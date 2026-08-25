@@ -6,12 +6,21 @@ import app.readylytics.health.core.model.domain.model.DomainBodyTemperatureRecor
 object BodyTemperatureDataMapper {
     fun toEntity(record: DomainBodyTemperatureRecord): BodyTemperatureRecordEntity =
         BodyTemperatureRecordEntity(
-            id = "${record.id}_${record.time.toEpochMilli()}",
-            timestampMs = record.time.toEpochMilli(),
+            id = extractBodyTemperatureRecordId(record),
+            timestampMs = extractBodyTemperatureTimestamp(record),
             celsius = record.celsius,
-            deviceName = record.deviceName,
+            deviceName = extractBodyTemperatureDeviceName(record),
         )
 
     fun toEntities(records: List<DomainBodyTemperatureRecord>): List<BodyTemperatureRecordEntity> =
-        records.map { toEntity(it) }
+        MapperHelpers.mapRecordList(records, ::toEntity)
+
+    private fun extractBodyTemperatureRecordId(record: DomainBodyTemperatureRecord): String =
+        MapperHelpers.extractRecordIdFromInstant(record.id, record.time)
+
+    private fun extractBodyTemperatureTimestamp(record: DomainBodyTemperatureRecord): Long =
+        MapperHelpers.extractTimestampMs(record.time)
+
+    private fun extractBodyTemperatureDeviceName(record: DomainBodyTemperatureRecord): String =
+        MapperHelpers.extractDeviceName(record.deviceName)
 }

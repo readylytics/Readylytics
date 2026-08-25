@@ -68,7 +68,7 @@ class DailySyncUseCase
                     onProgress = onProgress,
                 )
             } catch (e: HealthConnectWindowTimeoutException) {
-                logE("DailySyncUseCase") {
+                logE("DailySyncUseCase", e) {
                     "Ingest segment $startMs..$endMs timed out; retrying with extended budget"
                 }
                 ingestionCoordinator.ingestWindow(
@@ -194,7 +194,7 @@ class DailySyncUseCase
                         startMs = ingestStart.toEpochMilli(),
                         endMs = windowEnd.toEpochMilli() - 1,
                         zoneThresholds =
-                            app.readylytics.health.core.model.domain.heartrate.ZoneThresholds.zoneThresholds(
+                            app.readylytics.health.core.model.domain.heartrate.ZoneThresholds.create(
                                 prefs.zone1MinBpm,
                                 prefs.zone1MaxBpm,
                                 prefs.zone2MaxBpm,

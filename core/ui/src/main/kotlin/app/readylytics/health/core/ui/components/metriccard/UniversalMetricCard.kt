@@ -49,10 +49,6 @@ import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.containerColor
-import app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplayMode
-import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCardSpec
-import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
-import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.core.ui.components.onContainerColor
 import kotlinx.coroutines.launch
 
@@ -66,23 +62,7 @@ fun UniversalMetricCard(
     onModeSelected: (UniversalCardDisplayMode) -> Unit = {},
     onClick: (() -> Unit)? = null,
 ) {
-    val modeStringRes =
-        when (requestedMode) {
-            UniversalCardDisplayMode.GAUGE -> app.readylytics.health.core.ui.R.string.mode_gauge
-            UniversalCardDisplayMode.BAR -> app.readylytics.health.core.ui.R.string.mode_bar
-            UniversalCardDisplayMode.VALUE -> app.readylytics.health.core.ui.R.string.mode_value
-        }
-    val modeContext = stringResource(id = modeStringRes)
-    val contentDesc =
-        if (isEditing) {
-            stringResource(app.readylytics.health.core.ui.R.string.semantics_edit_mode_separator, modeContext)
-                .let(presentation.accessibilityDescription::plus)
-        } else {
-            presentation.accessibilityDescription
-        }
-    // Every mode resolves the same status-derived container/content pair so the card's
-    // background and title/tooltip tinting stay consistent when switching visualization modes.
-    val containerColor = presentation.status.containerColor()
+    val contentDesc = resolveCardAccessibilityDescription(presentation, requestedMode, isEditing)
     val contentColor = presentation.status.onContainerColor()
     val cardModifier =
         modifier
@@ -91,9 +71,21 @@ fun UniversalMetricCard(
             .testTag(UNIVERSAL_METRIC_CARD_TAG)
     val colors =
         CardDefaults.cardColors(
-            containerColor = containerColor,
+            containerColor = presentation.status.containerColor(),
             contentColor = contentColor,
         )
+
+    val contentComposable = @Composable {
+        UniversalMetricCardContent(
+            presentation = presentation,
+            specification = specification,
+            requestedMode = requestedMode,
+            isEditing = isEditing,
+            cardContentDescription = contentDesc,
+            contentColor = contentColor,
+            onModeSelected = onModeSelected,
+        )
+    }
 
     if (onClick != null) {
         Card(
@@ -102,15 +94,7 @@ fun UniversalMetricCard(
             shape = MaterialTheme.shapes.large,
             colors = colors,
         ) {
-            UniversalMetricCardContent(
-                presentation = presentation,
-                specification = specification,
-                requestedMode = requestedMode,
-                isEditing = isEditing,
-                cardContentDescription = contentDesc,
-                contentColor = contentColor,
-                onModeSelected = onModeSelected,
-            )
+            contentComposable()
         }
     } else {
         Card(
@@ -118,16 +102,29 @@ fun UniversalMetricCard(
             shape = MaterialTheme.shapes.large,
             colors = colors,
         ) {
-            UniversalMetricCardContent(
-                presentation = presentation,
-                specification = specification,
-                requestedMode = requestedMode,
-                isEditing = isEditing,
-                cardContentDescription = contentDesc,
-                contentColor = contentColor,
-                onModeSelected = onModeSelected,
-            )
+            contentComposable()
         }
+    }
+}
+
+@Composable
+private fun resolveCardAccessibilityDescription(
+    presentation: UniversalMetricPresentation,
+    requestedMode: UniversalCardDisplayMode,
+    isEditing: Boolean,
+): String {
+    val modeStringRes =
+        when (requestedMode) {
+            UniversalCardDisplayMode.GAUGE -> app.readylytics.health.core.ui.R.string.mode_gauge
+            UniversalCardDisplayMode.BAR -> app.readylytics.health.core.ui.R.string.mode_bar
+            UniversalCardDisplayMode.VALUE -> app.readylytics.health.core.ui.R.string.mode_value
+        }
+    val modeContext = stringResource(id = modeStringRes)
+    return if (isEditing) {
+        stringResource(app.readylytics.health.core.ui.R.string.semantics_edit_mode_separator, modeContext)
+            .let(presentation.accessibilityDescription::plus)
+    } else {
+        presentation.accessibilityDescription
     }
 }
 
@@ -152,78 +149,116 @@ private fun UniversalMetricCardContent(
                     vertical = MaterialTheme.spacing.smallMedium,
                 ),
     ) {
-        Row(
-            verticalAlignment = Alignment.Top,
-            modifier = Modifier.fillMaxWidth().semantics { heading() },
-        ) {
-            Text(
-                text = presentation.title,
-                style = MaterialTheme.typography.titleMedium,
-                color = contentColor,
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-
-            if (isEditing && specification.supportedModes.size > 1) {
-                val selectionAvailable =
-                    when (val visual = presentation.visual) {
-                        is UniversalMetricVisual.Goal -> visual.selectionAvailable
-                        is UniversalMetricVisual.PersonalBaseline -> visual.selectionAvailable
-                        is UniversalMetricVisual.ReferenceRange -> visual.selectionAvailable
-                        else -> true // Score and ValueOnly don't have this field explicitly disabling it
-                    }
-                Box(
-                    modifier = Modifier.size(MaterialTheme.dimens.iconStandard).wrapContentSize(unbounded = true),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    UniversalDisplayModeMenu(
-                        specification = specification,
-                        requestedMode = requestedMode,
-                        isSelectionAvailable = selectionAvailable,
-                        onModeSelected = onModeSelected,
-                    )
-                }
-            } else if (!isEditing && presentation.tooltip.isNotEmpty()) {
-                Box(
-                    modifier =
-                        Modifier
-                            .size(
-                                MaterialTheme.dimens.iconStandard,
-                            ).wrapContentSize(align = Alignment.TopEnd, unbounded = true),
-                ) {
-                    UniversalTitleInfoAction(
-                        description = presentation.tooltip,
-                        iconTint = contentColor,
-                    )
-                }
-            }
-        }
+        UniversalMetricCardHeader(
+            presentation = presentation,
+            specification = specification,
+            requestedMode = requestedMode,
+            isEditing = isEditing,
+            contentColor = contentColor,
+            onModeSelected = onModeSelected,
+        )
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
 
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            when (requestedMode) {
-                UniversalCardDisplayMode.GAUGE ->
-                    UniversalGaugeRenderer(
-                        presentation = presentation,
-                        secondaryUsesPill = specification.usesDeltaPill,
-                        animateMarker = !isEditing,
-                        contentColor = contentColor,
-                    )
-                UniversalCardDisplayMode.BAR ->
-                    UniversalBarRenderer(
-                        presentation = presentation,
-                        secondaryUsesPill = specification.usesDeltaPill,
-                        contentColor = contentColor,
-                    )
-                UniversalCardDisplayMode.VALUE ->
-                    UniversalValueRenderer(
-                        presentation = presentation,
-                        contentColor = contentColor,
-                        secondaryUsesPill = specification.usesDeltaPill,
-                    )
+        UniversalMetricCardBody(
+            presentation = presentation,
+            specification = specification,
+            requestedMode = requestedMode,
+            isEditing = isEditing,
+            contentColor = contentColor,
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
+}
+
+@Composable
+private fun UniversalMetricCardHeader(
+    presentation: UniversalMetricPresentation,
+    specification: UniversalMetricCardSpec,
+    requestedMode: UniversalCardDisplayMode,
+    isEditing: Boolean,
+    contentColor: Color,
+    onModeSelected: (UniversalCardDisplayMode) -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.Top,
+        modifier = Modifier.fillMaxWidth().semantics { heading() },
+    ) {
+        Text(
+            text = presentation.title,
+            style = MaterialTheme.typography.titleMedium,
+            color = contentColor,
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+
+        if (isEditing && specification.supportedModes.size > 1) {
+            val selectionAvailable =
+                when (val visual = presentation.visual) {
+                    is UniversalMetricVisual.Goal -> visual.selectionAvailable
+                    is UniversalMetricVisual.PersonalBaseline -> visual.selectionAvailable
+                    is UniversalMetricVisual.ReferenceRange -> visual.selectionAvailable
+                    else -> true
+                }
+            Box(
+                modifier = Modifier.size(MaterialTheme.dimens.iconStandard).wrapContentSize(unbounded = true),
+                contentAlignment = Alignment.Center,
+            ) {
+                UniversalDisplayModeMenu(
+                    specification = specification,
+                    requestedMode = requestedMode,
+                    isSelectionAvailable = selectionAvailable,
+                    onModeSelected = onModeSelected,
+                )
             }
+        } else if (!isEditing && presentation.tooltip.isNotEmpty()) {
+            Box(
+                modifier =
+                    Modifier
+                        .size(
+                            MaterialTheme.dimens.iconStandard,
+                        ).wrapContentSize(align = Alignment.TopEnd, unbounded = true),
+            ) {
+                UniversalTitleInfoAction(
+                    description = presentation.tooltip,
+                    iconTint = contentColor,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun UniversalMetricCardBody(
+    presentation: UniversalMetricPresentation,
+    specification: UniversalMetricCardSpec,
+    requestedMode: UniversalCardDisplayMode,
+    isEditing: Boolean,
+    contentColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        when (requestedMode) {
+            UniversalCardDisplayMode.GAUGE ->
+                UniversalGaugeRenderer(
+                    presentation = presentation,
+                    secondaryUsesPill = specification.usesDeltaPill,
+                    animateMarker = !isEditing,
+                    contentColor = contentColor,
+                )
+            UniversalCardDisplayMode.BAR ->
+                UniversalBarRenderer(
+                    presentation = presentation,
+                    secondaryUsesPill = specification.usesDeltaPill,
+                    contentColor = contentColor,
+                )
+            UniversalCardDisplayMode.VALUE ->
+                UniversalValueRenderer(
+                    presentation = presentation,
+                    contentColor = contentColor,
+                    secondaryUsesPill = specification.usesDeltaPill,
+                )
         }
     }
 }
@@ -314,9 +349,6 @@ fun UniversalDisplayModeMenu(
 
                 val isSelected = mode == requestedMode
                 val modeName = stringResource(id = textRes)
-                // A dedicated contentDescription (rather than relying on the visible text plus
-                // the `selected` boolean alone) gives TalkBack a single, unambiguous announcement
-                // that names the category ("Visualization style") and the selection state.
                 val itemDescription =
                     if (isSelected) {
                         stringResource(

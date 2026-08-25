@@ -12,7 +12,10 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Dao
 interface HeartRateDao {
-    @Query("SELECT * FROM heart_rate_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC, sourceRecordRef ASC")
+    @Query(
+        "SELECT * FROM heart_rate_records " +
+            "WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC, sourceRecordRef ASC",
+    )
     suspend fun getSince(fromMs: Long): List<HeartRateRecordEntity>
 
 
@@ -35,7 +38,8 @@ interface HeartRateDao {
     @Query(
         "SELECT * FROM heart_rate_records " +
             "WHERE timestampMs >= :startMs AND timestampMs <= :endMs " +
-            "AND (timestampMs > :lastTimestampMs OR (timestampMs = :lastTimestampMs AND sourceRecordRef > :lastSourceRecordRef)) " +
+            "AND (timestampMs > :lastTimestampMs OR " +
+            "(timestampMs = :lastTimestampMs AND sourceRecordRef > :lastSourceRecordRef)) " +
             "ORDER BY timestampMs ASC, sourceRecordRef ASC LIMIT :limit",
     )
     suspend fun getKeysetPage(
@@ -218,7 +222,9 @@ interface HeartRateDao {
     suspend fun getDistinctDeviceNames(): List<String>
 
     @Query(
-        "DELETE FROM heart_rate_records WHERE timestampMs >= :fromMs AND timestampMs < :toMs AND (deviceName != :deviceName OR deviceName IS NULL)",
+        "DELETE FROM heart_rate_records " +
+            "WHERE timestampMs >= :fromMs AND timestampMs < :toMs " +
+            "AND (deviceName != :deviceName OR deviceName IS NULL)",
     )
     suspend fun deleteRecordsNotMatchingDevice(
         fromMs: Long,

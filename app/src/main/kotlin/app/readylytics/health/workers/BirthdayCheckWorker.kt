@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.data.preferences.SettingsRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -37,6 +38,7 @@ class BirthdayCheckWorker
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                logE("BirthdayCheckWorker", e) { "Birthday check failed" }
                 Result.failure()
             }
         }

@@ -77,17 +77,21 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = uiState,
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
-                onNavigateToSleep = {},
-                onNavigateToWorkouts = {},
-                onNavigateToRhr = {},
-                onNavigateToSteps = {},
+                navigationCallbacks =
+                    DashboardNavigationCallbacks(
+                        onNavigateToSleep = {},
+                        onNavigateToWorkouts = {},
+                        onNavigateToRhr = {},
+                        onNavigateToSteps = {},
+                    ),
                 onToggleCardManagement = {},
+                onCancelCardManagement = {},
                 onCardVisibilityChanged = { _, _ -> },
                 onReorderCards = {},
                 onResetToDefaults = {},
+                onCardDisplayModeChanged = { _, _ -> },
             )
         }
 
@@ -103,17 +107,21 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = uiState,
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
-                onNavigateToSleep = {},
-                onNavigateToWorkouts = {},
-                onNavigateToRhr = {},
-                onNavigateToSteps = {},
+                navigationCallbacks =
+                    DashboardNavigationCallbacks(
+                        onNavigateToSleep = {},
+                        onNavigateToWorkouts = {},
+                        onNavigateToRhr = {},
+                        onNavigateToSteps = {},
+                    ),
                 onToggleCardManagement = {},
+                onCancelCardManagement = {},
                 onCardVisibilityChanged = { _, _ -> },
                 onReorderCards = {},
                 onResetToDefaults = {},
+                onCardDisplayModeChanged = { _, _ -> },
             )
         }
 
@@ -129,17 +137,21 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = uiState,
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
-                onNavigateToSleep = {},
-                onNavigateToWorkouts = {},
-                onNavigateToRhr = {},
-                onNavigateToSteps = {},
+                navigationCallbacks =
+                    DashboardNavigationCallbacks(
+                        onNavigateToSleep = {},
+                        onNavigateToWorkouts = {},
+                        onNavigateToRhr = {},
+                        onNavigateToSteps = {},
+                    ),
                 onToggleCardManagement = {},
+                onCancelCardManagement = {},
                 onCardVisibilityChanged = { _, _ -> },
                 onReorderCards = {},
                 onResetToDefaults = {},
+                onCardDisplayModeChanged = { _, _ -> },
             )
         }
 
@@ -161,17 +173,21 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = uiState,
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
-                onNavigateToSleep = {},
-                onNavigateToWorkouts = {},
-                onNavigateToRhr = {},
-                onNavigateToSteps = {},
+                navigationCallbacks =
+                    DashboardNavigationCallbacks(
+                        onNavigateToSleep = {},
+                        onNavigateToWorkouts = {},
+                        onNavigateToRhr = {},
+                        onNavigateToSteps = {},
+                    ),
                 onToggleCardManagement = {},
+                onCancelCardManagement = {},
                 onCardVisibilityChanged = { _, _ -> },
                 onReorderCards = {},
                 onResetToDefaults = {},
+                onCardDisplayModeChanged = { _, _ -> },
                 insightsCard = { state, _, onDismissInsight, _, _ ->
                     state.currentInsight?.let { insight ->
                         InsightCard(
@@ -281,14 +297,17 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = createConfigurableTestUiState(isManagingCards = true),
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
-                onNavigateToSleep = {},
-                onNavigateToWorkouts = {},
-                onNavigateToRhr = {},
-                onNavigateToSteps = {},
+                navigationCallbacks =
+                    DashboardNavigationCallbacks(
+                        onNavigateToSleep = {},
+                        onNavigateToWorkouts = {},
+                        onNavigateToRhr = {},
+                        onNavigateToSteps = {},
+                    ),
                 onToggleCardManagement = {},
+                onCancelCardManagement = {},
                 onCardVisibilityChanged = { _, _ -> },
                 onReorderCards = {},
                 onResetToDefaults = {},
@@ -313,14 +332,17 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = createConfigurableTestUiState(isManagingCards = true),
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
-                onNavigateToSleep = {},
-                onNavigateToWorkouts = {},
-                onNavigateToRhr = {},
-                onNavigateToSteps = {},
+                navigationCallbacks =
+                    DashboardNavigationCallbacks(
+                        onNavigateToSleep = {},
+                        onNavigateToWorkouts = {},
+                        onNavigateToRhr = {},
+                        onNavigateToSteps = {},
+                    ),
                 onToggleCardManagement = {},
+                onCancelCardManagement = {},
                 onCardVisibilityChanged = { _, _ -> },
                 onReorderCards = {},
                 onResetToDefaults = {},
@@ -345,14 +367,17 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = createConfigurableTestUiState(isManagingCards = true),
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
-                onNavigateToSleep = {},
-                onNavigateToWorkouts = {},
-                onNavigateToRhr = {},
-                onNavigateToSteps = {},
+                navigationCallbacks =
+                    DashboardNavigationCallbacks(
+                        onNavigateToSleep = {},
+                        onNavigateToWorkouts = {},
+                        onNavigateToRhr = {},
+                        onNavigateToSteps = {},
+                    ),
                 onToggleCardManagement = {},
+                onCancelCardManagement = {},
                 onCardVisibilityChanged = { _, _ -> },
                 onReorderCards = {},
                 onResetToDefaults = {},
@@ -377,15 +402,18 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = createConfigurableTestUiState(isManagingCards = false),
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
-                onNavigateToSleep = {},
-                onNavigateToWorkouts = {},
-                onNavigateToRhr = {},
-                onNavigateToSteps = {},
-                onNavigateToHrv = { hrvClicked = true },
+                navigationCallbacks =
+                    DashboardNavigationCallbacks(
+                        onNavigateToSleep = {},
+                        onNavigateToWorkouts = {},
+                        onNavigateToRhr = {},
+                        onNavigateToSteps = {},
+                        onNavigateToHrv = { hrvClicked = true },
+                    ),
                 onToggleCardManagement = {},
+                onCancelCardManagement = {},
                 onCardVisibilityChanged = { _, _ -> },
                 onReorderCards = {},
                 onResetToDefaults = {},
@@ -418,14 +446,17 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = state.value,
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
-                onNavigateToSleep = {},
-                onNavigateToWorkouts = {},
-                onNavigateToRhr = {},
-                onNavigateToSteps = {},
+                navigationCallbacks =
+                    DashboardNavigationCallbacks(
+                        onNavigateToSleep = {},
+                        onNavigateToWorkouts = {},
+                        onNavigateToRhr = {},
+                        onNavigateToSteps = {},
+                    ),
                 onToggleCardManagement = {},
+                onCancelCardManagement = {},
                 onCardVisibilityChanged = { _, _ -> },
                 onReorderCards = {},
                 onResetToDefaults = {},
@@ -470,17 +501,21 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = uiState,
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
-                onNavigateToSleep = {},
-                onNavigateToWorkouts = {},
-                onNavigateToRhr = {},
-                onNavigateToSteps = {},
+                navigationCallbacks =
+                    DashboardNavigationCallbacks(
+                        onNavigateToSleep = {},
+                        onNavigateToWorkouts = {},
+                        onNavigateToRhr = {},
+                        onNavigateToSteps = {},
+                    ),
                 onToggleCardManagement = {},
+                onCancelCardManagement = {},
                 onCardVisibilityChanged = { _, _ -> },
                 onReorderCards = {},
                 onResetToDefaults = {},
+                onCardDisplayModeChanged = { _, _ -> },
                 insightsCard = { state, _, onDismissInsight, _, _ ->
                     state.currentInsight?.let { insight ->
                         InsightCard(
@@ -516,14 +551,17 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = createConfigurableTestUiState(isManagingCards = true),
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
-                onNavigateToSleep = {},
-                onNavigateToWorkouts = {},
-                onNavigateToRhr = {},
-                onNavigateToSteps = {},
+                navigationCallbacks =
+                    DashboardNavigationCallbacks(
+                        onNavigateToSleep = {},
+                        onNavigateToWorkouts = {},
+                        onNavigateToRhr = {},
+                        onNavigateToSteps = {},
+                    ),
                 onToggleCardManagement = {},
+                onCancelCardManagement = {},
                 onCardVisibilityChanged = { _, _ -> },
                 onReorderCards = {},
                 onResetToDefaults = {},
@@ -566,13 +604,21 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = uiState,
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
-                onNavigateToSleep = {},
-                onNavigateToWorkouts = {},
-                onNavigateToRhr = {},
-                onNavigateToSteps = {},
+                navigationCallbacks =
+                    DashboardNavigationCallbacks(
+                        onNavigateToSleep = {},
+                        onNavigateToWorkouts = {},
+                        onNavigateToRhr = {},
+                        onNavigateToSteps = {},
+                    ),
+                onToggleCardManagement = {},
+                onCancelCardManagement = {},
+                onCardVisibilityChanged = { _, _ -> },
+                onReorderCards = {},
+                onResetToDefaults = {},
+                onCardDisplayModeChanged = { _, _ -> },
             )
         }
 
@@ -606,13 +652,21 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = uiState,
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
-                onNavigateToSleep = {},
-                onNavigateToWorkouts = {},
-                onNavigateToRhr = {},
-                onNavigateToSteps = {},
+                navigationCallbacks =
+                    DashboardNavigationCallbacks(
+                        onNavigateToSleep = {},
+                        onNavigateToWorkouts = {},
+                        onNavigateToRhr = {},
+                        onNavigateToSteps = {},
+                    ),
+                onToggleCardManagement = {},
+                onCancelCardManagement = {},
+                onCardVisibilityChanged = { _, _ -> },
+                onReorderCards = {},
+                onResetToDefaults = {},
+                onCardDisplayModeChanged = { _, _ -> },
                 onCopySetupPrompt = { setupClicks++ },
                 onCopyDailyPrompt = { dailyClicks++ },
             )
@@ -636,17 +690,21 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = uiState,
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
-                onNavigateToSleep = {},
-                onNavigateToWorkouts = {},
-                onNavigateToRhr = {},
-                onNavigateToSteps = {},
+                navigationCallbacks =
+                    DashboardNavigationCallbacks(
+                        onNavigateToSleep = {},
+                        onNavigateToWorkouts = {},
+                        onNavigateToRhr = {},
+                        onNavigateToSteps = {},
+                    ),
                 onToggleCardManagement = {},
+                onCancelCardManagement = {},
                 onCardVisibilityChanged = { _, _ -> },
                 onReorderCards = {},
                 onResetToDefaults = {},
+                onCardDisplayModeChanged = { _, _ -> },
             )
         }
 
@@ -662,17 +720,21 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = uiState,
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
-                onNavigateToSleep = {},
-                onNavigateToWorkouts = {},
-                onNavigateToRhr = {},
-                onNavigateToSteps = {},
+                navigationCallbacks =
+                    DashboardNavigationCallbacks(
+                        onNavigateToSleep = {},
+                        onNavigateToWorkouts = {},
+                        onNavigateToRhr = {},
+                        onNavigateToSteps = {},
+                    ),
                 onToggleCardManagement = {},
+                onCancelCardManagement = {},
                 onCardVisibilityChanged = { _, _ -> },
                 onReorderCards = {},
                 onResetToDefaults = {},
+                onCardDisplayModeChanged = { _, _ -> },
             )
         }
 
@@ -688,17 +750,21 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = uiState,
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
-                onNavigateToSleep = {},
-                onNavigateToWorkouts = {},
-                onNavigateToRhr = {},
-                onNavigateToSteps = {},
+                navigationCallbacks =
+                    DashboardNavigationCallbacks(
+                        onNavigateToSleep = {},
+                        onNavigateToWorkouts = {},
+                        onNavigateToRhr = {},
+                        onNavigateToSteps = {},
+                    ),
                 onToggleCardManagement = {},
+                onCancelCardManagement = {},
                 onCardVisibilityChanged = { _, _ -> },
                 onReorderCards = {},
                 onResetToDefaults = {},
+                onCardDisplayModeChanged = { _, _ -> },
             )
         }
 

@@ -27,6 +27,7 @@ import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUse
 import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
+import app.readylytics.health.core.scoring.domain.scoring.SleepMetricsRequest
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepPercentileRhrCalculator
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -75,10 +76,20 @@ class ScoringRepositoryBiphasicIntegrationTest {
             oxygenSaturationRecordDao,
             bodyTemperatureRecordDao,
         )
+    private val bodyMetricsDataLoader =
+        BodyMetricsDataLoader(
+            weightRecordDao,
+            bodyFatRecordDao,
+            bloodPressureRecordDao,
+            oxygenSaturationRecordDao,
+            bodyTemperatureRecordDao,
+        )
+    private val seriesLoader = ScoringSeriesLoader(workoutDao, dailySummaryDao)
 
     private val readinessSummaryCoordinator =
         ReadinessSummaryCoordinator(
             dataLoader,
+            seriesLoader,
             scoringHistoryRepository,
             baselineComputer,
             BuildLoadSeriesUseCase(scoringCalculator),
@@ -90,6 +101,8 @@ class ScoringRepositoryBiphasicIntegrationTest {
     private val repo =
         ScoringRepositoryImpl(
             dataLoader,
+            bodyMetricsDataLoader,
+            seriesLoader,
             settingsRepo,
             baselineComputer,
             scoringConfigFactory,
@@ -106,7 +119,6 @@ class ScoringRepositoryBiphasicIntegrationTest {
         runTest {
             val zoneId = ZoneId.of("Europe/Berlin")
             val targetDate = LocalDate.of(2026, 7, 9)
-            val dayMidnightMs = targetDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
 
             every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
             coEvery { scoringHistoryRepository.getDailySummaryByDate(any(), any()) } returns null
@@ -192,23 +204,11 @@ class ScoringRepositoryBiphasicIntegrationTest {
             coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
             coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns emptyList()
 
-            val sessionSlot = slot<SleepSession>()
+            val sessionSlot = slot<SleepMetricsRequest>()
             coEvery {
-                computeSleepMetricsUseCase(
-                    capture(sessionSlot),
-                    any(),
-                    eq(targetDate),
-                    any(),
-                    any(),
-                    any(),
-                    anyNullable<Float>(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                )
+                computeSleepMetricsUseCase(capture(sessionSlot))
             } answers {
-                val scoringSession = sessionSlot.captured
+                val scoringSession = sessionSlot.captured.session
                 Result.success(
                     DailySummary(
                         date = targetDate,
@@ -224,11 +224,11 @@ class ScoringRepositoryBiphasicIntegrationTest {
             val result = repo.computeDailySummary(targetDate)
 
             assertEquals(510, result.sleepDurationMinutes)
-            assertEquals(510, sessionSlot.captured.durationMinutes)
-            assertEquals(270, sessionSlot.captured.lightSleepMinutes)
-            assertEquals(102, sessionSlot.captured.deepSleepMinutes)
-            assertEquals(108, sessionSlot.captured.remSleepMinutes)
-            assertEquals(15, sessionSlot.captured.awakeMinutes)
+            assertEquals(510, sessionSlot.captured.session.durationMinutes)
+            assertEquals(270, sessionSlot.captured.session.lightSleepMinutes)
+            assertEquals(102, sessionSlot.captured.session.deepSleepMinutes)
+            assertEquals(108, sessionSlot.captured.session.remSleepMinutes)
+            assertEquals(15, sessionSlot.captured.session.awakeMinutes)
             assertEquals(
                 LocalDate
                     .of(2026, 7, 8)
@@ -236,7 +236,7 @@ class ScoringRepositoryBiphasicIntegrationTest {
                     .atZone(zoneId)
                     .toInstant()
                     .toEpochMilli(),
-                sessionSlot.captured.startTime,
+                sessionSlot.captured.session.startTime,
             )
             assertEquals(
                 LocalDate
@@ -245,23 +245,11 @@ class ScoringRepositoryBiphasicIntegrationTest {
                     .atZone(zoneId)
                     .toInstant()
                     .toEpochMilli(),
-                sessionSlot.captured.endTime,
+                sessionSlot.captured.session.endTime,
             )
-            coVerify {
-                computeSleepMetricsUseCase(
-                    any(),
-                    any(),
-                    eq(targetDate),
-                    any(),
-                    any(),
-                    any(),
-                    anyNullable<Float>(),
-                    any(),
-                    any(),
-                    any(),
-                    eq(setOf("core-1", "core-2")),
-                )
-            }
+            coVerify(exactly = 1) { computeSleepMetricsUseCase(capture(sessionSlot)) }
+            assertEquals(targetDate, sessionSlot.captured.targetDate)
+            assertEquals(setOf("core-1", "core-2"), sessionSlot.captured.currentSessionIds)
             coVerify(exactly = 0) { sleepSessionDao.getSessionEndingInRange(any(), any()) }
         }
 

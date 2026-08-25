@@ -49,9 +49,14 @@ object DomainLogger {
 }
 
 class ScopedLogger(val tag: String, val context: LogContext) {
-    inline fun info(msg: () -> String) = DomainLogger.log(LogLevel.INFO, tag, context = context, msg = msg)
-    inline fun warn(throwable: Throwable? = null, msg: () -> String) = DomainLogger.log(LogLevel.WARN, tag, throwable, context, msg)
-    inline fun error(throwable: Throwable? = null, msg: () -> String) = DomainLogger.log(LogLevel.ERROR, tag, throwable, context, msg)
+    inline fun info(msg: () -> String) =
+        DomainLogger.log(LogLevel.INFO, tag, context = context, msg = msg)
+
+    inline fun warn(throwable: Throwable? = null, msg: () -> String) =
+        DomainLogger.log(LogLevel.WARN, tag, throwable, context, msg)
+
+    inline fun error(throwable: Throwable? = null, msg: () -> String) =
+        DomainLogger.log(LogLevel.ERROR, tag, throwable, context, msg)
 }
 
 inline fun DomainLogger.scoped(

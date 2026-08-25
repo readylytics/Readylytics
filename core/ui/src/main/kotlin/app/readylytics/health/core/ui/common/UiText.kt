@@ -23,6 +23,7 @@ sealed class UiText {
 }
 
 @Composable
+@Suppress("SpreadOperator")
 fun UiText.resolveString(): String =
     when (this) {
         is UiText.StringRes -> stringResource(id)

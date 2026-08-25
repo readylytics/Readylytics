@@ -289,7 +289,7 @@ class FirstSetupDummyIngestionFlowTest {
             totalDistanceMeters: Float?,
             avgSpeedKmh: Float?,
             elevationGainMeters: Float?,
-        ) {}
+        ) = Unit
     }
 
     private class FakeFirstSetupHealthConnectRepository : HealthConnectRepository {

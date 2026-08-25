@@ -11,6 +11,7 @@ import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.ExerciseRouteResult
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.records.Record as HcRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.SleepSessionRecord
@@ -271,16 +272,20 @@ class HealthConnectRepositoryImpl
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                val securityCause = e.asHealthConnectSecurityCause()
-                if (securityCause != null) {
-                    throw HealthConnectPermissionRevokedException(
-                        cause = securityCause,
-                        operation = "read",
-                        recordType = T::class.simpleName,
-                    )
-                }
-                throw e
+                rethrowReadFailureOrOriginal<T>(e)
             }
+        }
+
+        private inline fun <reified T : HcRecord> rethrowReadFailureOrOriginal(e: Exception): Nothing {
+            val securityCause = e.asHealthConnectSecurityCause()
+            if (securityCause != null) {
+                throw HealthConnectPermissionRevokedException(
+                    cause = securityCause,
+                    operation = "read",
+                    recordType = T::class.simpleName,
+                )
+            }
+            throw e
         }
 
 
@@ -358,7 +363,8 @@ class HealthConnectRepositoryImpl
                                     .record
                             val result = record.exerciseRouteResult
                             app.readylytics.health.core.model.domain.util.logD("HealthConnectRepository") {
-                                "Exercise session ${session.metadata.id} (${session.exerciseType}) route result: ${result.javaClass.simpleName}"
+                                "Exercise session ${session.metadata.id} (${session.exerciseType}) " +
+                                    "route result: ${result.javaClass.simpleName}"
                             }
                             result
                         } catch (e: CancellationException) {
@@ -396,8 +402,13 @@ class HealthConnectRepositoryImpl
                 readAllPages<T>(from, to).map(map)
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: HealthConnectPermissionRevokedException) {
+                app.readylytics.health.core.model.domain.util.logD("HealthConnectRepository") {
+                    "${T::class.simpleName} permission not granted; falling back to route-derived totals (${e.message})"
+                }
+                emptyList()
             } catch (e: Exception) {
-                if (e !is HealthConnectPermissionRevokedException && e.asHealthConnectSecurityCause() == null) throw e
+                if (e.asHealthConnectSecurityCause() == null) throw e
                 app.readylytics.health.core.model.domain.util.logD("HealthConnectRepository") {
                     "${T::class.simpleName} permission not granted; falling back to route-derived totals"
                 }
@@ -418,7 +429,8 @@ class HealthConnectRepositoryImpl
                     val record = client.readRecord(ExerciseSessionRecord::class, id).record
                     val routeResult = record.exerciseRouteResult
                     app.readylytics.health.core.model.domain.util.logD("HealthConnectRepository") {
-                        "Read single exercise session $id (${record.exerciseType}) route result: ${routeResult.javaClass.simpleName}"
+                        "Read single exercise session $id (${record.exerciseType}) " +
+                            "route result: ${routeResult.javaClass.simpleName}"
                     }
                     val distanceTotals =
                         readIntervalTotals<DistanceRecord>(record.startTime, record.endTime) { it.toIntervalTotal() }
@@ -519,7 +531,7 @@ class HealthConnectRepositoryImpl
                     // HC-003: defensive fallback -- if a provider doesn't support grouped-by-period
                     // aggregation, fall back to one per-day aggregate call. Slower, but correct.
                     app.readylytics.health.core.model.domain.util.logD("HealthConnectRepository") {
-                        "aggregateGroupByPeriod unsupported; falling back to per-day step aggregate"
+                        "aggregateGroupByPeriod unsupported; falling back to per-day step aggregate (${e.message})"
                     }
                     readDailyStepTotalsPerDay(from, to, zoneId)
                 } catch (e: Exception) {
@@ -561,12 +573,12 @@ class HealthConnectRepositoryImpl
                     readAllPages<WeightRecord>(from, to).map { it.toDomain() }
                 } catch (e: HealthConnectPermissionRevokedException) {
                     app.readylytics.health.core.model.domain.util.logD("HealthConnectRepository") {
-                        "Weight record permission not granted"
+                        "Weight record permission not granted: ${e.message}"
                     }
                     emptyList()
                 } catch (e: SecurityException) {
                     app.readylytics.health.core.model.domain.util.logD("HealthConnectRepository") {
-                        "Weight record permission not granted"
+                        "Weight record permission not granted: ${e.message}"
                     }
                     emptyList()
                 } catch (e: CancellationException) {
@@ -590,12 +602,12 @@ class HealthConnectRepositoryImpl
                     readAllPages<BodyFatRecord>(from, to).map { it.toDomain() }
                 } catch (e: HealthConnectPermissionRevokedException) {
                     app.readylytics.health.core.model.domain.util.logD("HealthConnectRepository") {
-                        "Body fat record permission not granted"
+                        "Body fat record permission not granted: ${e.message}"
                     }
                     emptyList()
                 } catch (e: SecurityException) {
                     app.readylytics.health.core.model.domain.util.logD("HealthConnectRepository") {
-                        "Body fat record permission not granted"
+                        "Body fat record permission not granted: ${e.message}"
                     }
                     emptyList()
                 } catch (e: CancellationException) {
@@ -619,12 +631,12 @@ class HealthConnectRepositoryImpl
                     readAllPages<BloodPressureRecord>(from, to).map { it.toDomain() }
                 } catch (e: HealthConnectPermissionRevokedException) {
                     app.readylytics.health.core.model.domain.util.logD("HealthConnectRepository") {
-                        "Blood pressure record permission not granted"
+                        "Blood pressure record permission not granted: ${e.message}"
                     }
                     emptyList()
                 } catch (e: SecurityException) {
                     app.readylytics.health.core.model.domain.util.logD("HealthConnectRepository") {
-                        "Blood pressure record permission not granted"
+                        "Blood pressure record permission not granted: ${e.message}"
                     }
                     emptyList()
                 } catch (e: CancellationException) {
@@ -648,12 +660,12 @@ class HealthConnectRepositoryImpl
                     readAllPages<OxygenSaturationRecord>(from, to).map { it.toDomain() }
                 } catch (e: HealthConnectPermissionRevokedException) {
                     app.readylytics.health.core.model.domain.util.logD("HealthConnectRepository") {
-                        "Oxygen saturation record permission not granted"
+                        "Oxygen saturation record permission not granted: ${e.message}"
                     }
                     emptyList()
                 } catch (e: SecurityException) {
                     app.readylytics.health.core.model.domain.util.logD("HealthConnectRepository") {
-                        "Oxygen saturation record permission not granted"
+                        "Oxygen saturation record permission not granted: ${e.message}"
                     }
                     emptyList()
                 } catch (e: CancellationException) {
@@ -677,12 +689,12 @@ class HealthConnectRepositoryImpl
                     readAllPages<BodyTemperatureRecord>(from, to).map { it.toDomain() }
                 } catch (e: HealthConnectPermissionRevokedException) {
                     app.readylytics.health.core.model.domain.util.logD("HealthConnectRepository") {
-                        "Body temperature record permission not granted"
+                        "Body temperature record permission not granted: ${e.message}"
                     }
                     emptyList()
                 } catch (e: SecurityException) {
                     app.readylytics.health.core.model.domain.util.logD("HealthConnectRepository") {
-                        "Body temperature record permission not granted"
+                        "Body temperature record permission not granted: ${e.message}"
                     }
                     emptyList()
                 } catch (e: CancellationException) {
@@ -701,6 +713,9 @@ class HealthConnectRepositoryImpl
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                app.readylytics.health.core.model.domain.util.logW("HealthConnectRepository", e) {
+                    "Read failed; returning empty list"
+                }
                 emptyList()
             }
 

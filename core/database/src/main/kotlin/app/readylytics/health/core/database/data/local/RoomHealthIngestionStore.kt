@@ -1,31 +1,6 @@
 package app.readylytics.health.core.database.data.local
 
-import app.readylytics.health.core.databaseschema.data.local.dao.BloodPressureRecordDao
-import app.readylytics.health.core.databaseschema.data.local.dao.BodyFatRecordDao
-import app.readylytics.health.core.databaseschema.data.local.dao.BodyTemperatureRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.DailySummaryDao
-import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
-import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao
-import app.readylytics.health.core.databaseschema.data.local.dao.OxygenSaturationRecordDao
-import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
-import app.readylytics.health.core.databaseschema.data.local.dao.SleepStageDao
-import app.readylytics.health.core.databaseschema.data.local.dao.SourceRecordDao
-import app.readylytics.health.core.databaseschema.data.local.dao.StepRecordDao
-import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
-import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
-import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutRoutePointDao
-import app.readylytics.health.core.databaseschema.data.local.entity.BloodPressureRecordEntity
-import app.readylytics.health.core.databaseschema.data.local.entity.BodyFatRecordEntity
-import app.readylytics.health.core.databaseschema.data.local.entity.BodyTemperatureRecordEntity
-import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
-import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity
-import app.readylytics.health.core.databaseschema.data.local.entity.OxygenSaturationRecordEntity
-import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
-import app.readylytics.health.core.databaseschema.data.local.entity.SleepStageEntity
-import app.readylytics.health.core.databaseschema.data.local.entity.StepRecordEntity
-import app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity
-import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
-import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRoutePointEntity
 import app.readylytics.health.core.model.domain.model.RouteState
 import app.readylytics.health.core.model.domain.model.WorkoutRoutePoint
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
@@ -54,30 +29,18 @@ import kotlinx.coroutines.yield
 class RoomHealthIngestionStore
     @Inject
     constructor(
-        private val sleepSessionDao: SleepSessionDao,
-        private val sleepStageDao: SleepStageDao,
-        private val heartRateDao: HeartRateDao,
-        private val hrvDao: HrvDao,
-        private val workoutDao: WorkoutDao,
-        private val workoutRoutePointDao: WorkoutRoutePointDao,
-        private val weightRecordDao: WeightRecordDao,
-        private val bodyFatRecordDao: BodyFatRecordDao,
-        private val bloodPressureRecordDao: BloodPressureRecordDao,
-        private val oxygenSaturationRecordDao: OxygenSaturationRecordDao,
-        private val bodyTemperatureRecordDao: BodyTemperatureRecordDao,
-        private val stepRecordDao: StepRecordDao,
+        private val daos: HealthRecordDaos,
         private val dailySummaryDao: DailySummaryDao,
-        private val sourceRecordDao: SourceRecordDao,
         private val transactionRunner: TransactionRunner,
     ) : HealthIngestionStore {
         override suspend fun persist(batch: HealthIngestionBatch) {
             // Persist parent and low-volume records first. Sample batches can then commit
             // independently; stable IDs make a retry of this window idempotent.
             transactionRunner.runInTransaction {
-                sleepSessionDao.upsertAll(batch.sleepSessions.map(SleepSessionInput::toEntity))
+                daos.sleepSessionDao.upsertAll(batch.sleepSessions.map(SleepSessionInput::toEntity))
                 val sessionIds = batch.sleepSessions.map(SleepSessionInput::id).toSet()
-                sleepStageDao.deleteForSessions(sessionIds.toList())
-                sleepStageDao.upsertAll(
+                daos.sleepStageDao.deleteForSessions(sessionIds.toList())
+                daos.sleepStageDao.upsertAll(
                     batch.sleepStages
                         .filter { it.sessionId in sessionIds }
                         .map(SleepStageInput::toEntity),
@@ -89,7 +52,7 @@ class RoomHealthIngestionStore
                 // when this pass actually produced a route. Mirrors persistSingleWorkoutRoute.
                 val workoutEntities =
                     batch.workouts.map { workout ->
-                        val existing = workoutDao.getById(workout.id)
+                        val existing = daos.workoutDao.getById(workout.id)
                         val fresh = workout.toEntity()
                         fresh.copy(
                             modelTrimp = existing?.modelTrimp,
@@ -104,26 +67,26 @@ class RoomHealthIngestionStore
                                 },
                         )
                     }
-                workoutDao.upsertAll(workoutEntities)
+                daos.workoutDao.upsertAll(workoutEntities)
                 val workoutsWithRoutes = batch.workouts.filter { it.routePoints.isNotEmpty() }
                 if (workoutsWithRoutes.isNotEmpty()) {
-                    workoutRoutePointDao.deleteForWorkouts(workoutsWithRoutes.map(WorkoutInput::id))
-                    workoutRoutePointDao.insertAll(
+                    daos.workoutRoutePointDao.deleteForWorkouts(workoutsWithRoutes.map(WorkoutInput::id))
+                    daos.workoutRoutePointDao.insertAll(
                         workoutsWithRoutes.flatMap { workout ->
                             workout.routePoints.map(WorkoutRoutePoint::toEntity)
                         },
                     )
                 }
-                weightRecordDao.upsertAll(batch.weights.map(WeightInput::toEntity))
-                bodyFatRecordDao.upsertAll(batch.bodyFatSamples.map(BodyFatInput::toEntity))
-                bloodPressureRecordDao.upsertAll(batch.bloodPressureSamples.map(BloodPressureInput::toEntity))
-                oxygenSaturationRecordDao.upsertAll(
+                daos.weightRecordDao.upsertAll(batch.weights.map(WeightInput::toEntity))
+                daos.bodyFatRecordDao.upsertAll(batch.bodyFatSamples.map(BodyFatInput::toEntity))
+                daos.bloodPressureRecordDao.upsertAll(batch.bloodPressureSamples.map(BloodPressureInput::toEntity))
+                daos.oxygenSaturationRecordDao.upsertAll(
                     batch.oxygenSaturationSamples.map(OxygenSaturationInput::toEntity),
                 )
-                bodyTemperatureRecordDao.upsertAll(
+                daos.bodyTemperatureRecordDao.upsertAll(
                     batch.bodyTemperatureSamples.map(BodyTemperatureInput::toEntity),
                 )
-                stepRecordDao.upsertAll(batch.stepRecords.map(StepRecordInput::toEntity))
+                daos.stepRecordDao.upsertAll(batch.stepRecords.map(StepRecordInput::toEntity))
             }
 
             persistHeartRateSamples(batch.heartRateSamples)
@@ -134,7 +97,7 @@ class RoomHealthIngestionStore
             if (samples.isEmpty()) return
             val sourceRefByBaseId = samples.mapTo(mutableSetOf()) { it.id.substringBefore('_') }
                 .associateWith { baseId ->
-                    sourceRecordDao.getOrCreateSourceRef(
+                    daos.sourceRecordDao.getOrCreateSourceRef(
                         sourceRecordId = baseId,
                         recordType = "HEART_RATE",
                         createdAtMs = samples.first().timestampMs,
@@ -143,7 +106,7 @@ class RoomHealthIngestionStore
             samples.forEachPersistenceBatch { batch ->
                 val startedAt = System.currentTimeMillis()
                 transactionRunner.runInTransaction {
-                    heartRateDao.upsertAll(batch.map { input -> input.toEntity(sourceRefByBaseId) })
+                    daos.heartRateDao.upsertAll(batch.map { input -> input.toEntity(sourceRefByBaseId) })
                 }
                 logD(PERSIST_TAG) {
                     "HR batch persisted: ${batch.size} samples in ${System.currentTimeMillis() - startedAt}ms"
@@ -155,7 +118,7 @@ class RoomHealthIngestionStore
             if (samples.isEmpty()) return
             val sourceRefByBaseId = samples.mapTo(mutableSetOf()) { it.id.substringBefore('_') }
                 .associateWith { baseId ->
-                    sourceRecordDao.getOrCreateSourceRef(
+                    daos.sourceRecordDao.getOrCreateSourceRef(
                         sourceRecordId = baseId,
                         recordType = "HRV",
                         createdAtMs = samples.first().timestampMs,
@@ -164,7 +127,7 @@ class RoomHealthIngestionStore
             samples.forEachPersistenceBatch { batch ->
                 val startedAt = System.currentTimeMillis()
                 transactionRunner.runInTransaction {
-                    hrvDao.upsertAll(batch.map { input -> input.toEntity(sourceRefByBaseId) })
+                    daos.hrvDao.upsertAll(batch.map { input -> input.toEntity(sourceRefByBaseId) })
                 }
                 logD(PERSIST_TAG) {
                     "HRV batch persisted: ${batch.size} samples in ${System.currentTimeMillis() - startedAt}ms"
@@ -184,19 +147,19 @@ class RoomHealthIngestionStore
         }
 
         override suspend fun countHeartRateInRange(startMs: Long, endMs: Long): Int {
-            return heartRateDao.countInRange(startMs, endMs)
+            return daos.heartRateDao.countInRange(startMs, endMs)
         }
 
         override suspend fun countHrvInRange(startMs: Long, endMs: Long): Int {
-            return hrvDao.countInRange(startMs, endMs)
+            return daos.hrvDao.countInRange(startMs, endMs)
         }
 
         override suspend fun countSleepSessionsInRange(startMs: Long, endMs: Long): Int {
-            return sleepSessionDao.countInRange(startMs, endMs)
+            return daos.sleepSessionDao.countInRange(startMs, endMs)
         }
 
         override suspend fun countWorkoutsInRange(startMs: Long, endMs: Long): Int {
-            return workoutDao.countInRange(startMs, endMs)
+            return daos.workoutDao.countInRange(startMs, endMs)
         }
 
         override suspend fun persistSingleWorkoutRoute(
@@ -208,9 +171,9 @@ class RoomHealthIngestionStore
             elevationGainMeters: Float?,
         ) {
             transactionRunner.runInTransaction {
-                val existing = workoutDao.getById(workoutId)
+                val existing = daos.workoutDao.getById(workoutId)
                 if (existing != null) {
-                    workoutDao.upsertAll(
+                    daos.workoutDao.upsertAll(
                         listOf(
                             existing.copy(
                                 routeState = routeState,
@@ -221,15 +184,14 @@ class RoomHealthIngestionStore
                         ),
                     )
                 }
-                workoutRoutePointDao.deleteForWorkouts(listOf(workoutId))
+                daos.workoutRoutePointDao.deleteForWorkouts(listOf(workoutId))
                 if (routePoints.isNotEmpty()) {
-                    workoutRoutePointDao.insertAll(routePoints.map(WorkoutRoutePoint::toEntity))
+                    daos.workoutRoutePointDao.insertAll(routePoints.map(WorkoutRoutePoint::toEntity))
                 }
             }
         }
     }
 
-private const val TAG = "RoomHealthIngestionStore"
 private const val PERSIST_TAG = "HealthSync.Persist"
 
 internal suspend fun <T> List<T>.forEachPersistenceBatch(
@@ -246,131 +208,3 @@ internal suspend fun <T> List<T>.forEachPersistenceBatch(
     }
 }
 
-private fun SleepSessionInput.toEntity() =
-    SleepSessionEntity(
-        id = id,
-        startTime = startTime,
-        endTime = endTime,
-        durationMinutes = durationMinutes,
-        efficiency = efficiency,
-        deepSleepMinutes = deepSleepMinutes,
-        remSleepMinutes = remSleepMinutes,
-        lightSleepMinutes = lightSleepMinutes,
-        awakeMinutes = awakeMinutes,
-        sleepScore = sleepScore,
-        startZoneOffsetSeconds = startZoneOffsetSeconds,
-        endZoneOffsetSeconds = endZoneOffsetSeconds,
-        deviceName = deviceName,
-    )
-
-private fun SleepStageInput.toEntity() =
-    SleepStageEntity(
-        sessionId = sessionId,
-        stageType = stageType,
-        startTime = startTime,
-        endTime = endTime,
-        durationMinutes = durationMinutes,
-    )
-
-private fun HeartRateInput.toEntity(sourceRefByBaseId: Map<String, Long>) =
-    HeartRateRecordEntity(
-        sourceRecordRef = sourceRefByBaseId.getValue(id.substringBefore('_')),
-        timestampMs = timestampMs,
-        beatsPerMinute = beatsPerMinute,
-        recordType = recordType,
-        sessionId = sessionId,
-        deviceName = deviceName,
-    )
-
-private fun HrvInput.toEntity(sourceRefByBaseId: Map<String, Long>) =
-    HrvRecordEntity(
-        sourceRecordRef = sourceRefByBaseId.getValue(id.substringBefore('_')),
-        timestampMs = timestampMs,
-        rmssdMs = rmssdMs,
-        recordType = recordType,
-        sessionId = sessionId,
-        deviceName = deviceName,
-    )
-
-private fun WorkoutInput.toEntity() =
-    WorkoutRecordEntity(
-        id = id,
-        startTime = startTime,
-        endTime = endTime,
-        exerciseType = exerciseType,
-        durationMinutes = durationMinutes,
-        zone1Minutes = zone1Minutes,
-        zone2Minutes = zone2Minutes,
-        zone3Minutes = zone3Minutes,
-        zone4Minutes = zone4Minutes,
-        zone5Minutes = zone5Minutes,
-        trimp = trimp,
-        avgHr = avgHr,
-        deviceName = deviceName,
-        totalDistanceMeters = totalDistanceMeters,
-        avgSpeedKmh = avgSpeedKmh,
-        elevationGainMeters = elevationGainMeters,
-        routeState = routeState,
-    )
-
-private fun WeightInput.toEntity() =
-    WeightRecordEntity(
-        id = id,
-        timestampMs = timestampMs,
-        weightKg = weightKg,
-        deviceName = deviceName,
-    )
-
-private fun BodyFatInput.toEntity() =
-    BodyFatRecordEntity(
-        id = id,
-        timestampMs = timestampMs,
-        bodyFatPercent = bodyFatPercent,
-        deviceName = deviceName,
-    )
-
-private fun BloodPressureInput.toEntity() =
-    BloodPressureRecordEntity(
-        id = id,
-        timestampMs = timestampMs,
-        systolicMmHg = systolicMmHg,
-        diastolicMmHg = diastolicMmHg,
-        deviceName = deviceName,
-    )
-
-private fun OxygenSaturationInput.toEntity() =
-    OxygenSaturationRecordEntity(
-        id = id,
-        timestampMs = timestampMs,
-        percentage = percentage,
-        deviceName = deviceName,
-    )
-
-private fun BodyTemperatureInput.toEntity() =
-    BodyTemperatureRecordEntity(
-        id = id,
-        timestampMs = timestampMs,
-        celsius = celsius,
-        deviceName = deviceName,
-    )
-
-private fun StepRecordInput.toEntity() =
-    StepRecordEntity(
-        id = id,
-        startTime = startTime,
-        endTime = endTime,
-        count = count,
-        deviceName = deviceName,
-    )
-
-private fun WorkoutRoutePoint.toEntity() =
-    WorkoutRoutePointEntity(
-        id = id,
-        workoutId = workoutId,
-        latitude = latitude,
-        longitude = longitude,
-        altitude = altitude,
-        timestampMs = timestampMs,
-        horizontalAccuracy = horizontalAccuracy,
-        verticalAccuracy = verticalAccuracy,
-    )

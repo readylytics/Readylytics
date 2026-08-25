@@ -4,6 +4,8 @@ import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import app.readylytics.health.core.model.domain.security.EncryptionInitException
+import app.readylytics.health.core.model.domain.util.logW
 import com.google.crypto.tink.Aead
 import com.google.crypto.tink.KeyTemplates
 import com.google.crypto.tink.RegistryConfiguration
@@ -43,6 +45,7 @@ class EncryptionManager
                     .keysetHandle
                     .getPrimitive(RegistryConfiguration.get(), Aead::class.java)
             } catch (e: Exception) {
+                logW("EncryptionManager", e) { "Versioned keyset unreadable; falling back to legacy master key" }
                 // Fallback to legacy master key if version 1 key fails to read/decrypt existing keyset
                 AndroidKeysetManager
                     .Builder()
@@ -68,11 +71,12 @@ class EncryptionManager
                 generateKey(alias, useStrongBox = true)
                 keyMetadataStore.setCurrentKey(CURRENT_KEY_VERSION, strongBoxBacked = true)
             } catch (e: Exception) {
+                logW("EncryptionManager", e) { "StrongBox key generation failed; retrying without StrongBox" }
                 try {
                     generateKey(alias, useStrongBox = false)
                     keyMetadataStore.setCurrentKey(CURRENT_KEY_VERSION, strongBoxBacked = false)
                 } catch (ex: Exception) {
-                    throw RuntimeException("Failed to generate master key", ex)
+                    throw EncryptionInitException("Failed to generate master key", ex)
                 }
             }
         }
@@ -116,6 +120,7 @@ class EncryptionManager
                 val plaintext = aead.decrypt(decoded, null)
                 String(plaintext, Charsets.UTF_8)
             } catch (e: Exception) {
+                logW("EncryptionManager", e) { "Decryption failed; returning null" }
                 null
             }
 

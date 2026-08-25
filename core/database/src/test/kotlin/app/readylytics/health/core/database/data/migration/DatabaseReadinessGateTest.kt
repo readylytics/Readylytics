@@ -25,8 +25,11 @@ class DatabaseReadinessGateTest {
         fakeDbFile.delete()
     }
 
+    @Suppress("TooGenericExceptionThrown")
     @Test
     fun `inspect returns Failed for non-key exceptions`() {
+        // Deliberately generic: this test verifies the fallback path taken for any
+        // exception that is not KeyDecryptionException, so the exact type must not matter.
         val fakeDbFile = File.createTempFile("test", ".db").apply { writeText("dummy") }
         val gate =
             DatabaseReadinessGate(

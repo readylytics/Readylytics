@@ -7,14 +7,6 @@ import app.readylytics.health.core.designsystem.LocalExtendedColors
 import app.readylytics.health.core.model.domain.model.MetricStatus
 import app.readylytics.health.core.model.domain.model.strainRatioStatus
 
-internal enum class MetricContainerTone {
-    DEFAULT_CARD,
-    NEUTRAL,
-    PRIMARY,
-    WARNING,
-    ERROR,
-}
-
 internal fun MetricStatus.containerTone(): MetricContainerTone =
     when (this) {
         MetricStatus.NO_DATA -> MetricContainerTone.DEFAULT_CARD

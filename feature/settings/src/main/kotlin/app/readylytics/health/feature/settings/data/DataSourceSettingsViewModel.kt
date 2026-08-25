@@ -6,6 +6,7 @@ import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.preferences.DeviceSettings
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.sync.HistoricalResyncController
+import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.feature.settings.DataSourceSettingsState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -121,6 +122,7 @@ class DataSourceSettingsViewModel
                     deviceSettings.clearDeviceCache()
                     availableDevicesFlow.value = deviceSettings.getAvailableDevices()
                 } catch (e: Exception) {
+                    logE("DataSourceSettings", e) { "Failed to clear device cache" }
                     availableDevicesFlow.value = emptyList()
                 } finally {
                     isLoadingDevicesFlow.value = false

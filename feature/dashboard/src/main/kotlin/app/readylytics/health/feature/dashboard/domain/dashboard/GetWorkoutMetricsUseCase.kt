@@ -6,6 +6,7 @@ import app.readylytics.health.core.model.domain.model.MetricStatus
 import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.model.strainRatioStatus
 import app.readylytics.health.core.model.domain.util.ResourceProvider
+import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.feature.dashboard.CardData
 import app.readylytics.health.feature.dashboard.DashboardAction
 import app.readylytics.health.feature.dashboard.R
@@ -59,6 +60,7 @@ class GetWorkoutMetricsUseCase
 
                 Result.success(WorkoutMetrics(strainRatioCard))
             } catch (e: Exception) {
+                logE("GetWorkoutMetricsUseCase", e) { "Failed to compute workout metrics" }
                 Result.failure("Failed to compute workout metrics", "WORKOUT_METRICS_ERROR")
             }
 

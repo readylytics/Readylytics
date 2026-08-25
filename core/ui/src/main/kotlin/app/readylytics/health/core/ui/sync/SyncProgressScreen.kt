@@ -68,149 +68,169 @@ fun SyncProgressScreen(
                 .padding(MaterialTheme.spacing.pageSectionGapLarge),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // Scrollable content area — grows to fill remaining space above buttons
-        Column(
-            modifier =
-                Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            val text =
-                if (progress == null) {
-                    stringResource(R.string.sync_progress_finishing_setup)
-                } else {
-                    when (progress.phase) {
-                        ResyncPhase.INGEST ->
-                            if (progress.total > 0) {
-                                stringResource(
-                                    R.string.sync_progress_phase_ingest,
-                                    progress.current,
-                                    progress.total,
-                                )
-                            } else {
-                                stringResource(
-                                    R.string.sync_progress_phase_ingest_indeterminate,
-                                    progress.current,
-                                )
-                            }
-                        ResyncPhase.PRUNE -> stringResource(R.string.sync_progress_phase_prune)
-                        ResyncPhase.RECONCILE -> stringResource(R.string.sync_progress_phase_reconcile)
-                        ResyncPhase.RECOMPUTE ->
-                            stringResource(R.string.sync_progress_fetching_data, progress.current, progress.total)
-                    }
-                }
+        SyncProgressContentArea(
+            progress = progress,
+            showLogs = showLogs,
+            onToggleLogs = { showLogs = !showLogs },
+            logText = logText,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+        )
+
+        SyncProgressActionButtons(
+            showLogs = showLogs,
+            onDownloadLogs = onDownloadLogs,
+            onContinueInBackground = onContinueInBackground,
+        )
+    }
+}
+
+@Composable
+private fun SyncProgressContentArea(
+    progress: RecalcProgress?,
+    showLogs: Boolean,
+    onToggleLogs: () -> Unit,
+    logText: String?,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = formatProgressPhaseText(progress),
+            style = MaterialTheme.typography.titleMedium,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
+        M3MetricBar(
+            progressFraction = progress?.fraction(),
+            activeColor = MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.secondaryContainer,
+            barHeight = MaterialTheme.dimens.syncProgressBarThickness,
+            markerDiameter = MaterialTheme.dimens.syncProgressBarThickness,
+            showMarker = true,
+            animateProgress = false,
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapLarge))
+
+        TextButton(onClick = onToggleLogs) {
             Text(
-                text = text,
-                style = MaterialTheme.typography.titleMedium,
-                textAlign = TextAlign.Center,
+                text =
+                    if (showLogs) {
+                        stringResource(R.string.sync_progress_hide_logs)
+                    } else {
+                        stringResource(R.string.sync_progress_view_logs)
+                    },
             )
-            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
-            M3MetricBar(
-                progressFraction = progress?.fraction(),
-                activeColor = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.secondaryContainer,
-                barHeight = MaterialTheme.dimens.syncProgressBarThickness,
-                markerDiameter = MaterialTheme.dimens.syncProgressBarThickness,
-                showMarker = true,
-                animateProgress = false,
-                modifier = Modifier.fillMaxWidth(),
-            )
+        }
 
-            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapLarge))
+        AnimatedVisibility(visible = showLogs) {
+            SyncLogsCard(logText = logText)
+        }
+    }
+}
 
-            TextButton(onClick = { showLogs = !showLogs }) {
+@Composable
+private fun formatProgressPhaseText(progress: RecalcProgress?): String =
+    if (progress == null) {
+        stringResource(R.string.sync_progress_finishing_setup)
+    } else {
+        when (progress.phase) {
+            ResyncPhase.INGEST ->
+                if (progress.total > 0) {
+                    stringResource(
+                        R.string.sync_progress_phase_ingest,
+                        progress.current,
+                        progress.total,
+                    )
+                } else {
+                    stringResource(
+                        R.string.sync_progress_phase_ingest_indeterminate,
+                        progress.current,
+                    )
+                }
+            ResyncPhase.PRUNE -> stringResource(R.string.sync_progress_phase_prune)
+            ResyncPhase.RECONCILE -> stringResource(R.string.sync_progress_phase_reconcile)
+            ResyncPhase.RECOMPUTE ->
+                stringResource(R.string.sync_progress_fetching_data, progress.current, progress.total)
+        }
+    }
+
+@Composable
+private fun SyncLogsCard(logText: String?) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+        shape = MaterialTheme.shapes.large,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+                .padding(vertical = MaterialTheme.spacing.small),
+    ) {
+        val listState = rememberLazyListState()
+        val logLines =
+            remember(logText) {
+                logText?.split("\n")?.filter { it.isNotBlank() }?.takeLast(40) ?: emptyList()
+            }
+
+        LaunchedEffect(logLines) {
+            if (logLines.isNotEmpty()) {
+                listState.animateScrollToItem(logLines.size - 1)
+            }
+        }
+
+        if (logLines.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
                 Text(
-                    text =
-                        if (showLogs) {
-                            stringResource(R.string.sync_progress_hide_logs)
-                        } else {
-                            stringResource(R.string.sync_progress_view_logs)
-                        },
+                    text = stringResource(R.string.sync_progress_logs_empty),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-
-            AnimatedVisibility(visible = showLogs) {
-                Card(
-                    colors =
-                        CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        ),
-                    shape = MaterialTheme.shapes.large,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .height(200.dp)
-                            .padding(vertical = MaterialTheme.spacing.small),
-                ) {
-                    val listState = rememberLazyListState()
-                    val logLines =
-                        remember(logText) {
-                            logText?.split("\n")?.filter { it.isNotBlank() }?.takeLast(40) ?: emptyList()
-                        }
-
-                    LaunchedEffect(logLines) {
-                        if (logLines.isNotEmpty()) {
-                            listState.animateScrollToItem(logLines.size - 1)
-                        }
-                    }
-
-                    if (logLines.isEmpty()) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = stringResource(R.string.sync_progress_logs_empty),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    } else {
-                        LazyColumn(
-                            state = listState,
-                            modifier =
-                                Modifier
-                                    .fillMaxSize()
-                                    .padding(MaterialTheme.spacing.small),
-                        ) {
-                            items(logLines) { line ->
-                                Text(
-                                    text = line,
-                                    style =
-                                        MaterialTheme.typography.bodySmall.copy(
-                                            fontFamily = FontFamily.Monospace,
-                                        ),
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                            }
-                        }
-                    }
+        } else {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize().padding(MaterialTheme.spacing.smallMedium),
+            ) {
+                items(logLines) { line ->
+                    Text(
+                        text = line,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         }
+    }
+}
 
-        // Buttons pinned to the bottom
-        Spacer(Modifier.height(MaterialTheme.spacing.small))
-
-        Column(
+@Composable
+private fun SyncProgressActionButtons(
+    showLogs: Boolean,
+    onDownloadLogs: () -> Unit,
+    onContinueInBackground: () -> Unit,
+) {
+    if (showLogs) {
+        OutlinedButton(
+            onClick = onDownloadLogs,
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
         ) {
-            OutlinedButton(
-                onClick = onDownloadLogs,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.sync_progress_download_logs))
-            }
-
-            Button(
-                onClick = onContinueInBackground,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.sync_progress_continue_in_background))
-            }
+            Text(stringResource(R.string.sync_progress_download_logs))
         }
+        Spacer(Modifier.height(MaterialTheme.spacing.small))
+    }
+
+    Button(
+        onClick = onContinueInBackground,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(stringResource(R.string.sync_progress_continue_in_background))
     }
 }

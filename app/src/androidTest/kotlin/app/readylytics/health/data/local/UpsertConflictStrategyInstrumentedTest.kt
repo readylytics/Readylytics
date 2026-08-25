@@ -86,7 +86,7 @@ class UpsertConflictStrategyInstrumentedTest {
                 .databaseBuilder<UpsertPrototypeDatabase>(
                     context,
                     dbFile.absolutePath,
-                ).openHelperFactory(keyManager.getOrCreateFactory(dbFile))
+                ).openHelperFactory(keyManager.getOrCreateFactory())
                 .setJournalMode(androidx.room.RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
                 .setQueryCoroutineContext(kotlinx.coroutines.Dispatchers.IO)
                 .build()

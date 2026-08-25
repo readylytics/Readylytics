@@ -7,6 +7,7 @@ import app.readylytics.health.core.scoring.domain.scoring.BuildLoadSeriesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.CompositeScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUseCase
+import app.readylytics.health.core.scoring.domain.scoring.SleepMetricsCollaborators
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
@@ -32,8 +33,10 @@ import app.readylytics.health.core.model.data.preferences.Gender
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoader
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
+import app.readylytics.health.core.database.data.repository.ScoringSeriesLoader
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.core.database.data.repository.SleepSessionRepositoryImpl
@@ -138,7 +141,8 @@ class ScoringSyncScopeOutputsDeterminismTest {
             assertEquals(
                 live.readinessWorkoutOnly?.roundToInt(),
                 frozenReplay.readinessWorkoutOnly?.roundToInt(),
-                "Rounded readinessWorkoutOnly must not flip when a live-computed day is recomputed from its frozen summary.",
+                "Rounded readinessWorkoutOnly must not flip when a live-computed day is recomputed " +
+                    "from its frozen summary.",
             )
         }
 
@@ -335,16 +339,19 @@ class ScoringSyncScopeOutputsDeterminismTest {
         val sleepModifierResolver = SleepModifierResolver(sleepSessionRepository, circadianConsistencyRepository)
         val computeSleepMetricsUseCase =
             ComputeSleepMetricsUseCase(
-                baselineComputer = baselineComputer,
-                scoringHistoryRepository = scoringHistoryRepository,
-                scoringCalculator = scoringCalculator,
-                scoringConfigFactory = scoringConfigFactory,
-                encryptionManager = encryptionManager,
-                hrvResolver = currentNightHrvResolver,
-                sleepPercentileRhrCalculator = sleepPercentileRhrCalculator,
-                nadirAnalyzer = sleepNadirAnalyzer,
-                coverageValidator = coverageValidator,
-                sleepModifierResolver = sleepModifierResolver,
+                collaborators =
+                    SleepMetricsCollaborators(
+                        baselineComputer = baselineComputer,
+                        scoringHistoryRepository = scoringHistoryRepository,
+                        scoringCalculator = scoringCalculator,
+                        scoringConfigFactory = scoringConfigFactory,
+                        encryptionManager = encryptionManager,
+                        hrvResolver = currentNightHrvResolver,
+                        sleepPercentileRhrCalculator = sleepPercentileRhrCalculator,
+                        nadirAnalyzer = sleepNadirAnalyzer,
+                        coverageValidator = coverageValidator,
+                        sleepModifierResolver = sleepModifierResolver,
+                    ),
             )
 
         val dataLoader =
@@ -360,12 +367,22 @@ class ScoringSyncScopeOutputsDeterminismTest {
                 oxygenSaturationRecordDao,
                 bodyTemperatureRecordDao,
             )
+        val bodyMetricsDataLoader =
+            BodyMetricsDataLoader(
+                weightRecordDao,
+                bodyFatRecordDao,
+                bloodPressureRecordDao,
+                oxygenSaturationRecordDao,
+                bodyTemperatureRecordDao,
+            )
+        val seriesLoader = ScoringSeriesLoader(workoutDao, dailySummaryDao)
         val buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator)
         val resolveDailyBaselinesUseCase = ResolveDailyBaselinesUseCase(baselineComputer)
         val assembleDailySummaryUseCase = AssembleDailySummaryUseCase()
         val readinessSummaryCoordinator =
             ReadinessSummaryCoordinator(
                 dataLoader = dataLoader,
+                seriesLoader = seriesLoader,
                 scoringHistoryRepository = scoringHistoryRepository,
                 baselineComputer = baselineComputer,
                 buildLoadSeriesUseCase = buildLoadSeriesUseCase,
@@ -377,6 +394,8 @@ class ScoringSyncScopeOutputsDeterminismTest {
         val repo =
             ScoringRepositoryImpl(
                 dataLoader = dataLoader,
+                bodyMetricsDataLoader = bodyMetricsDataLoader,
+                seriesLoader = seriesLoader,
                 settingsRepo = settingsRepo,
                 baselineComputer = baselineComputer,
                 scoringConfigFactory = scoringConfigFactory,
@@ -411,20 +430,20 @@ class ScoringSyncScopeOutputsDeterminismTest {
     }
 
     private fun assertSameMatrix(results: List<ScopeResult>) {
-        val fields =
+        val fields: List<Pair<String, (DailySummary) -> Any?>> =
             listOf(
-                "sleepScore" to { it: DailySummary -> it.sleepScore },
-                "readinessWorkoutOnly" to { it: DailySummary -> it.readinessWorkoutOnly },
-                "rhrBpm" to { it: DailySummary -> it.rhrBpm },
-                "rhrSigma" to { it: DailySummary -> it.rhrSigma },
-                "hrvMuMssd" to { it: DailySummary -> it.hrvMuMssd },
-                "hrvSigmaMssd" to { it: DailySummary -> it.hrvSigmaMssd },
-                "restingHeartRate" to { it: DailySummary -> it.restingHeartRate },
-                "nocturnalHrv" to { it: DailySummary -> it.nocturnalHrv },
-                "baselineObservationCount" to { it: DailySummary -> it.baselineObservationCount },
-                "zLnHrv" to { it: DailySummary -> it.zLnHrv },
-                "zRhr" to { it: DailySummary -> it.zRhr },
-                "sRest" to { it: DailySummary -> it.sRest },
+                "sleepScore" to { it.sleepScore },
+                "readinessWorkoutOnly" to { it.readinessWorkoutOnly },
+                "rhrBpm" to { it.rhrBpm },
+                "rhrSigma" to { it.rhrSigma },
+                "hrvMuMssd" to { it.hrvMuMssd },
+                "hrvSigmaMssd" to { it.hrvSigmaMssd },
+                "restingHeartRate" to { it.restingHeartRate },
+                "nocturnalHrv" to { it.nocturnalHrv },
+                "baselineObservationCount" to { it.baselineObservationCount },
+                "zLnHrv" to { it.zLnHrv },
+                "zRhr" to { it.zRhr },
+                "sRest" to { it.sRest },
             )
 
         val baseline = results.first()

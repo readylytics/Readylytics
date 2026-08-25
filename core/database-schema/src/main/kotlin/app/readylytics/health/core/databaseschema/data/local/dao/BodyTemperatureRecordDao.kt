@@ -68,7 +68,9 @@ interface BodyTemperatureRecordDao {
     suspend fun deleteAll(): Int
 
     @Query(
-        "DELETE FROM body_temperature_records WHERE timestampMs >= :fromMs AND timestampMs < :toMs AND (deviceName != :deviceName OR deviceName IS NULL)",
+        "DELETE FROM body_temperature_records " +
+            "WHERE timestampMs >= :fromMs AND timestampMs < :toMs " +
+            "AND (deviceName != :deviceName OR deviceName IS NULL)",
     )
     suspend fun deleteRecordsNotMatchingDevice(
         fromMs: Long,

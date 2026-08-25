@@ -21,8 +21,6 @@ internal class PhysiologyPreferences
 
         private fun Float.toValidHeight() = coerceIn(120f, 250f)
 
-        private fun Int.toValidRestMinutes() = coerceIn(0, 60)
-
         private fun Int.toValidRestingHrPercentile() = coerceIn(1, 15)
 
         private fun Float.toValidBanisterMultiplier() = coerceIn(0.5f, 2.5f)

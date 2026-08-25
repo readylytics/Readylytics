@@ -299,10 +299,14 @@ class ResyncRangeUseCase
 
                         logD(TELEMETRY_TAG) {
                             "[INGESTION] Completed in ${ingestEnd - ingestStart}ms. " +
-                            "HeartRate: $hrBeforeResync -> $hrBeforePrune (delta: ${hrBeforePrune - hrBeforeResync}), " +
-                            "HRV: $hrvBeforeResync -> $hrvBeforePrune (delta: ${hrvBeforePrune - hrvBeforeResync}), " +
-                            "Sleep: $sleepBeforeResync -> $sleepBeforePrune (delta: ${sleepBeforePrune - sleepBeforeResync}), " +
-                            "Workout: $workoutBeforeResync -> $workoutBeforePrune (delta: ${workoutBeforePrune - workoutBeforeResync})"
+                                "HeartRate: $hrBeforeResync -> $hrBeforePrune " +
+                                "(delta: ${hrBeforePrune - hrBeforeResync}), " +
+                                "HRV: $hrvBeforeResync -> $hrvBeforePrune " +
+                                "(delta: ${hrvBeforePrune - hrvBeforeResync}), " +
+                                "Sleep: $sleepBeforeResync -> $sleepBeforePrune " +
+                                "(delta: ${sleepBeforePrune - sleepBeforeResync}), " +
+                                "Workout: $workoutBeforeResync -> $workoutBeforePrune " +
+                                "(delta: ${workoutBeforePrune - workoutBeforeResync})"
                         }
                     }
 
@@ -353,10 +357,14 @@ class ResyncRangeUseCase
 
                         logD(TELEMETRY_TAG) {
                             "[PRUNING] Completed in ${pruneEnd - pruneStart}ms. " +
-                            "HeartRate: $hrBeforePrune -> $hrAfterPrune (pruned: ${hrBeforePrune - hrAfterPrune}), " +
-                            "HRV: $hrvBeforePrune -> $hrvAfterPrune (pruned: ${hrvBeforePrune - hrvAfterPrune}), " +
-                            "Sleep: $sleepBeforePrune -> $sleepAfterPrune (pruned: ${sleepBeforePrune - sleepAfterPrune}), " +
-                            "Workout: $workoutBeforePrune -> $workoutAfterPrune (pruned: ${workoutBeforePrune - workoutAfterPrune})"
+                                "HeartRate: $hrBeforePrune -> $hrAfterPrune " +
+                                "(pruned: ${hrBeforePrune - hrAfterPrune}), " +
+                                "HRV: $hrvBeforePrune -> $hrvAfterPrune " +
+                                "(pruned: ${hrvBeforePrune - hrvAfterPrune}), " +
+                                "Sleep: $sleepBeforePrune -> $sleepAfterPrune " +
+                                "(pruned: ${sleepBeforePrune - sleepAfterPrune}), " +
+                                "Workout: $workoutBeforePrune -> $workoutAfterPrune " +
+                                "(pruned: ${workoutBeforePrune - workoutAfterPrune})"
                         }
                     }
 
@@ -365,7 +373,7 @@ class ResyncRangeUseCase
                         onProgress?.invoke(ResyncPhase.RECONCILE, 0, 0)
                         val reconcileStart = System.currentTimeMillis()
                         val zoneThresholds =
-                            app.readylytics.health.core.model.domain.heartrate.ZoneThresholds.zoneThresholds(
+                            app.readylytics.health.core.model.domain.heartrate.ZoneThresholds.create(
                                 prefs.zone1MinBpm,
                                 prefs.zone1MaxBpm,
                                 prefs.zone2MaxBpm,
@@ -537,7 +545,9 @@ class ResyncRangeUseCase
                     // at the smallest chunk size" apart from other failures; WorkManager's normal
                     // backoff (Result.retry() in HealthResyncWorker) is still the right fallback --
                     // a later retry may find a less dense window or a recovered provider.
-                    logI(TELEMETRY_TAG) { "Resync failed: window read timed out even at the minimum chunk size" }
+                    logI(TELEMETRY_TAG) {
+                        "Resync failed: window read timed out even at the minimum chunk size (${e.message})"
+                    }
                     Result.failure("Full resync failed: window read timeout", "RESYNC_WINDOW_TIMEOUT")
                 } catch (e: Exception) {
                     logI(TELEMETRY_TAG) { "Resync failed with exception: ${e.message}" }

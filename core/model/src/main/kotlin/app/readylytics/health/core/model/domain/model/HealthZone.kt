@@ -100,7 +100,8 @@ private fun BodyFatStatus.toHealthZone(): HealthZone =
         BodyFatStatus.Poor -> HealthZone.CRITICAL
     }
 
-// HRV — higher is better: above optimalMin=OPTIMAL, down to neutralMin=NEUTRAL, down to warningMin=WARNING, below=CRITICAL
+// HRV — higher is better: above optimalMin=OPTIMAL, down to neutralMin=NEUTRAL,
+// down to warningMin=WARNING, below=CRITICAL
 fun hrvZoneBands(
     optimalMin: Float,
     neutralMin: Float,

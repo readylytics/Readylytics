@@ -51,11 +51,9 @@ class DocumentationDriftTest {
             "feature/settings/src/main/res/values/strings.xml",
             "feature/onboarding/src/main/res/values/strings.xml",
         ).mapNotNull { path ->
-            try {
-                readRepoFile(path)
-            } catch (e: Throwable) {
-                null
-            }
+            listOf(File(path), File("../$path"), File("../../$path"))
+                .firstOrNull { it.exists() }
+                ?.readText()
         }.joinToString("\n")
     private val dataFlowMd = readRepoFile("internal-docs/DATA_FLOW.md")
     private val buildGradleKts = readRepoFile("app/build.gradle.kts")

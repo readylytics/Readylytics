@@ -290,8 +290,10 @@ class DailyPromptFormatterTest {
     private fun workoutData(): WorkoutData =
         WorkoutData(
             id = "w1",
-            startTime = LocalDate.of(2026, 8, 8).atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli(),
-            endTime = LocalDate.of(2026, 8, 8).atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli() + 3_600_000L,
+            startTime =
+                LocalDate.of(2026, 8, 8).atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli(),
+            endTime =
+                LocalDate.of(2026, 8, 8).atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli() + 3_600_000L,
             exerciseType = "Run",
             durationMinutes = 45,
             zone1Minutes = 10f,

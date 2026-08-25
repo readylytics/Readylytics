@@ -22,6 +22,17 @@ private data class ThemeHolder(
     val extendedColors: ExtendedColors,
 )
 
+private data class ColorSchemeParams(
+    val dynamicColor: Boolean,
+    val darkTheme: Boolean,
+    val customPrimaryColor: Long,
+    val customSecondaryColor: Long,
+    val customTertiaryColor: Long,
+    val isCustomPaletteEnabled: Boolean,
+    val fallbackThemeColor: FallbackThemeColor,
+    val context: android.content.Context,
+)
+
 data class StatusColors(
     val optimal: Color,
     val neutral: Color,
@@ -74,6 +85,142 @@ val LocalExtendedColors =
         )
     }
 
+private fun resolveColorScheme(params: ColorSchemeParams): ColorScheme {
+    val secondarySeed =
+        if (params.isCustomPaletteEnabled) Color(params.customSecondaryColor) else null
+    val tertiarySeed =
+        if (params.isCustomPaletteEnabled) Color(params.customTertiaryColor) else null
+
+    val matchingPreset =
+        if (params.isCustomPaletteEnabled) {
+            FallbackThemeColor.entries.find { it.primaryColor == params.customPrimaryColor }
+        } else {
+            params.fallbackThemeColor
+        }
+
+    return when {
+        params.dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+            if (params.darkTheme) {
+                dynamicDarkColorScheme(params.context)
+            } else {
+                dynamicLightColorScheme(params.context)
+            }
+        }
+
+        matchingPreset != null -> {
+            if (params.darkTheme) {
+                fallbackDarkScheme(
+                    seed = Color(matchingPreset.primaryColor),
+                    secondarySeed = Color(matchingPreset.secondaryColor),
+                    tertiarySeed = Color(matchingPreset.tertiaryColor),
+                ).copy(
+                    primary = Color(matchingPreset.primaryColor),
+                    secondary = Color(matchingPreset.secondaryColor),
+                    tertiary = Color(matchingPreset.tertiaryColor),
+                )
+            } else {
+                fallbackLightScheme(
+                    seed = Color(matchingPreset.primaryColor),
+                    secondarySeed = Color(matchingPreset.secondaryColor),
+                    tertiarySeed = Color(matchingPreset.tertiaryColor),
+                ).copy(
+                    primary = Color(matchingPreset.primaryColor),
+                    secondary = Color(matchingPreset.secondaryColor),
+                    tertiary = Color(matchingPreset.tertiaryColor),
+                )
+            }
+        }
+
+        else -> {
+            mcuColorScheme(
+                seedColor = Color(params.customPrimaryColor),
+                secondaryColor = secondarySeed,
+                tertiaryColor = tertiarySeed,
+                isDark = params.darkTheme,
+            )
+        }
+    }
+}
+
+private fun resolveSemanticColors(
+    dynamicColor: Boolean,
+    darkTheme: Boolean,
+    colorScheme: ColorScheme,
+): StatusColors =
+    if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        StatusColors(
+            optimal = colorScheme.primary,
+            neutral = colorScheme.secondary,
+            warning = colorScheme.tertiary,
+            poor = colorScheme.error,
+        )
+    } else {
+        if (darkTheme) {
+            StatusColors(
+                optimal = SuccessGreenDark,
+                neutral = Color(0xFFD1E4FF), // M3 Blue 80
+                warning = WarningOrangeDark,
+                poor = colorScheme.error,
+            )
+        } else {
+            StatusColors(
+                optimal = SuccessGreenLight,
+                neutral = Color(0xFF0061A4), // M3 Blue 40
+                warning = WarningOrangeLight,
+                poor = colorScheme.error,
+            )
+        }
+    }
+
+private fun resolveBaseExtendedColors(
+    darkTheme: Boolean,
+    colorScheme: ColorScheme,
+): ExtendedColors =
+    if (darkTheme) {
+        ExtendedColors(
+            success = SuccessGreenDark,
+            onSuccess = OnSuccessGreenDark,
+            successContainer = SuccessGreenContainerDark,
+            onSuccessContainer = OnSuccessGreenContainerDark,
+            warning = WarningOrangeDark,
+            onWarning = OnWarningOrangeDark,
+            warningContainer = WarningOrangeContainerDark,
+            onWarningContainer = OnWarningOrangeContainerDark,
+            neutralContainer = colorScheme.primaryContainer,
+            onNeutralContainer = colorScheme.onPrimaryContainer,
+        )
+    } else {
+        ExtendedColors(
+            success = SuccessGreenLight,
+            onSuccess = OnSuccessGreenLight,
+            successContainer = SuccessGreenContainerLight,
+            onSuccessContainer = OnSuccessGreenContainerLight,
+            warning = WarningOrangeLight,
+            onWarning = OnWarningOrangeLight,
+            warningContainer = WarningOrangeContainerLight,
+            onWarningContainer = OnWarningOrangeContainerLight,
+            neutralContainer = colorScheme.primaryContainer,
+            onNeutralContainer = colorScheme.onPrimaryContainer,
+        )
+    }
+
+private fun resolveExtendedColors(
+    dynamicColor: Boolean,
+    colorScheme: ColorScheme,
+    baseExtended: ExtendedColors,
+): ExtendedColors =
+    if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val p = colorScheme.primary
+        baseExtended.copy(
+            success = baseExtended.success.harmonizeWith(p),
+            successContainer = baseExtended.successContainer.harmonizeWith(p),
+            warning = baseExtended.warning.harmonizeWith(p),
+            warningContainer = baseExtended.warningContainer.harmonizeWith(p),
+        )
+    } else {
+        baseExtended
+    }
+
 @Composable
 fun FitDashboardTheme(
     appTheme: AppTheme = AppTheme.SYSTEM,
@@ -98,124 +245,46 @@ fun FitDashboardTheme(
         remember(
             darkTheme,
             dynamicColor,
+            fallbackThemeColor,
             customPrimaryColor,
             customSecondaryColor,
             customTertiaryColor,
             isCustomPaletteEnabled,
             context,
         ) {
-            val secondarySeed = if (isCustomPaletteEnabled) Color(customSecondaryColor) else null
-            val tertiarySeed = if (isCustomPaletteEnabled) Color(customTertiaryColor) else null
-
-            val matchingPreset = FallbackThemeColor.entries.find { it.primaryColor == customPrimaryColor }
-
             val colorScheme =
-                when {
-                    dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-                        if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-                    }
-
-                    matchingPreset != null -> {
-                        if (darkTheme) {
-                            fallbackDarkScheme(
-                                seed = Color(matchingPreset.primaryColor),
-                                secondarySeed = Color(matchingPreset.secondaryColor),
-                                tertiarySeed = Color(matchingPreset.tertiaryColor),
-                            ).copy(
-                                primary = Color(matchingPreset.primaryColor),
-                                secondary = Color(matchingPreset.secondaryColor),
-                                tertiary = Color(matchingPreset.tertiaryColor),
-                            )
-                        } else {
-                            fallbackLightScheme(
-                                seed = Color(matchingPreset.primaryColor),
-                                secondarySeed = Color(matchingPreset.secondaryColor),
-                                tertiarySeed = Color(matchingPreset.tertiaryColor),
-                            ).copy(
-                                primary = Color(matchingPreset.primaryColor),
-                                secondary = Color(matchingPreset.secondaryColor),
-                                tertiary = Color(matchingPreset.tertiaryColor),
-                            )
-                        }
-                    }
-
-                    else -> {
-                        mcuColorScheme(
-                            seedColor = Color(customPrimaryColor),
-                            secondaryColor = secondarySeed,
-                            tertiaryColor = tertiarySeed,
-                            isDark = darkTheme,
-                        )
-                    }
-                }
+                resolveColorScheme(
+                    ColorSchemeParams(
+                        dynamicColor = dynamicColor,
+                        darkTheme = darkTheme,
+                        customPrimaryColor = customPrimaryColor,
+                        customSecondaryColor = customSecondaryColor,
+                        customTertiaryColor = customTertiaryColor,
+                        isCustomPaletteEnabled = isCustomPaletteEnabled,
+                        fallbackThemeColor = fallbackThemeColor,
+                        context = context,
+                    ),
+                )
 
             val semanticColors =
-                if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    StatusColors(
-                        optimal = colorScheme.primary,
-                        neutral = colorScheme.secondary,
-                        warning = colorScheme.tertiary,
-                        poor = colorScheme.error,
-                    )
-                } else {
-                    if (darkTheme) {
-                        StatusColors(
-                            optimal = SuccessGreenDark,
-                            neutral = Color(0xFFD1E4FF), // M3 Blue 80
-                            warning = WarningOrangeDark,
-                            poor = colorScheme.error,
-                        )
-                    } else {
-                        StatusColors(
-                            optimal = SuccessGreenLight,
-                            neutral = Color(0xFF0061A4), // M3 Blue 40
-                            warning = WarningOrangeLight,
-                            poor = colorScheme.error,
-                        )
-                    }
-                }
+                resolveSemanticColors(
+                    dynamicColor = dynamicColor,
+                    darkTheme = darkTheme,
+                    colorScheme = colorScheme,
+                )
 
             val baseExtended =
-                if (darkTheme) {
-                    ExtendedColors(
-                        success = SuccessGreenDark,
-                        onSuccess = OnSuccessGreenDark,
-                        successContainer = SuccessGreenContainerDark,
-                        onSuccessContainer = OnSuccessGreenContainerDark,
-                        warning = WarningOrangeDark,
-                        onWarning = OnWarningOrangeDark,
-                        warningContainer = WarningOrangeContainerDark,
-                        onWarningContainer = OnWarningOrangeContainerDark,
-                        neutralContainer = colorScheme.primaryContainer,
-                        onNeutralContainer = colorScheme.onPrimaryContainer,
-                    )
-                } else {
-                    ExtendedColors(
-                        success = SuccessGreenLight,
-                        onSuccess = OnSuccessGreenLight,
-                        successContainer = SuccessGreenContainerLight,
-                        onSuccessContainer = OnSuccessGreenContainerLight,
-                        warning = WarningOrangeLight,
-                        onWarning = OnWarningOrangeLight,
-                        warningContainer = WarningOrangeContainerLight,
-                        onWarningContainer = OnWarningOrangeContainerLight,
-                        neutralContainer = colorScheme.primaryContainer,
-                        onNeutralContainer = colorScheme.onPrimaryContainer,
-                    )
-                }
+                resolveBaseExtendedColors(
+                    darkTheme = darkTheme,
+                    colorScheme = colorScheme,
+                )
 
             val extendedColors =
-                if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    val p = colorScheme.primary
-                    baseExtended.copy(
-                        success = baseExtended.success.harmonizeWith(p),
-                        successContainer = baseExtended.successContainer.harmonizeWith(p),
-                        warning = baseExtended.warning.harmonizeWith(p),
-                        warningContainer = baseExtended.warningContainer.harmonizeWith(p),
-                    )
-                } else {
-                    baseExtended
-                }
+                resolveExtendedColors(
+                    dynamicColor = dynamicColor,
+                    colorScheme = colorScheme,
+                    baseExtended = baseExtended,
+                )
 
             ThemeHolder(
                 colorScheme = colorScheme,

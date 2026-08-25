@@ -35,16 +35,27 @@ object SessionTotalsResolver {
         if (totals.isEmpty()) return null
         val startMs = sessionStart.toEpochMilli()
         val endMs = sessionEnd.toEpochMilli()
-        var sum = 0.0
-        var matched = false
-        for (total in totals) {
-            if (total.originPackage != sessionOrigin) continue
-            if (!total.value.isFinite() || total.value < 0.0) continue
-            val midpointMs = total.startTime.toEpochMilli() / 2 + total.endTime.toEpochMilli() / 2
-            if (midpointMs < startMs || midpointMs > endMs) continue
-            sum += total.value
-            matched = true
+        val matchingTotals =
+            totals.filter { total ->
+                isMatchingTotal(total, sessionOrigin, startMs, endMs)
+            }
+        return if (matchingTotals.isNotEmpty()) {
+            matchingTotals.sumOf { it.value }
+        } else {
+            null
         }
-        return if (matched) sum else null
+    }
+
+    private fun isMatchingTotal(
+        total: DomainIntervalTotal,
+        sessionOrigin: String,
+        startMs: Long,
+        endMs: Long,
+    ): Boolean {
+        if (total.originPackage != sessionOrigin || !total.value.isFinite() || total.value < 0.0) {
+            return false
+        }
+        val midpointMs = total.startTime.toEpochMilli() / 2 + total.endTime.toEpochMilli() / 2
+        return midpointMs in startMs..endMs
     }
 }

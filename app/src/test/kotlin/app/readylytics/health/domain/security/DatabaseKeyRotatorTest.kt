@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import kotlin.test.assertFailsWith
 
 class DatabaseKeyRotatorTest {
     @Test
@@ -36,12 +37,7 @@ class DatabaseKeyRotatorTest {
                     auditTrailRepository = audit,
                 )
 
-            try {
-                rotator.rotate()
-                error("Expected exception was not thrown")
-            } catch (e: IllegalStateException) {
-                // expected
-            }
+            assertFailsWith<IllegalStateException> { rotator.rotate() }
 
             assertEquals(listOf(AuditEvent.Type.KEY_ROTATION_FAILED), audit.events.map { it.type })
         }

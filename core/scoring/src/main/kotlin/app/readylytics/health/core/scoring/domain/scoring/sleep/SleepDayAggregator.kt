@@ -56,7 +56,13 @@ object SleepDayAggregator {
         val allRejected =
             rejectedByDay.values
                 .flatten()
-                .sortedWith(compareBy(RejectedSleepSegment::scoreDay, { it.segment.startTimeMs }, { it.segment.stableId }))
+                .sortedWith(
+                    compareBy(
+                        RejectedSleepSegment::scoreDay,
+                        { it.segment.startTimeMs },
+                        { it.segment.stableId },
+                    ),
+                )
 
         return SleepDayAggregationResult(
             aggregates = aggregates,
@@ -268,7 +274,10 @@ object SleepDayAggregator {
     ): Int =
         compareValues(left.durationMinutes, right.durationMinutes).takeIf { it != 0 }
             ?: compareCoverage(left, right).takeIf { it != 0 }
-            ?: compareLexicographicallySmaller(left.sourcePackageName.orEmpty(), right.sourcePackageName.orEmpty()).takeIf { it != 0 }
+            ?: compareLexicographicallySmaller(
+                left.sourcePackageName.orEmpty(),
+                right.sourcePackageName.orEmpty(),
+            ).takeIf { it != 0 }
             ?: compareLexicographicallySmaller(left.stableId, right.stableId)
 
     private fun compareLexicographicallySmaller(

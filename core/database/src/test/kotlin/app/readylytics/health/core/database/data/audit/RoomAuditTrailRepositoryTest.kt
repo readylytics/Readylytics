@@ -79,7 +79,10 @@ class RoomAuditTrailRepositoryTest {
         override fun observeRecent(limit: Int): Flow<List<AuditEventEntity>> =
             events.map { current ->
                 current
-                    .sortedWith(compareByDescending<AuditEventEntity> { it.occurredAtEpochMs }.thenByDescending { it.id })
+                    .sortedWith(
+                        compareByDescending<AuditEventEntity> { it.occurredAtEpochMs }
+                            .thenByDescending { it.id },
+                    )
                     .take(limit)
             }
     }

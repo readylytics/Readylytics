@@ -35,7 +35,6 @@ class GetDashboardDataUseCaseTest {
                 factory =
                     DashboardMetricPresentationFactory(
                         resourceProvider,
-                        getWorkoutMetricsUseCase,
                     ),
             )
     }

@@ -239,7 +239,7 @@ class CardConfigurationRepositoryTest {
 
             // Recreate repository to trigger init block with test scope
             val testScope = TestScope(testScheduler)
-            val repo = CardConfigurationRepositoryImpl(dataStore, testScope)
+            CardConfigurationRepositoryImpl(dataStore, testScope)
             testScope.advanceUntilIdle()
 
             val updatedProto = capturedUpdate.captured(existingProto)

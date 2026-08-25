@@ -65,15 +65,23 @@ class SelectedSourcePrunerImplTest {
         pruner =
             SelectedSourcePrunerImpl(
                 transactionRunner = transactionRunner,
-                sleepSessionDao = sleepDao,
-                heartRateDao = heartRateDao,
-                hrvDao = hrvDao,
-                workoutDao = workoutDao,
-                weightRecordDao = weightDao,
-                bodyFatRecordDao = bodyFatDao,
-                bloodPressureRecordDao = bloodPressureDao,
-                oxygenSaturationRecordDao = oxygenSaturationDao,
-                bodyTemperatureRecordDao = bodyTemperatureDao,
+                daos =
+                    HealthRecordDaos(
+                        sleepSessionDao = sleepDao,
+                        sleepStageDao = database.sleepStageDao(),
+                        heartRateDao = heartRateDao,
+                        hrvDao = hrvDao,
+                        workoutDao = workoutDao,
+                        workoutRoutePointDao = database.workoutRoutePointDao(),
+                        weightRecordDao = weightDao,
+                        bodyFatRecordDao = bodyFatDao,
+                        bloodPressureRecordDao = bloodPressureDao,
+                        oxygenSaturationRecordDao = oxygenSaturationDao,
+                        bodyTemperatureRecordDao = bodyTemperatureDao,
+                        stepRecordDao = database.stepRecordDao(),
+                        sourceRecordDao = database.sourceRecordDao(),
+                        minuteBucketDao = database.minuteBucketDao(),
+                    ),
             )
     }
 

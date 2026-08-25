@@ -142,7 +142,9 @@ interface BloodPressureRecordDao {
     suspend fun deleteAll(): Int
 
     @Query(
-        "DELETE FROM blood_pressure_records WHERE timestampMs >= :fromMs AND timestampMs < :toMs AND (deviceName != :deviceName OR deviceName IS NULL)",
+        "DELETE FROM blood_pressure_records " +
+            "WHERE timestampMs >= :fromMs AND timestampMs < :toMs " +
+            "AND (deviceName != :deviceName OR deviceName IS NULL)",
     )
     suspend fun deleteRecordsNotMatchingDevice(
         fromMs: Long,

@@ -104,7 +104,7 @@ class WorkoutMapperTest {
         val endTime = Instant.parse("2026-05-09T11:00:00Z")
 
         val thresholds =
-            ZoneThresholds.zoneThresholds(
+            ZoneThresholds.create(
                 z1Min = 100,
                 z1Max = 120,
                 z2Max = 140,
@@ -150,7 +150,7 @@ class WorkoutMapperTest {
         val startTime = Instant.parse("2026-05-09T10:00:00Z")
         val endTime = Instant.parse("2026-05-09T10:10:00Z")
 
-        val thresholds = ZoneThresholds.zoneThresholds()
+        val thresholds = ZoneThresholds.create()
 
         val hrSamples =
             listOf(

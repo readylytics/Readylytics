@@ -1,6 +1,5 @@
 package app.readylytics.health.feature.sleep
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.data.preferences.UserPreferences
@@ -56,7 +55,6 @@ class SleepViewModelLayoutManagementTest {
     private val selectedDateRepository: SelectedDateStore = mockk(relaxed = true)
     private val circadianRepo: CircadianConsistencyRepository = mockk(relaxed = true)
     private val foregroundSyncController: ForegroundSyncGateway = mockk(relaxed = true)
-    private val savedStateHandle: SavedStateHandle = mockk(relaxed = true)
     private val sleepLayoutRepository: SleepLayoutRepository = mockk(relaxed = true)
 
     private val selectedDateFlow = MutableStateFlow(LocalDate.of(2026, 6, 11))
@@ -105,7 +103,6 @@ class SleepViewModelLayoutManagementTest {
             selectedDateRepository = selectedDateRepository,
             circadianRepo = circadianRepo,
             foregroundSyncController = foregroundSyncController,
-            savedStateHandle = savedStateHandle,
             sleepLayoutRepository = sleepLayoutRepository,
             ioDispatcher = testDispatcher,
             defaultDispatcher = testDispatcher,

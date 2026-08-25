@@ -7,7 +7,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
-import app.readylytics.health.core.model.domain.dashboard.ModeSpec
 import app.readylytics.health.core.model.domain.model.MetricStatus
 import app.readylytics.health.core.model.domain.model.deepSleepStatus
 import app.readylytics.health.core.model.domain.model.efficiencyStatus
@@ -20,9 +19,6 @@ import app.readylytics.health.core.model.domain.sleep.SleepMetricCardId
 import app.readylytics.health.core.model.domain.sleep.SleepTopCardConfiguration
 import app.readylytics.health.core.model.domain.sleep.SleepTopCardId
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
-import app.readylytics.health.core.scoring.domain.scoring.toStatus
-import app.readylytics.health.core.scoring.domain.scoring.toTimeString
-import app.readylytics.health.core.scoring.domain.util.roundToPercentInt
 import app.readylytics.health.core.ui.common.DateFormatUtils
 import app.readylytics.health.core.ui.common.ScoreDialSkeleton
 import app.readylytics.health.core.ui.common.SkeletonCard
@@ -48,9 +44,6 @@ val SLEEP_TOP_CARD_FULL_WIDTH_IDS: Set<SleepTopCardId> =
     )
 
 private val VALUE_ONLY_MODES = listOf(UniversalCardDisplayMode.VALUE)
-
-private fun supportedModes(spec: ModeSpec?): List<UniversalCardDisplayMode> =
-    spec?.supportedModes?.map { it.toUniversalMode() } ?: VALUE_ONLY_MODES
 
 @Composable
 fun rememberSleepTopCardDataMap(
@@ -200,48 +193,19 @@ fun buildSleepMetricCardDataMap(
     return mapOf(
         SleepMetricCardId.CIRCADIAN_CONSISTENCY to
             @Composable { config: SleepMetricCardConfiguration ->
-                val scoreText =
-                    when (circadianResult) {
-                        is CircadianConsistencyResult.Calibrating ->
-                            stringResource(CoreUiR.string.spo2_calibrating)
-                        is CircadianConsistencyResult.MissingData ->
-                            stringResource(CoreUiR.string.metric_value_unavailable)
-                        is CircadianConsistencyResult.Ready ->
-                            stringResource(
-                                R.string.sleep_metric_percent_format,
-                                circadianResult.score.roundToPercentInt(),
-                            )
-                    }
-                val windowText =
-                    when (circadianResult) {
-                        is CircadianConsistencyResult.Calibrating,
-                        is CircadianConsistencyResult.MissingData,
-                        -> null
-                        is CircadianConsistencyResult.Ready ->
-                            stringResource(
-                                CoreUiR.string.label_circadian_median,
-                                circadianResult.medianBedtimeMinutes.toTimeString(),
-                                circadianResult.medianWakeMinutes.toTimeString(),
-                            )
-                    }
-                val thresholdMinutes =
-                    when (circadianResult) {
-                        is CircadianConsistencyResult.Calibrating,
-                        is CircadianConsistencyResult.MissingData,
-                        -> 30
-                        is CircadianConsistencyResult.Ready -> circadianResult.thresholdMinutes
-                    }
+                val scoreText = buildCircadianScoreText(circadianResult)
+                val windowText = buildCircadianWindowText(circadianResult)
+                val thresholdMinutes = getCircadianThresholdMinutes(circadianResult)
                 val tooltipText =
                     stringResource(CoreUiR.string.tooltip_circadian_score, thresholdMinutes)
-                val rawValue = (circadianResult as? CircadianConsistencyResult.Ready)?.score
 
                 SleepMetricCard(
                     title = stringResource(CoreUiR.string.label_circadian_consistency),
                     valueText = scoreText,
                     secondaryText = windowText,
-                    status = circadianResult.toStatus(),
+                    status = circadianCardStatus(circadianResult),
                     tooltip = tooltipText,
-                    rawValue = rawValue,
+                    rawValue = getCircadianRawScore(circadianResult),
                     maxScore = 100f,
                     supportedModes = supportedModes(SleepCardCatalog.metricCardSpec(config.cardId)),
                     requestedMode = SleepCardCatalog.requestedMetricCardMode(config).toUniversalMode(),
@@ -255,13 +219,7 @@ fun buildSleepMetricCardDataMap(
             @Composable { config: SleepMetricCardConfiguration ->
                 SleepMetricCard(
                     title = stringResource(CoreUiR.string.card_title_sleep_efficiency),
-                    valueText =
-                        session?.let {
-                            stringResource(
-                                CoreUiR.string.card_efficiency_format,
-                                it.efficiency.roundToPercentInt(),
-                            )
-                        } ?: stringResource(CoreUiR.string.metric_value_unavailable),
+                    valueText = buildEfficiencyText(session),
                     secondaryText = stringResource(CoreUiR.string.card_goal_sleep_efficiency),
                     status = efficiencyStatus,
                     tooltip = stringResource(CoreUiR.string.card_tooltip_sleep_efficiency),
@@ -279,9 +237,7 @@ fun buildSleepMetricCardDataMap(
             @Composable { config: SleepMetricCardConfiguration ->
                 SleepMetricCard(
                     title = stringResource(R.string.card_title_deep_sleep),
-                    valueText =
-                        metrics?.deepSleepPercentDisplay
-                            ?: stringResource(CoreUiR.string.metric_value_unavailable),
+                    valueText = buildDeepSleepText(metrics),
                     secondaryText = stringResource(R.string.card_target_deep_sleep),
                     status = deepStatus,
                     tooltip = stringResource(R.string.tooltip_deep_sleep),
@@ -299,9 +255,7 @@ fun buildSleepMetricCardDataMap(
             @Composable { config: SleepMetricCardConfiguration ->
                 SleepMetricCard(
                     title = stringResource(R.string.card_title_rem_sleep),
-                    valueText =
-                        metrics?.remSleepPercentDisplay
-                            ?: stringResource(CoreUiR.string.metric_value_unavailable),
+                    valueText = buildRemSleepText(metrics),
                     secondaryText = stringResource(R.string.card_target_rem_sleep),
                     status = remStatus,
                     tooltip = stringResource(R.string.tooltip_rem_sleep),
@@ -328,10 +282,7 @@ fun buildSleepMetricCardDataMap(
             @Composable { _: SleepMetricCardConfiguration ->
                 SleepMetricCard(
                     title = stringResource(R.string.card_title_nap_count),
-                    valueText =
-                        metrics?.napCount?.let {
-                            stringResource(R.string.sleep_metric_count_format, it)
-                        } ?: stringResource(R.string.sleep_metric_zero),
+                    valueText = buildNapCountText(metrics),
                     status = MetricStatus.NEUTRAL,
                     tooltip = stringResource(R.string.tooltip_nap_count),
                 )

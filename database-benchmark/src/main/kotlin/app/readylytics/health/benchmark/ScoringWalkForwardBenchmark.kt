@@ -8,10 +8,12 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.database.data.local.RoomTransactionRunner
 import app.readylytics.health.core.database.data.local.SessionLinkReconcilerImpl
+import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoader
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
+import app.readylytics.health.core.database.data.repository.ScoringSeriesLoader
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepStageEntity
@@ -149,7 +151,7 @@ class ScoringWalkForwardBenchmark {
                 .atStartOfDay(zoneId)
                 .toInstant()
                 .toEpochMilli()
-        val zoneThresholds = ZoneThresholds.zoneThresholds(120, 140, 155, 168, 180)
+        val zoneThresholds = ZoneThresholds.create(120, 140, 155, 168, 180)
 
         benchmarkRule.measureRepeated {
             runBlocking { reconciler.reconcile(startMs, endMs, zoneThresholds) }
@@ -218,18 +220,23 @@ class ScoringWalkForwardBenchmark {
                 db.dailySummaryDao(),
                 db.heartRateDao(),
                 db.minuteBucketDao(),
+            )
+        val bodyMetricsDataLoader =
+            BodyMetricsDataLoader(
                 db.weightRecordDao(),
                 db.bodyFatRecordDao(),
                 db.bloodPressureRecordDao(),
                 db.oxygenSaturationRecordDao(),
                 db.bodyTemperatureRecordDao(),
             )
+        val seriesLoader = ScoringSeriesLoader(db.workoutDao(), db.dailySummaryDao())
         val buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator)
         val resolveDailyBaselinesUseCase = ResolveDailyBaselinesUseCase(baselineComputer)
         val assembleDailySummaryUseCase = AssembleDailySummaryUseCase()
         val readinessSummaryCoordinator =
             ReadinessSummaryCoordinator(
                 dataLoader = dataLoader,
+                seriesLoader = seriesLoader,
                 scoringHistoryRepository = scoringHistoryRepository,
                 baselineComputer = baselineComputer,
                 buildLoadSeriesUseCase = buildLoadSeriesUseCase,
@@ -241,6 +248,8 @@ class ScoringWalkForwardBenchmark {
         val scoringRepository =
             ScoringRepositoryImpl(
                 dataLoader = dataLoader,
+                bodyMetricsDataLoader = bodyMetricsDataLoader,
+                seriesLoader = seriesLoader,
                 settingsRepo = settingsRepo,
                 baselineComputer = baselineComputer,
                 scoringConfigFactory = scoringConfigFactory,

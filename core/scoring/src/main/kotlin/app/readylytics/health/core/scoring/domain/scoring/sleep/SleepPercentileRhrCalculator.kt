@@ -1,7 +1,5 @@
 package app.readylytics.health.core.scoring.domain.scoring.sleep
 
-import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepPercentileRhrCalculator
-
 import app.readylytics.health.core.model.domain.model.SleepHrSample
 import app.readylytics.health.core.model.domain.model.SleepSession
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
@@ -24,14 +22,6 @@ class SleepPercentileRhrCalculator
             val restingHrBaseline: Int?,
             val restingHrRatio: Float?,
         )
-
-        private fun List<Int>.getPercentile(percentile: Int): Int? {
-            if (isEmpty()) return null
-            if (size == 1) return first()
-            val sorted = sorted()
-            val index = Math.round((percentile / 100.0) * (sorted.size - 1)).toInt().coerceIn(0, sorted.size - 1)
-            return sorted[index]
-        }
 
         suspend fun collect(
             session: SleepSession,

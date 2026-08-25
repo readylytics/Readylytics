@@ -132,7 +132,7 @@ open class KeyRaceTestService : Service() {
     ) {
         val helper =
             keyManager
-                .getOrCreateFactory(File(dbPath))
+                .getOrCreateFactory()
                 .create(
                     SupportSQLiteOpenHelper.Configuration
                         .builder(this)

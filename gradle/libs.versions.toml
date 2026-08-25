@@ -1,5 +1,5 @@
 [versions]
-agp = "9.3.1"
+agp = "9.3.2"
 detekt = "1.23.8"
 konsist = "0.17.3"
 kotlin = "2.3.21"
@@ -8,7 +8,7 @@ ksp = "2.3.9"
 hilt = "2.60.1"
 room = "2.8.4"
 sqlite = "2.7.0"
-sqlcipher = "4.16.0"
+sqlcipher = "4.17.0"
 datastore = "1.2.1"
 coroutines = "1.11.0"
 coreKtx = "1.19.0"
@@ -17,7 +17,8 @@ junitVersion = "1.3.0"
 espressoCore = "3.7.0"
 lifecycleRuntimeKtx = "2.11.0"
 activityCompose = "1.13.0"
-composeBom = "2026.06.00"
+composeBom = "2026.08.00"
+material3 = "1.5.0-alpha25"
 healthConnect = "1.1.0"
 navigationCompose = "2.9.8"
 hiltNavigationCompose = "1.4.0"
@@ -43,9 +44,9 @@ playServicesStats = "17.1.0"
 playServicesOssLicenses = "17.5.1"
 ossLicensesPlugin = "0.13.0"
 playPublisher = "4.1.1"
-appcompat = "1.7.1"
+appcompat = "1.8.0"
 materialColorUtilities = "5.0.0"
-adaptive = "1.2.0"
+adaptive = "1.3.0"
 
 
 
@@ -106,11 +107,11 @@ mockk-android = { group = "io.mockk", name = "mockk-android", version.ref = "moc
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidxTestCore" }
 androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }
-androidx-test-rules = { group = "androidx.test", name = "rules", version = "1.6.1" }
+androidx-test-rules = { group = "androidx.test", name = "rules", version = "1.7.0" }
 google-tink-android = { group = "com.google.crypto.tink", name = "tink-android", version.ref = "tink" }
 material = { group = "com.google.android.material", name = "material", version = "1.14.0" }
 material-color-utilities = { group = "com.materialkolor", name = "material-color-utilities", version.ref = "materialColorUtilities" }
-androidx-compose-material3-adaptive-navigation = { group = "androidx.compose.material3", name = "material3-adaptive-navigation-suite", version.ref = "adaptive" }
+androidx-compose-material3-adaptive-navigation = { group = "androidx.compose.material3", name = "material3-adaptive-navigation-suite", version.ref = "material3" }
 androidx-compose-material3-adaptive = { group = "androidx.compose.material3.adaptive", name = "adaptive", version.ref = "adaptive" }
 
 zip4j = { group = "net.lingala.zip4j", name = "zip4j", version.ref = "zip4j" }

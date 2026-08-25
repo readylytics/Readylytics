@@ -197,7 +197,7 @@ class ScoringEquivalenceGoldenTest {
                 }
             heartRateDao.upsertAll(rawSamples)
 
-            val thresholds = ZoneThresholds.zoneThresholds()
+            val thresholds = ZoneThresholds.create()
             val rawDomainSamples =
                 rawSamples.map {
                     DomainHeartRateSample(Instant.ofEpochMilli(it.timestampMs), it.beatsPerMinute)

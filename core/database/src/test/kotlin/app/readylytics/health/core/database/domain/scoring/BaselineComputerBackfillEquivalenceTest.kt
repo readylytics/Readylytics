@@ -65,6 +65,11 @@ class BaselineComputerBackfillEquivalenceTest {
 
     @Before
     fun setup() {
+        setupFixtureData()
+        setupDaoMocks()
+    }
+
+    private fun setupFixtureData() {
         // 60 nights, one per day, each fully contained within its own day (start 00:30, end 06:30).
         val halfHour = 30 * 60 * 1000L
         val sixHours = 6 * 60 * 60 * 1000L
@@ -101,7 +106,9 @@ class BaselineComputerBackfillEquivalenceTest {
                     (0 until 12).map { 48 + i % 7 + it } // >=10 samples (unsorted ok; fake sorts)
                 }
         }
+    }
 
+    private fun setupDaoMocks() {
         // Fake DAO semantics mirroring the SQL queries the per-day methods rely on.
         coEvery { sleepSessionDao.getBetween(any(), any()) } answers {
             val from = firstArg<Long>()
@@ -175,8 +182,6 @@ class BaselineComputerBackfillEquivalenceTest {
                         toMs = nextDayMidnightMs,
                         excludeSessionIds = ownSession?.id?.let(::setOf).orEmpty(),
                     )
-                val expectedRhr =
-                    baselineComputer.computeAdaptiveBaselineRhrBpmBetween(dayMidnightMs, nextDayMidnightMs, percentile)
                 val actual =
                     batched[
                         summary.dateMidnightMs.let {

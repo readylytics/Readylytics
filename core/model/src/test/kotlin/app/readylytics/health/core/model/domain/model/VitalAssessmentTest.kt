@@ -186,8 +186,14 @@ class VitalAssessmentTest {
                 rhrBpm = 50.4f,
             )
 
-        assertEquals(MetricStatus.WARNING, summary.rhrStatus(optimalThreshold = 1.0f, warningThreshold = 1.02f))
-        assertEquals(MetricStatus.WARNING, summary.restingHrStatus(optimalThreshold = 1.0f, warningThreshold = 1.02f))
+        assertEquals(
+            MetricStatus.WARNING,
+            summary.rhrStatus(optimalThreshold = 1.0f, warningThreshold = 1.02f),
+        )
+        assertEquals(
+            MetricStatus.WARNING,
+            summary.restingHrStatus(optimalThreshold = 1.0f, warningThreshold = 1.02f),
+        )
     }
 
     @Test
@@ -199,8 +205,14 @@ class VitalAssessmentTest {
                 rhrBpm = 50.4f,
             )
 
-        assertEquals(MetricStatus.CALIBRATING, summary.rhrStatus(optimalThreshold = 1.0f, warningThreshold = 1.02f))
-        assertEquals(MetricStatus.CALIBRATING, summary.restingHrStatus(optimalThreshold = 1.0f, warningThreshold = 1.02f))
+        assertEquals(
+            MetricStatus.CALIBRATING,
+            summary.rhrStatus(optimalThreshold = 1.0f, warningThreshold = 1.02f),
+        )
+        assertEquals(
+            MetricStatus.CALIBRATING,
+            summary.restingHrStatus(optimalThreshold = 1.0f, warningThreshold = 1.02f),
+        )
     }
 
     @Test

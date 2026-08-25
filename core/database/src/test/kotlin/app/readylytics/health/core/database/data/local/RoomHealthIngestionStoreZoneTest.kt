@@ -56,20 +56,24 @@ class RoomHealthIngestionStoreZoneTest {
 
     private fun buildStore(dailySummaryDao: DailySummaryDao): RoomHealthIngestionStore =
         RoomHealthIngestionStore(
-            sleepSessionDao = noOpDao(),
-            sleepStageDao = noOpDao(),
-            heartRateDao = noOpDao(),
-            hrvDao = noOpDao(),
-            workoutDao = noOpDao(),
-            workoutRoutePointDao = noOpDao(),
-            weightRecordDao = noOpDao(),
-            bodyFatRecordDao = noOpDao(),
-            bloodPressureRecordDao = noOpDao(),
-            oxygenSaturationRecordDao = noOpDao(),
-            bodyTemperatureRecordDao = noOpDao(),
-            stepRecordDao = noOpDao(),
+            daos =
+                HealthRecordDaos(
+                    sleepSessionDao = noOpDao(),
+                    sleepStageDao = noOpDao(),
+                    heartRateDao = noOpDao(),
+                    hrvDao = noOpDao(),
+                    workoutDao = noOpDao(),
+                    workoutRoutePointDao = noOpDao(),
+                    weightRecordDao = noOpDao(),
+                    bodyFatRecordDao = noOpDao(),
+                    bloodPressureRecordDao = noOpDao(),
+                    oxygenSaturationRecordDao = noOpDao(),
+                    bodyTemperatureRecordDao = noOpDao(),
+                    stepRecordDao = noOpDao(),
+                    sourceRecordDao = noOpDao(),
+                    minuteBucketDao = noOpDao(),
+                ),
             dailySummaryDao = dailySummaryDao,
-            sourceRecordDao = noOpDao(),
             transactionRunner =
                 object : TransactionRunner {
                     override suspend fun <R> runInTransaction(block: suspend () -> R): R = block()

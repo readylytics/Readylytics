@@ -107,7 +107,7 @@ internal fun bodyFatCategoryLabelRes(category: BodyFatCategory): Int =
 
 @Preview(showBackground = true)
 @Composable
-private fun BodyFatHistoryCardPreview() {
+internal fun BodyFatHistoryCardPreview() {
     FitDashboardTheme {
         Column {
             BodyFatHistoryCard(

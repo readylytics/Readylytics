@@ -277,12 +277,8 @@ class LocalRestoreValidationTest : LocalRestoreManagerTestBase() {
         val controlCharacters = (0x00..0x1f).map { it.toChar() }.joinToString("")
         val source = JSONObject().put("value", controlCharacters).toString()
         val reader = JsonReader(StringReader(source))
-        val readNextObjectAsString =
-            LocalRestoreManager::class.java
-                .getDeclaredMethod("readNextObjectAsString", JsonReader::class.java)
-                .apply { isAccessible = true }
-
-        val reemitted = readNextObjectAsString.invoke(manager, reader) as String
+        val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+        val reemitted = readNextObjectAsString(json, reader)
 
         assertTrue(reemitted.none { it.code in 0x00..0x1f })
     }

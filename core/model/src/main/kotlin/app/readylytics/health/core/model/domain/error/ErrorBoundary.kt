@@ -1,6 +1,7 @@
 package app.readylytics.health.core.model.domain.error
 
 import kotlinx.coroutines.CancellationException
+import app.readylytics.health.core.model.domain.util.logD
 
 /**
  * Result wrapper for operations that may fail.
@@ -96,7 +97,7 @@ suspend inline fun <T> SafeResult.Failure<T>.recover(
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    // Continue to next attempt
+                    logD("ErrorBoundary") { "Retry attempt failed, continuing: ${e.message}" }
                 }
             }
             this

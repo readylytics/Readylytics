@@ -11,7 +11,8 @@ object WorkoutMapper {
     private const val ELEVATION_GAIN_THRESHOLD_METERS = 3.0
 
     fun mapExerciseSession(session: DomainExerciseSessionRecord): WorkoutInput {
-        val durationMinutes = ((session.endTime.toEpochMilli() - session.startTime.toEpochMilli()) / 60_000L).toInt()
+        val durationMinutes =
+            ((session.endTime.toEpochMilli() - session.startTime.toEpochMilli()) / 60_000L).toInt()
         val sortedPoints = session.routePoints.sortedBy { it.time }
         return WorkoutInput(
             id = session.id,
@@ -33,7 +34,11 @@ object WorkoutMapper {
                     ?: fallbackDistanceMeters(sortedPoints),
             avgSpeedKmh =
                 session.avgSpeedMps?.takeIf { it in 0.0..100.0 }?.let { (it * 3.6).toFloat() }
-                    ?: fallbackAvgSpeedKmh(sortedPoints, session.startTime.toEpochMilli(), session.endTime.toEpochMilli()),
+                    ?: fallbackAvgSpeedKmh(
+                        points = sortedPoints,
+                        startMs = session.startTime.toEpochMilli(),
+                        endMs = session.endTime.toEpochMilli(),
+                    ),
             elevationGainMeters =
                 session.elevationGainMeters?.takeIf { it in 0.0..15_000.0 }?.toFloat()
                     ?: fallbackElevationGainMeters(sortedPoints),
