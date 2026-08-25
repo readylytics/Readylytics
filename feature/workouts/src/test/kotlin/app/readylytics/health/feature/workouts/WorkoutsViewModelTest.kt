@@ -19,6 +19,7 @@ import app.readylytics.health.core.scoring.domain.scoring.GetWorkoutDisplayMetri
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.WorkoutDisplayMetrics
 import app.readylytics.health.core.scoring.domain.scoring.WorkoutLoadClassification
+import app.readylytics.health.core.scoring.domain.workouts.weekly.ComputeWeeklyTrainingStatsUseCase
 import app.readylytics.health.core.ui.common.TimeRange
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -176,17 +177,15 @@ class WorkoutsViewModelTest {
 
     private fun createViewModel(): WorkoutsViewModel =
         WorkoutsViewModel(
-            dailySummaryRepository = dailySummaryRepository,
-            workoutRepository = workoutRepository,
-            heartRateRepository = heartRateRepository,
+            repositories = WorkoutsRepositories(dailySummaryRepository, workoutRepository, heartRateRepository),
             selectedDateRepository = selectedDateRepository,
             scoringCalculator = scoringCalculator,
             settingsRepo = settingsRepo,
-            getWorkoutDisplayMetricsUseCase = getWorkoutDisplayMetricsUseCase,
             foregroundSyncController = foregroundSyncController,
             workoutsLayoutRepository = workoutsLayoutRepository,
             savedStateHandle = savedStateHandle,
             dispatchers = WorkoutsDispatchers(testDispatcher, testDispatcher),
+            useCases = WorkoutsUseCases(getWorkoutDisplayMetricsUseCase, ComputeWeeklyTrainingStatsUseCase()),
         )
 
     @After
