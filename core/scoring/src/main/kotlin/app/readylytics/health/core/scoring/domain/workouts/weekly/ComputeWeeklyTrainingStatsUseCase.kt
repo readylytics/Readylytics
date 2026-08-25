@@ -42,7 +42,6 @@ class ComputeWeeklyTrainingStatsUseCase
 
             val currentToDateWorkouts = datedWorkouts.filter { (_, date) -> currentToDate.contains(date) }
             val previousToDateWorkouts = datedWorkouts.filter { (_, date) -> previousToDate.contains(date) }
-            val previousFullWorkouts = datedWorkouts.filter { (_, date) -> previousFull.contains(date) }
 
             val currentTotals = totalsFor(currentToDateWorkouts)
             val previousTotals = totalsFor(previousToDateWorkouts)

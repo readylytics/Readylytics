@@ -2,8 +2,10 @@ package app.readylytics.health.feature.workouts
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -12,7 +14,6 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -60,6 +61,7 @@ private fun WeeklyTrainingCards(stats: WeeklyTrainingStats) {
         modifier =
             Modifier
                 .fillMaxWidth()
+                .height(IntrinsicSize.Min)
                 .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
     ) {
@@ -77,7 +79,7 @@ private fun WeeklyTrainingCards(stats: WeeklyTrainingStats) {
                             stats.comparison.durationPercentChange,
                         ),
                 ),
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).fillMaxHeight(),
         )
         WeeklyStatCard(
             icon = Icons.Filled.EventAvailable,
@@ -89,7 +91,7 @@ private fun WeeklyTrainingCards(stats: WeeklyTrainingStats) {
                     previous = stats.previousWeek.workoutCount,
                     detail = WeeklyTrainingDeltaFormatter.formatCountDelta(stats.comparison.workoutCountDelta),
                 ),
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).fillMaxHeight(),
         )
         WeeklyStatCard(
             icon = Icons.Filled.CalendarMonth,
@@ -101,7 +103,7 @@ private fun WeeklyTrainingCards(stats: WeeklyTrainingStats) {
                     previous = stats.previousWeek.activeDays,
                     detail = WeeklyTrainingDeltaFormatter.formatCountDelta(stats.comparison.activeDaysDelta),
                 ),
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).fillMaxHeight(),
         )
     }
 }
@@ -117,7 +119,6 @@ private fun WeeklyStatCard(
     Card(
         modifier = modifier,
         shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
         Column(
             modifier = Modifier.padding(MaterialTheme.spacing.medium),

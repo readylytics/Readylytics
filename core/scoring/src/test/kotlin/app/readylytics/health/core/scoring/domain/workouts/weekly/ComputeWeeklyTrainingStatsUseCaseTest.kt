@@ -281,7 +281,7 @@ class ComputeWeeklyTrainingStatsUseCaseTest {
     }
 
     @Test
-    fun `previous-week totals cover the like-for-like window while the cumulative chart covers the full previous week`() {
+    fun `previous-week totals cover the like-for-like window while the chart covers the full week`() {
         val workouts =
             listOf(
                 workoutOn(LocalDate.of(2026, 5, 25), duration = 30),

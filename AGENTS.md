@@ -41,6 +41,7 @@ Offline-first Android health app (Health Connect + Room DB). minSdk=26, targetSd
 - **Tests:** Mirror source package structure. Must test boundary conditions and calculation logic. Zero Android dependencies in unit tests.
 - **Pre-Commit (Mandatory):** `./gradlew ktlintFormat && ./gradlew detekt && ./gradlew testDebugUnitTest` (and run `./gradlew lintRelease` at the end after resolving all coding tasks)
 - **Detekt Discipline:** New implementations must never add new detekt issues. If you touch a file that already has detekt issues, refactor it and resolve those issues too (boyscout rule).
+- **Detekt Suppressions Are Last Resort:** Never silence a detekt issue with `@Suppress` or baseline edits when a real fix exists — refactor instead (extract a parameter object/holder class, split the method, restructure). Suppress only when no structural fix is viable, and pair it with a comment explaining why no fix was possible. **Any change that adds a `@Suppress` or introduces/accepts a new detekt issue (including baseline edits) requires explicit human approval before merge.**
 - **Build Utilities:** `./gradlew installDebug`, `./gradlew assembleDebug`, `./gradlew clean`
 
 ## Documentation Sync

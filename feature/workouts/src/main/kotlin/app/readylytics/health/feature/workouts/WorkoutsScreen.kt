@@ -205,11 +205,6 @@ fun WorkoutsScreen(
                     onReorderCharts = onReorderCharts,
                 )
 
-                WeeklyTrainingSection(
-                    stats = uiState.weeklyTraining,
-                    isLoading = uiState.isLoading,
-                )
-
                 Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
 
                 HistoryDisplaySection(

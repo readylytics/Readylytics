@@ -164,7 +164,7 @@ class WorkoutsViewModelLayoutManagementTest {
             viewModel = createViewModel()
             val collector = backgroundScope.launch { viewModel.uiState.collect() }
             advanceUntilIdle()
-            assertEquals(1, viewModel.uiState.value.chartConfigurations.size)
+            assertEquals(2, viewModel.uiState.value.chartConfigurations.size)
 
             viewModel.toggleWorkoutsManagement()
             advanceUntilIdle()
@@ -181,6 +181,33 @@ class WorkoutsViewModelLayoutManagementTest {
             coVerify {
                 workoutsLayoutRepository.updateWorkoutChartConfigurations(
                     match { charts -> charts.any { it.chartId == WorkoutChartId.ACWR_TRIMP && !it.isVisible } },
+                )
+            }
+            collector.cancel()
+        }
+
+    @Test
+    fun `chart management toggle hides weekly training section and persists on save`() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            advanceUntilIdle()
+
+            viewModel.toggleWorkoutsManagement()
+            advanceUntilIdle()
+            viewModel.onToggleChartVisibility(WorkoutChartId.WEEKLY_TRAINING, visible = false)
+            advanceUntilIdle()
+            assertFalse(
+                viewModel.uiState.value.chartConfigurations
+                    .first { it.chartId == WorkoutChartId.WEEKLY_TRAINING }
+                    .isVisible,
+            )
+
+            viewModel.toggleWorkoutsManagement()
+            advanceUntilIdle()
+            coVerify {
+                workoutsLayoutRepository.updateWorkoutChartConfigurations(
+                    match { charts -> charts.any { it.chartId == WorkoutChartId.WEEKLY_TRAINING && !it.isVisible } },
                 )
             }
             collector.cancel()

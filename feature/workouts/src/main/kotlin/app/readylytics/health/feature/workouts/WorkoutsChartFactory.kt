@@ -34,4 +34,11 @@ fun buildWorkoutsChartDataMap(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.pageHorizontal),
             )
         },
+        WorkoutChartId.WEEKLY_TRAINING to { _: WorkoutChartConfiguration ->
+            WeeklyTrainingSection(
+                stats = uiState.weeklyTraining,
+                isLoading = uiState.isLoading,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
     )
