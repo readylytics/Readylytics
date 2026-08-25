@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import java.io.IOException
+import java.time.DayOfWeek
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -286,6 +287,8 @@ class SettingsRepository
         override suspend fun clearDeviceCache() = ui.clearDeviceCache()
 
         override suspend fun updateUnitSystem(unitSystem: UnitSystem) = ui.updateUnitSystem(unitSystem)
+
+        override suspend fun updateWeekStartDay(day: DayOfWeek) = ui.updateWeekStartDay(day)
 
         override suspend fun updateHrrToleranceSeconds(value: Int) = sleep.updateHrrToleranceSeconds(value)
 

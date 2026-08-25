@@ -27,6 +27,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.time.DayOfWeek
 import java.time.LocalDate
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -105,6 +106,8 @@ class SettingsReopenAfterSetupFlowTest {
                 override suspend fun updateUnitSystem(unitSystem: UnitSystem) {
                     preferences.update { it.copy(unitSystem = unitSystem) }
                 }
+
+                override suspend fun updateWeekStartDay(day: DayOfWeek) = error("Unexpected call: updateWeekStartDay")
 
                 override suspend fun updateHrrToleranceSeconds(value: Int) =
                     error("Unexpected call: updateHrrToleranceSeconds")

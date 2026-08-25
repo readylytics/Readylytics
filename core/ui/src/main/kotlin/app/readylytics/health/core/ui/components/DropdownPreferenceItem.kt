@@ -1,6 +1,7 @@
 package app.readylytics.health.core.ui.components
 
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -57,9 +58,10 @@ fun <T> DropdownPreferenceItem(
                     OutlinedTextFieldDefaults.colors()
                 },
         )
-        ExposedDropdownMenu(
+        DropdownMenu(
             expanded = expanded && enabled,
             onDismissRequest = { expanded = false },
+            modifier = Modifier.exposedDropdownSize(),
         ) {
             options.forEach { option ->
                 DropdownMenuItem(

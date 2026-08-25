@@ -12,6 +12,7 @@ import app.readylytics.health.core.model.data.preferences.normalizeHypersomniaOn
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -37,6 +38,17 @@ internal fun UserPreferences.withZonesAndDemographics(proto: UserPreferencesProt
                 UnitSystemProto.UNIT_METRIC -> UnitSystem.METRIC
                 UnitSystemProto.UNIT_IMPERIAL -> UnitSystem.IMPERIAL
                 else -> SettingsDefaults.UNIT_SYSTEM
+            },
+        weekStartDay =
+            when (proto.weekStartDay) {
+                DayOfWeekProto.DAY_OF_WEEK_MONDAY -> DayOfWeek.MONDAY
+                DayOfWeekProto.DAY_OF_WEEK_TUESDAY -> DayOfWeek.TUESDAY
+                DayOfWeekProto.DAY_OF_WEEK_WEDNESDAY -> DayOfWeek.WEDNESDAY
+                DayOfWeekProto.DAY_OF_WEEK_THURSDAY -> DayOfWeek.THURSDAY
+                DayOfWeekProto.DAY_OF_WEEK_FRIDAY -> DayOfWeek.FRIDAY
+                DayOfWeekProto.DAY_OF_WEEK_SATURDAY -> DayOfWeek.SATURDAY
+                DayOfWeekProto.DAY_OF_WEEK_SUNDAY -> DayOfWeek.SUNDAY
+                else -> SettingsDefaults.WEEK_START_DAY
             },
     )
 

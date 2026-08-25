@@ -16,6 +16,7 @@ import app.readylytics.health.core.model.domain.user.UserProfileActions
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import java.time.DayOfWeek
 import java.time.LocalDate
 
 class FirstSetupFlowHarness(
@@ -92,6 +93,8 @@ class FirstSetupFlowHarness(
         override suspend fun updateUnitSystem(unitSystem: UnitSystem) {
             preferences.update { it.copy(unitSystem = unitSystem) }
         }
+
+        override suspend fun updateWeekStartDay(day: DayOfWeek) = error("Unexpected call: updateWeekStartDay")
 
         override suspend fun updateAppTheme(theme: app.readylytics.health.core.model.data.preferences.AppTheme) =
             error("Unexpected call: updateAppTheme")
