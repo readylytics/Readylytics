@@ -41,6 +41,12 @@
     <string name="workout_stats_acwr_title">Training Load &amp; Strain Ratio (ACWR)</string>
     <string name="workout_stats_ras_title">Readylytics Activity Score</string>
     <string name="workout_stats_history_title">History</string>
+    <string name="workout_stats_weekly_title">Weekly training</string>
+    <string name="workout_stats_weekly_training_time">Training time</string>
+    <string name="workout_stats_weekly_workouts">Workouts</string>
+    <string name="workout_stats_weekly_active_days">Active days</string>
+    <string name="workout_stats_weekly_active_days_value">%1$d / 7</string>
+    <string name="workout_stats_weekly_vs_last_week">vs last week</string>
     <string name="workout_zones_title">Heart rate zones</string>
     <string name="workouts_manage_layout">Customize Workouts</string>
     <string name="workouts_management_cards_section_title">Cards</string>
