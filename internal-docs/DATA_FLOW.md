@@ -756,6 +756,22 @@ have been rolled up, `ScoringRepositoryImpl.exerciseSamplesForWorkout` rebuilds 
 sample stream from its warm exercise buckets, so variable-duration integration keeps working. The
 fetch+assemble step is extracted into `AssembleEverydayLoadInputUseCase`.
 
+### 2.3.1 Weekly Training Analytics — aggregation, week boundaries, activity breakdown
+
+Pure-Kotlin weekly aggregation layer feeding the Workouts tab's weekly visualizations (weekly totals, this-week-vs-last-week daily cumulative chart, per-activity-type volume, training mix). All components live in `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/workouts/weekly/` and have zero Android dependencies.
+
+| Component                          | Path                                                 | Responsibility |
+| :--------------------------------- | :--------------------------------------------------- | :------------- |
+| `WeekBounds`                       | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/util/WeekBounds.kt` | Single source of truth for "this week"/"last week" `DateRange` boundaries given the user's configured `DayOfWeek` week start. Provides `currentWeekToDate`, `currentWeekFull`, `previousWeekFull`, and `previousWeekToDate` — all weekly aggregation must resolve through here so every visualization agrees on the same week definition. Pure Kotlin, no Android dependencies. |
+| `ComputeWeeklyTrainingStatsUseCase`| `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/workouts/weekly/ComputeWeeklyTrainingStatsUseCase.kt` | Single-pass aggregation over `WorkoutData` producing `WeeklyTrainingStats` — weekly totals (`PeriodTotals`), current-vs-previous comparison (`PeriodComparison`), a 7-entry cumulative daily chart (`DailyTrainingVolume`), per-activity-type volume (`ActivityVolume`), and training mix (`TrainingMixItem`). All four visualizations share one pass so they can never disagree on workout inclusion, duration, activity classification, or week boundaries. Workout dates are resolved via the caller-supplied `ZoneId`. Current-week data is truncated to `today` (no fabricated future values); previous-week data covers the full 7-day window. Delegates activity-type grouping to `WeeklyActivityBreakdown`. |
+| `WeeklyActivityBreakdown`          | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/workouts/weekly/WeeklyActivityBreakdown.kt` | Internal helper: per-`WorkoutLayoutType` volume aggregation (distance or duration, per `ActivityMetricTypeMapper`) and training-mix percentage calculation. Shared by Activity Volume and Training Mix so their groupings never drift apart. |
+| `ActivityMetricTypeMapper`         | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/workouts/weekly/ActivityMetricTypeMapper.kt` | Maps each `WorkoutLayoutType` to `ActivityMetricType.DISTANCE` (running, walking, cycling, swimming, hiking) or `ActivityMetricType.DURATION` (strength, yoga, pilates, elliptical, rowing, stairs, HIIT, other). |
+| `WeeklyTrainingModels`             | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/workouts/weekly/WeeklyTrainingModels.kt` | Domain models: `WeeklyTrainingStats`, `PeriodTotals`, `PeriodComparison`, `DailyTrainingVolume`, `ActivityVolume`, `TrainingMixItem`, `ActivityMetricType` enum. Pure data classes, no logic. |
+
+The user-configurable week start day is persisted in `UserPreferences.weekStartDay` (proto `WEEK_START_DAY` field, default `MONDAY` via `SettingsDefaults.DEFAULT_WEEK_START_DAY`), serialized/deserialized through `UserPreferencesSerializer`/`UserPreferencesMapperExtensions`, and exposed through `UIPreferences.weekStartDay`. The `WeekStartDayPicker` composable in `core/ui` provides the selection UI.
+
+> **Not a scoring formula.** This use case performs pure aggregation (sums, counts, percentages) over already-scored `WorkoutData` from Room — it does not compute TRIMP, RAS, or any load/recovery metric. It reads Room via `WorkoutRepository.getInRange` and never touches Health Connect. Week boundaries are the only configurable input; the aggregation math itself is fixed.
+
 ### 2.4 Baselines & calibration
 
 **Physiology profiles** are now exactly **Athlete / Active / Sedentary**

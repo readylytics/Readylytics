@@ -1,7 +1,6 @@
 package app.readylytics.health.core.scoring.domain.workouts.weekly
 
 import app.readylytics.health.core.model.domain.repository.WorkoutData
-import app.readylytics.health.core.model.domain.workouts.detail.WorkoutLayoutType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -222,112 +221,8 @@ class ComputeWeeklyTrainingStatsUseCaseTest {
 
     // endregion
 
-    // region Activity volume
+    // Activity volume and training mix tests live in WeeklyActivityBreakdownTest.kt.
 
-    @Test
-    fun `distance-based activity sums distance across current and previous week`() {
-        val workouts =
-            listOf(
-                workoutOn(LocalDate.of(2026, 6, 1), exerciseType = "running", distanceMeters = 1000f),
-                workoutOn(LocalDate.of(2026, 6, 2), exerciseType = "running", distanceMeters = 1500f),
-                workoutOn(LocalDate.of(2026, 5, 25), exerciseType = "running", distanceMeters = 2000f),
-            )
-
-        val volumes = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC).activityVolumes
-        val running = volumes.single { it.activityType == WorkoutLayoutType.RUNNING }
-
-        assertEquals(ActivityMetricType.DISTANCE, running.metricType)
-        assertEquals(2500f, running.currentWeekValue, 0.001f)
-        assertEquals(2000f, running.previousWeekValue, 0.001f)
-        assertEquals(500f, running.absoluteChange, 0.001f)
-        assertEquals(25f, running.percentChange!!, 0.001f)
-    }
-
-    @Test
-    fun `duration-based activity sums duration, not distance`() {
-        val workouts =
-            listOf(
-                workoutOn(LocalDate.of(2026, 6, 1), exerciseType = "strength", duration = 30),
-                workoutOn(LocalDate.of(2026, 6, 2), exerciseType = "strength", duration = 45),
-            )
-
-        val volumes = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC).activityVolumes
-        val strength = volumes.single { it.activityType == WorkoutLayoutType.STRENGTH }
-
-        assertEquals(ActivityMetricType.DURATION, strength.metricType)
-        assertEquals(75f, strength.currentWeekValue, 0.001f)
-    }
-
-    @Test
-    fun `multiple health connect exercise type ids mapping to one category aggregate together`() {
-        val workouts =
-            listOf(
-                workoutOn(LocalDate.of(2026, 6, 1), exerciseType = "73", distanceMeters = 500f), // pool swimming
-                workoutOn(LocalDate.of(2026, 6, 2), exerciseType = "74", distanceMeters = 700f), // open water swimming
-            )
-
-        val volumes = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC).activityVolumes
-        val swimming = volumes.filter { it.activityType == WorkoutLayoutType.SWIMMING }
-
-        assertEquals(1, swimming.size)
-        assertEquals(1200f, swimming.single().currentWeekValue, 0.001f)
-    }
-
-    @Test
-    fun `missing distance on a distance-based activity contributes zero without failing`() {
-        val workouts = listOf(workoutOn(LocalDate.of(2026, 6, 1), exerciseType = "running", distanceMeters = null))
-
-        val volumes = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC).activityVolumes
-
-        assertEquals(0f, volumes.single { it.activityType == WorkoutLayoutType.RUNNING }.currentWeekValue, 0.001f)
-    }
-
-    @Test
-    fun `zero duration on a duration-based activity still appears with a zero value`() {
-        val workouts = listOf(workoutOn(LocalDate.of(2026, 6, 1), exerciseType = "strength", duration = 0))
-
-        val volumes = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC).activityVolumes
-
-        assertEquals(0f, volumes.single { it.activityType == WorkoutLayoutType.STRENGTH }.currentWeekValue, 0.001f)
-    }
-
-    // endregion
-
-    // region Training mix
-
-    @Test
-    fun `single activity type yields one hundred percent`() {
-        val workouts = listOf(workoutOn(LocalDate.of(2026, 6, 1), exerciseType = "running", duration = 60))
-
-        val mix = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC).trainingMix
-
-        assertEquals(1, mix.size)
-        assertEquals(100f, mix.single().percentage, 0.001f)
-    }
-
-    @Test
-    fun `multiple activity types split percentages proportionally and sum to one hundred`() {
-        val workouts =
-            listOf(
-                workoutOn(LocalDate.of(2026, 6, 1), exerciseType = "running", duration = 30),
-                workoutOn(LocalDate.of(2026, 6, 2), exerciseType = "strength", duration = 90),
-            )
-
-        val mix = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC).trainingMix
-
-        assertEquals(25f, mix.single { it.activityType == WorkoutLayoutType.RUNNING }.percentage, 0.001f)
-        assertEquals(75f, mix.single { it.activityType == WorkoutLayoutType.STRENGTH }.percentage, 0.001f)
-        assertEquals(100f, mix.sumOf { it.percentage.toDouble() }.toFloat(), 0.001f)
-    }
-
-    @Test
-    fun `empty week yields an empty training mix`() {
-        val mix = useCase.execute(emptyList(), today, DayOfWeek.MONDAY, ZoneOffset.UTC).trainingMix
-
-        assertTrue(mix.isEmpty())
-    }
-
-    // endregion
 
     // region Cross-model consistency
 
