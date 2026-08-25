@@ -17,6 +17,7 @@ import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryId
 import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
 import app.readylytics.health.core.scoring.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
+import app.readylytics.health.core.scoring.domain.workouts.weekly.ComputeWeeklyTrainingStatsUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -103,18 +104,15 @@ class WorkoutsViewModelLayoutManagementTest {
 
     private fun createViewModel(): WorkoutsViewModel =
         WorkoutsViewModel(
-            dailySummaryRepository = dailySummaryRepository,
-            workoutRepository = workoutRepository,
-            heartRateRepository = heartRateRepository,
+            repositories = WorkoutsRepositories(dailySummaryRepository, workoutRepository, heartRateRepository),
             selectedDateRepository = selectedDateRepository,
             scoringCalculator = scoringCalculator,
             settingsRepo = settingsRepo,
-            getWorkoutDisplayMetricsUseCase = getWorkoutDisplayMetricsUseCase,
             foregroundSyncController = foregroundSyncController,
             workoutsLayoutRepository = workoutsLayoutRepository,
             savedStateHandle = SavedStateHandle(),
-            ioDispatcher = testDispatcher,
-            defaultDispatcher = testDispatcher,
+            dispatchers = WorkoutsDispatchers(testDispatcher, testDispatcher),
+            useCases = WorkoutsUseCases(getWorkoutDisplayMetricsUseCase, ComputeWeeklyTrainingStatsUseCase()),
         )
 
     @After
@@ -165,7 +163,7 @@ class WorkoutsViewModelLayoutManagementTest {
             viewModel = createViewModel()
             val collector = backgroundScope.launch { viewModel.uiState.collect() }
             advanceUntilIdle()
-            assertEquals(1, viewModel.uiState.value.chartConfigurations.size)
+            assertEquals(2, viewModel.uiState.value.chartConfigurations.size)
 
             viewModel.toggleWorkoutsManagement()
             advanceUntilIdle()
@@ -182,6 +180,33 @@ class WorkoutsViewModelLayoutManagementTest {
             coVerify {
                 workoutsLayoutRepository.updateWorkoutChartConfigurations(
                     match { charts -> charts.any { it.chartId == WorkoutChartId.ACWR_TRIMP && !it.isVisible } },
+                )
+            }
+            collector.cancel()
+        }
+
+    @Test
+    fun `chart management toggle hides weekly training section and persists on save`() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            advanceUntilIdle()
+
+            viewModel.toggleWorkoutsManagement()
+            advanceUntilIdle()
+            viewModel.onToggleChartVisibility(WorkoutChartId.WEEKLY_TRAINING, visible = false)
+            advanceUntilIdle()
+            assertFalse(
+                viewModel.uiState.value.chartConfigurations
+                    .first { it.chartId == WorkoutChartId.WEEKLY_TRAINING }
+                    .isVisible,
+            )
+
+            viewModel.toggleWorkoutsManagement()
+            advanceUntilIdle()
+            coVerify {
+                workoutsLayoutRepository.updateWorkoutChartConfigurations(
+                    match { charts -> charts.any { it.chartId == WorkoutChartId.WEEKLY_TRAINING && !it.isVisible } },
                 )
             }
             collector.cancel()

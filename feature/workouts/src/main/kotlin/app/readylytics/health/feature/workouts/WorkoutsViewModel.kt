@@ -5,8 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.data.preferences.UserPreferences
-import app.readylytics.health.core.model.di.DefaultDispatcher
-import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
 import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.dashboard.CardManagementDelegate
@@ -17,22 +15,19 @@ import app.readylytics.health.core.model.domain.layout.LayoutManagementDelegate
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.preferences.scoringZone
-import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
-import app.readylytics.health.core.model.domain.repository.HeartRateRepository
 import app.readylytics.health.core.model.domain.repository.WorkoutData
-import app.readylytics.health.core.model.domain.repository.WorkoutRepository
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
+import app.readylytics.health.core.model.domain.util.WeekBounds
 import app.readylytics.health.core.model.domain.workouts.WorkoutChartConfiguration
 import app.readylytics.health.core.model.domain.workouts.WorkoutChartId
 import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryConfiguration
 import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryId
 import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
-import app.readylytics.health.core.scoring.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
+import app.readylytics.health.core.scoring.domain.workouts.weekly.WeeklyTrainingStats
 import app.readylytics.health.core.ui.common.TimeRange
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -49,24 +44,22 @@ import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 
 @HiltViewModel
 class WorkoutsViewModel
     @Inject
     constructor(
-        private val dailySummaryRepository: DailySummaryRepository,
-        private val workoutRepository: WorkoutRepository,
-        private val heartRateRepository: HeartRateRepository,
+        private val repositories: WorkoutsRepositories,
         private val selectedDateRepository: SelectedDateStore,
         private val scoringCalculator: ScoringCalculator,
         private val settingsRepo: UserPreferencesReader,
-        private val getWorkoutDisplayMetricsUseCase: GetWorkoutDisplayMetricsUseCase,
         private val foregroundSyncController: ForegroundSyncGateway,
         private val workoutsLayoutRepository: WorkoutsLayoutRepository,
         private val savedStateHandle: SavedStateHandle,
-        @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
-        @param:DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
+        private val dispatchers: WorkoutsDispatchers,
+        private val useCases: WorkoutsUseCases,
     ) : ViewModel() {
         private val _selectedRange =
             MutableStateFlow(savedStateHandle.get<TimeRange>("selectedRange") ?: TimeRange.SEVEN_DAYS)
@@ -180,17 +173,17 @@ class WorkoutsViewModel
 
                     val summaryFlow =
                         if (params.date == LocalDate.now(zoneId)) {
-                            dailySummaryRepository.observeLatest()
+                            repositories.dailySummary.observeLatest()
                         } else {
                             flow {
-                                emit(dailySummaryRepository.getByDate(window.selectedMidnightMs))
-                            }.flowOn(ioDispatcher)
+                                emit(repositories.dailySummary.getByDate(window.selectedMidnightMs))
+                            }.flowOn(dispatchers.io)
                         }
 
                     combine(
                         summaryFlow,
-                        dailySummaryRepository.observeSince(window.fetchFromMs),
-                        dailySummaryRepository.observeSince(window.rasFromMs),
+                        repositories.dailySummary.observeSince(window.fetchFromMs),
+                        repositories.dailySummary.observeSince(window.rasFromMs),
                         settingsRepo.userPreferences,
                     ) { latest, trimpSummaries, rasSummaries, prefs ->
                         val earliestLocalDate =
@@ -198,19 +191,19 @@ class WorkoutsViewModel
                                 prefs = prefs,
                                 trimpSummaries = trimpSummaries,
                                 zoneId = zoneId,
-                                getEarliestWorkoutTimestamp = workoutRepository::getEarliestWorkoutTimestamp,
+                                getEarliestWorkoutTimestamp = repositories.workout::getEarliestWorkoutTimestamp,
                             )
 
                         val pageSize = 10
                         val totalItems =
-                            workoutRepository.countByTimeRange(
+                            repositories.workout.countByTimeRange(
                                 window.displayFromMs,
                                 window.selectedDayEndMs,
                             )
                         val totalPages = maxOf(1, (totalItems + pageSize - 1) / pageSize)
                         val clampedPage = params.page.coerceIn(1, totalPages)
                         val pageWorkouts =
-                            workoutRepository.getInRangePaged(
+                            repositories.workout.getInRangePaged(
                                 window.displayFromMs,
                                 window.selectedDayEndMs,
                                 pageSize,
@@ -219,6 +212,7 @@ class WorkoutsViewModel
 
                         val recentItems = loadRecentWorkouts(pageWorkouts, prefs, trimpSummaries)
                         val workoutOnlyGains = loadWorkoutOnlyGains(window, prefs, trimpSummaries)
+                        val weeklyTraining = loadWeeklyTraining(params.date, prefs, zoneId)
 
                         buildWorkoutsState(
                             WorkoutsStateInputs(
@@ -235,6 +229,7 @@ class WorkoutsViewModel
                                 totalPages = totalPages,
                                 earliestLocalDate = earliestLocalDate,
                                 workoutOnlyGains = workoutOnlyGains,
+                                weeklyTraining = weeklyTraining,
                             ),
                         )
                     }
@@ -264,7 +259,7 @@ class WorkoutsViewModel
                         historyConfigurations = historyState.pendingConfiguration ?: historyState.historyConfigurations,
                         isManagingHistory = historyState.isManagingHistory,
                     )
-                }.flowOn(defaultDispatcher)
+                }.flowOn(dispatchers.default)
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5_000),
@@ -276,11 +271,11 @@ class WorkoutsViewModel
             prefs: UserPreferences,
             trimpSummaries: List<DailySummary>,
         ): List<WorkoutDisplayItem> {
-            val samplesByWorkoutId = fetchHeartRateSamplesByWorkout(pageWorkouts, heartRateRepository)
+            val samplesByWorkoutId = fetchHeartRateSamplesByWorkout(pageWorkouts, repositories.heartRate)
             return pageWorkouts.map { workout ->
                 val samples = samplesByWorkoutId[workout.id] ?: emptyList()
                 val displayMetrics =
-                    getWorkoutDisplayMetricsUseCase.execute(
+                    useCases.getWorkoutDisplayMetrics.execute(
                         workout = workout,
                         samples = samples,
                         preferences = prefs,
@@ -302,11 +297,12 @@ class WorkoutsViewModel
             trimpSummaries: List<DailySummary>,
         ): List<Float> {
             if (prefs.strainLoadSourceMode != LoadSourceMode.WORKOUT_ONLY) return emptyList()
-            val selectedDayWorkouts = workoutRepository.getInRange(window.selectedMidnightMs, window.selectedDayEndMs)
-            val selectedDaySamples = fetchHeartRateSamplesByWorkout(selectedDayWorkouts, heartRateRepository)
+            val selectedDayWorkouts =
+                repositories.workout.getInRange(window.selectedMidnightMs, window.selectedDayEndMs)
+            val selectedDaySamples = fetchHeartRateSamplesByWorkout(selectedDayWorkouts, repositories.heartRate)
             return selectedDayWorkouts.map { workout ->
                 val samples = selectedDaySamples[workout.id] ?: emptyList()
-                getWorkoutDisplayMetricsUseCase
+                useCases.getWorkoutDisplayMetrics
                     .execute(
                         workout = workout,
                         samples = samples,
@@ -314,6 +310,23 @@ class WorkoutsViewModel
                         historicalSummaries = trimpSummaries,
                     ).gainedStrain
             }
+        }
+
+        private suspend fun loadWeeklyTraining(
+            anchor: LocalDate,
+            prefs: UserPreferences,
+            zoneId: ZoneId,
+        ): WeeklyTrainingStats {
+            val fetchStart = WeekBounds.previousWeekFull(anchor, prefs.weekStartDay).start
+            val fromMs = fetchStart.atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val toMs =
+                anchor
+                    .plusDays(1)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val workouts = repositories.workout.getInRange(fromMs, toMs)
+            return useCases.computeWeeklyTrainingStats.execute(workouts, anchor, prefs.weekStartDay, zoneId)
         }
 
         fun onRangeSelected(range: TimeRange) {
