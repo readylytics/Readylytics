@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.scoring.domain.workouts.weekly.DailyTrainingVolume
 import app.readylytics.health.core.scoring.domain.workouts.weekly.WeeklyTrainingStats
+import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.DataPointTooltip
@@ -49,6 +50,7 @@ import com.patrykandpatrick.vico.compose.cartesian.data.lineModel
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerVisibilityListener
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
@@ -146,6 +148,32 @@ private fun WeeklyVolumeTrendChart(
             daily.map { it.date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()) }
         }
 
+    val modelProducer = rememberWeeklyVolumeModelProducer(currentPoints, previousPoints)
+    val (currentLine, previousLine) = rememberWeeklyVolumeLines(todayOffset)
+    val rangeProvider = rememberWeeklyVolumeRangeProvider(currentPoints, previousPoints)
+    val markerVisibilityListener =
+        rememberWeeklyVolumeMarkerVisibilityListener(onStateChanged = { selectedState = it })
+    val tooltipData = rememberWeeklyVolumeTooltipData(daily, selectedState)
+
+    WeeklyVolumeTrendChartContent(
+        modifier = modifier,
+        modelProducer = modelProducer,
+        currentLine = currentLine,
+        previousLine = previousLine,
+        rangeProvider = rangeProvider,
+        weekdayLabels = weekdayLabels,
+        markerVisibilityListener = markerVisibilityListener,
+        selectedState = selectedState,
+        tooltipData = tooltipData,
+        onDismissTooltip = { selectedState = null },
+    )
+}
+
+@Composable
+private fun rememberWeeklyVolumeModelProducer(
+    currentPoints: List<DailyDataPoint>,
+    previousPoints: List<DailyDataPoint>,
+): CartesianChartModelProducer {
     val modelProducer = remember { CartesianChartModelProducer() }
     LaunchedEffect(currentPoints, previousPoints) {
         modelProducer.runTransaction {
@@ -155,7 +183,11 @@ private fun WeeklyVolumeTrendChart(
             }
         }
     }
+    return modelProducer
+}
 
+@Composable
+private fun rememberWeeklyVolumeLines(todayOffset: Int?): Pair<LineCartesianLayer.Line, LineCartesianLayer.Line> {
     val primaryColor = MaterialTheme.colorScheme.primary
     val todayDotComponent = rememberShapeComponent(fill = Fill(primaryColor), shape = CircleShape)
     val todayPointProvider =
@@ -197,7 +229,14 @@ private fun WeeklyVolumeTrendChart(
                 ),
             interpolator = LineCartesianLayer.Interpolator.cubic(0.2f),
         )
+    return currentLine to previousLine
+}
 
+@Composable
+private fun rememberWeeklyVolumeRangeProvider(
+    currentPoints: List<DailyDataPoint>,
+    previousPoints: List<DailyDataPoint>,
+): CartesianLayerRangeProvider {
     val maxY =
         remember(currentPoints, previousPoints) {
             val maxValue =
@@ -207,16 +246,63 @@ private fun WeeklyVolumeTrendChart(
                 )
             (ceil(maxValue / Y_AXIS_STEP_MINUTES) * Y_AXIS_STEP_MINUTES).coerceAtLeast(Y_AXIS_FLOOR_MINUTES)
         }
-    val rangeProvider =
-        remember(maxY) {
-            CartesianLayerRangeProvider.fixed(
-                minX = 0.0,
-                maxX = (DAYS_IN_WEEK - 1).toDouble(),
-                minY = 0.0,
-                maxY = maxY,
+    return remember(maxY) {
+        CartesianLayerRangeProvider.fixed(
+            minX = 0.0,
+            maxX = (DAYS_IN_WEEK - 1).toDouble(),
+            minY = 0.0,
+            maxY = maxY,
+        )
+    }
+}
+
+@Composable
+private fun rememberWeeklyVolumeTooltipData(
+    daily: List<DailyTrainingVolume>,
+    selectedState: WeeklyVolumeSelectedState?,
+): DataPointTooltipData? {
+    val thisWeekFormat = stringResource(R.string.weekly_volume_tooltip_this_week_format)
+    val lastWeekFormat = stringResource(R.string.weekly_volume_tooltip_last_week_format)
+    val diffFormat = stringResource(R.string.weekly_volume_tooltip_diff_format)
+
+    return remember(selectedState, daily, thisWeekFormat, lastWeekFormat, diffFormat) {
+        selectedState?.let { state ->
+            val date = daily.getOrNull(state.dayOffset)?.date
+            val delta = WeeklyVolumeTrendMapper.dailyDelta(state.currentMinutes, state.previousMinutes)
+            DataPointTooltipData(
+                valueText = date?.format(TOOLTIP_DATE_FORMAT).orEmpty(),
+                dateText = lastWeekFormat.format(WeeklyTrainingDeltaFormatter.formatDuration(state.previousMinutes)),
+                preDateLines =
+                    state.currentMinutes
+                        ?.let {
+                            listOf(thisWeekFormat.format(WeeklyTrainingDeltaFormatter.formatDuration(it)))
+                        }.orEmpty(),
+                extraLine =
+                    delta?.let {
+                        diffFormat.format(
+                            WeeklyTrainingDeltaFormatter.formatDurationDelta(it.deltaMinutes, it.percentChange),
+                        )
+                    },
+                offset = IntOffset(state.canvasX.toInt(), (state.canvasY ?: 0f).toInt()),
             )
         }
+    }
+}
 
+@Suppress("LongParameterList")
+@Composable
+private fun WeeklyVolumeTrendChartContent(
+    modelProducer: CartesianChartModelProducer,
+    currentLine: LineCartesianLayer.Line,
+    previousLine: LineCartesianLayer.Line,
+    rangeProvider: CartesianLayerRangeProvider,
+    weekdayLabels: List<String>,
+    markerVisibilityListener: CartesianMarkerVisibilityListener,
+    selectedState: WeeklyVolumeSelectedState?,
+    tooltipData: DataPointTooltipData?,
+    onDismissTooltip: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val labelComponent = ChartDefaults.labelTextComponent()
     val guidelineComponent = ChartDefaults.guidelineComponent()
     val xAxisFormatter =
@@ -225,38 +311,6 @@ private fun WeeklyVolumeTrendChart(
         }
     val yAxisFormatter = remember { CartesianValueFormatter { _, value, _ -> value.toInt().toString() } }
     val itemPlacer = remember { HorizontalAxis.ItemPlacer.aligned(spacing = { 1 }, addExtremeLabelPadding = true) }
-
-    val markerVisibilityListener =
-        rememberWeeklyVolumeMarkerVisibilityListener(onStateChanged = { selectedState = it })
-
-    val thisWeekFormat = stringResource(R.string.weekly_volume_tooltip_this_week_format)
-    val lastWeekFormat = stringResource(R.string.weekly_volume_tooltip_last_week_format)
-    val diffFormat = stringResource(R.string.weekly_volume_tooltip_diff_format)
-
-    val tooltipData =
-        remember(selectedState, daily, thisWeekFormat, lastWeekFormat, diffFormat) {
-            selectedState?.let { state ->
-                val date = daily.getOrNull(state.dayOffset)?.date
-                val delta = WeeklyVolumeTrendMapper.dailyDelta(state.currentMinutes, state.previousMinutes)
-                DataPointTooltipData(
-                    valueText = date?.format(TOOLTIP_DATE_FORMAT).orEmpty(),
-                    dateText =
-                        lastWeekFormat.format(WeeklyTrainingDeltaFormatter.formatDuration(state.previousMinutes)),
-                    preDateLines =
-                        state.currentMinutes
-                            ?.let {
-                                listOf(thisWeekFormat.format(WeeklyTrainingDeltaFormatter.formatDuration(it)))
-                            }.orEmpty(),
-                    extraLine =
-                        delta?.let {
-                            diffFormat.format(
-                                WeeklyTrainingDeltaFormatter.formatDurationDelta(it.deltaMinutes, it.percentChange),
-                            )
-                        },
-                    offset = IntOffset(state.canvasX.toInt(), (state.canvasY ?: 0f).toInt()),
-                )
-            }
-        }
 
     Box(modifier = modifier.fillMaxWidth()) {
         CartesianChartHost(
@@ -297,7 +351,7 @@ private fun WeeklyVolumeTrendChart(
             DataPointTooltip(
                 isVisible = true,
                 data = data,
-                onDismissRequest = { selectedState = null },
+                onDismissRequest = onDismissTooltip,
             )
         }
     }
