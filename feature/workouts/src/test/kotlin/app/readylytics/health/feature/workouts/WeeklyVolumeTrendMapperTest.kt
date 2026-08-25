@@ -1,10 +1,10 @@
 package app.readylytics.health.feature.workouts
 
 import app.readylytics.health.core.scoring.domain.workouts.weekly.DailyTrainingVolume
-import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import java.time.LocalDate
 
 class WeeklyVolumeTrendMapperTest {
     private val weekStart: LocalDate = LocalDate.of(2026, 8, 17) // a Monday

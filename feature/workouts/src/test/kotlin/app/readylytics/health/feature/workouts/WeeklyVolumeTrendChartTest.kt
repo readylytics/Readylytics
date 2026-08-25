@@ -9,12 +9,12 @@ import app.readylytics.health.core.scoring.domain.workouts.weekly.DailyTrainingV
 import app.readylytics.health.core.scoring.domain.workouts.weekly.PeriodComparison
 import app.readylytics.health.core.scoring.domain.workouts.weekly.PeriodTotals
 import app.readylytics.health.core.scoring.domain.workouts.weekly.WeeklyTrainingStats
-import java.time.LocalDate
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.time.LocalDate
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])

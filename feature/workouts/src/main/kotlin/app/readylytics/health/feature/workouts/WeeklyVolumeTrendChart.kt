@@ -243,9 +243,10 @@ private fun WeeklyVolumeTrendChart(
                     dateText =
                         lastWeekFormat.format(WeeklyTrainingDeltaFormatter.formatDuration(state.previousMinutes)),
                     preDateLines =
-                        state.currentMinutes?.let {
-                            listOf(thisWeekFormat.format(WeeklyTrainingDeltaFormatter.formatDuration(it)))
-                        }.orEmpty(),
+                        state.currentMinutes
+                            ?.let {
+                                listOf(thisWeekFormat.format(WeeklyTrainingDeltaFormatter.formatDuration(it)))
+                            }.orEmpty(),
                     extraLine =
                         delta?.let {
                             diffFormat.format(
