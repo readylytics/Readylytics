@@ -150,7 +150,7 @@ private fun WeeklyStatCard(
     }
 }
 
-private data class WeeklyDeltaDisplay(
+internal data class WeeklyDeltaDisplay(
     val text: String,
     val color: Color,
 )
@@ -158,7 +158,7 @@ private data class WeeklyDeltaDisplay(
 /** Arrow + signed detail for an improved/worsened comparison; neutral no-change text otherwise.
  *  All Weekly training metrics are HIGHER_IS_BETTER. */
 @Composable
-private fun weeklyDeltaDisplay(
+internal fun weeklyDeltaDisplay(
     current: Int,
     previous: Int,
     detail: String,

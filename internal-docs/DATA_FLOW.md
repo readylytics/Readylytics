@@ -770,6 +770,8 @@ Pure-Kotlin weekly aggregation layer feeding the Workouts tab's weekly visualiza
 
 The user-configurable week start day is persisted in `UserPreferences.weekStartDay` (proto `WEEK_START_DAY` field, default `MONDAY` via `SettingsDefaults.DEFAULT_WEEK_START_DAY`), serialized/deserialized through `UserPreferencesSerializer`/`UserPreferencesMapperExtensions`, and exposed through `UIPreferences.weekStartDay`. The `WeekStartDayPicker` composable in `core/ui` provides the selection UI.
 
+`cumulativeDailyTraining` is presented by `WeeklyVolumeTrendChart` (`feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts/WeeklyVolumeTrendChart.kt`), registered as `WorkoutChartId.WEEKLY_VOLUME_TREND` — a Vico two-line cumulative chart independently show/hide/reorderable from the `WorkoutChartId.WEEKLY_TRAINING` stat-card row (`WeeklyTrainingSection`) in `WorkoutsChartFactory.kt`. Both consume the same `WeeklyTrainingStats` instance already held on `WorkoutsUiState.weeklyTraining`, so no additional data fetching was introduced.
+
 > **Not a scoring formula.** This use case performs pure aggregation (sums, counts, percentages) over already-scored `WorkoutData` from Room — it does not compute TRIMP, RAS, or any load/recovery metric. It reads Room via `WorkoutRepository.getInRange` and never touches Health Connect. Week boundaries are the only configurable input; the aggregation math itself is fixed.
 
 ### 2.4 Baselines & calibration
