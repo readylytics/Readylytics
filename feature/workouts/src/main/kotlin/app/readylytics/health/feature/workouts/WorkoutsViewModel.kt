@@ -5,8 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.data.preferences.UserPreferences
-import app.readylytics.health.core.model.di.DefaultDispatcher
-import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
 import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.dashboard.CardManagementDelegate
@@ -35,7 +33,6 @@ import app.readylytics.health.core.scoring.domain.workouts.weekly.ComputeWeeklyT
 import app.readylytics.health.core.scoring.domain.workouts.weekly.WeeklyTrainingStats
 import app.readylytics.health.core.ui.common.TimeRange
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -66,13 +63,13 @@ class WorkoutsViewModel
         private val scoringCalculator: ScoringCalculator,
         private val settingsRepo: UserPreferencesReader,
         private val getWorkoutDisplayMetricsUseCase: GetWorkoutDisplayMetricsUseCase,
-        private val computeWeeklyTrainingStatsUseCase: ComputeWeeklyTrainingStatsUseCase,
         private val foregroundSyncController: ForegroundSyncGateway,
         private val workoutsLayoutRepository: WorkoutsLayoutRepository,
         private val savedStateHandle: SavedStateHandle,
-        @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
-        @param:DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
+        private val dispatchers: WorkoutsDispatchers,
     ) : ViewModel() {
+        private val computeWeeklyTrainingStatsUseCase = ComputeWeeklyTrainingStatsUseCase()
+
         private val _selectedRange =
             MutableStateFlow(savedStateHandle.get<TimeRange>("selectedRange") ?: TimeRange.SEVEN_DAYS)
         val selectedRange = _selectedRange.asStateFlow()
@@ -189,7 +186,7 @@ class WorkoutsViewModel
                         } else {
                             flow {
                                 emit(dailySummaryRepository.getByDate(window.selectedMidnightMs))
-                            }.flowOn(ioDispatcher)
+                            }.flowOn(dispatchers.io)
                         }
 
                     combine(
@@ -271,7 +268,7 @@ class WorkoutsViewModel
                         historyConfigurations = historyState.pendingConfiguration ?: historyState.historyConfigurations,
                         isManagingHistory = historyState.isManagingHistory,
                     )
-                }.flowOn(defaultDispatcher)
+                }.flowOn(dispatchers.default)
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5_000),
@@ -330,7 +327,12 @@ class WorkoutsViewModel
         ): WeeklyTrainingStats {
             val fetchStart = WeekBounds.previousWeekFull(anchor, prefs.weekStartDay).start
             val fromMs = fetchStart.atStartOfDay(zoneId).toInstant().toEpochMilli()
-            val toMs = anchor.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val toMs =
+                anchor
+                    .plusDays(1)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
             val workouts = workoutRepository.getInRange(fromMs, toMs)
             return computeWeeklyTrainingStatsUseCase.execute(workouts, anchor, prefs.weekStartDay, zoneId)
         }

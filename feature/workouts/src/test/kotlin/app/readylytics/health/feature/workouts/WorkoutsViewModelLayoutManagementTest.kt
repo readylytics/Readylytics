@@ -110,13 +110,10 @@ class WorkoutsViewModelLayoutManagementTest {
             scoringCalculator = scoringCalculator,
             settingsRepo = settingsRepo,
             getWorkoutDisplayMetricsUseCase = getWorkoutDisplayMetricsUseCase,
-            computeWeeklyTrainingStatsUseCase =
-                app.readylytics.health.core.scoring.domain.workouts.weekly.ComputeWeeklyTrainingStatsUseCase(),
             foregroundSyncController = foregroundSyncController,
             workoutsLayoutRepository = workoutsLayoutRepository,
             savedStateHandle = SavedStateHandle(),
-            ioDispatcher = testDispatcher,
-            defaultDispatcher = testDispatcher,
+            dispatchers = WorkoutsDispatchers(testDispatcher, testDispatcher),
         )
 
     @After

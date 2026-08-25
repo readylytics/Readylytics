@@ -19,7 +19,6 @@ import app.readylytics.health.core.scoring.domain.scoring.GetWorkoutDisplayMetri
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.WorkoutDisplayMetrics
 import app.readylytics.health.core.scoring.domain.scoring.WorkoutLoadClassification
-import app.readylytics.health.core.scoring.domain.workouts.weekly.ComputeWeeklyTrainingStatsUseCase
 import app.readylytics.health.core.ui.common.TimeRange
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -184,12 +183,10 @@ class WorkoutsViewModelTest {
             scoringCalculator = scoringCalculator,
             settingsRepo = settingsRepo,
             getWorkoutDisplayMetricsUseCase = getWorkoutDisplayMetricsUseCase,
-            computeWeeklyTrainingStatsUseCase = ComputeWeeklyTrainingStatsUseCase(),
             foregroundSyncController = foregroundSyncController,
             workoutsLayoutRepository = workoutsLayoutRepository,
             savedStateHandle = savedStateHandle,
-            ioDispatcher = testDispatcher,
-            defaultDispatcher = testDispatcher,
+            dispatchers = WorkoutsDispatchers(testDispatcher, testDispatcher),
         )
 
     @After
@@ -1050,12 +1047,20 @@ class WorkoutsViewModelTest {
             viewModel = createViewModel()
             val collectJob = launch { viewModel.uiState.collect {} }
             testScheduler.advanceUntilIdle()
-            assertEquals(0, viewModel.uiState.value.weeklyTraining!!.currentWeek.workoutCount)
+            assertEquals(
+                0,
+                viewModel.uiState.value.weeklyTraining!!
+                    .currentWeek.workoutCount,
+            )
 
             workouts.addAll(listOf(workoutOnDate(LocalDate.of(2026, 6, 2), durationMinutes = 30)))
             summariesFlow.value = listOf(mockk<DailySummary>(relaxed = true))
             testScheduler.advanceUntilIdle()
-            assertEquals(1, viewModel.uiState.value.weeklyTraining!!.currentWeek.workoutCount)
+            assertEquals(
+                1,
+                viewModel.uiState.value.weeklyTraining!!
+                    .currentWeek.workoutCount,
+            )
             collectJob.cancel()
         }
 
@@ -1069,11 +1074,19 @@ class WorkoutsViewModelTest {
             viewModel = createViewModel()
             val collectJob = launch { viewModel.uiState.collect {} }
             testScheduler.advanceUntilIdle()
-            assertEquals(0, viewModel.uiState.value.weeklyTraining!!.currentWeek.totalDurationMinutes)
+            assertEquals(
+                0,
+                viewModel.uiState.value.weeklyTraining!!
+                    .currentWeek.totalDurationMinutes,
+            )
 
             preferencesFlow.value = preferencesFlow.value.copy(weekStartDay = DayOfWeek.SUNDAY)
             testScheduler.advanceUntilIdle()
-            assertEquals(60, viewModel.uiState.value.weeklyTraining!!.currentWeek.totalDurationMinutes)
+            assertEquals(
+                60,
+                viewModel.uiState.value.weeklyTraining!!
+                    .currentWeek.totalDurationMinutes,
+            )
             collectJob.cancel()
         }
 
@@ -1082,7 +1095,11 @@ class WorkoutsViewModelTest {
         durationMinutes: Int,
     ): WorkoutData {
         val epochMillis =
-            date.atTime(12, 0).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            date
+                .atTime(12, 0)
+                .atZone(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli()
         return WorkoutData(
             id = "workout-$epochMillis-$durationMinutes",
             startTime = epochMillis,
