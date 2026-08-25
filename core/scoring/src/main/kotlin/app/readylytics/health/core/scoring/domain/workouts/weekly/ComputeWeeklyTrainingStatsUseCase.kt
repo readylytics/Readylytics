@@ -3,8 +3,6 @@ package app.readylytics.health.core.scoring.domain.workouts.weekly
 import app.readylytics.health.core.model.domain.repository.WorkoutData
 import app.readylytics.health.core.model.domain.service.DateRange
 import app.readylytics.health.core.model.domain.util.WeekBounds
-import app.readylytics.health.core.model.domain.workouts.detail.WorkoutLayoutType
-import app.readylytics.health.core.model.domain.workouts.detail.WorkoutLayoutTypeMapper
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
@@ -49,8 +47,10 @@ class ComputeWeeklyTrainingStatsUseCase
                 previousWeek = previousTotals,
                 comparison = comparisonFor(currentTotals, previousTotals),
                 cumulativeDailyTraining = buildDailyTraining(datedWorkouts, today, currentFull, previousFull),
-                activityVolumes = buildActivityVolumes(currentToDateWorkouts, previousToDateWorkouts),
-                trainingMix = buildTrainingMix(currentToDateWorkouts, currentTotals.totalDurationMinutes),
+                activityVolumes =
+                    WeeklyActivityBreakdown.activityVolumes(currentToDateWorkouts, previousToDateWorkouts),
+                trainingMix =
+                    WeeklyActivityBreakdown.trainingMix(currentToDateWorkouts, currentTotals.totalDurationMinutes),
             )
         }
 
@@ -73,7 +73,7 @@ class ComputeWeeklyTrainingStatsUseCase
             PeriodComparison(
                 durationDeltaMinutes = current.totalDurationMinutes - previous.totalDurationMinutes,
                 durationPercentChange =
-                    percentChange(
+                    WeeklyActivityBreakdown.percentChange(
                         current = current.totalDurationMinutes.toFloat(),
                         previous = previous.totalDurationMinutes.toFloat(),
                     ),
@@ -123,66 +123,7 @@ class ComputeWeeklyTrainingStatsUseCase
                 .groupBy({ it.second }) { it.first.durationMinutes }
                 .mapValues { (_, durations) -> durations.sum() }
 
-        private fun buildActivityVolumes(
-            currentToDateWorkouts: List<Pair<WorkoutData, LocalDate>>,
-            previousToDateWorkouts: List<Pair<WorkoutData, LocalDate>>,
-        ): List<ActivityVolume> {
-            val currentByType = currentToDateWorkouts.map { it.first }.groupBy(::classify)
-            val previousByType = previousToDateWorkouts.map { it.first }.groupBy(::classify)
-            val types = currentByType.keys + previousByType.keys
-
-            return types.sortedBy { it.ordinal }.map { type ->
-                val metricType = ActivityMetricTypeMapper.metricTypeFor(type)
-                val currentValue = metricValue(currentByType[type].orEmpty(), metricType)
-                val previousValue = metricValue(previousByType[type].orEmpty(), metricType)
-                ActivityVolume(
-                    activityType = type,
-                    metricType = metricType,
-                    currentWeekValue = currentValue,
-                    previousWeekValue = previousValue,
-                    absoluteChange = currentValue - previousValue,
-                    percentChange = percentChange(currentValue, previousValue),
-                )
-            }
-        }
-
-        private fun buildTrainingMix(
-            currentToDateWorkouts: List<Pair<WorkoutData, LocalDate>>,
-            totalDurationMinutes: Int,
-        ): List<TrainingMixItem> {
-            if (totalDurationMinutes <= 0) return emptyList()
-            return currentToDateWorkouts
-                .map { it.first }
-                .groupBy(::classify)
-                .map { (type, workoutsOfType) ->
-                    val duration = workoutsOfType.sumOf { it.durationMinutes }
-                    TrainingMixItem(
-                        activityType = type,
-                        durationMinutes = duration,
-                        percentage = duration.toFloat() / totalDurationMinutes * PERCENT_SCALE,
-                    )
-                }.sortedBy { it.activityType.ordinal }
-        }
-
-        private fun classify(workout: WorkoutData): WorkoutLayoutType =
-            WorkoutLayoutTypeMapper.fromExerciseType(workout.exerciseType)
-
-        private fun metricValue(
-            workouts: List<WorkoutData>,
-            metricType: ActivityMetricType,
-        ): Float =
-            when (metricType) {
-                ActivityMetricType.DISTANCE -> workouts.sumOf { (it.totalDistanceMeters ?: 0f).toDouble() }.toFloat()
-                ActivityMetricType.DURATION -> workouts.sumOf { it.durationMinutes }.toFloat()
-            }
-
-        private fun percentChange(
-            current: Float,
-            previous: Float,
-        ): Float? = if (previous == 0f) null else (current - previous) / previous * PERCENT_SCALE
-
         private companion object {
             const val DAYS_IN_WEEK = 7
-            const val PERCENT_SCALE = 100f
         }
     }

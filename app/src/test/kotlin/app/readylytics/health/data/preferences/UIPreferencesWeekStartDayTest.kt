@@ -13,7 +13,9 @@ import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.job
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -26,6 +28,7 @@ import java.time.LocalDate
 class UIPreferencesWeekStartDayTest {
     private lateinit var context: Context
     private lateinit var fileName: String
+    private lateinit var dataStoreScope: CoroutineScope
     private lateinit var dataStore: DataStore<UserPreferencesProto>
     private lateinit var uiPreferences: UIPreferences
 
@@ -33,14 +36,15 @@ class UIPreferencesWeekStartDayTest {
     fun setup() {
         context = ApplicationProvider.getApplicationContext()
         fileName = "week_start_day_prefs_${System.nanoTime()}.pb"
-        dataStore = newDataStore()
+        dataStoreScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+        dataStore = newDataStore(dataStoreScope)
         uiPreferences = UIPreferences(dataStore, mockk<HealthDeviceRepository>(relaxed = true))
     }
 
-    private fun newDataStore(): DataStore<UserPreferencesProto> =
+    private fun newDataStore(scope: CoroutineScope): DataStore<UserPreferencesProto> =
         DataStoreFactory.create(
             serializer = UserPreferencesSerializer,
-            scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+            scope = scope,
             produceFile = { context.dataStoreFile(fileName) },
         )
 
@@ -84,7 +88,11 @@ class UIPreferencesWeekStartDayTest {
         runTest {
             uiPreferences.updateWeekStartDay(DayOfWeek.SUNDAY)
 
-            val restarted = newDataStore()
+            // DataStore forbids two live instances on one file; the first is inactive only
+            // once its scope's job completes, which also releases the active-file registry.
+            dataStoreScope.coroutineContext.job.cancelAndJoin()
+
+            val restarted = newDataStore(CoroutineScope(Dispatchers.IO + SupervisorJob()))
             val prefs = restarted.data.first().toDomainModel()
 
             assertEquals(DayOfWeek.SUNDAY, prefs.weekStartDay)
