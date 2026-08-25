@@ -16,7 +16,7 @@ enum class ActivityMetricType { DISTANCE, DURATION }
 data class WeeklyTrainingStats(
     /** Configured week start through the caller's `today`, inclusive. Partial for an in-progress week. */
     val currentPeriod: DateRange,
-    /** Full 7-day previous configured week, entirely in the past. */
+    /** Previous configured week truncated to the same elapsed day-count as [currentPeriod] — the like-for-like comparison basis. */
     val previousPeriod: DateRange,
     val currentWeek: PeriodTotals,
     val previousWeek: PeriodTotals,
