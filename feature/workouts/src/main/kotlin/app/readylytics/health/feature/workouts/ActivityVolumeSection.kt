@@ -49,6 +49,8 @@ fun ActivityVolumeSection(
     var showAllSheet by rememberSaveable { mutableStateOf(false) }
     val rows = remember(stats) { stats?.let(::buildActivityVolumeRows).orEmpty() }
 
+    if (!isLoading && stats != null && rows.isEmpty()) return
+
     Column(modifier = modifier) {
         Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
         when {
@@ -155,7 +157,7 @@ internal fun ActivityVolumeRow(
         leadingContent = {
             Icon(
                 imageVector = volume.activityType.icon,
-                contentDescription = stringResource(volume.activityType.displayNameResId),
+                contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         },

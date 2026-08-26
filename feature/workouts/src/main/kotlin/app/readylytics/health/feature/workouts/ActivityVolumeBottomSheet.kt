@@ -6,7 +6,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -35,9 +38,15 @@ internal fun ActivityVolumeBottomSheet(
                     .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
         )
         Spacer(Modifier.height(MaterialTheme.spacing.small))
-        Column {
-            rows.forEach { volume ->
+        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+            rows.forEachIndexed { index, volume ->
                 ActivityVolumeRow(volume = volume, unitSystem = unitSystem)
+                if (index < rows.lastIndex) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium),
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                    )
+                }
             }
         }
         Spacer(Modifier.height(MaterialTheme.spacing.small))
