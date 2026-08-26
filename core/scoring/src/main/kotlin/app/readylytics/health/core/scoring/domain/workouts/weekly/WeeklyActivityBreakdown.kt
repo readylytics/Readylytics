@@ -35,17 +35,44 @@ internal object WeeklyActivityBreakdown {
         totalDurationMinutes: Int,
     ): List<TrainingMixItem> {
         if (totalDurationMinutes <= 0) return emptyList()
-        return currentToDateWorkouts
-            .map { it.first }
-            .groupBy(::classify)
-            .map { (type, workoutsOfType) ->
-                val duration = workoutsOfType.sumOf { it.durationMinutes }
-                TrainingMixItem(
-                    activityType = type,
-                    durationMinutes = duration,
-                    percentage = duration.toFloat() / totalDurationMinutes * PERCENT_SCALE,
-                )
-            }.sortedBy { it.activityType.ordinal }
+
+        val items =
+            currentToDateWorkouts
+                .map { it.first }
+                .groupBy(::classify)
+                .mapNotNull { (type, workoutsOfType) ->
+                    val duration = workoutsOfType.sumOf { it.durationMinutes }
+                    if (duration <= 0) {
+                        null
+                    } else {
+                        TrainingMixItem(
+                            activityType = type,
+                            durationMinutes = duration,
+                            percentage = duration.toFloat() / totalDurationMinutes * PERCENT_SCALE,
+                        )
+                    }
+                }.sortedByDescending { it.durationMinutes }
+
+        return groupTopMixItems(items, totalDurationMinutes)
+    }
+
+    private fun groupTopMixItems(
+        items: List<TrainingMixItem>,
+        totalDurationMinutes: Int,
+    ): List<TrainingMixItem> {
+        if (items.size <= MAX_DISTINCT_MIX_TYPES) return items
+
+        val top = items.take(TOP_MIX_TYPES_BEFORE_OTHER)
+        val remainder = items.drop(TOP_MIX_TYPES_BEFORE_OTHER)
+        val otherDuration = remainder.sumOf { it.durationMinutes }
+        val otherItem =
+            TrainingMixItem(
+                activityType = WorkoutLayoutType.OTHER,
+                durationMinutes = otherDuration,
+                percentage = otherDuration.toFloat() / totalDurationMinutes * PERCENT_SCALE,
+            )
+
+        return top + otherItem
     }
 
     fun percentChange(
@@ -65,5 +92,8 @@ internal object WeeklyActivityBreakdown {
             ActivityMetricType.DURATION -> workouts.sumOf { it.durationMinutes }.toFloat()
         }
 
+    private const val MAX_DISTINCT_MIX_TYPES = 4
+    private const val TOP_MIX_TYPES_BEFORE_OTHER = 3
     private const val PERCENT_SCALE = 100f
 }
+
