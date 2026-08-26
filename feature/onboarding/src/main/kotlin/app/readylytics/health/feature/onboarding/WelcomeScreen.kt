@@ -159,8 +159,8 @@ private fun FeatureItem(
     description: String,
 ) {
     ListItem(
-        headlineContent = { Text(title, style = MaterialTheme.typography.titleSmall) },
-        supportingContent = { Text(description, style = MaterialTheme.typography.bodySmall) },
         leadingContent = icon,
+        supportingContent = { Text(description, style = MaterialTheme.typography.bodySmall) },
+        content = { Text(title, style = MaterialTheme.typography.titleSmall) },
     )
 }

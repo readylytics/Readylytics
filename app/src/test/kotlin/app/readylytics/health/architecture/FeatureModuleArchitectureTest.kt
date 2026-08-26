@@ -111,6 +111,7 @@ class FeatureModuleArchitectureTest {
                 "OnboardingRoute.kt",
                 "OnboardingPermissionGateHelpers.kt",
                 "PermissionBullets.kt",
+                "ActivityVolumeSection.kt",
             )
 
         val allowedHealthConnectApis =

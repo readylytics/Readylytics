@@ -110,9 +110,14 @@ class WorkoutsViewModelLayoutManagementTest {
             settingsRepo = settingsRepo,
             foregroundSyncController = foregroundSyncController,
             workoutsLayoutRepository = workoutsLayoutRepository,
-            savedStateHandle = SavedStateHandle(),
+            selectedRangeStore = WorkoutsSelectedRangeStore(SavedStateHandle()),
             dispatchers = WorkoutsDispatchers(testDispatcher, testDispatcher),
-            useCases = WorkoutsUseCases(getWorkoutDisplayMetricsUseCase, ComputeWeeklyTrainingStatsUseCase()),
+            useCases =
+                WorkoutsUseCases(
+                    getWorkoutDisplayMetricsUseCase,
+                    ComputeWeeklyTrainingStatsUseCase(),
+                    WorkoutsDistancePermissionGate { true },
+                ),
         )
 
     @After

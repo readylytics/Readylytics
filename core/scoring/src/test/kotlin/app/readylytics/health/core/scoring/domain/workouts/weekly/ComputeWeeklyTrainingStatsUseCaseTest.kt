@@ -103,55 +103,55 @@ class ComputeWeeklyTrainingStatsUseCaseTest {
     }
 
     @Test
-    fun `previous-week totals use the like-for-like same-elapsed-days window`() {
-        // Today is Thursday; the previous week's Friday workout falls outside the like-for-like
-        // window (previous Mon..Thu) and must not inflate the comparison.
+    fun `previous-week totals always cover the entire previous week`() {
+        // The previous week is finished history: its Friday workout counts even though the
+        // current side only reaches Thursday.
         val workouts =
             listOf(
                 workoutOn(LocalDate.of(2026, 6, 1), duration = 30), // current Mon
                 workoutOn(LocalDate.of(2026, 5, 25), duration = 30), // previous Mon
-                workoutOn(LocalDate.of(2026, 5, 29), duration = 60), // previous Fri — outside window
+                workoutOn(LocalDate.of(2026, 5, 29), duration = 60), // previous Fri — still included
             )
 
         val result = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC)
 
-        assertEquals(30, result.previousWeek.totalDurationMinutes)
-        assertEquals(1, result.previousWeek.workoutCount)
-        assertEquals(0, result.comparison.durationDeltaMinutes)
+        assertEquals(90, result.previousWeek.totalDurationMinutes)
+        assertEquals(2, result.previousWeek.workoutCount)
+        assertEquals(-60, result.comparison.durationDeltaMinutes)
     }
 
     @Test
-    fun `anchor on the configured week start yields one-day comparison windows`() {
+    fun `previous side is the full prior week even when the anchor is the week start`() {
         val monday = LocalDate.of(2026, 6, 1)
         val workouts =
             listOf(
                 workoutOn(LocalDate.of(2026, 6, 1), duration = 40), // current Monday
                 workoutOn(LocalDate.of(2026, 5, 25), duration = 10), // previous Monday
-                workoutOn(LocalDate.of(2026, 5, 26), duration = 90), // previous Tue — outside 1-day window
+                workoutOn(LocalDate.of(2026, 5, 26), duration = 90), // previous Tue — still included
             )
 
         val result = useCase.execute(workouts, monday, DayOfWeek.MONDAY, ZoneOffset.UTC)
 
         assertEquals(40, result.currentWeek.totalDurationMinutes)
-        assertEquals(10, result.previousWeek.totalDurationMinutes)
-        assertEquals(30, result.comparison.durationDeltaMinutes)
+        assertEquals(100, result.previousWeek.totalDurationMinutes)
+        assertEquals(-60, result.comparison.durationDeltaMinutes)
     }
 
     @Test
-    fun `sunday start compares the same elapsed days of the previous sunday-start week`() {
+    fun `sunday start compares week-to-date against the full previous sunday-start week`() {
         val workouts =
             listOf(
                 workoutOn(LocalDate.of(2026, 5, 31), duration = 20), // current Sunday (week start)
                 workoutOn(LocalDate.of(2026, 6, 1), duration = 30), // current Monday
                 workoutOn(LocalDate.of(2026, 5, 24), duration = 15), // previous Sunday
-                workoutOn(LocalDate.of(2026, 5, 29), duration = 99), // previous Fri — outside window
+                workoutOn(LocalDate.of(2026, 5, 29), duration = 99), // previous Fri — inside the full week
             )
 
         val result = useCase.execute(workouts, today, DayOfWeek.SUNDAY, ZoneOffset.UTC)
 
         assertEquals(50, result.currentWeek.totalDurationMinutes)
-        assertEquals(15, result.previousWeek.totalDurationMinutes)
-        assertEquals(35, result.comparison.durationDeltaMinutes)
+        assertEquals(114, result.previousWeek.totalDurationMinutes)
+        assertEquals(-64, result.comparison.durationDeltaMinutes)
     }
 
     @Test
@@ -281,7 +281,7 @@ class ComputeWeeklyTrainingStatsUseCaseTest {
     }
 
     @Test
-    fun `previous-week totals cover the like-for-like window while the chart covers the full week`() {
+    fun `previous-week totals match the chart's full previous week`() {
         val workouts =
             listOf(
                 workoutOn(LocalDate.of(2026, 5, 25), duration = 30),
@@ -291,7 +291,7 @@ class ComputeWeeklyTrainingStatsUseCaseTest {
 
         val result = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC)
 
-        assertEquals(30, result.previousWeek.totalDurationMinutes)
+        assertEquals(90, result.previousWeek.totalDurationMinutes)
         assertEquals(90, result.cumulativeDailyTraining.last().previousWeekCumulativeMinutes)
     }
 

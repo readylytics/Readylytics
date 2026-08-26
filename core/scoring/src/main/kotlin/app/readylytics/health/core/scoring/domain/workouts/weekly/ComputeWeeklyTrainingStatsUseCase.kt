@@ -15,44 +15,45 @@ import javax.inject.Inject
  * training mix) from one shared pass over [workouts] so none of them can disagree with each other.
  *
  * Callers should fetch [workouts] with a single `WorkoutRepository.getInRange` query spanning
- * `WeekBounds.previousWeekFull(today, weekStartDay).start` through `today` (inclusive) — that one
+ * `WeekBounds.previousWeekFull(anchor, weekStartDay).start` through `anchor` inclusive — that one
  * range covers everything every result field needs.
  *
- * Week semantics: comparison figures ([WeeklyTrainingStats.previousWeek], `comparison`, and the
- * previous side of `activityVolumes`) cover the like-for-like previous window — the configured
- * week start one week back through the same elapsed day-count as the current week — so an
- * in-progress week is never compared against a full previous week. Only the cumulative daily
- * chart covers the FULL previous week, because its fixed-length x-axis needs all 7 days.
+ * Week semantics, identical for every anchor date: the current side is the configured week
+ * **to date** (week start through [anchor], inclusive), and the previous side is the ENTIRE
+ * previous configured week (`WeekBounds.previousWeekFull`) — last week is finished history and
+ * is never truncated. The cumulative daily chart covers both full 7-day windows; days after
+ * [anchor] in the current week are null rather than fabricated.
  */
 class ComputeWeeklyTrainingStatsUseCase
     @Inject
     constructor() {
         fun execute(
             workouts: List<WorkoutData>,
-            today: LocalDate,
+            anchor: LocalDate,
             weekStartDay: DayOfWeek,
             zoneId: ZoneId,
         ): WeeklyTrainingStats {
-            val currentToDate = WeekBounds.currentWeekToDate(today, weekStartDay)
-            val currentFull = WeekBounds.currentWeekFull(today, weekStartDay)
-            val previousToDate = WeekBounds.previousWeekToDate(today, weekStartDay)
-            val previousFull = WeekBounds.previousWeekFull(today, weekStartDay)
+            val currentPeriod = WeekBounds.currentWeekToDate(anchor, weekStartDay)
+            val previousPeriod = WeekBounds.previousWeekFull(anchor, weekStartDay)
+            val currentFull = WeekBounds.currentWeekFull(anchor, weekStartDay)
+            val previousFull = previousPeriod
 
             val datedWorkouts = workouts.map { it to workoutDate(it, zoneId) }
 
-            val currentToDateWorkouts = datedWorkouts.filter { (_, date) -> currentToDate.contains(date) }
-            val previousToDateWorkouts = datedWorkouts.filter { (_, date) -> previousToDate.contains(date) }
+            val currentToDateWorkouts = datedWorkouts.filter { (_, date) -> currentPeriod.contains(date) }
+            val previousToDateWorkouts = datedWorkouts.filter { (_, date) -> previousPeriod.contains(date) }
 
             val currentTotals = totalsFor(currentToDateWorkouts)
             val previousTotals = totalsFor(previousToDateWorkouts)
 
             return WeeklyTrainingStats(
-                currentPeriod = currentToDate,
-                previousPeriod = previousToDate,
+                currentPeriod = currentPeriod,
+                previousPeriod = previousPeriod,
                 currentWeek = currentTotals,
                 previousWeek = previousTotals,
                 comparison = comparisonFor(currentTotals, previousTotals),
-                cumulativeDailyTraining = buildDailyTraining(datedWorkouts, today, currentFull, previousFull),
+                cumulativeDailyTraining =
+                    buildDailyTraining(datedWorkouts, anchor, currentFull, previousFull),
                 activityVolumes =
                     WeeklyActivityBreakdown.activityVolumes(currentToDateWorkouts, previousToDateWorkouts),
                 trainingMix =

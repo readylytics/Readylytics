@@ -51,13 +51,6 @@ fun HistoryCardLayout(
         shape = MaterialTheme.shapes.medium,
     ) {
         ListItem(
-            headlineContent = {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            },
             supportingContent = {
                 Text(
                     text = subtitle,
@@ -69,6 +62,12 @@ fun HistoryCardLayout(
                 StatusPill(label = pillLabel, status = pillStatus)
             },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        )
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }

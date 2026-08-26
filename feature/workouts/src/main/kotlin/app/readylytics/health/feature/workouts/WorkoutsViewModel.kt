@@ -1,6 +1,5 @@
 package app.readylytics.health.feature.workouts
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
@@ -57,12 +56,12 @@ class WorkoutsViewModel
         private val settingsRepo: UserPreferencesReader,
         private val foregroundSyncController: ForegroundSyncGateway,
         private val workoutsLayoutRepository: WorkoutsLayoutRepository,
-        private val savedStateHandle: SavedStateHandle,
+        private val selectedRangeStore: WorkoutsSelectedRangeStore,
         private val dispatchers: WorkoutsDispatchers,
         private val useCases: WorkoutsUseCases,
     ) : ViewModel() {
         private val _selectedRange =
-            MutableStateFlow(savedStateHandle.get<TimeRange>("selectedRange") ?: TimeRange.SEVEN_DAYS)
+            MutableStateFlow(selectedRangeStore.read())
         val selectedRange = _selectedRange.asStateFlow()
 
         private val cardManagementDelegate =
@@ -213,6 +212,7 @@ class WorkoutsViewModel
                         val recentItems = loadRecentWorkouts(pageWorkouts, prefs, trimpSummaries)
                         val workoutOnlyGains = loadWorkoutOnlyGains(window, prefs, trimpSummaries)
                         val weeklyTraining = loadWeeklyTraining(params.date, prefs, zoneId)
+                        val hasDistancePermission = useCases.distancePermissionGate.isGranted()
 
                         buildWorkoutsState(
                             WorkoutsStateInputs(
@@ -230,6 +230,7 @@ class WorkoutsViewModel
                                 earliestLocalDate = earliestLocalDate,
                                 workoutOnlyGains = workoutOnlyGains,
                                 weeklyTraining = weeklyTraining,
+                                hasDistancePermission = hasDistancePermission,
                             ),
                         )
                     }
@@ -333,7 +334,7 @@ class WorkoutsViewModel
             _currentPage.value = 1
             _selectedRange.value = range
             isRangeChangingState.value = true
-            savedStateHandle["selectedRange"] = range
+            selectedRangeStore.write(range)
         }
 
         val earliestDate: StateFlow<LocalDate?> =

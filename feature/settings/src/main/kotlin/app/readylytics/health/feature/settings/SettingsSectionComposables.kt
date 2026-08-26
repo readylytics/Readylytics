@@ -226,33 +226,31 @@ internal fun IssueReportingSection(onReportTypeSelected: (GitHubIssueType) -> Un
     Column {
         ListItem(
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            headlineContent = {
-                Text(
-                    text = stringResource(R.string.settings_item_report_bug),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-            },
             modifier =
                 Modifier.clickable {
                     onReportTypeSelected(GitHubIssueType.BUG_REPORT)
                 },
-        )
+        ) {
+            Text(
+                text = stringResource(R.string.settings_item_report_bug),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        }
         HorizontalDivider(
             modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall),
         )
         ListItem(
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            headlineContent = {
-                Text(
-                    text = stringResource(R.string.settings_item_request_feature),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-            },
             modifier =
                 Modifier.clickable {
                     onReportTypeSelected(GitHubIssueType.FEATURE_REQUEST)
                 },
-        )
+        ) {
+            Text(
+                text = stringResource(R.string.settings_item_request_feature),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        }
     }
 }
 
@@ -266,47 +264,43 @@ internal fun MiscellaneousSection(
     Column {
         ListItem(
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            headlineContent = {
-                Text(
-                    text = stringResource(R.string.settings_about_button),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-            },
             modifier = Modifier.clickable { onNavigateToAbout() },
-        )
+        ) {
+            Text(
+                text = stringResource(R.string.settings_about_button),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        }
         HorizontalDivider(modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall))
         ListItem(
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            headlineContent = {
-                Text(
-                    text = stringResource(R.string.settings_item_licenses),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-            },
             modifier = Modifier.clickable { onNavigateToLicenses() },
-        )
+        ) {
+            Text(
+                text = stringResource(R.string.settings_item_licenses),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        }
         HorizontalDivider(modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall))
         ListItem(
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            headlineContent = {
-                Text(
-                    text = stringResource(R.string.settings_item_privacy_policy),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-            },
             modifier = Modifier.clickable { onOpenPrivacyPolicy() },
-        )
+        ) {
+            Text(
+                text = stringResource(R.string.settings_item_privacy_policy),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        }
         HorizontalDivider(modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall))
         ListItem(
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            headlineContent = {
-                Text(
-                    text = stringResource(R.string.settings_item_source_code),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-            },
             modifier = Modifier.clickable { onOpenSourceCode() },
-        )
+        ) {
+            Text(
+                text = stringResource(R.string.settings_item_source_code),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        }
     }
 }
 

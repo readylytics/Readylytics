@@ -145,4 +145,13 @@
     <string name="workout_layout_type_stairs">Stairs</string>
     <string name="workout_layout_type_hiit">HIIT</string>
     <string name="workout_layout_type_other">Other workouts</string>
+
+    <!-- Activity volume -->
+    <string name="activity_volume_title">Activity volume</string>
+    <string name="activity_volume_view_all">View all</string>
+    <string name="activity_volume_delta_missing">-</string>
+    <string name="activity_volume_empty">No workouts this week</string>
+    <string name="activity_volume_last_week">Last week %1$s</string>
+    <string name="activity_volume_distance_permission_warning">Distance access is off in Health Connect, so distance totals are missing.</string>
+    <string name="activity_volume_distance_permission_action">Turn on</string>
 </resources>

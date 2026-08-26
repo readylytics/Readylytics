@@ -183,9 +183,14 @@ class WorkoutsViewModelTest {
             settingsRepo = settingsRepo,
             foregroundSyncController = foregroundSyncController,
             workoutsLayoutRepository = workoutsLayoutRepository,
-            savedStateHandle = savedStateHandle,
+            selectedRangeStore = WorkoutsSelectedRangeStore(savedStateHandle),
             dispatchers = WorkoutsDispatchers(testDispatcher, testDispatcher),
-            useCases = WorkoutsUseCases(getWorkoutDisplayMetricsUseCase, ComputeWeeklyTrainingStatsUseCase()),
+            useCases =
+                WorkoutsUseCases(
+                    getWorkoutDisplayMetricsUseCase,
+                    ComputeWeeklyTrainingStatsUseCase(),
+                    WorkoutsDistancePermissionGate { true },
+                ),
         )
 
     @After
@@ -1006,15 +1011,17 @@ class WorkoutsViewModelTest {
         }
 
     @Test
-    fun `weekly training stats compare week-to-date against the like-for-like previous window`() =
+    fun `weekly training compares week-to-date against the full previous week`() =
         runTest(testDispatcher) {
-            // Thursday 2026-06-04; Monday-start week = Jun 1..4, previous window = May 25..28.
+            // Thursday 2026-06-04; Monday-start current side = Jun 1..4,
+            // previous side = the ENTIRE prior week May 25..31.
             selectedDateFlow.value = LocalDate.of(2026, 6, 4)
             workouts.addAll(
                 listOf(
                     workoutOnDate(LocalDate.of(2026, 6, 2), durationMinutes = 30),
                     workoutOnDate(LocalDate.of(2026, 5, 26), durationMinutes = 60),
-                    workoutOnDate(LocalDate.of(2026, 5, 29), durationMinutes = 999), // prev Fri — outside window
+                    workoutOnDate(LocalDate.of(2026, 5, 29), durationMinutes = 15),
+                    workoutOnDate(LocalDate.of(2026, 5, 22), durationMinutes = 999), // week before last — outside
                 ),
             )
 
@@ -1024,8 +1031,8 @@ class WorkoutsViewModelTest {
 
             val stats = viewModel.uiState.value.weeklyTraining!!
             assertEquals(30, stats.currentWeek.totalDurationMinutes)
-            assertEquals(60, stats.previousWeek.totalDurationMinutes)
-            assertEquals(-30, stats.comparison.durationDeltaMinutes)
+            assertEquals(75, stats.previousWeek.totalDurationMinutes)
+            assertEquals(-45, stats.comparison.durationDeltaMinutes)
             assertEquals(1, stats.currentWeek.workoutCount)
             assertEquals(1, stats.currentWeek.activeDays)
             collectJob.cancel()

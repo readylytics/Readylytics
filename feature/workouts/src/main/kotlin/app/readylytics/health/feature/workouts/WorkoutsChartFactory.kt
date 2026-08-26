@@ -42,4 +42,13 @@ fun buildWorkoutsChartDataMap(
                 parentScrollInProgress = parentScrollInProgress,
             )
         },
+        WorkoutChartId.ACTIVITY_VOLUME to { _: WorkoutChartConfiguration ->
+            ActivityVolumeSection(
+                stats = uiState.weeklyTraining,
+                isLoading = uiState.isLoading,
+                unitSystem = uiState.unitSystem,
+                hasDistancePermission = uiState.hasDistancePermission,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
     )

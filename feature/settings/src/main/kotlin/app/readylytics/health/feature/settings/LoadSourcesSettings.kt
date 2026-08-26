@@ -76,13 +76,12 @@ private fun LoadSourcePicker(
 ) {
     ListItem(
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        headlineContent = {
-            Text(
-                text = stringResource(labelRes),
-                style = MaterialTheme.typography.bodyLarge,
-            )
-        },
-    )
+    ) {
+        Text(
+            text = stringResource(labelRes),
+            style = MaterialTheme.typography.bodyLarge,
+        )
+    }
     SingleChoiceSegmentedButtonRow(
         modifier =
             Modifier

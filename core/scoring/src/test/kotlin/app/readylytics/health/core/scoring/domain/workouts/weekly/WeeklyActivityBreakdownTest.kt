@@ -127,6 +127,31 @@ class WeeklyActivityBreakdownTest {
 
     // endregion
 
+    // region Comparison-window selection
+
+    @Test
+    fun `current side truncates at anchor while previous week stays full`() {
+        val anchor = LocalDate.of(2026, 8, 19) // Wednesday of Mon Aug 17 .. Sun Aug 23
+        val workouts =
+            listOf(
+                workoutOn(LocalDate.of(2026, 8, 19), exerciseType = "strength", duration = 45),
+                workoutOn(LocalDate.of(2026, 8, 21), exerciseType = "strength", duration = 42), // after anchor
+                workoutOn(LocalDate.of(2026, 8, 11), exerciseType = "strength", duration = 30),
+                workoutOn(LocalDate.of(2026, 8, 15), exerciseType = "strength", duration = 60),
+            )
+
+        val volumes =
+            useCase
+                .execute(workouts, anchor, DayOfWeek.MONDAY, ZoneOffset.UTC)
+                .activityVolumes
+
+        val strength = volumes.single { it.activityType == WorkoutLayoutType.STRENGTH }
+        assertEquals(45f, strength.currentWeekValue, 0.001f)
+        assertEquals(90f, strength.previousWeekValue, 0.001f)
+    }
+
+    // endregion
+
     private fun workoutOn(
         date: LocalDate,
         exerciseType: String = "running",

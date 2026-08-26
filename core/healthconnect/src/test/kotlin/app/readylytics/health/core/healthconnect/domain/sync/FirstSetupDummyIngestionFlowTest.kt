@@ -389,6 +389,8 @@ class FirstSetupDummyIngestionFlowTest {
 
         override suspend fun hasWeightPermission(): Boolean = false
 
+        override suspend fun hasDistancePermission(): Boolean = false
+
         override suspend fun hasBodyFatPermission(): Boolean = false
 
         override suspend fun hasBloodPressurePermission(): Boolean = false

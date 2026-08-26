@@ -168,12 +168,6 @@ private fun ManagementTabs(
 private fun ManagementRow(item: ManagementItem) {
     if (item.supportedModes.isNotEmpty()) {
         ListItem(
-            headlineContent = {
-                Text(
-                    text = item.label,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            },
             supportingContent = {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -192,21 +186,25 @@ private fun ManagementRow(item: ManagementItem) {
                     onCheckedChange = item.onVisibilityChanged,
                 )
             },
-        )
+        ) {
+            Text(
+                text = item.label,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
     } else {
         ListItem(
-            headlineContent = {
-                Text(
-                    text = item.label,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            },
             trailingContent = {
                 Checkbox(
                     checked = item.isVisible,
                     onCheckedChange = item.onVisibilityChanged,
                 )
             },
-        )
+        ) {
+            Text(
+                text = item.label,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
     }
 }
