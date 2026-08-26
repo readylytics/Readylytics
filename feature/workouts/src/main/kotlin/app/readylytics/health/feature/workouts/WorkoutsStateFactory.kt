@@ -58,6 +58,7 @@ data class WorkoutsUiState(
     val todayStrainIncrease: Float? = null,
     val weeklyTraining: WeeklyTrainingStats? = null,
     val unitSystem: UnitSystem = UnitSystem.METRIC,
+    val hasDistancePermission: Boolean = true,
     val isRangeChanging: Boolean = false,
     val trimpPeriodSummary: PeriodAverageSummary? = null,
     val strainRatioPeriodSummary: PeriodAverageSummary? = null,
@@ -166,6 +167,7 @@ internal data class WorkoutsStateInputs(
     val workoutOnlyGains: List<Float> = emptyList(),
     val todayStrainIncrease: Float? = null,
     val weeklyTraining: WeeklyTrainingStats? = null,
+    val hasDistancePermission: Boolean = true,
 )
 
 internal fun buildWorkoutsState(inputs: WorkoutsStateInputs): WorkoutsUiState =
@@ -484,6 +486,7 @@ private fun assembleWorkoutsUiState(
             todayStrainIncrease = resolvedTodayStrainIncrease,
             weeklyTraining = weeklyTraining,
             unitSystem = prefs.unitSystem,
+            hasDistancePermission = hasDistancePermission,
             trimpPeriodSummary = series.trimpSummary,
             strainRatioPeriodSummary = series.strainSummary,
         )

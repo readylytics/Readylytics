@@ -289,6 +289,9 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
     override suspend fun hasWeightPermission(): Boolean =
         granted.contains(HealthPermission.getReadPermission(WeightRecord::class))
 
+    override suspend fun hasDistancePermission(): Boolean =
+        granted.contains(HealthPermission.getReadPermission(DistanceRecord::class))
+
     override suspend fun hasBodyFatPermission(): Boolean =
         granted.contains(HealthPermission.getReadPermission(BodyFatRecord::class))
 

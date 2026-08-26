@@ -191,6 +191,9 @@ class HealthConnectRepositoryImpl
         override suspend fun hasWeightPermission(): Boolean =
             hasPermission<WeightRecord>("weight")
 
+        override suspend fun hasDistancePermission(): Boolean =
+            hasPermission<DistanceRecord>("distance")
+
         override suspend fun hasBodyFatPermission(): Boolean =
             hasPermission<BodyFatRecord>("body fat")
 

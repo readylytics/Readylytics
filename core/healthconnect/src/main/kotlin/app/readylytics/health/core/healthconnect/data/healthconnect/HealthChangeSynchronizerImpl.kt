@@ -325,19 +325,15 @@ class HealthChangeSynchronizerImpl
                 }
                 HealthDataType.EXERCISE -> {
                     if (record is ExerciseSessionRecord) {
-                        // Enrich with Distance/ElevationGained totals exactly like the full-sync
-                        // path (readExerciseSessions(includeDetails = true)) so a workout carries
-                        // the same distance no matter which sync pass wrote it -- without this,
-                        // delta-synced workouts stored a null totalDistanceMeters and every
-                        // distance-based view (Activity volume, detail tile) read "—" until the
-                        // next full resync.
+                        val distanceTotal =
+                            sessionTotalFor<DistanceRecord>(record) { it.toIntervalTotal() }
+                        val elevationTotal =
+                            sessionTotalFor<ElevationGainedRecord>(record) { it.toIntervalTotal() }
                         val domainExercise =
                             record.toDomain(
                                 routeResult = record.exerciseRouteResult,
-                                totalDistanceMeters =
-                                    sessionTotalFor<DistanceRecord>(record) { it.toIntervalTotal() },
-                                elevationGainMeters =
-                                    sessionTotalFor<ElevationGainedRecord>(record) { it.toIntervalTotal() },
+                                totalDistanceMeters = distanceTotal,
+                                elevationGainMeters = elevationTotal,
                             )
                         val thresholds =
                             ZoneThresholds.create(

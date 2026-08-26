@@ -47,6 +47,7 @@ fun buildWorkoutsChartDataMap(
                 stats = uiState.weeklyTraining,
                 isLoading = uiState.isLoading,
                 unitSystem = uiState.unitSystem,
+                hasDistancePermission = uiState.hasDistancePermission,
                 modifier = Modifier.fillMaxWidth(),
             )
         },

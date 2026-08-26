@@ -172,6 +172,9 @@ interface HealthConnectRepository {
     /** Whether the optional `READ_WEIGHT` permission is currently granted. */
     suspend fun hasWeightPermission(): Boolean
 
+    /** Whether the optional `READ_DISTANCE` permission is currently granted. */
+    suspend fun hasDistancePermission(): Boolean
+
     /** Whether the optional `READ_BODY_FAT` permission is currently granted. */
     suspend fun hasBodyFatPermission(): Boolean
 

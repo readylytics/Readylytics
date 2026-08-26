@@ -1,16 +1,23 @@
 package app.readylytics.health.feature.workouts
 
+import android.content.Context
+import android.content.Intent
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -22,11 +29,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.LocalStatusColors
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.model.domain.preferences.UnitSystem
+import app.readylytics.health.core.scoring.domain.workouts.weekly.ActivityMetricType
 import app.readylytics.health.core.scoring.domain.workouts.weekly.ActivityVolume
 import app.readylytics.health.core.scoring.domain.workouts.weekly.WeeklyTrainingStats
 import app.readylytics.health.core.ui.common.SkeletonCard
@@ -47,6 +56,7 @@ fun ActivityVolumeSection(
     isLoading: Boolean,
     unitSystem: UnitSystem,
     modifier: Modifier = Modifier,
+    hasDistancePermission: Boolean = true,
 ) {
     var showAllSheet by rememberSaveable { mutableStateOf(false) }
     val rows = remember(stats) { stats?.let(::buildActivityVolumeRows).orEmpty() }
@@ -57,13 +67,25 @@ fun ActivityVolumeSection(
         Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
         when {
             isLoading || stats == null -> ActivityVolumeSkeleton()
-            rows.isNotEmpty() ->
+            rows.isNotEmpty() -> {
+                val missingDistance =
+                    !hasDistancePermission && rows.any { it.metricType == ActivityMetricType.DISTANCE }
+                if (missingDistance) {
+                    DistancePermissionBanner(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+                    )
+                    Spacer(Modifier.height(MaterialTheme.spacing.extraSmall))
+                }
                 ActivityVolumeRows(
                     rows = rows.take(INLINE_ROW_LIMIT),
                     hasMore = rows.size > INLINE_ROW_LIMIT,
                     unitSystem = unitSystem,
                     onShowAll = { showAllSheet = true },
                 )
+            }
         }
     }
 
@@ -72,6 +94,50 @@ fun ActivityVolumeSection(
             rows = rows,
             unitSystem = unitSystem,
             onDismiss = { showAllSheet = false },
+        )
+    }
+}
+
+/** Shown when the optional READ_DISTANCE permission is missing while distance-type activities are
+ *  listed — otherwise every such row silently renders "—". Offers the Health Connect deep link. */
+@Composable
+private fun DistancePermissionBanner(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    Surface(
+        modifier = modifier,
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(MaterialTheme.spacing.medium),
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Info,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.width(MaterialTheme.spacing.smallMedium))
+            Text(
+                text = stringResource(R.string.activity_volume_distance_permission_warning),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = { openHealthConnectPermissions(context) }) {
+                Text(stringResource(R.string.activity_volume_distance_permission_action))
+            }
+        }
+    }
+}
+
+private const val ACTION_MANAGE_HEALTH_PERMISSIONS = "android.health.connect.action.MANAGE_HEALTH_PERMISSIONS"
+
+private fun openHealthConnectPermissions(context: Context) {
+    runCatching {
+        context.startActivity(
+            Intent(ACTION_MANAGE_HEALTH_PERMISSIONS)
+                .putExtra(Intent.EXTRA_PACKAGE_NAME, context.packageName),
         )
     }
 }
@@ -184,13 +250,13 @@ internal fun ActivityVolumeRow(
 }
 
 /** Same delta treatment as the Weekly training cards (HIGHER_IS_BETTER); a type with no
- *  previous-week volume shows the neutral "New" label instead of a misleading percentage. */
+ *  previous-week volume shows a plain dash instead of a misleading percentage. */
 @Composable
 private fun activityVolumeDeltaDisplay(volume: ActivityVolume): WeeklyDeltaDisplay {
     val detail = ActivityVolumeFormatter.formatPercentDelta(volume.percentChange)
     if (detail == null) {
         return WeeklyDeltaDisplay(
-            text = stringResource(R.string.activity_volume_new),
+            text = stringResource(R.string.activity_volume_delta_missing),
             color = LocalStatusColors.current.neutral,
         )
     }
