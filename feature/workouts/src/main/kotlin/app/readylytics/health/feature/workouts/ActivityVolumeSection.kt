@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
@@ -31,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.LocalStatusColors
 import app.readylytics.health.core.designsystem.spacing
@@ -61,13 +63,12 @@ fun ActivityVolumeSection(
     var showAllSheet by rememberSaveable { mutableStateOf(false) }
     val rows = remember(stats) { stats?.let(::buildActivityVolumeRows).orEmpty() }
 
-    if (!isLoading && stats != null && rows.isEmpty()) return
-
     Column(modifier = modifier) {
         Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
         when {
             isLoading || stats == null -> ActivityVolumeSkeleton()
-            rows.isNotEmpty() -> {
+            rows.isEmpty() -> ActivityVolumeEmptyCard()
+            else -> {
                 val missingDistance =
                     !hasDistancePermission && rows.any { it.metricType == ActivityMetricType.DISTANCE }
                 if (missingDistance) {
@@ -156,6 +157,42 @@ private fun ActivityVolumeSkeleton() {
                 .fillMaxWidth()
                 .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
     )
+}
+
+/** Shown when the anchored week has no workouts, so the section stays visible instead of
+ *  disappearing from the customizable layout. */
+@Composable
+private fun ActivityVolumeEmptyCard() {
+    SectionHeader(title = stringResource(R.string.activity_volume_title))
+    Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
+    Card(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+        shape = MaterialTheme.shapes.large,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(MaterialTheme.spacing.medium),
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.FitnessCenter,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(MaterialTheme.spacing.smallMedium))
+            Text(
+                text = stringResource(R.string.activity_volume_empty),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
 }
 
 @Composable
