@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.PieChart
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -87,7 +86,6 @@ private fun TrainingMixEmptyCard() {
                 .fillMaxWidth()
                 .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
         shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -138,7 +136,6 @@ private fun TrainingMixCard(stats: WeeklyTrainingStats) {
                 .padding(horizontal = MaterialTheme.spacing.pageHorizontal)
                 .semantics { contentDescription = accessibilitySummary },
         shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
         Row(
             modifier =
