@@ -9,13 +9,21 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.roundToInt
 
 object ChartUtils {
-    private val tooltipDateFormatters = ConcurrentHashMap<Locale, DateTimeFormatter>()
+    private val dateFormatters = ConcurrentHashMap<Pair<String, Locale>, DateTimeFormatter>()
 
-    // DateTimeFormatter is immutable; the locale set is small and reused across tooltip taps.
+    /**
+     * Returns a [DateTimeFormatter] for [pattern] in [locale], resolving the locale at call time so
+     * a system language change is picked up instead of being frozen at class-initialisation.
+     *
+     * DateTimeFormatter is immutable; the pattern/locale set is small and reused across tooltip taps.
+     */
+    fun getDateFormatter(
+        pattern: String,
+        locale: Locale = Locale.getDefault(),
+    ): DateTimeFormatter = dateFormatters.getOrPut(pattern to locale) { DateTimeFormatter.ofPattern(pattern, locale) }
+
     internal fun getTooltipDateFormatter(locale: Locale = Locale.getDefault()): DateTimeFormatter =
-        tooltipDateFormatters.getOrPut(locale) {
-            DateTimeFormatter.ofPattern(DateFormatUtils.DATE_FORMAT_SHORT, locale)
-        }
+        getDateFormatter(DateFormatUtils.DATE_FORMAT_SHORT, locale)
 
     fun dayOffsetToLocalDate(
         dayOffset: Int,

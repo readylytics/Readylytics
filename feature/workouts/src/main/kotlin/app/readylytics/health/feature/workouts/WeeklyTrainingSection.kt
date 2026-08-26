@@ -39,6 +39,7 @@ fun WeeklyTrainingSection(
     stats: WeeklyTrainingStats?,
     isLoading: Boolean,
     modifier: Modifier = Modifier,
+    parentScrollInProgress: () -> Boolean = { false },
 ) {
     Column(modifier = modifier) {
         Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
@@ -52,6 +53,13 @@ fun WeeklyTrainingSection(
         } else {
             WeeklyTrainingCards(stats)
         }
+        Spacer(Modifier.height(MaterialTheme.spacing.small))
+        WeeklyVolumeTrendChartCard(
+            stats = stats,
+            isLoading = isLoading,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+            parentScrollInProgress = parentScrollInProgress,
+        )
     }
 }
 
@@ -150,7 +158,7 @@ private fun WeeklyStatCard(
     }
 }
 
-private data class WeeklyDeltaDisplay(
+internal data class WeeklyDeltaDisplay(
     val text: String,
     val color: Color,
 )
@@ -158,7 +166,7 @@ private data class WeeklyDeltaDisplay(
 /** Arrow + signed detail for an improved/worsened comparison; neutral no-change text otherwise.
  *  All Weekly training metrics are HIGHER_IS_BETTER. */
 @Composable
-private fun weeklyDeltaDisplay(
+internal fun weeklyDeltaDisplay(
     current: Int,
     previous: Int,
     detail: String,

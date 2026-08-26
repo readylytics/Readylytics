@@ -39,6 +39,7 @@ fun buildWorkoutsChartDataMap(
                 stats = uiState.weeklyTraining,
                 isLoading = uiState.isLoading,
                 modifier = Modifier.fillMaxWidth(),
+                parentScrollInProgress = parentScrollInProgress,
             )
         },
     )
