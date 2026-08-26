@@ -27,7 +27,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -118,20 +117,18 @@ private fun TrainingMixCard(stats: WeeklyTrainingStats) {
     val items = stats.trainingMix
     val totalMinutes = stats.currentWeek.totalDurationMinutes
     val sliceColors = resolveTrainingMixColors()
-    val context = LocalContext.current
-
-    val accessibilitySummary =
-        remember(stats, context) {
-            val totalText = WeeklyTrainingDeltaFormatter.formatDuration(totalMinutes)
-            val itemsSummary =
-                items.joinToString(", ") { item ->
-                    val name = context.getString(item.activityType.displayNameResId)
-                    val duration = WeeklyTrainingDeltaFormatter.formatDuration(item.durationMinutes)
-                    val percent = item.percentage.roundToInt()
-                    "$name: $duration, $percent%"
-                }
-            context.getString(R.string.training_mix_accessibility_summary, totalText, itemsSummary)
+    val totalText = WeeklyTrainingDeltaFormatter.formatDuration(totalMinutes)
+    val itemNames = items.map { stringResource(it.activityType.displayNameResId) }
+    val itemsSummary =
+        remember(items, itemNames) {
+            items.mapIndexed { index, item ->
+                val name = itemNames[index]
+                val duration = WeeklyTrainingDeltaFormatter.formatDuration(item.durationMinutes)
+                val percent = item.percentage.roundToInt()
+                "$name: $duration, $percent%"
+            }.joinToString(", ")
         }
+    val accessibilitySummary = stringResource(R.string.training_mix_accessibility_summary, totalText, itemsSummary)
 
     Card(
         modifier =
