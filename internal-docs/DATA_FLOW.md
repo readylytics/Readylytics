@@ -374,6 +374,11 @@ permission error and returns an empty list, so an ungranted permission silently 
 route-derived value instead of failing the sync pass.
 The changes path (`HealthChangeSynchronizerImpl`) can never carry routes (the Changes API excludes
 them), so those workouts land with `routeState = NOT_AVAILABLE` until a full resync re-reads them.
+Delta-synced sessions DO get distance/elevation enrichment: the EXERCISE upsert branch reads
+`DistanceRecord`/`ElevationGainedRecord` over the session's own window and attributes them via the
+same `SessionTotalsResolver` rule as the full path (`sessionTotalFor`), degrading to null on a
+missing optional permission — so `totalDistanceMeters` no longer depends on which sync pass wrote
+the row.
 On-demand single workout route sync is provided by `SyncWorkoutRouteUseCase` (`core/model/.../domain/sync/SyncWorkoutRouteUseCase.kt`):
 when route permission is granted or the user opens a workout requiring permission, it reads the session from Health Connect,
 maps route points, and updates the local Room database atomically via `HealthIngestionStore.persistSingleWorkoutRoute`.
