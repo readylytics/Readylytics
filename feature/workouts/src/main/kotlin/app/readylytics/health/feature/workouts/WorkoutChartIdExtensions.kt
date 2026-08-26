@@ -10,4 +10,5 @@ val WorkoutChartId.displayNameResId: Int
             WorkoutChartId.ACWR_TRIMP -> R.string.acwr_training_load
             WorkoutChartId.WEEKLY_TRAINING -> R.string.workout_stats_weekly_title
             WorkoutChartId.ACTIVITY_VOLUME -> R.string.activity_volume_title
+            WorkoutChartId.TRAINING_MIX -> R.string.training_mix_title
         }
