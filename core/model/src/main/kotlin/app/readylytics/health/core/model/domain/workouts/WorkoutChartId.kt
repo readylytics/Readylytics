@@ -4,4 +4,5 @@ enum class WorkoutChartId {
     ACWR_TRIMP,
     WEEKLY_TRAINING,
     ACTIVITY_VOLUME,
+    TRAINING_MIX,
 }
