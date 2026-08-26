@@ -121,12 +121,13 @@ private fun TrainingMixCard(stats: WeeklyTrainingStats) {
     val itemNames = items.map { stringResource(it.activityType.displayNameResId) }
     val itemsSummary =
         remember(items, itemNames) {
-            items.mapIndexed { index, item ->
-                val name = itemNames[index]
-                val duration = WeeklyTrainingDeltaFormatter.formatDuration(item.durationMinutes)
-                val percent = item.percentage.roundToInt()
-                "$name: $duration, $percent%"
-            }.joinToString(", ")
+            items
+                .mapIndexed { index, item ->
+                    val name = itemNames[index]
+                    val duration = WeeklyTrainingDeltaFormatter.formatDuration(item.durationMinutes)
+                    val percent = item.percentage.roundToInt()
+                    "$name: $duration, $percent%"
+                }.joinToString(", ")
         }
     val accessibilitySummary = stringResource(R.string.training_mix_accessibility_summary, totalText, itemsSummary)
 

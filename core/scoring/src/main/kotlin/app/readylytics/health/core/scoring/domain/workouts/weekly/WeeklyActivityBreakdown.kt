@@ -62,9 +62,10 @@ internal object WeeklyActivityBreakdown {
     ): List<TrainingMixItem> {
         if (items.size <= MAX_DISTINCT_MIX_TYPES) return items
 
-        val top = items.take(TOP_MIX_TYPES_BEFORE_OTHER)
-        val remainder = items.drop(TOP_MIX_TYPES_BEFORE_OTHER)
-        val otherDuration = remainder.sumOf { it.durationMinutes }
+        val (otherItems, nonOtherItems) = items.partition { it.activityType == WorkoutLayoutType.OTHER }
+        val top = nonOtherItems.take(TOP_MIX_TYPES_BEFORE_OTHER)
+        val remainder = nonOtherItems.drop(TOP_MIX_TYPES_BEFORE_OTHER)
+        val otherDuration = remainder.sumOf { it.durationMinutes } + otherItems.sumOf { it.durationMinutes }
         val otherItem =
             TrainingMixItem(
                 activityType = WorkoutLayoutType.OTHER,
