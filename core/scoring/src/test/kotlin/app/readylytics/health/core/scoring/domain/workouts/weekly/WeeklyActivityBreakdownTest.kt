@@ -31,7 +31,7 @@ class WeeklyActivityBreakdownTest {
                 workoutOn(LocalDate.of(2026, 5, 25), exerciseType = "running", distanceMeters = 2000f),
             )
 
-        val volumes = useCase.execute(workouts, today, today, DayOfWeek.MONDAY, ZoneOffset.UTC).activityVolumes
+        val volumes = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC).activityVolumes
         val running = volumes.single { it.activityType == WorkoutLayoutType.RUNNING }
 
         assertEquals(ActivityMetricType.DISTANCE, running.metricType)
@@ -49,7 +49,7 @@ class WeeklyActivityBreakdownTest {
                 workoutOn(LocalDate.of(2026, 6, 2), exerciseType = "strength", duration = 45),
             )
 
-        val volumes = useCase.execute(workouts, today, today, DayOfWeek.MONDAY, ZoneOffset.UTC).activityVolumes
+        val volumes = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC).activityVolumes
         val strength = volumes.single { it.activityType == WorkoutLayoutType.STRENGTH }
 
         assertEquals(ActivityMetricType.DURATION, strength.metricType)
@@ -64,7 +64,7 @@ class WeeklyActivityBreakdownTest {
                 workoutOn(LocalDate.of(2026, 6, 2), exerciseType = "74", distanceMeters = 700f), // open water swimming
             )
 
-        val volumes = useCase.execute(workouts, today, today, DayOfWeek.MONDAY, ZoneOffset.UTC).activityVolumes
+        val volumes = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC).activityVolumes
         val swimming = volumes.filter { it.activityType == WorkoutLayoutType.SWIMMING }
 
         assertEquals(1, swimming.size)
@@ -75,7 +75,7 @@ class WeeklyActivityBreakdownTest {
     fun `missing distance on a distance-based activity contributes zero without failing`() {
         val workouts = listOf(workoutOn(LocalDate.of(2026, 6, 1), exerciseType = "running", distanceMeters = null))
 
-        val volumes = useCase.execute(workouts, today, today, DayOfWeek.MONDAY, ZoneOffset.UTC).activityVolumes
+        val volumes = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC).activityVolumes
 
         assertEquals(0f, volumes.single { it.activityType == WorkoutLayoutType.RUNNING }.currentWeekValue, 0.001f)
     }
@@ -84,7 +84,7 @@ class WeeklyActivityBreakdownTest {
     fun `zero duration on a duration-based activity still appears with a zero value`() {
         val workouts = listOf(workoutOn(LocalDate.of(2026, 6, 1), exerciseType = "strength", duration = 0))
 
-        val volumes = useCase.execute(workouts, today, today, DayOfWeek.MONDAY, ZoneOffset.UTC).activityVolumes
+        val volumes = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC).activityVolumes
 
         assertEquals(0f, volumes.single { it.activityType == WorkoutLayoutType.STRENGTH }.currentWeekValue, 0.001f)
     }
@@ -97,7 +97,7 @@ class WeeklyActivityBreakdownTest {
     fun `single activity type yields one hundred percent`() {
         val workouts = listOf(workoutOn(LocalDate.of(2026, 6, 1), exerciseType = "running", duration = 60))
 
-        val mix = useCase.execute(workouts, today, today, DayOfWeek.MONDAY, ZoneOffset.UTC).trainingMix
+        val mix = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC).trainingMix
 
         assertEquals(1, mix.size)
         assertEquals(100f, mix.single().percentage, 0.001f)
@@ -111,7 +111,7 @@ class WeeklyActivityBreakdownTest {
                 workoutOn(LocalDate.of(2026, 6, 2), exerciseType = "strength", duration = 90),
             )
 
-        val mix = useCase.execute(workouts, today, today, DayOfWeek.MONDAY, ZoneOffset.UTC).trainingMix
+        val mix = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC).trainingMix
 
         assertEquals(25f, mix.single { it.activityType == WorkoutLayoutType.RUNNING }.percentage, 0.001f)
         assertEquals(75f, mix.single { it.activityType == WorkoutLayoutType.STRENGTH }.percentage, 0.001f)
@@ -120,7 +120,7 @@ class WeeklyActivityBreakdownTest {
 
     @Test
     fun `empty week yields an empty training mix`() {
-        val mix = useCase.execute(emptyList(), today, today, DayOfWeek.MONDAY, ZoneOffset.UTC).trainingMix
+        val mix = useCase.execute(emptyList(), today, DayOfWeek.MONDAY, ZoneOffset.UTC).trainingMix
 
         assertTrue(mix.isEmpty())
     }
@@ -130,45 +130,24 @@ class WeeklyActivityBreakdownTest {
     // region Comparison-window selection
 
     @Test
-    fun `past week anchor compares entire configured weeks`() {
+    fun `current side truncates at anchor while previous week stays full`() {
         val anchor = LocalDate.of(2026, 8, 19) // Wednesday of Mon Aug 17 .. Sun Aug 23
-        val realToday = LocalDate.of(2026, 8, 27) // Thursday of the following week
         val workouts =
             listOf(
                 workoutOn(LocalDate.of(2026, 8, 19), exerciseType = "strength", duration = 45),
-                workoutOn(LocalDate.of(2026, 8, 21), exerciseType = "strength", duration = 42),
+                workoutOn(LocalDate.of(2026, 8, 21), exerciseType = "strength", duration = 42), // after anchor
                 workoutOn(LocalDate.of(2026, 8, 11), exerciseType = "strength", duration = 30),
                 workoutOn(LocalDate.of(2026, 8, 15), exerciseType = "strength", duration = 60),
             )
 
         val volumes =
             useCase
-                .execute(workouts, anchor, realToday, DayOfWeek.MONDAY, ZoneOffset.UTC)
-                .activityVolumes
-
-        val strength = volumes.single { it.activityType == WorkoutLayoutType.STRENGTH }
-        assertEquals(87f, strength.currentWeekValue, 0.001f)
-        assertEquals(90f, strength.previousWeekValue, 0.001f)
-    }
-
-    @Test
-    fun `current in-progress week keeps like-for-like truncation`() {
-        val midWeek = LocalDate.of(2026, 8, 19)
-        val workouts =
-            listOf(
-                workoutOn(LocalDate.of(2026, 8, 19), exerciseType = "strength", duration = 45),
-                workoutOn(LocalDate.of(2026, 8, 21), exerciseType = "strength", duration = 42),
-                workoutOn(LocalDate.of(2026, 8, 11), exerciseType = "strength", duration = 30),
-            )
-
-        val volumes =
-            useCase
-                .execute(workouts, midWeek, midWeek, DayOfWeek.MONDAY, ZoneOffset.UTC)
+                .execute(workouts, anchor, DayOfWeek.MONDAY, ZoneOffset.UTC)
                 .activityVolumes
 
         val strength = volumes.single { it.activityType == WorkoutLayoutType.STRENGTH }
         assertEquals(45f, strength.currentWeekValue, 0.001f)
-        assertEquals(30f, strength.previousWeekValue, 0.001f)
+        assertEquals(90f, strength.previousWeekValue, 0.001f)
     }
 
     // endregion

@@ -64,7 +64,7 @@ class ActivityVolumeRowsTest {
     }
 
     private fun stats(vararg workouts: WorkoutData) =
-        useCase.execute(workouts.toList(), today, today, DayOfWeek.MONDAY, ZoneOffset.UTC)
+        useCase.execute(workouts.toList(), today, DayOfWeek.MONDAY, ZoneOffset.UTC)
 
     private fun workoutOn(
         date: LocalDate,
