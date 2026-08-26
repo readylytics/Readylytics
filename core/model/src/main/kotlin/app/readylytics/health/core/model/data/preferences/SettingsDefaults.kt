@@ -236,6 +236,7 @@ object SettingsDefaults {
             WorkoutChartConfiguration(WorkoutChartId.ACWR_TRIMP, isVisible = true, position = 0),
             WorkoutChartConfiguration(WorkoutChartId.WEEKLY_TRAINING, isVisible = true, position = 1),
             WorkoutChartConfiguration(WorkoutChartId.ACTIVITY_VOLUME, isVisible = true, position = 2),
+            WorkoutChartConfiguration(WorkoutChartId.TRAINING_MIX, isVisible = true, position = 3),
         )
 
     val DEFAULT_WORKOUT_HISTORY =

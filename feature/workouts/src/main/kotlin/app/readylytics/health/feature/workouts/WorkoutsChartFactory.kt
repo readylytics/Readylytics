@@ -51,4 +51,11 @@ fun buildWorkoutsChartDataMap(
                 modifier = Modifier.fillMaxWidth(),
             )
         },
+        WorkoutChartId.TRAINING_MIX to { _: WorkoutChartConfiguration ->
+            TrainingMixSection(
+                stats = uiState.weeklyTraining,
+                isLoading = uiState.isLoading,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
     )

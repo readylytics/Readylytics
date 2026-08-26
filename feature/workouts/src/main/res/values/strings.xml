@@ -154,4 +154,13 @@
     <string name="activity_volume_last_week">Last week %1$s</string>
     <string name="activity_volume_distance_permission_warning">Distance access is off in Health Connect, so distance totals are missing.</string>
     <string name="activity_volume_distance_permission_action">Turn on</string>
+
+    <!-- Training mix -->
+    <string name="training_mix_title">Training mix</string>
+    <string name="training_mix_empty">No workouts recorded this week</string>
+    <string name="training_mix_total">Total</string>
+    <string name="training_mix_percentage">%1$d%%</string>
+    <string name="training_mix_percentage_less_than_one">&lt;1%</string>
+    <string name="training_mix_item_accessibility">%1$s: %2$s, %3$s</string>
+    <string name="training_mix_accessibility_summary">Training mix: %1$s total. %2$s</string>
 </resources>

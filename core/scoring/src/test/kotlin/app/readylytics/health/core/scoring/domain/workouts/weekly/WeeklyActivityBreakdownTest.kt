@@ -125,6 +125,133 @@ class WeeklyActivityBreakdownTest {
         assertTrue(mix.isEmpty())
     }
 
+    @Test
+    fun `five activity types preserves top three and aggregates remaining into other`() {
+        val workouts =
+            listOf(
+                workoutOn(LocalDate.of(2026, 6, 1), exerciseType = "running", duration = 100),
+                workoutOn(LocalDate.of(2026, 6, 1), exerciseType = "strength", duration = 50),
+                workoutOn(LocalDate.of(2026, 6, 2), exerciseType = "cycling", duration = 30),
+                workoutOn(LocalDate.of(2026, 6, 2), exerciseType = "swimming", duration = 15),
+                workoutOn(LocalDate.of(2026, 6, 3), exerciseType = "yoga", duration = 5),
+            )
+
+        val mix = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC).trainingMix
+
+        assertEquals(4, mix.size)
+        assertEquals(WorkoutLayoutType.RUNNING, mix[0].activityType)
+        assertEquals(100, mix[0].durationMinutes)
+        assertEquals(50f, mix[0].percentage, 0.001f)
+
+        assertEquals(WorkoutLayoutType.STRENGTH, mix[1].activityType)
+        assertEquals(50, mix[1].durationMinutes)
+        assertEquals(25f, mix[1].percentage, 0.001f)
+
+        assertEquals(WorkoutLayoutType.CYCLING, mix[2].activityType)
+        assertEquals(30, mix[2].durationMinutes)
+        assertEquals(15f, mix[2].percentage, 0.001f)
+
+        assertEquals(WorkoutLayoutType.OTHER, mix[3].activityType)
+        assertEquals(20, mix[3].durationMinutes) // 15 (swimming) + 5 (yoga)
+        assertEquals(10f, mix[3].percentage, 0.001f)
+    }
+
+    @Test
+    fun `five activity types with high-duration other activity merges into single other item`() {
+        val workouts =
+            listOf(
+                workoutOn(LocalDate.of(2026, 6, 1), exerciseType = "other", duration = 100),
+                workoutOn(LocalDate.of(2026, 6, 1), exerciseType = "running", duration = 50),
+                workoutOn(LocalDate.of(2026, 6, 2), exerciseType = "strength", duration = 30),
+                workoutOn(LocalDate.of(2026, 6, 2), exerciseType = "cycling", duration = 15),
+                workoutOn(LocalDate.of(2026, 6, 3), exerciseType = "swimming", duration = 5),
+            )
+
+        val mix = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC).trainingMix
+
+        assertEquals(4, mix.size)
+        assertEquals(WorkoutLayoutType.RUNNING, mix[0].activityType)
+        assertEquals(50, mix[0].durationMinutes)
+        assertEquals(25f, mix[0].percentage, 0.001f)
+
+        assertEquals(WorkoutLayoutType.STRENGTH, mix[1].activityType)
+        assertEquals(30, mix[1].durationMinutes)
+        assertEquals(15f, mix[1].percentage, 0.001f)
+
+        assertEquals(WorkoutLayoutType.CYCLING, mix[2].activityType)
+        assertEquals(15, mix[2].durationMinutes)
+        assertEquals(7.5f, mix[2].percentage, 0.001f)
+
+        assertEquals(WorkoutLayoutType.OTHER, mix[3].activityType)
+        assertEquals(105, mix[3].durationMinutes) // 100 (other) + 5 (swimming)
+        assertEquals(52.5f, mix[3].percentage, 0.001f)
+
+        assertEquals(1, mix.count { it.activityType == WorkoutLayoutType.OTHER })
+    }
+
+    @Test
+    fun `four activity types are all preserved without other aggregation`() {
+        val workouts =
+            listOf(
+                workoutOn(LocalDate.of(2026, 6, 1), exerciseType = "running", duration = 40),
+                workoutOn(LocalDate.of(2026, 6, 1), exerciseType = "strength", duration = 30),
+                workoutOn(LocalDate.of(2026, 6, 2), exerciseType = "cycling", duration = 20),
+                workoutOn(LocalDate.of(2026, 6, 2), exerciseType = "swimming", duration = 10),
+            )
+
+        val mix = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC).trainingMix
+
+        assertEquals(4, mix.size)
+        assertEquals(
+            listOf(
+                WorkoutLayoutType.RUNNING,
+                WorkoutLayoutType.STRENGTH,
+                WorkoutLayoutType.CYCLING,
+                WorkoutLayoutType.SWIMMING,
+            ),
+            mix.map { it.activityType },
+        )
+    }
+
+    @Test
+    fun `four activity types with other category sorts other to end even when highest duration`() {
+        val workouts =
+            listOf(
+                workoutOn(LocalDate.of(2026, 6, 1), exerciseType = "other", duration = 100),
+                workoutOn(LocalDate.of(2026, 6, 1), exerciseType = "running", duration = 40),
+                workoutOn(LocalDate.of(2026, 6, 2), exerciseType = "strength", duration = 30),
+                workoutOn(LocalDate.of(2026, 6, 2), exerciseType = "cycling", duration = 20),
+            )
+
+        val mix = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC).trainingMix
+
+        assertEquals(4, mix.size)
+        assertEquals(
+            listOf(
+                WorkoutLayoutType.RUNNING,
+                WorkoutLayoutType.STRENGTH,
+                WorkoutLayoutType.CYCLING,
+                WorkoutLayoutType.OTHER,
+            ),
+            mix.map { it.activityType },
+        )
+    }
+
+    @Test
+    fun `activities with zero duration are excluded from training mix`() {
+        val workouts =
+            listOf(
+                workoutOn(LocalDate.of(2026, 6, 1), exerciseType = "running", duration = 60),
+                workoutOn(LocalDate.of(2026, 6, 2), exerciseType = "strength", duration = 0),
+            )
+
+        val mix = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC).trainingMix
+
+        assertEquals(1, mix.size)
+        assertEquals(WorkoutLayoutType.RUNNING, mix.single().activityType)
+        assertEquals(100f, mix.single().percentage, 0.001f)
+    }
+
     // endregion
 
     // region Comparison-window selection

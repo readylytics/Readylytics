@@ -221,6 +221,90 @@ class WorkoutsViewModelLayoutManagementTest {
         }
 
     @Test
+    fun `chart management toggle hides activity volume section and persists on save`() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            advanceUntilIdle()
+
+            viewModel.toggleWorkoutsManagement()
+            advanceUntilIdle()
+            viewModel.onToggleChartVisibility(WorkoutChartId.ACTIVITY_VOLUME, visible = false)
+            advanceUntilIdle()
+            assertFalse(
+                viewModel.uiState.value.chartConfigurations
+                    .first { it.chartId == WorkoutChartId.ACTIVITY_VOLUME }
+                    .isVisible,
+            )
+
+            viewModel.toggleWorkoutsManagement()
+            advanceUntilIdle()
+            coVerify {
+                workoutsLayoutRepository.updateWorkoutChartConfigurations(
+                    match { charts -> charts.any { it.chartId == WorkoutChartId.ACTIVITY_VOLUME && !it.isVisible } },
+                )
+            }
+            collector.cancel()
+        }
+
+    @Test
+    fun `chart management toggle hides training mix section and persists on save`() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            advanceUntilIdle()
+
+            viewModel.toggleWorkoutsManagement()
+            advanceUntilIdle()
+            viewModel.onToggleChartVisibility(WorkoutChartId.TRAINING_MIX, visible = false)
+            advanceUntilIdle()
+            assertFalse(
+                viewModel.uiState.value.chartConfigurations
+                    .first { it.chartId == WorkoutChartId.TRAINING_MIX }
+                    .isVisible,
+            )
+
+            viewModel.toggleWorkoutsManagement()
+            advanceUntilIdle()
+            coVerify {
+                workoutsLayoutRepository.updateWorkoutChartConfigurations(
+                    match { charts -> charts.any { it.chartId == WorkoutChartId.TRAINING_MIX && !it.isVisible } },
+                )
+            }
+            collector.cancel()
+        }
+
+    @Test
+    fun `reorder charts updates chart positions and persists on save`() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            advanceUntilIdle()
+
+            viewModel.toggleWorkoutsManagement()
+            advanceUntilIdle()
+
+            val current = viewModel.uiState.value.chartConfigurations
+            val trainingMixConfig = current.first { it.chartId == WorkoutChartId.TRAINING_MIX }
+            val newOrder = listOf(trainingMixConfig) + current.filter { it.chartId != WorkoutChartId.TRAINING_MIX }
+            viewModel.onReorderCharts(newOrder)
+            advanceUntilIdle()
+
+            val reordered = viewModel.uiState.value.chartConfigurations
+            assertEquals(WorkoutChartId.TRAINING_MIX, reordered[0].chartId)
+
+            viewModel.toggleWorkoutsManagement()
+            advanceUntilIdle()
+
+            coVerify {
+                workoutsLayoutRepository.updateWorkoutChartConfigurations(
+                    match { charts -> charts.first().chartId == WorkoutChartId.TRAINING_MIX },
+                )
+            }
+            collector.cancel()
+        }
+
+    @Test
     fun `history management toggle hides workout list and persists on save`() =
         runTest(testDispatcher) {
             viewModel = createViewModel()
