@@ -39,6 +39,7 @@ fun WeeklyTrainingSection(
     stats: WeeklyTrainingStats?,
     isLoading: Boolean,
     modifier: Modifier = Modifier,
+    parentScrollInProgress: () -> Boolean = { false },
 ) {
     Column(modifier = modifier) {
         Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
@@ -52,6 +53,13 @@ fun WeeklyTrainingSection(
         } else {
             WeeklyTrainingCards(stats)
         }
+        Spacer(Modifier.height(MaterialTheme.spacing.small))
+        WeeklyVolumeTrendChartCard(
+            stats = stats,
+            isLoading = isLoading,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+            parentScrollInProgress = parentScrollInProgress,
+        )
     }
 }
 

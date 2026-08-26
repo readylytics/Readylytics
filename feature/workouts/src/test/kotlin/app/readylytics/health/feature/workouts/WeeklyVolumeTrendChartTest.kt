@@ -85,15 +85,28 @@ class WeeklyVolumeTrendChartTest {
     }
 
     @Test
-    fun weeklyVolumeTrendChartCard_withData_rendersHeadlineAndTitle() {
+    fun weeklyVolumeTrendChartCard_withData_rendersTitleAndLegend() {
         composeRule.setContent {
             FitDashboardTheme {
                 WeeklyVolumeTrendChartCard(stats = sampleStats(), isLoading = false)
             }
         }
 
-        composeRule.onNodeWithText("This week vs last week").assertIsDisplayed()
-        composeRule.onNodeWithText("3h 42m").assertIsDisplayed()
+        composeRule.onNodeWithText("Training time comparison").assertIsDisplayed()
+        composeRule.onNodeWithText("This week").assertIsDisplayed()
+        composeRule.onNodeWithText("Last week").assertIsDisplayed()
+    }
+
+    @Test
+    fun weeklyVolumeTrendChartCard_withData_omitsTheWeeklyTotalShownOnTheStatCards() {
+        composeRule.setContent {
+            FitDashboardTheme {
+                WeeklyVolumeTrendChartCard(stats = sampleStats(), isLoading = false)
+            }
+        }
+
+        // The weekly total and its vs-last-week delta live on the WeeklyTrainingSection stat cards.
+        composeRule.onNodeWithText("3h 42m").assertDoesNotExist()
     }
 
     @Test
@@ -115,6 +128,6 @@ class WeeklyVolumeTrendChartTest {
             }
         }
 
-        composeRule.onNodeWithText("This week vs last week").assertDoesNotExist()
+        composeRule.onNodeWithText("Training time comparison").assertDoesNotExist()
     }
 }

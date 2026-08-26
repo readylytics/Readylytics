@@ -47,12 +47,14 @@
     <string name="workout_stats_weekly_active_days">Active days</string>
     <string name="workout_stats_weekly_active_days_value">%1$d / 7</string>
     <string name="workout_stats_weekly_vs_last_week">vs last week</string>
-    <string name="weekly_volume_trend_title">This week vs last week</string>
+    <string name="weekly_volume_trend_title">Training time comparison</string>
     <string name="weekly_volume_trend_legend_this_week">This week</string>
     <string name="weekly_volume_trend_legend_last_week">Last week</string>
     <string name="weekly_volume_tooltip_this_week_format">This week: %1$s</string>
     <string name="weekly_volume_tooltip_last_week_format">Last week: %1$s</string>
     <string name="weekly_volume_tooltip_diff_format">%1$s vs last week</string>
+    <!-- java.time date pattern for the weekly volume tooltip heading, e.g. "Thu, Aug 20". -->
+    <string name="weekly_volume_tooltip_date_pattern">EEE, MMM d</string>
     <string name="workout_zones_title">Heart rate zones</string>
     <string name="workouts_manage_layout">Customize Workouts</string>
     <string name="workouts_management_cards_section_title">Cards</string>

@@ -1,16 +1,11 @@
 package app.readylytics.health.feature.workouts
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
@@ -20,17 +15,21 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.scoring.domain.workouts.weekly.DailyTrainingVolume
 import app.readylytics.health.core.scoring.domain.workouts.weekly.WeeklyTrainingStats
+import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.components.ChartDefaults
@@ -57,9 +56,7 @@ import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
 import com.patrykandpatrick.vico.compose.common.data.ExtraStore
-import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
-import java.util.Locale
 import kotlin.math.ceil
 import app.readylytics.health.core.ui.R as CoreUiR
 
@@ -67,16 +64,22 @@ private const val DAYS_IN_WEEK = 7
 private const val CHART_HEIGHT_DP = 200
 private const val Y_AXIS_STEP_MINUTES = 30.0
 private const val Y_AXIS_FLOOR_MINUTES = 60.0
-private val TOOLTIP_DATE_FORMAT = DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault())
+
+/**
+ * Matches the rendered card: 32dp vertical padding + title + 200dp chart + legend, so the skeleton
+ * does not resize when data lands.
+ */
+private const val SKELETON_HEIGHT_DP = 292
 
 @Composable
 fun WeeklyVolumeTrendChartCard(
     stats: WeeklyTrainingStats?,
     isLoading: Boolean,
     modifier: Modifier = Modifier,
+    parentScrollInProgress: () -> Boolean = { false },
 ) {
     if (isLoading || stats == null) {
-        SkeletonCard(height = 280.dp, modifier = modifier.fillMaxWidth())
+        SkeletonCard(height = SKELETON_HEIGHT_DP.dp, modifier = modifier.fillMaxWidth())
         return
     }
     Card(
@@ -90,13 +93,11 @@ fun WeeklyVolumeTrendChartCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(MaterialTheme.spacing.medium))
-            WeeklyVolumeHeadline(stats)
-            Spacer(Modifier.height(MaterialTheme.spacing.medium))
             val daily = stats.cumulativeDailyTraining
             val hasAnyData =
                 daily.any { (it.currentWeekDurationMinutes ?: 0) > 0 || it.previousWeekDurationMinutes > 0 }
             if (hasAnyData) {
-                WeeklyVolumeTrendChart(daily = daily)
+                WeeklyVolumeTrendChart(daily = daily, parentScrollInProgress = parentScrollInProgress)
             } else {
                 EmptyWeeklyVolumeTrendPlaceholder()
             }
@@ -107,45 +108,30 @@ fun WeeklyVolumeTrendChartCard(
 }
 
 @Composable
-private fun WeeklyVolumeHeadline(stats: WeeklyTrainingStats) {
-    val delta =
-        weeklyDeltaDisplay(
-            current = stats.currentWeek.totalDurationMinutes,
-            previous = stats.previousWeek.totalDurationMinutes,
-            detail =
-                WeeklyTrainingDeltaFormatter.formatDurationDelta(
-                    stats.comparison.durationDeltaMinutes,
-                    stats.comparison.durationPercentChange,
-                ),
-        )
-    Column {
-        Text(
-            text = WeeklyTrainingDeltaFormatter.formatDuration(stats.currentWeek.totalDurationMinutes),
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        Text(
-            text = "${delta.text} ${stringResource(R.string.workout_stats_weekly_vs_last_week)}",
-            style = MaterialTheme.typography.labelMedium,
-            color = delta.color,
-        )
-    }
-}
-
-@Composable
 private fun WeeklyVolumeTrendChart(
     daily: List<DailyTrainingVolume>,
     modifier: Modifier = Modifier,
+    parentScrollInProgress: () -> Boolean = { false },
 ) {
     var selectedState by remember(daily) { mutableStateOf<WeeklyVolumeSelectedState?>(null) }
+
+    // Dismiss the tooltip/selection when the parent list scrolls vertically, so the popup never
+    // detaches from its anchor point. The chart itself has scrolling and zooming disabled.
+    val currentParentScrollInProgress by rememberUpdatedState(parentScrollInProgress)
+    LaunchedEffect(Unit) {
+        snapshotFlow { currentParentScrollInProgress() }.collect { inProgress ->
+            if (inProgress) selectedState = null
+        }
+    }
 
     val series = remember(daily) { WeeklyVolumeTrendMapper.toSeries(daily) }
     val currentPoints = series.first
     val previousPoints = series.second
     val todayOffset = remember(daily) { WeeklyVolumeTrendMapper.todayOffset(daily) }
+    val locale = LocalLocale.current.platformLocale
     val weekdayLabels =
-        remember(daily) {
-            daily.map { it.date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()) }
+        remember(daily, locale) {
+            daily.map { it.date.dayOfWeek.getDisplayName(TextStyle.SHORT, locale) }
         }
 
     val modelProducer = rememberWeeklyVolumeModelProducer(currentPoints, previousPoints)
@@ -157,17 +143,33 @@ private fun WeeklyVolumeTrendChart(
 
     WeeklyVolumeTrendChartContent(
         modifier = modifier,
-        modelProducer = modelProducer,
-        currentLine = currentLine,
-        previousLine = previousLine,
-        rangeProvider = rangeProvider,
-        weekdayLabels = weekdayLabels,
-        markerVisibilityListener = markerVisibilityListener,
+        spec =
+            WeeklyVolumeChartSpec(
+                modelProducer = modelProducer,
+                currentLine = currentLine,
+                previousLine = previousLine,
+                rangeProvider = rangeProvider,
+                weekdayLabels = weekdayLabels,
+                markerVisibilityListener = markerVisibilityListener,
+            ),
         selectedState = selectedState,
         tooltipData = tooltipData,
         onDismissTooltip = { selectedState = null },
     )
 }
+
+/**
+ * Bundles the Vico building blocks for the chart so [WeeklyVolumeTrendChartContent] stays within
+ * detekt's parameter budget. All members are remembered upstream and never mutated.
+ */
+private data class WeeklyVolumeChartSpec(
+    val modelProducer: CartesianChartModelProducer,
+    val currentLine: LineCartesianLayer.Line,
+    val previousLine: LineCartesianLayer.Line,
+    val rangeProvider: CartesianLayerRangeProvider,
+    val weekdayLabels: List<String>,
+    val markerVisibilityListener: CartesianMarkerVisibilityListener,
+)
 
 @Composable
 private fun rememberWeeklyVolumeModelProducer(
@@ -178,8 +180,9 @@ private fun rememberWeeklyVolumeModelProducer(
     LaunchedEffect(currentPoints, previousPoints) {
         modelProducer.runTransaction {
             lineModel {
-                series(x = currentPoints.map { it.dayOffset }, y = currentPoints.map { requireNotNull(it.value) })
-                series(x = previousPoints.map { it.dayOffset }, y = previousPoints.map { requireNotNull(it.value) })
+                weeklyVolumeSeriesOrder(currentPoints, previousPoints).forEach { points ->
+                    series(x = points.map { it.dayOffset }, y = points.map { requireNotNull(it.value) })
+                }
             }
         }
     }
@@ -264,19 +267,25 @@ private fun rememberWeeklyVolumeTooltipData(
     val thisWeekFormat = stringResource(R.string.weekly_volume_tooltip_this_week_format)
     val lastWeekFormat = stringResource(R.string.weekly_volume_tooltip_last_week_format)
     val diffFormat = stringResource(R.string.weekly_volume_tooltip_diff_format)
+    val datePattern = stringResource(R.string.weekly_volume_tooltip_date_pattern)
+    val locale = LocalLocale.current.platformLocale
 
-    return remember(selectedState, daily, thisWeekFormat, lastWeekFormat, diffFormat) {
+    return remember(selectedState, daily, thisWeekFormat, lastWeekFormat, diffFormat, datePattern, locale) {
         selectedState?.let { state ->
             val date = daily.getOrNull(state.dayOffset)?.date
             val delta = WeeklyVolumeTrendMapper.dailyDelta(state.currentMinutes, state.previousMinutes)
+            // The card leads with the current week, so "This week" is the first line under the date
+            // and "Last week" follows it. On a day after today there is no current-week point.
+            val thisWeekLine =
+                state.currentMinutes?.let {
+                    thisWeekFormat.format(WeeklyTrainingDeltaFormatter.formatDuration(it))
+                }
+            val lastWeekLine =
+                lastWeekFormat.format(WeeklyTrainingDeltaFormatter.formatDuration(state.previousMinutes))
             DataPointTooltipData(
-                valueText = date?.format(TOOLTIP_DATE_FORMAT).orEmpty(),
-                dateText = lastWeekFormat.format(WeeklyTrainingDeltaFormatter.formatDuration(state.previousMinutes)),
-                preDateLines =
-                    state.currentMinutes
-                        ?.let {
-                            listOf(thisWeekFormat.format(WeeklyTrainingDeltaFormatter.formatDuration(it)))
-                        }.orEmpty(),
+                valueText = date?.format(ChartUtils.getDateFormatter(datePattern, locale)).orEmpty(),
+                dateText = thisWeekLine ?: lastWeekLine,
+                preDateLines = if (thisWeekLine != null) listOf(lastWeekLine) else emptyList(),
                 extraLine =
                     delta?.let {
                         diffFormat.format(
@@ -289,20 +298,15 @@ private fun rememberWeeklyVolumeTooltipData(
     }
 }
 
-@Suppress("LongParameterList")
 @Composable
 private fun WeeklyVolumeTrendChartContent(
-    modelProducer: CartesianChartModelProducer,
-    currentLine: LineCartesianLayer.Line,
-    previousLine: LineCartesianLayer.Line,
-    rangeProvider: CartesianLayerRangeProvider,
-    weekdayLabels: List<String>,
-    markerVisibilityListener: CartesianMarkerVisibilityListener,
+    spec: WeeklyVolumeChartSpec,
     selectedState: WeeklyVolumeSelectedState?,
     tooltipData: DataPointTooltipData?,
     onDismissTooltip: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val weekdayLabels = spec.weekdayLabels
     val labelComponent = ChartDefaults.labelTextComponent()
     val guidelineComponent = ChartDefaults.guidelineComponent()
     val xAxisFormatter =
@@ -317,8 +321,11 @@ private fun WeeklyVolumeTrendChartContent(
             chart =
                 rememberCartesianChart(
                     rememberLineCartesianLayer(
-                        lineProvider = LineCartesianLayer.LineProvider.series(currentLine, previousLine),
-                        rangeProvider = rangeProvider,
+                        lineProvider =
+                            LineCartesianLayer.LineProvider.series(
+                                weeklyVolumeSeriesOrder(spec.currentLine, spec.previousLine),
+                            ),
+                        rangeProvider = spec.rangeProvider,
                     ),
                     startAxis =
                         VerticalAxis.rememberStart(
@@ -334,9 +341,9 @@ private fun WeeklyVolumeTrendChartContent(
                             guideline = guidelineComponent,
                         ),
                     marker = InvisibleMarker,
-                    markerVisibilityListener = markerVisibilityListener,
+                    markerVisibilityListener = spec.markerVisibilityListener,
                 ),
-            modelProducer = modelProducer,
+            modelProducer = spec.modelProducer,
             scrollState = rememberVicoScrollState(scrollEnabled = false),
             zoomState = rememberVicoZoomState(zoomEnabled = false, initialZoom = Zoom.Content),
             modifier = Modifier.fillMaxWidth().height(CHART_HEIGHT_DP.dp),
@@ -371,41 +378,7 @@ private fun EmptyWeeklyVolumeTrendPlaceholder(modifier: Modifier = Modifier) {
     }
 }
 
-@Composable
-private fun WeeklyVolumeTrendLegend(modifier: Modifier = Modifier) {
-    val primaryColor = MaterialTheme.colorScheme.primary
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.size(width = 16.dp, height = 2.dp).background(primaryColor))
-            Spacer(Modifier.width(MaterialTheme.spacing.extraSmallMedium))
-            Text(
-                text = stringResource(R.string.weekly_volume_trend_legend_this_week),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier =
-                    Modifier
-                        .size(width = 16.dp, height = 2.dp)
-                        .background(primaryColor.copy(alpha = PREVIOUS_WEEK_LINE_ALPHA)),
-            )
-            Spacer(Modifier.width(MaterialTheme.spacing.extraSmallMedium))
-            Text(
-                text = stringResource(R.string.weekly_volume_trend_legend_last_week),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
 private const val TODAY_POINT_SIZE_DP = 9
-private const val PREVIOUS_WEEK_LINE_ALPHA = 0.55f
-private const val PREVIOUS_WEEK_DASH_LENGTH_DP = 6
-private const val PREVIOUS_WEEK_GAP_LENGTH_DP = 4
+internal const val PREVIOUS_WEEK_LINE_ALPHA = 0.55f
+internal const val PREVIOUS_WEEK_DASH_LENGTH_DP = 6
+internal const val PREVIOUS_WEEK_GAP_LENGTH_DP = 4

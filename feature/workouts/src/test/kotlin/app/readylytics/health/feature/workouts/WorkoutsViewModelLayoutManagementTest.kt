@@ -163,7 +163,10 @@ class WorkoutsViewModelLayoutManagementTest {
             viewModel = createViewModel()
             val collector = backgroundScope.launch { viewModel.uiState.collect() }
             advanceUntilIdle()
-            assertEquals(3, viewModel.uiState.value.chartConfigurations.size)
+            assertEquals(
+                SettingsDefaults.DEFAULT_WORKOUT_CHARTS.size,
+                viewModel.uiState.value.chartConfigurations.size,
+            )
 
             viewModel.toggleWorkoutsManagement()
             advanceUntilIdle()

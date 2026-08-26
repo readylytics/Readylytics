@@ -14,7 +14,22 @@ internal const val CURRENT_WEEK_SERIES_INDEX = 0
 internal const val PREVIOUS_WEEK_SERIES_INDEX = 1
 
 /**
- * Remembers a [CartesianMarkerVisibilityListener] for the "This week vs last week" chart.
+ * Orders a current-week/previous-week pair by the series indices this listener resolves against.
+ *
+ * The chart registers its model series and its `LineProvider` lines through this function, so the
+ * declaration order can never drift from [CURRENT_WEEK_SERIES_INDEX]/[PREVIOUS_WEEK_SERIES_INDEX] —
+ * a silent swap would otherwise invert every tooltip's "this week"/"last week" values.
+ */
+internal fun <T> weeklyVolumeSeriesOrder(
+    current: T,
+    previous: T,
+): List<T> =
+    listOf(CURRENT_WEEK_SERIES_INDEX to current, PREVIOUS_WEEK_SERIES_INDEX to previous)
+        .sortedBy { it.first }
+        .map { it.second }
+
+/**
+ * Remembers a [CartesianMarkerVisibilityListener] for the "Training time comparison" chart.
  *
  * Both lines share a single [com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer]
  * and y-axis, so Vico reports one [LineCartesianLayerMarkerTarget] per tapped day offset, whose

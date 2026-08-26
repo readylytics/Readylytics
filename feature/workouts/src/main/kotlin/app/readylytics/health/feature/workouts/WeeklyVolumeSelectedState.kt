@@ -1,7 +1,7 @@
 package app.readylytics.health.feature.workouts
 
 /**
- * Holds the resolved data for the currently tapped day on the "This week vs last week"
+ * Holds the resolved data for the currently tapped day on the "Training time comparison"
  * cumulative volume chart.
  *
  * @param dayOffset       Index into the chart's fixed 7-day x-axis (0 = configured week start).
