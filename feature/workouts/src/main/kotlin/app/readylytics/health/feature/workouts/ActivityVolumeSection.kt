@@ -34,6 +34,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.health.connect.client.HealthConnectClient
 import app.readylytics.health.core.designsystem.LocalStatusColors
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.model.domain.preferences.UnitSystem
@@ -140,6 +141,8 @@ private fun openHealthConnectPermissions(context: Context) {
             Intent(ACTION_MANAGE_HEALTH_PERMISSIONS)
                 .putExtra(Intent.EXTRA_PACKAGE_NAME, context.packageName),
         )
+    }.recoverCatching {
+        context.startActivity(Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS))
     }
 }
 

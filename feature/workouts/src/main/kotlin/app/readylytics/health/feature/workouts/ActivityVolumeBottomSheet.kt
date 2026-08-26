@@ -1,13 +1,12 @@
 package app.readylytics.health.feature.workouts
 
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -38,8 +37,8 @@ internal fun ActivityVolumeBottomSheet(
                     .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
         )
         Spacer(Modifier.height(MaterialTheme.spacing.small))
-        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-            rows.forEachIndexed { index, volume ->
+        LazyColumn {
+            itemsIndexed(rows) { index, volume ->
                 ActivityVolumeRow(volume = volume, unitSystem = unitSystem)
                 if (index < rows.lastIndex) {
                     HorizontalDivider(

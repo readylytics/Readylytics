@@ -8,16 +8,20 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
 /**
- * Cached `READ_DISTANCE` permission check for UI gating (Activity volume banner). Checked once per
- * instance lifetime: permission changes require an app restart to take effect, so re-querying on
- * every state emission would only add Health Connect IPC calls.
+ * Cached `READ_DISTANCE` permission check for UI gating (Activity volume banner). A **granted**
+ * result is cached permanently (the process is killed on revocation anyway). A **denied** result
+ * is re-probed every call because Android does *not* kill the process when the user grants a
+ * permission — only when they revoke one.
  */
 class WorkoutsDistancePermissionGate(
     private val probe: suspend () -> Boolean,
 ) {
     private var cached: Boolean? = null
 
-    suspend fun isGranted(): Boolean = cached ?: probe().also { cached = it }
+    suspend fun isGranted(): Boolean {
+        if (cached == true) return true
+        return probe().also { cached = it }
+    }
 }
 
 @Module
