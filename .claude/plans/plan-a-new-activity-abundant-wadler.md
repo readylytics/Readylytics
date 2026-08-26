@@ -30,6 +30,19 @@ new-data-model task. No Room/Health Connect/domain-model changes are needed.
   explicitly out of scope (deferred as a possible fast-follow) to avoid extending the
   `ActivityVolume` domain model and the associated `internal-docs/DATA_FLOW.md` update in this
   change.
+- **Existing users**: auto-heal (`LayoutDefaultsMerger.mergeWithDefaults` in
+  `WorkoutsLayoutRepositoryImpl.ensureDefaultChartsArePresent()`) injects
+  `ACTIVITY_VOLUME` (`isVisible = true`, `position = 2`) into already-stored layouts, so the
+  section is visible by default for existing users too — hideable via Customize (confirmed).
+- **Zero-distance rows**: a DISTANCE-type row whose current-week value is 0 (e.g., pool swim
+  logged without distance) displays the `"—" that `UnitConverter.formatDistance` returns for
+  `<= 0m`; the row is NOT dropped (confirmed).
+- **Delta direction**: uniform `DeltaDirection.HIGHER_IS_BETTER` for every activity type — more
+  volume always reads as improved (optimal color up / warning down), matching the Weekly
+  training cards' duration treatment; no per-type direction mapping (confirmed).
+- **Strings home**: new keys go in `feature/workouts/src/main/res/values/strings.xml`, matching
+  existing precedent (`workout_layout_type_*` live there) rather than the generic app-level
+  `app/src/main/res/values/strings.xml` rule (confirmed).
 
 ## Domain layer — no changes
 
@@ -61,9 +74,9 @@ convention as other cards that use `null`/empty to signal "nothing to show").
    Add a test `ActivityVolumeRowsTest.kt` (mirrors `core/scoring/src/test/kotlin/.../weekly/WeeklyActivityBreakdownTest.kt`'s `workoutOn(...)`-style fixture builder) covering: ranking by duration share, a distance-type and a duration-type both present, and the empty-week case.
 
 2. **`ActivityVolumeFormatter.kt`** — pure formatting, sibling to `WeeklyTrainingDeltaFormatter.kt`:
-   - `formatValue(value: Float, metricType: ActivityMetricType, unitSystem: UnitSystem): String` — `ActivityMetricType.DISTANCE` → `UnitConverter.formatDistance(value, unitSystem)` (`core/model/.../domain/util/UnitConverter.kt`); `ActivityMetricType.DURATION` → `WeeklyTrainingDeltaFormatter.formatDuration(value.roundToInt())`.
+   - `formatValue(value: Float, metricType: ActivityMetricType, unitSystem: UnitSystem): String` — `ActivityMetricType.DISTANCE` → `UnitConverter.formatDistance(value, unitSystem)` (`core/model/.../domain/util/UnitConverter.kt`; returns `"—"` for `<= 0m`, which is the intended zero-distance display); `ActivityMetricType.DURATION` → `WeeklyTrainingDeltaFormatter.formatDuration(value.roundToInt())`.
    - `formatPercentDelta(percentChange: Float?): String` — `"+24%"` / `"-18%"` signed, and a distinct string (new `activity_volume_new` resource, "New") when `percentChange == null` (previous week had zero volume for that type) instead of a misleading `+∞%` or `0%`.
-   Add `ActivityVolumeFormatterTest.kt` covering the distance/duration branch and the null-percent-change case.
+   Add `ActivityVolumeFormatterTest.kt` covering the distance/duration branch, the null-percent-change case, and the zero-distance `"—"` case.
 
 3. **`ActivityVolumeSection.kt`** — the section composable, following the structure of `WeeklyTrainingSection.kt`:
    - `ActivityVolumeSection(stats: WeeklyTrainingStats?, isLoading: Boolean, unitSystem: UnitSystem, modifier: Modifier)`: builds rows via `buildActivityVolumeRows`, renders nothing when the result is empty (post-loading), shows a skeleton while loading (reuse `SkeletonCard` from `core/ui/common`, matching `WeeklyTrainingSkeleton`'s pattern).
@@ -96,7 +109,8 @@ does via `prefs.unitSystem`). Add:
 
 ## Strings
 
-Add to `feature/workouts/src/main/res/values/strings.xml`: `activity_volume_title` ("Activity
+Add to `feature/workouts/src/main/res/values/strings.xml` (decided: feature-local wins over the
+app-level strings rule, matching existing `workout_layout_type_*` precedent): `activity_volume_title` ("Activity
 volume"), a "View all" label, `activity_volume_new` ("New", for the null-percent-change case),
 and a content-description string for the row icons. Reuse the existing `workout_layout_type_*`
 strings for row labels — no changes needed there.
