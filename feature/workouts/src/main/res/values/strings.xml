@@ -145,4 +145,10 @@
     <string name="workout_layout_type_stairs">Stairs</string>
     <string name="workout_layout_type_hiit">HIIT</string>
     <string name="workout_layout_type_other">Other workouts</string>
+
+    <!-- Activity volume -->
+    <string name="activity_volume_title">Activity volume</string>
+    <string name="activity_volume_view_all">View all</string>
+    <string name="activity_volume_new">New</string>
+    <string name="activity_volume_last_week">Last week %1$s</string>
 </resources>

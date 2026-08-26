@@ -7,6 +7,7 @@ import app.readylytics.health.core.model.domain.model.DailyMetrics
 import app.readylytics.health.core.model.domain.model.DailyMetricsMapper
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.model.LoadSourceSelector
+import app.readylytics.health.core.model.domain.preferences.UnitSystem
 import app.readylytics.health.core.model.domain.repository.WorkoutData
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
@@ -56,6 +57,7 @@ data class WorkoutsUiState(
     val yesterdayReadiness: Float? = null,
     val todayStrainIncrease: Float? = null,
     val weeklyTraining: WeeklyTrainingStats? = null,
+    val unitSystem: UnitSystem = UnitSystem.METRIC,
     val isRangeChanging: Boolean = false,
     val trimpPeriodSummary: PeriodAverageSummary? = null,
     val strainRatioPeriodSummary: PeriodAverageSummary? = null,
@@ -481,6 +483,7 @@ private fun assembleWorkoutsUiState(
             yesterdayReadiness = yesterdayMetrics?.readinessRounded?.toFloat(),
             todayStrainIncrease = resolvedTodayStrainIncrease,
             weeklyTraining = weeklyTraining,
+            unitSystem = prefs.unitSystem,
             trimpPeriodSummary = series.trimpSummary,
             strainRatioPeriodSummary = series.strainSummary,
         )
