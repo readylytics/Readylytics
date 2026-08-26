@@ -318,16 +318,25 @@ class WorkoutsViewModel
             prefs: UserPreferences,
             zoneId: ZoneId,
         ): WeeklyTrainingStats {
+            // Cover both comparison modes: the full previous week and the full week containing the
+            // anchor (the current-week branch only ever needs a prefix of it).
             val fetchStart = WeekBounds.previousWeekFull(anchor, prefs.weekStartDay).start
+            val fetchEnd = WeekBounds.currentWeekFull(anchor, prefs.weekStartDay).end
             val fromMs = fetchStart.atStartOfDay(zoneId).toInstant().toEpochMilli()
             val toMs =
-                anchor
+                fetchEnd
                     .plusDays(1)
                     .atStartOfDay(zoneId)
                     .toInstant()
                     .toEpochMilli()
             val workouts = repositories.workout.getInRange(fromMs, toMs)
-            return useCases.computeWeeklyTrainingStats.execute(workouts, anchor, prefs.weekStartDay, zoneId)
+            return useCases.computeWeeklyTrainingStats.execute(
+                workouts = workouts,
+                anchor = anchor,
+                realToday = useCases.today(zoneId),
+                weekStartDay = prefs.weekStartDay,
+                zoneId = zoneId,
+            )
         }
 
         fun onRangeSelected(range: TimeRange) {

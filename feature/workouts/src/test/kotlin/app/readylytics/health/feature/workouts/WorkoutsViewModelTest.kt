@@ -44,6 +44,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Before
 import org.junit.Test
+import java.time.Clock
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
@@ -175,7 +176,7 @@ class WorkoutsViewModelTest {
         savedStateHandle = SavedStateHandle()
     }
 
-    private fun createViewModel(): WorkoutsViewModel =
+    private fun createViewModel(clock: Clock = Clock.systemDefaultZone()): WorkoutsViewModel =
         WorkoutsViewModel(
             repositories = WorkoutsRepositories(dailySummaryRepository, workoutRepository, heartRateRepository),
             selectedDateRepository = selectedDateRepository,
@@ -190,6 +191,7 @@ class WorkoutsViewModelTest {
                     getWorkoutDisplayMetricsUseCase,
                     ComputeWeeklyTrainingStatsUseCase(),
                     WorkoutsDistancePermissionGate { true },
+                    clock,
                 ),
         )
 
@@ -1015,6 +1017,11 @@ class WorkoutsViewModelTest {
         runTest(testDispatcher) {
             // Thursday 2026-06-04; Monday-start week = Jun 1..4, previous window = May 25..28.
             selectedDateFlow.value = LocalDate.of(2026, 6, 4)
+            val pinnedClock =
+                Clock.fixed(
+                    LocalDate.of(2026, 6, 4).atStartOfDay(ZoneId.systemDefault()).toInstant(),
+                    ZoneId.systemDefault(),
+                )
             workouts.addAll(
                 listOf(
                     workoutOnDate(LocalDate.of(2026, 6, 2), durationMinutes = 30),
@@ -1023,7 +1030,7 @@ class WorkoutsViewModelTest {
                 ),
             )
 
-            viewModel = createViewModel()
+            viewModel = createViewModel(pinnedClock)
             val collectJob = launch { viewModel.uiState.collect {} }
             testScheduler.advanceUntilIdle()
 
@@ -1048,7 +1055,12 @@ class WorkoutsViewModelTest {
     fun `weekly training updates when workout data refreshes`() =
         runTest(testDispatcher) {
             selectedDateFlow.value = LocalDate.of(2026, 6, 4)
-            viewModel = createViewModel()
+            val pinnedClock =
+                Clock.fixed(
+                    LocalDate.of(2026, 6, 4).atStartOfDay(ZoneId.systemDefault()).toInstant(),
+                    ZoneId.systemDefault(),
+                )
+            viewModel = createViewModel(pinnedClock)
             val collectJob = launch { viewModel.uiState.collect {} }
             testScheduler.advanceUntilIdle()
             assertEquals(
@@ -1073,9 +1085,14 @@ class WorkoutsViewModelTest {
         runTest(testDispatcher) {
             // Thursday 2026-06-04. Sunday-start week contains Sun May 31; Monday-start does not.
             selectedDateFlow.value = LocalDate.of(2026, 6, 4)
+            val pinnedClock =
+                Clock.fixed(
+                    LocalDate.of(2026, 6, 4).atStartOfDay(ZoneId.systemDefault()).toInstant(),
+                    ZoneId.systemDefault(),
+                )
             workouts.addAll(listOf(workoutOnDate(LocalDate.of(2026, 5, 31), durationMinutes = 60)))
 
-            viewModel = createViewModel()
+            viewModel = createViewModel(pinnedClock)
             val collectJob = launch { viewModel.uiState.collect {} }
             testScheduler.advanceUntilIdle()
             assertEquals(

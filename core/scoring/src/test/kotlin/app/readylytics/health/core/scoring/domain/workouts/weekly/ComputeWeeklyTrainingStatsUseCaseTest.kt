@@ -35,7 +35,7 @@ class ComputeWeeklyTrainingStatsUseCaseTest {
                 workoutOn(LocalDate.of(2026, 5, 28), duration = 30),
             )
 
-        val result = useCase.execute(current + previous, today, DayOfWeek.MONDAY, ZoneOffset.UTC)
+        val result = useCase.execute(current + previous, today, today, DayOfWeek.MONDAY, ZoneOffset.UTC)
 
         assertEquals(0, result.comparison.durationDeltaMinutes)
         assertEquals(0f, result.comparison.durationPercentChange!!, 0.001f)
@@ -51,7 +51,7 @@ class ComputeWeeklyTrainingStatsUseCaseTest {
                 workoutOn(LocalDate.of(2026, 5, 25), duration = 100),
             )
 
-        val result = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC)
+        val result = useCase.execute(workouts, today, today, DayOfWeek.MONDAY, ZoneOffset.UTC)
 
         assertEquals(100, result.comparison.durationDeltaMinutes)
         assertEquals(100f, result.comparison.durationPercentChange!!, 0.001f)
@@ -65,7 +65,7 @@ class ComputeWeeklyTrainingStatsUseCaseTest {
                 workoutOn(LocalDate.of(2026, 5, 25), duration = 100),
             )
 
-        val result = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC)
+        val result = useCase.execute(workouts, today, today, DayOfWeek.MONDAY, ZoneOffset.UTC)
 
         assertEquals(-50, result.comparison.durationDeltaMinutes)
         assertEquals(-50f, result.comparison.durationPercentChange!!, 0.001f)
@@ -75,7 +75,7 @@ class ComputeWeeklyTrainingStatsUseCaseTest {
     fun `no previous-week workouts yields a null percent change`() {
         val workouts = listOf(workoutOn(LocalDate.of(2026, 6, 1), duration = 100))
 
-        val result = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC)
+        val result = useCase.execute(workouts, today, today, DayOfWeek.MONDAY, ZoneOffset.UTC)
 
         assertEquals(0, result.previousWeek.totalDurationMinutes)
         assertNull(result.comparison.durationPercentChange)
@@ -92,7 +92,7 @@ class ComputeWeeklyTrainingStatsUseCaseTest {
                 workoutOn(LocalDate.of(2026, 5, 26), duration = 40),
             )
 
-        val result = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC)
+        val result = useCase.execute(workouts, today, today, DayOfWeek.MONDAY, ZoneOffset.UTC)
 
         assertEquals(0, result.currentWeek.totalDurationMinutes)
         assertEquals(0, result.currentWeek.workoutCount)
@@ -113,7 +113,7 @@ class ComputeWeeklyTrainingStatsUseCaseTest {
                 workoutOn(LocalDate.of(2026, 5, 29), duration = 60), // previous Fri — outside window
             )
 
-        val result = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC)
+        val result = useCase.execute(workouts, today, today, DayOfWeek.MONDAY, ZoneOffset.UTC)
 
         assertEquals(30, result.previousWeek.totalDurationMinutes)
         assertEquals(1, result.previousWeek.workoutCount)
@@ -130,7 +130,7 @@ class ComputeWeeklyTrainingStatsUseCaseTest {
                 workoutOn(LocalDate.of(2026, 5, 26), duration = 90), // previous Tue — outside 1-day window
             )
 
-        val result = useCase.execute(workouts, monday, DayOfWeek.MONDAY, ZoneOffset.UTC)
+        val result = useCase.execute(workouts, monday, monday, DayOfWeek.MONDAY, ZoneOffset.UTC)
 
         assertEquals(40, result.currentWeek.totalDurationMinutes)
         assertEquals(10, result.previousWeek.totalDurationMinutes)
@@ -147,7 +147,7 @@ class ComputeWeeklyTrainingStatsUseCaseTest {
                 workoutOn(LocalDate.of(2026, 5, 29), duration = 99), // previous Fri — outside window
             )
 
-        val result = useCase.execute(workouts, today, DayOfWeek.SUNDAY, ZoneOffset.UTC)
+        val result = useCase.execute(workouts, today, today, DayOfWeek.SUNDAY, ZoneOffset.UTC)
 
         assertEquals(50, result.currentWeek.totalDurationMinutes)
         assertEquals(15, result.previousWeek.totalDurationMinutes)
@@ -164,7 +164,7 @@ class ComputeWeeklyTrainingStatsUseCaseTest {
                 workoutOn(LocalDate.of(2026, 6, 3), duration = 999), // Future relative to partialToday.
             )
 
-        val result = useCase.execute(workouts, partialToday, DayOfWeek.MONDAY, ZoneOffset.UTC)
+        val result = useCase.execute(workouts, partialToday, partialToday, DayOfWeek.MONDAY, ZoneOffset.UTC)
 
         assertEquals(30, result.currentWeek.totalDurationMinutes)
         assertEquals(2, result.currentWeek.workoutCount)
@@ -174,8 +174,8 @@ class ComputeWeeklyTrainingStatsUseCaseTest {
     fun `different configured week starts change which workouts count toward the current week`() {
         val workout = listOf(workoutOn(LocalDate.of(2026, 5, 31), duration = 60)) // Sunday
 
-        val mondayResult = useCase.execute(workout, today, DayOfWeek.MONDAY, ZoneOffset.UTC)
-        val sundayResult = useCase.execute(workout, today, DayOfWeek.SUNDAY, ZoneOffset.UTC)
+        val mondayResult = useCase.execute(workout, today, today, DayOfWeek.MONDAY, ZoneOffset.UTC)
+        val sundayResult = useCase.execute(workout, today, today, DayOfWeek.SUNDAY, ZoneOffset.UTC)
 
         assertEquals(0, mondayResult.currentWeek.totalDurationMinutes)
         assertEquals(60, sundayResult.currentWeek.totalDurationMinutes)
@@ -189,7 +189,7 @@ class ComputeWeeklyTrainingStatsUseCaseTest {
     fun `single workout produces the correct day entry and running cumulative total`() {
         val workouts = listOf(workoutOn(LocalDate.of(2026, 6, 2), duration = 45))
 
-        val days = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC).cumulativeDailyTraining
+        val days = useCase.execute(workouts, today, today, DayOfWeek.MONDAY, ZoneOffset.UTC).cumulativeDailyTraining
 
         assertEquals(7, days.size)
         assertEquals(LocalDate.of(2026, 6, 1), days[0].date)
@@ -208,14 +208,14 @@ class ComputeWeeklyTrainingStatsUseCaseTest {
                 workoutOn(LocalDate.of(2026, 6, 1), duration = 25),
             )
 
-        val days = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC).cumulativeDailyTraining
+        val days = useCase.execute(workouts, today, today, DayOfWeek.MONDAY, ZoneOffset.UTC).cumulativeDailyTraining
 
         assertEquals(45, days[0].currentWeekDurationMinutes)
     }
 
     @Test
     fun `rest days are represented as explicit zero, not omitted or null`() {
-        val days = useCase.execute(emptyList(), today, DayOfWeek.MONDAY, ZoneOffset.UTC).cumulativeDailyTraining
+        val days = useCase.execute(emptyList(), today, today, DayOfWeek.MONDAY, ZoneOffset.UTC).cumulativeDailyTraining
 
         // Monday..Thursday (today) have elapsed; all are explicit zeros, not null.
         assertEquals(listOf(0, 0, 0, 0), days.take(4).map { it.currentWeekDurationMinutes })
@@ -227,7 +227,7 @@ class ComputeWeeklyTrainingStatsUseCaseTest {
     fun `sunday start cumulative chart begins on the configured sunday`() {
         val workouts = listOf(workoutOn(LocalDate.of(2026, 5, 31), duration = 10))
 
-        val days = useCase.execute(workouts, today, DayOfWeek.SUNDAY, ZoneOffset.UTC).cumulativeDailyTraining
+        val days = useCase.execute(workouts, today, today, DayOfWeek.SUNDAY, ZoneOffset.UTC).cumulativeDailyTraining
 
         assertEquals(LocalDate.of(2026, 5, 31), days[0].date)
         assertEquals(10, days[0].currentWeekDurationMinutes)
@@ -236,7 +236,7 @@ class ComputeWeeklyTrainingStatsUseCaseTest {
 
     @Test
     fun `previous week values are always present even when both weeks are empty`() {
-        val days = useCase.execute(emptyList(), today, DayOfWeek.MONDAY, ZoneOffset.UTC).cumulativeDailyTraining
+        val days = useCase.execute(emptyList(), today, today, DayOfWeek.MONDAY, ZoneOffset.UTC).cumulativeDailyTraining
 
         assertTrue(days.all { it.previousWeekDurationMinutes == 0 })
         assertTrue(days.all { it.previousWeekCumulativeMinutes == 0 })
@@ -246,7 +246,7 @@ class ComputeWeeklyTrainingStatsUseCaseTest {
     fun `zero-duration workout contributes zero volume but still counts toward totals`() {
         val workouts = listOf(workoutOn(LocalDate.of(2026, 6, 1), duration = 0))
 
-        val result = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC)
+        val result = useCase.execute(workouts, today, today, DayOfWeek.MONDAY, ZoneOffset.UTC)
 
         assertEquals(0, result.cumulativeDailyTraining[0].currentWeekDurationMinutes)
         assertEquals(1, result.currentWeek.workoutCount)
@@ -269,7 +269,7 @@ class ComputeWeeklyTrainingStatsUseCaseTest {
                 workoutOn(LocalDate.of(2026, 6, 4), exerciseType = "running", duration = 20, distanceMeters = 500f),
             )
 
-        val result = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC)
+        val result = useCase.execute(workouts, today, today, DayOfWeek.MONDAY, ZoneOffset.UTC)
 
         val mixTotal = result.trainingMix.sumOf { it.durationMinutes }
         val lastPopulatedDay = result.cumulativeDailyTraining.last { it.currentWeekCumulativeMinutes != null }
@@ -289,7 +289,7 @@ class ComputeWeeklyTrainingStatsUseCaseTest {
                 workoutOn(LocalDate.of(2026, 6, 1), duration = 45),
             )
 
-        val result = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC)
+        val result = useCase.execute(workouts, today, today, DayOfWeek.MONDAY, ZoneOffset.UTC)
 
         assertEquals(30, result.previousWeek.totalDurationMinutes)
         assertEquals(90, result.cumulativeDailyTraining.last().previousWeekCumulativeMinutes)
@@ -306,8 +306,8 @@ class ComputeWeeklyTrainingStatsUseCaseTest {
         val crossesUtc = LocalDate.of(2026, 6, 3).atTime(20, 0).atZone(la).toInstant().toEpochMilli()
         val workout = listOf(workoutAt(crossesUtc, duration = 45))
 
-        val utcDays = useCase.execute(workout, today, DayOfWeek.MONDAY, ZoneOffset.UTC).cumulativeDailyTraining
-        val laDays = useCase.execute(workout, today, DayOfWeek.MONDAY, la).cumulativeDailyTraining
+        val utcDays = useCase.execute(workout, today, today, DayOfWeek.MONDAY, ZoneOffset.UTC).cumulativeDailyTraining
+        val laDays = useCase.execute(workout, today, today, DayOfWeek.MONDAY, la).cumulativeDailyTraining
 
         assertEquals(45, utcDays[3].currentWeekDurationMinutes) // Thursday Jun 4 in UTC.
         assertEquals(0, utcDays[2].currentWeekDurationMinutes)
