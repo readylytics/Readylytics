@@ -60,7 +60,10 @@ internal object WeeklyActivityBreakdown {
         items: List<TrainingMixItem>,
         totalDurationMinutes: Int,
     ): List<TrainingMixItem> {
-        if (items.size <= MAX_DISTINCT_MIX_TYPES) return items
+        if (items.size <= MAX_DISTINCT_MIX_TYPES) {
+            val (otherItems, nonOtherItems) = items.partition { it.activityType == WorkoutLayoutType.OTHER }
+            return nonOtherItems + otherItems
+        }
 
         val (otherItems, nonOtherItems) = items.partition { it.activityType == WorkoutLayoutType.OTHER }
         val top = nonOtherItems.take(TOP_MIX_TYPES_BEFORE_OTHER)

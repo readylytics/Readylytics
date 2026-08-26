@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.PieChart
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -86,6 +87,7 @@ private fun TrainingMixEmptyCard() {
                 .fillMaxWidth()
                 .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
         shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -117,14 +119,24 @@ private fun TrainingMixCard(stats: WeeklyTrainingStats) {
     val sliceColors = resolveTrainingMixColors()
     val totalText = WeeklyTrainingDeltaFormatter.formatDuration(totalMinutes)
     val itemNames = items.map { stringResource(it.activityType.displayNameResId) }
+    val itemPercents =
+        items.map { item ->
+            val rounded = item.percentage.roundToInt()
+            if (rounded == 0 && item.percentage > 0f) {
+                stringResource(R.string.training_mix_percentage_less_than_one)
+            } else {
+                stringResource(R.string.training_mix_percentage, rounded)
+            }
+        }
+    val itemAccessibilityTemplate = stringResource(R.string.training_mix_item_accessibility)
     val itemsSummary =
-        remember(items, itemNames) {
+        remember(items, itemNames, itemPercents, itemAccessibilityTemplate) {
             items
                 .mapIndexed { index, item ->
                     val name = itemNames[index]
                     val duration = WeeklyTrainingDeltaFormatter.formatDuration(item.durationMinutes)
-                    val percent = item.percentage.roundToInt()
-                    "$name: $duration, $percent%"
+                    val percent = itemPercents[index]
+                    itemAccessibilityTemplate.format(name, duration, percent)
                 }.joinToString(", ")
         }
     val accessibilitySummary = stringResource(R.string.training_mix_accessibility_summary, totalText, itemsSummary)
@@ -136,6 +148,7 @@ private fun TrainingMixCard(stats: WeeklyTrainingStats) {
                 .padding(horizontal = MaterialTheme.spacing.pageHorizontal)
                 .semantics { contentDescription = accessibilitySummary },
         shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
         Row(
             modifier =
@@ -279,8 +292,15 @@ private fun TrainingMixRow(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.width(MaterialTheme.spacing.small))
+        val rounded = item.percentage.roundToInt()
+        val percentText =
+            if (rounded == 0 && item.percentage > 0f) {
+                stringResource(R.string.training_mix_percentage_less_than_one)
+            } else {
+                stringResource(R.string.training_mix_percentage, rounded)
+            }
         Text(
-            text = "${item.percentage.roundToInt()}%",
+            text = percentText,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary,

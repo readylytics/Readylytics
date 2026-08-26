@@ -214,6 +214,30 @@ class WeeklyActivityBreakdownTest {
     }
 
     @Test
+    fun `four activity types with other category sorts other to end even when highest duration`() {
+        val workouts =
+            listOf(
+                workoutOn(LocalDate.of(2026, 6, 1), exerciseType = "other", duration = 100),
+                workoutOn(LocalDate.of(2026, 6, 1), exerciseType = "running", duration = 40),
+                workoutOn(LocalDate.of(2026, 6, 2), exerciseType = "strength", duration = 30),
+                workoutOn(LocalDate.of(2026, 6, 2), exerciseType = "cycling", duration = 20),
+            )
+
+        val mix = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC).trainingMix
+
+        assertEquals(4, mix.size)
+        assertEquals(
+            listOf(
+                WorkoutLayoutType.RUNNING,
+                WorkoutLayoutType.STRENGTH,
+                WorkoutLayoutType.CYCLING,
+                WorkoutLayoutType.OTHER,
+            ),
+            mix.map { it.activityType },
+        )
+    }
+
+    @Test
     fun `activities with zero duration are excluded from training mix`() {
         val workouts =
             listOf(
