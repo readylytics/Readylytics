@@ -89,12 +89,6 @@ private fun WorkoutHistoryItem(
                 stringResource(R.string.workout_history_bpm_na)
             }
         ListItem(
-            headlineContent = {
-                Text(
-                    text = "$displayType $dateStr",
-                    style = MaterialTheme.typography.titleSmall,
-                )
-            },
             supportingContent = {
                 Text(
                     text =
@@ -117,7 +111,12 @@ private fun WorkoutHistoryItem(
                 }
             },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        )
+        ) {
+            Text(
+                text = "$displayType $dateStr",
+                style = MaterialTheme.typography.titleSmall,
+            )
+        }
     }
 }
 

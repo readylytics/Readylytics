@@ -1,9 +1,9 @@
 package app.readylytics.health.feature.workouts
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DirectionsBike
-import androidx.compose.material.icons.filled.DirectionsRun
-import androidx.compose.material.icons.filled.DirectionsWalk
+import androidx.compose.material.icons.automirrored.filled.DirectionsBike
+import androidx.compose.material.icons.automirrored.filled.DirectionsRun
+import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Hiking
 import androidx.compose.material.icons.filled.Pool
@@ -21,9 +21,9 @@ import app.readylytics.health.core.model.domain.workouts.detail.WorkoutLayoutTyp
 internal val WorkoutLayoutType.icon: ImageVector
     get() =
         when (this) {
-            WorkoutLayoutType.RUNNING -> Icons.Filled.DirectionsRun
-            WorkoutLayoutType.WALKING -> Icons.Filled.DirectionsWalk
-            WorkoutLayoutType.CYCLING -> Icons.Filled.DirectionsBike
+            WorkoutLayoutType.RUNNING -> Icons.AutoMirrored.Filled.DirectionsRun
+            WorkoutLayoutType.WALKING -> Icons.AutoMirrored.Filled.DirectionsWalk
+            WorkoutLayoutType.CYCLING -> Icons.AutoMirrored.Filled.DirectionsBike
             WorkoutLayoutType.SWIMMING -> Icons.Filled.Pool
             WorkoutLayoutType.STRENGTH -> Icons.Filled.FitnessCenter
             WorkoutLayoutType.HIKING -> Icons.Filled.Hiking

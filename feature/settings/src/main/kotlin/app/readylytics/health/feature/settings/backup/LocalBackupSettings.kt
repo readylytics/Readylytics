@@ -424,12 +424,6 @@ private fun BackupDirectoryItem(
 
     ListItem(
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        headlineContent = {
-            Text(
-                text = stringResource(R.string.backup_directory_label),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        },
         supportingContent = {
             Text(
                 text = displayPath,
@@ -442,7 +436,12 @@ private fun BackupDirectoryItem(
                 Text(stringResource(R.string.action_change))
             }
         },
-    )
+    ) {
+        Text(
+            text = stringResource(R.string.backup_directory_label),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    }
 }
 
 @Composable
@@ -469,12 +468,6 @@ private fun BackupFileItem(
                 tint = MaterialTheme.colorScheme.primary,
             )
         },
-        headlineContent = {
-            Text(
-                text = backupDate,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        },
         supportingContent = {
             Text(
                 text = stringResource(R.string.backup_size_kb, file.sizeBytes / 1024),
@@ -498,7 +491,12 @@ private fun BackupFileItem(
                 }
             }
         },
-    )
+    ) {
+        Text(
+            text = backupDate,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    }
 }
 
 @Composable

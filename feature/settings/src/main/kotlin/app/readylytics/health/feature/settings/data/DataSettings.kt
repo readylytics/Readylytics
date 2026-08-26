@@ -77,12 +77,6 @@ fun SyncSettingsSection(
     Column {
         ListItem(
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            headlineContent = {
-                Text(
-                    stringResource(R.string.sync_on_app_open_label),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-            },
             trailingContent = {
                 Switch(
                     checked = uiState.syncPreference != SyncPreference.NEVER,
@@ -95,7 +89,12 @@ fun SyncSettingsSection(
                     },
                 )
             },
-        )
+        ) {
+            Text(
+                stringResource(R.string.sync_on_app_open_label),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        }
 
         SettingsToggleItem(
             label = stringResource(R.string.background_sync_label),

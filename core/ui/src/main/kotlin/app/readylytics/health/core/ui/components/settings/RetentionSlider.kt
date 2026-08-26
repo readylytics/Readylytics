@@ -58,19 +58,18 @@ private fun RetentionToggleItem(
 ) {
     ListItem(
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        headlineContent = {
-            Text(
-                stringResource(R.string.settings_retention_enabled_label),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        },
         trailingContent = {
             Switch(
                 checked = enabled,
                 onCheckedChange = onEnabledChanged,
             )
         },
-    )
+    ) {
+        Text(
+            stringResource(R.string.settings_retention_enabled_label),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    }
 }
 
 @Composable

@@ -246,9 +246,6 @@ internal fun ActivityVolumeRow(
     unitSystem: UnitSystem,
 ) {
     ListItem(
-        headlineContent = {
-            Text(text = stringResource(volume.activityType.displayNameResId))
-        },
         supportingContent = {
             Text(
                 text =
@@ -286,7 +283,9 @@ internal fun ActivityVolumeRow(
             }
         },
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-    )
+    ) {
+        Text(text = stringResource(volume.activityType.displayNameResId))
+    }
 }
 
 /** Same delta treatment as the Weekly training cards (HIGHER_IS_BETTER); a type with no
