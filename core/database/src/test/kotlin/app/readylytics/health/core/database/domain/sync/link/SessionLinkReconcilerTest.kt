@@ -158,7 +158,10 @@ class SessionLinkReconcilerTest {
 
             coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 0L, 0L, any()) } returns listOf(hr3)
             coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 11_000L, 3L, any()) } returns emptyList()
-            coEvery { heartRateDao.getByTimeRange(10_000L, 14_000L) } returns listOf(hr3)
+            coEvery { workoutDao.getByIds(listOf("workout_1")) } returns listOf(workoutSession)
+            coEvery {
+                heartRateDao.getByTypeAndTimeRange(RecordType.EXERCISE.name, 10_000L, 14_000L)
+            } returns listOf(hr3)
             coEvery { hrvDao.getKeysetPage(any(), any(), any(), any(), any()) } returns emptyList()
 
             val workoutUpsertSlot = slot<List<WorkoutRecordEntity>>()

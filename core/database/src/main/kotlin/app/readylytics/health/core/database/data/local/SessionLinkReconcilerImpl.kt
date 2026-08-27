@@ -8,6 +8,7 @@ import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRec
 import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity
 import app.readylytics.health.core.model.domain.heartrate.ZoneThresholds
 import app.readylytics.health.core.model.domain.model.DomainHeartRateSample
+import app.readylytics.health.core.model.domain.model.RecordType
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import java.time.Instant
 import app.readylytics.health.core.model.domain.sync.link.SampleLink
@@ -132,40 +133,63 @@ class SessionLinkReconcilerImpl
             workoutSpans: List<SessionSpan>,
             zoneThresholds: IntArray,
         ) {
-            for (span in workoutSpans) {
+            // HC-002: batched in groups of WORKOUT_BATCH_SIZE instead of one DB read + one
+            // transaction per workout. workoutSpans is ordered by startTime ASC (WorkoutDao.getOverlapping),
+            // so a chunk's own time span stays local to ~WORKOUT_BATCH_SIZE chronologically-adjacent
+            // workouts rather than spanning the whole reconcile range.
+            for (batch in workoutSpans.chunked(WORKOUT_BATCH_SIZE)) {
                 currentCoroutineContext().ensureActive()
-                val existing = workoutDao.getById(span.id) ?: continue
-                val hrSamples = heartRateDao.getByTimeRange(existing.startTime, existing.endTime)
-                val hrSamplesMapped = hrSamples.map { sample ->
-                    DomainHeartRateSample(
-                        time = Instant.ofEpochMilli(sample.timestampMs),
-                        beatsPerMinute = sample.beatsPerMinute
-                    )
+                val existingById = workoutDao.getByIds(batch.map { it.id }).associateBy { it.id }
+                if (existingById.isEmpty()) {
+                    yield()
+                    continue
                 }
-                val metrics = ZoneThresholds.computeMetrics(
-                    existing.startTime,
-                    existing.endTime,
-                    hrSamplesMapped,
-                    zoneThresholds
-                )
-                transactionRunner.runInTransaction {
-                    workoutDao.upsertAll(
-                        listOf(
-                            existing.copy(
-                                durationMinutes = metrics.durationMinutes,
-                                zone1Minutes = metrics.zoneMinutes[0],
-                                zone2Minutes = metrics.zoneMinutes[1],
-                                zone3Minutes = metrics.zoneMinutes[2],
-                                zone4Minutes = metrics.zoneMinutes[3],
-                                zone5Minutes = metrics.zoneMinutes[4],
-                                trimp = metrics.trimp,
-                                avgHr = metrics.avgHr,
-                            ),
-                        ),
-                    )
+
+                val batchStartMs = batch.minOf { it.startTime }
+                val batchEndMs = batch.maxOf { it.endTime }
+                val hrSamplesMapped =
+                    heartRateDao
+                        .getByTypeAndTimeRange(RecordType.EXERCISE.name, batchStartMs, batchEndMs)
+                        .map { sample ->
+                            DomainHeartRateSample(
+                                time = Instant.ofEpochMilli(sample.timestampMs),
+                                beatsPerMinute = sample.beatsPerMinute,
+                            )
+                        }
+
+                val updated =
+                    batch.mapNotNull { span ->
+                        val existing = existingById[span.id] ?: return@mapNotNull null
+                        val metrics =
+                            ZoneThresholds.computeMetrics(
+                                existing.startTime,
+                                existing.endTime,
+                                hrSamplesMapped,
+                                zoneThresholds,
+                            )
+                        existing.copy(
+                            durationMinutes = metrics.durationMinutes,
+                            zone1Minutes = metrics.zoneMinutes[0],
+                            zone2Minutes = metrics.zoneMinutes[1],
+                            zone3Minutes = metrics.zoneMinutes[2],
+                            zone4Minutes = metrics.zoneMinutes[3],
+                            zone5Minutes = metrics.zoneMinutes[4],
+                            trimp = metrics.trimp,
+                            avgHr = metrics.avgHr,
+                        )
+                    }
+
+                if (updated.isNotEmpty()) {
+                    transactionRunner.runInTransaction {
+                        workoutDao.upsertAll(updated)
+                    }
                 }
                 yield()
             }
+        }
+
+        private companion object {
+            private const val WORKOUT_BATCH_SIZE = 20
         }
     }
 
