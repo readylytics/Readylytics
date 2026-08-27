@@ -133,8 +133,8 @@ private fun HrvTrendChartBlock(
                     baselineUnit = stringResource(CoreUiR.string.unit_ms),
                     modifier = Modifier.testTag("HrvTrendChart"),
                     baseline =
-                        chartSeries.historicalHrvBaselineAverage?.toFloat()
-                            ?: presentation.hrv.baseline?.toFloat(),
+                        presentation.hrv.baseline?.toFloat()
+                            ?: chartSeries.historicalHrvBaselineAverage?.toFloat(),
                     showBaseline = presentation.hrv.baseline != null,
                     scrollState = chartScrollState,
                     zoomState = chartZoomState,
@@ -180,8 +180,8 @@ private fun RhrTrendChartBlock(
                     baselineUnit = stringResource(CoreUiR.string.unit_bpm),
                     modifier = Modifier.testTag("RestingHeartRateTrendChart"),
                     baseline =
-                        chartSeries.historicalRhrBaselineAverage?.toFloat()
-                            ?: presentation.rhr.baseline?.toFloat(),
+                        presentation.rhr.baseline?.toFloat()
+                            ?: chartSeries.historicalRhrBaselineAverage?.toFloat(),
                     showBaseline = presentation.rhr.baseline != null,
                     scrollState = chartScrollState,
                     zoomState = chartZoomState,
