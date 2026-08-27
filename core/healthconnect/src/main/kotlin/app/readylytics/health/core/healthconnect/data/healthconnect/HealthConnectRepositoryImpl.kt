@@ -722,6 +722,29 @@ class HealthConnectRepositoryImpl
                 emptyList()
             }
 
+        /**
+         * HC-001: collects device names from a streaming paged read without ever materializing the
+         * full [from]..[to] record list. [readPaged] is expected to be a partial application of
+         * readHeartRateSamplesPaged/readHrvSamplesPaged that forwards each page's device names to
+         * its callback.
+         */
+        private suspend fun collectDeviceNames(
+            label: String,
+            readPaged: suspend (onNames: suspend (List<String>) -> Unit) -> Unit,
+        ): Set<String> {
+            val localDevices = mutableSetOf<String>()
+            try {
+                readPaged { names -> localDevices.addAll(names) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                app.readylytics.health.core.model.domain.util.logW("HealthConnectRepository", e) {
+                    "$label device scan failed; returning partial results"
+                }
+            }
+            return localDevices
+        }
+
         override suspend fun discoverDevices(windowDays: Int): List<String> =
             withContext(ioDispatcher) {
                 try {
@@ -738,10 +761,22 @@ class HealthConnectRepositoryImpl
                         // cancel the whole scope and collapse discovery to an empty list.
                         val sleepSessionsDeferred =
                             async { readOrEmpty { readSleepSessions(from, to) } }
-                        val hrRecordsDeferred =
-                            async { readOrEmpty { readHeartRateSamples(from, to) } }
-                        val hrvRecordsDeferred =
-                            async { readOrEmpty { readHrvSamples(from, to) } }
+                        val hrDevicesDeferred =
+                            async {
+                                collectDeviceNames("Heart rate") { onNames ->
+                                    readHeartRateSamplesPaged(from, to) { page ->
+                                        onNames(page.map { it.deviceName })
+                                    }
+                                }
+                            }
+                        val hrvDevicesDeferred =
+                            async {
+                                collectDeviceNames("HRV") { onNames ->
+                                    readHrvSamplesPaged(from, to) { page ->
+                                        onNames(page.map { it.deviceName })
+                                    }
+                                }
+                            }
                         val workoutRecordsDeferred =
                             // Discovery only reads deviceName -- reading routes here would add one
                             // IPC round-trip per workout and block the source picker for nothing.
@@ -763,13 +798,8 @@ class HealthConnectRepositoryImpl
                             devices.add(record.deviceName)
                         }
 
-                        hrRecordsDeferred.await().forEach { record ->
-                            devices.add(record.deviceName)
-                        }
-
-                        hrvRecordsDeferred.await().forEach { record ->
-                            devices.add(record.deviceName)
-                        }
+                        devices.addAll(hrDevicesDeferred.await())
+                        devices.addAll(hrvDevicesDeferred.await())
 
                         workoutRecordsDeferred.await().forEach { record ->
                             devices.add(record.deviceName)
