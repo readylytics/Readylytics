@@ -37,6 +37,8 @@ import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import java.util.Locale
 import kotlin.math.roundToInt
 
+private val TREND_CHART_HEIGHT_DP = 180.dp
+
 @Composable
 internal fun TrendChartHostBox(
     renderData: TrendChartRenderData,
@@ -81,13 +83,14 @@ internal fun TrendChartHostBox(
             modelProducer = modelProducer,
             scrollState = uiState.scrollState,
             zoomState = uiState.zoomState,
-            modifier = Modifier.fillMaxWidth().height(180.dp),
+            modifier = Modifier.fillMaxWidth().height(TREND_CHART_HEIGHT_DP),
+            chartAreaHeight = TREND_CHART_HEIGHT_DP,
         )
 
         VicoChartTooltipOverlay(
             selectedPointOffset = selectedPointOffset,
             pulseColor = dotColor,
-            modifier = Modifier.fillMaxWidth().height(180.dp),
+            modifier = Modifier.fillMaxWidth().height(TREND_CHART_HEIGHT_DP),
         )
 
         if (tooltipState != null) {
@@ -178,16 +181,14 @@ private fun rememberChartDecorations(context: TrendChartContext): List<Decoratio
             context.bounds.maxY,
             context.config.rangeDays,
         )
-    val decorations =
-        rememberTrendChartDecorations(
-            zoneBandDecoration = zoneBandDeco,
-            shouldShowBaseline = context.bounds.shouldShowBaseline,
-            baselineValue = context.bounds.baselineValue,
-            baselineColor = context.visuals.baselineColor,
-            hasHistoricalBaseline = context.bounds.hasHistoricalBaseline,
-            bucketZoneBands = context.visuals.bucketZoneBands,
-        )
-    return decorations.filterIsInstance<Decoration>()
+    return rememberTrendChartDecorations(
+        zoneBandDecoration = zoneBandDeco,
+        shouldShowBaseline = context.bounds.shouldShowBaseline,
+        baselineValue = context.bounds.baselineValue,
+        baselineColor = context.visuals.baselineColor,
+        hasHistoricalBaseline = context.bounds.hasHistoricalBaseline,
+        bucketZoneBands = context.visuals.bucketZoneBands,
+    )
 }
 
 @Composable
@@ -207,7 +208,7 @@ private fun rememberStartVerticalAxis(context: TrendChartContext) =
         label = ChartDefaults.labelTextComponent(),
         valueFormatter = rememberStartAxisFormatter(context.config.axisDecimalPlaces),
         guideline = ChartDefaults.guidelineComponent(),
-        title = { context.config.baselineUnit },
+        title = rememberAxisTitle(context.config.baselineUnit),
         titleComponent = ChartDefaults.axisLabelTextComponent(),
     )
 

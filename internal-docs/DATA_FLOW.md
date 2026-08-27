@@ -588,10 +588,14 @@ formula:
    `core/ui/.../common/TrendPeriodAggregation.kt`. The RHR/HRV charts additionally
    plot a muted per-bucket *historical baseline* line (`historicalRhrBaseline`/`historicalHrvBaseline`)
    derived from each day's frozen baseline (`DailyMetricsMapper.rhrBaselineRounded`/
-   `hrvBaselineRounded`, frozen-only rows, honoring any override), whose whole-range average drives
-   both the legend scalar and the background zone bands (`historicalRhrZoneBands`/
-   `historicalHrvZoneBands`). This overlay spans all four ranges at range-appropriate granularity:
-   7D keeps one point per frozen day (unaveraged), 30D pairs days into non-overlapping 2-day
+   `hrvBaselineRounded`, frozen-only rows, honoring any override). The whole-range average
+   (`historicalRhrBaselineAverage`/`historicalHrvBaselineAverage`) drives the background zone bands
+   (`historicalRhrZoneBands`/`historicalHrvZoneBands`); the "Baseline" legend scalar instead prefers
+   the current day's frozen baseline (`VitalsPresentationState.rhr/hrv.baseline`, the same rounded
+value the dashboard displays), falling back to the whole-range average only when the current day's
+    baseline is unavailable — so the chart's baseline label always agrees with the dashboard.
+    This overlay spans all four ranges at range-appropriate granularity:
+    7D keeps one point per frozen day (unaveraged), 30D pairs days into non-overlapping 2-day
    buckets via `bucketByFixedSize` (anchored at the window's `startDate`, independent of
    `TrendGranularity`, with each point placed on its bucket's last day so the line ends on the
    window's final day), and 180D/360D keep the existing calendar `bucketBy` path unchanged. The
