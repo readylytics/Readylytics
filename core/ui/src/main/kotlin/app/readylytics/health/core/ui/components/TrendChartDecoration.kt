@@ -9,6 +9,7 @@ import app.readylytics.health.core.designsystem.LocalExtendedColors
 import app.readylytics.health.core.model.domain.model.BucketZoneBands
 import app.readylytics.health.core.model.domain.model.HealthZone
 import app.readylytics.health.core.model.domain.model.ZoneBand
+import com.patrykandpatrick.vico.compose.cartesian.decoration.Decoration
 import com.patrykandpatrick.vico.compose.cartesian.decoration.HorizontalLine
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
@@ -58,7 +59,7 @@ internal fun rememberTrendChartDecorations(
     baselineColor: Color,
     hasHistoricalBaseline: Boolean,
     bucketZoneBands: List<BucketZoneBands>?,
-): List<Any> {
+): List<Decoration> {
     val baselineLineComponent = rememberLineComponent(fill = Fill(baselineColor), thickness = 1.dp)
     return remember(
         zoneBandDecoration,
@@ -68,7 +69,7 @@ internal fun rememberTrendChartDecorations(
         hasHistoricalBaseline,
         bucketZoneBands,
     ) {
-        listOfNotNull(
+        listOfNotNull<Decoration>(
             zoneBandDecoration,
             if (shouldShowBaseline && !hasHistoricalBaseline) {
                 HorizontalLine(
