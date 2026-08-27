@@ -194,11 +194,13 @@ modified.
  * A non-overlapping, fixed-length day-bucket used only by the Vitals baseline overlay at 7D/30D.
  * Buckets are anchored at day-offset 0 (the caller's `startDate`) rather than at a calendar
  * boundary, so pairing is deterministic regardless of which real-world dates the window spans.
+ * [lastDayOffset] is the x-axis position of the bucket's point (the bucket's last day), which for
+ * the final bucket equals the window's last day so the overlay line reaches it.
  */
 data class FixedDayBucket(
     val startDayOffset: Int,
     val endDayOffsetExclusive: Int,
-    val midpointDayOffset: Int,
+    val lastDayOffset: Int,
     val value: Float,
 )
 
@@ -207,7 +209,9 @@ data class FixedDayBucket(
  * offset 0, averaging each bucket's non-null values and rounding to [valueDecimalPlaces].
  * Buckets with zero non-null values are omitted entirely, mirroring [bucketBy]'s null-filtering
  * convention. [bucketSizeDays] == 1 yields one bucket per populated day (no averaging).
- * [rangeEndOffsetExclusive] clips the final bucket's end boundary to the selected window.
+ * [rangeEndOffsetExclusive] clips the final bucket's end boundary to the selected window. Each
+ * bucket's point is positioned at the bucket's last day ([FixedDayBucket.lastDayOffset]), so the
+ * final bucket's point lands on the window's last day.
  */
 fun List<DailyDataPoint>.bucketByFixedSize(
     bucketSizeDays: Int,
@@ -221,24 +225,29 @@ fun List<DailyDataPoint>.bucketByFixedSize(
         .map { (bucketIndex, points) ->
             val startOffset = bucketIndex * bucketSizeDays
             val endOffsetExclusive = (startOffset + bucketSizeDays).coerceAtMost(rangeEndOffsetExclusive)
-            val midpoint = startOffset + (endOffsetExclusive - startOffset - 1) / 2
             val average =
                 points.mapNotNull(DailyDataPoint::value)
                     .average()
                     .toFloat()
                     .roundToDecimalPlaces(valueDecimalPlaces)
-            FixedDayBucket(startOffset, endOffsetExclusive, midpoint, average)
+            FixedDayBucket(startOffset, endOffsetExclusive, endOffsetExclusive - 1, average)
         }
 }
 ```
 
 Correctness against the product rules:
 - `bucketSizeDays = 1` (7D): `dayOffset / 1 == dayOffset`, so each frozen day is its own bucket;
-  midpoint equals that same offset — unaveraged, one point per day.
+  the point sits at the bucket's last day, which equals that same offset — unaveraged, one point
+  per day, ending on today.
 - `bucketSizeDays = 2` (30D): offsets `{0,1}→bucket0`, `{2,3}→bucket1`, …, `{28,29}→bucket14` —
   exactly "day1+day2 averaged, day3+day4 averaged, …". The grouping key is `dayOffset /
   bucketSizeDays` relative to `startDate`, not `LocalDate.getDayOfMonth()`, so pairing is
-  deterministic regardless of which calendar dates the window spans.
+  deterministic regardless of which calendar dates the window spans. Each point is placed at the
+  bucket's last day (`endDayOffsetExclusive - 1`): interior buckets at their second day (1, 3, …),
+  and the final bucket at the window's last day (29 = today). This aligns the line with the
+  per-bucket zone-band polygon (which draws through `(startDayOffset + endDayOffset) / 2`,
+  i.e. the same last-day offset for 2-day buckets) and makes the overlay line end on today's date,
+  matching the 7D and 180D/360D behavior.
 - A pair with only one frozen day still produces a bucket (single-value average); a pair with
   zero frozen days is omitted via `filter { it.value != null }` before grouping — matches the
   "omit buckets with zero frozen days" requirement exactly, reusing `bucketBy`'s own convention.
@@ -303,7 +312,7 @@ Correctness against the product rules:
   val historicalRhrBucketZoneBands: List<BucketZoneBands>
   if (overlayBucketSizeDays != null) {
       val rhrBuckets = rawRhrBaseline.bucketByFixedSize(overlayBucketSizeDays, rangeEndOffsetExclusive)
-      historicalRhrBaseline = rhrBuckets.map { DailyDataPoint(it.midpointDayOffset, it.value) }
+      historicalRhrBaseline = rhrBuckets.map { DailyDataPoint(it.lastDayOffset, it.value) }
       historicalRhrBucketZoneBands =
           rhrBuckets.map { bucket ->
               BucketZoneBands(
@@ -375,14 +384,16 @@ No other line in this file changes.
    "no frozen baseline data → empty series," which remains true.
 2. New: `` `SEVEN_DAYS range plots per-day historical baseline when frozen` `` — 7 daily
    `DailySummary`s spanning `start..start+6`, each frozen with a distinct `rhrBpm`/`hrvMuMssd`.
-   Assert `historicalRhrBaseline.map { it.dayOffset } == (0..6).toList()` with each value equal
+   Assert `historicalRhrBaseline.map { it.dayOffset } == (0..6).toList()` (one point per day, the
+   last on today) with each value equal
    to that day's own frozen baseline (unaveraged); `historicalRhrBucketZoneBands.size == 7` with
    `startDayOffset == i && endDayOffset == i + 1` for each `i`; `historicalRhrBaselineAverage ==`
    the rounded mean of the 7 values. Mirror for HRV.
 3. New: `` `THIRTY_DAYS range averages historical baseline into 2-day buckets` `` — 30 daily
    frozen summaries spanning `start..start+29` with `start` deliberately crossing a month
    boundary (e.g. `LocalDate.of(2026, 1, 20)`), distinct values per day. Assert
-   `historicalRhrBaseline.size == 15` with `dayOffsets == [0, 2, 4, ..., 28]`, each bucket's
+   `historicalRhrBaseline.size == 15` with `dayOffsets == [1, 3, 5, ..., 29]` — each point at its
+   bucket's last day, so the final point lands on today (offset 29) — and each bucket's
    value equal to the average of that day-pair's two raw values; `historicalRhrBucketZoneBands`
    has boundaries exactly `[0,2), [2,4), ..., [28,30)`; `historicalRhrBaselineAverage` equals the
    rounded mean of all 30 raw values. (With every pair populated, the mean of the 15 bucket
@@ -408,7 +419,7 @@ No other line in this file changes.
 
 7. New pure-Kotlin tests for `bucketByFixedSize` (zero Android dependencies, per this repo's
    testing convention): `bucketSizeDays = 1` passthrough (no averaging); `bucketSizeDays = 2`
-   pairing/averaging with correct `startDayOffset`/`endDayOffsetExclusive`/`midpointDayOffset`;
+   pairing/averaging with correct `startDayOffset`/`endDayOffsetExclusive`/`lastDayOffset`;
    an empty bucket (all-null pair) omitted entirely; a single-day partial bucket averaging to
    that lone value; `rangeEndOffsetExclusive` clipping the final bucket short; `valueDecimalPlaces`
    rounding matching `bucketBy`'s convention.
@@ -425,11 +436,14 @@ the current "At 180D/360D the RHR/HRV charts additionally plot a muted per-bucke
 baseline line..." wording with prose stating the overlay now spans all four ranges at
 range-appropriate granularity: 7D unbucketed (one point per frozen day), 30D via the new
 `bucketByFixedSize` non-overlapping 2-day buckets (anchored at the window's `startDate`,
-independent of `TrendGranularity`), 180D/360D unchanged via the existing calendar `bucketBy`
+independent of `TrendGranularity`, points positioned at each bucket's last day so the line ends
+on the window's final day), 180D/360D unchanged via the existing calendar `bucketBy`
 path. Keep the existing statement that the whole-range average is always the mean of every
 frozen per-day baseline, never a mean of bucket averages, and update "the flat today-baseline
 `HorizontalLine` is replaced by this line whenever historical baseline data is present" to note
-this now applies "at any range," not just the averaged ones.
+this now applies "at any range," not just the averaged ones. The legend label is simply
+"Baseline" at every range (the "Historical baseline" label is removed — the overlay now exists at
+7D/30D too, so the qualifier no longer distinguishes anything).
 
 ## 7. Verification (to run once implementation lands)
 
