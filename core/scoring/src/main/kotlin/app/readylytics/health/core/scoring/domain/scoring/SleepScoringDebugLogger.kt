@@ -2,71 +2,44 @@ package app.readylytics.health.core.scoring.domain.scoring
 
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.scoring.BuildConfig
-import java.time.Instant
-import java.time.LocalDate
 
-internal fun logDebugScoringMetrics(
-    targetDate: LocalDate,
-    dayMidnight: Instant,
-    dayEndMs: Long,
-    frozenBaseline: Boolean,
-    isCalibrating: Boolean,
-    hrvMuHistorySize: Int,
-    rhrValuesSize: Int,
-    sessionId: String,
-    currentHrvMean: Float?,
-    currentNocturnalRhr: Int?,
-    durationMinutes: Int,
-    loadScore: Float,
-    frozenHrvMu: Float?,
-    frozenHrvSigma: Float?,
-    activeHrvMu: Float?,
-    activeHrvSigma: Float?,
-    frozenRhr: Float?,
-    effectiveRhrSigma: Float?,
-    zLnHrv: Float?,
-    zRhr: Float?,
-    sRest: Float?,
-    sleepScore: Float?,
-    readinessScore: Float?,
-    recoveryFlags: String?,
-) {
+internal fun logDebugScoringMetrics(snapshot: DebugScoringSnapshot) {
     if (!BuildConfig.DEBUG) return
 
     val debugPayload =
         """
         {
-            "targetDate": "$targetDate",
-            "dayMidnightMs": ${dayMidnight.toEpochMilli()},
-            "dayEndMs": $dayEndMs,
-            "frozenBaseline": $frozenBaseline,
-            "isCalibrating": $isCalibrating,
+            "targetDate": "${snapshot.targetDate}",
+            "dayMidnightMs": ${snapshot.dayMidnight.toEpochMilli()},
+            "dayEndMs": ${snapshot.dayEndMs},
+            "frozenBaseline": ${snapshot.frozenBaseline},
+            "isCalibrating": ${snapshot.isCalibrating},
             "windows": {
-                "hrvMuHistorySize": $hrvMuHistorySize,
-                "rhrValuesSize": $rhrValuesSize
+                "hrvMuHistorySize": ${snapshot.hrvMuHistorySize},
+                "rhrValuesSize": ${snapshot.rhrValuesSize}
             },
             "inputs": {
-                "sessionId": "$sessionId",
-                "currentHrvMean": $currentHrvMean,
-                "currentNocturnalRhr": $currentNocturnalRhr,
-                "durationMinutes": $durationMinutes,
-                "loadScore": $loadScore
+                "sessionId": "${snapshot.sessionId}",
+                "currentHrvMean": ${snapshot.currentHrvMean},
+                "currentNocturnalRhr": ${snapshot.currentNocturnalRhr},
+                "durationMinutes": ${snapshot.durationMinutes},
+                "loadScore": ${snapshot.loadScore}
             },
             "baselines": {
-                "frozenHrvMu": $frozenHrvMu,
-                "frozenHrvSigma": $frozenHrvSigma,
-                "activeHrvMu": $activeHrvMu,
-                "activeHrvSigma": $activeHrvSigma,
-                "frozenRhr": $frozenRhr,
-                "effectiveRhrSigma": $effectiveRhrSigma
+                "frozenHrvMu": ${snapshot.frozenHrvMu},
+                "frozenHrvSigma": ${snapshot.frozenHrvSigma},
+                "activeHrvMu": ${snapshot.activeHrvMu},
+                "activeHrvSigma": ${snapshot.activeHrvSigma},
+                "frozenRhr": ${snapshot.frozenRhr},
+                "effectiveRhrSigma": ${snapshot.effectiveRhrSigma}
             },
             "scores": {
-                "zHrv": $zLnHrv,
-                "zRhr": $zRhr,
-                "sRest": $sRest,
-                "sleepScore": $sleepScore,
-                "readinessScore": $readinessScore,
-                "recoveryFlags": "$recoveryFlags"
+                "zHrv": ${snapshot.zLnHrv},
+                "zRhr": ${snapshot.zRhr},
+                "sRest": ${snapshot.sRest},
+                "sleepScore": ${snapshot.sleepScore},
+                "readinessScore": ${snapshot.readinessScore},
+                "recoveryFlags": "${snapshot.recoveryFlags}"
             }
         }
         """.trimIndent()
