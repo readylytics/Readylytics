@@ -62,6 +62,12 @@ class HealthChangeSynchronizerImplTest {
             block()
         }
 
+        coEvery { client.readRecords<Record>(any()) } returns
+            mockk {
+                every { records } returns emptyList()
+                every { pageToken } returns null
+            }
+
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
 
         synchronizer =
@@ -648,6 +654,74 @@ class HealthChangeSynchronizerImplTest {
             assertFalse(outcome.requiresFullResync)
             assertTrue(outcome.affectedDates.isNotEmpty())
             assertEquals("next-hr", outcome.nextTokens[HealthDataType.HEART_RATE])
+        }
+
+    @Test
+    fun `applyPendingChanges preserves existing modelTrimp and routeState for exercise upsertion`() =
+        runTest {
+            seedTokens()
+
+            val startTime = Instant.parse("2026-06-01T10:00:00Z")
+            val endTime = Instant.parse("2026-06-01T11:00:00Z")
+            val exerciseRecordId = "exercise-session-123"
+
+            val exerciseRecord =
+                mockk<ExerciseSessionRecord>(relaxed = true) {
+                    every { metadata } returns
+                        mockk(relaxed = true) {
+                            every { id } returns exerciseRecordId
+                            every { dataOrigin } returns mockk(relaxed = true) { every { packageName } returns "com.example.tracker" }
+                        }
+                    every { this@mockk.startTime } returns startTime
+                    every { this@mockk.endTime } returns endTime
+                    every { exerciseType } returns ExerciseSessionRecord.EXERCISE_TYPE_RUNNING
+                    every { title } returns "Morning Run"
+                    every { notes } returns "Tempo"
+                    every { exerciseRouteResult } returns ExerciseRouteResult.NoData()
+                }
+
+            val existingEntity =
+                app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity(
+                    id = exerciseRecordId,
+                    startTime = startTime.toEpochMilli(),
+                    endTime = endTime.toEpochMilli(),
+                    exerciseType = "RUNNING",
+                    durationMinutes = 60,
+                    zone1Minutes = 10f,
+                    zone2Minutes = 20f,
+                    zone3Minutes = 20f,
+                    zone4Minutes = 10f,
+                    zone5Minutes = 0f,
+                    trimp = 45.0f,
+                    modelTrimp = 52.5f,
+                    avgHr = 150f,
+                    deviceName = "Pixel Watch",
+                    routeState = app.readylytics.health.core.model.domain.model.RouteState.IMPORTED,
+                    totalDistanceMeters = 10000.0f,
+                    avgSpeedKmh = 10.0f,
+                    elevationGainMeters = 50.0f,
+                )
+
+            coEvery { workoutDao.getById(exerciseRecordId) } returns existingEntity
+            coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
+
+            val capturedWorkouts = mutableListOf<List<app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity>>()
+            coEvery { workoutDao.upsertAll(capture(capturedWorkouts)) } returns Unit
+
+            routeOneChange(
+                HealthDataType.EXERCISE,
+                UpsertionChange(exerciseRecord),
+            )
+
+            synchronizer.applyPendingChanges()
+
+            val saved = capturedWorkouts.flatten().firstOrNull { it.id == exerciseRecordId }
+            assertNotNull("Saved workout entity should not be null", saved)
+            assertEquals("modelTrimp must be preserved from existing record", 52.5f, saved?.modelTrimp)
+            assertEquals("routeState must be preserved when fresh record has no route", app.readylytics.health.core.model.domain.model.RouteState.IMPORTED, saved?.routeState)
+            assertEquals("totalDistanceMeters must be preserved if existing", 10000.0f, saved?.totalDistanceMeters)
+            assertEquals("avgSpeedKmh must be preserved if existing", 10.0f, saved?.avgSpeedKmh)
+            assertEquals("elevationGainMeters must be preserved if existing", 50.0f, saved?.elevationGainMeters)
         }
 
     private fun seedTokens() {
