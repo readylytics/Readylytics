@@ -19,9 +19,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -36,9 +36,10 @@ class SelectedDateRepository
         private val oxygenSaturationRecordDao: OxygenSaturationRecordDao? = null,
         private val bloodPressureRecordDao: BloodPressureRecordDao? = null,
         @param:ApplicationScope private val appScope: CoroutineScope,
+        private val clock: Clock,
     ) : SelectedDateStore {
         private val dateMutex = Mutex()
-        private val _selectedDate = MutableStateFlow(LocalDate.now())
+        private val _selectedDate = MutableStateFlow(LocalDate.now(clock))
         override val selectedDate: StateFlow<LocalDate> = _selectedDate.asStateFlow()
 
         // Tracks what "today" was as of the last foreground check, so
@@ -64,7 +65,7 @@ class SelectedDateRepository
                 bloodPressureRecordDao?.observeEarliestBpTime() ?: flowOf(null),
             ) { times ->
                 val minTime = times.filterNotNull().minOrNull()
-                minTime?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate() }
+                minTime?.let { Instant.ofEpochMilli(it).atZone(clock.zone).toLocalDate() }
             }.stateIn(scope = appScope, started = SharingStarted.Eagerly, initialValue = null)
 
         init {
@@ -83,7 +84,7 @@ class SelectedDateRepository
 
         override suspend fun updateSelectedDate(date: LocalDate) {
             dateMutex.withLock {
-                val today = LocalDate.now()
+                val today = LocalDate.now(clock)
                 val earliest = earliestDate.value
                 _selectedDate.value =
                     date.coerceAtMost(today).let { d ->
@@ -95,7 +96,7 @@ class SelectedDateRepository
 
         override suspend fun resetToToday() {
             dateMutex.withLock {
-                val today = LocalDate.now()
+                val today = LocalDate.now(clock)
                 _selectedDate.value = today
                 lastKnownToday = today
             }
@@ -107,7 +108,7 @@ class SelectedDateRepository
         // selection is left untouched.
         override suspend fun advanceTodayIfNeeded() {
             dateMutex.withLock {
-                val today = LocalDate.now()
+                val today = LocalDate.now(clock)
                 val previousToday = lastKnownToday
                 if (_selectedDate.value == previousToday && today != previousToday) {
                     _selectedDate.value = today
@@ -125,13 +126,13 @@ class SelectedDateRepository
                 if (earliest == null || candidate >= earliest) {
                     _selectedDate.value = candidate
                 }
-                lastKnownToday = LocalDate.now()
+                lastKnownToday = LocalDate.now(clock)
             }
         }
 
         override suspend fun selectNextDay() {
             dateMutex.withLock {
-                val today = LocalDate.now()
+                val today = LocalDate.now(clock)
                 if (_selectedDate.value < today) {
                     _selectedDate.value = _selectedDate.value.plusDays(1)
                 }

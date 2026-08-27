@@ -88,7 +88,7 @@ class DashboardViewModel
         @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : BaseViewModel() {
         fun validateSelectedDate(date: LocalDate): Result<LocalDate> =
-            if (date <= LocalDate.now()) {
+            if (date <= LocalDate.now(clock)) {
                 Result.success(date)
             } else {
                 Result.failure("Cannot select future dates", "INVALID_DATE")
@@ -263,8 +263,8 @@ class DashboardViewModel
         }
 
         private fun nowMinutesOfDayFor(selectedDate: LocalDate): Int =
-            if (selectedDate == LocalDate.now()) {
-                LocalTime.now().let { it.hour * 60 + it.minute }
+            if (selectedDate == LocalDate.now(clock)) {
+                LocalTime.now(clock).let { it.hour * 60 + it.minute }
             } else {
                 1439
             }

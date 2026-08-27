@@ -40,6 +40,8 @@ class SleepAndThresholdSettingsViewModelTest {
     private val circadianPrefs = mockk<CircadianThresholdPreferences>(relaxed = true)
     private val resyncController = mockk<HistoricalResyncController>(relaxed = true)
     private val testDispatcher = StandardTestDispatcher()
+    private val testClock: java.time.Clock =
+        java.time.Clock.fixed(java.time.Instant.parse("2026-08-27T00:00:00Z"), java.time.ZoneOffset.UTC)
 
     private lateinit var sleepViewModel: SleepSettingsViewModel
     private lateinit var thresholdViewModel: ThresholdSettingsViewModel
@@ -57,6 +59,7 @@ class SleepAndThresholdSettingsViewModelTest {
                 scoringRepo,
                 resyncController,
                 kotlinx.coroutines.CoroutineScope(testDispatcher),
+                testClock,
             )
         thresholdViewModel =
             ThresholdSettingsViewModel(
@@ -64,6 +67,7 @@ class SleepAndThresholdSettingsViewModelTest {
                 thresholdSettings,
                 scoringRepo,
                 circadianPrefs,
+                testClock,
             )
     }
 
@@ -79,7 +83,7 @@ class SleepAndThresholdSettingsViewModelTest {
             advanceUntilIdle()
 
             coVerify { sleepSettings.updateHrvBaselineOverride(50f) }
-            coVerify { scoringRepo.computeAndPersistDailySummary() }
+            coVerify { scoringRepo.computeAndPersistDailySummary(any()) }
         }
 
     @Test
@@ -89,7 +93,7 @@ class SleepAndThresholdSettingsViewModelTest {
             advanceUntilIdle()
 
             coVerify { sleepSettings.updateRestingHrPercentile(8) }
-            coVerify { scoringRepo.computeAndPersistDailySummary() }
+            coVerify { scoringRepo.computeAndPersistDailySummary(any()) }
         }
 
     @Test
@@ -121,6 +125,7 @@ class SleepAndThresholdSettingsViewModelTest {
                     scoringRepo,
                     resyncController,
                     kotlinx.coroutines.CoroutineScope(testDispatcher),
+                    testClock,
                 )
 
             val state =
@@ -143,7 +148,7 @@ class SleepAndThresholdSettingsViewModelTest {
             advanceUntilIdle()
 
             coVerify { sleepSettings.updateCoreMergeGapMinutes(210) }
-            coVerify { scoringRepo.computeAndPersistDailySummary() }
+            coVerify { scoringRepo.computeAndPersistDailySummary(any()) }
         }
 
     @Test
@@ -189,7 +194,7 @@ class SleepAndThresholdSettingsViewModelTest {
             advanceUntilIdle()
 
             coVerify { circadianPrefs.setOverride(30) }
-            coVerify { scoringRepo.computeAndPersistDailySummary() }
+            coVerify { scoringRepo.computeAndPersistDailySummary(any()) }
         }
 
     @Test
@@ -218,7 +223,7 @@ class SleepAndThresholdSettingsViewModelTest {
             advanceUntilIdle()
 
             coVerify { sleepSettings.updateSleepScoreWeightProfile(SleepScoreWeightProfile.DURATION_FOCUSED) }
-            coVerify { scoringRepo.computeAndPersistDailySummary() }
+            coVerify { scoringRepo.computeAndPersistDailySummary(any()) }
             coVerify(exactly = 0) { resyncController.requestScoreRecompute() }
         }
 
@@ -238,7 +243,7 @@ class SleepAndThresholdSettingsViewModelTest {
             advanceUntilIdle()
 
             coVerify { sleepSettings.updateHypersomniaOnsetPercent(115) }
-            coVerify { scoringRepo.computeAndPersistDailySummary() }
+            coVerify { scoringRepo.computeAndPersistDailySummary(any()) }
         }
 
     @Test
@@ -268,6 +273,7 @@ class SleepAndThresholdSettingsViewModelTest {
                     scoringRepo,
                     resyncController,
                     kotlinx.coroutines.CoroutineScope(testDispatcher),
+                    testClock,
                 )
 
             val state =
@@ -290,6 +296,7 @@ class SleepAndThresholdSettingsViewModelTest {
                     scoringRepo,
                     resyncController,
                     kotlinx.coroutines.CoroutineScope(testDispatcher),
+                    testClock,
                 )
 
             val job =
@@ -315,6 +322,7 @@ class SleepAndThresholdSettingsViewModelTest {
                     scoringRepo,
                     resyncController,
                     kotlinx.coroutines.CoroutineScope(testDispatcher),
+                    testClock,
                 )
 
             val job =
@@ -345,6 +353,7 @@ class SleepAndThresholdSettingsViewModelTest {
                     scoringRepo,
                     resyncController,
                     kotlinx.coroutines.CoroutineScope(testDispatcher),
+                    testClock,
                 )
 
             val job =
@@ -375,6 +384,7 @@ class SleepAndThresholdSettingsViewModelTest {
                     scoringRepo,
                     resyncController,
                     kotlinx.coroutines.CoroutineScope(testDispatcher),
+                    testClock,
                 )
 
             val job =
@@ -407,6 +417,7 @@ class SleepAndThresholdSettingsViewModelTest {
                     scoringRepo,
                     resyncController,
                     kotlinx.coroutines.CoroutineScope(testDispatcher),
+                    testClock,
                 )
 
             val job =

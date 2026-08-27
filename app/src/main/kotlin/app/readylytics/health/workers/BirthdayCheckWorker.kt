@@ -10,6 +10,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
+import java.time.Clock
 import java.time.LocalDate
 import java.time.Period
 
@@ -20,6 +21,7 @@ class BirthdayCheckWorker
         @Assisted context: Context,
         @Assisted params: WorkerParameters,
         private val settingsRepo: SettingsRepository,
+        private val clock: Clock,
     ) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result {
             val prefs = settingsRepo.userPreferences.first()
@@ -30,7 +32,7 @@ class BirthdayCheckWorker
 
             return try {
                 val birthDate = LocalDate.parse(prefs.birthDate)
-                val newAge = Period.between(birthDate, LocalDate.now()).years
+                val newAge = Period.between(birthDate, LocalDate.now(clock)).years
                 if (newAge != prefs.age) {
                     settingsRepo.updateAge(newAge)
                 }

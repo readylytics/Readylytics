@@ -17,8 +17,11 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.ZoneOffset
 import kotlin.test.assertEquals
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -29,30 +32,38 @@ class SelectedDateRepositoryTest {
             every { observeEarliestDateMs() } returns flowOf(null)
         }
     private val testScope = CoroutineScope(UnconfinedTestDispatcher())
+    private val testClock: Clock = Clock.fixed(Instant.parse("2026-08-27T00:00:00Z"), ZoneOffset.UTC)
+    private val today: LocalDate = LocalDate.now(testClock)
 
     @Before
     fun setUp() {
-        repository = SelectedDateRepository(dao = dao, appScope = testScope)
+        repository = SelectedDateRepository(dao = dao, appScope = testScope, clock = testClock)
     }
+
+    @Test
+    fun `selectedDate tracks current date using injected clock`() =
+        runTest {
+            assertEquals(LocalDate.of(2026, 8, 27), repository.selectedDate.value)
+        }
 
     @Test
     fun `resetToToday sets date to current date`() =
         runTest {
             repository.resetToToday()
-            assertEquals(LocalDate.now(), repository.selectedDate.value)
+            assertEquals(today, repository.selectedDate.value)
         }
 
     @Test
     fun `advanceTodayIfNeeded does nothing when already on today and day unchanged`() =
         runTest {
             repository.advanceTodayIfNeeded()
-            assertEquals(LocalDate.now(), repository.selectedDate.value)
+            assertEquals(today, repository.selectedDate.value)
         }
 
     @Test
     fun `advanceTodayIfNeeded leaves explicit past-date selection alone when day unchanged`() =
         runTest {
-            val pastDate = LocalDate.now().minusDays(3)
+            val pastDate = today.minusDays(3)
             repository.updateSelectedDate(pastDate)
 
             repository.advanceTodayIfNeeded()
@@ -63,7 +74,7 @@ class SelectedDateRepositoryTest {
     @Test
     fun `advanceTodayIfNeeded leaves explicit past-date selection alone across repeated foreground events`() =
         runTest {
-            val pastDate = LocalDate.now().minusDays(2)
+            val pastDate = today.minusDays(2)
             repository.updateSelectedDate(pastDate)
 
             repeat(5) { repository.advanceTodayIfNeeded() }
@@ -74,15 +85,15 @@ class SelectedDateRepositoryTest {
     @Test
     fun `updateSelectedDate prevents future dates`() =
         runTest {
-            val futureDate = LocalDate.now().plusDays(10)
+            val futureDate = today.plusDays(10)
             repository.updateSelectedDate(futureDate)
-            assertEquals(LocalDate.now(), repository.selectedDate.value)
+            assertEquals(today, repository.selectedDate.value)
         }
 
     @Test
     fun `updateSelectedDate allows past dates`() =
         runTest {
-            val pastDate = LocalDate.now().minusDays(5)
+            val pastDate = today.minusDays(5)
             repository.updateSelectedDate(pastDate)
             assertEquals(pastDate, repository.selectedDate.value)
         }
@@ -90,7 +101,7 @@ class SelectedDateRepositoryTest {
     @Test
     fun `selectNextDay increments date when not today`() =
         runTest {
-            val pastDate = LocalDate.now().minusDays(5)
+            val pastDate = today.minusDays(5)
             repository.updateSelectedDate(pastDate)
             repository.selectNextDay()
             assertEquals(pastDate.plusDays(1), repository.selectedDate.value)
@@ -99,7 +110,6 @@ class SelectedDateRepositoryTest {
     @Test
     fun `selectNextDay does nothing when date is today`() =
         runTest {
-            val today = LocalDate.now()
             repository.updateSelectedDate(today)
             repository.selectNextDay()
             assertEquals(today, repository.selectedDate.value)
@@ -108,7 +118,7 @@ class SelectedDateRepositoryTest {
     @Test
     fun `selectPreviousDay decrements date`() =
         runTest {
-            val date = LocalDate.now().minusDays(3)
+            val date = today.minusDays(3)
             repository.updateSelectedDate(date)
             repository.selectPreviousDay()
             assertEquals(date.minusDays(1), repository.selectedDate.value)
@@ -124,13 +134,13 @@ class SelectedDateRepositoryTest {
                     }
                 }
             jobs.forEach { it.join() }
-            assertEquals(LocalDate.now(), repository.selectedDate.value)
+            assertEquals(today, repository.selectedDate.value)
         }
 
     @Test
     fun `concurrent date operations maintain valid state`() =
         runTest {
-            val pastDate = LocalDate.now().minusDays(10)
+            val pastDate = today.minusDays(10)
             repository.updateSelectedDate(pastDate)
 
             val jobs =
@@ -146,7 +156,7 @@ class SelectedDateRepositoryTest {
             jobs.forEach { it.join() }
 
             val finalDate = repository.selectedDate.value
-            assert(finalDate <= LocalDate.now()) { "Final date should not be in future" }
+            assert(finalDate <= today) { "Final date should not be in future" }
         }
 
     @Test
@@ -158,7 +168,7 @@ class SelectedDateRepositoryTest {
                         if (i % 2 == 0) {
                             repository.resetToToday()
                         } else {
-                            repository.updateSelectedDate(LocalDate.now().minusDays(1))
+                            repository.updateSelectedDate(today.minusDays(1))
                         }
                     }
                 }
@@ -166,7 +176,7 @@ class SelectedDateRepositoryTest {
 
             val finalDate = repository.selectedDate.value
             assert(
-                finalDate == LocalDate.now() || finalDate == LocalDate.now().minusDays(1),
+                finalDate == today || finalDate == today.minusDays(1),
             ) {
                 "Final date should be either today or yesterday"
             }
@@ -177,20 +187,20 @@ class SelectedDateRepositoryTest {
     private fun repositoryWithEarliestDate(earliest: LocalDate): SelectedDateRepository {
         val epochMs =
             earliest
-                .atStartOfDay(java.time.ZoneId.systemDefault())
+                .atStartOfDay(testClock.zone)
                 .toInstant()
                 .toEpochMilli()
         val daoWithEarliest: DailySummaryDao =
             mockk {
                 every { observeEarliestDateMs() } returns flowOf(epochMs)
             }
-        return SelectedDateRepository(dao = daoWithEarliest, appScope = testScope)
+        return SelectedDateRepository(dao = daoWithEarliest, appScope = testScope, clock = testClock)
     }
 
     @Test
     fun `selectPreviousDay does nothing when at earliest date`() =
         runTest {
-            val earliest = LocalDate.now().minusDays(5)
+            val earliest = today.minusDays(5)
             val repo = repositoryWithEarliestDate(earliest)
             repo.updateSelectedDate(earliest)
 
@@ -201,7 +211,7 @@ class SelectedDateRepositoryTest {
     @Test
     fun `selectPreviousDay works when above earliest date`() =
         runTest {
-            val earliest = LocalDate.now().minusDays(10)
+            val earliest = today.minusDays(10)
             val repo = repositoryWithEarliestDate(earliest)
             val startDate = earliest.plusDays(2)
             repo.updateSelectedDate(startDate)
@@ -213,7 +223,7 @@ class SelectedDateRepositoryTest {
     @Test
     fun `updateSelectedDate clamps to earliest date`() =
         runTest {
-            val earliest = LocalDate.now().minusDays(5)
+            val earliest = today.minusDays(5)
             val repo = repositoryWithEarliestDate(earliest)
 
             repo.updateSelectedDate(earliest.minusDays(3))
@@ -223,13 +233,13 @@ class SelectedDateRepositoryTest {
     @Test
     fun `earliestDate combines all DAOs minimum times`() =
         runTest {
-            val date1 = LocalDate.now().minusDays(10)
-            val date2 = LocalDate.now().minusDays(15)
-            val date3 = LocalDate.now().minusDays(5)
+            val date1 = today.minusDays(10)
+            val date2 = today.minusDays(15)
+            val date3 = today.minusDays(5)
 
-            val ms1 = date1.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-            val ms2 = date2.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-            val ms3 = date3.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            val ms1 = date1.atStartOfDay(testClock.zone).toInstant().toEpochMilli()
+            val ms2 = date2.atStartOfDay(testClock.zone).toInstant().toEpochMilli()
+            val ms3 = date3.atStartOfDay(testClock.zone).toInstant().toEpochMilli()
 
             val mockDailySummaryDao: DailySummaryDao =
                 mockk {
@@ -265,6 +275,7 @@ class SelectedDateRepositoryTest {
                     oxygenSaturationRecordDao = mockSpo2Dao,
                     bloodPressureRecordDao = mockBpDao,
                     appScope = testScope,
+                    clock = testClock,
                 )
 
             assertEquals(date2, repo.earliestDate.value)
@@ -273,11 +284,11 @@ class SelectedDateRepositoryTest {
     @Test
     fun `selectedDate is coerced to earliestDate when earliestDate shifts forward`() =
         runTest {
-            val dateBefore = LocalDate.now().minusDays(15)
-            val dateAfter = LocalDate.now().minusDays(5)
+            val dateBefore = today.minusDays(15)
+            val dateAfter = today.minusDays(5)
 
-            val msBefore = dateBefore.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-            val msAfter = dateAfter.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            val msBefore = dateBefore.atStartOfDay(testClock.zone).toInstant().toEpochMilli()
+            val msAfter = dateAfter.atStartOfDay(testClock.zone).toInstant().toEpochMilli()
 
             val earliestFlow = MutableStateFlow<Long?>(msBefore)
 
@@ -290,6 +301,7 @@ class SelectedDateRepositoryTest {
                 SelectedDateRepository(
                     dao = mockDailySummaryDao,
                     appScope = testScope,
+                    clock = testClock,
                 )
 
             repo.updateSelectedDate(dateBefore)
