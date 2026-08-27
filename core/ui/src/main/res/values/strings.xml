@@ -55,7 +55,6 @@
 
 
     <string name="label_baseline">Baseline</string>
-    <string name="label_historical_baseline">Historical baseline</string>
     <string name="accessibility_drag_to_reorder">Drag to reorder</string>
     <string name="unit_system_label">Unit system</string>
     <string name="unit_system_metric_label">Metric (cm, kg)</string>
