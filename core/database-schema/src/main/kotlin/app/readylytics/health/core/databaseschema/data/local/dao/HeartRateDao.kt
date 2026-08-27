@@ -206,6 +206,20 @@ interface HeartRateDao {
     @Query("DELETE FROM heart_rate_records WHERE timestampMs < :beforeMs")
     suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
 
+    // DB-002: keyset-bounded delete for RetentionCleanup -- deletes at most `limit` of the oldest
+    // rows before `beforeMs` per call, so a large first-time cleanup opens many bounded
+    // transactions instead of one unbounded delete (WAL growth).
+    @Query(
+        "DELETE FROM heart_rate_records WHERE rowId IN (" +
+            "SELECT rowId FROM heart_rate_records WHERE timestampMs < :beforeMs " +
+            "ORDER BY timestampMs ASC LIMIT :limit" +
+            ")",
+    )
+    suspend fun deleteBeforeTimestampBatch(
+        beforeMs: Long,
+        limit: Int,
+    ): Int
+
     @Query("DELETE FROM heart_rate_records WHERE sourceRecordRef = :sourceRecordRef")
     suspend fun deleteByRef(sourceRecordRef: Long): Int
 

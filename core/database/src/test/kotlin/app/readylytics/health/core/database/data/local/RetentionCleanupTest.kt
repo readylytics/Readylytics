@@ -5,6 +5,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.readylytics.health.core.databaseschema.data.local.dao.*
 import app.readylytics.health.core.databaseschema.data.local.entity.*
+import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -419,5 +420,102 @@ class RetentionCleanupTest {
             // Verify warm-tier minute buckets (old deleted, equal/new remain)
             val bucketRemaining = minuteBucketDao.getMinuteBuckets(cutoffMs - 120_000, cutoffMs + 120_000)
             assertEquals(listOf(2, 3), bucketRemaining.map { it.bucketIndex })
+        }
+
+    private class CountingTransactionRunner(
+        private val delegate: TransactionRunner,
+    ) : TransactionRunner {
+        var transactionCount = 0
+            private set
+
+        override suspend fun <R> runInTransaction(block: suspend () -> R): R {
+            transactionCount++
+            return delegate.runInTransaction(block)
+        }
+    }
+
+    private fun buildRetentionCleanup(transactionRunner: TransactionRunner): RetentionCleanup =
+        RetentionCleanup(
+            transactionRunner = transactionRunner,
+            daos =
+                HealthRecordDaos(
+                    sleepSessionDao = sleepDao,
+                    sleepStageDao = sleepStageDao,
+                    heartRateDao = heartRateDao,
+                    hrvDao = hrvDao,
+                    workoutDao = workoutDao,
+                    workoutRoutePointDao = database.workoutRoutePointDao(),
+                    weightRecordDao = weightDao,
+                    bodyFatRecordDao = bodyFatDao,
+                    bloodPressureRecordDao = bloodPressureDao,
+                    oxygenSaturationRecordDao = oxygenSaturationDao,
+                    bodyTemperatureRecordDao = bodyTemperatureDao,
+                    stepRecordDao = stepRecordDao,
+                    sourceRecordDao = database.sourceRecordDao(),
+                    minuteBucketDao = minuteBucketDao,
+                ),
+            dailySummaryDao = dailySummaryDao,
+        )
+
+    private suspend fun seedSingleHrHrvAndOldWorkout(cutoffMs: Long) {
+        heartRateDao.upsertAll(
+            listOf(
+                HeartRateRecordEntity(
+                    sourceRecordRef = 1L,
+                    timestampMs = cutoffMs - 1,
+                    beatsPerMinute = 70,
+                    recordType = "RESTING",
+                ),
+            ),
+        )
+        hrvDao.upsertAll(
+            listOf(
+                HrvRecordEntity(
+                    sourceRecordRef = 2L,
+                    timestampMs = cutoffMs - 1,
+                    rmssdMs = 50f,
+                    recordType = "RESTING",
+                ),
+            ),
+        )
+        workoutDao.upsertAll(
+            listOf(
+                WorkoutRecordEntity(
+                    id = "old_workout",
+                    startTime = cutoffMs - 1,
+                    endTime = cutoffMs,
+                    exerciseType = "Run",
+                    durationMinutes = 30,
+                    zone1Minutes = 10f,
+                    zone2Minutes = 10f,
+                    zone3Minutes = 10f,
+                    zone4Minutes = 0f,
+                    zone5Minutes = 0f,
+                    trimp = 50f,
+                    avgHr = 130f,
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun testRetentionCleanup_splitsHrHrvIntoSeparateTransactionsFromLowVolumeTables() =
+        runTest {
+            seedSourceRecordParents(1L, 2L)
+            val cutoffMs = 1_000_000L
+            seedSingleHrHrvAndOldWorkout(cutoffMs)
+
+            val countingRunner = CountingTransactionRunner(RoomTransactionRunner(database))
+            val cleanupWithCountingRunner = buildRetentionCleanup(countingRunner)
+
+            cleanupWithCountingRunner.deleteBefore(cutoffMs)
+
+            // 1 batch each for HR and HRV (single row < limit terminates the loop immediately) +
+            // 1 final transaction for the 9 remaining low-volume tables = 3. Before this change,
+            // the whole delete was exactly 1 transaction.
+            assertEquals(3, countingRunner.transactionCount)
+            assertEquals(0, heartRateDao.countInRange(0L, cutoffMs))
+            assertEquals(0, hrvDao.countInRange(0L, cutoffMs))
+            assertEquals(emptyList<String>(), workoutDao.getSince(0).map { it.id })
         }
 }

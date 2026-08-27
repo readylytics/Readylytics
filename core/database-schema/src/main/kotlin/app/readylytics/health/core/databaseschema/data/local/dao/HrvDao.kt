@@ -157,6 +157,18 @@ interface HrvDao {
     @Query("DELETE FROM hrv_records WHERE timestampMs < :beforeMs")
     suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
 
+    // DB-002: keyset-bounded delete, same pattern as HeartRateDao.deleteBeforeTimestampBatch.
+    @Query(
+        "DELETE FROM hrv_records WHERE rowId IN (" +
+            "SELECT rowId FROM hrv_records WHERE timestampMs < :beforeMs " +
+            "ORDER BY timestampMs ASC LIMIT :limit" +
+            ")",
+    )
+    suspend fun deleteBeforeTimestampBatch(
+        beforeMs: Long,
+        limit: Int,
+    ): Int
+
     @Query("DELETE FROM hrv_records WHERE sourceRecordRef = :sourceRecordRef")
     suspend fun deleteByRef(sourceRecordRef: Long): Int
 
