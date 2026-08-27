@@ -201,13 +201,14 @@ class RecoveryFlagTest {
         isCurrentHrvOptimal: Boolean = false,
         isCurrentRhrOptimal: Boolean = true,
         isPreviousHrvOptimal: Boolean = false,
+        hrvMissing: Boolean = false,
     ) = calculator.computeRecoveryFlags(
         zLnHrv = 0f,
         zRhr = 0f,
         rhrDeltaBpm = null,
         yesterdayZLnHrv = null,
         yesterdayZRhr = null,
-        hrvMissing = false,
+        hrvMissing = hrvMissing,
         stagesSuspicious = false,
         isLateNadir = false,
         isCalibrating = false,
@@ -378,5 +379,34 @@ class RecoveryFlagTest {
             )
 
         assertTrue(RecoveryFlag.WORKOUT_IMPACT in result)
+    }
+
+    // ─── HRV missing suppresses HRV-comparison insights ──────────────────────
+    @Test
+    fun `rest day no impact does not fire when hrv is missing`() {
+        val result =
+            restDayFlags(
+                yesterdayTrimp = 5f,
+                yesterdayHrv = 50f,
+                currentHrv = 0f,
+                hrvMissing = true,
+            )
+        assertFalse(RecoveryFlag.REST_DAY_NO_IMPACT in result)
+        assertFalse(RecoveryFlag.REST_DAY_SUCCESS in result)
+        assertTrue(RecoveryFlag.HRV_MISSING in result)
+    }
+
+    @Test
+    fun `workout impact does not fire when hrv is missing`() {
+        val result =
+            restDayFlags(
+                yesterdayTrimp = 150f,
+                yesterdayHrv = 50f,
+                currentHrv = 0f,
+                isCurrentRhrOptimal = false,
+                hrvMissing = true,
+            )
+        assertFalse(RecoveryFlag.WORKOUT_IMPACT in result)
+        assertTrue(RecoveryFlag.HRV_MISSING in result)
     }
 }

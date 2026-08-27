@@ -1,15 +1,15 @@
 package app.readylytics.health.core.scoring.domain.scoring.strategies
 
-import app.readylytics.health.core.scoring.domain.scoring.strategies.LoadScoringStrategy
-
 import app.readylytics.health.core.model.domain.model.RecoveryFlag
 import app.readylytics.health.core.model.domain.preferences.PhysiologyProfile
-import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants.Readiness
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants.Restoration
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants.Strain
+import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.components.EmergencyFlagThresholds
+import app.readylytics.health.core.scoring.domain.scoring.components.RecoveryFlagContext
+import app.readylytics.health.core.scoring.domain.scoring.components.RecoveryFlagEvaluator
 import app.readylytics.health.core.scoring.domain.util.mean
 import app.readylytics.health.core.scoring.domain.util.median
 import app.readylytics.health.core.scoring.domain.util.stdev
@@ -117,71 +117,28 @@ class LoadScoringStrategy
             isCurrentHrvOptimal: Boolean = false,
             isCurrentRhrOptimal: Boolean = false,
             isPreviousHrvOptimal: Boolean = false,
-        ): Set<RecoveryFlag> {
-            val flags = mutableSetOf<RecoveryFlag>()
-            if (isCalibrating) flags += RecoveryFlag.CALIBRATING
-            if (hrvMissing) flags += RecoveryFlag.HRV_MISSING
-            if (stagesSuspicious) flags += RecoveryFlag.SUSPICIOUS_STAGE_RATIO
-            if (isLateNadir) flags += RecoveryFlag.NADIR_DELAYED
-
-            val thresholds = emergencyFlags ?: EmergencyFlagThresholds()
-
-            if (zLnHrv != null && zRhr != null) {
-                val todayIllness =
-                    zLnHrv < thresholds.illnessZHrvThreshold &&
-                        (
-                            rhrDeltaBpm != null &&
-                                rhrDeltaBpm >= thresholds.illnessRhrDeltaBpm ||
-                                zRhr >= thresholds.illnessZRhrThreshold
-                        )
-                val prevIllness =
-                    yesterdayZLnHrv != null &&
-                        yesterdayZRhr != null &&
-                        yesterdayZLnHrv < thresholds.illnessZHrvThreshold &&
-                        yesterdayZRhr >= thresholds.illnessZRhrThreshold
-                if (todayIllness && prevIllness) flags += RecoveryFlag.ILLNESS_ONSET
-
-                val todayStrongRecovery =
-                    zLnHrv > thresholds.strongRecoveryZHrvThreshold &&
-                        zRhr < thresholds.strongRecoveryZRhrThreshold
-                val prevStrongRecovery =
-                    yesterdayZLnHrv != null &&
-                        yesterdayZRhr != null &&
-                        yesterdayZLnHrv > thresholds.strongRecoveryZHrvThreshold &&
-                        yesterdayZRhr < thresholds.strongRecoveryZRhrThreshold
-                if (todayStrongRecovery && prevStrongRecovery && RecoveryFlag.ILLNESS_ONSET !in flags) {
-                    flags += RecoveryFlag.STRONG_RECOVERY_SIGNAL
-                }
-            }
-
-            // Workout Impact & Rest Day Insight Logic
-            if (yesterdayTrimp != null && yesterdayTrimp >= 120f) {
-                val hrvDropThreshold = (2f - hrvOptimalThreshold).coerceIn(0f, 1f)
-                val hrvDroppedBeyondThreshold =
-                    currentHrv != null &&
-                        yesterdayHrv != null &&
-                        yesterdayHrv > 0f &&
-                        currentHrv < yesterdayHrv * hrvDropThreshold
-                if (!isCurrentHrvOptimal && !isCurrentRhrOptimal && hrvDroppedBeyondThreshold) {
-                    flags.add(RecoveryFlag.WORKOUT_IMPACT)
-                }
-            } else if (yesterdayTrimp != null && yesterdayTrimp < 10f) {
-                if (currentHrv != null && yesterdayHrv != null && yesterdayHrv > 0) {
-                    val targetHrv = yesterdayHrv * hrvOptimalThreshold
-                    val significantIncrease = currentHrv >= targetHrv
-                    val newlyOptimal = isCurrentHrvOptimal && !isPreviousHrvOptimal
-                    if (significantIncrease || newlyOptimal) {
-                        flags.add(RecoveryFlag.REST_DAY_SUCCESS)
-                    } else if (!isCurrentHrvOptimal) {
-                        flags.add(RecoveryFlag.REST_DAY_NO_IMPACT)
-                    }
-                    // else: HRV already optimal on both days with no significant further
-                    // rise — nothing changed, so no insight is surfaced either way.
-                }
-            }
-
-            return flags
-        }
+        ): Set<RecoveryFlag> =
+            RecoveryFlagEvaluator.evaluate(
+                RecoveryFlagContext(
+                    zLnHrv = zLnHrv,
+                    zRhr = zRhr,
+                    rhrDeltaBpm = rhrDeltaBpm,
+                    yesterdayZLnHrv = yesterdayZLnHrv,
+                    yesterdayZRhr = yesterdayZRhr,
+                    hrvMissing = hrvMissing,
+                    stagesSuspicious = stagesSuspicious,
+                    isLateNadir = isLateNadir,
+                    isCalibrating = isCalibrating,
+                    emergencyFlags = emergencyFlags,
+                    yesterdayTrimp = yesterdayTrimp,
+                    yesterdayHrv = yesterdayHrv,
+                    currentHrv = currentHrv,
+                    hrvOptimalThreshold = hrvOptimalThreshold,
+                    isCurrentHrvOptimal = isCurrentHrvOptimal,
+                    isCurrentRhrOptimal = isCurrentRhrOptimal,
+                    isPreviousHrvOptimal = isPreviousHrvOptimal,
+                ),
+            )
 
         fun computeReadinessScore(
             sRest: Float,

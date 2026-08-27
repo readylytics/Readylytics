@@ -1643,7 +1643,7 @@
         "restingHrRatio": 0.9807692,
         "stepCount": 5945,
         "zRhr": -1.9707686,
-        "recoveryFlags": "HRV_MISSING,REST_DAY_NO_IMPACT",
+        "recoveryFlags": "HRV_MISSING",
         "diagnostics": {
             "zRhr": -1.9707686,
             "rollingMu": 3.765082,
@@ -5500,7 +5500,7 @@
         "restingHrRatio": 1.0,
         "stepCount": 5621,
         "zRhr": 0.98319215,
-        "recoveryFlags": "HRV_MISSING,NADIR_DELAYED,REST_DAY_NO_IMPACT",
+        "recoveryFlags": "HRV_MISSING,NADIR_DELAYED",
         "diagnostics": {
             "zRhr": 0.98319215,
             "rollingMu": 3.5655432,
@@ -46788,7 +46788,7 @@
         "restingHrRatio": 1.0,
         "stepCount": 9887,
         "zRhr": 0.0,
-        "recoveryFlags": "HRV_MISSING,REST_DAY_NO_IMPACT",
+        "recoveryFlags": "HRV_MISSING",
         "diagnostics": {
             "zRhr": 0.0,
             "rollingMu": 3.6337612,
