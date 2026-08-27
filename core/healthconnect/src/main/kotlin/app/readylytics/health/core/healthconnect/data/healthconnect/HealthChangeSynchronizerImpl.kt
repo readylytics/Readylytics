@@ -365,16 +365,29 @@ class HealthChangeSynchronizerImpl
                             thresholds
                         )
                         val workoutInput = WorkoutMapper.mapExerciseSession(domainExercise)
-                        val entity = workoutInput.toEntity().copy(
-                            durationMinutes = metrics.durationMinutes,
-                            zone1Minutes = metrics.zoneMinutes[0],
-                            zone2Minutes = metrics.zoneMinutes[1],
-                            zone3Minutes = metrics.zoneMinutes[2],
-                            zone4Minutes = metrics.zoneMinutes[3],
-                            zone5Minutes = metrics.zoneMinutes[4],
-                            trimp = metrics.trimp,
-                            avgHr = metrics.avgHr
-                        )
+                        val existing = workoutDao.getById(workoutInput.id)
+                        val freshEntity = workoutInput.toEntity()
+                        val entity =
+                            freshEntity.copy(
+                                durationMinutes = metrics.durationMinutes,
+                                zone1Minutes = metrics.zoneMinutes[0],
+                                zone2Minutes = metrics.zoneMinutes[1],
+                                zone3Minutes = metrics.zoneMinutes[2],
+                                zone4Minutes = metrics.zoneMinutes[3],
+                                zone5Minutes = metrics.zoneMinutes[4],
+                                trimp = metrics.trimp,
+                                avgHr = metrics.avgHr,
+                                modelTrimp = existing?.modelTrimp,
+                                totalDistanceMeters = freshEntity.totalDistanceMeters ?: existing?.totalDistanceMeters,
+                                avgSpeedKmh = freshEntity.avgSpeedKmh ?: existing?.avgSpeedKmh,
+                                elevationGainMeters = freshEntity.elevationGainMeters ?: existing?.elevationGainMeters,
+                                routeState =
+                                    if (workoutInput.routePoints.isEmpty() && existing?.routeState == RouteState.IMPORTED) {
+                                        existing.routeState
+                                    } else {
+                                        freshEntity.routeState
+                                    },
+                            )
                         workoutDao.upsertAll(listOf(entity))
                     }
                 }
