@@ -20,7 +20,6 @@ import kotlinx.coroutines.withContext
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.reflect.KClass
 
 /**
  * Reads interval records (such as distance and elevation gain) from Health Connect
@@ -42,13 +41,13 @@ class IntervalTotalsReader
             from: Instant,
             to: Instant,
         ): List<DomainIntervalTotal> =
-            readIntervalTotals(DistanceRecord::class, from, to) { it.toIntervalTotal() }
+            readIntervalTotals<DistanceRecord>(from, to) { it.toIntervalTotal() }
 
         suspend fun readElevationTotals(
             from: Instant,
             to: Instant,
         ): List<DomainIntervalTotal> =
-            readIntervalTotals(ElevationGainedRecord::class, from, to) { it.toIntervalTotal() }
+            readIntervalTotals<ElevationGainedRecord>(from, to) { it.toIntervalTotal() }
 
         fun resolveTotal(
             session: ExerciseSessionRecord,
@@ -66,34 +65,32 @@ class IntervalTotalsReader
          * permission is not granted -- distance and elevation are enrichment, never a reason to
          * fail an exercise sync pass.
          */
-        private suspend fun <T : Record> readIntervalTotals(
-            recordType: KClass<T>,
+        private suspend inline fun <reified T : Record> readIntervalTotals(
             from: Instant,
             to: Instant,
-            map: (T) -> DomainIntervalTotal,
+            noinline map: (T) -> DomainIntervalTotal,
         ): List<DomainIntervalTotal> =
             withContext(ioDispatcher) {
                 try {
-                    readAllPages(recordType, from, to).map(map)
+                    readAllPages<T>(from, to).map(map)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: HealthConnectPermissionRevokedException) {
                     logD("IntervalTotalsReader") {
-                        "${recordType.simpleName} permission not granted; " +
+                        "${T::class.simpleName} permission not granted; " +
                             "falling back to route-derived totals (${e.message})"
                     }
                     emptyList()
                 } catch (e: Exception) {
                     if (e.asHealthConnectSecurityCause() == null) throw e
                     logD("IntervalTotalsReader") {
-                        "${recordType.simpleName} permission not granted; falling back to route-derived totals"
+                        "${T::class.simpleName} permission not granted; falling back to route-derived totals"
                     }
                     emptyList()
                 }
             }
 
-        private suspend fun <T : Record> readAllPages(
-            recordType: KClass<T>,
+        private suspend inline fun <reified T : Record> readAllPages(
             from: Instant,
             to: Instant,
         ): List<T> {
@@ -101,11 +98,10 @@ class IntervalTotalsReader
             var pageToken: String? = null
             try {
                 do {
-                    @Suppress("UNCHECKED_CAST")
                     val response =
                         client.readRecords(
                             ReadRecordsRequest(
-                                recordType = recordType,
+                                recordType = T::class,
                                 timeRangeFilter = TimeRangeFilter.between(from, to),
                                 pageToken = pageToken,
                             ),
@@ -116,7 +112,7 @@ class IntervalTotalsReader
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                rethrowReadFailureOrOriginal(recordType.simpleName, e)
+                rethrowReadFailureOrOriginal(T::class.simpleName, e)
             }
             return all
         }
