@@ -24,7 +24,7 @@ data class SleepUiState(
     val latestSession: SleepSessionData? = null,
     val stageTimeline: List<SleepStageData> = emptyList(),
     val sleepHrSamples: List<HeartRateRecordData> = emptyList(),
-    val selectedDate: LocalDate = LocalDate.now(),
+    val selectedDate: LocalDate,
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val selectedTrendRange: TimeRange = TimeRange.SEVEN_DAYS,

@@ -78,7 +78,7 @@ class ScoringRepositoryN1Test {
     private lateinit var minuteBucketDao: MinuteBucketDao
     private lateinit var repo: ScoringRepository
 
-    private val today = LocalDate.now()
+    private val today = LocalDate.of(2026, 8, 27)
     private val todayMidnight =
         today
             .atStartOfDay(java.time.ZoneId.systemDefault())
@@ -262,7 +262,6 @@ class ScoringRepositoryN1Test {
     @Test
     fun `profile differentiation produces different RAS gains`() =
         runTest {
-            val today = LocalDate.now()
             val dayMidnight = today.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
             val nextDayMidnight =
                 today
@@ -473,7 +472,6 @@ class ScoringRepositoryN1Test {
     @Test
     fun `HRV baseline is stable across multiple identical calculations`() =
         runTest {
-            val today = LocalDate.now()
             val todaySession = makeSleepSession("today", 0)
 
             coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns todaySession

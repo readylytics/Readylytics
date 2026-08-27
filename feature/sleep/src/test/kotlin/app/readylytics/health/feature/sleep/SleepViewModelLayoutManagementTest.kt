@@ -41,11 +41,15 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SleepViewModelLayoutManagementTest {
     private val testDispatcher = StandardTestDispatcher()
+    private val clock = Clock.fixed(Instant.parse("2026-06-11T10:00:00Z"), ZoneId.systemDefault())
 
     private val dailySummaryRepository: DailySummaryRepository = mockk(relaxed = true)
     private val dailyMetricsRepository: DailyMetricsRepository = mockk(relaxed = true)
@@ -108,6 +112,7 @@ class SleepViewModelLayoutManagementTest {
             selectedDateRepository = selectedDateRepository,
             foregroundSyncController = foregroundSyncController,
             dispatchers = SleepDispatchers(testDispatcher, testDispatcher),
+            clock = clock,
         )
 
     @Test

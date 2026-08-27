@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.Clock
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
@@ -47,6 +48,7 @@ class SleepViewModel
         private val selectedDateRepository: SelectedDateStore,
         private val foregroundSyncController: ForegroundSyncGateway,
         private val dispatchers: SleepDispatchers,
+        private val clock: Clock,
     ) : ViewModel() {
         private val layoutDelegate = SleepLayoutDelegate(repositories.sleepLayout, viewModelScope)
 
@@ -100,10 +102,10 @@ class SleepViewModel
                             .toEpochMilli()
 
                     val summaryFlow =
-                        if (date == LocalDate.now(deviceZoneId)) {
+                        if (date == LocalDate.now(clock.withZone(deviceZoneId))) {
                             val todayMs =
                                 LocalDate
-                                    .now(deviceZoneId)
+                                    .now(clock.withZone(deviceZoneId))
                                     .atStartOfDay(deviceZoneId)
                                     .toInstant()
                                     .toEpochMilli()
@@ -238,7 +240,11 @@ class SleepViewModel
             }.stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),
-                initialValue = SleepUiState(isLoading = true),
+                initialValue =
+                    SleepUiState(
+                        selectedDate = selectedDateRepository.selectedDate.value,
+                        isLoading = true,
+                    ),
             )
 
         val earliestDate: StateFlow<LocalDate?> =
