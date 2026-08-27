@@ -148,8 +148,8 @@ This was confirmed directly with the user, no assumptions:
     `` `DAILY range produces empty historical baseline series` `` (~347-364),
     `` `historical baseline averages only frozen days per bucket` `` (~366-407),
     `` `historical zone bands empty when no frozen baselines` ``,
-    `` `historical baseline honors override when no frozen days` `` (~409-448) — all currently
-    exercised with `TimeRange.SIX_MONTHS`.
+    `` `historical baseline honors override when no frozen days` `` (~409-448). The first uses
+    `TimeRange.SEVEN_DAYS`; the other three use `TimeRange.SIX_MONTHS`.
   - `core/ui/src/test/kotlin/app/readylytics/health/core/ui/common/TimeRangeTest.kt` asserts
     `SEVEN_DAYS`/`THIRTY_DAYS` map to `TrendGranularity.DAILY` — this must keep passing
     unmodified (raw-point/axis granularity is not changing).
@@ -273,8 +273,15 @@ Correctness against the product rules:
   val rawHrvBaseline: List<DailyDataPoint> =
       realPoints { summary -> DailyMetricsMapper.hrvBaselineRounded(summary, hrvBaselineOverride)?.toFloat() }
   ```
-  (`DailyMetricsMapper.rhrBaselineRounded`/`hrvBaselineRounded` are unchanged — they already
-  return `null` for un-frozen days regardless of range.)
+  (`DailyMetricsMapper.rhrBaselineRounded`/`hrvBaselineRounded` are unchanged, but note they are
+  **not** symmetric about "un-frozen days": `rhrBaselineRounded` returns `null` unless the day is
+  frozen (`baselineCalculatedAtDate != null`), whereas `hrvBaselineRounded` has no frozen check of
+  its own — it returns `null` only when `hrvMuMssd` is `null`, which is how production represents
+  an un-frozen day (`ComputeHistoricalBaselinesUseCase` sets `hrvMuMssd` only alongside
+  `baselineCalculatedAtDate`). A fixture day carrying both `hrvMuMssd` and `baselineCalculatedAt =
+  null` is an artificial state that now produces a populated HRV baseline, exactly as a frozen day
+  would. So **an "un-frozen" fixture day must set `hrvMuMssd = null`** (see the test-fixture rule in
+  §5 item 1).)
 
 - `historicalRhrBaselineAverage`/`historicalHrvBaselineAverage` keep their exact current
   formula — mean of every frozen per-day baseline across the whole window, never a mean of
@@ -355,11 +362,17 @@ No other line in this file changes.
 ### `feature/vitals/src/test/kotlin/app/readylytics/health/feature/vitals/overview/VitalsStateFactoryTest.kt`
 
 1. Rename `` `DAILY range produces empty historical baseline series` `` →
-   `` `SEVEN_DAYS range with unfrozen baseline produces empty historical baseline series` ``.
-   Assertions unchanged — its fixture has zero frozen days (`baselineCalculatedAt = null`), so
-   `rhrBaselineRounded`/`hrvBaselineRounded` return `null` regardless of range; the rename just
-   reflects that it was never really testing a range-granularity gate, only "no frozen data →
-   empty series," which remains true.
+   `` `SEVEN_DAYS range with unfrozen baseline produces empty historical baseline series` `` and
+   **change its fixture** to `dailySummary(date = LocalDate.of(2026, 1, 1), rhrBpm = null, hrvMuMssd = null)`.
+   Today it passes only because of the old `TrendGranularity.DAILY` gate this plan removes; after
+   the change, `rhrBaselineRounded` returns null via the frozen gate and `hrvBaselineRounded` returns
+   null via the null-`hrvMuMssd` path, so all six assertions hold unchanged. The current fixture's
+   `hrvMuMssd = 3.8f` would NOT stay empty after this change — `hrvBaselineRounded` ignores
+   `baselineCalculatedAtDate` and would emit `exp(3.8f)` ≈ 45. **Fixture rule for every test in this
+   section:** an "un-frozen" day is `rhrBpm = null` AND `hrvMuMssd = null` (mirroring production's
+   `ComputeHistoricalBaselinesUseCase`); never `hrvMuMssd` set with `baselineCalculatedAt = null`.
+   The rename reflects that this test was never really testing a range-granularity gate, only
+   "no frozen baseline data → empty series," which remains true.
 2. New: `` `SEVEN_DAYS range plots per-day historical baseline when frozen` `` — 7 daily
    `DailySummary`s spanning `start..start+6`, each frozen with a distinct `rhrBpm`/`hrvMuMssd`.
    Assert `historicalRhrBaseline.map { it.dayOffset } == (0..6).toList()` with each value equal
@@ -372,13 +385,19 @@ No other line in this file changes.
    `historicalRhrBaseline.size == 15` with `dayOffsets == [0, 2, 4, ..., 28]`, each bucket's
    value equal to the average of that day-pair's two raw values; `historicalRhrBucketZoneBands`
    has boundaries exactly `[0,2), [2,4), ..., [28,30)`; `historicalRhrBaselineAverage` equals the
-   rounded mean of all 30 raw values (construct the fixture so this provably differs from the
-   mean of the 15 bucket averages, e.g. via test 4's omitted-pair scenario, to prove the average
-   is computed off the raw series, not the bucketed one).
+   rounded mean of all 30 raw values. (With every pair populated, the mean of the 15 bucket
+   averages equals the mean of the raw series, so this fixture cannot distinguish "average of raw
+   values" from "average of bucket averages" — that distinction is asserted in test 4, where an
+   omitted pair makes the two diverge.)
 4. New: `` `THIRTY_DAYS bucket omits pair with zero frozen days` `` — one pair (e.g. offsets
-   10-11) both unfrozen. Assert `historicalRhrBaseline.size == 14` with no entry at midpoint `10`.
+   10-11) both unfrozen (`rhrBpm`/`hrvMuMssd` both null, per the fixture rule in item 1). Assert
+   `historicalRhrBaseline.size == 14` with no entry at midpoint `10`; `historicalRhrBucketZoneBands`
+   has no bucket spanning those offsets; and `historicalRhrBaselineAverage` equals the rounded mean
+   of the 28 *present* raw values — which provably differs from the mean of the 14 bucket averages,
+   proving the average is computed off the raw series, not the bucketed one.
 5. New: `` `THIRTY_DAYS bucket averages partial pair with one frozen day` `` — one pair has
-   exactly one frozen day. Assert that bucket's value equals the single frozen value exactly
+   exactly one frozen day (the pair's other day carries `rhrBpm = null`/`hrvMuMssd = null`, per the
+   fixture rule in item 1). Assert that bucket's value equals the single frozen value exactly
    (not halved), while its `BucketZoneBands` still spans the full 2-day nominal width.
 6. No changes to the existing 180D/360D tests (`historical baseline averages only frozen days
    per bucket`, `historical zone bands empty when no frozen baselines`, `historical baseline
