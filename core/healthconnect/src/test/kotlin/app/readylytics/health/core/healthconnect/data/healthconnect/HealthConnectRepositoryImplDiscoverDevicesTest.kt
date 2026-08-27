@@ -99,10 +99,17 @@ class HealthConnectRepositoryImplDiscoverDevicesTest {
                 every { pageToken } returns null
             }
 
+        val ioDispatcher = Dispatchers.Unconfined
+        val stepRecordReader =
+            StepRecordReader(context = context, ioDispatcher = ioDispatcher)
+        val intervalTotalsReader =
+            IntervalTotalsReader(context = context, ioDispatcher = ioDispatcher)
         repo =
             HealthConnectRepositoryImpl(
                 context = context,
-                ioDispatcher = Dispatchers.Unconfined,
+                ioDispatcher = ioDispatcher,
+                stepRecordReader = stepRecordReader,
+                intervalTotalsReader = intervalTotalsReader,
             )
     }
 
