@@ -155,28 +155,32 @@ class LoadScoringStrategy
             }
 
             // Workout Impact & Rest Day Insight Logic
-            if (yesterdayTrimp != null && yesterdayTrimp >= 120f) {
-                val hrvDropThreshold = (2f - hrvOptimalThreshold).coerceIn(0f, 1f)
-                val hrvDroppedBeyondThreshold =
-                    currentHrv != null &&
-                        yesterdayHrv != null &&
-                        yesterdayHrv > 0f &&
-                        currentHrv < yesterdayHrv * hrvDropThreshold
-                if (!isCurrentHrvOptimal && !isCurrentRhrOptimal && hrvDroppedBeyondThreshold) {
-                    flags.add(RecoveryFlag.WORKOUT_IMPACT)
-                }
-            } else if (yesterdayTrimp != null && yesterdayTrimp < 10f) {
-                if (currentHrv != null && yesterdayHrv != null && yesterdayHrv > 0) {
-                    val targetHrv = yesterdayHrv * hrvOptimalThreshold
-                    val significantIncrease = currentHrv >= targetHrv
-                    val newlyOptimal = isCurrentHrvOptimal && !isPreviousHrvOptimal
-                    if (significantIncrease || newlyOptimal) {
-                        flags.add(RecoveryFlag.REST_DAY_SUCCESS)
-                    } else if (!isCurrentHrvOptimal) {
-                        flags.add(RecoveryFlag.REST_DAY_NO_IMPACT)
+            // Skipped entirely when HRV wasn't recorded — RECOVERY_HRV_MISSING is the only
+            // insight that should surface for a day with no HRV reading to compare against.
+            if (!hrvMissing) {
+                if (yesterdayTrimp != null && yesterdayTrimp >= 120f) {
+                    val hrvDropThreshold = (2f - hrvOptimalThreshold).coerceIn(0f, 1f)
+                    val hrvDroppedBeyondThreshold =
+                        currentHrv != null &&
+                            yesterdayHrv != null &&
+                            yesterdayHrv > 0f &&
+                            currentHrv < yesterdayHrv * hrvDropThreshold
+                    if (!isCurrentHrvOptimal && !isCurrentRhrOptimal && hrvDroppedBeyondThreshold) {
+                        flags.add(RecoveryFlag.WORKOUT_IMPACT)
                     }
-                    // else: HRV already optimal on both days with no significant further
-                    // rise — nothing changed, so no insight is surfaced either way.
+                } else if (yesterdayTrimp != null && yesterdayTrimp < 10f) {
+                    if (currentHrv != null && yesterdayHrv != null && yesterdayHrv > 0) {
+                        val targetHrv = yesterdayHrv * hrvOptimalThreshold
+                        val significantIncrease = currentHrv >= targetHrv
+                        val newlyOptimal = isCurrentHrvOptimal && !isPreviousHrvOptimal
+                        if (significantIncrease || newlyOptimal) {
+                            flags.add(RecoveryFlag.REST_DAY_SUCCESS)
+                        } else if (!isCurrentHrvOptimal) {
+                            flags.add(RecoveryFlag.REST_DAY_NO_IMPACT)
+                        }
+                        // else: HRV already optimal on both days with no significant further
+                        // rise — nothing changed, so no insight is surfaced either way.
+                    }
                 }
             }
 
