@@ -53,10 +53,7 @@ class ScoringDayDataLoader
         }
 
         private suspend fun fetchExerciseHrInRange(startMs: Long, endMs: Long): List<HeartRateRecordEntity> =
-            heartRateDao
-                .getByTimeRange(startMs, endMs)
-                .filter { it.recordType == RecordType.EXERCISE.name }
-                .sortedBy { it.timestampMs }
+            heartRateDao.getByTypeAndTimeRange(RecordType.EXERCISE.name, startMs, endMs)
 
         // from exerciseSamplesForWorkout L655-673
         suspend fun loadWorkoutSamples(

@@ -137,6 +137,21 @@ interface HeartRateDao {
         endMs: Long,
     ): List<HeartRateRecordEntity>
 
+    // DB-001: recordType-filtered variant of getByTimeRange, backed by index_hr_v10_type_timestamp
+    // (recordType, timestampMs) -- callers that only need one record type (e.g. exercise-HR for
+    // workout metrics) no longer pull every sleep/resting sample in the range into memory just to
+    // discard it with a Kotlin `.filter`.
+    @Query(
+        "SELECT * FROM heart_rate_records " +
+            "WHERE recordType = :recordType AND timestampMs >= :startMs AND timestampMs <= :endMs " +
+            "ORDER BY timestampMs ASC, sourceRecordRef ASC",
+    )
+    suspend fun getByTypeAndTimeRange(
+        recordType: String,
+        startMs: Long,
+        endMs: Long,
+    ): List<HeartRateRecordEntity>
+
     @Query(
         "SELECT * FROM heart_rate_records WHERE timestampMs >= :startMs AND timestampMs < :endMs " +
             "ORDER BY timestampMs ASC, sourceRecordRef ASC",

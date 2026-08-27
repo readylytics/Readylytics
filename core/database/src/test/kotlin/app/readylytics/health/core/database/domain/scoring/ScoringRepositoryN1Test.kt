@@ -150,6 +150,9 @@ class ScoringRepositoryN1Test {
         coEvery { heartRateDao.getAvgSleepHrForSessions(any()) } returns emptyMap()
         coEvery { heartRateDao.getMinHrInRange(any(), any()) } returns 50
         coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
+        // DB-001: exercise-HR fetch now uses SQL-filtered getByTypeAndTimeRange instead of
+        // getByTimeRange + Kotlin filter
+        coEvery { heartRateDao.getByTypeAndTimeRange(any(), any(), any()) } returns emptyList()
         // PERF-006/WP-21: everyday-HR load now reads SQL-bucketed rows instead of raw getByTimeRange rows.
         coEvery { heartRateDao.getMinuteBuckets(any(), any()) } returns emptyList()
         coEvery { heartRateDao.getMinHrTimestamp(any()) } returns null
@@ -295,7 +298,8 @@ class ScoringRepositoryN1Test {
                         sessionId = "w1",
                     )
                 }
-            coEvery { heartRateDao.getByTimeRange(any(), any()) } returns samples
+            // DB-001: exercise-HR fetch now uses getByTypeAndTimeRange instead of getByTimeRange
+            coEvery { heartRateDao.getByTypeAndTimeRange("EXERCISE", any(), any()) } returns samples
 
             val capturedSummaries = mutableListOf<DailySummaryEntity>()
             coEvery { dailySummaryDao.upsert(capture(capturedSummaries)) } returns Unit
