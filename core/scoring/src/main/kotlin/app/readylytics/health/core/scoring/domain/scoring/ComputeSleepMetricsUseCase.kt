@@ -483,7 +483,7 @@ class ComputeSleepMetricsUseCase
             val isCurrentHrvOptimal =
                 isHrvOptimal(currentHrvBaseline, input.currentHrvMean, input.prefs.hrvOptimalThreshold)
             val isCurrentRhrOptimal =
-                isRhrOptimal(input.baselineRhrValue, input.currentNocturnalRhr, input.prefs.hrvOptimalThreshold)
+                isRhrOptimal(input.baselineRhrValue, input.currentNocturnalRhr, input.prefs.rhrOptimalThreshold)
             val yesterdayHrvBaseline =
                 input.prefs.hrvBaselineOverride ?: input.yesterdaySummary?.hrvMuMssd?.let { exp(it) }
             val isPreviousHrvOptimal =

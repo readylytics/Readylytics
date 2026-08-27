@@ -54,7 +54,7 @@ internal fun isHrvOptimal(baseline: Float?, current: Float, threshold: Float): B
     baseline != null && baseline > 0f && current / baseline >= threshold
 
 internal fun isRhrOptimal(baseline: Int, current: Int, threshold: Float): Boolean =
-    baseline > 0 && threshold > 0f && current.toFloat() / baseline.toFloat() <= 1f / threshold
+    baseline > 0 && current.toFloat() / baseline.toFloat() <= threshold
 
 internal fun isPreviousHrvOptimal(
     yesterdaySummary: DailySummary?,
