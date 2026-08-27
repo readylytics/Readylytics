@@ -95,7 +95,7 @@ private fun buildTrendChartComposableState(params: TrendChartParams): TrendChart
             maxY = maxY,
             baselineValue = baselineValue,
             shouldShowBaseline = shouldShowBaseline,
-            resolvedBaselineLabel = params.baselineLabel ?: defaultBaselineLabel(params.historicalBaseline),
+            resolvedBaselineLabel = params.baselineLabel ?: stringResource(R.string.label_baseline),
             baselineUnavailableLabel = params.baselineUnavailableLabel,
             hasHistoricalBaseline = hasHistoricalBaseline,
         )
@@ -205,14 +205,6 @@ private fun defaultZoomState(rangeDays: Int): VicoZoomState =
                 }
             },
     )
-
-@Composable
-private fun defaultBaselineLabel(historicalBaseline: List<DailyDataPoint>?): String =
-    if (!historicalBaseline.isNullOrEmpty()) {
-        stringResource(R.string.label_historical_baseline)
-    } else {
-        stringResource(R.string.label_baseline)
-    }
 
 @Composable
 private fun calculateMinMaxY(

@@ -14,7 +14,6 @@ import app.readylytics.health.core.model.domain.vitals.VitalsChartId
 import app.readylytics.health.core.ui.common.CardLoader
 import app.readylytics.health.core.ui.common.DeltaDirection
 import app.readylytics.health.core.ui.common.SkeletonCard
-import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.core.ui.components.ChartConfigurationsList
 import app.readylytics.health.core.ui.components.ChartDataMap
 import app.readylytics.health.core.ui.components.ReorderableChartList
@@ -140,7 +139,7 @@ private fun HrvTrendChartBlock(
                     scrollState = chartScrollState,
                     zoomState = chartZoomState,
                     zoneBands =
-                        if (chartInputs.selectedRange.granularity == TrendGranularity.DAILY) {
+                        if (chartSeries.historicalHrvBaseline.isEmpty()) {
                             presentation.hrv.zoneBands
                         } else {
                             chartSeries.historicalHrvZoneBands
@@ -187,7 +186,7 @@ private fun RhrTrendChartBlock(
                     scrollState = chartScrollState,
                     zoomState = chartZoomState,
                     zoneBands =
-                        if (chartInputs.selectedRange.granularity == TrendGranularity.DAILY) {
+                        if (chartSeries.historicalRhrBaseline.isEmpty()) {
                             presentation.rhr.zoneBands
                         } else {
                             chartSeries.historicalRhrZoneBands

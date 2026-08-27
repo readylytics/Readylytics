@@ -364,4 +364,111 @@ class TrendPeriodAggregationTest {
             points.padBucketsToRange(TrendGranularity.DAILY, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 1)),
         )
     }
+
+    @Test
+    fun `fixed day bucket of size one yields one unaveraged bucket per populated day`() {
+        val points =
+            listOf(
+                DailyDataPoint(0, 60f),
+                DailyDataPoint(2, 58f),
+                DailyDataPoint(5, 62f),
+            )
+
+        assertEquals(
+            listOf(
+                FixedDayBucket(0, 1, 0, 60f),
+                FixedDayBucket(2, 3, 2, 58f),
+                FixedDayBucket(5, 6, 5, 62f),
+            ),
+            points.bucketByFixedSize(bucketSizeDays = 1, rangeEndOffsetExclusive = 7),
+        )
+    }
+
+    @Test
+    fun `fixed day bucket of size two pairs consecutive days and averages each pair`() {
+        val points =
+            listOf(
+                DailyDataPoint(0, 10f),
+                DailyDataPoint(1, 20f),
+                DailyDataPoint(2, 30f),
+                DailyDataPoint(3, 50f),
+                DailyDataPoint(4, 10f),
+            )
+
+        assertEquals(
+            listOf(
+                FixedDayBucket(0, 2, 1, 15f),
+                FixedDayBucket(2, 4, 3, 40f),
+                FixedDayBucket(4, 6, 5, 10f),
+            ),
+            points.bucketByFixedSize(bucketSizeDays = 2, rangeEndOffsetExclusive = 30),
+        )
+    }
+
+    @Test
+    fun `fixed day bucket omits bucket with no non null values`() {
+        val points =
+            listOf(
+                DailyDataPoint(0, 10f),
+                DailyDataPoint(1, 20f),
+                DailyDataPoint(2, null),
+                DailyDataPoint(3, null),
+                DailyDataPoint(4, 50f),
+                DailyDataPoint(5, 60f),
+            )
+
+        assertEquals(
+            listOf(
+                FixedDayBucket(0, 2, 1, 15f),
+                FixedDayBucket(4, 6, 5, 55f),
+            ),
+            points.bucketByFixedSize(bucketSizeDays = 2, rangeEndOffsetExclusive = 6),
+        )
+    }
+
+    @Test
+    fun `fixed day bucket with one non null day averages to that lone value`() {
+        val points = listOf(DailyDataPoint(3, 70f))
+
+        assertEquals(
+            listOf(FixedDayBucket(2, 4, 3, 70f)),
+            points.bucketByFixedSize(bucketSizeDays = 2, rangeEndOffsetExclusive = 10),
+        )
+    }
+
+    @Test
+    fun `fixed day bucket clips final bucket to range end`() {
+        val points =
+            listOf(
+                DailyDataPoint(0, 10f),
+                DailyDataPoint(1, 20f),
+                DailyDataPoint(4, 50f),
+            )
+
+        assertEquals(
+            listOf(
+                FixedDayBucket(0, 2, 1, 15f),
+                FixedDayBucket(4, 5, 4, 50f),
+            ),
+            points.bucketByFixedSize(bucketSizeDays = 2, rangeEndOffsetExclusive = 5),
+        )
+    }
+
+    @Test
+    fun `fixed day bucket respects configured decimal places`() {
+        val points =
+            listOf(
+                DailyDataPoint(0, 36.5f),
+                DailyDataPoint(1, 36.8f),
+            )
+
+        assertEquals(
+            listOf(FixedDayBucket(0, 2, 1, 36.7f)),
+            points.bucketByFixedSize(
+                bucketSizeDays = 2,
+                rangeEndOffsetExclusive = 2,
+                valueDecimalPlaces = 1,
+            ),
+        )
+    }
 }

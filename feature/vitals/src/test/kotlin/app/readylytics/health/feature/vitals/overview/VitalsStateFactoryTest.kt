@@ -2,6 +2,7 @@ package app.readylytics.health.feature.vitals.overview
 
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.model.DailyMetrics
+import app.readylytics.health.core.model.domain.model.DailyMetricsMapper
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.model.MetricStatus
 import app.readylytics.health.core.model.domain.preferences.UnitSystem
@@ -16,6 +17,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlin.math.roundToInt
 
 class VitalsStateFactoryTest {
     @Test
@@ -345,10 +347,10 @@ class VitalsStateFactoryTest {
     }
 
     @Test
-    fun `DAILY range produces empty historical baseline series`() {
+    fun `SEVEN_DAYS range with unfrozen baseline produces empty historical baseline series`() {
         val summaries =
             listOf(
-                dailySummary(date = LocalDate.of(2026, 1, 1), rhrBpm = 60f, hrvMuMssd = 3.8f),
+                dailySummary(date = LocalDate.of(2026, 1, 1)),
             )
         val result =
             buildVitalsChartSeries(summaries, LocalDate.of(2026, 1, 1), TimeRange.SEVEN_DAYS, UnitSystem.METRIC)
@@ -445,6 +447,138 @@ class VitalsStateFactoryTest {
         assertTrue(result.historicalHrvZoneBands.isNotEmpty())
         assertTrue(result.historicalRhrBucketZoneBands.isNotEmpty())
         assertTrue(result.historicalHrvBucketZoneBands.isNotEmpty())
+    }
+
+    @Test
+    fun `SEVEN_DAYS range plots per-day historical baseline when frozen`() {
+        val start = LocalDate.of(2026, 1, 1)
+        val summaries =
+            (0..6).map { day ->
+                dailySummary(
+                    date = start.plusDays(day.toLong()),
+                    rhrBpm = 60f + day,
+                    hrvMuMssd = 3.8f + day * 0.1f,
+                    baselineCalculatedAt = start.plusDays(day.toLong()),
+                )
+            }
+        val result =
+            buildVitalsChartSeries(summaries, start, TimeRange.SEVEN_DAYS, UnitSystem.METRIC)
+
+        assertEquals((0..6).toList(), result.historicalRhrBaseline.map { it.dayOffset })
+        assertEquals(
+            summaries.map { DailyMetricsMapper.rhrBaselineRounded(it, null)!!.toFloat() },
+            result.historicalRhrBaseline.map { it.value },
+        )
+        assertEquals(
+            summaries.map { DailyMetricsMapper.hrvBaselineRounded(it, null)!!.toFloat() },
+            result.historicalHrvBaseline.map { it.value },
+        )
+        assertEquals(63, result.historicalRhrBaselineAverage)
+
+        val rhrBucketBands = result.historicalRhrBucketZoneBands
+        assertEquals(7, rhrBucketBands.size)
+        rhrBucketBands.forEachIndexed { index, band ->
+            assertEquals(index, band.startDayOffset)
+            assertEquals(index + 1, band.endDayOffset)
+        }
+        val hrvBucketBands = result.historicalHrvBucketZoneBands
+        assertEquals(7, hrvBucketBands.size)
+        hrvBucketBands.forEachIndexed { index, band ->
+            assertEquals(index, band.startDayOffset)
+            assertEquals(index + 1, band.endDayOffset)
+        }
+    }
+
+    @Test
+    fun `THIRTY_DAYS range averages historical baseline into 2-day buckets`() {
+        val start = LocalDate.of(2026, 1, 20)
+        val summaries =
+            (0..29).map { day ->
+                dailySummary(
+                    date = start.plusDays(day.toLong()),
+                    rhrBpm = 50f + day,
+                    baselineCalculatedAt = start.plusDays(day.toLong()),
+                )
+            }
+        val result =
+            buildVitalsChartSeries(summaries, start, TimeRange.THIRTY_DAYS, UnitSystem.METRIC)
+
+        val rawValues = (0..29).map { 50f + it }
+        assertEquals((1..29).step(2).toList(), result.historicalRhrBaseline.map { it.dayOffset })
+        // The final baseline point must land on the window's last day (today).
+        assertEquals(29, result.historicalRhrBaseline.last().dayOffset)
+        assertEquals(
+            (0..14).map { pair ->
+                ((rawValues[pair * 2] + rawValues[pair * 2 + 1]) / 2f).roundToInt().toFloat()
+            },
+            result.historicalRhrBaseline.map { it.value },
+        )
+        assertEquals(
+            (0..14).map { pair -> pair * 2 },
+            result.historicalRhrBucketZoneBands.map { it.startDayOffset },
+        )
+        assertEquals(
+            (0..14).map { pair -> pair * 2 + 2 },
+            result.historicalRhrBucketZoneBands.map { it.endDayOffset },
+        )
+        assertEquals(rawValues.average().roundToInt(), result.historicalRhrBaselineAverage)
+    }
+
+    @Test
+    fun `THIRTY_DAYS bucket omits pair with zero frozen days`() {
+        val start = LocalDate.of(2026, 1, 20)
+        val rawValue: (Int) -> Float? =
+            { day ->
+                when {
+                    day in 28..29 -> null
+                    day in 20..27 -> if (day % 2 == 0) 51f else 52f
+                    else -> 50f
+                }
+            }
+        val summaries =
+            (0..29).map { day ->
+                val value = rawValue(day)
+                dailySummary(
+                    date = start.plusDays(day.toLong()),
+                    rhrBpm = value,
+                    baselineCalculatedAt = if (value == null) null else start.plusDays(day.toLong()),
+                )
+            }
+        val result =
+            buildVitalsChartSeries(summaries, start, TimeRange.THIRTY_DAYS, UnitSystem.METRIC)
+
+        assertEquals(14, result.historicalRhrBaseline.size)
+        assertTrue(result.historicalRhrBaseline.none { it.dayOffset == 28 })
+        assertTrue(result.historicalRhrBucketZoneBands.none { it.startDayOffset == 28 })
+
+        val presentValues = (0..29).mapNotNull(rawValue)
+        assertEquals(28, presentValues.size)
+        // The average is the mean of every present raw value (rounded 50), which provably differs
+        // from the mean of the 14 rounded bucket averages (would round to 51).
+        assertEquals(presentValues.average().roundToInt(), result.historicalRhrBaselineAverage)
+        assertEquals(50, result.historicalRhrBaselineAverage)
+    }
+
+    @Test
+    fun `THIRTY_DAYS bucket averages partial pair with one frozen day`() {
+        val start = LocalDate.of(2026, 1, 20)
+        val summaries =
+            (0..29).map { day ->
+                val frozen = day != 10
+                dailySummary(
+                    date = start.plusDays(day.toLong()),
+                    rhrBpm = if (frozen) 50f + day else null,
+                    baselineCalculatedAt = if (frozen) start.plusDays(day.toLong()) else null,
+                )
+            }
+        val result =
+            buildVitalsChartSeries(summaries, start, TimeRange.THIRTY_DAYS, UnitSystem.METRIC)
+
+        val partialBucket = result.historicalRhrBaseline.single { it.dayOffset == 11 }
+        assertEquals(61f, partialBucket.value)
+        val partialBand = result.historicalRhrBucketZoneBands.single { it.startDayOffset == 10 }
+        assertEquals(10, partialBand.startDayOffset)
+        assertEquals(12, partialBand.endDayOffset)
     }
 
     private fun dailySummary(

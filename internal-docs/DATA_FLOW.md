@@ -585,13 +585,20 @@ formula:
    (`VitalsStateFactory.buildVitalsChartSeries`): the range selector renders raw daily points for
    7D/30D, calendar-month averages for 180D, and ISO-week-octad (8-week) averages for 360D,
    bucketed by the pure-Kotlin `bucketBy`/`buildPeriodAverageSummary` in
-   `core/ui/.../common/TrendPeriodAggregation.kt`. At 180D/360D the RHR/HRV charts additionally
+   `core/ui/.../common/TrendPeriodAggregation.kt`. The RHR/HRV charts additionally
    plot a muted per-bucket *historical baseline* line (`historicalRhrBaseline`/`historicalHrvBaseline`)
    derived from each day's frozen baseline (`DailyMetricsMapper.rhrBaselineRounded`/
    `hrvBaselineRounded`, frozen-only rows, honoring any override), whose whole-range average drives
    both the legend scalar and the background zone bands (`historicalRhrZoneBands`/
-   `historicalHrvZoneBands`) — the flat today-baseline `HorizontalLine` is replaced by this line
-   whenever historical baseline data is present. The averaged ranges additionally show a
+   `historicalHrvZoneBands`). This overlay spans all four ranges at range-appropriate granularity:
+   7D keeps one point per frozen day (unaveraged), 30D pairs days into non-overlapping 2-day
+   buckets via `bucketByFixedSize` (anchored at the window's `startDate`, independent of
+   `TrendGranularity`, with each point placed on its bucket's last day so the line ends on the
+   window's final day), and 180D/360D keep the existing calendar `bucketBy` path unchanged. The
+   whole-range average is always the mean of every frozen per-day baseline — never a mean of
+   bucket averages. The flat today-baseline `HorizontalLine` is replaced by this line whenever
+   historical baseline data is present, at any range; the legend scalar is labeled "Baseline" at
+   every range. The averaged ranges additionally show a
    latest-bucket-vs-previous-bucket summary row (`PeriodAverageSummaryRow`) beneath the baseline
    legend; zone-band and baseline decorations apply unchanged since bucketed points keep the same
    day-offset x-axis.
