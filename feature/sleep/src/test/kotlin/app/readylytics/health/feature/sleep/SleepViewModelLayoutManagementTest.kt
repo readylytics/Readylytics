@@ -95,17 +95,19 @@ class SleepViewModelLayoutManagementTest {
 
     private fun createViewModel() =
         SleepViewModel(
-            dailySummaryRepository = dailySummaryRepository,
-            dailyMetricsRepository = dailyMetricsRepository,
-            sleepSessionRepository = sleepSessionRepository,
-            heartRateRepository = heartRateRepository,
+            repositories =
+                SleepRepositories(
+                    dailySummary = dailySummaryRepository,
+                    dailyMetrics = dailyMetricsRepository,
+                    sleepSession = sleepSessionRepository,
+                    heartRate = heartRateRepository,
+                    circadian = circadianRepo,
+                    sleepLayout = sleepLayoutRepository,
+                ),
             settingsRepo = settingsRepo,
             selectedDateRepository = selectedDateRepository,
-            circadianRepo = circadianRepo,
             foregroundSyncController = foregroundSyncController,
-            sleepLayoutRepository = sleepLayoutRepository,
-            ioDispatcher = testDispatcher,
-            defaultDispatcher = testDispatcher,
+            dispatchers = SleepDispatchers(testDispatcher, testDispatcher),
         )
 
     @Test
