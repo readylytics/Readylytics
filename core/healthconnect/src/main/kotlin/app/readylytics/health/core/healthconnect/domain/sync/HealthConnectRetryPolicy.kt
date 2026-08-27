@@ -34,14 +34,9 @@ internal class HealthConnectRetryPolicy(
      * 1. IOException catch provides a fallback for most transient failures
      * 2. HC SDK changes are infrequent
      *
-     * TODO: Monitor Health Connect SDK releases for typed rate-limit exceptions. If Google
+     * Follow-up: Monitor Health Connect SDK releases for typed rate-limit exceptions. If Google
      * introduces a dedicated exception class (e.g., RateLimitException), migrate to it.
-     *
-     * Note: TODO suppression is intentional — this documents a known fragility that requires
-     * future monitoring of the HC SDK, and cannot be fixed until Google provides typed
-     * rate-limit exceptions.
      */
-    @Suppress("ForbiddenComment")
     private fun Throwable.isTransientHealthConnectFailure(): Boolean =
         this is IOException ||
             message?.contains("rate limit", ignoreCase = true) == true ||

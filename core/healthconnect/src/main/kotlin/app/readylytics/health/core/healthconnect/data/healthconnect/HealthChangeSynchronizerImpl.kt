@@ -346,9 +346,14 @@ class HealthChangeSynchronizerImpl
                         // Compute metrics from already-stored HR rows overlapping this session so a
                         // workout upsert has non-zero TRIMP/zones/avgHr immediately (HC-004); a sample
                         // arriving in the very same changes batch is still corrected by the next
-                        // reconcile pass, matching SessionLinkReconcilerImpl.recomputeWorkouts.
+                        // reconcile pass. EXERCISE-only filter matches
+                        // SessionLinkReconcilerImpl.recomputeWorkouts, which reads via
+                        // getByTypeAndTimeRange(RecordType.EXERCISE.name, ...) so sleep-overlapping or
+                        // boundary-straddling samples tagged to another session don't leak into this
+                        // workout's TRIMP/zones/avgHr.
                         val hrSamples =
-                            heartRateDao.getByTimeRange(
+                            heartRateDao.getByTypeAndTimeRange(
+                                RecordType.EXERCISE.name,
                                 record.startTime.toEpochMilli(),
                                 record.endTime.toEpochMilli(),
                             )

@@ -309,7 +309,7 @@ class HealthChangeSynchronizerRecordSyncTest {
             val existingEntity = createExistingWorkoutEntity(exerciseRecordId, startTime, endTime)
 
             coEvery { workoutDao.getById(exerciseRecordId) } returns existingEntity
-            coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { heartRateDao.getByTypeAndTimeRange(any(), any(), any()) } returns emptyList()
 
             val capturedWorkouts = mutableListOf<List<WorkoutRecordEntity>>()
             coEvery { workoutDao.upsertAll(capture(capturedWorkouts)) } returns Unit
