@@ -48,7 +48,7 @@ sealed interface DateTransition {
 fun applyDateTransition(
     currentDate: LocalDate,
     transition: DateTransition,
-    clock: Clock = Clock.systemDefaultZone(),
+    clock: Clock,
 ): LocalDate {
     val today = LocalDate.now(clock)
     return when (transition) {
@@ -75,7 +75,7 @@ fun applyDateTransition(
  */
 fun DateTransition.isValidFrom(
     currentDate: LocalDate,
-    clock: Clock = Clock.systemDefaultZone(),
+    clock: Clock,
 ): Boolean {
     val today = LocalDate.now(clock)
     return when (this) {
