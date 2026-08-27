@@ -96,12 +96,12 @@ object RecoveryFlagEvaluator {
     }
 
     private fun computeWorkoutAndRestFlags(ctx: RecoveryFlagContext): RecoveryFlag? {
-        val trimp = ctx.yesterdayTrimp
+        val prevHrv = ctx.yesterdayHrv?.takeIf { it > 0f }
         val currHrv = ctx.currentHrv
-        val prevHrv = ctx.yesterdayHrv
-        val isValid = trimp != null && currHrv != null && prevHrv != null && prevHrv > 0f
-        return if (isValid) {
-            computeWorkoutImpactFlag(ctx, trimp!!, currHrv!!, prevHrv!!)
+        val trimp = ctx.yesterdayTrimp
+
+        return if (prevHrv != null && currHrv != null && trimp != null) {
+            computeWorkoutImpactFlag(ctx, trimp, currHrv, prevHrv)
                 ?: computeRestDayFlag(ctx, trimp, currHrv, prevHrv)
         } else {
             null
