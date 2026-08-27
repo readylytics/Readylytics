@@ -18,7 +18,6 @@ import app.readylytics.health.core.scoring.domain.scoring.components.PhaseCalcul
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayPolicy
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.exp
