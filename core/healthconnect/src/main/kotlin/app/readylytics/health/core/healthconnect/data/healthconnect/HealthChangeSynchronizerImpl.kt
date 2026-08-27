@@ -382,7 +382,9 @@ class HealthChangeSynchronizerImpl
                                 avgSpeedKmh = freshEntity.avgSpeedKmh ?: existing?.avgSpeedKmh,
                                 elevationGainMeters = freshEntity.elevationGainMeters ?: existing?.elevationGainMeters,
                                 routeState =
-                                    if (workoutInput.routePoints.isEmpty() && existing?.routeState == RouteState.IMPORTED) {
+                                    if (workoutInput.routePoints.isEmpty() &&
+                                        existing?.routeState == RouteState.IMPORTED
+                                    ) {
                                         existing.routeState
                                     } else {
                                         freshEntity.routeState
