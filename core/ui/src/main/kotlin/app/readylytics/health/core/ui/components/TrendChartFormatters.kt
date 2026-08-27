@@ -1,5 +1,7 @@
 package app.readylytics.health.core.ui.components
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.core.ui.common.bucketLengthDays
@@ -69,3 +71,14 @@ internal fun <T> shouldAssignTrendMarkerState(
     current: T,
     next: T,
 ): Boolean = current != next
+
+/**
+ * A stable axis-title lambda. `rememberStart` keys on the [com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis]
+ * `title` function, so a fresh lambda on every recomposition recreates the axis (and, transitively,
+ * the whole chart), resetting its measurement and briefly shifting the plot area.
+ */
+@Composable
+internal fun rememberAxisTitle(
+    baselineUnit: String,
+): (com.patrykandpatrick.vico.compose.common.data.ExtraStore) -> CharSequence? =
+    remember(baselineUnit) { { baselineUnit } }
