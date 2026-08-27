@@ -726,12 +726,11 @@ independent per-workout values that must not be confused:
   injected into the everyday-HR series), so today's value never depends on the just-issued
   `workoutDao.upsertAll` being visible through the same bucketed read.
 - Idempotent overlap refetches must never demote a previously recomputed workout from `modelTrimp`
-  back to zone `trimp`. The bulk window path preserves `modelTrimp` during its stable-ID upsert.
-  A genuine exercise `UpsertionChange` in `HealthChangeSynchronizerImpl` invalidates `modelTrimp`
-  and reports the workout's scoring date; `DailySyncUseCase` then widens only for that actual
-  recent change and recomputes the contiguous affected range. Thus an unchanged previous-day
-  workout returned solely because daily ingestion reaches back for cross-midnight sleep cannot
-  alter the current day's ATL/CTL series.
+  back to zone `trimp`. Both the bulk window path (`RoomHealthIngestionStore`) and the incremental
+  changes path (`HealthChangeSynchronizerImpl`) preserve `existing?.modelTrimp` and existing route
+  metadata during their stable-ID upsert. When an exercise `UpsertionChange` arrives, its scoring
+  date is reported for walk-forward recompute; `DailySyncUseCase` widens and recomputes the
+  contiguous affected range if the underlying HR samples or session bounds changed.
 - A TRIMP-model or -parameter settings change (see 1.2.2) must invalidate every persisted
   historical day, not just a recent window, or the COALESCE transition mixes model-A and model-B
   values inside the same ATL/CTL EMA — this is exactly what `HealthDataRefresh.refreshHistorical()`
