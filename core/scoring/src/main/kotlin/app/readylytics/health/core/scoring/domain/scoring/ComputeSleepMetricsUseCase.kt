@@ -9,22 +9,13 @@ import app.readylytics.health.core.model.domain.model.RecoveryFlag
 import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.model.SleepSession
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
-import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.model.domain.repository.SleepSessionData
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
-import app.readylytics.health.core.model.domain.security.EncryptionManager
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
-import app.readylytics.health.core.scoring.BuildConfig
 import app.readylytics.health.core.scoring.domain.scoring.components.PhaseCalculator
-import app.readylytics.health.core.scoring.domain.scoring.sleep.CurrentNightHrvResolver
-import app.readylytics.health.core.scoring.domain.scoring.sleep.HrCoverageValidator
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayPolicy
-import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepModifierResolver
-import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepModifiers
-import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepNadirAnalyzer
-import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepPercentileRhrCalculator
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -34,38 +25,6 @@ import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
-
-data class SleepMetricsCollaborators
-    @Inject
-    constructor(
-        val baselineComputer: BaselineComputer,
-        val scoringHistoryRepository: ScoringHistoryRepository,
-        val scoringCalculator: ScoringCalculator,
-        val scoringConfigFactory: ScoringConfigFactory,
-        val encryptionManager: EncryptionManager,
-        val hrvResolver: CurrentNightHrvResolver,
-        val sleepPercentileRhrCalculator: SleepPercentileRhrCalculator,
-        val nadirAnalyzer: SleepNadirAnalyzer,
-        val coverageValidator: HrCoverageValidator,
-        val sleepModifierResolver: SleepModifierResolver,
-        val baselineZScoreComputer: BaselineZScoreComputer = BaselineZScoreComputer(scoringCalculator),
-        val restorationScoreAssembler: RestorationScoreAssembler = RestorationScoreAssembler(scoringCalculator),
-    )
-
-data class SleepMetricsRequest(
-    val session: SleepSession,
-    val dayMidnight: Instant,
-    val targetDate: LocalDate,
-    val prefs: UserPreferences,
-    val summary: DailySummary,
-    val loadScore: Float,
-    val loadScoreEverydayHr: Float?,
-    val zoneId: ZoneId,
-    val rhrBaselineValue: Float,
-    val dayEndMs: Long,
-    val currentSessionIds: Set<String>,
-    val prefetchedSessions: List<SleepSession>?,
-)
 
 @Singleton
 class ComputeSleepMetricsUseCase
@@ -572,75 +531,6 @@ class ComputeSleepMetricsUseCase
             )
         }
 
-        // Extracted to reduce invoke() complexity - logs comprehensive debug metrics
-        private fun logDebugScoringMetrics(
-            targetDate: LocalDate,
-            dayMidnight: Instant,
-            dayEndMs: Long,
-            frozenBaseline: Boolean,
-            isCalibrating: Boolean,
-            hrvMuHistorySize: Int,
-            rhrValuesSize: Int,
-            sessionId: String,
-            currentHrvMean: Float?,
-            currentNocturnalRhr: Int?,
-            durationMinutes: Int,
-            loadScore: Float,
-            frozenHrvMu: Float?,
-            frozenHrvSigma: Float?,
-            activeHrvMu: Float?,
-            activeHrvSigma: Float?,
-            frozenRhr: Float?,
-            effectiveRhrSigma: Float?,
-            zLnHrv: Float?,
-            zRhr: Float?,
-            sRest: Float?,
-            sleepScore: Float?,
-            readinessScore: Float?,
-            recoveryFlags: String?,
-        ) {
-            if (!BuildConfig.DEBUG) return
-
-            val debugPayload =
-                """
-                {
-                    "targetDate": "$targetDate",
-                    "dayMidnightMs": ${dayMidnight.toEpochMilli()},
-                    "dayEndMs": $dayEndMs,
-                    "frozenBaseline": $frozenBaseline,
-                    "isCalibrating": $isCalibrating,
-                    "windows": {
-                        "hrvMuHistorySize": $hrvMuHistorySize,
-                        "rhrValuesSize": $rhrValuesSize
-                    },
-                    "inputs": {
-                        "sessionId": "$sessionId",
-                        "currentHrvMean": $currentHrvMean,
-                        "currentNocturnalRhr": $currentNocturnalRhr,
-                        "durationMinutes": $durationMinutes,
-                        "loadScore": $loadScore
-                    },
-                    "baselines": {
-                        "frozenHrvMu": $frozenHrvMu,
-                        "frozenHrvSigma": $frozenHrvSigma,
-                        "activeHrvMu": $activeHrvMu,
-                        "activeHrvSigma": $activeHrvSigma,
-                        "frozenRhr": $frozenRhr,
-                        "effectiveRhrSigma": $effectiveRhrSigma
-                    },
-                    "scores": {
-                        "zHrv": $zLnHrv,
-                        "zRhr": $zRhr,
-                        "sRest": $sRest,
-                        "sleepScore": $sleepScore,
-                        "readinessScore": $readinessScore,
-                        "recoveryFlags": "$recoveryFlags"
-                    }
-                }
-                """.trimIndent()
-            logD("ScoringDebug") { "\n$debugPayload" }
-        }
-
         private suspend fun resolveBaselineWindow(
             frozenBaseline: Boolean,
             summary: DailySummary,
@@ -715,66 +605,3 @@ class ComputeSleepMetricsUseCase
                 endZoneOffsetSeconds = endZoneOffsetSeconds,
             )
     }
-
-private data class NocturnalScoringInput(
-    val session: SleepSession,
-    val historicalSessions: List<SleepSession>,
-    val minHrTimestamp: Long?,
-    val sessionHrvSamples: List<Float>,
-    val currentHrvMean: Float,
-    val muHrvHistory: List<Float>,
-    val effectiveSigmaHistory: List<Float>,
-    val sigmaPrior: Float,
-    val frozenHrvMu: Float?,
-    val frozenHrvSigma: Float?,
-    val currentNocturnalRhr: Int,
-    val rhrValues: List<Int>,
-    val frozenRhr: Float?,
-    val effectiveRhrSigma: Float?,
-    val baselineRhrValue: Int,
-    val prefs: UserPreferences,
-    val scoringConfig: ScoringConfig,
-    val stagesSuspicious: Boolean,
-    val sleepModifiers: SleepModifiers,
-    val frozenBaseline: Boolean,
-    val isCalibrating: Boolean,
-    val yesterdaySummary: DailySummary?,
-    val loadScore: Float,
-    val loadScoreEverydayHr: Float?,
-    val summary: DailySummary,
-    val hrvSigma: Float?,
-)
-
-private data class NocturnalScoringResult(
-    val sleepScore: Float?,
-    val readinessScore: Float?,
-    val readinessEverydayHr: Float?,
-    val persistedZLnHrv: Float?,
-    val persistedZRhr: Float?,
-    val persistedFlags: String?,
-    val sRest: Float?,
-    val readinessResult: ReadinessResult,
-)
-
-private data class ReadinessContext(
-    val restorationResult: RestorationScoreAssembler.RestorationScoreResult,
-    val recoveryFlags: Set<RecoveryFlag>,
-    val zHrv: Float?,
-    val zRhr: Float?,
-    val rhrDeltaBpm: Float,
-    val isLateNadir: Boolean,
-    val isTimezoneJump: Boolean,
-)
-
-private data class BaselineWindowResult(
-    val rhrValues: List<Int>,
-    val muHrvHistory: List<Float>,
-    val sigmaHrvHistory: List<Float>,
-    val historicalSessions: List<SleepSession>,
-    val validHistoricalSessionIds: List<String>,
-    val validHistoricalDayCount: Int,
-    val frozenHrvMu: Float?,
-    val frozenHrvSigma: Float?,
-    val frozenRhr: Float?,
-    val frozenRhrSigma: Float?,
-)
