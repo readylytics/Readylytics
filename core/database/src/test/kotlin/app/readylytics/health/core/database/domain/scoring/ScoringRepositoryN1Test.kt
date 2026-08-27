@@ -78,9 +78,9 @@ class ScoringRepositoryN1Test {
     private lateinit var minuteBucketDao: MinuteBucketDao
     private lateinit var repo: ScoringRepository
 
+    private val today = LocalDate.of(2026, 8, 27)
     private val todayMidnight =
-        LocalDate
-            .now()
+        today
             .atStartOfDay(java.time.ZoneId.systemDefault())
             .toInstant()
             .toEpochMilli()
@@ -150,6 +150,9 @@ class ScoringRepositoryN1Test {
         coEvery { heartRateDao.getAvgSleepHrForSessions(any()) } returns emptyMap()
         coEvery { heartRateDao.getMinHrInRange(any(), any()) } returns 50
         coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
+        // DB-001: exercise-HR fetch now uses SQL-filtered getByTypeAndTimeRange instead of
+        // getByTimeRange + Kotlin filter
+        coEvery { heartRateDao.getByTypeAndTimeRange(any(), any(), any()) } returns emptyList()
         // PERF-006/WP-21: everyday-HR load now reads SQL-bucketed rows instead of raw getByTimeRange rows.
         coEvery { heartRateDao.getMinuteBuckets(any(), any()) } returns emptyList()
         coEvery { heartRateDao.getMinHrTimestamp(any()) } returns null
@@ -259,7 +262,6 @@ class ScoringRepositoryN1Test {
     @Test
     fun `profile differentiation produces different RAS gains`() =
         runTest {
-            val today = LocalDate.now()
             val dayMidnight = today.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
             val nextDayMidnight =
                 today
@@ -295,7 +297,8 @@ class ScoringRepositoryN1Test {
                         sessionId = "w1",
                     )
                 }
-            coEvery { heartRateDao.getByTimeRange(any(), any()) } returns samples
+            // DB-001: exercise-HR fetch now uses getByTypeAndTimeRange instead of getByTimeRange
+            coEvery { heartRateDao.getByTypeAndTimeRange("EXERCISE", any(), any()) } returns samples
 
             val capturedSummaries = mutableListOf<DailySummaryEntity>()
             coEvery { dailySummaryDao.upsert(capture(capturedSummaries)) } returns Unit
@@ -348,7 +351,7 @@ class ScoringRepositoryN1Test {
             coEvery { heartRateDao.getAvgSleepHrForSessions(any()) } returns
                 mapOf("valid" to 55, "short" to 55)
 
-            repo.computeAndPersistDailySummary(LocalDate.now())
+            repo.computeAndPersistDailySummary(today)
 
             // Batch path fetches both sessions once, then filters invalid nights in memory.
             coVerify { hrvDao.getSleepRmssdForSessionsMap(match { it.containsAll(listOf("valid", "short")) }) }
@@ -383,7 +386,7 @@ class ScoringRepositoryN1Test {
             val summarySlot = io.mockk.slot<DailySummaryEntity>()
             coEvery { dailySummaryDao.upsert(capture(summarySlot)) } returns Unit
 
-            repo.computeAndPersistDailySummary(LocalDate.now())
+            repo.computeAndPersistDailySummary(today)
 
             val flags = summarySlot.captured.recoveryFlags ?: ""
             assert(!flags.contains("NADIR_DELAYED")) {
@@ -394,7 +397,7 @@ class ScoringRepositoryN1Test {
     @Test
     fun `batch fetch replaces per-session getMinHrInRange calls`() =
         runTest {
-            repo.computeAndPersistDailySummary(LocalDate.now())
+            repo.computeAndPersistDailySummary(today)
             // One SQL-bucketed HR fetch for everyday-HR load (PERF-006/WP-21), one or more
             // projection batches for sleep-baseline math.
             coVerify(atLeast = 1) { heartRateDao.getMinuteBuckets(any(), any()) }
@@ -411,7 +414,7 @@ class ScoringRepositoryN1Test {
             coEvery { hrvDao.getSleepRmssdForSessionsMap(any()) } returns sessions.associate { it.id to listOf(60f) }
             coEvery { heartRateDao.getAvgSleepHrForSessions(any()) } returns sessions.associate { it.id to 55 }
 
-            repo.computeAndPersistDailySummary(LocalDate.now())
+            repo.computeAndPersistDailySummary(today)
 
             coVerify(atLeast = 1) { hrvDao.getSleepRmssdForSessionsMap(any()) }
             coVerify(atLeast = 1) { heartRateDao.getSleepHrProjectionForSessions(any()) }
@@ -422,7 +425,7 @@ class ScoringRepositoryN1Test {
     @Test
     fun `result is persisted exactly once`() =
         runTest {
-            repo.computeAndPersistDailySummary(LocalDate.now())
+            repo.computeAndPersistDailySummary(today)
             coVerify(exactly = 1) { dailySummaryDao.upsert(any<DailySummaryEntity>()) }
         }
 
@@ -430,14 +433,13 @@ class ScoringRepositoryN1Test {
     fun `is persisted even when insufficient sessions for calibration`() =
         runTest {
             coEvery { sleepSessionDao.countSince(any()) } returns 3
-            repo.computeAndPersistDailySummary(LocalDate.now())
+            repo.computeAndPersistDailySummary(today)
             coVerify(exactly = 1) { dailySummaryDao.upsert(any()) }
         }
 
     @Test
     fun `day 1 baseline initialization matches daily values`() =
         runTest {
-            val today = LocalDate.now()
             val todaySession = makeSleepSession("today", 0)
 
             // Day 1 setup: only 1 session exists
@@ -470,7 +472,6 @@ class ScoringRepositoryN1Test {
     @Test
     fun `HRV baseline is stable across multiple identical calculations`() =
         runTest {
-            val today = LocalDate.now()
             val todaySession = makeSleepSession("today", 0)
 
             coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns todaySession

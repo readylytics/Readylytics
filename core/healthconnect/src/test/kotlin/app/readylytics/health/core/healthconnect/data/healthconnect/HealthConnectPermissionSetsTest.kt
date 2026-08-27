@@ -13,10 +13,14 @@ import kotlin.test.assertTrue
  * that, otherwise the app crashes the moment the request is fired.
  */
 class HealthConnectPermissionSetsTest {
+    private val context = mockk<Context>(relaxed = true)
+    private val ioDispatcher = Dispatchers.Unconfined
     private val repo =
         HealthConnectRepositoryImpl(
-            context = mockk<Context>(relaxed = true),
-            ioDispatcher = Dispatchers.Unconfined,
+            context = context,
+            ioDispatcher = ioDispatcher,
+            stepRecordReader = StepRecordReader(context = context, ioDispatcher = ioDispatcher),
+            intervalTotalsReader = IntervalTotalsReader(context = context, ioDispatcher = ioDispatcher),
         )
 
     private val permissionPrefix = "android.permission.health."

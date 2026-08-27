@@ -15,7 +15,10 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneOffset
 import kotlin.test.assertEquals
 
 @RunWith(RobolectricTestRunner::class)
@@ -23,6 +26,7 @@ class BirthdayCheckWorkerTest {
     private lateinit var context: Context
     private lateinit var workerParams: WorkerParameters
     private val settingsRepo = mockk<SettingsRepository>(relaxed = true)
+    private val testClock = Clock.fixed(Instant.parse("2026-08-27T00:00:00Z"), ZoneOffset.UTC)
 
     @Before
     fun setUp() {
@@ -37,7 +41,7 @@ class BirthdayCheckWorkerTest {
             val prefs = UserPreferences(isBirthdayConfigured = false, birthDate = null)
             every { settingsRepo.userPreferences } returns flowOf(prefs)
 
-            val worker = BirthdayCheckWorker(context, workerParams, settingsRepo)
+            val worker = BirthdayCheckWorker(context, workerParams, settingsRepo, testClock)
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
@@ -48,11 +52,11 @@ class BirthdayCheckWorkerTest {
     fun `doWork returns success and updates age when age changes`() =
         runBlocking {
             // Birthdate is 30 years ago today
-            val birthDate = LocalDate.now().minusYears(30).toString()
+            val birthDate = LocalDate.now(testClock).minusYears(30).toString()
             val prefs = UserPreferences(isBirthdayConfigured = true, birthDate = birthDate, age = 29)
             every { settingsRepo.userPreferences } returns flowOf(prefs)
 
-            val worker = BirthdayCheckWorker(context, workerParams, settingsRepo)
+            val worker = BirthdayCheckWorker(context, workerParams, settingsRepo, testClock)
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
@@ -62,11 +66,11 @@ class BirthdayCheckWorkerTest {
     @Test
     fun `doWork returns success and does not update age when age is correct`() =
         runBlocking {
-            val birthDate = LocalDate.now().minusYears(30).toString()
+            val birthDate = LocalDate.now(testClock).minusYears(30).toString()
             val prefs = UserPreferences(isBirthdayConfigured = true, birthDate = birthDate, age = 30)
             every { settingsRepo.userPreferences } returns flowOf(prefs)
 
-            val worker = BirthdayCheckWorker(context, workerParams, settingsRepo)
+            val worker = BirthdayCheckWorker(context, workerParams, settingsRepo, testClock)
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)

@@ -13,6 +13,9 @@ interface WorkoutDao {
     @Query("SELECT * FROM workout_records WHERE id = :id")
     suspend fun getById(id: String): WorkoutRecordEntity?
 
+    @Query("SELECT * FROM workout_records WHERE id IN (:ids)")
+    suspend fun getByIds(ids: List<String>): List<WorkoutRecordEntity>
+
     @Query("SELECT modelTrimp FROM workout_records WHERE id = :id")
     suspend fun getModelTrimpById(id: String): Float?
 

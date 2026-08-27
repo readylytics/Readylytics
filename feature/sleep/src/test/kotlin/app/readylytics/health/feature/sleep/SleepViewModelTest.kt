@@ -27,6 +27,7 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -39,6 +40,8 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -63,6 +66,7 @@ class SleepViewModelTest {
     private val selectedMetricsFlow = MutableStateFlow<DailyMetrics?>(null)
     private val yesterdaySummaryFlow = MutableStateFlow<DailySummary?>(null)
     private val isSyncingFlow = MutableStateFlow(false)
+    private val clock = Clock.fixed(Instant.parse("2026-06-11T10:00:00Z"), ZoneId.systemDefault())
     private lateinit var viewModel: SleepViewModel
 
     @Before
@@ -76,8 +80,12 @@ class SleepViewModelTest {
         every { dailyMetricsRepository.observeByDate(any()) } returns selectedMetricsFlow
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences(goalSleepHours = 8f))
 
-        every { dailySummaryRepository.observeSince(any()) } returns flowOf(emptyList())
-        coEvery { dailySummaryRepository.getByDate(any()) } returns null
+        every { dailySummaryRepository.observeSince(any()) } answers {
+            selectedSummaryFlow.map { listOfNotNull(it) }
+        }
+        coEvery { dailySummaryRepository.getByDate(any()) } answers {
+            selectedSummaryFlow.value
+        }
         every { dailySummaryRepository.observeByDate(any()) } answers {
             val requestedMidnightMs = firstArg<Long>()
             val selectedMidnightMs =
@@ -111,17 +119,20 @@ class SleepViewModelTest {
 
     private fun createViewModel() =
         SleepViewModel(
-            dailySummaryRepository = dailySummaryRepository,
-            dailyMetricsRepository = dailyMetricsRepository,
-            sleepSessionRepository = sleepSessionRepository,
-            heartRateRepository = heartRateRepository,
+            repositories =
+                SleepRepositories(
+                    dailySummary = dailySummaryRepository,
+                    dailyMetrics = dailyMetricsRepository,
+                    sleepSession = sleepSessionRepository,
+                    heartRate = heartRateRepository,
+                    circadian = circadianRepo,
+                    sleepLayout = sleepLayoutRepository,
+                ),
             settingsRepo = settingsRepo,
             selectedDateRepository = selectedDateRepository,
-            circadianRepo = circadianRepo,
             foregroundSyncController = foregroundSyncController,
-            sleepLayoutRepository = sleepLayoutRepository,
-            ioDispatcher = testDispatcher,
-            defaultDispatcher = testDispatcher,
+            dispatchers = SleepDispatchers(testDispatcher, testDispatcher),
+            clock = clock,
         )
 
     @Test

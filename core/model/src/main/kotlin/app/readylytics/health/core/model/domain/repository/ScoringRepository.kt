@@ -8,7 +8,7 @@ import java.time.ZoneId
 
 interface ScoringRepository {
     suspend fun computeAndPersistDailySummary(
-        targetDate: LocalDate = LocalDate.now(),
+        targetDate: LocalDate,
         steps: Long? = null,
     )
 
@@ -63,7 +63,7 @@ interface ScoringRepository {
         zoneId: ZoneId,
     ): WalkForwardBaselineContext
 
-    suspend fun computeDailySummary(targetDate: LocalDate = LocalDate.now()): DailySummary
+    suspend fun computeDailySummary(targetDate: LocalDate): DailySummary
 
     suspend fun persist(summary: DailySummary)
 

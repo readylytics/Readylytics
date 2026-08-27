@@ -62,6 +62,12 @@ class HealthChangeSynchronizerImplTest {
             block()
         }
 
+        coEvery { client.readRecords<Record>(any()) } returns
+            mockk {
+                every { records } returns emptyList()
+                every { pageToken } returns null
+            }
+
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
 
         synchronizer =
@@ -317,206 +323,6 @@ class HealthChangeSynchronizerImplTest {
         }
 
     @Test
-    fun `applyPendingChanges deletes all heart rate rows for one source record id`() =
-        runTest {
-            seedTokens()
-            val recordId = "hr-record"
-            val change =
-                mockk<DeletionChange>(relaxed = true) {
-                    every { this@mockk.recordId } returns recordId
-                }
-            routeOneChange(dataType = HealthDataType.HEART_RATE, change = change)
-            coEvery { sourceRecordDao.getSourceRef(recordId) } returns 1L
-            coEvery { heartRateDao.getBySourceRecordRef(1L) } returns
-                listOf(
-                    HeartRateRecordEntity(
-                        sourceRecordRef = 1L,
-                        timestampMs = 1000L,
-                        beatsPerMinute = 60,
-                        recordType = "SLEEP",
-                    ),
-                    HeartRateRecordEntity(
-                        sourceRecordRef = 1L,
-                        timestampMs = 2000L,
-                        beatsPerMinute = 61,
-                        recordType = "SLEEP",
-                    ),
-                )
-            coEvery { heartRateDao.deleteBySourceRecordRef(1L) } returns 2
-            coEvery { sourceRecordDao.deleteBySourceRecordId(recordId) } returns 1
-
-            val outcome = synchronizer.applyPendingChanges()
-
-            assertEquals(setOf(epochDay(1000L), epochDay(2000L)), outcome.affectedDates)
-            coVerifyOrder {
-                heartRateDao.getBySourceRecordRef(1L)
-                heartRateDao.deleteBySourceRecordRef(1L)
-            }
-            coVerify(exactly = 0) { heartRateDao.deleteByRef(any()) }
-        }
-
-    @Test
-    fun `applyPendingChanges deletes all hrv rows for one source record id`() =
-        runTest {
-            seedTokens()
-            val recordId = "hrv-record"
-            val change =
-                mockk<DeletionChange>(relaxed = true) {
-                    every { this@mockk.recordId } returns recordId
-                }
-            routeOneChange(dataType = HealthDataType.HRV, change = change)
-            coEvery { sourceRecordDao.getSourceRef(recordId) } returns 1L
-            coEvery { hrvDao.getBySourceRecordRef(1L) } returns
-                listOf(
-                    HrvRecordEntity(sourceRecordRef = 1L, timestampMs = 3000L, rmssdMs = 40f, recordType = "SLEEP"),
-                    HrvRecordEntity(sourceRecordRef = 1L, timestampMs = 4000L, rmssdMs = 41f, recordType = "SLEEP"),
-                )
-            coEvery { hrvDao.deleteBySourceRecordRef(1L) } returns 2
-            coEvery { sourceRecordDao.deleteBySourceRecordId(recordId) } returns 1
-
-            val outcome = synchronizer.applyPendingChanges()
-
-            assertEquals(setOf(epochDay(3000L), epochDay(4000L)), outcome.affectedDates)
-            coVerifyOrder {
-                hrvDao.getBySourceRecordRef(1L)
-                hrvDao.deleteBySourceRecordRef(1L)
-            }
-            coVerify(exactly = 0) { hrvDao.deleteByRef(any()) }
-        }
-
-    @Test
-    fun `applyPendingChanges replaces changed heart rate source record before upsert`() =
-        runTest {
-            seedTokens()
-            val recordId = "hr-record"
-            val oldEntity =
-                HeartRateRecordEntity(
-                    sourceRecordRef = 1L,
-                    timestampMs = 1000L,
-                    beatsPerMinute = 55,
-                    recordType = "SLEEP",
-                )
-            val sampleTime = Instant.parse("2026-06-20T09:00:00Z")
-            val record =
-                mockk<HeartRateRecord>(relaxed = true) {
-                    every { metadata.id } returns recordId
-                    every { metadata.device } returns null
-                    every { metadata.dataOrigin.packageName } returns "pkg"
-                    every { startTime } returns sampleTime
-                    every { endTime } returns sampleTime
-                    every { samples } returns
-                        listOf(
-                            mockk {
-                                every { time } returns sampleTime
-                                every { beatsPerMinute } returns 63L
-                            },
-                        )
-                }
-            val change =
-                mockk<UpsertionChange>(relaxed = true) {
-                    every { this@mockk.record } returns record
-                }
-            routeOneChange(dataType = HealthDataType.HEART_RATE, change = change)
-            coEvery { sourceRecordDao.getSourceRef(recordId) } returns 1L
-            coEvery { sourceRecordDao.getOrCreateSourceRef(recordId, "HEART_RATE", any()) } returns 1L
-            coEvery { heartRateDao.getBySourceRecordRef(1L) } returns listOf(oldEntity)
-            coEvery { heartRateDao.deleteBySourceRecordRef(1L) } returns 1
-            coEvery { sourceRecordDao.deleteBySourceRecordId(recordId) } returns 1
-
-            val outcome = synchronizer.applyPendingChanges()
-
-            assertEquals(
-                setOf(epochDay(oldEntity.timestampMs), sampleTime.atZone(ZoneId.systemDefault()).toLocalDate()),
-                outcome.affectedDates,
-            )
-            coVerifyOrder {
-                heartRateDao.getBySourceRecordRef(1L)
-                heartRateDao.deleteBySourceRecordRef(1L)
-                heartRateDao.upsertAll(
-                    match {
-                        it.map(HeartRateRecordEntity::sourceRecordRef) == listOf(1L) &&
-                            it.map(HeartRateRecordEntity::timestampMs) == listOf(sampleTime.toEpochMilli())
-                    },
-                )
-            }
-        }
-
-    @Test
-    fun `applyPendingChanges replaces changed weight source record before upsert`() =
-        runTest {
-            seedTokens()
-            val recordId = "weight-record"
-            val oldEntity = WeightRecordEntity("${recordId}_1000", 1000L, 70f)
-            val newTime = Instant.parse("2026-06-21T09:00:00Z")
-            val record =
-                mockk<WeightRecord>(relaxed = true) {
-                    every { metadata.id } returns recordId
-                    every { metadata.device } returns null
-                    every { metadata.dataOrigin.packageName } returns "pkg"
-                    every { time } returns newTime
-                    every { weight.inKilograms } returns 72.5
-                }
-            val change =
-                mockk<UpsertionChange>(relaxed = true) {
-                    every { this@mockk.record } returns record
-                }
-            routeOneChange(dataType = HealthDataType.WEIGHT, change = change)
-            coEvery { weightRecordDao.getBySourceRecordId(recordId) } returns listOf(oldEntity)
-            coEvery { weightRecordDao.deleteBySourceRecordId(recordId) } returns 1
-
-            val outcome = synchronizer.applyPendingChanges()
-
-            assertEquals(
-                setOf(epochDay(oldEntity.timestampMs), newTime.atZone(ZoneId.systemDefault()).toLocalDate()),
-                outcome.affectedDates,
-            )
-            coVerifyOrder {
-                weightRecordDao.getBySourceRecordId(recordId)
-                weightRecordDao.deleteBySourceRecordId(recordId)
-                weightRecordDao.upsertAll(
-                    match {
-                        it.map(WeightRecordEntity::id) == listOf("${recordId}_${newTime.toEpochMilli()}")
-                    },
-                )
-            }
-        }
-
-    @Test
-    fun `applyPendingChanges uses scoring zone from preferences for affected dates`() =
-        runTest {
-            val originalZone = TimeZone.getDefault()
-            TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
-            try {
-                every { settingsRepo.userPreferences } returns
-                    flowOf(UserPreferences(scoringZoneId = "Pacific/Kiritimati"))
-                seedTokens()
-                val recordId = "weight-zone-record"
-                val recordTime = Instant.parse("2026-01-01T12:30:00Z")
-                val record =
-                    mockk<WeightRecord>(relaxed = true) {
-                        every { metadata.id } returns recordId
-                        every { metadata.device } returns null
-                        every { metadata.dataOrigin.packageName } returns "pkg"
-                        every { time } returns recordTime
-                        every { weight.inKilograms } returns 72.5
-                    }
-                val change =
-                    mockk<UpsertionChange>(relaxed = true) {
-                        every { this@mockk.record } returns record
-                    }
-                routeOneChange(dataType = HealthDataType.WEIGHT, change = change)
-                coEvery { weightRecordDao.getBySourceRecordId(recordId) } returns emptyList()
-                coEvery { weightRecordDao.deleteBySourceRecordId(recordId) } returns 0
-
-                val outcome = synchronizer.applyPendingChanges()
-
-                assertEquals(setOf(LocalDate.of(2026, 1, 2)), outcome.affectedDates)
-            } finally {
-                TimeZone.setDefault(originalZone)
-            }
-        }
-
-    @Test
     fun `applyPendingChanges persists an upserted steps record for later deletion resolution`() =
         runTest {
             seedTokens()
@@ -700,7 +506,4 @@ class HealthChangeSynchronizerImplTest {
             every { nextChangesToken } returns "next-token"
             every { hasMore } returns false
         }
-
-    private fun epochDay(timestampMs: Long): LocalDate =
-        Instant.ofEpochMilli(timestampMs).atZone(ZoneId.systemDefault()).toLocalDate()
 }

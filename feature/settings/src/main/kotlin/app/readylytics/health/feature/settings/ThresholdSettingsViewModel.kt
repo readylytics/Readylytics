@@ -20,6 +20,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Clock
+import java.time.LocalDate
 import javax.inject.Inject
 
 @HiltViewModel
@@ -30,6 +32,7 @@ class ThresholdSettingsViewModel
         private val thresholdSettings: ThresholdSettings,
         private val scoringRepository: ScoringRepository,
         private val circadianThresholdPreferences: CircadianThresholdPreferences,
+        private val clock: Clock,
     ) : ViewModel() {
         val uiState: StateFlow<ThresholdSettingsState> =
             combine(
@@ -121,7 +124,7 @@ class ThresholdSettingsViewModel
                                 .onSuccess { _ ->
                                     transientState.update { it.copy(isUpdating = true, error = null) }
                                     circadianThresholdPreferences.setOverride(minutes = event.minutes)
-                                    scoringRepository.computeAndPersistDailySummary()
+                                    scoringRepository.computeAndPersistDailySummary(LocalDate.now(clock))
                                     transientState.update { it.copy(isUpdating = false) }
                                 }.onFailure { _ ->
                                     transientState.update {

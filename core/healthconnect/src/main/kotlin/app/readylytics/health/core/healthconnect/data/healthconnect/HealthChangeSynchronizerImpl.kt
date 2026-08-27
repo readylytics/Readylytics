@@ -346,9 +346,14 @@ class HealthChangeSynchronizerImpl
                         // Compute metrics from already-stored HR rows overlapping this session so a
                         // workout upsert has non-zero TRIMP/zones/avgHr immediately (HC-004); a sample
                         // arriving in the very same changes batch is still corrected by the next
-                        // reconcile pass, matching SessionLinkReconcilerImpl.recomputeWorkouts.
+                        // reconcile pass. EXERCISE-only filter matches
+                        // SessionLinkReconcilerImpl.recomputeWorkouts, which reads via
+                        // getByTypeAndTimeRange(RecordType.EXERCISE.name, ...) so sleep-overlapping or
+                        // boundary-straddling samples tagged to another session don't leak into this
+                        // workout's TRIMP/zones/avgHr.
                         val hrSamples =
-                            heartRateDao.getByTimeRange(
+                            heartRateDao.getByTypeAndTimeRange(
+                                RecordType.EXERCISE.name,
                                 record.startTime.toEpochMilli(),
                                 record.endTime.toEpochMilli(),
                             )
@@ -365,16 +370,31 @@ class HealthChangeSynchronizerImpl
                             thresholds
                         )
                         val workoutInput = WorkoutMapper.mapExerciseSession(domainExercise)
-                        val entity = workoutInput.toEntity().copy(
-                            durationMinutes = metrics.durationMinutes,
-                            zone1Minutes = metrics.zoneMinutes[0],
-                            zone2Minutes = metrics.zoneMinutes[1],
-                            zone3Minutes = metrics.zoneMinutes[2],
-                            zone4Minutes = metrics.zoneMinutes[3],
-                            zone5Minutes = metrics.zoneMinutes[4],
-                            trimp = metrics.trimp,
-                            avgHr = metrics.avgHr
-                        )
+                        val existing = workoutDao.getById(workoutInput.id)
+                        val freshEntity = workoutInput.toEntity()
+                        val entity =
+                            freshEntity.copy(
+                                durationMinutes = metrics.durationMinutes,
+                                zone1Minutes = metrics.zoneMinutes[0],
+                                zone2Minutes = metrics.zoneMinutes[1],
+                                zone3Minutes = metrics.zoneMinutes[2],
+                                zone4Minutes = metrics.zoneMinutes[3],
+                                zone5Minutes = metrics.zoneMinutes[4],
+                                trimp = metrics.trimp,
+                                avgHr = metrics.avgHr,
+                                modelTrimp = existing?.modelTrimp,
+                                totalDistanceMeters = freshEntity.totalDistanceMeters ?: existing?.totalDistanceMeters,
+                                avgSpeedKmh = freshEntity.avgSpeedKmh ?: existing?.avgSpeedKmh,
+                                elevationGainMeters = freshEntity.elevationGainMeters ?: existing?.elevationGainMeters,
+                                routeState =
+                                    if (workoutInput.routePoints.isEmpty() &&
+                                        existing?.routeState == RouteState.IMPORTED
+                                    ) {
+                                        existing.routeState
+                                    } else {
+                                        freshEntity.routeState
+                                    },
+                            )
                         workoutDao.upsertAll(listOf(entity))
                     }
                 }

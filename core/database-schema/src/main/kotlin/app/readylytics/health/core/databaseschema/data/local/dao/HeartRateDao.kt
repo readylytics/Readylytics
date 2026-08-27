@@ -137,6 +137,21 @@ interface HeartRateDao {
         endMs: Long,
     ): List<HeartRateRecordEntity>
 
+    // DB-001: recordType-filtered variant of getByTimeRange, backed by index_hr_v10_type_timestamp
+    // (recordType, timestampMs) -- callers that only need one record type (e.g. exercise-HR for
+    // workout metrics) no longer pull every sleep/resting sample in the range into memory just to
+    // discard it with a Kotlin `.filter`.
+    @Query(
+        "SELECT * FROM heart_rate_records " +
+            "WHERE recordType = :recordType AND timestampMs >= :startMs AND timestampMs <= :endMs " +
+            "ORDER BY timestampMs ASC, sourceRecordRef ASC",
+    )
+    suspend fun getByTypeAndTimeRange(
+        recordType: String,
+        startMs: Long,
+        endMs: Long,
+    ): List<HeartRateRecordEntity>
+
     @Query(
         "SELECT * FROM heart_rate_records WHERE timestampMs >= :startMs AND timestampMs < :endMs " +
             "ORDER BY timestampMs ASC, sourceRecordRef ASC",
@@ -190,6 +205,20 @@ interface HeartRateDao {
 
     @Query("DELETE FROM heart_rate_records WHERE timestampMs < :beforeMs")
     suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
+
+    // DB-002: keyset-bounded delete for RetentionCleanup -- deletes at most `limit` of the oldest
+    // rows before `beforeMs` per call, so a large first-time cleanup opens many bounded
+    // transactions instead of one unbounded delete (WAL growth).
+    @Query(
+        "DELETE FROM heart_rate_records WHERE rowId IN (" +
+            "SELECT rowId FROM heart_rate_records WHERE timestampMs < :beforeMs " +
+            "ORDER BY timestampMs ASC LIMIT :limit" +
+            ")",
+    )
+    suspend fun deleteBeforeTimestampBatch(
+        beforeMs: Long,
+        limit: Int,
+    ): Int
 
     @Query("DELETE FROM heart_rate_records WHERE sourceRecordRef = :sourceRecordRef")
     suspend fun deleteByRef(sourceRecordRef: Long): Int

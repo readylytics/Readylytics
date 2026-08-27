@@ -1,5 +1,6 @@
 package app.readylytics.health.core.model.domain.date
 
+import java.time.Clock
 import java.time.LocalDate
 
 /**
@@ -41,13 +42,15 @@ sealed interface DateTransition {
  *
  * @param currentDate The current selected date
  * @param transition The transition to apply
+ * @param clock The clock used to determine today's date
  * @return The new date after applying the transition
  */
 fun applyDateTransition(
     currentDate: LocalDate,
     transition: DateTransition,
+    clock: Clock,
 ): LocalDate {
-    val today = LocalDate.now()
+    val today = LocalDate.now(clock)
     return when (transition) {
         is DateTransition.NoChange -> currentDate
         is DateTransition.UpdateTo -> {
@@ -66,10 +69,15 @@ fun applyDateTransition(
 /**
  * Validates that a transition is safe from the current state.
  *
+ * @param currentDate The current selected date
+ * @param clock The clock used to determine today's date
  * @return true if the transition is safe to execute
  */
-fun DateTransition.isValidFrom(currentDate: LocalDate): Boolean {
-    val today = LocalDate.now()
+fun DateTransition.isValidFrom(
+    currentDate: LocalDate,
+    clock: Clock,
+): Boolean {
+    val today = LocalDate.now(clock)
     return when (this) {
         is DateTransition.NoChange -> true
         is DateTransition.UpdateTo -> true // applyDateTransition handles capping
