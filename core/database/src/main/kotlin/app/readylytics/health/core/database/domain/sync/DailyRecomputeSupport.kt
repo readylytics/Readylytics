@@ -8,6 +8,7 @@ import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.ScoringRepository
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
+import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
 import app.readylytics.health.core.model.domain.util.logD
@@ -98,6 +99,40 @@ class DailyRecomputeSupport
             }
 
         /**
+         * Same as the 5-arg overload, but also advances the shared [fatigueContext] residual-fatigue
+         * accumulator. A multi-day walk-forward must build one [fatigueContext] (via
+         * [buildWalkForwardFatigueContext]) and pass it to every day it recomputes in that run,
+         * oldest day first.
+         */
+        suspend fun recomputeDay(
+            day: LocalDate,
+            steps: Long?,
+            prefs: UserPreferences,
+            trimpContext: WalkForwardTrimpContext,
+            baselineContext: WalkForwardBaselineContext,
+            fatigueContext: WalkForwardFatigueContext,
+        ): Result<Unit> =
+            try {
+                scoringRepository.computeAndPersistDailySummary(
+                    day,
+                    steps,
+                    prefs,
+                    trimpContext,
+                    baselineContext,
+                    fatigueContext,
+                )
+                logD("DailyRecomputeSupport") {
+                    "Day $day: scored atomically (steps=${steps?.toString() ?: "preserved"})"
+                }
+                Result.success(Unit)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logE("DailyRecomputeSupport", e) { "Day $day sync failed" }
+                Result.failure("Day $day sync failed", "DAY_SYNC_ERROR")
+            }
+
+        /**
          * PERF-002/WP-20: fetches the shared TRIMP-series context once for the whole
          * `[startDate, endDate]` walk-forward; pass the result to every [recomputeDay] call in
          * that run instead of letting each day re-query its own lookback window.
@@ -118,6 +153,18 @@ class DailyRecomputeSupport
             endDate: LocalDate,
             zoneId: ZoneId,
         ): WalkForwardBaselineContext = scoringRepository.fetchWalkForwardBaselineContext(startDate, endDate, zoneId)
+
+        /**
+         * WP-27: prefetches the residual-fatigue workout-impulse series once for the whole
+         * `[startDate, endDate]` walk-forward (seeded with a 32-day lookback); pass the result to
+         * every [recomputeDay] call in that run, oldest day first, so the shared accumulator decays
+         * and adds impulses in the correct order.
+         */
+        suspend fun buildWalkForwardFatigueContext(
+            startDate: LocalDate,
+            endDate: LocalDate,
+            zoneId: ZoneId,
+        ): WalkForwardFatigueContext = scoringRepository.fetchWalkForwardFatigueContext(startDate, endDate, zoneId)
 
         /**
          * F7: runs a whole walk-forward's worth of [recomputeDay] calls inside ONE Room

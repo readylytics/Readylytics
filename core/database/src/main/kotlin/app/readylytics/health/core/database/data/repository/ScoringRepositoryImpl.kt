@@ -10,12 +10,14 @@ import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.model.domain.repository.ScoringRepository
 import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
+import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase
 import app.readylytics.health.core.scoring.domain.scoring.EverydayHrLoadResult
 import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
@@ -57,21 +59,26 @@ class ScoringRepositoryImpl
         private val baseSummaryAssembler = BaseSummaryAssembler(bodyMetricsDataLoader)
         private val calibrationGate = CalibrationGate(baselineComputer)
         private val rasTotalsComputer = RasTotalsComputer(seriesLoader)
+        private val residualFatigueComputer =
+            ResidualFatigueComputer(dataLoader, ComputeResidualFatigueUseCase())
+        private val finalSummaryAssembler =
+            FinalSummaryAssembler(
+                baseSummaryAssembler,
+                calibrationGate,
+                baselineComputer,
+                bodyMetricsDataLoader,
+                readinessSummaryCoordinator,
+                residualFatigueComputer,
+            )
 
         override suspend fun computeAndPersistDailySummary(
             targetDate: LocalDate,
             steps: Long?,
-        ) {
-            computeAndPersistDailySummary(targetDate, steps, settingsRepo.userPreferences.first())
-        }
-
-        override suspend fun computeAndPersistDailySummary(
-            targetDate: LocalDate,
-            steps: Long?,
-            prefs: UserPreferences,
+            prefs: UserPreferences?,
         ) = calculationMutex.withLock {
-            val zoneId = prefs.scoringZone()
-            val computed = computeDailySummary(targetDate, prefs)
+            val resolvedPrefs = prefs ?: settingsRepo.userPreferences.first()
+            val zoneId = resolvedPrefs.scoringZone()
+            val computed = computeDailySummary(targetDate, resolvedPrefs)
             val summary =
                 if (steps != null) {
                     computed.copy(stepCount = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
@@ -90,6 +97,25 @@ class ScoringRepositoryImpl
         ) = calculationMutex.withLock {
             val zoneId = prefs.scoringZone()
             val computed = computeDailySummary(targetDate, prefs, trimpContext, baselineContext)
+            val summary =
+                if (steps != null) {
+                    computed.copy(stepCount = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
+                } else {
+                    computed
+                }
+            dataLoader.persistDailySummary(summary, zoneId)
+        }
+
+        override suspend fun computeAndPersistDailySummary(
+            targetDate: LocalDate,
+            steps: Long?,
+            prefs: UserPreferences,
+            trimpContext: WalkForwardTrimpContext,
+            baselineContext: WalkForwardBaselineContext,
+            fatigueContext: WalkForwardFatigueContext,
+        ) = calculationMutex.withLock {
+            val zoneId = prefs.scoringZone()
+            val computed = computeDailySummary(targetDate, prefs, trimpContext, baselineContext, fatigueContext)
             val summary =
                 if (steps != null) {
                     computed.copy(stepCount = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
@@ -135,6 +161,12 @@ class ScoringRepositoryImpl
         ): WalkForwardBaselineContext =
             WalkForwardBaselineContext(baselineComputer.prefetchWalkForwardSessions(startDate, endDate, zoneId))
 
+        override suspend fun fetchWalkForwardFatigueContext(
+            startDate: LocalDate,
+            endDate: LocalDate,
+            zoneId: ZoneId,
+        ): WalkForwardFatigueContext = residualFatigueComputer.fetchWalkForwardContext(startDate, endDate, zoneId)
+
         override suspend fun computeDailySummary(targetDate: LocalDate): DailySummary {
             val prefs = settingsRepo.userPreferences.first()
             return calculationMutex.withLock { computeDailySummary(targetDate, prefs) }
@@ -145,6 +177,7 @@ class ScoringRepositoryImpl
             prefs: UserPreferences,
             trimpContext: WalkForwardTrimpContext? = null,
             baselineContext: WalkForwardBaselineContext? = null,
+            fatigueContext: WalkForwardFatigueContext? = null,
         ): DailySummary =
             withContext(defaultDispatcher) {
                 val context = scoringDayContextResolver.resolveScoringDayContext(targetDate, prefs, baselineContext)
@@ -181,8 +214,8 @@ class ScoringRepositoryImpl
                         context.zoneId,
                     )
                 val finalSummary =
-                    computeFinalSummary(
-                        FinalSummaryInputs(
+                    finalSummaryAssembler.assemble(
+                        FinalSummaryAssembler.Inputs(
                             context = context,
                             session = session,
                             currentSessionIds = currentSessionIds,
@@ -193,6 +226,7 @@ class ScoringRepositoryImpl
                             aggregatedSleep = aggregatedSleep,
                             trimpContext = trimpContext,
                             baselineContext = baselineContext,
+                            fatigueContext = fatigueContext,
                         ),
                     )
                 ScoringTelemetry.logTelemetry(
@@ -203,81 +237,6 @@ class ScoringRepositoryImpl
                 )
                 finalSummary
             }
-
-        private data class FinalSummaryInputs(
-            val context: ScoringDayContext,
-            val session: SleepSessionEntity?,
-            val currentSessionIds: Set<String>,
-            val dailyTrimpRaw: Float,
-            val trimpEverydayHr: Float,
-            val rasTotals: RasTotalsComputer.RasTotals,
-            val everydayResult: EverydayHrLoadResult,
-            val aggregatedSleep: SleepAggregationContext?,
-            val trimpContext: WalkForwardTrimpContext?,
-            val baselineContext: WalkForwardBaselineContext?,
-        )
-
-        private suspend fun computeFinalSummary(
-            inputs: FinalSummaryInputs,
-        ): DailySummary {
-            val baseSummary =
-                baseSummaryAssembler.buildBaseSummary(
-                    inputs.context,
-                    inputs.dailyTrimpRaw,
-                    inputs.trimpEverydayHr,
-                    inputs.rasTotals,
-                    inputs.everydayResult,
-                    inputs.aggregatedSleep,
-                )
-            val isCalibrated =
-                calibrationGate.isCalibrated(
-                    inputs.context,
-                    inputs.baselineContext?.sessions,
-                    inputs.session != null,
-                )
-            val base =
-                ReadinessBaseInputs(
-                    session = inputs.session,
-                    currentSessionIds = inputs.currentSessionIds,
-                    baseSummary = baseSummary,
-                    avgSpo2 = bodyMetricsDataLoader.loadAvgSpo2(inputs.session),
-                    avgBodyTemp = bodyMetricsDataLoader.loadAvgBodyTemp(inputs.session),
-                )
-            return if (!isCalibrated) {
-                val calibHrvBaseline =
-                    baselineComputer.computeHrvBaselineBetween(
-                        fromMs = inputs.context.dayMidnightMs,
-                        toMs = inputs.context.nextDayMidnightMs,
-                        hrvBaselineOverride = inputs.context.prefs.hrvBaselineOverride,
-                        sleepDayPolicy = inputs.context.sleepDayPolicy,
-                        prefetchedSessions = inputs.baselineContext?.sessions,
-                    )
-                readinessSummaryCoordinator.computeUncalibratedSummary(
-                    base = base,
-                    calibHrvBaseline = calibHrvBaseline,
-                    rhrBaselineValue = inputs.context.initialBaselines.rhrBaselineValue,
-                    prefs = inputs.context.prefs,
-                )
-            } else {
-                readinessSummaryCoordinator.computeCalibratedSummary(
-                    base = base,
-                    context =
-                        CalibratedScoringContext(
-                            targetDate = inputs.context.targetDate,
-                            zoneId = inputs.context.zoneId,
-                            nextDayMidnightMs = inputs.context.nextDayMidnightMs,
-                            dailyTrimpRaw = inputs.dailyTrimpRaw,
-                            trimpEverydayHr = inputs.trimpEverydayHr,
-                            initialBaselines = inputs.context.initialBaselines,
-                            scoringConfig = inputs.context.scoringConfig,
-                            prefs = inputs.context.prefs,
-                            sleepDayPolicy = inputs.context.sleepDayPolicy,
-                            trimpContext = inputs.trimpContext,
-                            baselineContext = inputs.baselineContext,
-                        ),
-                )
-            }
-        }
 
         override suspend fun persist(summary: DailySummary) {
             dataLoader.persistDailySummary(summary, settingsRepo.userPreferences.first().scoringZone())

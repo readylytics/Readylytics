@@ -7,21 +7,16 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 interface ScoringRepository {
-    suspend fun computeAndPersistDailySummary(
-        targetDate: LocalDate,
-        steps: Long? = null,
-    )
-
     /**
-     * Same as the no-[prefs] overload, but uses the caller's already-taken preferences snapshot
-     * instead of reading a fresh one. A multi-day walk-forward (daily sync / resync) must call
-     * this with one snapshot shared across every day it recomputes, or a preference change
-     * mid-walk-forward silently mixes old- and new-preference days (SCORE-004).
+     * Computes and persists the daily summary for [targetDate]. [prefs] null reads a fresh
+     * preferences snapshot; a multi-day walk-forward (daily sync / resync) must pass one snapshot
+     * shared across every day it recomputes, or a preference change mid-walk-forward silently
+     * mixes old- and new-preference days (SCORE-004).
      */
     suspend fun computeAndPersistDailySummary(
         targetDate: LocalDate,
-        steps: Long?,
-        prefs: UserPreferences,
+        steps: Long? = null,
+        prefs: UserPreferences? = null,
     )
 
     /**
@@ -38,6 +33,22 @@ interface ScoringRepository {
         prefs: UserPreferences,
         trimpContext: WalkForwardTrimpContext,
         baselineContext: WalkForwardBaselineContext,
+    )
+
+    /**
+     * PERF-002/WP-20/WP-22 + residual-fatigue walk-forward: same as the 5-arg overload, but also
+     * reads/advances the shared [WalkForwardFatigueContext] state accumulator. A multi-day
+     * walk-forward must fetch one [fatigueContext] (via [fetchWalkForwardFatigueContext]) and pass it
+     * to every day recomputed in that run, oldest day first, so the accumulator decays and adds
+     * impulses in the correct order.
+     */
+    suspend fun computeAndPersistDailySummary(
+        targetDate: LocalDate,
+        steps: Long?,
+        prefs: UserPreferences,
+        trimpContext: WalkForwardTrimpContext,
+        baselineContext: WalkForwardBaselineContext,
+        fatigueContext: WalkForwardFatigueContext,
     )
 
     /**
@@ -62,6 +73,19 @@ interface ScoringRepository {
         endDate: LocalDate,
         zoneId: ZoneId,
     ): WalkForwardBaselineContext
+
+    /**
+     * PERF-002/WP-27: prefetches the workout-impulse series (keyed by end time, ascending) needed by
+     * every day in `[startDate, endDate]`, seeded with a 32-day lookback so early days include
+     * decayed contributions from prior workouts. The caller holds the returned mutable
+     * [WalkForwardFatigueContext] across the whole walk-forward and passes it to every
+     * [computeAndPersistDailySummary] call in that run.
+     */
+    suspend fun fetchWalkForwardFatigueContext(
+        startDate: LocalDate,
+        endDate: LocalDate,
+        zoneId: ZoneId,
+    ): WalkForwardFatigueContext
 
     suspend fun computeDailySummary(targetDate: LocalDate): DailySummary
 

@@ -8,6 +8,7 @@ import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
 import app.readylytics.health.core.model.domain.repository.ScoringRepository
 import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
+import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
@@ -52,12 +53,16 @@ class ResyncCheckpointResumeTest {
         coEvery { changeSynchronizer.captureChangesTokens() } returns baselineTokens
         coEvery { changeSynchronizer.commitTokens(any()) } returns Unit
         // PERF-002/WP-20/WP-22: every non-empty RECOMPUTE range now fetches batched TRIMP-series and
-        // baseline contexts once up front via these methods before calling the 5-arg
+        // baseline contexts once up front via these methods before calling the 6-arg
         // computeAndPersistDailySummary overload.
         coEvery { scoringRepository.fetchWalkForwardTrimpContext(any(), any(), any()) } returns
             WalkForwardTrimpContext(TreeMap(), TreeMap())
         coEvery { scoringRepository.fetchWalkForwardBaselineContext(any(), any(), any()) } returns
             WalkForwardBaselineContext(emptyList())
+        // WP-27: the walk-forward also prefetches one mutable residual-fatigue accumulator per run;
+        // a relaxed mock would return null and NPE on the 6-arg recomputeDay call.
+        coEvery { scoringRepository.fetchWalkForwardFatigueContext(any(), any(), any()) } returns
+            WalkForwardFatigueContext(emptyList())
         useCase =
             ResyncRangeUseCase(
                 settingsRepo = settingsRepo,
@@ -129,13 +134,29 @@ class ResyncCheckpointResumeTest {
             assertEquals(Triple(ResyncPhase.RECOMPUTE, 2, 4), progress.first())
             coVerify(
                 exactly = 0,
-            ) { scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any()) }
+            ) { scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any(), any()) }
             coVerify(
                 exactly = 0,
-            ) { scoringRepository.computeAndPersistDailySummary(startDate.plusDays(1), any(), any(), any(), any()) }
+            ) {
+                scoringRepository.computeAndPersistDailySummary(
+                    startDate.plusDays(1),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                )
+            }
             coVerifyOrder {
-                scoringRepository.computeAndPersistDailySummary(startDate.plusDays(2), any(), any(), any(), any())
-                scoringRepository.computeAndPersistDailySummary(endDate, any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(
+                    startDate.plusDays(2),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                )
+                scoringRepository.computeAndPersistDailySummary(endDate, any(), any(), any(), any(), any())
             }
         }
 
@@ -210,7 +231,7 @@ class ResyncCheckpointResumeTest {
             coVerifyOrder {
                 changeSynchronizer.captureChangesTokens()
                 hcRepo.readSleepSessions(any(), any())
-                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any(), any())
                 changeSynchronizer.commitTokens(baselineTokens)
             }
             assertEquals(null, checkpointStore.value)
@@ -220,7 +241,9 @@ class ResyncCheckpointResumeTest {
     fun `resyncRange keeps checkpoint and tokens when recompute fails`() =
         runTest {
             val startDate = LocalDate.of(2024, 6, 1)
-            coEvery { scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any()) } throws
+            coEvery {
+                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any(), any())
+            } throws
                 IllegalStateException("scoring failed")
 
             val result = useCase.run(startDate = startDate, endDate = startDate, chunkDays = 30, onProgress = null)
@@ -239,7 +262,14 @@ class ResyncCheckpointResumeTest {
             val preferences = MutableStateFlow(UserPreferences(trimpModel = TrimpModel.BANISTER))
             every { settingsRepo.userPreferences } returns preferences
             coEvery {
-                scoringRepository.computeAndPersistDailySummary(startDate.plusDays(1), any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(
+                    startDate.plusDays(1),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                )
             } throws IllegalStateException("scoring failed")
 
             useCase.run(
@@ -262,7 +292,9 @@ class ResyncCheckpointResumeTest {
             assertEquals(emptyMap<HealthDataType, String>(), failedCheckpoint.baselineChangeTokens)
 
             clearMocks(scoringRepository, answers = false, recordedCalls = true)
-            coEvery { scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any(), any()) } returns Unit
+            coEvery {
+                scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any(), any(), any())
+            } returns Unit
 
             useCase.run(
                 startDate = startDate,
@@ -273,9 +305,16 @@ class ResyncCheckpointResumeTest {
             )
 
             coVerifyOrder {
-                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any())
-                scoringRepository.computeAndPersistDailySummary(startDate.plusDays(1), any(), any(), any(), any())
-                scoringRepository.computeAndPersistDailySummary(endDate, any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(
+                    startDate.plusDays(1),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                )
+                scoringRepository.computeAndPersistDailySummary(endDate, any(), any(), any(), any(), any())
             }
             coVerify(exactly = 0) { changeSynchronizer.captureChangesTokens() }
             coVerify(exactly = 0) { changeSynchronizer.applyPendingChanges() }
@@ -290,7 +329,14 @@ class ResyncCheckpointResumeTest {
             val preferences = MutableStateFlow(UserPreferences(trimpModel = TrimpModel.BANISTER))
             every { settingsRepo.userPreferences } returns preferences
             coEvery {
-                scoringRepository.computeAndPersistDailySummary(startDate.plusDays(1), any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(
+                    startDate.plusDays(1),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                )
             } throws IllegalStateException("scoring failed")
 
             useCase.run(
@@ -311,7 +357,9 @@ class ResyncCheckpointResumeTest {
 
             clearMocks(scoringRepository, answers = false, recordedCalls = true)
             preferences.value = UserPreferences(trimpModel = TrimpModel.CHENG)
-            coEvery { scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any(), any()) } returns Unit
+            coEvery {
+                scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any(), any(), any())
+            } returns Unit
 
             useCase.run(
                 startDate = startDate,
@@ -322,9 +370,16 @@ class ResyncCheckpointResumeTest {
             )
 
             coVerifyOrder {
-                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any())
-                scoringRepository.computeAndPersistDailySummary(startDate.plusDays(1), any(), any(), any(), any())
-                scoringRepository.computeAndPersistDailySummary(endDate, any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(
+                    startDate.plusDays(1),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                )
+                scoringRepository.computeAndPersistDailySummary(endDate, any(), any(), any(), any(), any())
             }
             assertEquals(null, checkpointStore.value)
         }

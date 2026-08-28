@@ -5,6 +5,7 @@ import androidx.room.Query
 import androidx.room.Upsert
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.model.domain.model.TimestampedTrimp
+import app.readylytics.health.core.model.domain.repository.FatigueWorkoutInput
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 
@@ -110,6 +111,21 @@ interface WorkoutDao {
         fromMs: Long,
         toMs: Long,
     ): List<WorkoutRecordEntity>
+
+    @Query(
+        // Residual-fatigue impulses keyed by workout end time. Both modelTrimp (user-selected TRIMP
+        // model) and trimp (Edwards zone-weighted) are per-workout HR-integrated training load over
+        // the same workout boundary; the COALESCE fallback is semantically safe for rows not yet
+        // backfilled with modelTrimp (same semantics as getTrimpPoints).
+        "SELECT endTime AS endTimeMs, COALESCE(modelTrimp, trimp) AS trimp FROM workout_records " +
+            "WHERE endTime >= :fromMs AND endTime <= :toMs " +
+            "AND COALESCE(modelTrimp, trimp) > 0 " +
+            "ORDER BY endTime ASC",
+    )
+    suspend fun getFatigueWorkoutInputs(
+        fromMs: Long,
+        toMs: Long,
+    ): List<FatigueWorkoutInput>
 
     @Query(
         "SELECT * FROM workout_records WHERE endTime >= :fromMs AND startTime <= :toMs ORDER BY startTime ASC, id ASC",

@@ -430,6 +430,16 @@ class ResyncRangeUseCase
                         } else {
                             null
                         }
+                    // WP-27: prefetch the residual-fatigue workout-impulse series once for the whole
+                    // recompute walk-forward (32-day lookback seed). Null when the recompute range is
+                    // empty, mirroring trimpContext/baselineContext. The mutable accumulator advances
+                    // across the chronological day loop below (including across chunk boundaries).
+                    val fatigueContext =
+                        if (!recomputeStartDate.isAfter(endDate)) {
+                            recomputeSupport.buildWalkForwardFatigueContext(recomputeStartDate, endDate, zoneId)
+                        } else {
+                            null
+                        }
                     if (checkpoint == null || checkpoint.phase != ResyncPhase.RECOMPUTE) {
                         healthIngestionStore.clearFrozenBaselines(startDate, endDate.plusDays(1), zoneId)
                     }
@@ -466,13 +476,14 @@ class ResyncRangeUseCase
                                             else -> stepsMap[day]
                                         }
                                     val dayResult =
-                                        if (trimpContext != null && baselineContext != null) {
+                                        if (trimpContext != null && baselineContext != null && fatigueContext != null) {
                                             recomputeSupport.recomputeDay(
                                                 day,
                                                 stepsForDay,
                                                 prefs,
                                                 trimpContext,
                                                 baselineContext,
+                                                fatigueContext,
                                             )
                                         } else {
                                             recomputeSupport.recomputeDay(day, stepsForDay, prefs)

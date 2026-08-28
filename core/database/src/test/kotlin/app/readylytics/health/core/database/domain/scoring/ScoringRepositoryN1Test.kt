@@ -137,6 +137,8 @@ class ScoringRepositoryN1Test {
         coEvery { workoutDao.getTotalDurationMinutes(any(), any()) } returns 0
         coEvery { workoutDao.getWeightedAvgHr(any(), any()) } returns 0f
         coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns emptyList()
+        // WP-27: single-day residual-fatigue fallback reads the same series via its own query.
+        coEvery { workoutDao.getFatigueWorkoutInputs(any(), any()) } returns emptyList()
 
         coEvery { hrvDao.getSleepRmssdValues(any()) } returns listOf(60f, 60f, 60f)
         coEvery { hrvDao.getSleepRmssdValuesSince(any(), any()) } returns listOf(60f, 60f, 60f)

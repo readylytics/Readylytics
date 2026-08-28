@@ -60,5 +60,6 @@
     "everydayCoverageMinutes": 2,
     "everydayLoadConfidence": "LOW",
     "supplementalSleepDurationMinutes": 0,
-    "napCount": 0
+    "napCount": 0,
+    "residualFatigue": 67.04113
 }

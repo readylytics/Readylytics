@@ -9,6 +9,7 @@ import app.readylytics.health.core.model.domain.repository.HealthConnectPermissi
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
 import app.readylytics.health.core.model.domain.repository.ScoringRepository
 import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
+import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
 import io.mockk.coEvery
@@ -55,12 +56,16 @@ class ResyncRangeUseCaseTest {
         coEvery { changeSynchronizer.applyPendingChanges() } returns HealthChangeSyncOutcome(emptySet(), false)
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
         // PERF-002/WP-20/WP-22: every non-empty RECOMPUTE range now fetches batched TRIMP-series and
-        // baseline contexts once up front via these methods before calling the 5-arg
+        // baseline contexts once up front via these methods before calling the 6-arg
         // computeAndPersistDailySummary overload.
         coEvery { scoringRepository.fetchWalkForwardTrimpContext(any(), any(), any()) } returns
             WalkForwardTrimpContext(TreeMap(), TreeMap())
         coEvery { scoringRepository.fetchWalkForwardBaselineContext(any(), any(), any()) } returns
             WalkForwardBaselineContext(emptyList())
+        // WP-27: the walk-forward also prefetches one mutable residual-fatigue accumulator per run;
+        // a relaxed mock would return null and NPE on the 6-arg recomputeDay call.
+        coEvery { scoringRepository.fetchWalkForwardFatigueContext(any(), any(), any()) } returns
+            WalkForwardFatigueContext(emptyList())
 
         useCase =
             ResyncRangeUseCase(
@@ -277,7 +282,7 @@ class ResyncRangeUseCaseTest {
                 onProgress = null,
             )
 
-            coVerify { scoringRepository.computeAndPersistDailySummary(date, 0L, any(), any(), any()) }
+            coVerify { scoringRepository.computeAndPersistDailySummary(date, 0L, any(), any(), any(), any()) }
         }
 
     @Test
@@ -353,9 +358,16 @@ class ResyncRangeUseCaseTest {
 
             coVerifyOrder {
                 healthIngestionStore.clearFrozenBaselines(startDate, endDate.plusDays(1), zoneId)
-                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any())
-                scoringRepository.computeAndPersistDailySummary(startDate.plusDays(1), any(), any(), any(), any())
-                scoringRepository.computeAndPersistDailySummary(endDate, any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(
+                    startDate.plusDays(1),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                )
+                scoringRepository.computeAndPersistDailySummary(endDate, any(), any(), any(), any(), any())
             }
         }
 
@@ -371,6 +383,7 @@ class ResyncRangeUseCaseTest {
                 scoringRepository.computeAndPersistDailySummary(
                     any(),
                     captureNullable(stepOverrides),
+                    any(),
                     any(),
                     any(),
                     any(),
@@ -398,7 +411,7 @@ class ResyncRangeUseCaseTest {
             coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }
             coVerify(exactly = 1) { sessionLinkReconciler.reconcile(any(), any(), any()) }
             coVerify(exactly = 2) {
-                scoringRepository.computeAndPersistDailySummary(any(), null, any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(any(), null, any(), any(), any(), any())
             }
         }
 
@@ -416,7 +429,14 @@ class ResyncRangeUseCaseTest {
             }
             val capturedPrefs = mutableListOf<UserPreferences>()
             coEvery {
-                scoringRepository.computeAndPersistDailySummary(any(), any(), capture(capturedPrefs), any(), any())
+                scoringRepository.computeAndPersistDailySummary(
+                    any(),
+                    any(),
+                    capture(capturedPrefs),
+                    any(),
+                    any(),
+                    any(),
+                )
             } returns Unit
 
             useCase.run(
@@ -441,7 +461,7 @@ class ResyncRangeUseCaseTest {
             coVerifyOrder {
                 selectedSourcePruner.prune(startDate, endDate, any(), any())
                 sessionLinkReconciler.reconcile(any(), any(), any())
-                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any(), any())
             }
         }
 
@@ -527,6 +547,7 @@ class ResyncRangeUseCaseTest {
             coEvery {
                 scoringRepository.computeAndPersistDailySummary(
                     startDate.plusDays(34),
+                    any(),
                     any(),
                     any(),
                     any(),
