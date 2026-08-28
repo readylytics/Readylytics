@@ -261,6 +261,8 @@ suspend fun updateResidualFatigueGain(value: Float)
 
 Changing any fatigue parameter triggers `HealthSyncUseCase.recomputeRange()` over the full retained history (same pattern as TRIMP model changes via `SettingsEvent.RecalculateScores`). The walk-forward recompute regenerates all `residualFatigue` values deterministically.
 
+> **Implementation note — trigger deferred to Phase 2.** Phase 1 does NOT trigger a recompute on fatigue-parameter changes: the settings handlers persist the preference without `refreshHistorical()`, and a test locks this behavior. Because `residualFatigue` is shadow-only in Phase 1 (nothing reads it), stale persisted snapshots until the next natural sync/recompute pass are harmless — but they are documented here so the record stays accurate. The recompute trigger is deferred to Phase 2, when the value becomes user-visible.
+
 ---
 
 ## 6. Persistence — Schema Changes
@@ -417,7 +419,7 @@ Eventually: `LoadReadiness = f(LoadScore, ResidualFatigue)`. Weights and functio
 ### Independence Guarantees
 
 Results must NOT depend on:
-- Sync range (partial vs full)
+- Sync range (partial vs full) — scoped to the fixed 32-day seed window (8 × max half-life of 96h): a partial resync starting inside the retained history sees only that lookback while a full resync sees more, a bounded divergence at the 96h half-life ceiling (~0.4% on boundary days, near-zero at the default 24h). This boundary behavior is the same "Cold Start" condition documented below, not a chunking artifact.
 - Sync order (chronological requirement satisfied by walk-forward)
 - Chunk size (HC ingestion chunks don't affect persisted workout data)
 - Active `LoadSourceMode` (fatigue always uses workout-only TRIMP)
