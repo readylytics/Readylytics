@@ -38,6 +38,7 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
         .withPaletteAndUi(this)
         .withDevicesAndBackups(this)
         .withScoringProfiles(this, profile)
+        .withResidualFatigue(this)
         .withRecalcAndVersion(this)
 }
 

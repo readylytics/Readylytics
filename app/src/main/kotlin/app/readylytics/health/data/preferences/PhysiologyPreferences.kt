@@ -29,6 +29,10 @@ internal class PhysiologyPreferences
 
         private fun Float.toValidItrimB() = coerceIn(1.0f, 4.5f)
 
+        private fun Float.toValidFatigueHalfLife() = coerceIn(6f, 96f)
+
+        private fun Float.toValidFatigueGain() = coerceIn(0.1f, 5.0f)
+
         suspend fun updateMaxHeartRate(bpm: Int) {
             dataStore.updateData { it.toBuilder().setMaxHeartRate(bpm.toValidMaxHr()).build() }
         }
@@ -207,6 +211,22 @@ internal class PhysiologyPreferences
 
         suspend fun updateItrimB(value: Float) {
             dataStore.updateData { it.toBuilder().setItrimpB(value.toValidItrimB()).build() }
+        }
+
+        suspend fun updateResidualFatigueEnabled(enabled: Boolean) {
+            dataStore.updateData { it.toBuilder().setResidualFatigueEnabled(enabled).build() }
+        }
+
+        suspend fun updateResidualFatigueHalfLifeHours(hours: Float) {
+            dataStore.updateData {
+                it.toBuilder().setResidualFatigueHalfLifeHours(hours.toValidFatigueHalfLife()).build()
+            }
+        }
+
+        suspend fun updateResidualFatigueGain(value: Float) {
+            dataStore.updateData {
+                it.toBuilder().setResidualFatigueGain(value.toValidFatigueGain()).build()
+            }
         }
     }
 

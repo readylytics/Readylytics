@@ -90,6 +90,9 @@ interface DisplaySettings {
     suspend fun updateBanisterMultiplier(value: Float)
     suspend fun updateChengBeta(value: Float)
     suspend fun updateItrimB(value: Float)
+    suspend fun updateResidualFatigueEnabled(enabled: Boolean)
+    suspend fun updateResidualFatigueHalfLifeHours(hours: Float)
+    suspend fun updateResidualFatigueGain(value: Float)
     suspend fun updateBulkDisplayModeNoticeDismissed(dismissed: Boolean)
     suspend fun updateLastGlobalDisplayMode(mode: DashboardCardDisplayMode?)
 }

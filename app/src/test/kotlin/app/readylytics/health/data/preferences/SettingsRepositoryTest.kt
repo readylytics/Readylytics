@@ -342,6 +342,41 @@ class SettingsRepositoryTest {
      * This structural assertion guards against a future setter being given such a dependency.
      */
     @Test
+    fun `default residual fatigue settings are exposed`() =
+        runTest {
+            val prefs = repository.userPreferences.first()
+            assertEquals(true, prefs.residualFatigueEnabled)
+            assertEquals(24f, prefs.residualFatigueHalfLifeHours, 0f)
+            assertEquals(1.0f, prefs.residualFatigueGain, 0f)
+        }
+
+    @Test
+    fun `legacy proto without residual fatigue fields resolves defaults`() {
+        val prefs = UserPreferencesProto.getDefaultInstance().toDomainModel()
+
+        assertEquals(true, prefs.residualFatigueEnabled)
+        assertEquals(24f, prefs.residualFatigueHalfLifeHours, 0f)
+        assertEquals(1.0f, prefs.residualFatigueGain, 0f)
+    }
+
+    @Test
+    fun `residual fatigue settings persist through serializer round trip`() =
+        runTest {
+            dataStore.updateData {
+                UserPreferences(
+                    residualFatigueEnabled = false,
+                    residualFatigueHalfLifeHours = 48f,
+                    residualFatigueGain = 2.5f,
+                ).toProto()
+            }
+
+            val prefs = repository.userPreferences.first()
+            assertEquals(false, prefs.residualFatigueEnabled)
+            assertEquals(48f, prefs.residualFatigueHalfLifeHours, 0f)
+            assertEquals(2.5f, prefs.residualFatigueGain, 0f)
+        }
+
+    @Test
     fun `SettingsRepository has no DailySummaryDao dependency so pref switches never write summaries`() {
         val constructorParamTypes =
             SettingsRepository::class.java.declaredConstructors

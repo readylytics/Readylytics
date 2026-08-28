@@ -188,6 +188,28 @@ internal fun UserPreferences.withScoringProfiles(
             },
     )
 
+internal fun UserPreferences.withResidualFatigue(proto: UserPreferencesProto): UserPreferences =
+    copy(
+        residualFatigueEnabled =
+            if (proto.hasResidualFatigueEnabled()) {
+                proto.residualFatigueEnabled
+            } else {
+                SettingsDefaults.RESIDUAL_FATIGUE_ENABLED
+            },
+        residualFatigueHalfLifeHours =
+            if (proto.hasResidualFatigueHalfLifeHours() && proto.residualFatigueHalfLifeHours > 0f) {
+                proto.residualFatigueHalfLifeHours.coerceIn(6f, 96f)
+            } else {
+                SettingsDefaults.RESIDUAL_FATIGUE_HALF_LIFE_HOURS
+            },
+        residualFatigueGain =
+            if (proto.hasResidualFatigueGain() && proto.residualFatigueGain > 0f) {
+                proto.residualFatigueGain.coerceIn(0.1f, 5.0f)
+            } else {
+                SettingsDefaults.RESIDUAL_FATIGUE_GAIN
+            },
+    )
+
 internal fun UserPreferences.withRecalcAndVersion(proto: UserPreferencesProto): UserPreferences =
     copy(
         lastRecalcSleepScoreWeightProfile =

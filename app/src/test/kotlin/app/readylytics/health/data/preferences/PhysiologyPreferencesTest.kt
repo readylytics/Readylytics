@@ -114,4 +114,48 @@ class PhysiologyPreferencesTest {
             assertEquals(2.1f, proto.itrimpB, 0f)
             assertEquals(1.0f, proto.rasCalibration, 0f)
         }
+
+    @Test
+    fun `updateResidualFatigueEnabled persists the toggle`() =
+        runTest {
+            physiologyPreferences.updateResidualFatigueEnabled(false)
+            var proto = dataStore.data.first()
+            assertEquals(false, proto.residualFatigueEnabled)
+
+            physiologyPreferences.updateResidualFatigueEnabled(true)
+            proto = dataStore.data.first()
+            assertEquals(true, proto.residualFatigueEnabled)
+        }
+
+    @Test
+    fun `updateResidualFatigueHalfLifeHours persists in-range values and clamps out-of-range`() =
+        runTest {
+            physiologyPreferences.updateResidualFatigueHalfLifeHours(48f)
+            var proto = dataStore.data.first()
+            assertEquals(48f, proto.residualFatigueHalfLifeHours, 0f)
+
+            physiologyPreferences.updateResidualFatigueHalfLifeHours(2f)
+            proto = dataStore.data.first()
+            assertEquals(6f, proto.residualFatigueHalfLifeHours, 0f)
+
+            physiologyPreferences.updateResidualFatigueHalfLifeHours(120f)
+            proto = dataStore.data.first()
+            assertEquals(96f, proto.residualFatigueHalfLifeHours, 0f)
+        }
+
+    @Test
+    fun `updateResidualFatigueGain persists in-range values and clamps out-of-range`() =
+        runTest {
+            physiologyPreferences.updateResidualFatigueGain(2.5f)
+            var proto = dataStore.data.first()
+            assertEquals(2.5f, proto.residualFatigueGain, 0f)
+
+            physiologyPreferences.updateResidualFatigueGain(0.05f)
+            proto = dataStore.data.first()
+            assertEquals(0.1f, proto.residualFatigueGain, 0f)
+
+            physiologyPreferences.updateResidualFatigueGain(10f)
+            proto = dataStore.data.first()
+            assertEquals(5.0f, proto.residualFatigueGain, 0f)
+        }
 }

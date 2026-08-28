@@ -279,6 +279,80 @@ class SettingsViewModelTest {
         }
 
     @Test
+    fun `residual fatigue enabled event persists and does not trigger a recompute`() =
+        runTest {
+            val viewModel =
+                UISettingsViewModel(
+                    settingsReader,
+                    displaySettings,
+                    healthDataRefresh,
+                    workoutDetailLayoutRepository = mockk<WorkoutDetailLayoutRepository>(relaxed = true),
+                )
+            viewModel.sharingStarted = SharingStarted.Eagerly
+            viewModel.uiState
+
+            viewModel.onEvent(SettingsEvent.ResidualFatigueEnabledChanged(false))
+            advanceUntilIdle()
+
+            coVerify { displaySettings.updateResidualFatigueEnabled(false) }
+            coVerify(exactly = 0) { healthDataRefresh.refreshHistorical() }
+            coVerify(exactly = 0) { healthDataRefresh.refreshAffectedWindow() }
+
+            viewModel.viewModelScope.cancel()
+            advanceUntilIdle()
+        }
+
+    @Test
+    fun `residual fatigue half life event persists valid values and rejects invalid ones`() =
+        runTest {
+            val viewModel =
+                UISettingsViewModel(
+                    settingsReader,
+                    displaySettings,
+                    healthDataRefresh,
+                    workoutDetailLayoutRepository = mockk<WorkoutDetailLayoutRepository>(relaxed = true),
+                )
+            viewModel.sharingStarted = SharingStarted.Eagerly
+            viewModel.uiState
+
+            viewModel.onEvent(SettingsEvent.ResidualFatigueHalfLifeChanged(48f))
+            advanceUntilIdle()
+            coVerify { displaySettings.updateResidualFatigueHalfLifeHours(48f) }
+
+            viewModel.onEvent(SettingsEvent.ResidualFatigueHalfLifeChanged(5f))
+            advanceUntilIdle()
+            coVerify(exactly = 0) { displaySettings.updateResidualFatigueHalfLifeHours(5f) }
+
+            viewModel.viewModelScope.cancel()
+            advanceUntilIdle()
+        }
+
+    @Test
+    fun `residual fatigue gain event persists valid values and rejects invalid ones`() =
+        runTest {
+            val viewModel =
+                UISettingsViewModel(
+                    settingsReader,
+                    displaySettings,
+                    healthDataRefresh,
+                    workoutDetailLayoutRepository = mockk<WorkoutDetailLayoutRepository>(relaxed = true),
+                )
+            viewModel.sharingStarted = SharingStarted.Eagerly
+            viewModel.uiState
+
+            viewModel.onEvent(SettingsEvent.ResidualFatigueGainChanged(2.5f))
+            advanceUntilIdle()
+            coVerify { displaySettings.updateResidualFatigueGain(2.5f) }
+
+            viewModel.onEvent(SettingsEvent.ResidualFatigueGainChanged(10f))
+            advanceUntilIdle()
+            coVerify(exactly = 0) { displaySettings.updateResidualFatigueGain(10f) }
+
+            viewModel.viewModelScope.cancel()
+            advanceUntilIdle()
+        }
+
+    @Test
     fun `SyncSettingsViewModel resync event enqueues worker and isResyncing follows durable state`() =
         runTest {
             val mockRefresh = mockk<HealthDataRefresh>(relaxed = true)

@@ -140,6 +140,20 @@ class UISettingsViewModel
                         }
                     }
                 }
+                is SettingsEvent.ResidualFatigueEnabledChanged ->
+                    viewModelScope.launch { displaySettings.updateResidualFatigueEnabled(event.enabled) }
+                is SettingsEvent.ResidualFatigueHalfLifeChanged -> {
+                    val validation = SettingsValidators.FATIGUE_HALF_LIFE_RULE.validate(event.hours)
+                    if (validation is ValidationResult.Valid) {
+                        viewModelScope.launch { displaySettings.updateResidualFatigueHalfLifeHours(event.hours) }
+                    }
+                }
+                is SettingsEvent.ResidualFatigueGainChanged -> {
+                    val validation = SettingsValidators.FATIGUE_GAIN_RULE.validate(event.value)
+                    if (validation is ValidationResult.Valid) {
+                        viewModelScope.launch { displaySettings.updateResidualFatigueGain(event.value) }
+                    }
+                }
                 SettingsEvent.WorkoutDetailLayoutsResetConfirmed ->
                     viewModelScope.launch { workoutDetailLayoutRepository.resetAll() }
                 SettingsEvent.ResetTrimpToProfileDefaults ->

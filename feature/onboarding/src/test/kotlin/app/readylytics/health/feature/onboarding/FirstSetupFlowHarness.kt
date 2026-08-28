@@ -135,6 +135,15 @@ class FirstSetupFlowHarness(
 
         override suspend fun updateItrimB(value: Float) = error("Unexpected call: updateItrimB")
 
+        override suspend fun updateResidualFatigueEnabled(enabled: Boolean) =
+            error("Unexpected call: updateResidualFatigueEnabled")
+
+        override suspend fun updateResidualFatigueHalfLifeHours(hours: Float) =
+            error("Unexpected call: updateResidualFatigueHalfLifeHours")
+
+        override suspend fun updateResidualFatigueGain(value: Float) =
+            error("Unexpected call: updateResidualFatigueGain")
+
         override suspend fun updateBulkDisplayModeNoticeDismissed(dismissed: Boolean) =
             error("Unexpected call: updateBulkDisplayModeNoticeDismissed")
 

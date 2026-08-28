@@ -156,6 +156,9 @@ internal fun UserPreferencesProto.Builder.applyScoringAndRecalcFields(
         domain.lastRecalcHypersomniaOnsetPercent?.let { setLastRecalcHypersomniaOnsetPercent(it) }
         setScoringVersion(domain.scoringVersion)
         setTrimpNormalizationMigrated(domain.trimpNormalizationMigrated)
+        setResidualFatigueEnabled(domain.residualFatigueEnabled)
+        setResidualFatigueHalfLifeHours(domain.residualFatigueHalfLifeHours)
+        setResidualFatigueGain(domain.residualFatigueGain)
     }
 
 private fun mapSleepScoreWeightProfile(profile: SleepScoreWeightProfile): SleepScoreWeightProfileProto =

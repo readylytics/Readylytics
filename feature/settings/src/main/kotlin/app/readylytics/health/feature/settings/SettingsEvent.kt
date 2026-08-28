@@ -253,6 +253,18 @@ sealed interface SettingsEvent {
 
     data object ResetTrimpToProfileDefaults : SettingsEvent
 
+    data class ResidualFatigueEnabledChanged(
+        val enabled: Boolean,
+    ) : SettingsEvent
+
+    data class ResidualFatigueHalfLifeChanged(
+        val hours: Float,
+    ) : SettingsEvent
+
+    data class ResidualFatigueGainChanged(
+        val value: Float,
+    ) : SettingsEvent
+
     data class UnitSystemChanged(
         val unitSystem: app.readylytics.health.core.model.data.preferences.UnitSystem,
     ) : SettingsEvent
