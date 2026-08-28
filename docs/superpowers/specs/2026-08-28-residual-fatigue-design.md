@@ -26,17 +26,17 @@ Introduce a timestamp-aware Residual Fatigue model as an internal/shadow metric 
 
 ### New Defaults
 
-All three profiles get identical TRIMP parameters:
+Only `banisterMultiplier` is normalized. Cheng beta and iTRIMP B retain their profile-specific defaults — they control model shape, not magnitude scaling, and lack independent justification for unification at this time.
 
 | Profile   | banisterMultiplier | chengBeta | itrimB |
 |-----------|-------------------|-----------|--------|
-| ATHLETE   | 1.0               | 0.09      | 2.1    |
+| ATHLETE   | 1.0               | 0.07      | 2.9    |
 | ACTIVE    | 1.0               | 0.09      | 2.1    |
-| SEDENTARY | 1.0               | 0.09      | 2.1    |
+| SEDENTARY | 1.0               | 0.11      | 1.5    |
 
 `lnSigmaPrior` and `defaultSleepGoalHours` remain profile-specific (not TRIMP-related).
 
-**Principle:** TRIMP is the canonical training-load signal and must not silently change magnitude because of physiology profile selection. All three TRIMP model parameters (Banister multiplier, Cheng beta, iTRIMP B) follow this principle. Users retain the ability to override any parameter through advanced settings.
+**Principle:** The Banister multiplier is a pure magnitude scaler on TRIMP output. Profile-dependent multipliers silently change training-load signal magnitude, making TRIMP values non-comparable across profiles. Normalizing to 1.0 makes TRIMP the canonical, profile-independent training-load signal. Users retain the ability to override the multiplier through advanced settings.
 
 ### Existing User Migration
 
@@ -46,18 +46,19 @@ All three profiles get identical TRIMP parameters:
 
 Rules:
 - If stored `rasCalibration` matches old profile default (1.00 / 1.35 / 1.75), reset to 1.0
-- If stored `chengBeta` matches old default (0.07 / 0.09 / 0.11), reset to 0.09
-- If stored `itrimpB` matches old default (2.9 / 2.1 / 1.5), reset to 2.1
-- If stored value does not match any old default, user customized it — leave it alone
+- If stored value does not match any old default, leave it alone
+- Cheng beta and iTRIMP B are NOT migrated (they keep profile-specific defaults)
 - Set `trimpNormalizationMigrated = true` to prevent re-running
+
+**Known limitation:** The heuristic "stored value matches old default" cannot distinguish a user who selected a profile and accepted the default multiplier from a user who explicitly typed in that same value. In practice, manually typing exactly 1.35 or 1.75 is unlikely — the slider/input UX makes round values like 1.5 or 2.0 far more common for intentional overrides. However, this edge case exists: if a user deliberately set their multiplier to exactly 1.35 (the old ACTIVE default), the migration will incorrectly reset it to 1.0. Document this in release notes. The alternative — never migrating defaults — leaves the majority of users on stale profile-specific multipliers indefinitely, which is worse.
 
 Migration runs at app startup (in the existing `DatabaseReadyStartupInitializer` or equivalent preference-migration path) before any scoring. The next sync/recompute picks up the new values.
 
 ### Affected Recalculation Paths
 
-Every metric downstream of per-workout TRIMP changes when the multiplier changes:
+Every metric downstream of per-workout TRIMP changes when the Banister multiplier changes:
 
-1. `ComputeWorkoutTrimpUseCase` — reads `prefs.banisterMultiplier` / `chengBeta` / `itrimB`
+1. `ComputeWorkoutTrimpUseCase` — reads `prefs.banisterMultiplier` (affected), `chengBeta` / `itrimB` (unchanged)
 2. `ComputeDailyTrimpUseCase` — sums per-workout TRIMP
 3. `WorkoutRecordEntity.modelTrimp` — lazily backfilled on next walk-forward recompute
 4. `BuildLoadSeriesUseCase` — ATL / CTL / strainRatio / loadScore
@@ -71,10 +72,10 @@ Impact: ACTIVE users see TRIMP decrease ~26% (1.35 → 1.0). SEDENTARY users see
 
 | File | Change |
 |------|--------|
-| `core/model/.../PhysiologyProfile.kt` | Change enum parameter defaults |
+| `core/model/.../PhysiologyProfile.kt` | Change `banisterMultiplier` to 1.0 for all profiles (Cheng/iTRIMP unchanged) |
 | Proto schema (`user_preferences.proto`) | Add `trimp_normalization_migrated` bool field |
-| `app/.../UserPreferencesMapper.kt` (or startup initializer) | Add migration logic |
-| Golden snapshot fixtures | Update expected values |
+| `app/.../UserPreferencesMapper.kt` (or startup initializer) | Add Banister multiplier migration logic |
+| Golden snapshot fixtures | Update expected values for Banister-model tests |
 
 ---
 
@@ -148,12 +149,12 @@ class ComputeResidualFatigueUseCase @Inject constructor() {
 
 - Pure Kotlin, zero Android dependencies
 - Uses `WorkoutRecordEntity.endTime` as impulse timestamp
-- Uses `COALESCE(modelTrimp, trimp)` as per-workout TRIMP (handles pre-v6 rows)
+- **Workout TRIMP source — requires implementation-time verification:** The spec assumes `COALESCE(modelTrimp, trimp)` provides canonical per-workout training load. `modelTrimp` is the user-selected TRIMP model output (Banister/Cheng/iTRIMP); `trimp` is the legacy zone-weighted fallback. Before implementation, verify that fallback `trimp` represents the same canonical workout-load semantics as `modelTrimp` (i.e., both are integrated HR-based training impulse for the same workout boundary). If the semantics diverge (e.g., `trimp` uses a different HR integration method or includes non-workout time), prefer recomputing/backfilling `modelTrimp` for those rows rather than silently mixing models. This verification is a commit-3 prerequisite
 - Elapsed time in milliseconds internally, half-life in hours externally
 - Superposition: workouts stack additively
 - Rest days add no impulse, fatigue decays
 - Workouts crossing midnight work correctly (continuous time, not calendar days)
-- `evaluationTimeMs` = next-day midnight for daily snapshot storage (end of the scoring day)
+- **Daily snapshot timing:** `evaluationTimeMs` for persisted daily values is set to next-day midnight (00:00 of day+1 in the user's zone). This represents fatigue state at the end of the scoring day — it captures all workouts that ended on or before that day and applies full overnight decay. This is the value stored in `DailySummaryEntity.residualFatigue`. It is NOT necessarily the time at which Readiness is consumed by the user (which could be any time the next morning). The underlying model (`ComputeResidualFatigueUseCase.compute()`) accepts arbitrary `evaluationTimeMs` and can evaluate fatigue at any point in time — the daily snapshot is a persistence convenience, not a model limitation. Phase 2+ may evaluate at other timestamps (e.g., "current fatigue right now") using the same formula
 - Zero TRIMP and future workouts contribute nothing
 - When disabled, returns 0f
 
@@ -174,7 +175,7 @@ Residual Fatigue always uses **workout-only TRIMP**, regardless of `LoadSourceMo
 
 The existing codebase computes per-workout TRIMP through `ComputeWorkoutTrimpUseCase` → `ComputeDailyTrimpUseCase` regardless of the selected load source mode. `WorkoutRecordEntity.modelTrimp` stores the result. Everyday-HR TRIMP is a separate, independent computation.
 
-Residual Fatigue reads from `WorkoutRecordEntity.endTime` and `COALESCE(modelTrimp, trimp)`. It never touches everyday-HR TRIMP data.
+Residual Fatigue reads from `WorkoutRecordEntity.endTime` and per-workout canonical TRIMP (see Section 2, COALESCE verification requirement). It never touches everyday-HR TRIMP data.
 
 Changing `LoadSourceMode` does NOT change Residual Fatigue values.
 
@@ -190,13 +191,15 @@ Changing `LoadSourceMode` does NOT change Residual Fatigue values.
 | `fatigueGain` | 1.0 | 0.1–5.0 | dimensionless |
 | `enabled` | true | — | boolean |
 
-These are product/calibration defaults, not scientifically proven universal constants.
+**All values above are provisional calibration defaults and product guardrails.** They are not scientifically validated ranges. The defaults (24h half-life, 1.0 gain) were chosen as reasonable starting points for initial shadow-mode validation. They will be reviewed against real user data before Phase 2 promotion.
 
-### Range Rationale
+### Range Rationale (Product Guardrails)
 
-- **Half-life 6h floor:** Prevents numerical instability. Sub-6h recovery makes the metric meaninglessly volatile.
-- **Half-life 96h ceiling:** ~4 days. Covers even very slow recovery kinetics. Beyond this, the metric becomes indistinguishable from CTL (chronic training load).
-- **Gain 0.1–5.0:** Allows meaningful scaling without sign flip. 0.1 = heavily damped, 5.0 = amplified sensitivity.
+These bounds prevent user-configured values from producing degenerate or misleading output:
+
+- **Half-life 6h floor:** Sub-6h decay makes fatigue vanish within a single sleep cycle, rendering the metric meaninglessly volatile — it would never accumulate across training days.
+- **Half-life 96h ceiling:** ~4 days. Beyond this, fatigue accumulation becomes indistinguishable from chronic training load (CTL), defeating the purpose of a separate acute fatigue signal.
+- **Gain 0.1–5.0:** Prevents sign flip (gain > 0) and extreme sensitivity. 0.1 = heavily damped, 5.0 = amplified. The floor avoids a de-facto disable (use the toggle instead); the ceiling prevents unreasonable fatigue values that obscure real training patterns.
 
 ### Effective Value Hierarchy
 
@@ -306,21 +309,38 @@ No backup format version bump needed.
 
 ## 7. Walk-Forward Integration
 
-### Walk-Forward Fatigue Context
+### Walk-Forward Fatigue Context (State Accumulator)
 
 New file: `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/repository/WalkForwardFatigueContext.kt`
 
 ```kotlin
 data class WalkForwardFatigueContext(
-    val workouts: List<ComputeResidualFatigueUseCase.FatigueWorkoutInput>,
+    val workoutsByEndTimeMs: List<FatigueWorkoutInput>,
+    var accumulatedFatigue: Double = 0.0,
+    var lastEvaluationTimeMs: Long = Long.MIN_VALUE,
 )
 ```
 
-Prefetched once per walk-forward from `WorkoutDao`:
-- Range: `[walkForwardStart - maxLookbackDays, walkForwardEnd]`
-- Max lookback = 8 * maxHalfLifeHours / 24 = 8 * 96 / 24 = 32 days
-- Query: `SELECT endTime, COALESCE(modelTrimp, trimp) FROM workout_records WHERE endTime >= ? AND endTime <= ? ORDER BY endTime`
+**Prefetch:** One query per walk-forward from `WorkoutDao`, sorted by `endTime ASC`:
+- Range: `[walkForwardStart - seedLookbackDays, walkForwardEnd]`
+- Seed lookback = 8 * maxHalfLifeHours / 24 = 8 * 96 / 24 = 32 days (captures >99.6% of decayed signal)
+- Query: workouts with verified canonical TRIMP (see Section 3 — COALESCE verification)
 - Mapped to `FatigueWorkoutInput(endTimeMs, trimp)`
+
+**State accumulator pattern — O(workouts + days), not O(days * lookback):**
+
+During walk-forward processing, the fatigue context maintains a running accumulated state. For each scoring day:
+
+1. **Decay** accumulated fatigue from `lastEvaluationTimeMs` to current evaluation time: `accumulatedFatigue *= 2^(-(currentTimeMs - lastEvaluationTimeMs) / halfLifeMs)`
+2. **Add impulses** for any workouts with `endTimeMs` in `(lastEvaluationTimeMs, currentEvaluationTimeMs]`: `accumulatedFatigue += fatigueGain * trimp`
+3. **Persist** `accumulatedFatigue` as the day's `residualFatigue`
+4. **Advance** `lastEvaluationTimeMs = currentEvaluationTimeMs`
+
+The workout list is walked with a cursor index (no per-day filtering). Each workout is visited exactly once across the entire walk-forward. Total cost: O(W + D) where W = workouts in range, D = days recomputed.
+
+**Seed initialization:** Before day 1 of the walk-forward, iterate through all pre-range workouts (those in the lookback window before `walkForwardStart`) to compute the initial `accumulatedFatigue`. This seeds the accumulator so day 1 includes decayed contributions from prior workouts.
+
+**Equivalence:** The accumulator produces mathematically identical results to the summation formula `F(t) = Σ impulse_i * 2^(-(t - end_i) / halfLife)` — both are exact for exponential decay with superposition. The accumulator simply evaluates it incrementally.
 
 ### ScoringRepository Integration
 
@@ -334,26 +354,11 @@ suspend fun fetchWalkForwardFatigueContext(
 ```
 
 `ScoringRepositoryImpl`:
-- `fetchWalkForwardFatigueContext()` queries `WorkoutDao` with the lookback window
+- `fetchWalkForwardFatigueContext()` queries `WorkoutDao` with the lookback+range window, seeds the accumulator from pre-range workouts
 - `computeAndPersistDailySummary()` 5-arg overload gains optional `fatigueContext` parameter
-- Inside `computeDailySummary()`, after workouts are processed:
+- Inside `computeDailySummary()`, after workouts are processed, advances the accumulator and reads the current fatigue value
 
-```kotlin
-val fatigueConfig = ResidualFatigueConfig(
-    enabled = prefs.residualFatigueEnabled,
-    halfLifeHours = prefs.residualFatigueHalfLifeHours,
-    fatigueGain = prefs.residualFatigueGain,
-)
-val residualFatigue = computeResidualFatigueUseCase.compute(
-    evaluationTimeMs = context.nextDayMidnightMs,
-    workouts = fatigueContext?.workouts
-        ?.filter { it.endTimeMs <= context.nextDayMidnightMs }
-        ?: loadWorkoutsForFatigue(context),
-    config = fatigueConfig,
-)
-```
-
-The result is set on the `DailySummary` before persistence.
+For single-day recompute (no walk-forward context), falls back to the summation formula over a per-day workout query. This path is only used for individual day rescores, never for bulk walk-forward.
 
 ### DailyRecomputeSupport
 
@@ -363,25 +368,23 @@ The result is set on the `DailySummary` before persistence.
 
 ### Callers
 
-`DailySyncUseCase` and `ResyncRangeUseCase` already build walk-forward contexts before the day loop. They add a `fatigueContext = recomputeSupport.buildWalkForwardFatigueContext(...)` call alongside the existing TRIMP and baseline context builds, and pass it through.
-
-Single-day recompute (no walk-forward context) falls back to a per-day workout query internally.
+`DailySyncUseCase` and `ResyncRangeUseCase` already build walk-forward contexts before the day loop. They add a `fatigueContext = recomputeSupport.buildWalkForwardFatigueContext(...)` call alongside the existing TRIMP and baseline context builds, and pass it through. The fatigue context is mutable — each `recomputeDay` call advances its internal state.
 
 ---
 
 ## 8. Shadow Mode
 
-### Phase 1 Behavior
+### Phase 1 Behavior — Strictly Shadow-Only
 
-Residual Fatigue is computed and persisted on every `computeAndPersistDailySummary()` call but does NOT affect Readiness.
+Residual Fatigue is computed and persisted on every `computeAndPersistDailySummary()` call. **Zero Readiness behavior change.** This is a hard constraint, not a suggestion.
 
-Current Readiness formula remains:
+Current Readiness formula remains exactly:
 
 ```
 Readiness = 0.40 * Restoration + 0.30 * Sleep + 0.30 * Load
 ```
 
-No fourth pillar. No weight changes. `computeReadinessScore()` unchanged.
+No fourth pillar. No weight changes. No conditional logic that reads `residualFatigue` in the Readiness path. `computeReadinessScore()` must not be modified in any Phase 1 commit. The purpose of shadow mode is to validate the fatigue model against historical behavior before it influences any user-visible score.
 
 ### Future Architecture (NOT implemented)
 
@@ -428,11 +431,13 @@ Results must NOT depend on:
 
 ### Cold Start
 
-When workout history begins, `F(0) = 0` before any workouts. This is mathematically correct: no prior training = no residual fatigue.
+`F(0) = 0` at the boundary of available workout history. This is a model boundary condition — we lack earlier training data, not proof the user was fully rested. The result is a temporary underestimation of true fatigue during the first ~2-3 half-lives (48-72h at default 24h).
 
-**Warm-up transient:** The first ~2-3 half-lives (48-72h at default 24h) show lower-than-steady-state values. This is inherent to the exponential-decay model and is the same transient ATL/CTL exhibit. Document this in user-facing help text when the metric becomes visible.
+This transient is inherent to any exponential-decay model initialized without prior state (ATL/CTL exhibit the same). It is acceptable because:
+- For new users: Health Connect typically provides weeks of historical data; full resync reconstructs fatigue from all available workouts, so the underestimation window usually predates the first visible score.
+- For existing users: the recompute walks forward from the earliest retained workout data. Underestimation only affects days near the retention boundary, which are rarely viewed.
 
-If the user has pre-existing workout history (e.g., first install with Health Connect data), the full historical resync reconstructs fatigue from all available workouts — no warm-up artifact beyond the earliest available data.
+Document this boundary condition in developer documentation. When the metric becomes user-visible (Phase 2+), add user-facing help text explaining that fatigue accuracy improves after the first few days of data.
 
 ---
 
@@ -440,9 +445,10 @@ If the user has pre-existing workout history (e.g., first install with Health Co
 
 ### Computation Cost
 
-- **Historical reconstruction:** O(W) where W = number of workouts in lookback window. Max lookback = 32 days. Typical W = 30-60 workouts (1-2/day). Negligible.
-- **Incremental daily sync:** O(W) with W = workouts in 32-day window. Same cost. No raw-HR scan.
-- **Walk-forward N days:** One prefetch query + N * O(W_day) evaluations where W_day = workouts in lookback. Total O(N * W_max) where W_max ≈ 60. Negligible vs the sleep/TRIMP/baseline computations that dominate each day.
+- **Walk-forward N days (accumulator):** One prefetch query + O(W + D) where W = total workouts in range, D = days recomputed. Each workout is visited exactly once via cursor; each day performs one decay multiplication + impulse additions. Not O(D * W_lookback).
+- **Single-day recompute (fallback summation):** O(W_lookback) where W_lookback = workouts in 32-day window. Typical W_lookback = 30-60. Only used for individual day rescores outside walk-forward.
+- **Incremental daily sync (1 day):** O(W_lookback) via summation fallback. Negligible vs sleep/TRIMP computations.
+- No raw-HR scan in any path.
 
 ### Data Flow
 
@@ -504,8 +510,8 @@ Walk-forward fatigue context holds `List<FatigueWorkoutInput>` — two fields pe
 | 20 | ATHLETE user with 1.00 | Stays at 1.00 |
 | 21 | User who customized to 1.50 | Keeps 1.50 (not a known default) |
 | 22 | Migration flag prevents double-run | Second call is no-op |
-| 23 | Cheng beta migration (0.07 → 0.09) | Migrates if matches old default |
-| 24 | iTRIMP B migration (2.9 → 2.1) | Migrates if matches old default |
+| 23 | Cheng beta unchanged by migration | Profile-specific values preserved |
+| 24 | iTRIMP B unchanged by migration | Profile-specific values preserved |
 
 ### Debug/Comparison Mechanism
 
@@ -521,20 +527,20 @@ Pure query over stored `DailySummary` rows. No cloud telemetry. Callable from a 
 
 ## 12. Commit Sequence
 
-### Commit 1: Normalize TRIMP Defaults in Enum
+### Commit 1: Normalize Banister Multiplier in Enum
 
-**Purpose:** Change `PhysiologyProfile` enum parameter defaults to unified values.
+**Purpose:** Change `PhysiologyProfile.banisterMultiplier` to 1.0 for all profiles. `defaultChengBeta` and `defaultItrimB` remain profile-specific.
 
 **Files:**
 - `core/model/src/main/kotlin/app/readylytics/health/core/model/data/preferences/PhysiologyProfile.kt`
 
-**Tests:** Existing tests that reference `PhysiologyProfile.ACTIVE.banisterMultiplier` etc. must update expected values.
+**Tests:** Existing tests that reference `PhysiologyProfile.ACTIVE.banisterMultiplier` etc. must update expected values. Tests referencing `defaultChengBeta` / `defaultItrimB` should remain unchanged.
 
 **Behavior change:** None. The enum defaults only take effect when `updatePhysiologyProfile()` is called (new profile selection). Existing stored prefs unchanged.
 
 ### Commit 2: DataStore Migration for Existing Users
 
-**Purpose:** Migrate stored TRIMP parameters to new unified defaults for users who haven't manually customized them.
+**Purpose:** Migrate stored Banister multiplier to 1.0 for users who haven't manually customized it. Cheng beta and iTRIMP B are not migrated.
 
 **Files:**
 - Proto schema — add `trimp_normalization_migrated` field
@@ -543,7 +549,7 @@ Pure query over stored `DailySummary` rows. No cloud telemetry. Callable from a 
 
 **Tests:** `TrimpNormalizationMigrationTest` (tests 18-24 above)
 
-**Behavior change:** Yes. On next app launch + recompute, ACTIVE/SEDENTARY users see changed TRIMP values and all downstream metrics.
+**Behavior change:** Yes. On next app launch + recompute, ACTIVE/SEDENTARY users with Banister model selected see changed TRIMP values and all downstream metrics. Users on Cheng or iTRIMP models: no change (their multiplier was already profile-independent or not the Banister multiplier).
 
 ### Commit 3: Residual Fatigue Domain Model + Use Case
 
@@ -655,6 +661,7 @@ None of the above is implemented now.
 
 1. **Proto field numbers:** Exact field numbers for new proto fields must be assigned from the project's field-number registry to avoid collisions.
 2. **SettingsDefaults constants location:** Decide whether fatigue defaults live in `SettingsDefaults` object (alongside `TRIMP_MODEL`) or inline in `ResidualFatigueConfig`. Recommend `SettingsDefaults` for consistency.
+3. **COALESCE(modelTrimp, trimp) semantic verification:** Confirm that fallback `trimp` and `modelTrimp` represent the same canonical workout-load semantics. If they diverge, plan a backfill of `modelTrimp` for legacy rows instead of mixing models. This is a commit-3 prerequisite (see Section 2).
 
 ### Risks
 
