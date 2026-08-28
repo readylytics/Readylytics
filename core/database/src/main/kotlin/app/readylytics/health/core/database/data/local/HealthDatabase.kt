@@ -100,6 +100,6 @@ abstract class HealthDatabase : RoomDatabase() {
     abstract fun workoutRoutePointDao(): WorkoutRoutePointDao
 
     companion object {
-        const val DATABASE_VERSION = 12
+        const val DATABASE_VERSION = 13
     }
 }

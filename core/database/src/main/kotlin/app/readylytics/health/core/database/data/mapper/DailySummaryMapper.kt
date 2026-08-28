@@ -143,6 +143,7 @@ object DailySummaryMapper {
             everydayLoadConfidence = entity.everydayLoadConfidence,
             supplementalSleepDurationMinutes = entity.supplementalSleepDurationMinutes,
             napCount = entity.napCount,
+            residualFatigue = entity.residualFatigue,
         )
 
     private fun DailySummaryEntity.withBodyMetrics(domain: DailySummary): DailySummaryEntity =
@@ -192,5 +193,6 @@ object DailySummaryMapper {
             everydayLoadConfidence = domain.everydayLoadConfidence,
             supplementalSleepDurationMinutes = domain.supplementalSleepDurationMinutes,
             napCount = domain.napCount,
+            residualFatigue = domain.residualFatigue,
         )
 }

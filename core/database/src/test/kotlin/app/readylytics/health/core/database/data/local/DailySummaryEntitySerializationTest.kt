@@ -40,4 +40,24 @@ class DailySummaryEntitySerializationTest {
         val deserialized = json.decodeFromString<DailySummaryEntity>(serialized)
         assertEquals(original, deserialized)
     }
+
+    @Test
+    fun testSerializationRoundTripWithNullResidualFatigue() {
+        val original = DailySummaryEntity(dateMidnightMs = 123456789L, residualFatigue = null)
+        val json = Json { encodeDefaults = true }
+        val serialized = json.encodeToString(original)
+
+        val deserialized = json.decodeFromString<DailySummaryEntity>(serialized)
+        assertEquals(original, deserialized)
+    }
+
+    @Test
+    fun testSerializationRoundTripWithResidualFatigueValue() {
+        val original = DailySummaryEntity(dateMidnightMs = 123456789L, residualFatigue = 42.5f)
+        val json = Json { encodeDefaults = true }
+        val serialized = json.encodeToString(original)
+
+        val deserialized = json.decodeFromString<DailySummaryEntity>(serialized)
+        assertEquals(original, deserialized)
+    }
 }
