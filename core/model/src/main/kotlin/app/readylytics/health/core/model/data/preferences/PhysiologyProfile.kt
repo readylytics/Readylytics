@@ -17,14 +17,14 @@ enum class PhysiologyProfile(
     ACTIVE(
         lnSigmaPrior = 0.15f,
         defaultSleepGoalHours = 8.0f,
-        banisterMultiplier = 1.35f,
+        banisterMultiplier = 1.00f,
         defaultChengBeta = 0.09f,
         defaultItrimB = 2.1f,
     ),
     SEDENTARY(
         lnSigmaPrior = 0.20f,
         defaultSleepGoalHours = 7.5f,
-        banisterMultiplier = 1.75f,
+        banisterMultiplier = 1.00f,
         defaultChengBeta = 0.11f,
         defaultItrimB = 1.5f,
     ),
