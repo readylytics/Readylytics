@@ -41,7 +41,9 @@ class ComputeResidualFatigueUseCase
                 if (lastEvalMs == Long.MIN_VALUE) {
                     0.0
                 } else {
-                    val elapsed = (currentEvalMs - lastEvalMs).toDouble()
+                    // Clamp: an out-of-order advance (currentEvalMs before lastEvalMs) must decay,
+                    // never amplify the accumulated fatigue.
+                    val elapsed = (currentEvalMs - lastEvalMs).toDouble().coerceAtLeast(0.0)
                     accumulatedFatigue * 2.0.pow(-elapsed / halfLifeMs)
                 }
             for (impulse in newImpulses) {

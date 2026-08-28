@@ -126,6 +126,23 @@ class ComputeResidualFatigueUseCaseTest {
     }
 
     @Test
+    fun `out-of-order advance does not amplify accumulated fatigue`() {
+        // An advance with currentEvalMs before lastEvalMs would otherwise compute a negative
+        // elapsed and invert the decay into amplification; the clamp must keep fatigue flat.
+        val lastEvalMs = (24 * 3_600_000).toLong()
+        val outOfOrderEvalMs = (12 * 3_600_000).toLong()
+        val (acc, _) =
+            useCase.advanceAccumulator(
+                accumulatedFatigue = 100.0,
+                lastEvalMs = lastEvalMs,
+                currentEvalMs = outOfOrderEvalMs,
+                newImpulses = emptyList(),
+                config = defaultConfig,
+            )
+        assertEquals(100.0, acc, 0.001)
+    }
+
+    @Test
     fun `accumulator produces identical results to summation`() {
         val workouts = listOf(
             workout(endTimeMs = 0L, trimp = 100f),

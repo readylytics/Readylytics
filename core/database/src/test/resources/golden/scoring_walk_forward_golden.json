@@ -339,7 +339,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 11.004364
+        "residualFatigue": 11.196141
     },
     {
         "dateMidnightMs": 1717970400000,
@@ -406,7 +406,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 43.422028
+        "residualFatigue": 43.517914
     },
     {
         "dateMidnightMs": 1718056800000,
@@ -471,7 +471,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 21.711014
+        "residualFatigue": 21.758957
     },
     {
         "dateMidnightMs": 1718143200000,
@@ -537,7 +537,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 10.652217
+        "residualFatigue": 10.879478
     },
     {
         "dateMidnightMs": 1718229600000,
@@ -604,7 +604,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 67.233345
+        "residualFatigue": 67.34698
     },
     {
         "dateMidnightMs": 1718316000000,
@@ -669,7 +669,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 33.616673
+        "residualFatigue": 33.67349
     },
     {
         "dateMidnightMs": 1718402400000,
@@ -735,7 +735,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 16.661804
+        "residualFatigue": 16.836744
     },
     {
         "dateMidnightMs": 1718488800000,
@@ -801,7 +801,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 68.34336
+        "residualFatigue": 68.43083
     },
     {
         "dateMidnightMs": 1718575200000,
@@ -868,7 +868,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 34.17168
+        "residualFatigue": 34.215416
     },
     {
         "dateMidnightMs": 1718661600000,
@@ -935,7 +935,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 16.937716
+        "residualFatigue": 17.107708
     },
     {
         "dateMidnightMs": 1718748000000,
@@ -1001,7 +1001,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 55.38496
+        "residualFatigue": 55.469955
     },
     {
         "dateMidnightMs": 1718834400000,
@@ -1066,7 +1066,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 27.69248
+        "residualFatigue": 27.734978
     },
     {
         "dateMidnightMs": 1718920800000,
@@ -1132,7 +1132,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 13.604415
+        "residualFatigue": 13.867489
     },
     {
         "dateMidnightMs": 1719007200000,
@@ -1198,7 +1198,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 61.199547
+        "residualFatigue": 61.33108
     },
     {
         "dateMidnightMs": 1719093600000,
@@ -1263,7 +1263,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 30.599773
+        "residualFatigue": 30.66554
     },
     {
         "dateMidnightMs": 1719180000000,
@@ -1329,7 +1329,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 15.065462
+        "residualFatigue": 15.33277
     },
     {
         "dateMidnightMs": 1719266400000,
@@ -1396,7 +1396,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 56.958885
+        "residualFatigue": 57.092537
     },
     {
         "dateMidnightMs": 1719352800000,
@@ -1461,7 +1461,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 28.479443
+        "residualFatigue": 28.546268
     },
     {
         "dateMidnightMs": 1719439200000,
@@ -1528,7 +1528,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 14.056455
+        "residualFatigue": 14.273134
     },
     {
         "dateMidnightMs": 1719525600000,
@@ -1594,7 +1594,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 78.956955
+        "residualFatigue": 79.06529
     },
     {
         "dateMidnightMs": 1719612000000,
@@ -1659,7 +1659,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 39.478477
+        "residualFatigue": 39.532646
     },
     {
         "dateMidnightMs": 1719698400000,
@@ -1719,7 +1719,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 19.526749
+        "residualFatigue": 19.766323
     },
     {
         "dateMidnightMs": 1719784800000,
@@ -1760,7 +1760,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 90.14963
+        "residualFatigue": 90.26942
     },
     {
         "dateMidnightMs": 1719871200000,
@@ -1825,7 +1825,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 45.074814
+        "residualFatigue": 45.13471
     },
     {
         "dateMidnightMs": 1719957600000,
@@ -1891,7 +1891,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 22.344336
+        "residualFatigue": 22.567354
     },
     {
         "dateMidnightMs": 1720044000000,
@@ -1957,7 +1957,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 67.74627
+        "residualFatigue": 67.85778
     },
     {
         "dateMidnightMs": 1720130400000,
@@ -2022,7 +2022,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 33.873135
+        "residualFatigue": 33.92889
     },
     {
         "dateMidnightMs": 1720216800000,
@@ -2088,7 +2088,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 16.655596
+        "residualFatigue": 16.964445
     },
     {
         "dateMidnightMs": 1720303200000,
@@ -2154,7 +2154,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 52.7379
+        "residualFatigue": 52.892323
     },
     {
         "dateMidnightMs": 1720389600000,
@@ -2219,7 +2219,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 26.36895
+        "residualFatigue": 26.446161
     },
     {
         "dateMidnightMs": 1720476000000,
@@ -2286,7 +2286,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 12.870465
+        "residualFatigue": 13.223081
     },
     {
         "dateMidnightMs": 1720562400000,
@@ -2352,7 +2352,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 78.88598
+        "residualFatigue": 79.06229
     },
     {
         "dateMidnightMs": 1720648800000,
@@ -2419,7 +2419,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 39.44299
+        "residualFatigue": 39.531143
     },
     {
         "dateMidnightMs": 1720735200000,
@@ -2486,7 +2486,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 19.500502
+        "residualFatigue": 19.765572
     },
     {
         "dateMidnightMs": 1720821600000,
@@ -2552,7 +2552,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 67.8737
+        "residualFatigue": 68.00624
     },
     {
         "dateMidnightMs": 1720908000000,
@@ -2617,7 +2617,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 33.93685
+        "residualFatigue": 34.00312
     },
     {
         "dateMidnightMs": 1720994400000,
@@ -2683,7 +2683,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 16.794949
+        "residualFatigue": 17.00156
     },
     {
         "dateMidnightMs": 1721080800000,
@@ -2749,7 +2749,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 87.09844
+        "residualFatigue": 87.201744
     },
     {
         "dateMidnightMs": 1721167200000,
@@ -2814,7 +2814,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 43.54922
+        "residualFatigue": 43.600872
     },
     {
         "dateMidnightMs": 1721253600000,
@@ -2880,7 +2880,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 21.4916
+        "residualFatigue": 21.800436
     },
     {
         "dateMidnightMs": 1721340000000,
@@ -2946,7 +2946,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 76.96875
+        "residualFatigue": 77.12317
     },
     {
         "dateMidnightMs": 1721426400000,
@@ -3011,7 +3011,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 38.484375
+        "residualFatigue": 38.561584
     },
     {
         "dateMidnightMs": 1721512800000,
@@ -3078,7 +3078,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 19.015142
+        "residualFatigue": 19.280792
     },
     {
         "dateMidnightMs": 1721599200000,
@@ -3144,7 +3144,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 77.823975
+        "residualFatigue": 77.9568
     },
     {
         "dateMidnightMs": 1721685600000,
@@ -3209,7 +3209,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 38.911987
+        "residualFatigue": 38.9784
     },
     {
         "dateMidnightMs": 1721772000000,
@@ -3275,7 +3275,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 19.148567
+        "residualFatigue": 19.4892
     },
     {
         "dateMidnightMs": 1721858400000,
@@ -3340,7 +3340,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 65.50081
+        "residualFatigue": 65.67113
     },
     {
         "dateMidnightMs": 1721944800000,
@@ -3405,7 +3405,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 32.750404
+        "residualFatigue": 32.835564
     },
     {
         "dateMidnightMs": 1722031200000,
@@ -3471,7 +3471,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 16.116518
+        "residualFatigue": 16.417782
     },
     {
         "dateMidnightMs": 1722117600000,
@@ -3537,7 +3537,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 50.629654
+        "residualFatigue": 50.780285
     },
     {
         "dateMidnightMs": 1722204000000,
@@ -3602,7 +3602,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 25.314827
+        "residualFatigue": 25.390142
     },
     {
         "dateMidnightMs": 1722290400000,
@@ -3668,7 +3668,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 12.3905525
+        "residualFatigue": 12.695071
     },
     {
         "dateMidnightMs": 1722376800000,
@@ -3734,7 +3734,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 45,
         "napCount": 1,
-        "residualFatigue": 67.0347
+        "residualFatigue": 67.18696
     },
     {
         "dateMidnightMs": 1722463200000,
@@ -3799,7 +3799,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 33.51735
+        "residualFatigue": 33.59348
     },
     {
         "dateMidnightMs": 1722549600000,
@@ -3865,7 +3865,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 16.54021
+        "residualFatigue": 16.79674
     },
     {
         "dateMidnightMs": 1722636000000,
@@ -3930,7 +3930,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 63.824497
+        "residualFatigue": 63.952763
     },
     {
         "dateMidnightMs": 1722722400000,
@@ -3997,7 +3997,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 31.912249
+        "residualFatigue": 31.976381
     },
     {
         "dateMidnightMs": 1722808800000,
@@ -4063,7 +4063,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 15.78983
+        "residualFatigue": 15.988191
     },
     {
         "dateMidnightMs": 1722895200000,
@@ -4130,7 +4130,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 78.60101
+        "residualFatigue": 78.700195
     },
     {
         "dateMidnightMs": 1722981600000,
@@ -4195,7 +4195,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 39.300507
+        "residualFatigue": 39.350098
     },
     {
         "dateMidnightMs": 1723068000000,
@@ -4261,7 +4261,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 19.4126
+        "residualFatigue": 19.675049
     },
     {
         "dateMidnightMs": 1723154400000,
@@ -4327,7 +4327,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 65.21355
+        "residualFatigue": 65.34477
     },
     {
         "dateMidnightMs": 1723240800000,
@@ -4392,7 +4392,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 32.606773
+        "residualFatigue": 32.672386
     },
     {
         "dateMidnightMs": 1723327200000,
@@ -4458,7 +4458,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 16.086378
+        "residualFatigue": 16.336193
     },
     {
         "dateMidnightMs": 1723413600000,
@@ -4524,7 +4524,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 84.78095
+        "residualFatigue": 84.90586
     },
     {
         "dateMidnightMs": 1723500000000,
@@ -4589,7 +4589,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 42.390476
+        "residualFatigue": 42.45293
     },
     {
         "dateMidnightMs": 1723586400000,
@@ -4655,7 +4655,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 20.919043
+        "residualFatigue": 21.226465
     },
     {
         "dateMidnightMs": 1723672800000,
@@ -4721,7 +4721,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 87.23648
+        "residualFatigue": 87.3902
     },
     {
         "dateMidnightMs": 1723759200000,
@@ -4786,7 +4786,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 43.61824
+        "residualFatigue": 43.6951
     },
     {
         "dateMidnightMs": 1723845600000,
@@ -4852,7 +4852,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 21.592295
+        "residualFatigue": 21.84755
     },
     {
         "dateMidnightMs": 1723932000000,
@@ -4918,7 +4918,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 62.159294
+        "residualFatigue": 62.286922
     },
     {
         "dateMidnightMs": 1724018400000,
@@ -4983,7 +4983,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 31.079647
+        "residualFatigue": 31.143461
     },
     {
         "dateMidnightMs": 1724104800000,
@@ -5049,7 +5049,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 15.240067
+        "residualFatigue": 15.571731
     },
     {
         "dateMidnightMs": 1724191200000,
@@ -5115,7 +5115,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 57.11932
+        "residualFatigue": 57.285152
     },
     {
         "dateMidnightMs": 1724277600000,
@@ -5180,7 +5180,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 28.55966
+        "residualFatigue": 28.642576
     },
     {
         "dateMidnightMs": 1724364000000,
@@ -5247,7 +5247,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 13.97992
+        "residualFatigue": 14.321288
     },
     {
         "dateMidnightMs": 1724450400000,
@@ -5313,7 +5313,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 75.77549
+        "residualFatigue": 75.946175
     },
     {
         "dateMidnightMs": 1724536800000,
@@ -5378,7 +5378,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 37.887745
+        "residualFatigue": 37.973087
     },
     {
         "dateMidnightMs": 1724623200000,
@@ -5444,7 +5444,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 18.743235
+        "residualFatigue": 18.986544
     },
     {
         "dateMidnightMs": 1724709600000,
@@ -5510,7 +5510,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 79.01063
+        "residualFatigue": 79.13228
     },
     {
         "dateMidnightMs": 1724796000000,
@@ -5575,7 +5575,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 39.505314
+        "residualFatigue": 39.56614
     },
     {
         "dateMidnightMs": 1724882400000,
@@ -5636,7 +5636,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 19.5593
+        "residualFatigue": 19.78307
     },
     {
         "dateMidnightMs": 1724968800000,
@@ -5665,7 +5665,7 @@
         "loadScoreEverydayHr": 100.0,
         "everydayCoverageMinutes": 0,
         "everydayLoadConfidence": "NONE",
-        "residualFatigue": 9.77965
+        "residualFatigue": 9.891535
     },
     {
         "dateMidnightMs": 1725055200000,
@@ -5694,7 +5694,7 @@
         "loadScoreEverydayHr": 100.0,
         "everydayCoverageMinutes": 0,
         "everydayLoadConfidence": "NONE",
-        "residualFatigue": 4.889825
+        "residualFatigue": 4.9457674
     },
     {
         "dateMidnightMs": 1725141600000,
@@ -5723,7 +5723,7 @@
         "loadScoreEverydayHr": 100.0,
         "everydayCoverageMinutes": 0,
         "everydayLoadConfidence": "NONE",
-        "residualFatigue": 2.176219
+        "residualFatigue": 2.4728837
     },
     {
         "dateMidnightMs": 1725228000000,
@@ -5752,7 +5752,7 @@
         "loadScoreEverydayHr": 100.0,
         "everydayCoverageMinutes": 0,
         "everydayLoadConfidence": "NONE",
-        "residualFatigue": 1.0881095
+        "residualFatigue": 1.2364419
     },
     {
         "dateMidnightMs": 1725314400000,
@@ -5781,7 +5781,7 @@
         "loadScoreEverydayHr": 100.0,
         "everydayCoverageMinutes": 12,
         "everydayLoadConfidence": "LOW",
-        "residualFatigue": 0.54405475
+        "residualFatigue": 0.6182209
     },
     {
         "dateMidnightMs": 1725400800000,
@@ -5846,7 +5846,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 0.0
+        "residualFatigue": 0.30911046
     },
     {
         "dateMidnightMs": 1725487200000,
@@ -5912,7 +5912,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 56.649292
+        "residualFatigue": 56.803844
     },
     {
         "dateMidnightMs": 1725573600000,
@@ -5977,7 +5977,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 28.324646
+        "residualFatigue": 28.401922
     },
     {
         "dateMidnightMs": 1725660000000,
@@ -6043,7 +6043,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 14.162323
+        "residualFatigue": 14.200961
     },
     {
         "dateMidnightMs": 1725746400000,
@@ -6109,7 +6109,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 58.443565
+        "residualFatigue": 58.462887
     },
     {
         "dateMidnightMs": 1725832800000,
@@ -6174,7 +6174,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 29.221783
+        "residualFatigue": 29.231443
     },
     {
         "dateMidnightMs": 1725919200000,
@@ -6240,7 +6240,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 14.610891
+        "residualFatigue": 14.615722
     },
     {
         "dateMidnightMs": 1726005600000,
@@ -6306,7 +6306,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 72.21738
+        "residualFatigue": 72.21979
     },
     {
         "dateMidnightMs": 1726092000000,
@@ -6371,7 +6371,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 36.10869
+        "residualFatigue": 36.109894
     },
     {
         "dateMidnightMs": 1726178400000,
@@ -6437,7 +6437,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 17.833057
+        "residualFatigue": 18.054947
     },
     {
         "dateMidnightMs": 1726264800000,
@@ -6503,7 +6503,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 77.659004
+        "residualFatigue": 77.76994
     },
     {
         "dateMidnightMs": 1726351200000,
@@ -6568,7 +6568,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 38.829502
+        "residualFatigue": 38.88497
     },
     {
         "dateMidnightMs": 1726437600000,
@@ -6633,7 +6633,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 19.214115
+        "residualFatigue": 19.442486
     },
     {
         "dateMidnightMs": 1726524000000,
@@ -6698,7 +6698,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 70.50759
+        "residualFatigue": 70.62177
     },
     {
         "dateMidnightMs": 1726610400000,
@@ -6763,7 +6763,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 35.253796
+        "residualFatigue": 35.310886
     },
     {
         "dateMidnightMs": 1726696800000,
@@ -6830,7 +6830,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 17.373335
+        "residualFatigue": 17.655443
     },
     {
         "dateMidnightMs": 1726783200000,
@@ -6896,7 +6896,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 55.48741
+        "residualFatigue": 55.628468
     },
     {
         "dateMidnightMs": 1726869600000,
@@ -6961,7 +6961,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 27.743706
+        "residualFatigue": 27.814234
     },
     {
         "dateMidnightMs": 1726956000000,
@@ -7027,7 +7027,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 13.603328
+        "residualFatigue": 13.907117
     },
     {
         "dateMidnightMs": 1727042400000,
@@ -7093,7 +7093,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 45.303337
+        "residualFatigue": 45.45523
     },
     {
         "dateMidnightMs": 1727128800000,
@@ -7158,7 +7158,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 22.651669
+        "residualFatigue": 22.727615
     },
     {
         "dateMidnightMs": 1727215200000,
@@ -7224,7 +7224,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 11.087942
+        "residualFatigue": 11.363808
     },
     {
         "dateMidnightMs": 1727301600000,
@@ -7289,7 +7289,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 64.79466
+        "residualFatigue": 64.932594
     },
     {
         "dateMidnightMs": 1727388000000,
@@ -7354,7 +7354,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 32.39733
+        "residualFatigue": 32.466297
     },
     {
         "dateMidnightMs": 1727474400000,
@@ -7420,7 +7420,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 16.01585
+        "residualFatigue": 16.233149
     },
     {
         "dateMidnightMs": 1727560800000,
@@ -7486,7 +7486,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 53.551533
+        "residualFatigue": 53.660183
     },
     {
         "dateMidnightMs": 1727647200000,
@@ -7551,7 +7551,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 26.775766
+        "residualFatigue": 26.830091
     },
     {
         "dateMidnightMs": 1727733600000,
@@ -7617,7 +7617,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 13.237486
+        "residualFatigue": 13.415046
     },
     {
         "dateMidnightMs": 1727820000000,
@@ -7683,7 +7683,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 60.35903
+        "residualFatigue": 60.44781
     },
     {
         "dateMidnightMs": 1727906400000,
@@ -7748,7 +7748,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 30.179516
+        "residualFatigue": 30.223906
     },
     {
         "dateMidnightMs": 1727992800000,
@@ -7814,7 +7814,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 14.85831
+        "residualFatigue": 15.111953
     },
     {
         "dateMidnightMs": 1728079200000,
@@ -7879,7 +7879,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 56.514973
+        "residualFatigue": 56.641796
     },
     {
         "dateMidnightMs": 1728165600000,
@@ -7946,7 +7946,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 28.257486
+        "residualFatigue": 28.320898
     },
     {
         "dateMidnightMs": 1728252000000,
@@ -8012,7 +8012,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 13.950839
+        "residualFatigue": 14.160449
     },
     {
         "dateMidnightMs": 1728338400000,
@@ -8078,7 +8078,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 70.476135
+        "residualFatigue": 70.58094
     },
     {
         "dateMidnightMs": 1728424800000,
@@ -8143,7 +8143,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 35.238068
+        "residualFatigue": 35.29047
     },
     {
         "dateMidnightMs": 1728511200000,
@@ -8209,7 +8209,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 17.409111
+        "residualFatigue": 17.645235
     },
     {
         "dateMidnightMs": 1728597600000,
@@ -8275,7 +8275,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 94.73904
+        "residualFatigue": 94.8571
     },
     {
         "dateMidnightMs": 1728684000000,
@@ -8340,7 +8340,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 47.36952
+        "residualFatigue": 47.42855
     },
     {
         "dateMidnightMs": 1728770400000,
@@ -8406,7 +8406,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 23.49302
+        "residualFatigue": 23.714275
     },
     {
         "dateMidnightMs": 1728856800000,
@@ -8472,7 +8472,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 63.29976
+        "residualFatigue": 63.41039
     },
     {
         "dateMidnightMs": 1728943200000,
@@ -8537,7 +8537,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 31.64988
+        "residualFatigue": 31.705194
     },
     {
         "dateMidnightMs": 1729029600000,
@@ -8603,7 +8603,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 15.57689
+        "residualFatigue": 15.852597
     },
     {
         "dateMidnightMs": 1729116000000,
@@ -8668,7 +8668,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 74.69969
+        "residualFatigue": 74.83754
     },
     {
         "dateMidnightMs": 1729202400000,
@@ -8733,7 +8733,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 37.349846
+        "residualFatigue": 37.41877
     },
     {
         "dateMidnightMs": 1729288800000,
@@ -8799,7 +8799,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 18.33885
+        "residualFatigue": 18.709385
     },
     {
         "dateMidnightMs": 1729375200000,
@@ -8865,7 +8865,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 75.09891
+        "residualFatigue": 75.28417
     },
     {
         "dateMidnightMs": 1729461600000,
@@ -8930,7 +8930,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 37.549454
+        "residualFatigue": 37.642086
     },
     {
         "dateMidnightMs": 1729548000000,
@@ -8996,7 +8996,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 18.573347
+        "residualFatigue": 18.821043
     },
     {
         "dateMidnightMs": 1729634400000,
@@ -9062,7 +9062,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 62.174206
+        "residualFatigue": 62.298054
     },
     {
         "dateMidnightMs": 1729720800000,
@@ -9127,7 +9127,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 31.087103
+        "residualFatigue": 31.149027
     },
     {
         "dateMidnightMs": 1729807200000,
@@ -9193,7 +9193,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 15.282179
+        "residualFatigue": 15.574513
     },
     {
         "dateMidnightMs": 1729893600000,
@@ -9259,7 +9259,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 62.329964
+        "residualFatigue": 62.47613
     },
     {
         "dateMidnightMs": 1729980000000,
@@ -9324,7 +9324,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 30.277775
+        "residualFatigue": 30.348778
     },
     {
         "dateMidnightMs": 1730070000000,
@@ -9391,7 +9391,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 14.888682
+        "residualFatigue": 15.174389
     },
     {
         "dateMidnightMs": 1730156400000,
@@ -9457,7 +9457,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 65.537094
+        "residualFatigue": 65.67995
     },
     {
         "dateMidnightMs": 1730242800000,
@@ -9522,7 +9522,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 32.768547
+        "residualFatigue": 32.839973
     },
     {
         "dateMidnightMs": 1730329200000,
@@ -9588,7 +9588,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 16.183561
+        "residualFatigue": 16.419987
     },
     {
         "dateMidnightMs": 1730415600000,
@@ -9654,7 +9654,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 86.36148
+        "residualFatigue": 86.47969
     },
     {
         "dateMidnightMs": 1730502000000,
@@ -9719,7 +9719,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 43.18074
+        "residualFatigue": 43.239845
     },
     {
         "dateMidnightMs": 1730588400000,
@@ -9785,7 +9785,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 21.382822
+        "residualFatigue": 21.619923
     },
     {
         "dateMidnightMs": 1730674800000,
@@ -9851,7 +9851,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 74.40101
+        "residualFatigue": 74.519554
     },
     {
         "dateMidnightMs": 1730761200000,
@@ -9916,7 +9916,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 37.200504
+        "residualFatigue": 37.259777
     },
     {
         "dateMidnightMs": 1730847600000,
@@ -9982,7 +9982,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 18.373327
+        "residualFatigue": 18.629889
     },
     {
         "dateMidnightMs": 1730934000000,
@@ -10048,7 +10048,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 74.16939
+        "residualFatigue": 74.29767
     },
     {
         "dateMidnightMs": 1731020400000,
@@ -10113,7 +10113,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 37.084694
+        "residualFatigue": 37.148834
     },
     {
         "dateMidnightMs": 1731106800000,
@@ -10179,7 +10179,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 18.236605
+        "residualFatigue": 18.574417
     },
     {
         "dateMidnightMs": 1731193200000,
@@ -10245,7 +10245,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 56.66213
+        "residualFatigue": 56.83103
     },
     {
         "dateMidnightMs": 1731279600000,
@@ -10310,7 +10310,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 28.331064
+        "residualFatigue": 28.415516
     },
     {
         "dateMidnightMs": 1731366000000,
@@ -10376,7 +10376,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 13.916666
+        "residualFatigue": 14.207758
     },
     {
         "dateMidnightMs": 1731452400000,
@@ -10442,7 +10442,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 54.155964
+        "residualFatigue": 54.30151
     },
     {
         "dateMidnightMs": 1731538800000,
@@ -10507,7 +10507,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 27.077982
+        "residualFatigue": 27.150755
     },
     {
         "dateMidnightMs": 1731625200000,
@@ -10573,7 +10573,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 13.2851515
+        "residualFatigue": 13.575377
     },
     {
         "dateMidnightMs": 1731711600000,
@@ -10638,7 +10638,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 59.00598
+        "residualFatigue": 59.151096
     },
     {
         "dateMidnightMs": 1731798000000,
@@ -10703,7 +10703,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 29.50299
+        "residualFatigue": 29.575548
     },
     {
         "dateMidnightMs": 1731884400000,
@@ -10769,7 +10769,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 14.565778
+        "residualFatigue": 14.787774
     },
     {
         "dateMidnightMs": 1731970800000,
@@ -10835,7 +10835,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 57.19731
+        "residualFatigue": 57.308308
     },
     {
         "dateMidnightMs": 1732057200000,
@@ -10900,7 +10900,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 28.598656
+        "residualFatigue": 28.654154
     },
     {
         "dateMidnightMs": 1732143600000,
@@ -10966,7 +10966,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 14.114962
+        "residualFatigue": 14.327077
     },
     {
         "dateMidnightMs": 1732230000000,
@@ -11031,7 +11031,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 78.69511
+        "residualFatigue": 78.80116
     },
     {
         "dateMidnightMs": 1732316400000,
@@ -11096,7 +11096,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 39.347553
+        "residualFatigue": 39.40058
     },
     {
         "dateMidnightMs": 1732402800000,
@@ -11162,7 +11162,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 19.46923
+        "residualFatigue": 19.70029
     },
     {
         "dateMidnightMs": 1732489200000,
@@ -11228,7 +11228,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 98.47015
+        "residualFatigue": 98.585686
     },
     {
         "dateMidnightMs": 1732575600000,
@@ -11293,7 +11293,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 49.235077
+        "residualFatigue": 49.292843
     },
     {
         "dateMidnightMs": 1732662000000,
@@ -11358,7 +11358,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 24.422562
+        "residualFatigue": 24.646421
     },
     {
         "dateMidnightMs": 1732748400000,
@@ -11424,7 +11424,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 93.45969
+        "residualFatigue": 93.57162
     },
     {
         "dateMidnightMs": 1732834800000,
@@ -11489,7 +11489,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 46.729843
+        "residualFatigue": 46.78581
     },
     {
         "dateMidnightMs": 1732921200000,
@@ -11555,7 +11555,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 23.085087
+        "residualFatigue": 23.392904
     },
     {
         "dateMidnightMs": 1733007600000,
@@ -11620,7 +11620,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 61.65652
+        "residualFatigue": 61.81043
     },
     {
         "dateMidnightMs": 1733094000000,
@@ -11685,7 +11685,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 30.82826
+        "residualFatigue": 30.905214
     },
     {
         "dateMidnightMs": 1733180400000,
@@ -11751,7 +11751,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 15.067507
+        "residualFatigue": 15.452607
     },
     {
         "dateMidnightMs": 1733266800000,
@@ -11817,7 +11817,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 59.00864
+        "residualFatigue": 59.201187
     },
     {
         "dateMidnightMs": 1733353200000,
@@ -11882,7 +11882,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 29.50432
+        "residualFatigue": 29.600594
     },
     {
         "dateMidnightMs": 1733439600000,
@@ -11948,7 +11948,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 14.434783
+        "residualFatigue": 14.800297
     },
     {
         "dateMidnightMs": 1733526000000,
@@ -12014,7 +12014,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 86.84319
+        "residualFatigue": 87.025955
     },
     {
         "dateMidnightMs": 1733612400000,
@@ -12079,7 +12079,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 43.421597
+        "residualFatigue": 43.512978
     },
     {
         "dateMidnightMs": 1733698800000,
@@ -12146,7 +12146,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 21.515041
+        "residualFatigue": 21.756489
     },
     {
         "dateMidnightMs": 1733785200000,
@@ -12211,7 +12211,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 59.4038
+        "residualFatigue": 59.524525
     },
     {
         "dateMidnightMs": 1733871600000,
@@ -12276,7 +12276,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 29.7019
+        "residualFatigue": 29.762262
     },
     {
         "dateMidnightMs": 1733958000000,
@@ -12342,7 +12342,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 14.649877
+        "residualFatigue": 14.881131
     },
     {
         "dateMidnightMs": 1734044400000,
@@ -12408,7 +12408,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 59.068665
+        "residualFatigue": 59.18429
     },
     {
         "dateMidnightMs": 1734130800000,
@@ -12475,7 +12475,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 29.534332
+        "residualFatigue": 29.592146
     },
     {
         "dateMidnightMs": 1734217200000,
@@ -12542,7 +12542,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 14.456128
+        "residualFatigue": 14.796073
     },
     {
         "dateMidnightMs": 1734303600000,
@@ -12609,7 +12609,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 72.8467
+        "residualFatigue": 73.01667
     },
     {
         "dateMidnightMs": 1734390000000,
@@ -12674,7 +12674,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 36.42335
+        "residualFatigue": 36.508335
     },
     {
         "dateMidnightMs": 1734476400000,
@@ -12741,7 +12741,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 18.02165
+        "residualFatigue": 18.254168
     },
     {
         "dateMidnightMs": 1734562800000,
@@ -12808,7 +12808,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 59.111435
+        "residualFatigue": 59.22769
     },
     {
         "dateMidnightMs": 1734649200000,
@@ -12873,7 +12873,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 29.555717
+        "residualFatigue": 29.613846
     },
     {
         "dateMidnightMs": 1734735600000,
@@ -12939,7 +12939,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 14.575734
+        "residualFatigue": 14.806923
     },
     {
         "dateMidnightMs": 1734822000000,
@@ -13005,7 +13005,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 73.02119
+        "residualFatigue": 73.13678
     },
     {
         "dateMidnightMs": 1734908400000,
@@ -13070,7 +13070,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 36.510593
+        "residualFatigue": 36.56839
     },
     {
         "dateMidnightMs": 1734994800000,
@@ -13136,7 +13136,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 17.998974
+        "residualFatigue": 18.284195
     },
     {
         "dateMidnightMs": 1735081200000,
@@ -13202,7 +13202,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 61.677536
+        "residualFatigue": 61.820145
     },
     {
         "dateMidnightMs": 1735167600000,
@@ -13267,7 +13267,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 30.838768
+        "residualFatigue": 30.910072
     },
     {
         "dateMidnightMs": 1735254000000,
@@ -13334,7 +13334,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 15.223678
+        "residualFatigue": 15.455036
     },
     {
         "dateMidnightMs": 1735340400000,
@@ -13401,7 +13401,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 51.61168
+        "residualFatigue": 51.72736
     },
     {
         "dateMidnightMs": 1735426800000,
@@ -13466,7 +13466,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 25.80584
+        "residualFatigue": 25.86368
     },
     {
         "dateMidnightMs": 1735513200000,
@@ -13532,7 +13532,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 12.646149
+        "residualFatigue": 12.93184
     },
     {
         "dateMidnightMs": 1735599600000,
@@ -13598,7 +13598,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 70.066376
+        "residualFatigue": 70.20922
     },
     {
         "dateMidnightMs": 1735686000000,
@@ -13663,7 +13663,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 35.033188
+        "residualFatigue": 35.10461
     },
     {
         "dateMidnightMs": 1735772400000,
@@ -13729,7 +13729,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 17.310822
+        "residualFatigue": 17.552305
     },
     {
         "dateMidnightMs": 1735858800000,
@@ -13795,7 +13795,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 57.056053
+        "residualFatigue": 57.176792
     },
     {
         "dateMidnightMs": 1735945200000,
@@ -13860,7 +13860,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 28.528027
+        "residualFatigue": 28.588396
     },
     {
         "dateMidnightMs": 1736031600000,
@@ -13927,7 +13927,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 14.092138
+        "residualFatigue": 14.294198
     },
     {
         "dateMidnightMs": 1736118000000,
@@ -13993,7 +13993,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 57.188995
+        "residualFatigue": 57.290024
     },
     {
         "dateMidnightMs": 1736204400000,
@@ -14060,7 +14060,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 28.594498
+        "residualFatigue": 28.645012
     },
     {
         "dateMidnightMs": 1736290800000,
@@ -14126,7 +14126,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 14.048252
+        "residualFatigue": 14.322506
     },
     {
         "dateMidnightMs": 1736377200000,
@@ -14192,7 +14192,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 58.538937
+        "residualFatigue": 58.676064
     },
     {
         "dateMidnightMs": 1736463600000,
@@ -14257,7 +14257,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 29.269468
+        "residualFatigue": 29.338032
     },
     {
         "dateMidnightMs": 1736550000000,
@@ -14323,7 +14323,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 14.445669
+        "residualFatigue": 14.669016
     },
     {
         "dateMidnightMs": 1736636400000,
@@ -14390,7 +14390,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 46.339157
+        "residualFatigue": 46.450832
     },
     {
         "dateMidnightMs": 1736722800000,
@@ -14455,7 +14455,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 23.169579
+        "residualFatigue": 23.225416
     },
     {
         "dateMidnightMs": 1736809200000,
@@ -14521,7 +14521,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 11.388919
+        "residualFatigue": 11.612708
     },
     {
         "dateMidnightMs": 1736895600000,
@@ -14587,7 +14587,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 61.131695
+        "residualFatigue": 61.24359
     },
     {
         "dateMidnightMs": 1736982000000,
@@ -14652,7 +14652,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 30.565847
+        "residualFatigue": 30.621796
     },
     {
         "dateMidnightMs": 1737068400000,
@@ -14718,7 +14718,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 15.081694
+        "residualFatigue": 15.310898
     },
     {
         "dateMidnightMs": 1737154800000,
@@ -14784,7 +14784,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 47.28765
+        "residualFatigue": 47.402252
     },
     {
         "dateMidnightMs": 1737241200000,
@@ -14849,7 +14849,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 23.643826
+        "residualFatigue": 23.701126
     },
     {
         "dateMidnightMs": 1737327600000,
@@ -14915,7 +14915,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 11.669115
+        "residualFatigue": 11.850563
     },
     {
         "dateMidnightMs": 1737414000000,
@@ -14981,7 +14981,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 68.29413
+        "residualFatigue": 68.38485
     },
     {
         "dateMidnightMs": 1737500400000,
@@ -15048,7 +15048,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 34.147064
+        "residualFatigue": 34.192425
     },
     {
         "dateMidnightMs": 1737586800000,
@@ -15114,7 +15114,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 16.85698
+        "residualFatigue": 17.096212
     },
     {
         "dateMidnightMs": 1737673200000,
@@ -15180,7 +15180,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 84.44386
+        "residualFatigue": 84.56348
     },
     {
         "dateMidnightMs": 1737759600000,
@@ -15247,7 +15247,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 42.22193
+        "residualFatigue": 42.28174
     },
     {
         "dateMidnightMs": 1737846000000,
@@ -15313,7 +15313,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 20.955704
+        "residualFatigue": 21.14087
     },
     {
         "dateMidnightMs": 1737932400000,
@@ -15379,7 +15379,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 74.88396
+        "residualFatigue": 74.97654
     },
     {
         "dateMidnightMs": 1738018800000,
@@ -15444,7 +15444,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 37.44198
+        "residualFatigue": 37.48827
     },
     {
         "dateMidnightMs": 1738105200000,
@@ -15511,7 +15511,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 18.477005
+        "residualFatigue": 18.744135
     },
     {
         "dateMidnightMs": 1738191600000,
@@ -15577,7 +15577,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 68.049995
+        "residualFatigue": 68.18356
     },
     {
         "dateMidnightMs": 1738278000000,
@@ -15642,7 +15642,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 34.024998
+        "residualFatigue": 34.09178
     },
     {
         "dateMidnightMs": 1738364400000,
@@ -15708,7 +15708,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 16.715565
+        "residualFatigue": 17.04589
     },
     {
         "dateMidnightMs": 1738450800000,
@@ -15773,7 +15773,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 59.05349
+        "residualFatigue": 59.218655
     },
     {
         "dateMidnightMs": 1738537200000,
@@ -15838,7 +15838,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 29.526745
+        "residualFatigue": 29.609327
     },
     {
         "dateMidnightMs": 1738623600000,
@@ -15904,7 +15904,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 14.511786
+        "residualFatigue": 14.804664
     },
     {
         "dateMidnightMs": 1738710000000,
@@ -15970,7 +15970,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 44.934696
+        "residualFatigue": 45.081135
     },
     {
         "dateMidnightMs": 1738796400000,
@@ -16035,7 +16035,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 22.467348
+        "residualFatigue": 22.540567
     },
     {
         "dateMidnightMs": 1738882800000,
@@ -16101,7 +16101,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 11.003942
+        "residualFatigue": 11.270284
     },
     {
         "dateMidnightMs": 1738969200000,
@@ -16167,7 +16167,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 67.96021
+        "residualFatigue": 68.09338
     },
     {
         "dateMidnightMs": 1739055600000,
@@ -16232,7 +16232,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 33.980106
+        "residualFatigue": 34.04669
     },
     {
         "dateMidnightMs": 1739142000000,
@@ -16298,7 +16298,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 16.792023
+        "residualFatigue": 17.023346
     },
     {
         "dateMidnightMs": 1739228400000,
@@ -16364,7 +16364,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 77.87445
+        "residualFatigue": 77.99011
     },
     {
         "dateMidnightMs": 1739314800000,
@@ -16429,7 +16429,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 38.937225
+        "residualFatigue": 38.995056
     },
     {
         "dateMidnightMs": 1739401200000,
@@ -16495,7 +16495,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 19.32143
+        "residualFatigue": 19.497528
     },
     {
         "dateMidnightMs": 1739487600000,
@@ -16561,7 +16561,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 62.50554
+        "residualFatigue": 62.59359
     },
     {
         "dateMidnightMs": 1739574000000,
@@ -16626,7 +16626,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 31.25277
+        "residualFatigue": 31.296795
     },
     {
         "dateMidnightMs": 1739660400000,
@@ -16692,7 +16692,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 15.382408
+        "residualFatigue": 15.648397
     },
     {
         "dateMidnightMs": 1739746800000,
@@ -16758,7 +16758,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 58.578804
+        "residualFatigue": 58.711796
     },
     {
         "dateMidnightMs": 1739833200000,
@@ -16823,7 +16823,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 29.289402
+        "residualFatigue": 29.355898
     },
     {
         "dateMidnightMs": 1739919600000,
@@ -16889,7 +16889,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 14.373301
+        "residualFatigue": 14.677949
     },
     {
         "dateMidnightMs": 1740006000000,
@@ -16955,7 +16955,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 55.63474
+        "residualFatigue": 55.787064
     },
     {
         "dateMidnightMs": 1740092400000,
@@ -17022,7 +17022,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 27.81737
+        "residualFatigue": 27.893532
     },
     {
         "dateMidnightMs": 1740178800000,
@@ -17088,7 +17088,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 13.70226
+        "residualFatigue": 13.946766
     },
     {
         "dateMidnightMs": 1740265200000,
@@ -17154,7 +17154,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 53.17977
+        "residualFatigue": 53.302025
     },
     {
         "dateMidnightMs": 1740351600000,
@@ -17219,7 +17219,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 26.589886
+        "residualFatigue": 26.651012
     },
     {
         "dateMidnightMs": 1740438000000,
@@ -17285,7 +17285,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 13.096164
+        "residualFatigue": 13.325506
     },
     {
         "dateMidnightMs": 1740524400000,
@@ -17351,7 +17351,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 62.937016
+        "residualFatigue": 63.05169
     },
     {
         "dateMidnightMs": 1740610800000,
@@ -17416,7 +17416,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 31.468508
+        "residualFatigue": 31.525845
     },
     {
         "dateMidnightMs": 1740697200000,
@@ -17482,7 +17482,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 15.545004
+        "residualFatigue": 15.762922
     },
     {
         "dateMidnightMs": 1740783600000,
@@ -17548,7 +17548,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 82.8283
+        "residualFatigue": 82.93726
     },
     {
         "dateMidnightMs": 1740870000000,
@@ -17613,7 +17613,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 41.41415
+        "residualFatigue": 41.46863
     },
     {
         "dateMidnightMs": 1740956400000,
@@ -17679,7 +17679,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 20.526104
+        "residualFatigue": 20.734316
     },
     {
         "dateMidnightMs": 1741042800000,
@@ -17745,7 +17745,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 75.77664
+        "residualFatigue": 75.88075
     },
     {
         "dateMidnightMs": 1741129200000,
@@ -17810,7 +17810,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 37.88832
+        "residualFatigue": 37.940376
     },
     {
         "dateMidnightMs": 1741215600000,
@@ -17876,7 +17876,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 18.723892
+        "residualFatigue": 18.970188
     },
     {
         "dateMidnightMs": 1741302000000,
@@ -17942,7 +17942,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 53.923244
+        "residualFatigue": 54.046394
     },
     {
         "dateMidnightMs": 1741388400000,
@@ -18007,7 +18007,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 26.961622
+        "residualFatigue": 27.023197
     },
     {
         "dateMidnightMs": 1741474800000,
@@ -18073,7 +18073,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 13.187625
+        "residualFatigue": 13.511599
     },
     {
         "dateMidnightMs": 1741561200000,
@@ -18139,7 +18139,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 50.830246
+        "residualFatigue": 50.992233
     },
     {
         "dateMidnightMs": 1741647600000,
@@ -18206,7 +18206,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 25.415123
+        "residualFatigue": 25.496117
     },
     {
         "dateMidnightMs": 1741734000000,
@@ -18272,7 +18272,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 12.451649
+        "residualFatigue": 12.748058
     },
     {
         "dateMidnightMs": 1741820400000,
@@ -18337,7 +18337,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 84.63067
+        "residualFatigue": 84.77888
     },
     {
         "dateMidnightMs": 1741906800000,
@@ -18402,7 +18402,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 42.315334
+        "residualFatigue": 42.38944
     },
     {
         "dateMidnightMs": 1741993200000,
@@ -18468,7 +18468,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 20.9836
+        "residualFatigue": 21.19472
     },
     {
         "dateMidnightMs": 1742079600000,
@@ -18534,7 +18534,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 59.270065
+        "residualFatigue": 59.37562
     },
     {
         "dateMidnightMs": 1742166000000,
@@ -18601,7 +18601,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 29.635033
+        "residualFatigue": 29.68781
     },
     {
         "dateMidnightMs": 1742252400000,
@@ -18667,7 +18667,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 14.644717
+        "residualFatigue": 14.843905
     },
     {
         "dateMidnightMs": 1742338800000,
@@ -18733,7 +18733,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 61.572865
+        "residualFatigue": 61.67246
     },
     {
         "dateMidnightMs": 1742425200000,
@@ -18798,7 +18798,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 30.786432
+        "residualFatigue": 30.83623
     },
     {
         "dateMidnightMs": 1742511600000,
@@ -18864,7 +18864,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 15.086947
+        "residualFatigue": 15.418115
     },
     {
         "dateMidnightMs": 1742598000000,
@@ -18931,7 +18931,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 46.593025
+        "residualFatigue": 46.75861
     },
     {
         "dateMidnightMs": 1742684400000,
@@ -18996,7 +18996,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 23.296513
+        "residualFatigue": 23.379305
     },
     {
         "dateMidnightMs": 1742770800000,
@@ -19062,7 +19062,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 11.457716
+        "residualFatigue": 11.689652
     },
     {
         "dateMidnightMs": 1742857200000,
@@ -19129,7 +19129,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 73.02483
+        "residualFatigue": 73.1408
     },
     {
         "dateMidnightMs": 1742943600000,
@@ -19194,7 +19194,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 36.512417
+        "residualFatigue": 36.5704
     },
     {
         "dateMidnightMs": 1743030000000,
@@ -19260,7 +19260,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 18.044292
+        "residualFatigue": 18.2852
     },
     {
         "dateMidnightMs": 1743116400000,
@@ -19326,7 +19326,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 73.50484
+        "residualFatigue": 73.62529
     },
     {
         "dateMidnightMs": 1743202800000,
@@ -19391,7 +19391,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 36.75242
+        "residualFatigue": 36.812645
     },
     {
         "dateMidnightMs": 1743289200000,
@@ -19457,7 +19457,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 18.757668
+        "residualFatigue": 18.94567
     },
     {
         "dateMidnightMs": 1743372000000,
@@ -19523,7 +19523,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 80.093254
+        "residualFatigue": 80.187256
     },
     {
         "dateMidnightMs": 1743458400000,
@@ -19588,7 +19588,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 40.046627
+        "residualFatigue": 40.093628
     },
     {
         "dateMidnightMs": 1743544800000,
@@ -19654,7 +19654,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 19.752737
+        "residualFatigue": 20.046814
     },
     {
         "dateMidnightMs": 1743631200000,
@@ -19720,7 +19720,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 77.17361
+        "residualFatigue": 77.32065
     },
     {
         "dateMidnightMs": 1743717600000,
@@ -19785,7 +19785,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 38.586803
+        "residualFatigue": 38.660324
     },
     {
         "dateMidnightMs": 1743804000000,
@@ -19850,7 +19850,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 19.034136
+        "residualFatigue": 19.330162
     },
     {
         "dateMidnightMs": 1743890400000,
@@ -19915,7 +19915,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 57.24707
+        "residualFatigue": 57.395084
     },
     {
         "dateMidnightMs": 1743976800000,
@@ -19980,7 +19980,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 28.623535
+        "residualFatigue": 28.697542
     },
     {
         "dateMidnightMs": 1744063200000,
@@ -20045,7 +20045,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 14.03554
+        "residualFatigue": 14.348771
     },
     {
         "dateMidnightMs": 1744149600000,
@@ -20111,7 +20111,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 60.270145
+        "residualFatigue": 60.42676
     },
     {
         "dateMidnightMs": 1744236000000,
@@ -20176,7 +20176,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 30.135073
+        "residualFatigue": 30.21338
     },
     {
         "dateMidnightMs": 1744322400000,
@@ -20242,7 +20242,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 14.804656
+        "residualFatigue": 15.10669
     },
     {
         "dateMidnightMs": 1744408800000,
@@ -20308,7 +20308,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 46.52403
+        "residualFatigue": 46.67505
     },
     {
         "dateMidnightMs": 1744495200000,
@@ -20373,7 +20373,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 23.262014
+        "residualFatigue": 23.337524
     },
     {
         "dateMidnightMs": 1744581600000,
@@ -20439,7 +20439,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 11.444562
+        "residualFatigue": 11.668762
     },
     {
         "dateMidnightMs": 1744668000000,
@@ -20505,7 +20505,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 60.91989
+        "residualFatigue": 61.031994
     },
     {
         "dateMidnightMs": 1744754400000,
@@ -20570,7 +20570,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 30.459946
+        "residualFatigue": 30.515997
     },
     {
         "dateMidnightMs": 1744840800000,
@@ -20636,7 +20636,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 15.021956
+        "residualFatigue": 15.257998
     },
     {
         "dateMidnightMs": 1744927200000,
@@ -20702,7 +20702,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 56.87217
+        "residualFatigue": 56.990192
     },
     {
         "dateMidnightMs": 1745013600000,
@@ -20767,7 +20767,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 28.436085
+        "residualFatigue": 28.495096
     },
     {
         "dateMidnightMs": 1745100000000,
@@ -20833,7 +20833,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 14.065224
+        "residualFatigue": 14.247548
     },
     {
         "dateMidnightMs": 1745186400000,
@@ -20899,7 +20899,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 42.87655
+        "residualFatigue": 42.967712
     },
     {
         "dateMidnightMs": 1745272800000,
@@ -20964,7 +20964,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 21.438274
+        "residualFatigue": 21.483856
     },
     {
         "dateMidnightMs": 1745359200000,
@@ -21030,7 +21030,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 10.503522
+        "residualFatigue": 10.741928
     },
     {
         "dateMidnightMs": 1745445600000,
@@ -21096,7 +21096,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 68.16663
+        "residualFatigue": 68.285835
     },
     {
         "dateMidnightMs": 1745532000000,
@@ -21161,7 +21161,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 34.083317
+        "residualFatigue": 34.142918
     },
     {
         "dateMidnightMs": 1745618400000,
@@ -21227,7 +21227,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 16.84884
+        "residualFatigue": 17.071459
     },
     {
         "dateMidnightMs": 1745704800000,
@@ -21293,7 +21293,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 76.73559
+        "residualFatigue": 76.8469
     },
     {
         "dateMidnightMs": 1745791200000,
@@ -21358,7 +21358,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 38.367794
+        "residualFatigue": 38.42345
     },
     {
         "dateMidnightMs": 1745877600000,
@@ -21423,7 +21423,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 19.043882
+        "residualFatigue": 19.211725
     },
     {
         "dateMidnightMs": 1745964000000,
@@ -21488,7 +21488,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 68.70087
+        "residualFatigue": 68.78479
     },
     {
         "dateMidnightMs": 1746050400000,
@@ -21553,7 +21553,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 34.350433
+        "residualFatigue": 34.392395
     },
     {
         "dateMidnightMs": 1746136800000,
@@ -21619,7 +21619,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 16.929455
+        "residualFatigue": 17.196198
     },
     {
         "dateMidnightMs": 1746223200000,
@@ -21685,7 +21685,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 59.139206
+        "residualFatigue": 59.272575
     },
     {
         "dateMidnightMs": 1746309600000,
@@ -21750,7 +21750,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 29.569603
+        "residualFatigue": 29.636288
     },
     {
         "dateMidnightMs": 1746396000000,
@@ -21816,7 +21816,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 14.517961
+        "residualFatigue": 14.818144
     },
     {
         "dateMidnightMs": 1746482400000,
@@ -21883,7 +21883,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 56.1843
+        "residualFatigue": 56.334393
     },
     {
         "dateMidnightMs": 1746568800000,
@@ -21948,7 +21948,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 28.09215
+        "residualFatigue": 28.167196
     },
     {
         "dateMidnightMs": 1746655200000,
@@ -22014,7 +22014,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 13.814907
+        "residualFatigue": 14.083598
     },
     {
         "dateMidnightMs": 1746741600000,
@@ -22081,7 +22081,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 64.08632
+        "residualFatigue": 64.220665
     },
     {
         "dateMidnightMs": 1746828000000,
@@ -22146,7 +22146,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 32.04316
+        "residualFatigue": 32.110332
     },
     {
         "dateMidnightMs": 1746914400000,
@@ -22211,7 +22211,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 15.823633
+        "residualFatigue": 16.055166
     },
     {
         "dateMidnightMs": 1747000800000,
@@ -22277,7 +22277,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 54.32171
+        "residualFatigue": 54.437477
     },
     {
         "dateMidnightMs": 1747087200000,
@@ -22342,7 +22342,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 27.160854
+        "residualFatigue": 27.218739
     },
     {
         "dateMidnightMs": 1747173600000,
@@ -22409,7 +22409,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 13.389313
+        "residualFatigue": 13.609369
     },
     {
         "dateMidnightMs": 1747260000000,
@@ -22475,7 +22475,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 68.105804
+        "residualFatigue": 68.215836
     },
     {
         "dateMidnightMs": 1747346400000,
@@ -22540,7 +22540,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 34.052902
+        "residualFatigue": 34.107918
     },
     {
         "dateMidnightMs": 1747432800000,
@@ -22606,7 +22606,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 16.803097
+        "residualFatigue": 17.053959
     },
     {
         "dateMidnightMs": 1747519200000,
@@ -22672,7 +22672,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 94.42623
+        "residualFatigue": 94.55166
     },
     {
         "dateMidnightMs": 1747605600000,
@@ -22737,7 +22737,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 47.213116
+        "residualFatigue": 47.27583
     },
     {
         "dateMidnightMs": 1747692000000,
@@ -22803,7 +22803,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 23.425268
+        "residualFatigue": 23.637915
     },
     {
         "dateMidnightMs": 1747778400000,
@@ -22869,7 +22869,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 60.9985
+        "residualFatigue": 61.104824
     },
     {
         "dateMidnightMs": 1747864800000,
@@ -22934,7 +22934,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 30.49925
+        "residualFatigue": 30.552412
     },
     {
         "dateMidnightMs": 1747951200000,
@@ -23000,7 +23000,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 15.009738
+        "residualFatigue": 15.276206
     },
     {
         "dateMidnightMs": 1748037600000,
@@ -23066,7 +23066,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 62.934444
+        "residualFatigue": 63.06768
     },
     {
         "dateMidnightMs": 1748124000000,
@@ -23131,7 +23131,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 31.467222
+        "residualFatigue": 31.53384
     },
     {
         "dateMidnightMs": 1748210400000,
@@ -23197,7 +23197,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 15.397577
+        "residualFatigue": 15.76692
     },
     {
         "dateMidnightMs": 1748296800000,
@@ -23263,7 +23263,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 56.69686
+        "residualFatigue": 56.881535
     },
     {
         "dateMidnightMs": 1748383200000,
@@ -23328,7 +23328,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 28.34843
+        "residualFatigue": 28.440767
     },
     {
         "dateMidnightMs": 1748469600000,
@@ -23393,7 +23393,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 13.981693
+        "residualFatigue": 14.220384
     },
     {
         "dateMidnightMs": 1748556000000,
@@ -23459,7 +23459,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 74.37595
+        "residualFatigue": 74.4953
     },
     {
         "dateMidnightMs": 1748642400000,
@@ -23524,7 +23524,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 37.187977
+        "residualFatigue": 37.24765
     },
     {
         "dateMidnightMs": 1748728800000,
@@ -23590,7 +23590,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 18.377466
+        "residualFatigue": 18.623825
     },
     {
         "dateMidnightMs": 1748815200000,
@@ -23656,7 +23656,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 84.06238
+        "residualFatigue": 84.18556
     },
     {
         "dateMidnightMs": 1748901600000,
@@ -23721,7 +23721,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 42.03119
+        "residualFatigue": 42.09278
     },
     {
         "dateMidnightMs": 1748988000000,
@@ -23787,7 +23787,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 20.824196
+        "residualFatigue": 21.04639
     },
     {
         "dateMidnightMs": 1749074400000,
@@ -23854,7 +23854,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 71.76324
+        "residualFatigue": 71.87434
     },
     {
         "dateMidnightMs": 1749160800000,
@@ -23919,7 +23919,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 35.88162
+        "residualFatigue": 35.93717
     },
     {
         "dateMidnightMs": 1749247200000,
@@ -23985,7 +23985,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 17.677586
+        "residualFatigue": 17.968584
     },
     {
         "dateMidnightMs": 1749333600000,
@@ -24051,7 +24051,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 83.7441
+        "residualFatigue": 83.8896
     },
     {
         "dateMidnightMs": 1749420000000,
@@ -24116,7 +24116,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 41.87205
+        "residualFatigue": 41.9448
     },
     {
         "dateMidnightMs": 1749506400000,
@@ -24183,7 +24183,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 20.64355
+        "residualFatigue": 20.9724
     },
     {
         "dateMidnightMs": 1749592800000,
@@ -24249,7 +24249,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 54.42884
+        "residualFatigue": 54.593266
     },
     {
         "dateMidnightMs": 1749679200000,
@@ -24314,7 +24314,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 27.21442
+        "residualFatigue": 27.296633
     },
     {
         "dateMidnightMs": 1749765600000,
@@ -24379,7 +24379,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 13.367558
+        "residualFatigue": 13.648316
     },
     {
         "dateMidnightMs": 1749852000000,
@@ -24445,7 +24445,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 77.97388
+        "residualFatigue": 78.11426
     },
     {
         "dateMidnightMs": 1749938400000,
@@ -24510,7 +24510,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 38.98694
+        "residualFatigue": 39.05713
     },
     {
         "dateMidnightMs": 1750024800000,
@@ -24576,7 +24576,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 19.20087
+        "residualFatigue": 19.528564
     },
     {
         "dateMidnightMs": 1750111200000,
@@ -24642,7 +24642,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 48.455433
+        "residualFatigue": 48.61928
     },
     {
         "dateMidnightMs": 1750197600000,
@@ -24707,7 +24707,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 24.227716
+        "residualFatigue": 24.30964
     },
     {
         "dateMidnightMs": 1750284000000,
@@ -24773,7 +24773,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 11.9415655
+        "residualFatigue": 12.15482
     },
     {
         "dateMidnightMs": 1750370400000,
@@ -24839,7 +24839,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 81.996956
+        "residualFatigue": 82.10358
     },
     {
         "dateMidnightMs": 1750456800000,
@@ -24904,7 +24904,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 40.998478
+        "residualFatigue": 41.05179
     },
     {
         "dateMidnightMs": 1750543200000,
@@ -24971,7 +24971,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 20.22076
+        "residualFatigue": 20.525894
     },
     {
         "dateMidnightMs": 1750629600000,
@@ -25038,7 +25038,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 66.50507
+        "residualFatigue": 66.657646
     },
     {
         "dateMidnightMs": 1750716000000,
@@ -25103,7 +25103,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 33.252537
+        "residualFatigue": 33.328823
     },
     {
         "dateMidnightMs": 1750802400000,
@@ -25168,7 +25168,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 16.474491
+        "residualFatigue": 16.664412
     },
     {
         "dateMidnightMs": 1750888800000,
@@ -25234,7 +25234,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 48.724457
+        "residualFatigue": 48.81942
     },
     {
         "dateMidnightMs": 1750975200000,
@@ -25299,7 +25299,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 24.362228
+        "residualFatigue": 24.40971
     },
     {
         "dateMidnightMs": 1751061600000,
@@ -25365,7 +25365,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 11.884137
+        "residualFatigue": 12.204855
     },
     {
         "dateMidnightMs": 1751148000000,
@@ -25431,7 +25431,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 70.61527
+        "residualFatigue": 70.775635
     },
     {
         "dateMidnightMs": 1751234400000,
@@ -25496,7 +25496,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 35.307636
+        "residualFatigue": 35.387817
     },
     {
         "dateMidnightMs": 1751320800000,
@@ -25562,7 +25562,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 17.433527
+        "residualFatigue": 17.693909
     },
     {
         "dateMidnightMs": 1751407200000,
@@ -25628,7 +25628,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 49.93008
+        "residualFatigue": 50.06027
     },
     {
         "dateMidnightMs": 1751493600000,
@@ -25693,7 +25693,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 24.96504
+        "residualFatigue": 25.030134
     },
     {
         "dateMidnightMs": 1751580000000,
@@ -25759,7 +25759,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 12.324367
+        "residualFatigue": 12.515067
     },
     {
         "dateMidnightMs": 1751666400000,
@@ -25825,7 +25825,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 62.642128
+        "residualFatigue": 62.73748
     },
     {
         "dateMidnightMs": 1751752800000,
@@ -25890,7 +25890,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 31.321064
+        "residualFatigue": 31.36874
     },
     {
         "dateMidnightMs": 1751839200000,
@@ -25956,7 +25956,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 15.407903
+        "residualFatigue": 15.68437
     },
     {
         "dateMidnightMs": 1751925600000,
@@ -26022,7 +26022,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 85.14688
+        "residualFatigue": 85.28511
     },
     {
         "dateMidnightMs": 1752012000000,
@@ -26087,7 +26087,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 42.57344
+        "residualFatigue": 42.642555
     },
     {
         "dateMidnightMs": 1752098400000,
@@ -26153,7 +26153,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 21.12573
+        "residualFatigue": 21.321278
     },
     {
         "dateMidnightMs": 1752184800000,
@@ -26219,7 +26219,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 72.60787
+        "residualFatigue": 72.70565
     },
     {
         "dateMidnightMs": 1752271200000,
@@ -26284,7 +26284,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 36.303936
+        "residualFatigue": 36.352825
     },
     {
         "dateMidnightMs": 1752357600000,
@@ -26351,7 +26351,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 17.931343
+        "residualFatigue": 18.176413
     },
     {
         "dateMidnightMs": 1752444000000,
@@ -26417,7 +26417,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 72.85028
+        "residualFatigue": 72.97282
     },
     {
         "dateMidnightMs": 1752530400000,
@@ -26482,7 +26482,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 36.42514
+        "residualFatigue": 36.48641
     },
     {
         "dateMidnightMs": 1752616800000,
@@ -26548,7 +26548,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 17.910059
+        "residualFatigue": 18.243204
     },
     {
         "dateMidnightMs": 1752703200000,
@@ -26614,7 +26614,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 89.39461
+        "residualFatigue": 89.56118
     },
     {
         "dateMidnightMs": 1752789600000,
@@ -26679,7 +26679,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 44.697304
+        "residualFatigue": 44.78059
     },
     {
         "dateMidnightMs": 1752876000000,
@@ -26745,7 +26745,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 22.106289
+        "residualFatigue": 22.390295
     },
     {
         "dateMidnightMs": 1752962400000,
@@ -26811,7 +26811,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 73.76974
+        "residualFatigue": 73.91174
     },
     {
         "dateMidnightMs": 1753048800000,
@@ -26876,7 +26876,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 36.88487
+        "residualFatigue": 36.95587
     },
     {
         "dateMidnightMs": 1753135200000,
@@ -26942,7 +26942,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 18.192884
+        "residualFatigue": 18.477936
     },
     {
         "dateMidnightMs": 1753221600000,
@@ -27008,7 +27008,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 67.67675
+        "residualFatigue": 67.819275
     },
     {
         "dateMidnightMs": 1753308000000,
@@ -27073,7 +27073,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 33.838375
+        "residualFatigue": 33.909637
     },
     {
         "dateMidnightMs": 1753394400000,
@@ -27139,7 +27139,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 16.60497
+        "residualFatigue": 16.954819
     },
     {
         "dateMidnightMs": 1753480800000,
@@ -27205,7 +27205,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 61.219837
+        "residualFatigue": 61.39476
     },
     {
         "dateMidnightMs": 1753567200000,
@@ -27270,7 +27270,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 30.609919
+        "residualFatigue": 30.69738
     },
     {
         "dateMidnightMs": 1753653600000,
@@ -27336,7 +27336,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 15.059972
+        "residualFatigue": 15.34869
     },
     {
         "dateMidnightMs": 1753740000000,
@@ -27402,7 +27402,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 70.324585
+        "residualFatigue": 70.46895
     },
     {
         "dateMidnightMs": 1753826400000,
@@ -27469,7 +27469,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 35.162292
+        "residualFatigue": 35.234474
     },
     {
         "dateMidnightMs": 1753912800000,
@@ -27535,7 +27535,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 17.352318
+        "residualFatigue": 17.617237
     },
     {
         "dateMidnightMs": 1753999200000,
@@ -27602,7 +27602,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 85.70306
+        "residualFatigue": 85.83552
     },
     {
         "dateMidnightMs": 1754085600000,
@@ -27667,7 +27667,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 42.85153
+        "residualFatigue": 42.91776
     },
     {
         "dateMidnightMs": 1754172000000,
@@ -27733,7 +27733,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 21.219055
+        "residualFatigue": 21.45888
     },
     {
         "dateMidnightMs": 1754258400000,
@@ -27799,7 +27799,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 70.98307
+        "residualFatigue": 71.10299
     },
     {
         "dateMidnightMs": 1754344800000,
@@ -27866,7 +27866,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 35.491535
+        "residualFatigue": 35.551495
     },
     {
         "dateMidnightMs": 1754431200000,
@@ -27932,7 +27932,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 17.500477
+        "residualFatigue": 17.775747
     },
     {
         "dateMidnightMs": 1754517600000,
@@ -27998,7 +27998,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 76.44129
+        "residualFatigue": 76.578926
     },
     {
         "dateMidnightMs": 1754604000000,
@@ -28063,7 +28063,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 38.220646
+        "residualFatigue": 38.289463
     },
     {
         "dateMidnightMs": 1754690400000,
@@ -28130,7 +28130,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 18.809437
+        "residualFatigue": 19.144732
     },
     {
         "dateMidnightMs": 1754776800000,
@@ -28197,7 +28197,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 80.73386
+        "residualFatigue": 80.901505
     },
     {
         "dateMidnightMs": 1754863200000,
@@ -28262,7 +28262,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 40.36693
+        "residualFatigue": 40.450752
     },
     {
         "dateMidnightMs": 1754949600000,
@@ -28328,7 +28328,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 19.94763
+        "residualFatigue": 20.225376
     },
     {
         "dateMidnightMs": 1755036000000,
@@ -28394,7 +28394,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 58.41583
+        "residualFatigue": 58.554703
     },
     {
         "dateMidnightMs": 1755122400000,
@@ -28459,7 +28459,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 29.207914
+        "residualFatigue": 29.277351
     },
     {
         "dateMidnightMs": 1755208800000,
@@ -28526,7 +28526,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 14.33954
+        "residualFatigue": 14.638676
     },
     {
         "dateMidnightMs": 1755295200000,
@@ -28592,7 +28592,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 83.580345
+        "residualFatigue": 83.72991
     },
     {
         "dateMidnightMs": 1755381600000,
@@ -28657,7 +28657,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 41.790173
+        "residualFatigue": 41.864956
     },
     {
         "dateMidnightMs": 1755468000000,
@@ -28723,7 +28723,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 20.616455
+        "residualFatigue": 20.932478
     },
     {
         "dateMidnightMs": 1755554400000,
@@ -28789,7 +28789,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 72.56421
+        "residualFatigue": 72.72222
     },
     {
         "dateMidnightMs": 1755640800000,
@@ -28856,7 +28856,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 36.282104
+        "residualFatigue": 36.36111
     },
     {
         "dateMidnightMs": 1755727200000,
@@ -28922,7 +28922,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 17.951826
+        "residualFatigue": 18.180555
     },
     {
         "dateMidnightMs": 1755813600000,
@@ -28988,7 +28988,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 60.794926
+        "residualFatigue": 60.90929
     },
     {
         "dateMidnightMs": 1755900000000,
@@ -29055,7 +29055,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 30.397463
+        "residualFatigue": 30.454645
     },
     {
         "dateMidnightMs": 1755986400000,
@@ -29121,7 +29121,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 14.900253
+        "residualFatigue": 15.227323
     },
     {
         "dateMidnightMs": 1756072800000,
@@ -29187,7 +29187,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 63.745068
+        "residualFatigue": 63.908604
     },
     {
         "dateMidnightMs": 1756159200000,
@@ -29252,7 +29252,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 31.872534
+        "residualFatigue": 31.954302
     },
     {
         "dateMidnightMs": 1756245600000,
@@ -29318,7 +29318,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 15.69308
+        "residualFatigue": 15.977151
     },
     {
         "dateMidnightMs": 1756332000000,
@@ -29385,7 +29385,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 59.20924
+        "residualFatigue": 59.351276
     },
     {
         "dateMidnightMs": 1756418400000,
@@ -29450,7 +29450,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 29.60462
+        "residualFatigue": 29.675638
     },
     {
         "dateMidnightMs": 1756504800000,
@@ -29516,7 +29516,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 14.599892
+        "residualFatigue": 14.837819
     },
     {
         "dateMidnightMs": 1756591200000,
@@ -29583,7 +29583,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 65.1654
+        "residualFatigue": 65.28436
     },
     {
         "dateMidnightMs": 1756677600000,
@@ -29648,7 +29648,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 32.5827
+        "residualFatigue": 32.64218
     },
     {
         "dateMidnightMs": 1756764000000,
@@ -29713,7 +29713,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 16.071447
+        "residualFatigue": 16.32109
     },
     {
         "dateMidnightMs": 1756850400000,
@@ -29779,7 +29779,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 47.272263
+        "residualFatigue": 47.397083
     },
     {
         "dateMidnightMs": 1756936800000,
@@ -29844,7 +29844,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 23.636131
+        "residualFatigue": 23.698542
     },
     {
         "dateMidnightMs": 1757023200000,
@@ -29909,7 +29909,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 11.61743
+        "residualFatigue": 11.849271
     },
     {
         "dateMidnightMs": 1757109600000,
@@ -29975,7 +29975,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 91.55282
+        "residualFatigue": 91.66874
     },
     {
         "dateMidnightMs": 1757196000000,
@@ -30040,7 +30040,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 45.77641
+        "residualFatigue": 45.83437
     },
     {
         "dateMidnightMs": 1757282400000,
@@ -30106,7 +30106,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 22.662169
+        "residualFatigue": 22.917185
     },
     {
         "dateMidnightMs": 1757368800000,
@@ -30172,7 +30172,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 76.49833
+        "residualFatigue": 76.62584
     },
     {
         "dateMidnightMs": 1757455200000,
@@ -30237,7 +30237,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 38.249165
+        "residualFatigue": 38.31292
     },
     {
         "dateMidnightMs": 1757541600000,
@@ -30303,7 +30303,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 18.971315
+        "residualFatigue": 19.15646
     },
     {
         "dateMidnightMs": 1757628000000,
@@ -30370,7 +30370,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 59.596004
+        "residualFatigue": 59.68858
     },
     {
         "dateMidnightMs": 1757714400000,
@@ -30437,7 +30437,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 29.798002
+        "residualFatigue": 29.84429
     },
     {
         "dateMidnightMs": 1757800800000,
@@ -30503,7 +30503,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 14.564063
+        "residualFatigue": 14.922145
     },
     {
         "dateMidnightMs": 1757887200000,
@@ -30569,7 +30569,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 85.95291
+        "residualFatigue": 86.13195
     },
     {
         "dateMidnightMs": 1757973600000,
@@ -30634,7 +30634,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 42.976456
+        "residualFatigue": 43.065975
     },
     {
         "dateMidnightMs": 1758060000000,
@@ -30701,7 +30701,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 21.23367
+        "residualFatigue": 21.532988
     },
     {
         "dateMidnightMs": 1758146400000,
@@ -30767,7 +30767,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 52.866108
+        "residualFatigue": 53.01577
     },
     {
         "dateMidnightMs": 1758232800000,
@@ -30832,7 +30832,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 26.433054
+        "residualFatigue": 26.507885
     },
     {
         "dateMidnightMs": 1758319200000,
@@ -30898,7 +30898,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 13.020784
+        "residualFatigue": 13.2539425
     },
     {
         "dateMidnightMs": 1758405600000,
@@ -30964,7 +30964,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 85.278404
+        "residualFatigue": 85.39498
     },
     {
         "dateMidnightMs": 1758492000000,
@@ -31031,7 +31031,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 42.639202
+        "residualFatigue": 42.69749
     },
     {
         "dateMidnightMs": 1758578400000,
@@ -31098,7 +31098,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 21.012293
+        "residualFatigue": 21.348745
     },
     {
         "dateMidnightMs": 1758664800000,
@@ -31164,7 +31164,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 81.03222
+        "residualFatigue": 81.20045
     },
     {
         "dateMidnightMs": 1758751200000,
@@ -31229,7 +31229,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 40.51611
+        "residualFatigue": 40.600224
     },
     {
         "dateMidnightMs": 1758837600000,
@@ -31295,7 +31295,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 20.09302
+        "residualFatigue": 20.300112
     },
     {
         "dateMidnightMs": 1758924000000,
@@ -31361,7 +31361,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 56.769672
+        "residualFatigue": 56.87322
     },
     {
         "dateMidnightMs": 1759010400000,
@@ -31426,7 +31426,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 28.384836
+        "residualFatigue": 28.43661
     },
     {
         "dateMidnightMs": 1759096800000,
@@ -31493,7 +31493,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 13.88473
+        "residualFatigue": 14.218305
     },
     {
         "dateMidnightMs": 1759183200000,
@@ -31560,7 +31560,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 79.63819
+        "residualFatigue": 79.80498
     },
     {
         "dateMidnightMs": 1759269600000,
@@ -31627,7 +31627,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 39.819096
+        "residualFatigue": 39.90249
     },
     {
         "dateMidnightMs": 1759356000000,
@@ -31693,7 +31693,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 19.634056
+        "residualFatigue": 19.951244
     },
     {
         "dateMidnightMs": 1759442400000,
@@ -31759,7 +31759,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 83.22823
+        "residualFatigue": 83.38683
     },
     {
         "dateMidnightMs": 1759528800000,
@@ -31824,7 +31824,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 41.614117
+        "residualFatigue": 41.693417
     },
     {
         "dateMidnightMs": 1759615200000,
@@ -31889,7 +31889,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 20.624546
+        "residualFatigue": 20.846708
     },
     {
         "dateMidnightMs": 1759701600000,
@@ -31955,7 +31955,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 84.86529
+        "residualFatigue": 84.97637
     },
     {
         "dateMidnightMs": 1759788000000,
@@ -32020,7 +32020,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 42.432644
+        "residualFatigue": 42.488186
     },
     {
         "dateMidnightMs": 1759874400000,
@@ -32087,7 +32087,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 20.932354
+        "residualFatigue": 21.244093
     },
     {
         "dateMidnightMs": 1759960800000,
@@ -32153,7 +32153,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 87.08793
+        "residualFatigue": 87.2438
     },
     {
         "dateMidnightMs": 1760047200000,
@@ -32218,7 +32218,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 43.543964
+        "residualFatigue": 43.6219
     },
     {
         "dateMidnightMs": 1760133600000,
@@ -32285,7 +32285,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 21.48522
+        "residualFatigue": 21.81095
     },
     {
         "dateMidnightMs": 1760220000000,
@@ -32351,7 +32351,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 54.228947
+        "residualFatigue": 54.39181
     },
     {
         "dateMidnightMs": 1760306400000,
@@ -32418,7 +32418,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 27.114473
+        "residualFatigue": 27.195906
     },
     {
         "dateMidnightMs": 1760392800000,
@@ -32484,7 +32484,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 13.266014
+        "residualFatigue": 13.597953
     },
     {
         "dateMidnightMs": 1760479200000,
@@ -32550,7 +32550,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 52.171516
+        "residualFatigue": 52.337486
     },
     {
         "dateMidnightMs": 1760565600000,
@@ -32617,7 +32617,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 26.085758
+        "residualFatigue": 26.168743
     },
     {
         "dateMidnightMs": 1760652000000,
@@ -32682,7 +32682,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 12.743575
+        "residualFatigue": 13.084372
     },
     {
         "dateMidnightMs": 1760738400000,
@@ -32747,7 +32747,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 50.83727
+        "residualFatigue": 51.007668
     },
     {
         "dateMidnightMs": 1760824800000,
@@ -32812,7 +32812,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 25.418634
+        "residualFatigue": 25.503834
     },
     {
         "dateMidnightMs": 1760911200000,
@@ -32879,7 +32879,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 12.539449
+        "residualFatigue": 12.751917
     },
     {
         "dateMidnightMs": 1760997600000,
@@ -32945,7 +32945,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 72.95152
+        "residualFatigue": 73.05776
     },
     {
         "dateMidnightMs": 1761084000000,
@@ -33010,7 +33010,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 36.47576
+        "residualFatigue": 36.52888
     },
     {
         "dateMidnightMs": 1761170400000,
@@ -33076,7 +33076,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 18.059996
+        "residualFatigue": 18.26444
     },
     {
         "dateMidnightMs": 1761256800000,
@@ -33143,7 +33143,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 84.38691
+        "residualFatigue": 84.48913
     },
     {
         "dateMidnightMs": 1761343200000,
@@ -33208,7 +33208,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 42.193455
+        "residualFatigue": 42.244564
     },
     {
         "dateMidnightMs": 1761429600000,
@@ -33274,7 +33274,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 20.327396
+        "residualFatigue": 20.520973
     },
     {
         "dateMidnightMs": 1761519600000,
@@ -33339,7 +33339,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 76.49864
+        "residualFatigue": 76.59543
     },
     {
         "dateMidnightMs": 1761606000000,
@@ -33404,7 +33404,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 38.24932
+        "residualFatigue": 38.297714
     },
     {
         "dateMidnightMs": 1761692400000,
@@ -33470,7 +33470,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 18.871601
+        "residualFatigue": 19.148857
     },
     {
         "dateMidnightMs": 1761778800000,
@@ -33537,7 +33537,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 50.624344
+        "residualFatigue": 50.762974
     },
     {
         "dateMidnightMs": 1761865200000,
@@ -33602,7 +33602,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 25.312172
+        "residualFatigue": 25.381487
     },
     {
         "dateMidnightMs": 1761951600000,
@@ -33667,7 +33667,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 12.370103
+        "residualFatigue": 12.690743
     },
     {
         "dateMidnightMs": 1762038000000,
@@ -33733,7 +33733,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 78.62448
+        "residualFatigue": 78.7848
     },
     {
         "dateMidnightMs": 1762124400000,
@@ -33798,7 +33798,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 39.31224
+        "residualFatigue": 39.3924
     },
     {
         "dateMidnightMs": 1762210800000,
@@ -33865,7 +33865,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 19.397
+        "residualFatigue": 19.6962
     },
     {
         "dateMidnightMs": 1762297200000,
@@ -33931,7 +33931,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 71.88932
+        "residualFatigue": 72.038925
     },
     {
         "dateMidnightMs": 1762383600000,
@@ -33996,7 +33996,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 35.94466
+        "residualFatigue": 36.019463
     },
     {
         "dateMidnightMs": 1762470000000,
@@ -34062,7 +34062,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 17.811438
+        "residualFatigue": 18.009731
     },
     {
         "dateMidnightMs": 1762556400000,
@@ -34128,7 +34128,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 62.25661
+        "residualFatigue": 62.35576
     },
     {
         "dateMidnightMs": 1762642800000,
@@ -34195,7 +34195,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 31.128305
+        "residualFatigue": 31.17788
     },
     {
         "dateMidnightMs": 1762729200000,
@@ -34261,7 +34261,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 15.281187
+        "residualFatigue": 15.58894
     },
     {
         "dateMidnightMs": 1762815600000,
@@ -34327,7 +34327,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 86.0094
+        "residualFatigue": 86.16328
     },
     {
         "dateMidnightMs": 1762902000000,
@@ -34392,7 +34392,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 43.0047
+        "residualFatigue": 43.08164
     },
     {
         "dateMidnightMs": 1762988400000,
@@ -34458,7 +34458,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 21.259417
+        "residualFatigue": 21.54082
     },
     {
         "dateMidnightMs": 1763074800000,
@@ -34525,7 +34525,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 86.09874
+        "residualFatigue": 86.23944
     },
     {
         "dateMidnightMs": 1763161200000,
@@ -34590,7 +34590,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 43.04937
+        "residualFatigue": 43.11972
     },
     {
         "dateMidnightMs": 1763247600000,
@@ -34656,7 +34656,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 21.316284
+        "residualFatigue": 21.55986
     },
     {
         "dateMidnightMs": 1763334000000,
@@ -34723,7 +34723,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 71.79569
+        "residualFatigue": 71.91748
     },
     {
         "dateMidnightMs": 1763420400000,
@@ -34788,7 +34788,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 35.897846
+        "residualFatigue": 35.95874
     },
     {
         "dateMidnightMs": 1763506800000,
@@ -34855,7 +34855,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 17.642796
+        "residualFatigue": 17.97937
     },
     {
         "dateMidnightMs": 1763593200000,
@@ -34921,7 +34921,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 81.38672
+        "residualFatigue": 81.55501
     },
     {
         "dateMidnightMs": 1763679600000,
@@ -34986,7 +34986,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 40.69336
+        "residualFatigue": 40.777504
     },
     {
         "dateMidnightMs": 1763766000000,
@@ -35052,7 +35052,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 20.05188
+        "residualFatigue": 20.388752
     },
     {
         "dateMidnightMs": 1763852400000,
@@ -35118,7 +35118,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 56.62366
+        "residualFatigue": 56.7921
     },
     {
         "dateMidnightMs": 1763938800000,
@@ -35183,7 +35183,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 28.31183
+        "residualFatigue": 28.39605
     },
     {
         "dateMidnightMs": 1764025200000,
@@ -35250,7 +35250,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 13.917097
+        "residualFatigue": 14.198025
     },
     {
         "dateMidnightMs": 1764111600000,
@@ -35316,7 +35316,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 87.428444
+        "residualFatigue": 87.5689
     },
     {
         "dateMidnightMs": 1764198000000,
@@ -35383,7 +35383,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 43.714222
+        "residualFatigue": 43.78445
     },
     {
         "dateMidnightMs": 1764284400000,
@@ -35450,7 +35450,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 21.573652
+        "residualFatigue": 21.892225
     },
     {
         "dateMidnightMs": 1764370800000,
@@ -35516,7 +35516,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 81.833496
+        "residualFatigue": 81.99278
     },
     {
         "dateMidnightMs": 1764457200000,
@@ -35581,7 +35581,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 40.916748
+        "residualFatigue": 40.99639
     },
     {
         "dateMidnightMs": 1764543600000,
@@ -35647,7 +35647,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 20.276352
+        "residualFatigue": 20.498196
     },
     {
         "dateMidnightMs": 1764630000000,
@@ -35714,7 +35714,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 71.32583
+        "residualFatigue": 71.43675
     },
     {
         "dateMidnightMs": 1764716400000,
@@ -35779,7 +35779,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 35.662914
+        "residualFatigue": 35.718376
     },
     {
         "dateMidnightMs": 1764802800000,
@@ -35845,7 +35845,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 17.517122
+        "residualFatigue": 17.859188
     },
     {
         "dateMidnightMs": 1764889200000,
@@ -35912,7 +35912,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 86.9303
+        "residualFatigue": 87.10133
     },
     {
         "dateMidnightMs": 1764975600000,
@@ -35979,7 +35979,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 43.46515
+        "residualFatigue": 43.550667
     },
     {
         "dateMidnightMs": 1765062000000,
@@ -36045,7 +36045,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 21.45505
+        "residualFatigue": 21.775333
     },
     {
         "dateMidnightMs": 1765148400000,
@@ -36111,7 +36111,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 60.541084
+        "residualFatigue": 60.701225
     },
     {
         "dateMidnightMs": 1765234800000,
@@ -36176,7 +36176,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 30.270542
+        "residualFatigue": 30.350613
     },
     {
         "dateMidnightMs": 1765321200000,
@@ -36242,7 +36242,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 14.896256
+        "residualFatigue": 15.175306
     },
     {
         "dateMidnightMs": 1765407600000,
@@ -36308,7 +36308,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 74.17317
+        "residualFatigue": 74.31269
     },
     {
         "dateMidnightMs": 1765494000000,
@@ -36373,7 +36373,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 37.086586
+        "residualFatigue": 37.156345
     },
     {
         "dateMidnightMs": 1765580400000,
@@ -36439,7 +36439,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 18.237934
+        "residualFatigue": 18.578173
     },
     {
         "dateMidnightMs": 1765666800000,
@@ -36506,7 +36506,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 56.70746
+        "residualFatigue": 56.877575
     },
     {
         "dateMidnightMs": 1765753200000,
@@ -36571,7 +36571,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 28.35373
+        "residualFatigue": 28.438787
     },
     {
         "dateMidnightMs": 1765839600000,
@@ -36637,7 +36637,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 13.98228
+        "residualFatigue": 14.219394
     },
     {
         "dateMidnightMs": 1765926000000,
@@ -36702,7 +36702,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 81.94821
+        "residualFatigue": 82.06677
     },
     {
         "dateMidnightMs": 1766012400000,
@@ -36767,7 +36767,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 40.974106
+        "residualFatigue": 41.033386
     },
     {
         "dateMidnightMs": 1766098800000,
@@ -36833,7 +36833,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 20.226408
+        "residualFatigue": 20.516693
     },
     {
         "dateMidnightMs": 1766185200000,
@@ -36900,7 +36900,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 82.66326
+        "residualFatigue": 82.8084
     },
     {
         "dateMidnightMs": 1766271600000,
@@ -36965,7 +36965,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 41.33163
+        "residualFatigue": 41.4042
     },
     {
         "dateMidnightMs": 1766358000000,
@@ -37032,7 +37032,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 20.479923
+        "residualFatigue": 20.7021
     },
     {
         "dateMidnightMs": 1766444400000,
@@ -37098,7 +37098,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 63.146667
+        "residualFatigue": 63.257755
     },
     {
         "dateMidnightMs": 1766530800000,
@@ -37163,7 +37163,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 31.573334
+        "residualFatigue": 31.628878
     },
     {
         "dateMidnightMs": 1766617200000,
@@ -37229,7 +37229,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 15.493866
+        "residualFatigue": 15.814439
     },
     {
         "dateMidnightMs": 1766703600000,
@@ -37295,7 +37295,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 53.14205
+        "residualFatigue": 53.302338
     },
     {
         "dateMidnightMs": 1766790000000,
@@ -37360,7 +37360,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 26.571026
+        "residualFatigue": 26.651169
     },
     {
         "dateMidnightMs": 1766876400000,
@@ -37427,7 +37427,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 13.002114
+        "residualFatigue": 13.325584
     },
     {
         "dateMidnightMs": 1766962800000,
@@ -37493,7 +37493,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 81.48493
+        "residualFatigue": 81.64667
     },
     {
         "dateMidnightMs": 1767049200000,
@@ -37558,7 +37558,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 40.742466
+        "residualFatigue": 40.823334
     },
     {
         "dateMidnightMs": 1767135600000,
@@ -37624,7 +37624,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 20.164566
+        "residualFatigue": 20.411667
     },
     {
         "dateMidnightMs": 1767222000000,
@@ -37690,7 +37690,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 56.66743
+        "residualFatigue": 56.79098
     },
     {
         "dateMidnightMs": 1767308400000,
@@ -37755,7 +37755,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 28.333715
+        "residualFatigue": 28.39549
     },
     {
         "dateMidnightMs": 1767394800000,
@@ -37821,7 +37821,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 13.989533
+        "residualFatigue": 14.197745
     },
     {
         "dateMidnightMs": 1767481200000,
@@ -37886,7 +37886,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 69.19298
+        "residualFatigue": 69.29708
     },
     {
         "dateMidnightMs": 1767567600000,
@@ -37951,7 +37951,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 34.59649
+        "residualFatigue": 34.64854
     },
     {
         "dateMidnightMs": 1767654000000,
@@ -38018,7 +38018,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 17.005339
+        "residualFatigue": 17.32427
     },
     {
         "dateMidnightMs": 1767740400000,
@@ -38084,7 +38084,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 62.141
+        "residualFatigue": 62.300465
     },
     {
         "dateMidnightMs": 1767826800000,
@@ -38149,7 +38149,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 31.0705
+        "residualFatigue": 31.150232
     },
     {
         "dateMidnightMs": 1767913200000,
@@ -38216,7 +38216,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 15.353276
+        "residualFatigue": 15.575116
     },
     {
         "dateMidnightMs": 1767999600000,
@@ -38282,7 +38282,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 83.680786
+        "residualFatigue": 83.79171
     },
     {
         "dateMidnightMs": 1768086000000,
@@ -38347,7 +38347,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 41.840393
+        "residualFatigue": 41.895855
     },
     {
         "dateMidnightMs": 1768172400000,
@@ -38413,7 +38413,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 20.677235
+        "residualFatigue": 20.947927
     },
     {
         "dateMidnightMs": 1768258800000,
@@ -38479,7 +38479,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 70.1717
+        "residualFatigue": 70.307045
     },
     {
         "dateMidnightMs": 1768345200000,
@@ -38546,7 +38546,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 35.08585
+        "residualFatigue": 35.153522
     },
     {
         "dateMidnightMs": 1768431600000,
@@ -38612,7 +38612,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 17.3334
+        "residualFatigue": 17.576761
     },
     {
         "dateMidnightMs": 1768518000000,
@@ -38678,7 +38678,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 73.82703
+        "residualFatigue": 73.94871
     },
     {
         "dateMidnightMs": 1768604400000,
@@ -38745,7 +38745,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 36.913513
+        "residualFatigue": 36.974354
     },
     {
         "dateMidnightMs": 1768690800000,
@@ -38811,7 +38811,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 18.159864
+        "residualFatigue": 18.487177
     },
     {
         "dateMidnightMs": 1768777200000,
@@ -38878,7 +38878,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 90.01398
+        "residualFatigue": 90.177635
     },
     {
         "dateMidnightMs": 1768863600000,
@@ -38943,7 +38943,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 45.00699
+        "residualFatigue": 45.088818
     },
     {
         "dateMidnightMs": 1768950000000,
@@ -39009,7 +39009,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 22.269772
+        "residualFatigue": 22.544409
     },
     {
         "dateMidnightMs": 1769036400000,
@@ -39075,7 +39075,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 79.07158
+        "residualFatigue": 79.2089
     },
     {
         "dateMidnightMs": 1769122800000,
@@ -39142,7 +39142,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 39.53579
+        "residualFatigue": 39.60445
     },
     {
         "dateMidnightMs": 1769209200000,
@@ -39208,7 +39208,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 19.513363
+        "residualFatigue": 19.802225
     },
     {
         "dateMidnightMs": 1769295600000,
@@ -39274,7 +39274,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 54.38777
+        "residualFatigue": 54.532204
     },
     {
         "dateMidnightMs": 1769382000000,
@@ -39339,7 +39339,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 27.193886
+        "residualFatigue": 27.266102
     },
     {
         "dateMidnightMs": 1769468400000,
@@ -39405,7 +39405,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 13.280794
+        "residualFatigue": 13.633051
     },
     {
         "dateMidnightMs": 1769554800000,
@@ -39471,7 +39471,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 56.12767
+        "residualFatigue": 56.3038
     },
     {
         "dateMidnightMs": 1769641200000,
@@ -39538,7 +39538,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 28.063835
+        "residualFatigue": 28.1519
     },
     {
         "dateMidnightMs": 1769727600000,
@@ -39604,7 +39604,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 13.76654
+        "residualFatigue": 14.07595
     },
     {
         "dateMidnightMs": 1769814000000,
@@ -39671,7 +39671,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 56.64124
+        "residualFatigue": 56.795944
     },
     {
         "dateMidnightMs": 1769900400000,
@@ -39736,7 +39736,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 28.32062
+        "residualFatigue": 28.397972
     },
     {
         "dateMidnightMs": 1769986800000,
@@ -39802,7 +39802,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 13.98597
+        "residualFatigue": 14.198986
     },
     {
         "dateMidnightMs": 1770073200000,
@@ -39868,7 +39868,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 61.30527
+        "residualFatigue": 61.411777
     },
     {
         "dateMidnightMs": 1770159600000,
@@ -39935,7 +39935,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 30.652636
+        "residualFatigue": 30.705889
     },
     {
         "dateMidnightMs": 1770246000000,
@@ -40002,7 +40002,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 15.133008
+        "residualFatigue": 15.352944
     },
     {
         "dateMidnightMs": 1770332400000,
@@ -40068,7 +40068,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 62.2337
+        "residualFatigue": 62.343666
     },
     {
         "dateMidnightMs": 1770418800000,
@@ -40133,7 +40133,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 31.11685
+        "residualFatigue": 31.171833
     },
     {
         "dateMidnightMs": 1770505200000,
@@ -40199,7 +40199,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 15.364058
+        "residualFatigue": 15.5859165
     },
     {
         "dateMidnightMs": 1770591600000,
@@ -40265,7 +40265,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 54.703823
+        "residualFatigue": 54.814754
     },
     {
         "dateMidnightMs": 1770678000000,
@@ -40330,7 +40330,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 27.351912
+        "residualFatigue": 27.407377
     },
     {
         "dateMidnightMs": 1770764400000,
@@ -40397,7 +40397,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 13.4637985
+        "residualFatigue": 13.703689
     },
     {
         "dateMidnightMs": 1770850800000,
@@ -40463,7 +40463,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 79.74609
+        "residualFatigue": 79.866035
     },
     {
         "dateMidnightMs": 1770937200000,
@@ -40528,7 +40528,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 39.873047
+        "residualFatigue": 39.933018
     },
     {
         "dateMidnightMs": 1771023600000,
@@ -40594,7 +40594,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 19.722979
+        "residualFatigue": 19.966509
     },
     {
         "dateMidnightMs": 1771110000000,
@@ -40660,7 +40660,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 75.16241
+        "residualFatigue": 75.28417
     },
     {
         "dateMidnightMs": 1771196400000,
@@ -40725,7 +40725,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 37.581203
+        "residualFatigue": 37.642086
     },
     {
         "dateMidnightMs": 1771282800000,
@@ -40791,7 +40791,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 18.606922
+        "residualFatigue": 18.821043
     },
     {
         "dateMidnightMs": 1771369200000,
@@ -40857,7 +40857,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 81.16418
+        "residualFatigue": 81.27123
     },
     {
         "dateMidnightMs": 1771455600000,
@@ -40922,7 +40922,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 40.58209
+        "residualFatigue": 40.635616
     },
     {
         "dateMidnightMs": 1771542000000,
@@ -40988,7 +40988,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 20.005833
+        "residualFatigue": 20.317808
     },
     {
         "dateMidnightMs": 1771628400000,
@@ -41055,7 +41055,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 65.181946
+        "residualFatigue": 65.33794
     },
     {
         "dateMidnightMs": 1771714800000,
@@ -41120,7 +41120,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 32.590973
+        "residualFatigue": 32.66897
     },
     {
         "dateMidnightMs": 1771801200000,
@@ -41186,7 +41186,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 16.040405
+        "residualFatigue": 16.334484
     },
     {
         "dateMidnightMs": 1771887600000,
@@ -41252,7 +41252,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 69.7051
+        "residualFatigue": 69.85214
     },
     {
         "dateMidnightMs": 1771974000000,
@@ -41317,7 +41317,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 34.85255
+        "residualFatigue": 34.92607
     },
     {
         "dateMidnightMs": 1772060400000,
@@ -41384,7 +41384,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 17.14557
+        "residualFatigue": 17.463036
     },
     {
         "dateMidnightMs": 1772146800000,
@@ -41450,7 +41450,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 64.41447
+        "residualFatigue": 64.5732
     },
     {
         "dateMidnightMs": 1772233200000,
@@ -41515,7 +41515,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 32.207233
+        "residualFatigue": 32.2866
     },
     {
         "dateMidnightMs": 1772319600000,
@@ -41581,7 +41581,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 15.888074
+        "residualFatigue": 16.1433
     },
     {
         "dateMidnightMs": 1772406000000,
@@ -41647,7 +41647,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 44.254116
+        "residualFatigue": 44.38173
     },
     {
         "dateMidnightMs": 1772492400000,
@@ -41712,7 +41712,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 22.127058
+        "residualFatigue": 22.190865
     },
     {
         "dateMidnightMs": 1772578800000,
@@ -41778,7 +41778,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 10.822573
+        "residualFatigue": 11.095432
     },
     {
         "dateMidnightMs": 1772665200000,
@@ -41843,7 +41843,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 88.7716
+        "residualFatigue": 88.90803
     },
     {
         "dateMidnightMs": 1772751600000,
@@ -41908,7 +41908,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 44.3858
+        "residualFatigue": 44.454014
     },
     {
         "dateMidnightMs": 1772838000000,
@@ -41974,7 +41974,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 21.97477
+        "residualFatigue": 22.227007
     },
     {
         "dateMidnightMs": 1772924400000,
@@ -42040,7 +42040,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 68.34498
+        "residualFatigue": 68.4711
     },
     {
         "dateMidnightMs": 1773010800000,
@@ -42105,7 +42105,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 34.17249
+        "residualFatigue": 34.23555
     },
     {
         "dateMidnightMs": 1773097200000,
@@ -42171,7 +42171,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 16.944408
+        "residualFatigue": 17.117775
     },
     {
         "dateMidnightMs": 1773183600000,
@@ -42237,7 +42237,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 75.71676
+        "residualFatigue": 75.803444
     },
     {
         "dateMidnightMs": 1773270000000,
@@ -42302,7 +42302,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 37.85838
+        "residualFatigue": 37.901722
     },
     {
         "dateMidnightMs": 1773356400000,
@@ -42368,7 +42368,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 18.603565
+        "residualFatigue": 18.950861
     },
     {
         "dateMidnightMs": 1773442800000,
@@ -42435,7 +42435,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 66.374016
+        "residualFatigue": 66.54766
     },
     {
         "dateMidnightMs": 1773529200000,
@@ -42500,7 +42500,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 33.187008
+        "residualFatigue": 33.27383
     },
     {
         "dateMidnightMs": 1773615600000,
@@ -42566,7 +42566,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 16.36945
+        "residualFatigue": 16.636915
     },
     {
         "dateMidnightMs": 1773702000000,
@@ -42632,7 +42632,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 50.04961
+        "residualFatigue": 50.183342
     },
     {
         "dateMidnightMs": 1773788400000,
@@ -42697,7 +42697,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 25.024805
+        "residualFatigue": 25.091671
     },
     {
         "dateMidnightMs": 1773874800000,
@@ -42763,7 +42763,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 12.249728
+        "residualFatigue": 12.5458355
     },
     {
         "dateMidnightMs": 1773961200000,
@@ -42829,7 +42829,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 69.09226
+        "residualFatigue": 69.24031
     },
     {
         "dateMidnightMs": 1774047600000,
@@ -42894,7 +42894,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 34.54613
+        "residualFatigue": 34.620155
     },
     {
         "dateMidnightMs": 1774134000000,
@@ -42960,7 +42960,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 17.050127
+        "residualFatigue": 17.310078
     },
     {
         "dateMidnightMs": 1774220400000,
@@ -43026,7 +43026,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 75.15962
+        "residualFatigue": 75.2896
     },
     {
         "dateMidnightMs": 1774306800000,
@@ -43091,7 +43091,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 37.57981
+        "residualFatigue": 37.6448
     },
     {
         "dateMidnightMs": 1774393200000,
@@ -43158,7 +43158,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 18.626371
+        "residualFatigue": 18.8224
     },
     {
         "dateMidnightMs": 1774479600000,
@@ -43223,7 +43223,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 70.7087
+        "residualFatigue": 70.80672
     },
     {
         "dateMidnightMs": 1774566000000,
@@ -43288,7 +43288,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 35.35435
+        "residualFatigue": 35.40336
     },
     {
         "dateMidnightMs": 1774652400000,
@@ -43354,7 +43354,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 17.43121
+        "residualFatigue": 17.70168
     },
     {
         "dateMidnightMs": 1774738800000,
@@ -43420,7 +43420,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 72.93463
+        "residualFatigue": 73.07383
     },
     {
         "dateMidnightMs": 1774821600000,
@@ -43485,7 +43485,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 36.467316
+        "residualFatigue": 36.536915
     },
     {
         "dateMidnightMs": 1774908000000,
@@ -43551,7 +43551,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 17.965738
+        "residualFatigue": 18.268457
     },
     {
         "dateMidnightMs": 1774994400000,
@@ -43618,7 +43618,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 81.052414
+        "residualFatigue": 81.20377
     },
     {
         "dateMidnightMs": 1775080800000,
@@ -43683,7 +43683,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 40.526207
+        "residualFatigue": 40.601887
     },
     {
         "dateMidnightMs": 1775167200000,
@@ -43750,7 +43750,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 20.01625
+        "residualFatigue": 20.300943
     },
     {
         "dateMidnightMs": 1775253600000,
@@ -43816,7 +43816,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 53.214325
+        "residualFatigue": 53.35667
     },
     {
         "dateMidnightMs": 1775340000000,
@@ -43881,7 +43881,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 26.607162
+        "residualFatigue": 26.678335
     },
     {
         "dateMidnightMs": 1775426400000,
@@ -43946,7 +43946,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 13.053723
+        "residualFatigue": 13.339168
     },
     {
         "dateMidnightMs": 1775512800000,
@@ -44012,7 +44012,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 53.968643
+        "residualFatigue": 54.111366
     },
     {
         "dateMidnightMs": 1775599200000,
@@ -44077,7 +44077,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 26.984322
+        "residualFatigue": 27.055683
     },
     {
         "dateMidnightMs": 1775685600000,
@@ -44144,7 +44144,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 13.210639
+        "residualFatigue": 13.527842
     },
     {
         "dateMidnightMs": 1775772000000,
@@ -44210,7 +44210,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 52.685993
+        "residualFatigue": 52.844593
     },
     {
         "dateMidnightMs": 1775858400000,
@@ -44277,7 +44277,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 26.342997
+        "residualFatigue": 26.422297
     },
     {
         "dateMidnightMs": 1775944800000,
@@ -44343,7 +44343,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 13.002724
+        "residualFatigue": 13.211148
     },
     {
         "dateMidnightMs": 1776031200000,
@@ -44409,7 +44409,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 52.470882
+        "residualFatigue": 52.575092
     },
     {
         "dateMidnightMs": 1776117600000,
@@ -44474,7 +44474,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 26.235441
+        "residualFatigue": 26.287546
     },
     {
         "dateMidnightMs": 1776204000000,
@@ -44540,7 +44540,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 12.932401
+        "residualFatigue": 13.143773
     },
     {
         "dateMidnightMs": 1776290400000,
@@ -44606,7 +44606,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 64.424484
+        "residualFatigue": 64.530174
     },
     {
         "dateMidnightMs": 1776376800000,
@@ -44671,7 +44671,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 32.212242
+        "residualFatigue": 32.265087
     },
     {
         "dateMidnightMs": 1776463200000,
@@ -44737,7 +44737,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 15.926119
+        "residualFatigue": 16.132544
     },
     {
         "dateMidnightMs": 1776549600000,
@@ -44803,7 +44803,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 65.4087
+        "residualFatigue": 65.51191
     },
     {
         "dateMidnightMs": 1776636000000,
@@ -44868,7 +44868,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 32.70435
+        "residualFatigue": 32.755955
     },
     {
         "dateMidnightMs": 1776722400000,
@@ -44933,7 +44933,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 16.172606
+        "residualFatigue": 16.377977
     },
     {
         "dateMidnightMs": 1776808800000,
@@ -44999,7 +44999,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 76.598114
+        "residualFatigue": 76.7008
     },
     {
         "dateMidnightMs": 1776895200000,
@@ -45064,7 +45064,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 38.299057
+        "residualFatigue": 38.3504
     },
     {
         "dateMidnightMs": 1776981600000,
@@ -45130,7 +45130,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 18.923128
+        "residualFatigue": 19.1752
     },
     {
         "dateMidnightMs": 1777068000000,
@@ -45196,7 +45196,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 59.036236
+        "residualFatigue": 59.16227
     },
     {
         "dateMidnightMs": 1777154400000,
@@ -45261,7 +45261,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 29.518118
+        "residualFatigue": 29.581135
     },
     {
         "dateMidnightMs": 1777240800000,
@@ -45327,7 +45327,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 14.534661
+        "residualFatigue": 14.790567
     },
     {
         "dateMidnightMs": 1777327200000,
@@ -45394,7 +45394,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 57.46057
+        "residualFatigue": 57.588524
     },
     {
         "dateMidnightMs": 1777413600000,
@@ -45461,7 +45461,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 28.730286
+        "residualFatigue": 28.794262
     },
     {
         "dateMidnightMs": 1777500000000,
@@ -45526,7 +45526,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 14.097519
+        "residualFatigue": 14.397131
     },
     {
         "dateMidnightMs": 1777586400000,
@@ -45592,7 +45592,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 67.818344
+        "residualFatigue": 67.96815
     },
     {
         "dateMidnightMs": 1777672800000,
@@ -45657,7 +45657,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 33.909172
+        "residualFatigue": 33.984074
     },
     {
         "dateMidnightMs": 1777759200000,
@@ -45723,7 +45723,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 16.760935
+        "residualFatigue": 16.992037
     },
     {
         "dateMidnightMs": 1777845600000,
@@ -45789,7 +45789,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 78.27502
+        "residualFatigue": 78.39057
     },
     {
         "dateMidnightMs": 1777932000000,
@@ -45854,7 +45854,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 39.13751
+        "residualFatigue": 39.195286
     },
     {
         "dateMidnightMs": 1778018400000,
@@ -45921,7 +45921,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 19.372688
+        "residualFatigue": 19.597643
     },
     {
         "dateMidnightMs": 1778104800000,
@@ -45987,7 +45987,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 57.630646
+        "residualFatigue": 57.743122
     },
     {
         "dateMidnightMs": 1778191200000,
@@ -46052,7 +46052,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 28.815323
+        "residualFatigue": 28.871561
     },
     {
         "dateMidnightMs": 1778277600000,
@@ -46118,7 +46118,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 14.17028
+        "residualFatigue": 14.435781
     },
     {
         "dateMidnightMs": 1778364000000,
@@ -46184,7 +46184,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 76.83587
+        "residualFatigue": 76.96862
     },
     {
         "dateMidnightMs": 1778450400000,
@@ -46249,7 +46249,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 38.417934
+        "residualFatigue": 38.48431
     },
     {
         "dateMidnightMs": 1778536800000,
@@ -46315,7 +46315,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 18.935942
+        "residualFatigue": 19.242155
     },
     {
         "dateMidnightMs": 1778623200000,
@@ -46381,7 +46381,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 87.53706
+        "residualFatigue": 87.69017
     },
     {
         "dateMidnightMs": 1778709600000,
@@ -46446,7 +46446,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 43.76853
+        "residualFatigue": 43.845085
     },
     {
         "dateMidnightMs": 1778796000000,
@@ -46512,7 +46512,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 21.696983
+        "residualFatigue": 21.922543
     },
     {
         "dateMidnightMs": 1778882400000,
@@ -46578,7 +46578,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 57.9559
+        "residualFatigue": 58.068676
     },
     {
         "dateMidnightMs": 1778968800000,
@@ -46643,7 +46643,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 28.97795
+        "residualFatigue": 29.034338
     },
     {
         "dateMidnightMs": 1779055200000,
@@ -46709,7 +46709,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 14.216511
+        "residualFatigue": 14.517169
     },
     {
         "dateMidnightMs": 1779141600000,
@@ -46775,7 +46775,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 78.591194
+        "residualFatigue": 78.74152
     },
     {
         "dateMidnightMs": 1779228000000,
@@ -46840,7 +46840,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 39.295597
+        "residualFatigue": 39.37076
     },
     {
         "dateMidnightMs": 1779314400000,
@@ -46906,7 +46906,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 19.34284
+        "residualFatigue": 19.68538
     },
     {
         "dateMidnightMs": 1779400800000,
@@ -46972,7 +46972,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 83.07565
+        "residualFatigue": 83.24692
     },
     {
         "dateMidnightMs": 1779487200000,
@@ -47037,7 +47037,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 41.537827
+        "residualFatigue": 41.62346
     },
     {
         "dateMidnightMs": 1779573600000,
@@ -47103,7 +47103,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 20.5849
+        "residualFatigue": 20.81173
     },
     {
         "dateMidnightMs": 1779660000000,
@@ -47169,7 +47169,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 83.45413
+        "residualFatigue": 83.56754
     },
     {
         "dateMidnightMs": 1779746400000,
@@ -47234,7 +47234,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 41.727066
+        "residualFatigue": 41.78377
     },
     {
         "dateMidnightMs": 1779832800000,
@@ -47300,7 +47300,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 20.584303
+        "residualFatigue": 20.891886
     },
     {
         "dateMidnightMs": 1779919200000,
@@ -47366,7 +47366,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 70.29614
+        "residualFatigue": 70.449936
     },
     {
         "dateMidnightMs": 1780005600000,
@@ -47431,7 +47431,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 35.14807
+        "residualFatigue": 35.224968
     },
     {
         "dateMidnightMs": 1780092000000,
@@ -47498,7 +47498,7 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 17.2873
+        "residualFatigue": 17.612484
     },
     {
         "dateMidnightMs": 1780178400000,
@@ -47558,6 +47558,6 @@
         "everydayLoadConfidence": "LOW",
         "supplementalSleepDurationMinutes": 0,
         "napCount": 0,
-        "residualFatigue": 69.30674
+        "residualFatigue": 69.46933
     }
 ]

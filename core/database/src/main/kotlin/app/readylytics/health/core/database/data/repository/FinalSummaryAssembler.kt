@@ -61,8 +61,7 @@ class FinalSummaryAssembler(
             )
         val summary = resolveScoredSummary(base, inputs, isCalibrated)
         return summary.copy(
-            residualFatigue =
-                residualFatigueComputer.compute(inputs.context, inputs.fatigueContext, inputs.context.prefs),
+            residualFatigue = residualFatigueComputer.compute(inputs.context, inputs.fatigueContext),
         )
     }
 

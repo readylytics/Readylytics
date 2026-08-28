@@ -182,6 +182,19 @@ class ResidualFatigueWalkForwardDeterminismTest {
             ),
         )
 
+    /**
+     * Range-aware stub of the DAO query: like the real Room query, only workouts whose end time
+     * falls inside the requested window are returned. A plain `any()`-return stubs every call the
+     * same list regardless of window, which would mask window-width differences between paths.
+     */
+    private fun stubFatigueWorkouts(workouts: List<FatigueWorkoutInput>) {
+        coEvery { workoutDao.getFatigueWorkoutInputs(any(), any()) } answers {
+            val from = firstArg<Long>()
+            val to = secondArg<Long>()
+            workouts.filter { it.endTimeMs in from..to }
+        }
+    }
+
     private fun evalMs(day: LocalDate): Long = day.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
 
     private fun expectedFatigue(
@@ -218,7 +231,7 @@ class ResidualFatigueWalkForwardDeterminismTest {
     fun `walk-forward accumulator reproduces summation formula per day`() =
         runTest {
             val workouts = workoutInputs()
-            coEvery { workoutDao.getFatigueWorkoutInputs(any(), any()) } returns workouts
+            stubFatigueWorkouts(workouts)
 
             val prefs =
                 UserPreferences(
@@ -242,7 +255,7 @@ class ResidualFatigueWalkForwardDeterminismTest {
     fun `partial walk-forward equals full walk-forward for overlapping days`() =
         runTest {
             val workouts = workoutInputs()
-            coEvery { workoutDao.getFatigueWorkoutInputs(any(), any()) } returns workouts
+            stubFatigueWorkouts(workouts)
 
             val prefs =
                 UserPreferences(
@@ -266,7 +279,7 @@ class ResidualFatigueWalkForwardDeterminismTest {
     fun `single-day fallback matches walk-forward value for the same day`() =
         runTest {
             val workouts = workoutInputs()
-            coEvery { workoutDao.getFatigueWorkoutInputs(any(), any()) } returns workouts
+            stubFatigueWorkouts(workouts)
 
             val prefs =
                 UserPreferences(
@@ -282,10 +295,42 @@ class ResidualFatigueWalkForwardDeterminismTest {
         }
 
     @Test
+    fun `single-day fallback matches walk-forward for workout in the seed band`() =
+        runTest {
+            // A workout 10 days back sits in the 8-32-half-life band at the default 24h half-life:
+            // inside the walk-forward's 32-day seed window but outside a naive 8x-half-life fallback
+            // window. Both paths must cover the same window, or the same day scores differently
+            // depending on which path recomputes it (spec §9 determinism).
+            val oldWorkout =
+                FatigueWorkoutInput(
+                    endTimeMs =
+                        day0
+                            .minusDays(10)
+                            .atStartOfDay(zoneId)
+                            .toInstant()
+                            .toEpochMilli() + 2 * 3_600_000L,
+                    trimp = 30f,
+                )
+            stubFatigueWorkouts(listOf(oldWorkout))
+
+            val prefs =
+                UserPreferences(
+                    scoringZoneId = zoneId.id,
+                    residualFatigueHalfLifeHours = config.halfLifeHours,
+                    residualFatigueGain = config.fatigueGain,
+                )
+            val walkForward = runWalkForward(day0, day0, prefs)
+
+            val singleDay = repo.computeDailySummary(day0)
+
+            assertEquals(walkForward[day0], singleDay.residualFatigue)
+        }
+
+    @Test
     fun `disabled fatigue persists null on both walk-forward and single-day paths`() =
         runTest {
             val workouts = workoutInputs()
-            coEvery { workoutDao.getFatigueWorkoutInputs(any(), any()) } returns workouts
+            stubFatigueWorkouts(workouts)
 
             val disabledPrefs =
                 UserPreferences(
@@ -306,7 +351,7 @@ class ResidualFatigueWalkForwardDeterminismTest {
     fun `fetchWalkForwardFatigueContext holds sorted end-time impulse series`() =
         runTest {
             val workouts = workoutInputs()
-            coEvery { workoutDao.getFatigueWorkoutInputs(any(), any()) } returns workouts
+            stubFatigueWorkouts(workouts)
 
             val context = repo.fetchWalkForwardFatigueContext(day0, day2, zoneId)
 

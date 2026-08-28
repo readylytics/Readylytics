@@ -59,8 +59,10 @@ class ResyncCheckpointResumeTest {
             WalkForwardTrimpContext(TreeMap(), TreeMap())
         coEvery { scoringRepository.fetchWalkForwardBaselineContext(any(), any(), any()) } returns
             WalkForwardBaselineContext(emptyList())
-        // WP-27: the walk-forward also prefetches one mutable residual-fatigue accumulator per run;
-        // a relaxed mock would return null and NPE on the 6-arg recomputeDay call.
+        // WP-27: the walk-forward also prefetches one mutable residual-fatigue accumulator per run.
+        // A relaxed mock would return null here, and the recompute loop's non-null-context guard
+        // would then silently fall back to the 3-arg recomputeDay (no fatigue computed) -- stub it
+        // so the walk-forward actually exercises the 6-arg path.
         coEvery { scoringRepository.fetchWalkForwardFatigueContext(any(), any(), any()) } returns
             WalkForwardFatigueContext(emptyList())
         useCase =
