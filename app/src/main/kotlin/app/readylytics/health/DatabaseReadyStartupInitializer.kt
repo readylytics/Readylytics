@@ -42,22 +42,25 @@ internal class DatabaseReadyStartupInitializer(
                 }
             }
 
-            runNonFatal("TRIMP normalization migration") {
-                physiologyPreferences.get().migrateTrimpDefaultsIfNeeded()
-            }
+            val migrationCompleted =
+                runNonFatal("TRIMP normalization migration") {
+                    physiologyPreferences.get().migrateTrimpDefaultsIfNeeded()
+                }
 
             val settings = settingsRepository.get()
-            runNonFatal("Scoring version migration check") {
-                val storedScoringVersion = settings.userPreferences.first().scoringVersion
-                if (storedScoringVersion < SettingsDefaults.CURRENT_SCORING_VERSION) {
-                    logD(TAG) {
-                        "Scoring version $storedScoringVersion < ${SettingsDefaults.CURRENT_SCORING_VERSION}; " +
-                            "enqueueing recompute-only resync"
+            if (migrationCompleted) {
+                runNonFatal("Scoring version migration check") {
+                    val storedScoringVersion = settings.userPreferences.first().scoringVersion
+                    if (storedScoringVersion < SettingsDefaults.CURRENT_SCORING_VERSION) {
+                        logD(TAG) {
+                            "Scoring version $storedScoringVersion < ${SettingsDefaults.CURRENT_SCORING_VERSION}; " +
+                                "enqueueing recompute-only resync"
+                        }
+                        // The worker owns the version bump (HealthResyncWorker.persistPostRecomputeState, on
+                        // success only). Never bump here: a killed worker must leave the stale version in
+                        // place so the next launch re-enqueues idempotently.
+                        workerScheduler.scheduleResyncWorker(recomputeOnly = true)
                     }
-                    // The worker owns the version bump (HealthResyncWorker.persistPostRecomputeState, on
-                    // success only). Never bump here: a killed worker must leave the stale version in
-                    // place so the next launch re-enqueues idempotently.
-                    workerScheduler.scheduleResyncWorker(recomputeOnly = true)
                 }
             }
 
@@ -92,15 +95,16 @@ internal class DatabaseReadyStartupInitializer(
     private suspend fun runNonFatal(
         actionName: String,
         block: suspend () -> Unit,
-    ) {
+    ): Boolean =
         try {
             block()
+            true
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             logE(TAG, e) { "$actionName failed" }
+            false
         }
-    }
 
     private companion object {
         const val TAG = "HealthDashboardApplication"

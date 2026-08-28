@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.io.IOException
 
 class DatabaseReadyStartupInitializerScoringVersionTest {
     @Test
@@ -75,6 +76,26 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
 
             coVerify(exactly = 1) { physiology.migrateTrimpDefaultsIfNeeded() }
             assertEquals(1, scheduler.recomputeOnlyRequests)
+        }
+
+    @Test
+    fun `migration failure suppresses recompute scheduling so a later launch re-enqueues`() =
+        runTest {
+            val scheduler = FakeWorkerScheduler()
+            val physiology = mockk<PhysiologyPreferences>(relaxed = true)
+            coEvery { physiology.migrateTrimpDefaultsIfNeeded() } throws
+                IOException("datastore unavailable")
+            val initializer =
+                initializerWith(
+                    storedScoringVersion = 0,
+                    scheduler = scheduler,
+                    physiology = physiology,
+                )
+
+            val result = initializer.initializeIfReady(DatabaseReadiness.Ready)
+
+            assertEquals(StartupInitializationResult.COMPLETE, result)
+            assertEquals(0, scheduler.recomputeOnlyRequests)
         }
 
     private fun initializerWith(

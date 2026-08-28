@@ -55,7 +55,7 @@ class HealthDashboardApplication :
     lateinit var backfillHistoricalBaselines: Lazy<BackfillHistoricalBaselinesUseCase>
 
     @Inject
-    internal lateinit var physiologyPreferences: Lazy<PhysiologyPreferences>
+    lateinit var physiologyPreferences: Lazy<PhysiologyPreferences>
 
     @Inject
     lateinit var healthSyncUseCase: Lazy<HealthSyncUseCase>

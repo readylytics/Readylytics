@@ -9,7 +9,7 @@ import java.time.LocalDate
 import java.time.Period
 import javax.inject.Inject
 
-internal class PhysiologyPreferences
+class PhysiologyPreferences
     @Inject
     constructor(
         private val dataStore: DataStore<UserPreferencesProto>,
