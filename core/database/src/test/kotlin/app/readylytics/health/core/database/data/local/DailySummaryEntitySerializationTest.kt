@@ -60,4 +60,21 @@ class DailySummaryEntitySerializationTest {
         val deserialized = json.decodeFromString<DailySummaryEntity>(serialized)
         assertEquals(original, deserialized)
     }
+
+    @Test
+    fun testDecodesBackupWithoutResidualFatigueKeyToNull() {
+        val legacyBackup = """{"dateMidnightMs":123456789,"sleepScore":87.5,"napCount":2}"""
+
+        val testCodec = Json { encodeDefaults = true }
+        val fromTestCodec = testCodec.decodeFromString<DailySummaryEntity>(legacyBackup)
+        assertEquals(123456789L, fromTestCodec.dateMidnightMs)
+        assertEquals(87.5f, fromTestCodec.sleepScore)
+        assertEquals(2, fromTestCodec.napCount)
+        assertEquals(null, fromTestCodec.residualFatigue)
+
+        val restoreCodec = Json { ignoreUnknownKeys = true }
+        val fromRestoreCodec = restoreCodec.decodeFromString<DailySummaryEntity>(legacyBackup)
+        assertEquals(123456789L, fromRestoreCodec.dateMidnightMs)
+        assertEquals(null, fromRestoreCodec.residualFatigue)
+    }
 }
