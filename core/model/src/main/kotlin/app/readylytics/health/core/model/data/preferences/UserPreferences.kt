@@ -111,6 +111,7 @@ data class UserPreferences(
     val lastRecalcSleepScoreWeightProfile: SleepScoreWeightProfile? = null,
     val lastRecalcGoalSleepHours: Float? = null,
     val lastRecalcHypersomniaOnsetPercent: Int? = null,
+    val trimpNormalizationMigrated: Boolean = false,
 )
 
 /**

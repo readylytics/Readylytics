@@ -201,6 +201,7 @@ internal fun UserPreferences.withRecalcAndVersion(proto: UserPreferencesProto): 
         lastRecalcHypersomniaOnsetPercent =
             if (proto.hasLastRecalcHypersomniaOnsetPercent()) proto.lastRecalcHypersomniaOnsetPercent else null,
         scoringVersion = proto.scoringVersion,
+        trimpNormalizationMigrated = proto.trimpNormalizationMigrated,
     )
 
 private fun migrateBirthdateFields(

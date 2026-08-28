@@ -7,6 +7,7 @@ import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.core.scoring.domain.scoring.BackfillHistoricalBaselinesUseCase
+import app.readylytics.health.data.preferences.PhysiologyPreferences
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.domain.migration.DatabaseMigrationUiState
 import dagger.Lazy
@@ -21,6 +22,7 @@ internal class DatabaseReadyStartupInitializer(
     private val healthSyncUseCase: Lazy<HealthSyncUseCase>,
     private val backfillHistoricalBaselines: Lazy<BackfillHistoricalBaselinesUseCase>,
     private val settingsRepository: Lazy<SettingsRepository>,
+    private val physiologyPreferences: Lazy<PhysiologyPreferences>,
     private val workerScheduler: WorkerScheduler,
 ) {
     private val initialized = AtomicBoolean(false)
@@ -38,6 +40,10 @@ internal class DatabaseReadyStartupInitializer(
                 if (backfilled > 0) {
                     logD(TAG) { "Backfilled $backfilled historical baselines" }
                 }
+            }
+
+            runNonFatal("TRIMP normalization migration") {
+                physiologyPreferences.get().migrateTrimpDefaultsIfNeeded()
             }
 
             val settings = settingsRepository.get()

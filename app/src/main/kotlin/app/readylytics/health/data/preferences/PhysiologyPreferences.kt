@@ -165,6 +165,22 @@ internal class PhysiologyPreferences
             }
         }
 
+        suspend fun migrateTrimpDefaultsIfNeeded() {
+            dataStore.updateData { proto ->
+                if (proto.trimpNormalizationMigrated) return@updateData proto
+                val newRasCal =
+                    TrimpMigrationHelper.migrateRasCalibration(
+                        storedValue = proto.rasCalibration,
+                        alreadyMigrated = false,
+                    )
+                proto
+                    .toBuilder()
+                    .setRasCalibration(newRasCal)
+                    .setTrimpNormalizationMigrated(true)
+                    .build()
+            }
+        }
+
         suspend fun updateTrimpModel(model: TrimpModel) {
             dataStore.updateData {
                 it
@@ -193,3 +209,18 @@ internal class PhysiologyPreferences
             dataStore.updateData { it.toBuilder().setItrimpB(value.toValidItrimB()).build() }
         }
     }
+
+internal object TrimpMigrationHelper {
+    private val OLD_PROFILE_DEFAULTS = setOf(1.00f, 1.35f, 1.75f)
+
+    fun migrateRasCalibration(
+        storedValue: Float,
+        alreadyMigrated: Boolean,
+    ): Float =
+        when {
+            alreadyMigrated -> storedValue
+            // proto3 zero default = un-set, treat as needing migration
+            storedValue == 0.0f || storedValue in OLD_PROFILE_DEFAULTS -> 1.0f
+            else -> storedValue
+        }
+}

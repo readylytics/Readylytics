@@ -7,6 +7,7 @@ import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.core.scoring.domain.scoring.BackfillHistoricalBaselinesUseCase
+import app.readylytics.health.data.preferences.PhysiologyPreferences
 import app.readylytics.health.data.preferences.SettingsRepository
 import dagger.Lazy
 import io.mockk.coEvery
@@ -58,10 +59,29 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
             assertEquals(0, scheduler.recomputeOnlyRequests)
         }
 
+    @Test
+    fun `ready startup runs trimp normalization migration before recompute check`() =
+        runTest {
+            val scheduler = FakeWorkerScheduler()
+            val physiology = mockk<PhysiologyPreferences>(relaxed = true)
+            val initializer =
+                initializerWith(
+                    storedScoringVersion = 0,
+                    scheduler = scheduler,
+                    physiology = physiology,
+                )
+
+            initializer.initializeIfReady(DatabaseReadiness.Ready)
+
+            coVerify(exactly = 1) { physiology.migrateTrimpDefaultsIfNeeded() }
+            assertEquals(1, scheduler.recomputeOnlyRequests)
+        }
+
     private fun initializerWith(
         storedScoringVersion: Int,
         scheduler: FakeWorkerScheduler,
         settings: SettingsRepository = mockk(relaxed = true),
+        physiology: PhysiologyPreferences = mockk(relaxed = true),
     ): DatabaseReadyStartupInitializer {
         val healthSyncUseCase = mockk<HealthSyncUseCase>()
         coEvery { healthSyncUseCase.withSyncLock<Int>(any()) } coAnswers {
@@ -72,6 +92,7 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
 
         val healthSyncLazy = Lazy { healthSyncUseCase }
         val backfillLazy = Lazy { backfill }
+        val physiologyLazy = Lazy { physiology }
 
         val userPrefsFlow = MutableStateFlow(UserPreferences(scoringVersion = storedScoringVersion))
         coEvery { settings.userPreferences } returns userPrefsFlow.asStateFlow()
@@ -83,6 +104,7 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
             healthSyncUseCase = healthSyncLazy,
             backfillHistoricalBaselines = backfillLazy,
             settingsRepository = settingsLazy,
+            physiologyPreferences = physiologyLazy,
             workerScheduler = scheduler,
         )
     }

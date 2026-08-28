@@ -7,6 +7,7 @@ import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.core.scoring.domain.scoring.BackfillHistoricalBaselinesUseCase
+import app.readylytics.health.data.preferences.PhysiologyPreferences
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.domain.migration.DatabaseMigrationUiState
 import dagger.Lazy
@@ -38,6 +39,8 @@ class DatabaseReadyStartupInitializerTest {
     private val backfillLazy = mockk<Lazy<BackfillHistoricalBaselinesUseCase>>()
     private val settingsRepository = mockk<SettingsRepository>()
     private val settingsRepositoryLazy = mockk<Lazy<SettingsRepository>>()
+    private val physiologyPreferences = mockk<PhysiologyPreferences>(relaxed = true)
+    private val physiologyPreferencesLazy = mockk<Lazy<PhysiologyPreferences>>()
     private val workerScheduler = mockk<WorkerScheduler>(relaxed = true)
 
     @Test
@@ -50,6 +53,7 @@ class DatabaseReadyStartupInitializerTest {
             verify(exactly = 0) { healthSyncLazy.get() }
             verify(exactly = 0) { backfillLazy.get() }
             verify(exactly = 0) { settingsRepositoryLazy.get() }
+            verify(exactly = 0) { physiologyPreferencesLazy.get() }
             verify(exactly = 0) { workerScheduler.scheduleBackupWorker(any()) }
             verify(exactly = 0) { workerScheduler.scheduleBirthdayWorker() }
             verify(exactly = 0) { workerScheduler.scheduleDataCleanupWorker() }
@@ -260,6 +264,7 @@ class DatabaseReadyStartupInitializerTest {
 
     private fun createInitializer(): DatabaseReadyStartupInitializer {
         every { settingsRepositoryLazy.get() } returns settingsRepository
+        every { physiologyPreferencesLazy.get() } returns physiologyPreferences
         every { settingsRepository.userPreferences } returns
             flowOf(
                 UserPreferences(
@@ -270,6 +275,7 @@ class DatabaseReadyStartupInitializerTest {
             healthSyncUseCase = healthSyncLazy,
             backfillHistoricalBaselines = backfillLazy,
             settingsRepository = settingsRepositoryLazy,
+            physiologyPreferences = physiologyPreferencesLazy,
             workerScheduler = workerScheduler,
         )
     }

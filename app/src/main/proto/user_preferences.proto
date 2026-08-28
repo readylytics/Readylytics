@@ -276,6 +276,10 @@ message UserPreferencesProto {
     // DAY_OF_WEEK_UNSET (proto3 zero value) = never explicitly set; resolves to
     // SettingsDefaults.WEEK_START_DAY at the domain read boundary.
     DayOfWeekProto week_start_day = 89;
+
+    // One-time flag: Banister multiplier defaults have been migrated to 1.0.
+    // Prevents re-running the migration on subsequent launches.
+    bool trimp_normalization_migrated = 90;
 }
 
 enum TrimpMethodProto {

@@ -24,6 +24,7 @@ import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.core.scoring.domain.scoring.BackfillHistoricalBaselinesUseCase
 import app.readylytics.health.crashreport.CrashReportHandler
+import app.readylytics.health.data.preferences.PhysiologyPreferences
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.di.ReleaseLogSink
 import app.readylytics.health.domain.migration.DatabaseMigrationController
@@ -52,6 +53,9 @@ class HealthDashboardApplication :
 
     @Inject
     lateinit var backfillHistoricalBaselines: Lazy<BackfillHistoricalBaselinesUseCase>
+
+    @Inject
+    internal lateinit var physiologyPreferences: Lazy<PhysiologyPreferences>
 
     @Inject
     lateinit var healthSyncUseCase: Lazy<HealthSyncUseCase>
@@ -116,6 +120,7 @@ class HealthDashboardApplication :
                 healthSyncUseCase = healthSyncUseCase,
                 backfillHistoricalBaselines = backfillHistoricalBaselines,
                 settingsRepository = settingsRepo,
+                physiologyPreferences = physiologyPreferences,
                 workerScheduler = workerScheduler,
             )
         val startupCoordinator = DatabaseReadyStartupCoordinator(startupInitializer)

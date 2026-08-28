@@ -60,4 +60,58 @@ class PhysiologyPreferencesTest {
             assertEquals(36, proto.age) // 2026 - 1990 = 36 years (since 2026-07-08 is after 1990-06-15)
             assertEquals(true, proto.isBirthdayConfigured)
         }
+
+    @Test
+    fun `migrateTrimpDefaultsIfNeeded resets stored profile default to 1_0 and sets flag`() =
+        runTest {
+            physiologyPreferences.updateBanisterMultiplier(1.35f)
+
+            physiologyPreferences.migrateTrimpDefaultsIfNeeded()
+
+            val proto = dataStore.data.first()
+            assertEquals(1.0f, proto.rasCalibration, 0f)
+            assertEquals(true, proto.trimpNormalizationMigrated)
+        }
+
+    @Test
+    fun `migrateTrimpDefaultsIfNeeded preserves a customized multiplier`() =
+        runTest {
+            physiologyPreferences.updateBanisterMultiplier(1.50f)
+
+            physiologyPreferences.migrateTrimpDefaultsIfNeeded()
+
+            val proto = dataStore.data.first()
+            assertEquals(1.50f, proto.rasCalibration, 0f)
+            assertEquals(true, proto.trimpNormalizationMigrated)
+        }
+
+    @Test
+    fun `migrateTrimpDefaultsIfNeeded does not re-run once flagged`() =
+        runTest {
+            physiologyPreferences.updateBanisterMultiplier(1.35f)
+            physiologyPreferences.migrateTrimpDefaultsIfNeeded()
+            // Simulate a post-migration user change back to an old default value.
+            physiologyPreferences.updateBanisterMultiplier(1.35f)
+
+            physiologyPreferences.migrateTrimpDefaultsIfNeeded()
+
+            val proto = dataStore.data.first()
+            assertEquals(1.35f, proto.rasCalibration, 0f)
+            assertEquals(true, proto.trimpNormalizationMigrated)
+        }
+
+    @Test
+    fun `migrateTrimpDefaultsIfNeeded leaves cheng beta and itrimp b unchanged`() =
+        runTest {
+            physiologyPreferences.updateChengBeta(0.09f)
+            physiologyPreferences.updateItrimB(2.1f)
+            physiologyPreferences.updateBanisterMultiplier(1.75f)
+
+            physiologyPreferences.migrateTrimpDefaultsIfNeeded()
+
+            val proto = dataStore.data.first()
+            assertEquals(0.09f, proto.chengBeta, 0f)
+            assertEquals(2.1f, proto.itrimpB, 0f)
+            assertEquals(1.0f, proto.rasCalibration, 0f)
+        }
 }
