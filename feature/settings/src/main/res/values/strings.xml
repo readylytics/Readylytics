@@ -13,7 +13,7 @@
 <string name="action_restore">Restore</string>
 <string name="action_set">Set</string>
 <string name="action_verify">Verify</string>
-<string name="advanced_banister_multiplier_desc">Sedentary=1.75, Active=1.35, Athlete=1.00.</string>
+<string name="advanced_banister_multiplier_desc">Default: 1.00 for all profiles.</string>
 <string name="advanced_banister_multiplier_label">Banister Multiplier</string>
 <string name="advanced_baseline_override_tooltip">Overrides the 30-day rolling median used in
         scoring.</string>

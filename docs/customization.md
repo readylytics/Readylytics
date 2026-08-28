@@ -110,8 +110,8 @@ The app uses Training Impulse (TRIMP) to quantify workout intensity and duration
 **Find it:** Settings → Advanced → Load Models
 
 **Banister model** (default):
-- Classic exponential decay model. The multiplier (default 1.0–1.75 depending on profile) scales how much load an athlete experiences.
-- Athletes use 1.0×; sedentary users get 1.75× to reflect the same workout feeling "heavier."
+- Classic exponential decay model. The multiplier scales how much load a workout contributes; the default is **1.0 for every physiology profile**, so TRIMP is a consistent, profile-independent measure of training load.
+- You can adjust the multiplier (0.5–2.5) in Advanced Settings if you want a personal load-magnitude scale.
 
 **Cheng model:**
 - Beta-based variant. Adjust the beta parameter (0.04–0.12) to tune sensitivity.

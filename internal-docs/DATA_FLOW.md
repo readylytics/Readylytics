@@ -359,7 +359,8 @@ for keyset pagination, efficient range queries, and retention cleanup; keyset `p
 `MinuteBucketDao`, `WorkoutRoutePointDao`).
 Version 13 (`Migration12To13`) adds the nullable `residualFatigue` REAL column to `daily_summaries`
 (`core/database/.../data/local/migration/Migration12To13.kt`); existing rows are `NULL` until the scoring
-pipeline populates the value. Full Residual Fatigue pipeline documentation lands in the dedicated design pass.
+pipeline populates the value. The Residual Fatigue pipeline (per-workout impulse → exponential decay,
+walk-forward accumulator, single-day fallback, shadow mode) is documented in §2.8.
 
 **Workout distance and elevation come from separate records, not the session.** An
 `ExerciseSessionRecord` carries no distance — the recording app writes `DistanceRecord` and
@@ -746,6 +747,24 @@ independent per-workout values that must not be confused:
   values inside the same ATL/CTL EMA — this is exactly what `HealthDataRefresh.refreshHistorical()`
   exists to prevent.
 
+**Banister multiplier normalization — profile-independent TRIMP magnitude.** The Banister multiplier is a
+pure magnitude scaler on TRIMP output, so profile-dependent defaults made TRIMP values non-comparable
+across physiology profiles. `PhysiologyProfile.banisterMultiplier` is therefore **1.0 for every profile**
+(`core/model/.../data/preferences/PhysiologyProfile.kt`); `defaultChengBeta`/`defaultItrimB` stay
+profile-specific (they shape the model, they do not scale its output). Users can still override the
+multiplier in Advanced Settings (`rasCalibration`, range 0.5–2.5). Existing users are migrated by a
+one-time DataStore migration: `PhysiologyPreferences.migrateTrimpDefaultsIfNeeded()`
+(`app/.../data/preferences/PhysiologyPreferences.kt`) runs at app startup in
+`DatabaseReadyStartupInitializer` (before any scoring) and resets a stored `rasCalibration` that still
+equals an old profile default {1.00, 1.35, 1.75} — or is unset (proto3 0.0) — to 1.0 via
+`TrimpMigrationHelper.migrateRasCalibration`, setting the `trimp_normalization_migrated` proto flag
+(field 90) to prevent re-running; any other stored value is left untouched. The multiplier change is a
+historical-scope scoring input, so `SettingsDefaults.CURRENT_SCORING_VERSION` is bumped to **2**: startup
+enqueues a recompute-only resync (`WorkerScheduler.scheduleResyncWorker(recomputeOnly = true)` — gated on
+the migration succeeding) whenever `storedScoringVersion < CURRENT_SCORING_VERSION`, and
+`HealthResyncWorker.persistPostRecomputeState()` bumps the stored version only after the recompute
+succeeds (see §1.2.2 and the startup-gate row in §1.2).
+
 **PERF-002/WP-20 — batched TRIMP series in the walk-forward.** The ATL/CTL/strain-ratio/load-score
 assembly for both the workout-only and everyday-HR series is extracted from
 `ScoringRepositoryImpl.computeDailySummary` into `BuildLoadSeriesUseCase` (pure; takes the resolved
@@ -946,8 +965,8 @@ throwing for those rows.
 | `AssembleEverydayLoadInputUseCase` | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/AssembleEverydayLoadInputUseCase.kt` | PERF-006/WP-21/UI-002 extraction from `ScoringRepositoryImpl`. Pure; builds `EverydayHrLoadInput` from the caller-resolved bucket rows + intervals and runs `EverydayHeartRateLoadCalculator`. |
 | `AssembleDailySummaryUseCase` | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/AssembleDailySummaryUseCase.kt` | Pure summary assembler for uncalibrated and calibrated pipeline branches in `ScoringRepositoryImpl`. |
 | `BuildLoadSeriesUseCase` | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/BuildLoadSeriesUseCase.kt` | PERF-002/WP-20/UI-002 extraction from `ScoringRepositoryImpl`. Pure; runs `ScoringCalculator.compute*EmaWithDecay`/`computeStrainRatio`/`computeLoadScore` for both the workout-only and everyday-HR series given the caller-resolved `dailyTrimpByDate`/`everydayTrimpByDate` maps. |
-| `WalkForwardTrimpContext` / `WalkForwardBaselineContext` | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/repository/` | PERF-002/WP-20/WP-22. Held by a multi-day walk-forward (`ResyncRangeUseCase`'s RECOMPUTE phase) across every recomputed day: the TRIMP series (two `TreeMap<LocalDate, Float>`, fetched once via `ScoringRepository.fetchWalkForwardTrimpContext`) and the RHR/HRV baseline sleep-session superset (fetched once via `fetchWalkForwardBaselineContext`, delegating to `BaselineComputer.prefetchWalkForwardSessions`). |
-| `ScoringRepositoryImpl.computeDailySummary` | `core/database/src/main/kotlin/app/readylytics/health/core/database/data/repository/ScoringRepositoryImpl.kt` | Fetches the day's SQL-bucketed HR rows (`HeartRateDao.getMinuteBuckets`) plus sleep/workout intervals, feeds them to `AssembleEverydayLoadInputUseCase`, then `BuildLoadSeriesUseCase` for the ATL/CTL/strain/load assembly, and persists both `*WorkoutOnly` and `*EverydayHr` variants (TRIMP, RAS, total RAS, ATL, CTL, Strain Ratio, Load Score, Readiness) plus `everydayCoverageMinutes`/`everydayLoadConfidence` on `DailySummaryEntity`. Accepts an optional `WalkForwardTrimpContext`/`WalkForwardBaselineContext` pair (5-arg `computeAndPersistDailySummary` overload) to slice shared in-memory data instead of re-querying per day. |
+| `WalkForwardTrimpContext` / `WalkForwardBaselineContext` / `WalkForwardFatigueContext` | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/repository/` | PERF-002/WP-20/WP-22. Held by a multi-day walk-forward (`ResyncRangeUseCase`'s RECOMPUTE phase) across every recomputed day: the TRIMP series (two `TreeMap<LocalDate, Float>`, fetched once via `ScoringRepository.fetchWalkForwardTrimpContext`), the RHR/HRV baseline sleep-session superset (fetched once via `fetchWalkForwardBaselineContext`, delegating to `BaselineComputer.prefetchWalkForwardSessions`), and — WP-27, see §2.8 — the residual-fatigue workout-impulse series + running accumulator (`fetchWalkForwardFatigueContext`). |
+| `ScoringRepositoryImpl.computeDailySummary` | `core/database/src/main/kotlin/app/readylytics/health/core/database/data/repository/ScoringRepositoryImpl.kt` | Fetches the day's SQL-bucketed HR rows (`HeartRateDao.getMinuteBuckets`) plus sleep/workout intervals, feeds them to `AssembleEverydayLoadInputUseCase`, then `BuildLoadSeriesUseCase` for the ATL/CTL/strain/load assembly, and persists both `*WorkoutOnly` and `*EverydayHr` variants (TRIMP, RAS, total RAS, ATL, CTL, Strain Ratio, Load Score, Readiness) plus `everydayCoverageMinutes`/`everydayLoadConfidence` on `DailySummaryEntity`. Accepts optional `WalkForwardTrimpContext`/`WalkForwardBaselineContext`/`WalkForwardFatigueContext` (multi-arg `computeAndPersistDailySummary` overload, §2.6/§2.8) to slice shared in-memory data instead of re-querying per day. |
 | `LoadSourceSelector` | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/model/LoadSourceSelector.kt` | Pure mode-aware projection: `select*` functions pick the `*WorkoutOnly`/`*EverydayHr` variant column or derived value (TRIMP, ATL, CTL, strain ratio, RAS, earliest data date) matching `strainLoadSourceMode`/`rasSourceMode`. Zero Android dependencies. |
 | `DailyMetricsMapper` | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/model/DailyMetricsMapper.kt` | Builds `DailyMetrics` exclusively through `LoadSourceSelector` for all user-visible strain/load/RAS/readiness fields, so switching either source preference re-projects already-stored data instantly with no recompute. |
 
@@ -966,6 +985,48 @@ To guard scoring calculations against unintended architectural or algorithmic re
 | `ScoringGoldenSnapshotTest` | `core/database/src/test/kotlin/app/readylytics/health/core/database/domain/scoring/golden/ScoringGoldenSnapshotTest.kt` | Locks 6 representative single-day execution paths against checked-in JSON fixtures in `core/database/src/test/resources/golden/` (`day_with_workouts_and_frozen_snapshot.json`, `day_with_sleep_spanning_midnight.json`, `day_with_no_sleep_session.json`, `day_with_early_return_uncalibrated.json`, `day_with_hrmax_from_prefs_vs_snapshot.json`, `day_with_nap_and_supplemental_sleep.json`). Uses mock-free fakes and in-memory `HealthDatabase`. Regenerated via `-Dupdate.golden=true`. |
 | `GoldenFixtureWalkForwardTest` | `core/database/src/test/kotlin/app/readylytics/health/core/database/domain/scoring/golden/GoldenFixtureWalkForwardTest.kt` | Multi-year walk-forward regression test locking end-to-end multi-day scoring state against `core/database/src/test/resources/golden/scoring_walk_forward_golden.json`. |
 | `ScoringEquivalenceGoldenTest` | `core/database/src/test/kotlin/app/readylytics/health/core/database/domain/scoring/golden/ScoringEquivalenceGoldenTest.kt` | Verifies mathematical equivalence between hot-tier (raw 1s samples) and warm-tier (1-minute bucket rollups) TRIMP and sleep percentile RHR calculation paths. |
+
+### 2.8 Residual Fatigue (shadow mode)
+
+Residual Fatigue models the decay of recent training load as an exponentially decaying sum of per-workout
+TRIMP impulses. **Phase 1 is strictly shadow mode:** the value is computed and persisted on every
+`DailySummary` but never read by any user-visible score — `computeReadinessScore()` is untouched, Readiness
+stays `0.40 · Restoration + 0.30 · Sleep + 0.30 · Load`, and no formula consumes `residualFatigue`.
+
+**Pipeline & formula location.** Each workout contributes an impulse of `fatigueGain · trimp` keyed by its
+`endTime`, decaying with half-life `halfLifeHours`. The persisted per-workout impulse is
+`COALESCE(modelTrimp, trimp)` (`WorkoutDao.getFatigueWorkoutInputs`, §2.3's SCORE-001 semantics); everyday-HR
+TRIMP is **never** an impulse source, so the value is independent of `LoadSourceMode`. The formula — at
+evaluation time `t`, `F(t) = Σ gain · trimp_i · 2^(−(t − end_i) / halfLife)` — lives in pure Kotlin in
+`ComputeResidualFatigueUseCase` (`core/scoring/.../domain/scoring/`): `compute()` is the stateless
+summation, `advanceAccumulator()` the incremental decay+add step used by the walk-forward. `ResidualFatigueComputer`
+(`core/database/.../data/repository/`) owns the per-day snapshot: it resolves the config from the
+preferences snapshot and evaluates at **next-day midnight in the stored scoring zone**
+(`ScoringDayContext.nextDayMidnightMs`), and `FinalSummaryAssembler` stamps the result onto the assembled
+`DailySummary` (`DailySummary.residualFatigue`, persisted `NULL` when disabled). Zero-TRIMP and future
+workouts contribute nothing; rest days add no impulse, fatigue simply decays.
+
+**Walk-forward integration (WP-27).** Both walk-forward orchestrators (`DailySyncUseCase`,
+`ResyncRangeUseCase`) build one `WalkForwardFatigueContext` per run via
+`DailyRecomputeSupport.buildWalkForwardFatigueContext(...)` (alongside the WP-20 TRIMP and WP-22 baseline
+contexts) and pass it oldest-day-first to every recomputed day. The context prefetches the workout-impulse
+series once (`ScoringDayDataLoader.loadFatigueWorkoutInputs`, sorted `endTime ASC`) over
+`[walkForwardStart − 32 days, walkForwardEnd]` and advances a running accumulator with a single cursor pass —
+**O(W + D)**, each workout visited exactly once. The 32-day seed lookback
+(`ResidualFatigueComputer.seedLookbackDays` = 8 × max configured half-life 96 h ÷ 24, capturing >99.6% of the
+decayed signal) is shared by the **single-day fallback** (no walk-forward, e.g. ad-hoc day recompute), which
+sums the same fixed window with `ComputeResidualFatigueUseCase.compute()` — so both paths cover the same
+workout window regardless of the user's configured half-life. `advanceAccumulator` is the single source of
+truth for the accumulator step, keeping the incremental and summation paths mathematically identical
+(exponential decay + superposition; deterministic across partial vs full resync).
+
+**Settings (proto fields 91–93).** `residual_fatigue_enabled` / `residual_fatigue_half_life_hours` /
+`residual_fatigue_gain` on `user_preferences` — defaults `true` / 24 h / 1.0 via
+`SettingsDefaults.RESIDUAL_FATIGUE_*`, guardrails 6–96 h / 0.1–5.0 enforced in
+`PhysiologyPreferences.toValidFatigueHalfLife`/`toValidFatigueGain` and
+`SettingsValidators.FATIGUE_HALF_LIFE_RULE`/`FATIGUE_GAIN_RULE`. Resolved per-day from the preferences
+snapshot inside `ResidualFatigueComputer.compute`; there is **no dedicated recompute trigger** on a fatigue
+settings change — persisted snapshots refresh on the next sync/recompute walk-forward.
 
 ---
 
@@ -1177,7 +1238,12 @@ defaults when unset).
 | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/strategies/RasScoringStrategy.kt`                          | Processing — training load                          | CTL (42-day) / ATL (7-day) EMA                                                           |
 | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/ComputeSleepMetricsUseCase.kt`                             | Processing — sleep metrics assembly                 | sleep + restoration                                                                      |
 | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/BaselineZScoreComputer.kt`                                 | Processing — Z-score computation                    | HRV & RHR Z-scores, nocturnal RHR delta BPM                                              |
-| `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/RestorationScoreAssembler.kt`                              | Processing — restoration assembly                   | restoration score (sRest) assembly and contributor subscores                             |
+| `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/RestorationScoreAssembler.kt` | Processing — restoration assembly | restoration score (sRest) assembly and contributor subscores |
+| `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/ComputeResidualFatigueUseCase.kt` | Processing — residual fatigue (pure) | `compute()` summation + `advanceAccumulator()` decay/add step (§2.8) |
+| `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/scoring/ResidualFatigueConfig.kt` | Domain — fatigue parameters | enabled / halfLifeHours / fatigueGain (shadow mode, §2.8) |
+| `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/repository/WalkForwardFatigueContext.kt` | Processing — walk-forward accumulator | prefetched impulse series + running accumulated fatigue (WP-27) |
+| `core/database/src/main/kotlin/app/readylytics/health/core/database/data/repository/ResidualFatigueComputer.kt` | Processing — fatigue snapshot | per-day snapshot at next-day midnight; 32-day seed lookback (§2.8) |
+| `core/database/src/main/kotlin/app/readylytics/health/core/database/data/repository/FinalSummaryAssembler.kt` | Processing — summary assembly | stamps `residualFatigue` onto the assembled `DailySummary` (§2.8) |
 | `feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard/DashboardViewModel.kt` | UI — dashboard state                                | summary, cards, RAS, recalc progress                                                     |
 | `ui/sync/SyncViewModel.kt`                                                 | UI — sync state                                     | `recalcProgress` forward                                                                 |
 | `feature/vitals/src/main/kotlin/app/readylytics/health/feature/vitals/overview/VitalsViewModel.kt`         | UI — vitals state                                   | HRV / RHR / SpO2 / body temperature trends + bands                                       |
