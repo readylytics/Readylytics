@@ -2,6 +2,7 @@ package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
 import app.readylytics.health.core.scoring.domain.scoring.RasCalculator
 import java.time.Clock
@@ -29,9 +30,17 @@ internal class PhysiologyPreferences
 
         private fun Float.toValidItrimB() = coerceIn(1.0f, 4.5f)
 
-        private fun Float.toValidFatigueHalfLife() = coerceIn(6f, 96f)
+        private fun Float.toValidFatigueHalfLife() =
+            coerceIn(
+                SettingsDefaults.MIN_RESIDUAL_FATIGUE_HALF_LIFE_HOURS,
+                SettingsDefaults.MAX_RESIDUAL_FATIGUE_HALF_LIFE_HOURS,
+            )
 
-        private fun Float.toValidFatigueGain() = coerceIn(0.1f, 5.0f)
+        private fun Float.toValidFatigueGain() =
+            coerceIn(
+                SettingsDefaults.MIN_RESIDUAL_FATIGUE_GAIN,
+                SettingsDefaults.MAX_RESIDUAL_FATIGUE_GAIN,
+            )
 
         suspend fun updateMaxHeartRate(bpm: Int) {
             dataStore.updateData { it.toBuilder().setMaxHeartRate(bpm.toValidMaxHr()).build() }

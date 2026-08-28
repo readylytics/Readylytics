@@ -114,7 +114,11 @@ object SettingsDefaults {
     val TRIMP_MODEL = TrimpModel.BANISTER
     const val RESIDUAL_FATIGUE_ENABLED = true
     const val RESIDUAL_FATIGUE_HALF_LIFE_HOURS = 24f
+    const val MIN_RESIDUAL_FATIGUE_HALF_LIFE_HOURS = 6f
+    const val MAX_RESIDUAL_FATIGUE_HALF_LIFE_HOURS = 96f
     const val RESIDUAL_FATIGUE_GAIN = 1.0f
+    const val MIN_RESIDUAL_FATIGUE_GAIN = 0.1f
+    const val MAX_RESIDUAL_FATIGUE_GAIN = 5.0f
     val STRAIN_LOAD_SOURCE_MODE = LoadSourceMode.WORKOUT_ONLY
     val RAS_SOURCE_MODE = LoadSourceMode.EVERYDAY_HEART_RATE
     val UNIT_SYSTEM = UnitSystem.METRIC

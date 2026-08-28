@@ -342,6 +342,18 @@ class SettingsRepositoryTest {
      * This structural assertion guards against a future setter being given such a dependency.
      */
     @Test
+    fun `SettingsRepository has no DailySummaryDao dependency so pref switches never write summaries`() {
+        val constructorParamTypes =
+            SettingsRepository::class.java.declaredConstructors
+                .flatMap { it.parameterTypes.toList() }
+                .map { it.name }
+        assertEquals(
+            true,
+            constructorParamTypes.none { it.contains("DailySummaryDao") || it.contains("ScoringRepository") },
+        )
+    }
+
+    @Test
     fun `default residual fatigue settings are exposed`() =
         runTest {
             val prefs = repository.userPreferences.first()
@@ -377,14 +389,16 @@ class SettingsRepositoryTest {
         }
 
     @Test
-    fun `SettingsRepository has no DailySummaryDao dependency so pref switches never write summaries`() {
-        val constructorParamTypes =
-            SettingsRepository::class.java.declaredConstructors
-                .flatMap { it.parameterTypes.toList() }
-                .map { it.name }
-        assertEquals(
-            true,
-            constructorParamTypes.none { it.contains("DailySummaryDao") || it.contains("ScoringRepository") },
-        )
+    fun `out-of-range residual fatigue proto values clamp to guardrails on read`() {
+        val prefs =
+            UserPreferencesProto
+                .newBuilder()
+                .setResidualFatigueHalfLifeHours(200f)
+                .setResidualFatigueGain(99f)
+                .build()
+                .toDomainModel()
+
+        assertEquals(96f, prefs.residualFatigueHalfLifeHours, 0f)
+        assertEquals(5.0f, prefs.residualFatigueGain, 0f)
     }
 }

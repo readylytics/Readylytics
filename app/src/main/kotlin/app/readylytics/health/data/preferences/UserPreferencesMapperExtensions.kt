@@ -198,13 +198,19 @@ internal fun UserPreferences.withResidualFatigue(proto: UserPreferencesProto): U
             },
         residualFatigueHalfLifeHours =
             if (proto.hasResidualFatigueHalfLifeHours() && proto.residualFatigueHalfLifeHours > 0f) {
-                proto.residualFatigueHalfLifeHours.coerceIn(6f, 96f)
+                proto.residualFatigueHalfLifeHours.coerceIn(
+                    SettingsDefaults.MIN_RESIDUAL_FATIGUE_HALF_LIFE_HOURS,
+                    SettingsDefaults.MAX_RESIDUAL_FATIGUE_HALF_LIFE_HOURS,
+                )
             } else {
                 SettingsDefaults.RESIDUAL_FATIGUE_HALF_LIFE_HOURS
             },
         residualFatigueGain =
             if (proto.hasResidualFatigueGain() && proto.residualFatigueGain > 0f) {
-                proto.residualFatigueGain.coerceIn(0.1f, 5.0f)
+                proto.residualFatigueGain.coerceIn(
+                    SettingsDefaults.MIN_RESIDUAL_FATIGUE_GAIN,
+                    SettingsDefaults.MAX_RESIDUAL_FATIGUE_GAIN,
+                )
             } else {
                 SettingsDefaults.RESIDUAL_FATIGUE_GAIN
             },
