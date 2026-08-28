@@ -45,7 +45,7 @@ class ComputeResidualFatigueUseCase
                     accumulatedFatigue * 2.0.pow(-elapsed / halfLifeMs)
                 }
             for (impulse in newImpulses) {
-                if (impulse.trimp <= 0f) continue
+                if (impulse.trimp <= 0f || impulse.endTimeMs > currentEvalMs) continue
                 val elapsed = (currentEvalMs - impulse.endTimeMs).toDouble().coerceAtLeast(0.0)
                 fatigue += config.fatigueGain * impulse.trimp * 2.0.pow(-elapsed / halfLifeMs)
             }

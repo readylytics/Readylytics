@@ -2,6 +2,7 @@ package app.readylytics.health.core.scoring.domain.scoring
 
 import app.readylytics.health.core.model.domain.scoring.ResidualFatigueConfig
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.pow
 
@@ -54,7 +55,7 @@ class ComputeResidualFatigueUseCaseTest {
         val nextMorningEval = (30 * 3_600_000).toLong()
         val morningResult = useCase.compute(nextMorningEval, listOf(workout(morningEnd, 100f)), defaultConfig)
         val eveningResult = useCase.compute(nextMorningEval, listOf(workout(eveningEnd, 100f)), defaultConfig)
-        assert(eveningResult > morningResult)
+        assertTrue(eveningResult > morningResult)
     }
 
     @Test
@@ -78,6 +79,27 @@ class ComputeResidualFatigueUseCaseTest {
     fun `empty workout list returns zero`() {
         val result = useCase.compute(1000L, emptyList(), defaultConfig)
         assertEquals(0f, result, 0.001f)
+    }
+
+    @Test
+    fun `future workout contributes nothing to summation or accumulator`() {
+        val evalMs = (10 * 3_600_000).toLong()
+        val futureEnd = evalMs + 3_600_000L
+        val future = workout(futureEnd, 100f)
+
+        val summation = useCase.compute(evalMs, listOf(future), defaultConfig)
+        assertEquals(0f, summation, 0.001f)
+
+        val (acc, _) =
+            useCase.advanceAccumulator(
+                accumulatedFatigue = 50.0,
+                lastEvalMs = 0L,
+                currentEvalMs = evalMs,
+                newImpulses = listOf(future),
+                config = defaultConfig,
+            )
+        val expected = 50.0 * 2.0.pow(-10.0 / 24.0)
+        assertEquals(expected, acc, 0.001)
     }
 
     @Test
