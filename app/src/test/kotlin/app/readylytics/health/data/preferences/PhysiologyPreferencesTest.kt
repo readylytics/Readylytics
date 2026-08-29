@@ -74,8 +74,35 @@ class PhysiologyPreferencesTest {
         }
 
     @Test
-    fun `migrateTrimpDefaultsIfNeeded preserves stored nonzero multiplier 1_35 and sets flag`() =
+    fun `migrateTrimpDefaultsIfNeeded normalizes legacy ACTIVE default 1_35 and sets flag`() =
         runTest {
+            physiologyPreferences.updatePhysiologyProfile(PhysiologyProfile.ACTIVE)
+            physiologyPreferences.updateBanisterMultiplier(1.35f)
+
+            physiologyPreferences.migrateTrimpDefaultsIfNeeded()
+
+            val proto = dataStore.data.first()
+            assertEquals(1.0f, proto.rasCalibration, 0f)
+            assertEquals(true, proto.trimpNormalizationMigrated)
+        }
+
+    @Test
+    fun `migrateTrimpDefaultsIfNeeded normalizes legacy SEDENTARY default 1_75 and sets flag`() =
+        runTest {
+            physiologyPreferences.updatePhysiologyProfile(PhysiologyProfile.SEDENTARY)
+            physiologyPreferences.updateBanisterMultiplier(1.75f)
+
+            physiologyPreferences.migrateTrimpDefaultsIfNeeded()
+
+            val proto = dataStore.data.first()
+            assertEquals(1.0f, proto.rasCalibration, 0f)
+            assertEquals(true, proto.trimpNormalizationMigrated)
+        }
+
+    @Test
+    fun `migrateTrimpDefaultsIfNeeded preserves stored 1_35 with ATHLETE profile as override`() =
+        runTest {
+            physiologyPreferences.updatePhysiologyProfile(PhysiologyProfile.ATHLETE)
             physiologyPreferences.updateBanisterMultiplier(1.35f)
 
             physiologyPreferences.migrateTrimpDefaultsIfNeeded()

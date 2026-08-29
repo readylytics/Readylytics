@@ -1,6 +1,7 @@
 package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
+import app.readylytics.health.core.model.data.preferences.LegacyBanisterMultipliers
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
@@ -181,9 +182,11 @@ internal class PhysiologyPreferences
         suspend fun migrateTrimpDefaultsIfNeeded() {
             dataStore.updateData { proto ->
                 if (proto.trimpNormalizationMigrated) return@updateData proto
+                val profile = proto.physiologyProfile.toDomainProfile()
                 val newRasCal =
                     TrimpMigrationHelper.migrateRasCalibration(
                         storedValue = proto.rasCalibration,
+                        profile = profile,
                         alreadyMigrated = false,
                     )
                 proto
@@ -253,11 +256,15 @@ internal class PhysiologyPreferences
 internal object TrimpMigrationHelper {
     fun migrateRasCalibration(
         storedValue: Float,
+        profile: PhysiologyProfile,
         alreadyMigrated: Boolean,
     ): Float =
         when {
             alreadyMigrated -> storedValue
-            storedValue == 0f -> 1f
+            storedValue == 0f -> NORMALIZED_MULTIPLIER
+            storedValue == LegacyBanisterMultipliers.forProfile(profile) -> NORMALIZED_MULTIPLIER
             else -> storedValue
         }
+
+    private const val NORMALIZED_MULTIPLIER = 1.0f
 }

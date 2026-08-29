@@ -29,3 +29,22 @@ enum class PhysiologyProfile(
         defaultItrimB = 1.5f,
     ),
 }
+
+/**
+ * Banister multipliers shipped per profile before the normalization to 1.0. The one-time
+ * DataStore migration (TrimpMigrationHelper) treats a stored value equal to the legacy default
+ * for the user's stored profile as an accepted default rather than an explicit override, and
+ * normalizes it. Never reuse these as live defaults.
+ */
+object LegacyBanisterMultipliers {
+    const val ATHLETE = 1.00f
+    const val ACTIVE = 1.35f
+    const val SEDENTARY = 1.75f
+
+    fun forProfile(profile: PhysiologyProfile): Float =
+        when (profile) {
+            PhysiologyProfile.ATHLETE -> ATHLETE
+            PhysiologyProfile.ACTIVE -> ACTIVE
+            PhysiologyProfile.SEDENTARY -> SEDENTARY
+        }
+}
