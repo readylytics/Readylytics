@@ -54,7 +54,7 @@ Paths below are rooted at the project root. Module prefixes are explicit, for ex
                │   columns in place, near-no-op on identical re-ingest; others: @Upsert on stable id
                ▼
 ┌──────────────────────────────┐
-│  HealthDatabase (SQLite v13) │   17 entities — single source of truth
+│  HealthDatabase (SQLite v14) │   17 entities — single source of truth
 └──────────────┬───────────────┘
                │ raw DAO reads (local; no further HC calls)
                ▼
@@ -257,7 +257,7 @@ so re-ingestion is idempotent, but entity construction itself happens one layer 
 | `OxygenSaturationDataMapper` | `core/healthconnect/src/main/kotlin/app/readylytics/health/core/healthconnect/data/mapper/OxygenSaturationDataMapper.kt` | `DomainOxygenSaturationRecord` → `OxygenSaturationRecordEntity` (%).                                                                               |
 | `BodyTemperatureDataMapper`  | `core/healthconnect/src/main/kotlin/app/readylytics/health/core/healthconnect/data/mapper/BodyTemperatureDataMapper.kt`  | `DomainBodyTemperatureRecord` → `BodyTemperatureRecordEntity` (°C). Ingested through `HealthIngestionCoordinator` exactly like the other optional-permission metrics — same upsert/idempotency contract, no special-casing. |
 
-### 1.4 Room storage — `HealthDatabase` (`@Database(version = 13)`)
+### 1.4 Room storage — `HealthDatabase` (`@Database(version = 14)`)
 
 Defined in `core/database/src/main/kotlin/app/readylytics/health/core/database/data/local/HealthDatabase.kt`;
 entities in `core/database-schema/src/main/kotlin/app/readylytics/health/core/databaseschema/data/local/entity/`, DAOs in
@@ -361,6 +361,9 @@ Version 13 (`Migration12To13`) adds the nullable `residualFatigue` REAL column t
 (`core/database/.../data/local/migration/Migration12To13.kt`); existing rows are `NULL` until the scoring
 pipeline populates the value. The Residual Fatigue pipeline (per-workout impulse → exponential decay,
 walk-forward accumulator, single-day fallback, shadow mode) is documented in §2.8.
+Version 14 (`Migration13To14`) adds `index_workout_records_endTime_id` on
+`workout_records(endTime, id)`. It preserves all workout and daily-summary rows and supports the stable
+canonical residual-fatigue impulse order used by exact retained-history reconstruction.
 
 **Workout distance and elevation come from separate records, not the session.** An
 `ExerciseSessionRecord` carries no distance — the recording app writes `DistanceRecord` and
@@ -1013,19 +1016,22 @@ workouts contribute nothing; rest days add no impulse, fatigue simply decays.
 `ResyncRangeUseCase`) build one `WalkForwardFatigueContext` per run via
 `DailyRecomputeSupport.buildWalkForwardFatigueContext(...)` (alongside the WP-20 TRIMP and WP-22 baseline
 contexts) and pass it oldest-day-first to every recomputed day. The context prefetches only historical seed
-rows whose workout start precedes the walk-forward start and whose end falls within
-`[walkForwardStart − 32 days, walkForwardEnd]` (including a workout that straddles the lower boundary);
-current-range persisted TRIMP is never
-preloaded. A priority queue ordered by `(endTime, workoutId)` receives both seed rows and freshly calculated
-canonical current-range outputs. Registration is idempotent by workout ID, so a retried day cannot add an
-impulse twice, and the accumulator drains only entries through that day's evaluation time — **O(W log W + D)**.
-The 32-day seed lookback
-(`ResidualFatigueComputer.seedLookbackDays` = 8 × max configured half-life 96 h ÷ 24, capturing >99.6% of the
-decayed signal) is shared by the **single-day fallback** (no walk-forward, e.g. ad-hoc day recompute), which
-sums the same fixed window with `ComputeResidualFatigueUseCase.compute()` — so both paths cover the same
-workout window regardless of the user's configured half-life. `advanceAccumulator` is the single source of
-truth for the accumulator step, keeping the incremental and summation paths mathematically identical
-(exponential decay + superposition; deterministic across partial vs full resync).
+rows whose workout `startTime` precedes the walk-forward start boundary. `WorkoutDao.getCanonicalFatigueSeed`
+reads every such retained row with non-null positive `modelTrimp` from Room in stable `(endTime, id)` order;
+there is no bounded lookback, Health Connect query, or extra raw-HR scan. Partitioning by workout start keeps a
+boundary-straddling workout in the seed so it is neither recalculated nor omitted; if its end is after the first
+evaluation, it remains pending. Current-range persisted TRIMP is never preloaded. A priority queue ordered by
+`(endTime, workoutId)` receives both seed rows and freshly calculated canonical current-range outputs.
+Registration is idempotent by workout ID, so a retried day cannot add an impulse twice, and each evaluation
+drains only entries whose end is at or before that timestamp. After the deterministic Room/index and queue
+ordering cost, reconstruction and evaluation are **O(W + D)**.
+
+The **single-day fallback** (no walk-forward, e.g. ad-hoc day recompute) analogously reads every retained
+canonical impulse with `endTime <= evaluationTime` and sums it with
+`ComputeResidualFatigueUseCase.compute()`. Thus full, partial, resumed, and single-day walks reconstruct the
+same exact retained-history value. `advanceAccumulator` remains the single source of truth for the incremental
+step, keeping it mathematically identical to the summation path (exponential decay + superposition). Both
+paths stay shadow-only and independent of workout-only versus everyday-HR load-source mode.
 
 **Settings (proto fields 91–93).** `residual_fatigue_enabled` / `residual_fatigue_half_life_hours` /
 `residual_fatigue_gain` on `user_preferences` — defaults `true` / 24 h / 1.0 via
@@ -1208,7 +1214,7 @@ defaults when unset).
 | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/model/VitalStatusClassifiers.kt`      | Domain — canonical steps/heart-rate status seams     | `StepsStatusClassifier` and `HeartRateStatusClassifier` classify display statuses         |
 | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/service/HealthMetricsService.kt`     | Domain — canonical BP status seam and facade         | delegates BMI/body-fat assessments; owns blood-pressure assessment and component chart-band metadata derived from the same thresholds |
 | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/calculation/HealthMetricsCalculator.kt` | Domain — facade (delegates)                     | `assessBmi()`/`assessBodyFatPercent()` → `BodyCompositionAssessment`; `assessBloodPressure()` → `HealthMetricsService` |
-| `core/database/src/main/kotlin/app/readylytics/health/core/database/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v13)                             | 17 entities; pre-bridge Room migration chain ends at v6; external migration owns v7; Room owns v7→v13 |
+| `core/database/src/main/kotlin/app/readylytics/health/core/database/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v14)                             | 17 entities; pre-bridge Room migration chain ends at v6; external migration owns v7; Room owns v7→v14 |
 | `app/src/main/kotlin/app/readylytics/health/data/migration/DatabaseReadinessGate.kt`                                            | Storage — pre-Room readiness guard                  | missing or v7..`DATABASE_VERSION` ready; v5/v6 or resumable metadata require external migration |
 | `app/src/main/kotlin/app/readylytics/health/data/migration/V7DatabaseMigrator.kt`                                               | Storage — resumable external v7 migration           | preflight; 10k keyset copy/checkpoint; per-index transactions; validated atomic cutover  |
 | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/migration/DatabaseMigrationModels.kt`                                 | Domain — migration contracts                        | readiness inspector/state; phase/progress/result models                                  |
@@ -1249,7 +1255,7 @@ defaults when unset).
 | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/ComputeResidualFatigueUseCase.kt` | Processing — residual fatigue (pure) | `compute()` summation + `advanceAccumulator()` decay/add step (§2.8) |
 | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/scoring/ResidualFatigueConfig.kt` | Domain — fatigue parameters | enabled / halfLifeHours / fatigueGain (shadow mode, §2.8) |
 | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/repository/WalkForwardFatigueContext.kt` | Processing — walk-forward accumulator | prefetched impulse series + running accumulated fatigue (WP-27) |
-| `core/database/src/main/kotlin/app/readylytics/health/core/database/data/repository/ResidualFatigueComputer.kt` | Processing — fatigue snapshot | per-day snapshot at next-day midnight; 32-day seed lookback (§2.8) |
+| `core/database/src/main/kotlin/app/readylytics/health/core/database/data/repository/ResidualFatigueComputer.kt` | Processing — fatigue snapshot | per-day snapshot at next-day midnight; exact retained-history seed (§2.8) |
 | `core/database/src/main/kotlin/app/readylytics/health/core/database/data/repository/FinalSummaryAssembler.kt` | Processing — summary assembly | stamps `residualFatigue` onto the assembled `DailySummary` (§2.8) |
 | `feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard/DashboardViewModel.kt` | UI — dashboard state                                | summary, cards, RAS, recalc progress                                                     |
 | `ui/sync/SyncViewModel.kt`                                                 | UI — sync state                                     | `recalcProgress` forward                                                                 |

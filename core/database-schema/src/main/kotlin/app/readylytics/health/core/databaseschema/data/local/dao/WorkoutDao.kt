@@ -114,25 +114,17 @@ interface WorkoutDao {
 
     @Query(
         "SELECT id AS workoutId, endTime AS endTimeMs, modelTrimp AS trimp FROM workout_records " +
-        "WHERE endTime >= :fromMs AND endTime <= :toMs " +
-            "AND modelTrimp > 0 " +
+            "WHERE endTime <= :evaluationTimeMs AND modelTrimp IS NOT NULL AND modelTrimp > 0 " +
             "ORDER BY endTime ASC, id ASC",
     )
-    suspend fun getFatigueWorkoutInputs(
-        fromMs: Long,
-        toMs: Long,
-    ): List<FatigueWorkoutInput>
+    suspend fun getCanonicalFatigueInputsThrough(evaluationTimeMs: Long): List<FatigueWorkoutInput>
 
     @Query(
         "SELECT id AS workoutId, endTime AS endTimeMs, modelTrimp AS trimp FROM workout_records " +
-            "WHERE endTime >= :fromMs AND startTime < :seedCutoffMs AND endTime <= :toMs " +
-            "AND modelTrimp > 0 ORDER BY endTime ASC, id ASC",
+            "WHERE startTime < :startBeforeMs AND modelTrimp IS NOT NULL AND modelTrimp > 0 " +
+            "ORDER BY endTime ASC, id ASC",
     )
-    suspend fun getFatigueSeedWorkoutInputs(
-        fromMs: Long,
-        seedCutoffMs: Long,
-        toMs: Long,
-    ): List<FatigueWorkoutInput>
+    suspend fun getCanonicalFatigueSeed(startBeforeMs: Long): List<FatigueWorkoutInput>
 
     @Query(
         "SELECT * FROM workout_records WHERE endTime >= :fromMs AND startTime <= :toMs ORDER BY startTime ASC, id ASC",

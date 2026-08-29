@@ -180,15 +180,13 @@ class ScoringDayDataLoader
         suspend fun loadWorkoutTrimpPoints(fromMs: Long, toMs: Long): List<TimestampedTrimp> =
             workoutDao.getTrimpPoints(fromMs, toMs)
 
-        // from fetchWalkForwardFatigueContext / single-day residual-fatigue fallback
-        suspend fun loadFatigueWorkoutInputs(fromMs: Long, toMs: Long): List<FatigueWorkoutInput> =
-            workoutDao.getFatigueWorkoutInputs(fromMs, toMs)
+        // from single-day residual-fatigue fallback
+        suspend fun loadCanonicalFatigueInputsThrough(evaluationTimeMs: Long): List<FatigueWorkoutInput> =
+            workoutDao.getCanonicalFatigueInputsThrough(evaluationTimeMs)
 
-        suspend fun loadFatigueSeedWorkoutInputs(
-            fromMs: Long,
-            seedCutoffMs: Long,
-            toMs: Long,
-        ): List<FatigueWorkoutInput> = workoutDao.getFatigueSeedWorkoutInputs(fromMs, seedCutoffMs, toMs)
+        // from fetchWalkForwardFatigueContext
+        suspend fun loadCanonicalFatigueSeed(startBeforeMs: Long): List<FatigueWorkoutInput> =
+            workoutDao.getCanonicalFatigueSeed(startBeforeMs)
 
         // from fetchWalkForwardTrimpContext L146 / computeCalibratedSummary L546
         suspend fun loadEverydayTrimpPoints(fromMs: Long, toMs: Long): List<TimestampedTrimp> =

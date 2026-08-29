@@ -165,7 +165,7 @@ class ScoringRepositoryImpl
             startDate: LocalDate,
             endDate: LocalDate,
             zoneId: ZoneId,
-        ): WalkForwardFatigueContext = residualFatigueComputer.fetchWalkForwardContext(startDate, endDate, zoneId)
+        ): WalkForwardFatigueContext = residualFatigueComputer.fetchWalkForwardContext(startDate, zoneId)
 
         override suspend fun computeDailySummary(targetDate: LocalDate): DailySummary {
             val prefs = settingsRepo.userPreferences.first()

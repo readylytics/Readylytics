@@ -204,20 +204,13 @@ class ResidualFatigueWalkForwardDeterminismTest {
         workouts: List<FatigueWorkoutInput>,
         startTimeMs: (FatigueWorkoutInput) -> Long = { Long.MIN_VALUE },
     ) {
-        coEvery { workoutDao.getFatigueWorkoutInputs(any(), any()) } answers {
-            val from = firstArg<Long>()
-            val to = secondArg<Long>()
-            workouts.filter { it.endTimeMs in from..to }
+        coEvery { workoutDao.getCanonicalFatigueInputsThrough(any()) } answers {
+            val evaluationTimeMs = firstArg<Long>()
+            workouts.filter { it.endTimeMs <= evaluationTimeMs }
         }
-        coEvery { workoutDao.getFatigueSeedWorkoutInputs(any(), any(), any()) } answers {
-            val from = firstArg<Long>()
-            val seedCutoff = secondArg<Long>()
-            val to = thirdArg<Long>()
-            workouts.filter {
-                it.endTimeMs >= from &&
-                    startTimeMs(it) < seedCutoff &&
-                    it.endTimeMs <= to
-            }
+        coEvery { workoutDao.getCanonicalFatigueSeed(any()) } answers {
+            val boundaryMs = firstArg<Long>()
+            workouts.filter { startTimeMs(it) < boundaryMs }
         }
     }
 
@@ -313,14 +306,13 @@ class ResidualFatigueWalkForwardDeterminismTest {
     }
 
     private fun stubProductionFatigueQueries(store: ProductionWorkoutStore) {
-        coEvery { workoutDao.getFatigueWorkoutInputs(any(), any()) } answers {
-            val from = firstArg<Long>()
-            val to = secondArg<Long>()
+        coEvery { workoutDao.getCanonicalFatigueInputsThrough(any()) } answers {
+            val evaluationTimeMs = firstArg<Long>()
             store.workouts.values
-                .filter { it.endTime in from..to }
+                .filter { it.endTime <= evaluationTimeMs }
                 .mapNotNull { stored ->
-                    (stored.modelTrimp ?: stored.trimp)
-                        .takeIf { it > 0f }
+                    stored.modelTrimp
+                        ?.takeIf { it > 0f }
                         ?.let { fatigueTrimp ->
                             FatigueWorkoutInput(
                                 workoutId = stored.id,
@@ -330,12 +322,10 @@ class ResidualFatigueWalkForwardDeterminismTest {
                         }
                 }
         }
-        coEvery { workoutDao.getFatigueSeedWorkoutInputs(any(), any(), any()) } answers {
-            val from = firstArg<Long>()
-            val seedCutoff = secondArg<Long>()
-            val to = thirdArg<Long>()
+        coEvery { workoutDao.getCanonicalFatigueSeed(any()) } answers {
+            val boundaryMs = firstArg<Long>()
             store.workouts.values
-                .filter { it.endTime >= from && it.startTime < seedCutoff && it.endTime <= to }
+                .filter { it.startTime < boundaryMs }
                 .mapNotNull { stored ->
                     stored.modelTrimp
                         ?.takeIf { it > 0f }

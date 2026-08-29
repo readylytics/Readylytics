@@ -163,6 +163,43 @@ class ResyncCheckpointResumeTest {
         }
 
     @Test
+    fun `recompute resume after a committed 30-day chunk rebuilds fatigue context at the checkpoint boundary`() =
+        runTest {
+            val startDate = LocalDate.of(2024, 6, 1)
+            val resumedStart = startDate.plusDays(30)
+            val endDate = resumedStart.plusDays(1)
+            val resumedFatigueContext = WalkForwardFatigueContext(emptyList())
+            checkpointStore.value =
+                ResyncCheckpoint(
+                    startDate = startDate,
+                    endDate = endDate,
+                    phase = ResyncPhase.RECOMPUTE,
+                    nextDate = resumedStart,
+                    selectionHash = "",
+                    baselineChangeTokens = baselineTokens,
+                )
+            coEvery {
+                scoringRepository.fetchWalkForwardFatigueContext(resumedStart, endDate, any())
+            } returns resumedFatigueContext
+
+            useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
+
+            coVerify(exactly = 1) {
+                scoringRepository.fetchWalkForwardFatigueContext(resumedStart, endDate, any())
+            }
+            coVerify(exactly = 2) {
+                scoringRepository.computeAndPersistDailySummary(
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    resumedFatigueContext,
+                )
+            }
+        }
+
+    @Test
     fun `resyncRange discards mismatched checkpoint and restarts from requested range`() =
         runTest {
             val zoneId = ZoneId.systemDefault()

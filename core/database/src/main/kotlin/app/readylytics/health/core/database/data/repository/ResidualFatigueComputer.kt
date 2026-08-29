@@ -1,6 +1,5 @@
 package app.readylytics.health.core.database.data.repository
 
-import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.scoring.ResidualFatigueConfig
 import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase
@@ -11,43 +10,30 @@ import java.time.ZoneId
  * Residual-fatigue snapshot computation for the daily scoring pipeline (shadow mode). Mirrors
  * [RasTotalsComputer]/[DailyTrimpComputer]: the repository orchestrates, this class owns the
  * fatigue math. The walk-forward path advances the shared accumulator; the single-day fallback
- * sums over the same fixed window.
+ * reconstructs the same state from all retained canonical workout impulses.
  */
 class ResidualFatigueComputer(
     private val dataLoader: ScoringDayDataLoader,
     private val computeResidualFatigueUseCase: ComputeResidualFatigueUseCase,
 ) {
-    // 8 * max configured half-life (96h) / 24 = 32 days: captures >99.6% of the decayed signal.
-    // Shared by the walk-forward seed and the single-day fallback so both paths cover the same
-    // workout window regardless of the user's configured half-life (spec §9 determinism).
-    private val seedLookbackDays: Long =
-        (8.0 * SettingsDefaults.MAX_RESIDUAL_FATIGUE_HALF_LIFE_HOURS / 24.0).toLong()
-
     /**
-     * Prefetches the workout-impulse series (keyed by end time, ascending) for a whole
-     * `[startDate, endDate]` walk-forward, seeded with [seedLookbackDays] of lookback so early
-     * days include decayed contributions from prior workouts.
+     * Seeds a walk-forward with every retained canonical workout assigned before its start
+     * boundary. Boundary-straddling workouts remain pending until their end timestamp reaches an
+     * evaluation point.
      */
     suspend fun fetchWalkForwardContext(
         startDate: LocalDate,
-        endDate: LocalDate,
         zoneId: ZoneId,
     ): WalkForwardFatigueContext {
-        val fromMs =
-            startDate.minusDays(seedLookbackDays)
-                .atStartOfDay(zoneId)
-                .toInstant()
-                .toEpochMilli()
-        val toMs = endDate.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
-        val seedCutoffMs = startDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
-        return WalkForwardFatigueContext(dataLoader.loadFatigueSeedWorkoutInputs(fromMs, seedCutoffMs, toMs))
+        val boundaryMs = startDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
+        return WalkForwardFatigueContext(dataLoader.loadCanonicalFatigueSeed(boundaryMs))
     }
 
     /**
      * Computes the day's residual-fatigue snapshot at next-day midnight. The walk-forward path
      * (non-null [fatigueContext]) advances the shared accumulator; the single-day fallback (null
-     * context) sums over the same [seedLookbackDays] window. Returns null when disabled (shadow
-     * metric: never feeds Readiness).
+     * context) reconstructs from every retained canonical impulse through the evaluation. Returns
+     * null when disabled (shadow metric: never feeds Readiness).
      */
     suspend fun compute(
         context: ScoringDayContext,
@@ -65,13 +51,7 @@ class ResidualFatigueComputer(
         return if (fatigueContext != null) {
             advanceAccumulator(fatigueContext, evalMs, config)
         } else {
-            val fromMs =
-                context.targetDate
-                    .minusDays(seedLookbackDays)
-                    .atStartOfDay(context.zoneId)
-                    .toInstant()
-                    .toEpochMilli()
-            val workouts = dataLoader.loadFatigueWorkoutInputs(fromMs, evalMs)
+            val workouts = dataLoader.loadCanonicalFatigueInputsThrough(evalMs)
             computeResidualFatigueUseCase.compute(
                 evalMs,
                 workouts.map { ComputeResidualFatigueUseCase.FatigueWorkoutInput(it.endTimeMs, it.trimp) },

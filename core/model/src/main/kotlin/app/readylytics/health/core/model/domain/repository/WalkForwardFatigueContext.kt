@@ -14,7 +14,7 @@ data class FatigueWorkoutInput(
 
 /**
  * Residual-fatigue state accumulator shared across one walk-forward (daily sync or resync recompute).
- * Holds a 32-day historical seed plus freshly calculated canonical workout impulses from the current
+ * Holds the retained-history seed plus freshly calculated canonical workout impulses from the current
  * walk-forward. Pending impulses are deterministically ordered by end time and stable workout ID.
  *
  * Mutable, so deliberately a plain [class] rather than a data class. Each day advances
