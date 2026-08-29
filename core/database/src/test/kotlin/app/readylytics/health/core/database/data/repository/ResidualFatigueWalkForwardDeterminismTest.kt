@@ -195,11 +195,15 @@ class ResidualFatigueWalkForwardDeterminismTest {
         )
 
     /**
-     * Range-aware stub of the DAO query: like the real Room query, only workouts whose end time
-     * falls inside the requested window are returned. A plain `any()`-return stubs every call the
-     * same list regardless of window, which would mask window-width differences between paths.
+     * Range-aware stub of the DAO queries. A plain `any()`-return stubs every call with the same
+     * list regardless of its time predicates, which would mask window-boundary differences. Existing
+     * input-only fixtures have no start time, so they default to historical seeds; boundary tests
+     * supply their real start time explicitly.
      */
-    private fun stubFatigueWorkouts(workouts: List<FatigueWorkoutInput>) {
+    private fun stubFatigueWorkouts(
+        workouts: List<FatigueWorkoutInput>,
+        startTimeMs: (FatigueWorkoutInput) -> Long = { Long.MIN_VALUE },
+    ) {
         coEvery { workoutDao.getFatigueWorkoutInputs(any(), any()) } answers {
             val from = firstArg<Long>()
             val to = secondArg<Long>()
@@ -207,8 +211,13 @@ class ResidualFatigueWalkForwardDeterminismTest {
         }
         coEvery { workoutDao.getFatigueSeedWorkoutInputs(any(), any(), any()) } answers {
             val from = firstArg<Long>()
+            val seedCutoff = secondArg<Long>()
             val to = thirdArg<Long>()
-            workouts.filter { it.endTimeMs in from..to }
+            workouts.filter {
+                it.endTimeMs >= from &&
+                    startTimeMs(it) < seedCutoff &&
+                    it.endTimeMs <= to
+            }
         }
     }
 
@@ -326,7 +335,7 @@ class ResidualFatigueWalkForwardDeterminismTest {
             val seedCutoff = secondArg<Long>()
             val to = thirdArg<Long>()
             store.workouts.values
-                .filter { it.startTime in from until seedCutoff && it.endTime <= to }
+                .filter { it.endTime >= from && it.startTime < seedCutoff && it.endTime <= to }
                 .mapNotNull { stored ->
                     stored.modelTrimp
                         ?.takeIf { it > 0f }
@@ -524,6 +533,39 @@ class ResidualFatigueWalkForwardDeterminismTest {
             val singleDay = repo.computeDailySummary(day0)
 
             assertEquals(walkForward[day0], singleDay.residualFatigue)
+        }
+
+    @Test
+    fun `walk-forward retains a seed workout that straddles the lower lookback bound`() =
+        runTest {
+            val seedFromMs =
+                day0
+                    .minusDays(32)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val straddlingWorkout =
+                FatigueWorkoutInput(
+                    workoutId = "lower-bound-straddling",
+                    endTimeMs = seedFromMs + HOUR_MS,
+                    trimp = 40f,
+                )
+            stubFatigueWorkouts(
+                workouts = listOf(straddlingWorkout),
+                startTimeMs = { it.endTimeMs - 2 * HOUR_MS },
+            )
+
+            val prefs =
+                UserPreferences(
+                    scoringZoneId = zoneId.id,
+                    residualFatigueHalfLifeHours = config.halfLifeHours,
+                    residualFatigueGain = config.fatigueGain,
+                )
+            val walkForward = runWalkForward(day0, day0, prefs)
+            val singleDay = repo.computeDailySummary(day0)
+
+            assertEquals(expectedFatigue(day0, listOf(straddlingWorkout)), walkForward[day0])
+            assertEquals(singleDay.residualFatigue, walkForward[day0])
         }
 
     @Test

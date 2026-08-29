@@ -125,7 +125,7 @@ interface WorkoutDao {
 
     @Query(
         "SELECT id AS workoutId, endTime AS endTimeMs, modelTrimp AS trimp FROM workout_records " +
-            "WHERE startTime >= :fromMs AND startTime < :seedCutoffMs AND endTime <= :toMs " +
+            "WHERE endTime >= :fromMs AND startTime < :seedCutoffMs AND endTime <= :toMs " +
             "AND modelTrimp > 0 ORDER BY endTime ASC, id ASC",
     )
     suspend fun getFatigueSeedWorkoutInputs(

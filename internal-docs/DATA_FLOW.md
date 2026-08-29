@@ -1013,8 +1013,9 @@ workouts contribute nothing; rest days add no impulse, fatigue simply decays.
 `ResyncRangeUseCase`) build one `WalkForwardFatigueContext` per run via
 `DailyRecomputeSupport.buildWalkForwardFatigueContext(...)` (alongside the WP-20 TRIMP and WP-22 baseline
 contexts) and pass it oldest-day-first to every recomputed day. The context prefetches only historical seed
-rows whose workout start precedes the walk-forward start (including a boundary-straddling workout whose end
-falls in-range) over `[walkForwardStart − 32 days, walkForwardEnd]`; current-range persisted TRIMP is never
+rows whose workout start precedes the walk-forward start and whose end falls within
+`[walkForwardStart − 32 days, walkForwardEnd]` (including a workout that straddles the lower boundary);
+current-range persisted TRIMP is never
 preloaded. A priority queue ordered by `(endTime, workoutId)` receives both seed rows and freshly calculated
 canonical current-range outputs. Registration is idempotent by workout ID, so a retried day cannot add an
 impulse twice, and the accumulator drains only entries through that day's evaluation time — **O(W log W + D)**.
