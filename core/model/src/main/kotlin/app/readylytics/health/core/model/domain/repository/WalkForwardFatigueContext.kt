@@ -26,6 +26,12 @@ data class FatigueWorkoutInput(
  */
 class WalkForwardFatigueContext(
     seedInputs: List<FatigueWorkoutInput>,
+    /**
+     * True when the seed query had to drop retained workouts whose canonical `modelTrimp` has
+     * never been backfilled. The accumulator cannot reconstruct those impulses, so the day's
+     * snapshot is unknown rather than merely low; [ResidualFatigueComputer] persists null.
+     */
+    val seedIncomplete: Boolean = false,
 ) {
     private val comparator = compareBy<FatigueWorkoutInput>({ it.endTimeMs }, { it.workoutId })
     private val pendingInputs = PriorityQueue(comparator)

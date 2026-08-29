@@ -26,14 +26,20 @@ class ResidualFatigueComputer(
         zoneId: ZoneId,
     ): WalkForwardFatigueContext {
         val boundaryMs = startDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
-        return WalkForwardFatigueContext(dataLoader.loadCanonicalFatigueSeed(boundaryMs))
+        val seedInputs = dataLoader.loadCanonicalFatigueSeed(boundaryMs)
+        val unbackfilledCount = dataLoader.loadUnbackfilledCountBefore(boundaryMs)
+        return WalkForwardFatigueContext(
+            seedInputs = seedInputs,
+            seedIncomplete = unbackfilledCount > 0,
+        )
     }
 
     /**
      * Computes the day's residual-fatigue snapshot at next-day midnight. The walk-forward path
      * (non-null [fatigueContext]) advances the shared accumulator; the single-day fallback (null
      * context) reconstructs from every retained canonical impulse through the evaluation. Returns
-     * null when disabled (shadow metric: never feeds Readiness).
+     * null when disabled (shadow metric: never feeds Readiness) or when the seed dropped a
+     * never-backfilled retained workout (unknown, not low — HIGH-2).
      */
     suspend fun compute(
         context: ScoringDayContext,
@@ -51,8 +57,10 @@ class ResidualFatigueComputer(
 
         val evalMs = context.nextDayMidnightMs
         return if (fatigueContext != null) {
+            if (fatigueContext.seedIncomplete) return null
             advanceAccumulator(fatigueContext, evalMs, config)
         } else {
+            if (dataLoader.loadUnbackfilledCountThrough(evalMs) > 0) return null
             val workouts = dataLoader.loadCanonicalFatigueInputsThrough(evalMs)
             computeResidualFatigueUseCase.compute(
                 evalMs,

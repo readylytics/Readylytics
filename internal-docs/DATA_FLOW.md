@@ -1062,10 +1062,12 @@ alongside the stale-`scoringVersion` gate — both share one `scheduleResyncWork
 enqueue per launch, bounded by `RetentionBounds.resolveResyncStartDate(prefs)`. It converges: a recompute
 writes `modelTrimp` for every workout it touches (including `0f`), so the count reaches zero and the gate
 stops firing. This also closes the matching `COALESCE(modelTrimp, trimp)` inconsistency in ATL/CTL.
-The remaining piece — persisting `NULL` for the affected day instead of the low value, via a
-`seedIncomplete` flag on `WalkForwardFatigueContext` — is **not yet wired**; the counts exist and the
-self-heal runs, but a partial walk over never-backfilled history still persists the low value until the
-recompute lands.
+The residual-fatigue computer wires the seed count into `WalkForwardFatigueContext.seedIncomplete`
+and persists `NULL` for a walk-forward day when the retained seed is incomplete. The single-day
+fallback similarly checks the count through its evaluation timestamp before reconstructing. Thus a
+partial walk over never-backfilled history is explicitly unknown rather than silently low until the
+self-healing recompute lands; canonical-only sourcing and the one-count-per-walk O(1) query cost are
+preserved.
 
 The **single-day fallback** (no walk-forward, e.g. ad-hoc day recompute) analogously reads every retained
 canonical impulse with `endTime <= evaluationTime` and sums it with
