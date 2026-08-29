@@ -14,6 +14,7 @@ import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRec
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.heartrate.ZoneThresholds
 import app.readylytics.health.core.model.domain.model.RecordType
@@ -256,13 +257,15 @@ class ResidualFatigueScoringIntegrityTest {
             )
             val minPrefs = basePrefs.copy(
                 residualFatigueEnabled = true,
-                residualFatigueHalfLifeHours = 12f,
-                residualFatigueGain = 0.01f,
+                residualFatigueHalfLifeHours = SettingsDefaults.MIN_RESIDUAL_FATIGUE_HALF_LIFE_HOURS,
+                // Minimum *configurable* gain, not an illegal one: ResidualFatigueConfig.clamped
+                // would coerce anything below this, making the case indistinguishable from MIN.
+                residualFatigueGain = SettingsDefaults.MIN_RESIDUAL_FATIGUE_GAIN,
             )
             val maxPrefs = basePrefs.copy(
                 residualFatigueEnabled = true,
-                residualFatigueHalfLifeHours = 96f,
-                residualFatigueGain = 5.0f,
+                residualFatigueHalfLifeHours = SettingsDefaults.MAX_RESIDUAL_FATIGUE_HALF_LIFE_HOURS,
+                residualFatigueGain = SettingsDefaults.MAX_RESIDUAL_FATIGUE_GAIN,
             )
 
             val disabledSummaries = executeWalkForward(db, evalStartDate, evalEndDate, disabledPrefs)

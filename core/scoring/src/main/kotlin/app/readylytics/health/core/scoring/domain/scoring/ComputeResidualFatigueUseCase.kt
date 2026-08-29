@@ -17,8 +17,12 @@ class ComputeResidualFatigueUseCase
             workouts: List<FatigueWorkoutInput>,
             config: ResidualFatigueConfig,
         ): Float {
-            if (!config.enabled) return 0f
-            val halfLifeMs = config.halfLifeHours.toDouble() * 3_600_000.0
+            val halfLifeMs = config.halfLifeHours.toDouble() * MILLIS_PER_HOUR
+            // The half-life guard is defence in depth: ResidualFatigueConfig.clamped keeps
+            // halfLifeHours inside the validated positive range, so it is unreachable. Without it a
+            // zero half-life turns the decay exponent into NaN, which would be persisted into
+            // daily_summaries and exported in backups.
+            if (!config.enabled || halfLifeMs <= 0.0) return 0f
             var fatigue = 0.0
             for (w in workouts) {
                 if (w.trimp <= 0f || w.endTimeMs > evaluationTimeMs) continue
@@ -35,8 +39,9 @@ class ComputeResidualFatigueUseCase
             newImpulses: List<FatigueWorkoutInput>,
             config: ResidualFatigueConfig,
         ): Pair<Double, Long> {
-            if (!config.enabled) return 0.0 to currentEvalMs
-            val halfLifeMs = config.halfLifeHours.toDouble() * 3_600_000.0
+            val halfLifeMs = config.halfLifeHours.toDouble() * MILLIS_PER_HOUR
+            // Same guard as compute(): never let a non-positive half-life reach the decay exponent.
+            if (!config.enabled || halfLifeMs <= 0.0) return 0.0 to currentEvalMs
             var fatigue =
                 if (lastEvalMs == Long.MIN_VALUE) {
                     0.0
@@ -52,5 +57,9 @@ class ComputeResidualFatigueUseCase
                 fatigue += config.fatigueGain * impulse.trimp * 2.0.pow(-elapsed / halfLifeMs)
             }
             return fatigue to currentEvalMs
+        }
+
+        private companion object {
+            const val MILLIS_PER_HOUR = 3_600_000.0
         }
     }

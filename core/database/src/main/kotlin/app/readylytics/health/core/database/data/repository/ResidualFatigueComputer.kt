@@ -39,8 +39,10 @@ class ResidualFatigueComputer(
         context: ScoringDayContext,
         fatigueContext: WalkForwardFatigueContext?,
     ): Float? {
+        // Coerce rather than require: a stored pref outside the validated range should degrade the
+        // day to the nearest valid parameter, never fail the whole recompute.
         val config =
-            ResidualFatigueConfig(
+            ResidualFatigueConfig.clamped(
                 enabled = context.prefs.residualFatigueEnabled,
                 halfLifeHours = context.prefs.residualFatigueHalfLifeHours,
                 fatigueGain = context.prefs.residualFatigueGain,

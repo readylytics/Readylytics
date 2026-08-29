@@ -1,7 +1,10 @@
 package app.readylytics.health.core.scoring.domain.scoring
 
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.domain.scoring.ResidualFatigueConfig
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.pow
@@ -140,6 +143,86 @@ class ComputeResidualFatigueUseCaseTest {
                 config = defaultConfig,
             )
         assertEquals(100.0, acc, 0.001)
+    }
+
+    @Test
+    fun `non-positive half-life yields a finite zero instead of NaN`() {
+        // halfLifeMs == 0 makes -elapsed / halfLifeMs either NaN (elapsed 0) or -Infinity, and the
+        // resulting NaN would be persisted into daily_summaries and survive into the backup JSON.
+        val w = workout(endTimeMs = 0L, trimp = 100f)
+        for (halfLifeHours in listOf(0f, -24f)) {
+            val config = defaultConfig.copy(halfLifeHours = halfLifeHours)
+
+            val atImpulse = useCase.compute(0L, listOf(w), config)
+            assertFalse(atImpulse.isNaN())
+            assertEquals(0f, atImpulse, 0.001f)
+
+            val later = useCase.compute((24 * 3_600_000).toLong(), listOf(w), config)
+            assertFalse(later.isNaN())
+            assertEquals(0f, later, 0.001f)
+
+            val (acc, advancedEvalMs) =
+                useCase.advanceAccumulator(
+                    accumulatedFatigue = 100.0,
+                    lastEvalMs = 0L,
+                    currentEvalMs = (24 * 3_600_000).toLong(),
+                    newImpulses = listOf(w),
+                    config = config,
+                )
+            assertFalse(acc.isNaN())
+            assertEquals(0.0, acc, 0.001)
+            assertEquals((24 * 3_600_000).toLong(), advancedEvalMs)
+        }
+    }
+
+    @Test
+    fun `non-finite parameters are rejected at construction`() {
+        for (bad in listOf(Float.NaN, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY)) {
+            assertThrows(IllegalArgumentException::class.java) {
+                ResidualFatigueConfig(halfLifeHours = bad)
+            }
+            assertThrows(IllegalArgumentException::class.java) {
+                ResidualFatigueConfig(fatigueGain = bad)
+            }
+        }
+    }
+
+    @Test
+    fun `config defaults match the shipped settings defaults`() {
+        assertEquals(SettingsDefaults.RESIDUAL_FATIGUE_ENABLED, defaultConfig.enabled)
+        assertEquals(SettingsDefaults.RESIDUAL_FATIGUE_HALF_LIFE_HOURS, defaultConfig.halfLifeHours, 0f)
+        assertEquals(SettingsDefaults.RESIDUAL_FATIGUE_GAIN, defaultConfig.fatigueGain, 0f)
+    }
+
+    @Test
+    fun `clamped coerces out-of-range stored preferences into the validated bounds`() {
+        val tooLow =
+            ResidualFatigueConfig.clamped(enabled = true, halfLifeHours = 0f, fatigueGain = 0.01f)
+        assertEquals(SettingsDefaults.MIN_RESIDUAL_FATIGUE_HALF_LIFE_HOURS, tooLow.halfLifeHours, 0f)
+        assertEquals(SettingsDefaults.MIN_RESIDUAL_FATIGUE_GAIN, tooLow.fatigueGain, 0f)
+
+        val tooHigh =
+            ResidualFatigueConfig.clamped(enabled = true, halfLifeHours = 500f, fatigueGain = 10f)
+        assertEquals(SettingsDefaults.MAX_RESIDUAL_FATIGUE_HALF_LIFE_HOURS, tooHigh.halfLifeHours, 0f)
+        assertEquals(SettingsDefaults.MAX_RESIDUAL_FATIGUE_GAIN, tooHigh.fatigueGain, 0f)
+
+        val inRange =
+            ResidualFatigueConfig.clamped(enabled = false, halfLifeHours = 36f, fatigueGain = 2.5f)
+        assertEquals(36f, inRange.halfLifeHours, 0f)
+        assertEquals(2.5f, inRange.fatigueGain, 0f)
+        assertFalse(inRange.enabled)
+    }
+
+    @Test
+    fun `clamped falls back to the defaults for non-finite stored preferences`() {
+        val config =
+            ResidualFatigueConfig.clamped(
+                enabled = true,
+                halfLifeHours = Float.NaN,
+                fatigueGain = Float.POSITIVE_INFINITY,
+            )
+        assertEquals(SettingsDefaults.RESIDUAL_FATIGUE_HALF_LIFE_HOURS, config.halfLifeHours, 0f)
+        assertEquals(SettingsDefaults.RESIDUAL_FATIGUE_GAIN, config.fatigueGain, 0f)
     }
 
     @Test
