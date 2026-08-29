@@ -14,6 +14,8 @@ import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class ResidualFatigueExactReconstructionTest {
     private val dataLoader = mockk<ScoringDayDataLoader>()
@@ -42,6 +44,8 @@ class ResidualFatigueExactReconstructionTest {
                 val evaluationTimeMs = firstArg<Long>()
                 workouts.filter { it.endTimeMs <= evaluationTimeMs }
             }
+            coEvery { dataLoader.loadUnbackfilledCountBefore(any()) } returns 0
+            coEvery { dataLoader.loadUnbackfilledCountThrough(any()) } returns 0
 
             val full = runWalk(evaluationDay.minusDays(120), evaluationDay, workouts, startTimes)
             val partial = runWalk(evaluationDay, evaluationDay, workouts, startTimes)
@@ -73,6 +77,39 @@ class ResidualFatigueExactReconstructionTest {
         assertEquals(firstInputs, secondInputs)
         assertEquals(expectedFatigue(firstInputs), expectedFatigue(secondInputs), EPSILON)
     }
+
+    @Test
+    fun `fetchWalkForwardContext flags an incomplete seed when unbackfilled workouts exist before the boundary`() =
+        runTest {
+            coEvery { dataLoader.loadCanonicalFatigueSeed(any()) } returns emptyList()
+            coEvery { dataLoader.loadUnbackfilledCountBefore(any()) } returns 1
+
+            val context = computer.fetchWalkForwardContext(evaluationDay, zoneId)
+
+            assertTrue(context.seedIncomplete, "A dropped never-backfilled row must flag the seed incomplete")
+        }
+
+    @Test
+    fun `compute returns null on the walk-forward path when the seed is incomplete`() =
+        runTest {
+            coEvery { dataLoader.loadCanonicalFatigueSeed(any()) } returns emptyList()
+            coEvery { dataLoader.loadUnbackfilledCountBefore(any()) } returns 1
+            val fatigueContext = computer.fetchWalkForwardContext(evaluationDay, zoneId)
+
+            val result = computer.compute(scoringContext(evaluationDay), fatigueContext)
+
+            assertNull(result, "An incomplete seed must persist null (unknown), not a low value")
+        }
+
+    @Test
+    fun `compute returns null on the single-day fallback when unbackfilled workouts exist through the evaluation point`() =
+        runTest {
+            coEvery { dataLoader.loadUnbackfilledCountThrough(any()) } returns 1
+
+            val result = computer.compute(scoringContext(evaluationDay), null)
+
+            assertNull(result, "The single-day fallback must also report unknown, not a low value")
+        }
 
     private suspend fun runWalk(
         startDate: LocalDate,
