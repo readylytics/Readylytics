@@ -39,7 +39,8 @@ class ResidualFatigueComputer(
                 .toInstant()
                 .toEpochMilli()
         val toMs = endDate.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
-        return WalkForwardFatigueContext(dataLoader.loadFatigueWorkoutInputs(fromMs, toMs))
+        val seedCutoffMs = startDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
+        return WalkForwardFatigueContext(dataLoader.loadFatigueSeedWorkoutInputs(fromMs, seedCutoffMs, toMs))
     }
 
     /**
@@ -91,19 +92,13 @@ class ResidualFatigueComputer(
         evalMs: Long,
         config: ResidualFatigueConfig,
     ): Float {
-        val workouts = fatigueContext.workoutsByEndTimeMs
-        var cursor = fatigueContext.workoutCursor
-        val newImpulses = ArrayList<ComputeResidualFatigueUseCase.FatigueWorkoutInput>()
-        while (cursor < workouts.size && workouts[cursor].endTimeMs <= evalMs) {
-            newImpulses.add(
+        val newImpulses =
+            fatigueContext.takeImpulsesThrough(evalMs).map {
                 ComputeResidualFatigueUseCase.FatigueWorkoutInput(
-                    workouts[cursor].endTimeMs,
-                    workouts[cursor].trimp,
-                ),
-            )
-            cursor++
-        }
-        fatigueContext.workoutCursor = cursor
+                    it.endTimeMs,
+                    it.trimp,
+                )
+            }
         val (fatigue, advancedEvalMs) =
             computeResidualFatigueUseCase.advanceAccumulator(
                 accumulatedFatigue = fatigueContext.accumulatedFatigue,

@@ -32,6 +32,7 @@ class ComputeDailyTrimpUseCaseTest {
             )
         assertEquals(0f, result.totalDailyTrimpRaw, 0.0f)
         assertEquals(0, result.workoutModelTrimpUpdates.size)
+        assertEquals(0, result.canonicalWorkoutTrimps.size)
     }
 
     @Test
@@ -96,5 +97,16 @@ class ComputeDailyTrimpUseCaseTest {
         assertEquals(1, result.workoutModelTrimpUpdates.size)
         assertEquals("w1", result.workoutModelTrimpUpdates[0].workoutId)
         assertEquals(25f, result.workoutModelTrimpUpdates[0].modelTrimp, 0.001f)
+        assertCanonicalWorkoutTrimps(result)
+    }
+
+    private fun assertCanonicalWorkoutTrimps(result: ComputeDailyTrimpUseCase.DailyTrimpResult) {
+        assertEquals(2, result.canonicalWorkoutTrimps.size)
+        assertEquals("w1", result.canonicalWorkoutTrimps[0].workoutId)
+        assertEquals(2000L, result.canonicalWorkoutTrimps[0].endTimeMs)
+        assertEquals(25f, result.canonicalWorkoutTrimps[0].trimp, 0.001f)
+        assertEquals("w2", result.canonicalWorkoutTrimps[1].workoutId)
+        assertEquals(4000L, result.canonicalWorkoutTrimps[1].endTimeMs)
+        assertEquals(35f, result.canonicalWorkoutTrimps[1].trimp, 0.001f)
     }
 }

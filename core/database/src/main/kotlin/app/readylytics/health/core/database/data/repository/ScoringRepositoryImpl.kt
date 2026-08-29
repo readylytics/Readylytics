@@ -182,7 +182,8 @@ class ScoringRepositoryImpl
             withContext(defaultDispatcher) {
                 val context = scoringDayContextResolver.resolveScoringDayContext(targetDate, prefs, baselineContext)
                 logD("ScoringRepository") { "RAS CALC START [$targetDate]" }
-                val (workouts, dailyTrimpRaw) = dailyTrimpComputer.processWorkouts(context)
+                val processed = dailyTrimpComputer.processWorkouts(context)
+                fatigueContext?.registerCanonicalImpulses(processed.fatigueInputs)
                 val aggregatedSleep =
                     readinessSummaryCoordinator.resolveSleepAggregation(
                         context.targetDate,
@@ -194,21 +195,20 @@ class ScoringRepositoryImpl
                         ?: dataLoader.loadSessionEndingInRange(context.dayMidnightMs, context.nextDayMidnightMs)
                 val currentSessionIds = aggregatedSleep?.coreSessionIds ?: session?.let { setOf(it.id) }.orEmpty()
                 val everydayResult =
-                    dailyTrimpComputer.resolveEverydayTrimp(context, workouts, session, aggregatedSleep, dailyTrimpRaw)
-                val trimpEverydayHr = everydayResult.totalEverydayTrimp
+                    dailyTrimpComputer.resolveEverydayTrimp(context, processed, session, aggregatedSleep)
                 dailyTrimpComputer.publishTrimpToContext(
                     trimpContext,
                     context.targetDate,
-                    trimpEverydayHr,
-                    dailyTrimpRaw,
-                    workouts.isNotEmpty(),
+                    everydayResult.totalEverydayTrimp,
+                    processed.dailyTrimpRaw,
+                    processed.workouts.isNotEmpty(),
                 )
                 val scalingFactor =
                     context.initialBaselines.frozenRasScalingFactor ?: context.scoringConfig.rasScalingFactor
                 val rasTotals =
                     rasTotalsComputer.compute(
-                        dailyTrimpRaw,
-                        trimpEverydayHr,
+                        processed.dailyTrimpRaw,
+                        everydayResult.totalEverydayTrimp,
                         scalingFactor,
                         context.targetDate,
                         context.zoneId,
@@ -219,8 +219,8 @@ class ScoringRepositoryImpl
                             context = context,
                             session = session,
                             currentSessionIds = currentSessionIds,
-                            dailyTrimpRaw = dailyTrimpRaw,
-                            trimpEverydayHr = trimpEverydayHr,
+                            dailyTrimpRaw = processed.dailyTrimpRaw,
+                            trimpEverydayHr = everydayResult.totalEverydayTrimp,
                             rasTotals = rasTotals,
                             everydayResult = everydayResult,
                             aggregatedSleep = aggregatedSleep,

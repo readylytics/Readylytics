@@ -113,17 +113,24 @@ interface WorkoutDao {
     ): List<WorkoutRecordEntity>
 
     @Query(
-        // Residual-fatigue impulses keyed by workout end time. Both modelTrimp (user-selected TRIMP
-        // model) and trimp (Edwards zone-weighted) are per-workout HR-integrated training load over
-        // the same workout boundary; the COALESCE fallback is semantically safe for rows not yet
-        // backfilled with modelTrimp (same semantics as getTrimpPoints).
-        "SELECT endTime AS endTimeMs, COALESCE(modelTrimp, trimp) AS trimp FROM workout_records " +
-            "WHERE endTime >= :fromMs AND endTime <= :toMs " +
-            "AND COALESCE(modelTrimp, trimp) > 0 " +
-            "ORDER BY endTime ASC",
+        "SELECT id AS workoutId, endTime AS endTimeMs, modelTrimp AS trimp FROM workout_records " +
+        "WHERE endTime >= :fromMs AND endTime <= :toMs " +
+            "AND modelTrimp > 0 " +
+            "ORDER BY endTime ASC, id ASC",
     )
     suspend fun getFatigueWorkoutInputs(
         fromMs: Long,
+        toMs: Long,
+    ): List<FatigueWorkoutInput>
+
+    @Query(
+        "SELECT id AS workoutId, endTime AS endTimeMs, modelTrimp AS trimp FROM workout_records " +
+            "WHERE startTime >= :fromMs AND startTime < :seedCutoffMs AND endTime <= :toMs " +
+            "AND modelTrimp > 0 ORDER BY endTime ASC, id ASC",
+    )
+    suspend fun getFatigueSeedWorkoutInputs(
+        fromMs: Long,
+        seedCutoffMs: Long,
         toMs: Long,
     ): List<FatigueWorkoutInput>
 

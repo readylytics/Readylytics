@@ -994,9 +994,12 @@ TRIMP impulses. **Phase 1 is strictly shadow mode:** the value is computed and p
 stays `0.40 · Restoration + 0.30 · Sleep + 0.30 · Load`, and no formula consumes `residualFatigue`.
 
 **Pipeline & formula location.** Each workout contributes an impulse of `fatigueGain · trimp` keyed by its
-`endTime`, decaying with half-life `halfLifeHours`. The persisted per-workout impulse is
-`COALESCE(modelTrimp, trimp)` (`WorkoutDao.getFatigueWorkoutInputs`, §2.3's SCORE-001 semantics); everyday-HR
-TRIMP is **never** an impulse source, so the value is independent of `LoadSourceMode`. The formula — at
+`endTime`, decaying with half-life `halfLifeHours`. An impulse always uses the selected-model canonical
+per-workout TRIMP calculated by `ComputeWorkoutTrimpUseCase`; Edwards `trimp` is never a fallback. During a
+walk-forward, `ComputeDailyTrimpUseCase` publishes every computed per-workout value (including zero) beside
+the daily total, and `DailyTrimpComputer` registers those values with the fatigue context immediately after
+the workout pass. Everyday-HR TRIMP is **never** an impulse source, so the value is independent of
+`LoadSourceMode`. The formula — at
 evaluation time `t`, `F(t) = Σ gain · trimp_i · 2^(−(t − end_i) / halfLife)` — lives in pure Kotlin in
 `ComputeResidualFatigueUseCase` (`core/scoring/.../domain/scoring/`): `compute()` is the stateless
 summation, `advanceAccumulator()` the incremental decay+add step used by the walk-forward. `ResidualFatigueComputer`
@@ -1009,10 +1012,13 @@ workouts contribute nothing; rest days add no impulse, fatigue simply decays.
 **Walk-forward integration (WP-27).** Both walk-forward orchestrators (`DailySyncUseCase`,
 `ResyncRangeUseCase`) build one `WalkForwardFatigueContext` per run via
 `DailyRecomputeSupport.buildWalkForwardFatigueContext(...)` (alongside the WP-20 TRIMP and WP-22 baseline
-contexts) and pass it oldest-day-first to every recomputed day. The context prefetches the workout-impulse
-series once (`ScoringDayDataLoader.loadFatigueWorkoutInputs`, sorted `endTime ASC`) over
-`[walkForwardStart − 32 days, walkForwardEnd]` and advances a running accumulator with a single cursor pass —
-**O(W + D)**, each workout visited exactly once. The 32-day seed lookback
+contexts) and pass it oldest-day-first to every recomputed day. The context prefetches only historical seed
+rows whose workout start precedes the walk-forward start (including a boundary-straddling workout whose end
+falls in-range) over `[walkForwardStart − 32 days, walkForwardEnd]`; current-range persisted TRIMP is never
+preloaded. A priority queue ordered by `(endTime, workoutId)` receives both seed rows and freshly calculated
+canonical current-range outputs. Registration is idempotent by workout ID, so a retried day cannot add an
+impulse twice, and the accumulator drains only entries through that day's evaluation time — **O(W log W + D)**.
+The 32-day seed lookback
 (`ResidualFatigueComputer.seedLookbackDays` = 8 × max configured half-life 96 h ÷ 24, capturing >99.6% of the
 decayed signal) is shared by the **single-day fallback** (no walk-forward, e.g. ad-hoc day recompute), which
 sums the same fixed window with `ComputeResidualFatigueUseCase.compute()` — so both paths cover the same

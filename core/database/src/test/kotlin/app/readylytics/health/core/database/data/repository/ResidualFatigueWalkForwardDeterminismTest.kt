@@ -11,8 +11,11 @@ import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
 import app.readylytics.health.core.model.domain.model.Result
+import app.readylytics.health.core.model.domain.model.RecordType
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.FatigueWorkoutInput
@@ -32,6 +35,7 @@ import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUse
 import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
+import app.readylytics.health.core.model.domain.scoring.TrimpModel
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -46,7 +50,9 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.util.TreeMap
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
+import kotlin.math.pow
 
 /**
  * WP-27 shadow-mode determinism locks for the residual-fatigue walk-forward.
@@ -61,6 +67,11 @@ import kotlin.test.assertNull
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ResidualFatigueWalkForwardDeterminismTest {
+    companion object {
+        private const val HOUR_MS = 3_600_000L
+        private const val EPSILON = 0.001f
+    }
+
     private val workoutDao = mockk<WorkoutDao>(relaxed = true)
     private val sleepSessionDao = mockk<SleepSessionDao>(relaxed = true)
     private val dailySummaryDao = mockk<DailySummaryDao>(relaxed = true)
@@ -69,7 +80,6 @@ class ResidualFatigueWalkForwardDeterminismTest {
     private val baselineComputer = mockk<BaselineComputer>(relaxed = true)
     private val computeSleepMetricsUseCase = mockk<ComputeSleepMetricsUseCase>(relaxed = true)
     private val scoringConfigFactory = mockk<ScoringConfigFactory>(relaxed = true)
-    private val computeWorkoutTrimpUseCase = mockk<ComputeWorkoutTrimpUseCase>(relaxed = true)
     private val heartRateDao = mockk<HeartRateDao>(relaxed = true)
     private val minuteBucketDao = mockk<MinuteBucketDao>(relaxed = true)
     private val weightRecordDao = mockk<WeightRecordDao>(relaxed = true)
@@ -135,7 +145,7 @@ class ResidualFatigueWalkForwardDeterminismTest {
             settingsRepo,
             baselineComputer,
             scoringConfigFactory,
-            ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
+            ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
             ResolveDailyBaselinesUseCase(baselineComputer),
             AssembleEverydayLoadInputUseCase(),
             scoringHistoryRepository,
@@ -173,10 +183,12 @@ class ResidualFatigueWalkForwardDeterminismTest {
     private fun workoutInputs(): List<FatigueWorkoutInput> =
         listOf(
             FatigueWorkoutInput(
+                workoutId = "day0-workout",
                 endTimeMs = day0.atStartOfDay(zoneId).toInstant().toEpochMilli() + 2 * 3_600_000L,
                 trimp = 30f,
             ),
             FatigueWorkoutInput(
+                workoutId = "day1-workout",
                 endTimeMs = day1.atStartOfDay(zoneId).toInstant().toEpochMilli() + 1 * 3_600_000L,
                 trimp = 50f,
             ),
@@ -193,9 +205,196 @@ class ResidualFatigueWalkForwardDeterminismTest {
             val to = secondArg<Long>()
             workouts.filter { it.endTimeMs in from..to }
         }
+        coEvery { workoutDao.getFatigueSeedWorkoutInputs(any(), any(), any()) } answers {
+            val from = firstArg<Long>()
+            val to = thirdArg<Long>()
+            workouts.filter { it.endTimeMs in from..to }
+        }
     }
 
     private fun evalMs(day: LocalDate): Long = day.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
+
+    private fun workoutRecord(
+        id: String,
+        startTime: Long,
+        endTime: Long,
+        trimp: Float,
+        modelTrimp: Float?,
+    ) =
+        WorkoutRecordEntity(
+            id = id,
+            startTime = startTime,
+            endTime = endTime,
+            exerciseType = "RUNNING",
+            durationMinutes = ((endTime - startTime) / 60_000L).toInt(),
+            zone1Minutes = 0f,
+            zone2Minutes = 0f,
+            zone3Minutes = 0f,
+            zone4Minutes = 0f,
+            zone5Minutes = 0f,
+            trimp = trimp,
+            avgHr = 170f,
+            modelTrimp = modelTrimp,
+        )
+
+    private suspend fun runProductionPass(
+        workout: WorkoutRecordEntity,
+        prefs: UserPreferences,
+    ): ProductionPass {
+        val store = stubProductionWorkoutStore(workout)
+        val persisted = mutableListOf<DailySummaryEntity>()
+        coEvery { dailySummaryDao.upsert(capture(persisted)) } returns Unit
+
+        val firstFatigue = persistProductionDay(prefs, persisted)
+        val secondFatigue = persistProductionDay(prefs, persisted)
+        return ProductionPass(firstFatigue, secondFatigue, store.writtenModelTrimps.first())
+    }
+
+    private suspend fun persistProductionDay(
+        prefs: UserPreferences,
+        persisted: List<DailySummaryEntity>,
+    ): Float {
+        val fatigueContext = repo.fetchWalkForwardFatigueContext(day0, day0, zoneId)
+        repo.computeAndPersistDailySummary(
+            day0,
+            null,
+            prefs,
+            WalkForwardTrimpContext(TreeMap(), TreeMap()),
+            WalkForwardBaselineContext(emptyList()),
+            fatigueContext,
+        )
+        return requireNotNull(persisted.last().residualFatigue)
+    }
+
+    private fun stubProductionWorkoutStore(workout: WorkoutRecordEntity): ProductionWorkoutStore {
+        val store = ProductionWorkoutStore(mutableMapOf(workout.id to workout), mutableListOf())
+        stubProductionWorkoutQueries(store, workout)
+        stubProductionFatigueQueries(store)
+        coEvery { workoutDao.upsertAll(any()) } answers {
+            firstArg<List<WorkoutRecordEntity>>().forEach {
+                store.workouts[it.id] = it
+                store.writtenModelTrimps += requireNotNull(it.modelTrimp)
+            }
+        }
+        return store
+    }
+
+    private fun stubProductionWorkoutQueries(
+        store: ProductionWorkoutStore,
+        workout: WorkoutRecordEntity,
+    ) {
+        coEvery { workoutDao.getWorkoutsInRange(any(), any()) } answers {
+            val from = firstArg<Long>()
+            val to = secondArg<Long>()
+            store.workouts.values.filter { it.startTime in from until to }
+        }
+        coEvery { heartRateDao.getByTypeAndTimeRange(RecordType.EXERCISE.name, any(), any()) } answers {
+            val from = secondArg<Long>()
+            val to = thirdArg<Long>()
+            listOf(
+                HeartRateRecordEntity(
+                    sourceRecordRef = 1L,
+                    timestampMs = workout.startTime,
+                    beatsPerMinute = 170,
+                    recordType = RecordType.EXERCISE.name,
+                    sessionId = workout.id,
+                ),
+            ).filter { it.timestampMs in from..to }
+        }
+    }
+
+    private fun stubProductionFatigueQueries(store: ProductionWorkoutStore) {
+        coEvery { workoutDao.getFatigueWorkoutInputs(any(), any()) } answers {
+            val from = firstArg<Long>()
+            val to = secondArg<Long>()
+            store.workouts.values
+                .filter { it.endTime in from..to }
+                .mapNotNull { stored ->
+                    (stored.modelTrimp ?: stored.trimp)
+                        .takeIf { it > 0f }
+                        ?.let { fatigueTrimp ->
+                            FatigueWorkoutInput(
+                                workoutId = stored.id,
+                                endTimeMs = stored.endTime,
+                                trimp = fatigueTrimp,
+                            )
+                        }
+                }
+        }
+        coEvery { workoutDao.getFatigueSeedWorkoutInputs(any(), any(), any()) } answers {
+            val from = firstArg<Long>()
+            val seedCutoff = secondArg<Long>()
+            val to = thirdArg<Long>()
+            store.workouts.values
+                .filter { it.startTime in from until seedCutoff && it.endTime <= to }
+                .mapNotNull { stored ->
+                    stored.modelTrimp
+                        ?.takeIf { it > 0f }
+                        ?.let { fatigueTrimp ->
+                            FatigueWorkoutInput(
+                                workoutId = stored.id,
+                                endTimeMs = stored.endTime,
+                                trimp = fatigueTrimp,
+                            )
+                        }
+                }
+        }
+    }
+
+    private fun impulseAtWorkoutEnd(fatigueAtEvaluation: Float, workoutEndTimeMs: Long): Float {
+        val elapsedHours = (evalMs(day0) - workoutEndTimeMs).toDouble() / HOUR_MS
+        return (fatigueAtEvaluation / 2.0.pow(-elapsedHours / config.halfLifeHours)).toFloat()
+    }
+
+    private data class ProductionPass(
+        val firstFatigue: Float,
+        val secondFatigue: Float,
+        val firstCanonicalModelTrimp: Float,
+    )
+
+    private data class ProductionWorkoutStore(
+        val workouts: MutableMap<String, WorkoutRecordEntity>,
+        val writtenModelTrimps: MutableList<Float>,
+    )
+
+    private suspend fun canonicalModelTrimpFor(workoutId: String, prefs: UserPreferences): Float {
+        val day0Start = day0.atStartOfDay(zoneId).toInstant().toEpochMilli()
+        val workout =
+            workoutRecord(
+                id = workoutId,
+                startTime = day0Start + HOUR_MS,
+                endTime = day0Start + 2 * HOUR_MS,
+                trimp = 80f,
+                modelTrimp = null,
+            )
+        return runProductionPass(workout, prefs).firstCanonicalModelTrimp
+    }
+
+    private suspend fun assertSelectedModelParameters(
+        models: List<UserPreferences>,
+        canonicalTrimps: List<Float>,
+    ) {
+        assertEquals(
+            canonicalTrimps[1],
+            canonicalModelTrimpFor("cheng-no-banister", models[1].copy(banisterMultiplier = 1f)),
+            EPSILON,
+        )
+        assertNotEquals(
+            canonicalTrimps[1],
+            canonicalModelTrimpFor("cheng-different-beta", models[1].copy(chengBeta = 0.1f)),
+            EPSILON,
+        )
+        assertEquals(
+            canonicalTrimps[2],
+            canonicalModelTrimpFor("itrimp-no-banister", models[2].copy(banisterMultiplier = 1f)),
+            EPSILON,
+        )
+        assertNotEquals(
+            canonicalTrimps[2],
+            canonicalModelTrimpFor("itrimp-different-b", models[2].copy(itrimB = 1f)),
+            EPSILON,
+        )
+    }
 
     private fun expectedFatigue(
         day: LocalDate,
@@ -303,6 +502,7 @@ class ResidualFatigueWalkForwardDeterminismTest {
             // depending on which path recomputes it (spec §9 determinism).
             val oldWorkout =
                 FatigueWorkoutInput(
+                    workoutId = "old-workout",
                     endTimeMs =
                         day0
                             .minusDays(10)
@@ -357,11 +557,104 @@ class ResidualFatigueWalkForwardDeterminismTest {
 
             assertEquals(
                 workouts.map { it.endTimeMs },
-                context.workoutsByEndTimeMs.map { it.endTimeMs },
+                context.takeImpulsesThrough(Long.MAX_VALUE).map { it.endTimeMs },
                 "Prefetch must preserve ascending end-time order",
             )
             assertEquals(0.0, context.accumulatedFatigue)
             assertEquals(Long.MIN_VALUE, context.lastEvaluationTimeMs)
-            assertEquals(0, context.workoutCursor)
+        }
+
+    @Test
+    fun `walk-forward uses freshly calculated model TRIMP instead of stale persisted impulse`() =
+        runTest {
+            val day0Start = day0.atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val workout =
+                workoutRecord(
+                    id = "stale-model",
+                    startTime = day0Start + HOUR_MS,
+                    endTime = day0Start + 2 * HOUR_MS,
+                    trimp = 33f,
+                    modelTrimp = 135f,
+                )
+            val pass =
+                runProductionPass(
+                    workout,
+                    UserPreferences(
+                        scoringZoneId = zoneId.id,
+                        maxHeartRate = 190,
+                        autoCalculateMaxHr = false,
+                        residualFatigueHalfLifeHours = config.halfLifeHours,
+                        residualFatigueGain = config.fatigueGain,
+                    ),
+                )
+            val firstFatigueImpulse = impulseAtWorkoutEnd(pass.firstFatigue, workout.endTime)
+
+            assertEquals(pass.firstCanonicalModelTrimp, firstFatigueImpulse, EPSILON)
+            assertEquals(pass.firstFatigue, pass.secondFatigue, EPSILON)
+            assertNotEquals(135f, firstFatigueImpulse, EPSILON)
+            assertNotEquals(33f, firstFatigueImpulse, EPSILON)
+        }
+
+    @Test
+    fun `walk-forward never uses Edwards fallback for a missing model TRIMP`() =
+        runTest {
+            val day0Start = day0.atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val models =
+                listOf(
+                    UserPreferences(
+                        scoringZoneId = zoneId.id,
+                        trimpModel = TrimpModel.BANISTER,
+                        banisterMultiplier = 2f,
+                        maxHeartRate = 190,
+                        autoCalculateMaxHr = false,
+                        residualFatigueHalfLifeHours = config.halfLifeHours,
+                        residualFatigueGain = config.fatigueGain,
+                    ),
+                    UserPreferences(
+                        scoringZoneId = zoneId.id,
+                        trimpModel = TrimpModel.CHENG,
+                        banisterMultiplier = 8f,
+                        chengBeta = 0.4f,
+                        zone3MaxBpm = 150,
+                        maxHeartRate = 190,
+                        autoCalculateMaxHr = false,
+                        residualFatigueHalfLifeHours = config.halfLifeHours,
+                        residualFatigueGain = config.fatigueGain,
+                    ),
+                    UserPreferences(
+                        scoringZoneId = zoneId.id,
+                        trimpModel = TrimpModel.I_TRIMP,
+                        banisterMultiplier = 8f,
+                        itrimB = 3f,
+                        maxHeartRate = 190,
+                        autoCalculateMaxHr = false,
+                        residualFatigueHalfLifeHours = config.halfLifeHours,
+                        residualFatigueGain = config.fatigueGain,
+                    ),
+                )
+
+            val canonicalTrimps =
+                models.mapIndexed { index, prefs ->
+                    val workout =
+                        workoutRecord(
+                            id = "missing-model-$index",
+                            startTime = day0Start + HOUR_MS,
+                            endTime = day0Start + 2 * HOUR_MS,
+                            trimp = 80f,
+                            modelTrimp = null,
+                        )
+                    val pass = runProductionPass(workout, prefs)
+                    val firstFatigueImpulse = impulseAtWorkoutEnd(pass.firstFatigue, workout.endTime)
+
+                    assertEquals(pass.firstCanonicalModelTrimp, firstFatigueImpulse, EPSILON)
+                    assertEquals(pass.firstFatigue, pass.secondFatigue, EPSILON)
+                    assertNotEquals(80f, firstFatigueImpulse, EPSILON)
+                    pass.firstCanonicalModelTrimp
+                }
+
+            assertNotEquals(canonicalTrimps[0], canonicalTrimps[1], EPSILON)
+            assertNotEquals(canonicalTrimps[0], canonicalTrimps[2], EPSILON)
+            assertNotEquals(canonicalTrimps[1], canonicalTrimps[2], EPSILON)
+            assertSelectedModelParameters(models, canonicalTrimps)
         }
 }

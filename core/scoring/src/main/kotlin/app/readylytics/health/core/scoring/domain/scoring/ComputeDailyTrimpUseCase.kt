@@ -26,9 +26,16 @@ class ComputeDailyTrimpUseCase
             val modelTrimp: Float,
         )
 
+        data class CanonicalWorkoutTrimp(
+            val workoutId: String,
+            val endTimeMs: Long,
+            val trimp: Float,
+        )
+
         data class DailyTrimpResult(
             val totalDailyTrimpRaw: Float,
             val workoutModelTrimpUpdates: List<WorkoutModelTrimpUpdate>,
+            val canonicalWorkoutTrimps: List<CanonicalWorkoutTrimp>,
         )
 
         fun execute(
@@ -39,6 +46,7 @@ class ComputeDailyTrimpUseCase
         ): DailyTrimpResult {
             var dailyTrimpRaw = 0f
             val workoutModelTrimpUpdates = mutableListOf<WorkoutModelTrimpUpdate>()
+            val canonicalWorkoutTrimps = mutableListOf<CanonicalWorkoutTrimp>()
 
             workouts.forEach { workout ->
                 val workoutAvgHr =
@@ -62,6 +70,12 @@ class ComputeDailyTrimpUseCase
                     )
                 val workoutTrimp = workoutTrimpResult.getOrNull() ?: 0f
                 dailyTrimpRaw += workoutTrimp
+                canonicalWorkoutTrimps +=
+                    CanonicalWorkoutTrimp(
+                        workoutId = workout.id,
+                        endTimeMs = workout.endTime,
+                        trimp = workoutTrimp,
+                    )
 
                 if (workout.currentModelTrimp != workoutTrimp) {
                     workoutModelTrimpUpdates += WorkoutModelTrimpUpdate(workout.id, workoutTrimp)
@@ -71,6 +85,7 @@ class ComputeDailyTrimpUseCase
             return DailyTrimpResult(
                 totalDailyTrimpRaw = dailyTrimpRaw,
                 workoutModelTrimpUpdates = workoutModelTrimpUpdates,
+                canonicalWorkoutTrimps = canonicalWorkoutTrimps,
             )
         }
     }
