@@ -758,10 +758,16 @@ profile-specific (they shape the model, they do not scale its output). Users can
 multiplier in Advanced Settings (`rasCalibration`, range 0.5–2.5). Existing users are migrated by a
 one-time DataStore migration: `PhysiologyPreferences.migrateTrimpDefaultsIfNeeded()`
 (`app/.../data/preferences/PhysiologyPreferences.kt`) runs at app startup in
-`DatabaseReadyStartupInitializer` (before any scoring) and normalizes an unset `rasCalibration` (proto3 0.0)
-to 1.0 via `TrimpMigrationHelper.migrateRasCalibration`, setting the `trimp_normalization_migrated` proto flag
-(field 90) to prevent re-running; any nonzero stored value is safely preserved since historical provenance cannot
-distinguish an accepted old default from an explicit override. The multiplier change is a
+`DatabaseReadyStartupInitializer` (before any scoring) and normalizes via
+`TrimpMigrationHelper.migrateRasCalibration(storedValue, profile, alreadyMigrated)`, setting the
+`trimp_normalization_migrated` proto flag (field 90) to prevent re-running. The migration is
+**profile-aware**: it normalizes both an unset `rasCalibration` (proto3 0.0) and a stored value that exactly
+equals the legacy per-profile default for the user's *stored* physiology profile
+(`LegacyBanisterMultipliers` — ATHLETE 1.00, ACTIVE 1.35, SEDENTARY 1.75). Any other value — including a
+legacy default belonging to a *different* profile — is a genuine user override and is preserved verbatim.
+Without this, every onboarded user kept the old profile default (`OnboardingViewModel.saveProfile` always
+wrote `setRasCalibration(profile.banisterMultiplier)`), so the "1.0 for every profile" claim above would
+have reached zero existing users. The multiplier change is a
 historical-scope scoring input, so `SettingsDefaults.CURRENT_SCORING_VERSION` is bumped to **2**: startup
 enqueues a recompute-only resync (`WorkerScheduler.scheduleResyncWorker(recomputeOnly = true)` — gated on
 the migration succeeding) whenever `storedScoringVersion < CURRENT_SCORING_VERSION`, and
@@ -993,8 +999,9 @@ To guard scoring calculations against unintended architectural or algorithmic re
 
 Residual Fatigue models the decay of recent training load as an exponentially decaying sum of per-workout
 TRIMP impulses. **Phase 1 is strictly shadow mode:** the value is computed and persisted on every
-`DailySummary` but never read by any user-visible score — `computeReadinessScore()` is untouched, Readiness
-stays `0.40 · Restoration + 0.30 · Sleep + 0.30 · Load`, and no formula consumes `residualFatigue`.
+`DailySummary` but never read by any user-visible score. It **does not modify Readiness**, Load Score, or any
+other user-facing score — `computeReadinessScore()` is untouched, Readiness stays
+`0.40 · Restoration + 0.30 · Sleep + 0.30 · Load`, and no formula consumes `residualFatigue`.
 
 **Pipeline & formula location.** Each workout contributes an impulse of `fatigueGain · trimp` keyed by its
 `endTime`, decaying with half-life `halfLifeHours`. An impulse always uses the selected-model canonical
@@ -1040,6 +1047,25 @@ evaluation, it remains pending. Current-range persisted TRIMP is never preloaded
 Registration is idempotent by workout ID, so a retried day cannot add an impulse twice, and each evaluation
 drains only entries whose end is at or before that timestamp. After the deterministic Room/index and queue
 ordering cost, reconstruction and evaluation are **O(W + D)**.
+
+**Never-backfilled canonical TRIMP (HIGH-2).** `modelTrimp` is backfilled lazily by the walk-forward, so a
+retained workout that no walk-forward has touched (restore from a pre-SCORE-001 backup, or a day whose
+recompute failed) has `modelTrimp IS NULL`. The seed and fallback queries filter those rows out — correct,
+since Edwards `trimp` is never a fatigue fallback — which would otherwise leave the day silently *low*
+rather than *unknown*. Two things address that. First, `WorkoutDao.countUnbackfilledBefore` /
+`countUnbackfilledThrough`, surfaced by `ScoringDayDataLoader.loadUnbackfilledSeedCount` /
+`loadUnbackfilledCountThrough`, let the fatigue paths detect a dropped row (one `COUNT(*)` per walk-forward,
+not per day). Second, startup self-heals: `WorkoutDao.countUnbackfilledSince` behind the
+`WorkoutTrimpBackfillStatus` port (`core/model`, implemented by `WorkoutTrimpBackfillStatusImpl` in
+`core/database`) is a second gate on `DatabaseReadyStartupInitializer.scheduleRecomputeResyncIfNeeded`,
+alongside the stale-`scoringVersion` gate — both share one `scheduleResyncWorker(recomputeOnly = true)`
+enqueue per launch, bounded by `RetentionBounds.resolveResyncStartDate(prefs)`. It converges: a recompute
+writes `modelTrimp` for every workout it touches (including `0f`), so the count reaches zero and the gate
+stops firing. This also closes the matching `COALESCE(modelTrimp, trimp)` inconsistency in ATL/CTL.
+The remaining piece — persisting `NULL` for the affected day instead of the low value, via a
+`seedIncomplete` flag on `WalkForwardFatigueContext` — is **not yet wired**; the counts exist and the
+self-heal runs, but a partial walk over never-backfilled history still persists the low value until the
+recompute lands.
 
 The **single-day fallback** (no walk-forward, e.g. ad-hoc day recompute) analogously reads every retained
 canonical impulse with `endTime <= evaluationTime` and sums it with

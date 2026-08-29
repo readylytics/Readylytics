@@ -499,8 +499,14 @@ class ResyncRangeUseCase
                                 failure
                             }
                         if (chunkFailure != null) {
-                            // The chunk rolled back, so no checkpoint advance: the stored checkpoint
-                            // still starts at this chunk's first day and a retry redoes it whole.
+                            // The chunk does NOT roll back: recomputeDay catches and returns a
+                            // Result.Failure instead of throwing, so inRecomputeTransaction returns
+                            // normally and the days completed before the failure commit. Safety comes
+                            // from the checkpoint, not the transaction — it is not advanced, so it
+                            // still starts at this chunk's first day and a retry redoes the chunk
+                            // whole. Recompute is idempotent, and the retry rebuilds the fatigue
+                            // accumulator from the checkpoint boundary, so the partially committed
+                            // days are recomputed to the same values (see DATA_FLOW.md §2.8).
                             return@withContext chunkFailure
                         }
                         recomputedDays =
