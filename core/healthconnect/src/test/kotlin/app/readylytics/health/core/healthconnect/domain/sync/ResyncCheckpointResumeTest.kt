@@ -136,7 +136,7 @@ class ResyncCheckpointResumeTest {
             assertEquals(Triple(ResyncPhase.RECOMPUTE, 2, 4), progress.first())
             coVerify(
                 exactly = 0,
-            ) { scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any(), any()) }
+            ) { scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any()) }
             coVerify(
                 exactly = 0,
             ) {
@@ -144,21 +144,15 @@ class ResyncCheckpointResumeTest {
                     startDate.plusDays(1),
                     any(),
                     any(),
-                    any(),
-                    any(),
-                    any(),
-                )
+                    any())
             }
             coVerifyOrder {
                 scoringRepository.computeAndPersistDailySummary(
                     startDate.plusDays(2),
                     any(),
                     any(),
-                    any(),
-                    any(),
-                    any(),
-                )
-                scoringRepository.computeAndPersistDailySummary(endDate, any(), any(), any(), any(), any())
+                    any())
+                scoringRepository.computeAndPersistDailySummary(endDate, any(), any(), any())
             }
         }
 
@@ -192,9 +186,7 @@ class ResyncCheckpointResumeTest {
                     any(),
                     any(),
                     any(),
-                    any(),
-                    any(),
-                    resumedFatigueContext,
+                    match { it.fatigue === resumedFatigueContext },
                 )
             }
         }
@@ -270,7 +262,7 @@ class ResyncCheckpointResumeTest {
             coVerifyOrder {
                 changeSynchronizer.captureChangesTokens()
                 hcRepo.readSleepSessions(any(), any())
-                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any())
                 changeSynchronizer.commitTokens(baselineTokens)
             }
             assertEquals(null, checkpointStore.value)
@@ -281,7 +273,7 @@ class ResyncCheckpointResumeTest {
         runTest {
             val startDate = LocalDate.of(2024, 6, 1)
             coEvery {
-                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any())
             } throws
                 IllegalStateException("scoring failed")
 
@@ -305,10 +297,7 @@ class ResyncCheckpointResumeTest {
                     startDate.plusDays(1),
                     any(),
                     any(),
-                    any(),
-                    any(),
-                    any(),
-                )
+                    any())
             } throws IllegalStateException("scoring failed")
 
             useCase.run(
@@ -332,7 +321,7 @@ class ResyncCheckpointResumeTest {
 
             clearMocks(scoringRepository, answers = false, recordedCalls = true)
             coEvery {
-                scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any())
             } returns Unit
 
             useCase.run(
@@ -344,16 +333,13 @@ class ResyncCheckpointResumeTest {
             )
 
             coVerifyOrder {
-                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any())
                 scoringRepository.computeAndPersistDailySummary(
                     startDate.plusDays(1),
                     any(),
                     any(),
-                    any(),
-                    any(),
-                    any(),
-                )
-                scoringRepository.computeAndPersistDailySummary(endDate, any(), any(), any(), any(), any())
+                    any())
+                scoringRepository.computeAndPersistDailySummary(endDate, any(), any(), any())
             }
             coVerify(exactly = 0) { changeSynchronizer.captureChangesTokens() }
             coVerify(exactly = 0) { changeSynchronizer.applyPendingChanges() }
@@ -372,10 +358,7 @@ class ResyncCheckpointResumeTest {
                     startDate.plusDays(1),
                     any(),
                     any(),
-                    any(),
-                    any(),
-                    any(),
-                )
+                    any())
             } throws IllegalStateException("scoring failed")
 
             useCase.run(
@@ -397,7 +380,7 @@ class ResyncCheckpointResumeTest {
             clearMocks(scoringRepository, answers = false, recordedCalls = true)
             preferences.value = UserPreferences(trimpModel = TrimpModel.CHENG)
             coEvery {
-                scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any())
             } returns Unit
 
             useCase.run(
@@ -409,16 +392,13 @@ class ResyncCheckpointResumeTest {
             )
 
             coVerifyOrder {
-                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any())
                 scoringRepository.computeAndPersistDailySummary(
                     startDate.plusDays(1),
                     any(),
                     any(),
-                    any(),
-                    any(),
-                    any(),
-                )
-                scoringRepository.computeAndPersistDailySummary(endDate, any(), any(), any(), any(), any())
+                    any())
+                scoringRepository.computeAndPersistDailySummary(endDate, any(), any(), any())
             }
             assertEquals(null, checkpointStore.value)
         }
@@ -451,16 +431,13 @@ class ResyncCheckpointResumeTest {
             )
 
             coVerifyOrder {
-                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any())
                 scoringRepository.computeAndPersistDailySummary(
                     startDate.plusDays(1),
                     any(),
                     any(),
-                    any(),
-                    any(),
-                    any(),
-                )
-                scoringRepository.computeAndPersistDailySummary(endDate, any(), any(), any(), any(), any())
+                    any())
+                scoringRepository.computeAndPersistDailySummary(endDate, any(), any(), any())
             }
             assertEquals(null, checkpointStore.value)
         }
@@ -493,16 +470,13 @@ class ResyncCheckpointResumeTest {
             )
 
             coVerifyOrder {
-                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any())
                 scoringRepository.computeAndPersistDailySummary(
                     startDate.plusDays(1),
                     any(),
                     any(),
-                    any(),
-                    any(),
-                    any(),
-                )
-                scoringRepository.computeAndPersistDailySummary(endDate, any(), any(), any(), any(), any())
+                    any())
+                scoringRepository.computeAndPersistDailySummary(endDate, any(), any(), any())
             }
             assertEquals(null, checkpointStore.value)
         }
@@ -535,16 +509,13 @@ class ResyncCheckpointResumeTest {
             )
 
             coVerifyOrder {
-                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any())
                 scoringRepository.computeAndPersistDailySummary(
                     startDate.plusDays(1),
                     any(),
                     any(),
-                    any(),
-                    any(),
-                    any(),
-                )
-                scoringRepository.computeAndPersistDailySummary(endDate, any(), any(), any(), any(), any())
+                    any())
+                scoringRepository.computeAndPersistDailySummary(endDate, any(), any(), any())
             }
             assertEquals(null, checkpointStore.value)
         }

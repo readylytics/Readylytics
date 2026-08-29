@@ -29,6 +29,7 @@ import app.readylytics.health.core.scoring.domain.scoring.BuildLoadSeriesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.core.scoring.domain.scoring.CompositeScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
@@ -58,6 +59,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(AndroidJUnit4::class)
@@ -337,12 +339,15 @@ class ResidualFatigueScoringIntegrityTest {
         val support = DailyRecomputeSupport(scoringRepo, settingsRepo, RoomTransactionRunner(database))
 
         support.inRecomputeTransaction {
-            val trimpContext = support.buildWalkForwardTrimpContext(startDate, endDate, zoneId)
-            val baselineContext = support.buildWalkForwardBaselineContext(startDate, endDate, zoneId)
-            val fatigueContext = support.buildWalkForwardFatigueContext(startDate, endDate, zoneId)
+            val contexts =
+                WalkForwardContexts(
+                    trimp = support.buildWalkForwardTrimpContext(startDate, endDate, zoneId),
+                    baseline = support.buildWalkForwardBaselineContext(startDate, endDate, zoneId),
+                    fatigue = support.buildWalkForwardFatigueContext(startDate, endDate, zoneId),
+                )
             var current = startDate
             while (!current.isAfter(endDate)) {
-                support.recomputeDay(current, null, prefs, trimpContext, baselineContext, fatigueContext)
+                support.recomputeDay(current, null, prefs, contexts)
                 current = current.plusDays(1)
             }
         }
@@ -402,15 +407,20 @@ class ResidualFatigueScoringIntegrityTest {
         val coordinator = createReadinessCoordinator(components)
 
         return ScoringRepositoryImpl(
-            dataLoader = dataLoader,
-            bodyMetricsDataLoader = bodyMetricsDataLoader,
-            seriesLoader = seriesLoader,
+            loaders = ScoringDataLoaders(
+                dataLoader,
+                bodyMetricsDataLoader,
+                seriesLoader,
+            ),
             settingsRepo = settingsRepo,
             baselineComputer = baselineComputer,
             scoringConfigFactory = scoringConfigFactory,
-            computeDailyTrimpUseCase = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
-            resolveDailyBaselinesUseCase = ResolveDailyBaselinesUseCase(baselineComputer),
-            assembleEverydayLoadInputUseCase = AssembleEverydayLoadInputUseCase(),
+            useCases = ScoringDayUseCases(
+                ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
+                ComputeResidualFatigueUseCase(),
+                ResolveDailyBaselinesUseCase(baselineComputer),
+                AssembleEverydayLoadInputUseCase(),
+            ),
             scoringHistoryRepository = scoringHistoryRepository,
             readinessSummaryCoordinator = coordinator,
             defaultDispatcher = UnconfinedTestDispatcher(),

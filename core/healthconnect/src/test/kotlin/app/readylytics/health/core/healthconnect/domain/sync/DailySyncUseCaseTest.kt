@@ -37,6 +37,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.test.assertFailsWith
+import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
 
 /**
  * Behavioral characterization of the foreground daily-sync flow. The collaborators that actually
@@ -100,9 +101,9 @@ class DailySyncUseCaseTest {
             useCase.run(windowDays = windowDays, onProgress = null)
 
             coVerifyOrder {
-                scoringRepository.computeAndPersistDailySummary(day0, 0L, any(), any(), any(), any())
-                scoringRepository.computeAndPersistDailySummary(day1, 0L, any(), any(), any(), any())
-                scoringRepository.computeAndPersistDailySummary(day2, 0L, any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(day0, 0L, any(), any())
+                scoringRepository.computeAndPersistDailySummary(day1, 0L, any(), any())
+                scoringRepository.computeAndPersistDailySummary(day2, 0L, any(), any())
             }
         }
 
@@ -124,10 +125,7 @@ class DailySyncUseCaseTest {
                     any(),
                     any(),
                     capture(capturedPrefs),
-                    any(),
-                    any(),
-                    any(),
-                )
+                    any())
             } returns Unit
 
             useCase.run(windowDays = 3, onProgress = null)
@@ -142,22 +140,21 @@ class DailySyncUseCaseTest {
             // PERF-002/WP-20/WP-22 shape, now on the daily path: each recomputed day must read the
             // TRIMP series and the RHR/HRV baseline window through ONE context built for the whole
             // window, not re-query its own 84-/56-day lookback per day.
-            val capturedTrimp = mutableListOf<WalkForwardTrimpContext>()
-            val capturedBaseline = mutableListOf<WalkForwardBaselineContext>()
-            val capturedFatigue = mutableListOf<WalkForwardFatigueContext>()
+            val capturedContexts = mutableListOf<WalkForwardContexts>()
             coEvery {
                 scoringRepository.computeAndPersistDailySummary(
                     any(),
                     any(),
                     any(),
-                    capture(capturedTrimp),
-                    capture(capturedBaseline),
-                    capture(capturedFatigue),
+                    capture(capturedContexts),
                 )
             } returns Unit
 
             useCase.run(windowDays = 3, onProgress = null)
 
+            val capturedTrimp = capturedContexts.map { it.trimp }
+            val capturedBaseline = capturedContexts.map { it.baseline }
+            val capturedFatigue = capturedContexts.map { it.fatigue }
             assertEquals(3, capturedTrimp.size)
             assertEquals(1, capturedTrimp.distinctBy { System.identityHashCode(it) }.size)
             assertEquals(3, capturedBaseline.size)
@@ -218,7 +215,7 @@ class DailySyncUseCaseTest {
             useCase.run(windowDays = 1, onProgress = null)
 
             coVerifyOrder {
-                scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any())
                 changeSynchronizer.commitTokens(nextTokens)
             }
         }
@@ -234,8 +231,8 @@ class DailySyncUseCaseTest {
 
             coVerifyOrder {
                 healthIngestionStore.clearFrozenBaselines(today.minusDays(1), today.plusDays(1), zoneId)
-                scoringRepository.computeAndPersistDailySummary(today.minusDays(1), 0L, any(), any(), any(), any())
-                scoringRepository.computeAndPersistDailySummary(today, 0L, any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(today.minusDays(1), 0L, any(), any())
+                scoringRepository.computeAndPersistDailySummary(today, 0L, any(), any())
             }
         }
 
@@ -269,7 +266,7 @@ class DailySyncUseCaseTest {
                     zoneThresholds = any(),
                 )
                 healthIngestionStore.clearFrozenBaselines(today, today.plusDays(1), zoneId)
-                scoringRepository.computeAndPersistDailySummary(today, 0L, any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(today, 0L, any(), any())
             }
         }
 
@@ -379,7 +376,7 @@ class DailySyncUseCaseTest {
             // today's two attempts both timed out; the back-day segment never ran and nothing scored.
             coVerify(exactly = 2) { hcRepo.readSleepSessions(any(), any()) }
             coVerify(exactly = 0) {
-                scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any())
             }
             coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }
         }
@@ -406,7 +403,7 @@ class DailySyncUseCaseTest {
 
             assertTrue(result is app.readylytics.health.core.model.domain.model.Result.Success)
             coVerify(exactly = 1) {
-                scoringRepository.computeAndPersistDailySummary(today, any(), any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(today, any(), any(), any())
             }
         }
 
@@ -433,10 +430,7 @@ class DailySyncUseCaseTest {
                     capture(scoredDays),
                     any(),
                     any(),
-                    any(),
-                    any(),
-                    any(),
-                )
+                    any())
             }
 
             val result = useCase.run(windowDays = 1, onProgress = null)
@@ -473,10 +467,7 @@ class DailySyncUseCaseTest {
                     capture(scoredDays),
                     any(),
                     any(),
-                    any(),
-                    any(),
-                    any(),
-                )
+                    any())
             }
 
             val result = useCase.run(windowDays = 1, onProgress = null)
@@ -510,10 +501,7 @@ class DailySyncUseCaseTest {
                     capture(scoredDays),
                     any(),
                     any(),
-                    any(),
-                    any(),
-                    any(),
-                )
+                    any())
             }
 
             val result = useCase.run(windowDays = 1, onProgress = null)
@@ -578,17 +566,14 @@ class DailySyncUseCaseTest {
             clockedUseCase.run(windowDays = 1, onProgress = null)
 
             coVerify {
-                scoringRepository.computeAndPersistDailySummary(expectedDay, any(), any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(expectedDay, any(), any(), any())
             }
             coVerify(exactly = 0) {
                 scoringRepository.computeAndPersistDailySummary(
                     LocalDate.now(ZoneId.of("UTC")),
                     any(),
                     any(),
-                    any(),
-                    any(),
-                    any(),
-                )
+                    any())
             }
         }
 
@@ -614,7 +599,7 @@ class DailySyncUseCaseTest {
                 insideTransaction += "clear:${transactionRunner.openDepth}"
             }
             coEvery {
-                scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any())
             } answers {
                 insideTransaction += "score:${transactionRunner.openDepth}"
             }

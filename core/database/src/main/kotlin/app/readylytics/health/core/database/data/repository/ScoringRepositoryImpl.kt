@@ -10,16 +10,13 @@ import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.model.domain.repository.ScoringRepository
 import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
+import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.model.domain.util.logD
-import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
-import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
-import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase
 import app.readylytics.health.core.scoring.domain.scoring.EverydayHrLoadResult
-import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
 import app.readylytics.health.core.scoring.domain.scoring.TrimpDateBucketer
 import kotlinx.coroutines.CoroutineDispatcher
@@ -37,30 +34,34 @@ import javax.inject.Singleton
 class ScoringRepositoryImpl
     @Inject
     constructor(
-        private val dataLoader: ScoringDayDataLoader,
-        private val bodyMetricsDataLoader: BodyMetricsDataLoader,
-        private val seriesLoader: ScoringSeriesLoader,
+        private val loaders: ScoringDataLoaders,
         private val settingsRepo: SettingsRepository,
         private val baselineComputer: BaselineComputer,
         private val scoringConfigFactory: ScoringConfigFactory,
-        private val computeDailyTrimpUseCase: ComputeDailyTrimpUseCase,
-        private val resolveDailyBaselinesUseCase: ResolveDailyBaselinesUseCase,
-        private val assembleEverydayLoadInputUseCase: AssembleEverydayLoadInputUseCase,
+        private val useCases: ScoringDayUseCases,
         private val scoringHistoryRepository: ScoringHistoryRepository,
         private val readinessSummaryCoordinator: ReadinessSummaryCoordinator,
         @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : ScoringRepository {
         private val calculationMutex = Mutex()
 
+        private val dataLoader = loaders.day
+        private val bodyMetricsDataLoader = loaders.bodyMetrics
+        private val seriesLoader = loaders.series
+
         private val scoringDayContextResolver =
-            ScoringDayContextResolver(scoringConfigFactory, resolveDailyBaselinesUseCase, scoringHistoryRepository)
+            ScoringDayContextResolver(
+                scoringConfigFactory,
+                useCases.resolveDailyBaselines,
+                scoringHistoryRepository,
+            )
         private val dailyTrimpComputer =
-            DailyTrimpComputer(dataLoader, computeDailyTrimpUseCase, assembleEverydayLoadInputUseCase)
+            DailyTrimpComputer(dataLoader, useCases.computeDailyTrimp, useCases.assembleEverydayLoadInput)
         private val baseSummaryAssembler = BaseSummaryAssembler(bodyMetricsDataLoader)
         private val calibrationGate = CalibrationGate(baselineComputer)
         private val rasTotalsComputer = RasTotalsComputer(seriesLoader)
         private val residualFatigueComputer =
-            ResidualFatigueComputer(dataLoader, ComputeResidualFatigueUseCase())
+            ResidualFatigueComputer(dataLoader, useCases.computeResidualFatigue)
         private val finalSummaryAssembler =
             FinalSummaryAssembler(
                 baseSummaryAssembler,
@@ -75,55 +76,21 @@ class ScoringRepositoryImpl
             targetDate: LocalDate,
             steps: Long?,
             prefs: UserPreferences?,
+            contexts: WalkForwardContexts,
         ) = calculationMutex.withLock {
             val resolvedPrefs = prefs ?: settingsRepo.userPreferences.first()
             val zoneId = resolvedPrefs.scoringZone()
-            val computed = computeDailySummary(targetDate, resolvedPrefs)
-            val summary =
-                if (steps != null) {
-                    computed.copy(stepCount = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
-                } else {
-                    computed
-                }
-            dataLoader.persistDailySummary(summary, zoneId)
+            val computed = computeDailySummary(targetDate, resolvedPrefs, contexts)
+            dataLoader.persistDailySummary(computed.withStepCount(steps), zoneId)
         }
 
-        override suspend fun computeAndPersistDailySummary(
-            targetDate: LocalDate,
-            steps: Long?,
-            prefs: UserPreferences,
-            trimpContext: WalkForwardTrimpContext,
-            baselineContext: WalkForwardBaselineContext,
-        ) = calculationMutex.withLock {
-            val zoneId = prefs.scoringZone()
-            val computed = computeDailySummary(targetDate, prefs, trimpContext, baselineContext)
-            val summary =
-                if (steps != null) {
-                    computed.copy(stepCount = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
-                } else {
-                    computed
-                }
-            dataLoader.persistDailySummary(summary, zoneId)
-        }
-
-        override suspend fun computeAndPersistDailySummary(
-            targetDate: LocalDate,
-            steps: Long?,
-            prefs: UserPreferences,
-            trimpContext: WalkForwardTrimpContext,
-            baselineContext: WalkForwardBaselineContext,
-            fatigueContext: WalkForwardFatigueContext,
-        ) = calculationMutex.withLock {
-            val zoneId = prefs.scoringZone()
-            val computed = computeDailySummary(targetDate, prefs, trimpContext, baselineContext, fatigueContext)
-            val summary =
-                if (steps != null) {
-                    computed.copy(stepCount = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
-                } else {
-                    computed
-                }
-            dataLoader.persistDailySummary(summary, zoneId)
-        }
+        /** A null [steps] means no fresh count for the day; the stored value is preserved. */
+        private fun DailySummary.withStepCount(steps: Long?): DailySummary =
+            if (steps == null) {
+                this
+            } else {
+                copy(stepCount = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
+            }
 
         override suspend fun fetchWalkForwardTrimpContext(
             startDate: LocalDate,
@@ -169,21 +136,20 @@ class ScoringRepositoryImpl
 
         override suspend fun computeDailySummary(targetDate: LocalDate): DailySummary {
             val prefs = settingsRepo.userPreferences.first()
-            return calculationMutex.withLock { computeDailySummary(targetDate, prefs) }
+            return calculationMutex.withLock { computeDailySummary(targetDate, prefs, WalkForwardContexts()) }
         }
 
         private suspend fun computeDailySummary(
             targetDate: LocalDate,
             prefs: UserPreferences,
-            trimpContext: WalkForwardTrimpContext? = null,
-            baselineContext: WalkForwardBaselineContext? = null,
-            fatigueContext: WalkForwardFatigueContext? = null,
+            contexts: WalkForwardContexts,
         ): DailySummary =
             withContext(defaultDispatcher) {
-                val context = scoringDayContextResolver.resolveScoringDayContext(targetDate, prefs, baselineContext)
+                val context =
+                    scoringDayContextResolver.resolveScoringDayContext(targetDate, prefs, contexts.baseline)
                 logD("ScoringRepository") { "RAS CALC START [$targetDate]" }
                 val processed = dailyTrimpComputer.processWorkouts(context)
-                fatigueContext?.registerCanonicalImpulses(processed.fatigueInputs)
+                contexts.fatigue?.registerCanonicalImpulses(processed.fatigueInputs)
                 val aggregatedSleep =
                     readinessSummaryCoordinator.resolveSleepAggregation(
                         context.targetDate,
@@ -197,7 +163,7 @@ class ScoringRepositoryImpl
                 val everydayResult =
                     dailyTrimpComputer.resolveEverydayTrimp(context, processed, session, aggregatedSleep)
                 dailyTrimpComputer.publishTrimpToContext(
-                    trimpContext,
+                    contexts.trimp,
                     context.targetDate,
                     everydayResult.totalEverydayTrimp,
                     processed.dailyTrimpRaw,
@@ -224,9 +190,9 @@ class ScoringRepositoryImpl
                             rasTotals = rasTotals,
                             everydayResult = everydayResult,
                             aggregatedSleep = aggregatedSleep,
-                            trimpContext = trimpContext,
-                            baselineContext = baselineContext,
-                            fatigueContext = fatigueContext,
+                            trimpContext = contexts.trimp,
+                            baselineContext = contexts.baseline,
+                            fatigueContext = contexts.fatigue,
                         ),
                     )
                 ScoringTelemetry.logTelemetry(

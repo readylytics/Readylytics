@@ -29,6 +29,7 @@ import app.readylytics.health.core.scoring.domain.scoring.BuildLoadSeriesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.core.scoring.domain.scoring.CompositeScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.SleepMetricsCollaborators
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
@@ -56,6 +57,8 @@ import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import app.readylytics.health.core.database.data.repository.ScoringDayUseCases
+import app.readylytics.health.core.database.data.repository.ScoringDataLoaders
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(AndroidJUnit4::class)
@@ -135,15 +138,21 @@ class ScoringGoldenSnapshotTest {
             )
 
         return ScoringRepositoryImpl(
-            dataLoader = dataLoader,
-            bodyMetricsDataLoader = bodyMetricsDataLoader,
-            seriesLoader = seriesLoader,
+            loaders = ScoringDataLoaders(
+                dataLoader,
+                bodyMetricsDataLoader,
+                seriesLoader,
+            ),
             settingsRepo = settingsRepository,
             baselineComputer = baselineComputer,
             scoringConfigFactory = scoringConfigFactory,
-            computeDailyTrimpUseCase = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
-            resolveDailyBaselinesUseCase = resolveDailyBaselinesUseCase,
-            assembleEverydayLoadInputUseCase = AssembleEverydayLoadInputUseCase(),
+            useCases =
+                ScoringDayUseCases(
+                    ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
+                    ComputeResidualFatigueUseCase(),
+                    resolveDailyBaselinesUseCase,
+                    AssembleEverydayLoadInputUseCase(),
+                ),
             scoringHistoryRepository = scoringHistoryRepository,
             readinessSummaryCoordinator = readinessSummaryCoordinator,
             defaultDispatcher = UnconfinedTestDispatcher(),

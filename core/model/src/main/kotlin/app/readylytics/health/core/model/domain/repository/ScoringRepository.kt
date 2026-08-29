@@ -12,43 +12,20 @@ interface ScoringRepository {
      * preferences snapshot; a multi-day walk-forward (daily sync / resync) must pass one snapshot
      * shared across every day it recomputes, or a preference change mid-walk-forward silently
      * mixes old- and new-preference days (SCORE-004).
+     *
+     * PERF-002/WP-20/WP-22/WP-27: a multi-day walk-forward passes [contexts] so the TRIMP series,
+     * the RHR/HRV baseline windows, and the residual-fatigue accumulator are fetched once for the
+     * run (via [fetchWalkForwardTrimpContext], [fetchWalkForwardBaselineContext] and
+     * [fetchWalkForwardFatigueContext]) instead of re-querying their own lookback windows per day.
+     * The same [contexts] instance must be handed to every day of the run, oldest day first, so the
+     * fatigue accumulator decays and adds impulses in the correct order. The default (all null) is
+     * the single-day case.
      */
     suspend fun computeAndPersistDailySummary(
         targetDate: LocalDate,
         steps: Long? = null,
         prefs: UserPreferences? = null,
-    )
-
-    /**
-     * PERF-002/WP-20/WP-22: same as the 3-arg overload, but reads/writes the TRIMP series through
-     * [trimpContext] and the RHR/HRV baseline windows through [baselineContext] instead of
-     * independently re-querying their own lookback windows per day. Callers with a multi-day
-     * walk-forward must fetch one [trimpContext] (via [fetchWalkForwardTrimpContext]) and one
-     * [baselineContext] (via [fetchWalkForwardBaselineContext]) and share both across every day
-     * recomputed in that run.
-     */
-    suspend fun computeAndPersistDailySummary(
-        targetDate: LocalDate,
-        steps: Long?,
-        prefs: UserPreferences,
-        trimpContext: WalkForwardTrimpContext,
-        baselineContext: WalkForwardBaselineContext,
-    )
-
-    /**
-     * PERF-002/WP-20/WP-22 + residual-fatigue walk-forward: same as the 5-arg overload, but also
-     * reads/advances the shared [WalkForwardFatigueContext] state accumulator. A multi-day
-     * walk-forward must fetch one [fatigueContext] (via [fetchWalkForwardFatigueContext]) and pass it
-     * to every day recomputed in that run, oldest day first, so the accumulator decays and adds
-     * impulses in the correct order.
-     */
-    suspend fun computeAndPersistDailySummary(
-        targetDate: LocalDate,
-        steps: Long?,
-        prefs: UserPreferences,
-        trimpContext: WalkForwardTrimpContext,
-        baselineContext: WalkForwardBaselineContext,
-        fatigueContext: WalkForwardFatigueContext,
+        contexts: WalkForwardContexts = WalkForwardContexts(),
     )
 
     /**

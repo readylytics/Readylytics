@@ -53,6 +53,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.math.pow
+import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
 
 /**
  * WP-27 shadow-mode determinism locks for the residual-fatigue walk-forward.
@@ -139,15 +140,20 @@ class ResidualFatigueWalkForwardDeterminismTest {
                 AssembleDailySummaryUseCase(),
             )
         return ScoringRepositoryImpl(
-            dataLoader,
-            bodyMetricsDataLoader,
-            seriesLoader,
+            ScoringDataLoaders(
+                dataLoader,
+                bodyMetricsDataLoader,
+                seriesLoader,
+            ),
             settingsRepo,
             baselineComputer,
             scoringConfigFactory,
-            ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
-            ResolveDailyBaselinesUseCase(baselineComputer),
-            AssembleEverydayLoadInputUseCase(),
+            ScoringDayUseCases(
+                ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
+                ComputeResidualFatigueUseCase(),
+                ResolveDailyBaselinesUseCase(baselineComputer),
+                AssembleEverydayLoadInputUseCase(),
+            ),
             scoringHistoryRepository,
             readinessSummaryCoordinator,
             UnconfinedTestDispatcher(),
@@ -261,9 +267,11 @@ class ResidualFatigueWalkForwardDeterminismTest {
             day0,
             null,
             prefs,
-            WalkForwardTrimpContext(TreeMap(), TreeMap()),
-            WalkForwardBaselineContext(emptyList()),
-            fatigueContext,
+            WalkForwardContexts(
+                WalkForwardTrimpContext(TreeMap(), TreeMap()),
+                WalkForwardBaselineContext(emptyList()),
+                fatigueContext,
+            ),
         )
         return requireNotNull(persisted.last().residualFatigue)
     }
@@ -410,14 +418,17 @@ class ResidualFatigueWalkForwardDeterminismTest {
         endDate: LocalDate,
         prefs: UserPreferences,
     ): Map<LocalDate, Float?> {
-        val fatigueContext = repo.fetchWalkForwardFatigueContext(startDate, endDate, zoneId)
-        val trimpContext = WalkForwardTrimpContext(TreeMap(), TreeMap())
-        val baselineContext = WalkForwardBaselineContext(emptyList())
+        val contexts =
+            WalkForwardContexts(
+                trimp = WalkForwardTrimpContext(TreeMap(), TreeMap()),
+                baseline = WalkForwardBaselineContext(emptyList()),
+                fatigue = repo.fetchWalkForwardFatigueContext(startDate, endDate, zoneId),
+            )
         val persisted = mutableListOf<DailySummaryEntity>()
         coEvery { dailySummaryDao.upsert(capture(persisted)) } returns Unit
         var day = startDate
         while (!day.isAfter(endDate)) {
-            repo.computeAndPersistDailySummary(day, null, prefs, trimpContext, baselineContext, fatigueContext)
+            repo.computeAndPersistDailySummary(day, null, prefs, contexts)
             day = day.plusDays(1)
         }
         return persisted.associate {

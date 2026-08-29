@@ -12,6 +12,7 @@ import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.core.model.domain.repository.HealthConnectWindowTimeoutException
 import app.readylytics.health.core.model.domain.repository.WalDiagnostics
+import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
 import app.readylytics.health.core.scoring.domain.scoring.RasSourceModeBootstrapUseCase
 import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
@@ -256,9 +257,7 @@ class DailySyncUseCase
                                     dayToScore,
                                     steps,
                                     prefs,
-                                    trimpContext,
-                                    baselineContext,
-                                    fatigueContext,
+                                    WalkForwardContexts(trimpContext, baselineContext, fatigueContext),
                                 )
 
                             when (result) {

@@ -8,6 +8,7 @@ import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.ScoringRepository
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
+import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
@@ -51,76 +52,21 @@ class DailyRecomputeSupport
          * A multi-day walk-forward (daily sync / resync) must call this with one snapshot shared
          * across every recomputed day, or a preference change mid-walk-forward silently mixes
          * old- and new-preference days (SCORE-004).
+         *
+         * PERF-002/WP-20/WP-22/WP-27: a multi-day walk-forward also builds one [WalkForwardContexts]
+         * per run (via [buildWalkForwardTrimpContext], [buildWalkForwardBaselineContext] and
+         * [buildWalkForwardFatigueContext]) and passes the same instance to every day it recomputes,
+         * oldest day first, so nothing re-queries its own lookback window per day and the fatigue
+         * accumulator decays and adds impulses in the correct order.
          */
         suspend fun recomputeDay(
             day: LocalDate,
             steps: Long?,
             prefs: UserPreferences,
+            contexts: WalkForwardContexts = WalkForwardContexts(),
         ): Result<Unit> =
             try {
-                scoringRepository.computeAndPersistDailySummary(day, steps, prefs)
-                logD("DailyRecomputeSupport") {
-                    "Day $day: scored atomically (steps=${steps?.toString() ?: "preserved"})"
-                }
-                Result.success(Unit)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                logE("DailyRecomputeSupport", e) { "Day $day sync failed" }
-                Result.failure("Day $day sync failed", "DAY_SYNC_ERROR")
-            }
-
-        /**
-         * PERF-002/WP-20/WP-22: same as the 3-arg overload, but reads/writes the TRIMP series
-         * through [trimpContext] and the RHR/HRV baseline windows through [baselineContext] instead
-         * of independently re-querying their own lookback windows for this one day. A multi-day
-         * walk-forward must build one [trimpContext] (via [buildWalkForwardTrimpContext]) and one
-         * [baselineContext] (via [buildWalkForwardBaselineContext]) and pass both to every day it
-         * recomputes in that run.
-         */
-        suspend fun recomputeDay(
-            day: LocalDate,
-            steps: Long?,
-            prefs: UserPreferences,
-            trimpContext: WalkForwardTrimpContext,
-            baselineContext: WalkForwardBaselineContext,
-        ): Result<Unit> =
-            try {
-                scoringRepository.computeAndPersistDailySummary(day, steps, prefs, trimpContext, baselineContext)
-                logD("DailyRecomputeSupport") {
-                    "Day $day: scored atomically (steps=${steps?.toString() ?: "preserved"})"
-                }
-                Result.success(Unit)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                logE("DailyRecomputeSupport", e) { "Day $day sync failed" }
-                Result.failure("Day $day sync failed", "DAY_SYNC_ERROR")
-            }
-
-        /**
-         * Same as the 5-arg overload, but also advances the shared [fatigueContext] residual-fatigue
-         * accumulator. A multi-day walk-forward must build one [fatigueContext] (via
-         * [buildWalkForwardFatigueContext]) and pass it to every day it recomputes in that run,
-         * oldest day first.
-         */
-        suspend fun recomputeDay(
-            day: LocalDate,
-            steps: Long?,
-            prefs: UserPreferences,
-            trimpContext: WalkForwardTrimpContext,
-            baselineContext: WalkForwardBaselineContext,
-            fatigueContext: WalkForwardFatigueContext,
-        ): Result<Unit> =
-            try {
-                scoringRepository.computeAndPersistDailySummary(
-                    day,
-                    steps,
-                    prefs,
-                    trimpContext,
-                    baselineContext,
-                    fatigueContext,
-                )
+                scoringRepository.computeAndPersistDailySummary(day, steps, prefs, contexts)
                 logD("DailyRecomputeSupport") {
                     "Day $day: scored atomically (steps=${steps?.toString() ?: "preserved"})"
                 }

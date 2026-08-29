@@ -284,7 +284,7 @@ class ResyncRangeUseCaseTest {
                 onProgress = null,
             )
 
-            coVerify { scoringRepository.computeAndPersistDailySummary(date, 0L, any(), any(), any(), any()) }
+            coVerify { scoringRepository.computeAndPersistDailySummary(date, 0L, any(), any()) }
         }
 
     @Test
@@ -360,16 +360,13 @@ class ResyncRangeUseCaseTest {
 
             coVerifyOrder {
                 healthIngestionStore.clearFrozenBaselines(startDate, endDate.plusDays(1), zoneId)
-                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any())
                 scoringRepository.computeAndPersistDailySummary(
                     startDate.plusDays(1),
                     any(),
                     any(),
-                    any(),
-                    any(),
-                    any(),
-                )
-                scoringRepository.computeAndPersistDailySummary(endDate, any(), any(), any(), any(), any())
+                    any())
+                scoringRepository.computeAndPersistDailySummary(endDate, any(), any(), any())
             }
         }
 
@@ -386,10 +383,7 @@ class ResyncRangeUseCaseTest {
                     any(),
                     captureNullable(stepOverrides),
                     any(),
-                    any(),
-                    any(),
-                    any(),
-                )
+                    any())
             } returns Unit
 
             useCase.run(
@@ -413,7 +407,7 @@ class ResyncRangeUseCaseTest {
             coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }
             coVerify(exactly = 1) { sessionLinkReconciler.reconcile(any(), any(), any()) }
             coVerify(exactly = 2) {
-                scoringRepository.computeAndPersistDailySummary(any(), null, any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(any(), null, any(), any())
             }
         }
 
@@ -435,10 +429,7 @@ class ResyncRangeUseCaseTest {
                     any(),
                     any(),
                     capture(capturedPrefs),
-                    any(),
-                    any(),
-                    any(),
-                )
+                    any())
             } returns Unit
 
             useCase.run(
@@ -463,7 +454,7 @@ class ResyncRangeUseCaseTest {
             coVerifyOrder {
                 selectedSourcePruner.prune(startDate, endDate, any(), any())
                 sessionLinkReconciler.reconcile(any(), any(), any())
-                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any())
             }
         }
 
@@ -551,10 +542,7 @@ class ResyncRangeUseCaseTest {
                     startDate.plusDays(34),
                     any(),
                     any(),
-                    any(),
-                    any(),
-                    any(),
-                )
+                    any())
             } throws IllegalStateException("scoring failed")
 
             val result =
@@ -579,7 +567,7 @@ class ResyncRangeUseCaseTest {
                 scoringRepository.fetchWalkForwardFatigueContext(any(), any(), any())
             }
             coVerify(exactly = 65) {
-                scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any())
             }
         }
 }

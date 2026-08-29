@@ -6,6 +6,7 @@ import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
 import app.readylytics.health.core.scoring.domain.scoring.BuildLoadSeriesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.CompositeScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.SleepMetricsCollaborators
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
@@ -61,6 +62,8 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
+import app.readylytics.health.core.database.data.repository.ScoringDayUseCases
+import app.readylytics.health.core.database.data.repository.ScoringDataLoaders
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ScoringRepositoryN1Test {
@@ -247,15 +250,21 @@ class ScoringRepositoryN1Test {
 
         repo =
             ScoringRepositoryImpl(
-                dataLoader = dataLoader,
-                bodyMetricsDataLoader = bodyMetricsDataLoader,
-                seriesLoader = seriesLoader,
+                loaders = ScoringDataLoaders(
+                    dataLoader,
+                    bodyMetricsDataLoader,
+                    seriesLoader,
+                ),
                 settingsRepo = settingsRepo,
                 baselineComputer = baselineComputer,
                 scoringConfigFactory = scoringConfigFactory,
-                computeDailyTrimpUseCase = ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
-                resolveDailyBaselinesUseCase = resolveDailyBaselinesUseCase,
-                assembleEverydayLoadInputUseCase = AssembleEverydayLoadInputUseCase(),
+                useCases =
+                    ScoringDayUseCases(
+                        ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
+                        ComputeResidualFatigueUseCase(),
+                        resolveDailyBaselinesUseCase,
+                        AssembleEverydayLoadInputUseCase(),
+                    ),
                 scoringHistoryRepository = scoringHistoryRepository,
                 readinessSummaryCoordinator = readinessSummaryCoordinator,
                 defaultDispatcher = UnconfinedTestDispatcher(),

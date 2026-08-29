@@ -9,6 +9,7 @@ import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.core.model.domain.repository.HealthConnectWindowTimeoutException
+import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
 import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
 import app.readylytics.health.core.model.domain.util.logD
@@ -475,19 +476,16 @@ class ResyncRangeUseCase
                                             stepsDevice != null -> stepsMap[day] ?: 0L
                                             else -> stepsMap[day]
                                         }
+                                    // The nullable fields already express "not available for this
+                                    // run", so no branch is needed: each computer handles a null
+                                    // context individually.
                                     val dayResult =
-                                        if (trimpContext != null && baselineContext != null && fatigueContext != null) {
-                                            recomputeSupport.recomputeDay(
-                                                day,
-                                                stepsForDay,
-                                                prefs,
-                                                trimpContext,
-                                                baselineContext,
-                                                fatigueContext,
-                                            )
-                                        } else {
-                                            recomputeSupport.recomputeDay(day, stepsForDay, prefs)
-                                        }
+                                        recomputeSupport.recomputeDay(
+                                            day,
+                                            stepsForDay,
+                                            prefs,
+                                            WalkForwardContexts(trimpContext, baselineContext, fatigueContext),
+                                        )
                                     if (dayResult is Result.Failure) {
                                         logD(TELEMETRY_TAG) { "[RECOMPUTE] Failed at day $day: ${dayResult.reason}" }
                                         failure = dayResult
