@@ -601,7 +601,94 @@ git commit -m "feat: implement ResidualFatigueCurveChart on Workouts screen"
 
 ---
 
-### Task 6: Synchronize DATA_FLOW.md, Strings & Execute Final Quality Gates
+### Task 6: Polish Residual Fatigue Settings Header & Switch Layout
+
+**Files:**
+- Modify: `feature/settings/src/main/kotlin/app/readylytics/health/feature/settings/AdvancedResidualFatigueSection.kt`
+- Modify: `feature/settings/src/main/res/values/strings.xml`
+- Modify: `feature/settings/src/test/kotlin/app/readylytics/health/feature/settings/SettingsViewModelTest.kt`
+
+**Interfaces:**
+- Consumes: `UIState.residualFatigueEnabled`, `SettingsEvent.ResidualFatigueEnabledChanged`, `MetricTooltip`.
+- Produces: Polished `ResidualFatigueSubsection` with header info tooltip and simplified "Enabled" switch row without noisy descriptive text.
+
+- [ ] **Step 1: Write/update Settings UI tests**
+
+Verify that `ResidualFatigueEnabledChanged` continues to persist and trigger refresh cleanly while the UI structure uses the compact label.
+
+- [ ] **Step 2: Update string resources**
+
+In `feature/settings/src/main/res/values/strings.xml`:
+```xml
+<string name="advanced_residual_fatigue_enabled_label">Enabled</string>
+<string name="advanced_residual_fatigue_info_tooltip">Tracks training fatigue that accumulates from workouts and decays exponentially. Configured half-life (24h default) and gain (1.0 default) are provisional product guardrails, not scientifically validated ranges.</string>
+```
+
+- [ ] **Step 3: Update `AdvancedResidualFatigueSection.kt`**
+
+```kotlin
+@Composable
+fun ResidualFatigueSubsection(
+    uiState: UIState,
+    controlsEnabled: Boolean,
+    onUIEvent: (SettingsEvent) -> Unit,
+) {
+    Column {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium),
+        ) {
+            Text(
+                text = stringResource(R.string.advanced_residual_fatigue_title),
+                style = MaterialTheme.typography.labelLarge,
+            )
+            MetricTooltip(description = stringResource(R.string.advanced_residual_fatigue_info_tooltip))
+        }
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+
+        ListItem(
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+            trailingContent = {
+                Switch(
+                    checked = uiState.residualFatigueEnabled,
+                    onCheckedChange = { onUIEvent(SettingsEvent.ResidualFatigueEnabledChanged(it)) },
+                    enabled = controlsEnabled,
+                )
+            },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(
+                text = stringResource(R.string.advanced_residual_fatigue_enabled_label),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        }
+
+        if (uiState.residualFatigueEnabled) {
+            ResidualFatigueControls(
+                uiState = uiState,
+                controlsEnabled = controlsEnabled,
+                onUIEvent = onUIEvent,
+            )
+        }
+    }
+}
+```
+
+- [ ] **Step 4: Run settings unit tests**
+
+Run: `./gradlew :feature:settings:testDebugUnitTest :feature:settings:assembleDebug`
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add feature/settings/src/main/kotlin/app/readylytics/health/feature/settings/AdvancedResidualFatigueSection.kt feature/settings/src/main/res/values/strings.xml feature/settings/src/test/kotlin/app/readylytics/health/feature/settings/SettingsViewModelTest.kt
+git commit -m "feat: polish residual fatigue settings header and switch layout"
+```
+
+---
+
+### Task 7: Synchronize DATA_FLOW.md, Strings & Execute Final Quality Gates
 
 **Files:**
 - Modify: `internal-docs/DATA_FLOW.md`
@@ -610,7 +697,7 @@ git commit -m "feat: implement ResidualFatigueCurveChart on Workouts screen"
 - Modify: `docs/customization.md`
 
 **Interfaces:**
-- Consumes: Completed Dashboard card and 24-hour Workouts curve implementations from Tasks 1–5.
+- Consumes: Completed Dashboard card, 24-hour Workouts curve, and Settings UI polish from Tasks 1–6.
 - Produces: Synchronized data flow documentation, passing documentation drift tests, and passing pre-commit quality gates.
 
 - [ ] **Step 1: Update DATA_FLOW.md & Jekyll docs**
@@ -660,6 +747,7 @@ git commit -m "docs: document Residual Fatigue dashboard card and 24h curve char
 - Tapping the Dashboard Residual Fatigue card navigates to the Workouts tab.
 - `WorkoutChartId.RESIDUAL_FATIGUE_CURVE` is registered, hidden by default, and renders a smooth 24-hour Cubic Bézier curve with area gradient fill and touch scrubber on the Workouts tab.
 - 24-hour timeline sampling accurately captures quarter-hour marks and exact workout completion impulses using canonical `modelTrimp` and active user preferences.
+- Settings header for Residual Fatigue features an info icon tooltip with full description and a clean, concise "Enabled" toggle switch.
 - Phase 1 shadow isolation is preserved (Readiness, Load Score, recommendations are 100% unaltered).
 - All strings are localized in `strings.xml`.
 - Documentation in `internal-docs/DATA_FLOW.md`, `ABOUT.md`, and Jekyll docs is synchronized.

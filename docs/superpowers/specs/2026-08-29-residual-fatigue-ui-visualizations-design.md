@@ -98,11 +98,21 @@ graph TD
 
 ---
 
-## 5. Testing & Verification
+## 5. Advanced Settings UI Polish
+
+### 5.1 Header & Switch Layout
+- In `AdvancedResidualFatigueSection.kt`:
+  - **Header Row:** Add `MetricTooltip` alongside `advanced_residual_fatigue_title` containing the comprehensive explanation (`advanced_residual_fatigue_desc` / guardrails note).
+  - **Switch ListItem:** Simplify the label to "Enabled" (`advanced_residual_fatigue_enabled_label`), removing the redundant long `supportingContent` block from the row so the toggle remains clean, compact, and aligned with standard settings rows.
+
+---
+
+## 6. Testing & Verification
 
 1. **Unit Tests:**
    - `DashboardMetricPresentationFactoryTest`: Verify presentation, status classification thresholds (<30, 30-70, >70), secondary text, and missing value handling.
    - `Generate24hResidualFatigueCurveUseCaseTest`: Verify 15-minute grid generation, exact workout impulse insertion, decay accuracy at midnight boundaries, and empty history handling.
    - `DashboardCardCatalogTest` & `WorkoutChartIdExtensionsTest`: Verify catalog spec, supported modes, default visibility, and proto serialization.
+   - `SettingsViewModelTest` / Compose verification: Verify clean header layout with info icon and simplified "Enabled" switch.
 2. **Regression & Quality Gates:**
    - Pre-commit gates: `ktlintFormat`, `detekt`, `assembleDebug`, `testDebugUnitTest`, `lintRelease`.
