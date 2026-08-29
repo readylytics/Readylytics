@@ -607,6 +607,66 @@ class ResidualFatigueWalkForwardDeterminismTest {
             assertEquals(Long.MIN_VALUE, context.lastEvaluationTimeMs)
         }
 
+    /**
+     * The design invariant the removed conflicting-impulse `throw` was guarding:
+     * `getWorkoutsInRange` partitions strictly by `startTime`, so a midnight-crossing workout is
+     * registered by exactly one day of the walk-forward. It is then consumed at the first evaluation
+     * at or after its `endTime` — never at its start day, whose evaluation point precedes it.
+     */
+    @Test
+    fun `midnight-crossing workout is registered once and consumed after its end time`() =
+        runTest {
+            val day0Start = day0.atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val day1Start = day1.atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val workout =
+                workoutRecord(
+                    id = "midnight-crosser",
+                    startTime = day0Start + 23 * HOUR_MS,
+                    endTime = day1Start + HOUR_MS / 2,
+                    trimp = 80f,
+                    modelTrimp = null,
+                )
+            val store = stubProductionWorkoutStore(workout)
+            val registeringRanges = mutableListOf<Pair<Long, Long>>()
+            coEvery { workoutDao.getWorkoutsInRange(any(), any()) } answers {
+                val from = firstArg<Long>()
+                val to = secondArg<Long>()
+                store.workouts.values.filter { it.startTime in from until to }
+                    .also { if (it.isNotEmpty()) registeringRanges += from to to }
+            }
+
+            val prefs =
+                UserPreferences(
+                    scoringZoneId = zoneId.id,
+                    maxHeartRate = 190,
+                    autoCalculateMaxHr = false,
+                    residualFatigueHalfLifeHours = config.halfLifeHours,
+                    residualFatigueGain = config.fatigueGain,
+                )
+            val fatigueByDate = runWalkForward(day0, day2, prefs)
+
+            val registeringDays = registeringRanges.distinct()
+            assertEquals(1, registeringDays.size, "Workout must be registered by exactly one day")
+            assertEquals(day0Start, registeringDays.single().first, "Registered by its start day")
+            assertEquals(
+                0f,
+                requireNotNull(fatigueByDate[day0]),
+                EPSILON,
+                "Start day evaluation precedes the end time",
+            )
+            val canonicalTrimp = store.writtenModelTrimps.first()
+            val impulse =
+                listOf(ComputeResidualFatigueUseCase.FatigueWorkoutInput(workout.endTime, canonicalTrimp))
+            listOf(day1, day2).forEach { day ->
+                assertEquals(
+                    useCase.compute(evalMs(day), impulse, config),
+                    requireNotNull(fatigueByDate[day]),
+                    EPSILON,
+                    "Day $day: single impulse applied exactly once",
+                )
+            }
+        }
+
     @Test
     fun `walk-forward uses freshly calculated model TRIMP instead of stale persisted impulse`() =
         runTest {

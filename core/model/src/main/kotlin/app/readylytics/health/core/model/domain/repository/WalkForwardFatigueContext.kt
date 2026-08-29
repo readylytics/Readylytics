@@ -1,10 +1,13 @@
 package app.readylytics.health.core.model.domain.repository
 
+import app.readylytics.health.core.model.domain.util.logE
+import java.util.PriorityQueue
+
 /**
  * Room-mappable per-workout fatigue impulse. Intentionally distinct from
- * [app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase.FatigueWorkoutInput]:
- * this one is the DAO return type (mapped from `workout_records`), the use-case one is the pure-math
- * input. Do not merge them.
+ * `ComputeResidualFatigueUseCase.FatigueWorkoutInput` in the `core:scoring` module (not linkable
+ * from here — `core:model` does not depend on `core:scoring`): this one is the DAO return type
+ * (mapped from `workout_records`), the use-case one is the pure-math input. Do not merge them.
  */
 data class FatigueWorkoutInput(
     val workoutId: String,
@@ -25,7 +28,7 @@ class WalkForwardFatigueContext(
     seedInputs: List<FatigueWorkoutInput>,
 ) {
     private val comparator = compareBy<FatigueWorkoutInput>({ it.endTimeMs }, { it.workoutId })
-    private val pendingInputs = java.util.PriorityQueue(comparator)
+    private val pendingInputs = PriorityQueue(comparator)
     private val pendingByWorkoutId = mutableMapOf<String, FatigueWorkoutInput>()
     private val consumedByWorkoutId = mutableMapOf<String, FatigueWorkoutInput>()
 
@@ -36,14 +39,25 @@ class WalkForwardFatigueContext(
         registerCanonicalImpulses(seedInputs)
     }
 
+    /**
+     * Registers freshly calculated canonical impulses. A workout already consumed by an earlier
+     * evaluation keeps its consumed value: the accumulator has already applied that impulse, so
+     * re-applying a conflicting one would double count. `WorkoutDao.getWorkoutsInRange` partitions
+     * strictly by `startTime`, so each workout is registered by exactly one day and a conflict is
+     * unreachable — it is logged rather than thrown so that, if it ever fires, the day is not
+     * downgraded to `DAY_SYNC_ERROR` and left with a stale summary.
+     */
     fun registerCanonicalImpulses(inputs: List<FatigueWorkoutInput>) {
         inputs.forEach { input ->
             val consumed = consumedByWorkoutId[input.workoutId]
             when {
-                consumed != null && consumed == input -> Unit
-                consumed != null ->
-                    throw IllegalArgumentException("Conflicting canonical fatigue input for ${input.workoutId}")
-                else -> registerPendingInput(input)
+                consumed == null -> registerPendingInput(input)
+                consumed == input -> Unit
+                else ->
+                    logE(TAG) {
+                        "Conflicting canonical fatigue input for ${input.workoutId}: " +
+                            "keeping consumed trimp=${consumed.trimp}, ignoring ${input.trimp}"
+                    }
             }
         }
     }
@@ -65,5 +79,9 @@ class WalkForwardFatigueContext(
         if (previous != null) pendingInputs.remove(previous)
         pendingInputs += input
         pendingByWorkoutId[input.workoutId] = input
+    }
+
+    private companion object {
+        const val TAG = "WalkForwardFatigueContext"
     }
 }
