@@ -566,4 +566,20 @@ class ResyncRangeUseCaseTest {
             assertEquals(startDate.plusDays(30), checkpointStore.value?.nextDate)
             coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }
         }
+
+    @Test
+    fun `resyncRange fetches and supplies WalkForwardFatigueContext for each recompute chunk`() =
+        runTest {
+            val startDate = LocalDate.of(2024, 6, 1)
+            val endDate = startDate.plusDays(64) // 3 chunks: 30, 30, 5
+
+            useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
+
+            coVerify(exactly = 1) {
+                scoringRepository.fetchWalkForwardFatigueContext(any(), any(), any())
+            }
+            coVerify(exactly = 65) {
+                scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any(), any(), any())
+            }
+        }
 }
