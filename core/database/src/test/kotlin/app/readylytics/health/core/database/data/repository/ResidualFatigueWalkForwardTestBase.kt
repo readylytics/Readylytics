@@ -236,8 +236,9 @@ abstract class ResidualFatigueWalkForwardTestBase {
     protected suspend fun runProductionPass(
         workout: WorkoutRecordEntity,
         prefs: UserPreferences,
+        includeHeartRateSample: Boolean = true,
     ): ProductionPass {
-        val store = stubProductionWorkoutStore(workout)
+        val store = stubProductionWorkoutStore(workout, includeHeartRateSample)
         val persisted = mutableListOf<DailySummaryEntity>()
         coEvery { dailySummaryDao.upsert(capture(persisted)) } returns Unit
 
@@ -264,9 +265,12 @@ abstract class ResidualFatigueWalkForwardTestBase {
         return requireNotNull(persisted.last().residualFatigue)
     }
 
-    protected fun stubProductionWorkoutStore(workout: WorkoutRecordEntity): ProductionWorkoutStore {
+    protected fun stubProductionWorkoutStore(
+        workout: WorkoutRecordEntity,
+        includeHeartRateSample: Boolean = true,
+    ): ProductionWorkoutStore {
         val store = ProductionWorkoutStore(mutableMapOf(workout.id to workout), mutableListOf())
-        stubProductionWorkoutQueries(store, workout)
+        stubProductionWorkoutQueries(store, workout, includeHeartRateSample)
         stubProductionFatigueQueries(store)
         coEvery { workoutDao.upsertAll(any()) } answers {
             firstArg<List<WorkoutRecordEntity>>().forEach {
@@ -280,6 +284,7 @@ abstract class ResidualFatigueWalkForwardTestBase {
     private fun stubProductionWorkoutQueries(
         store: ProductionWorkoutStore,
         workout: WorkoutRecordEntity,
+        includeHeartRateSample: Boolean,
     ) {
         coEvery { workoutDao.getWorkoutsInRange(any(), any()) } answers {
             val from = firstArg<Long>()
@@ -289,15 +294,19 @@ abstract class ResidualFatigueWalkForwardTestBase {
         coEvery { heartRateDao.getByTypeAndTimeRange(RecordType.EXERCISE.name, any(), any()) } answers {
             val from = secondArg<Long>()
             val to = thirdArg<Long>()
-            listOf(
-                HeartRateRecordEntity(
-                    sourceRecordRef = 1L,
-                    timestampMs = workout.startTime,
-                    beatsPerMinute = 170,
-                    recordType = RecordType.EXERCISE.name,
-                    sessionId = workout.id,
-                ),
-            ).filter { it.timestampMs in from..to }
+            if (includeHeartRateSample) {
+                listOf(
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 1L,
+                        timestampMs = workout.startTime,
+                        beatsPerMinute = 170,
+                        recordType = RecordType.EXERCISE.name,
+                        sessionId = workout.id,
+                    ),
+                ).filter { it.timestampMs in from..to }
+            } else {
+                emptyList()
+            }
         }
     }
 

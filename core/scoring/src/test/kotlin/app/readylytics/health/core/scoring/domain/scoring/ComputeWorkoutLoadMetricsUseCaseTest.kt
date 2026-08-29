@@ -57,7 +57,6 @@ class ComputeWorkoutLoadMetricsUseCaseTest {
                 samples = emptyList(),
                 prefs = any(),
                 restingHrBaseline = 52f,
-                storedTrimp = workout.trimp,
             )
         } returns Result.success(115.6f)
         every { scoringCalculator.computeAtlEmaWithDecay(any(), workoutDate, any()) } returnsMany listOf(2f, 1f)
@@ -90,7 +89,6 @@ class ComputeWorkoutLoadMetricsUseCaseTest {
                 samples = emptyList(),
                 prefs = any(),
                 restingHrBaseline = 52f,
-                storedTrimp = workout.trimp,
             )
         }
     }
@@ -122,7 +120,6 @@ class ComputeWorkoutLoadMetricsUseCaseTest {
                 samples = emptyList(),
                 prefs = any(),
                 restingHrBaseline = 52f,
-                storedTrimp = workout.trimp,
             )
         } returns Result.success(50f)
         every { scoringCalculator.computeAtlEmaWithDecay(any(), workoutDate, any()) } returnsMany listOf(2f, 1f)

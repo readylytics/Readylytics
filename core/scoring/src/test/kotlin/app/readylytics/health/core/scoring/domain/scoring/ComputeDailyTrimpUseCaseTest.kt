@@ -42,7 +42,6 @@ class ComputeDailyTrimpUseCaseTest {
                 id = "w1",
                 startTime = 1000L,
                 endTime = 2000L,
-                storedTrimp = 20f,
                 currentModelTrimp = null,
                 samples =
                     listOf(
@@ -54,7 +53,6 @@ class ComputeDailyTrimpUseCaseTest {
                 id = "w2",
                 startTime = 3000L,
                 endTime = 4000L,
-                storedTrimp = 30f,
                 currentModelTrimp = 35f, // already matches
                 samples = emptyList(),
             )
@@ -67,7 +65,6 @@ class ComputeDailyTrimpUseCaseTest {
                 samples = any(),
                 prefs = any(),
                 restingHrBaseline = 60f,
-                storedTrimp = 20f,
                 frozenHrMax = null,
             )
         } returns Result.success(25f)
@@ -80,7 +77,6 @@ class ComputeDailyTrimpUseCaseTest {
                 samples = any(),
                 prefs = any(),
                 restingHrBaseline = 60f,
-                storedTrimp = 30f,
                 frozenHrMax = null,
             )
         } returns Result.success(35f)

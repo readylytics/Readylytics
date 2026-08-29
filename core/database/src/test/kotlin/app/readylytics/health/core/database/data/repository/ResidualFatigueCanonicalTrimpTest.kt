@@ -145,6 +145,49 @@ class ResidualFatigueCanonicalTrimpTest : ResidualFatigueWalkForwardTestBase() {
             assertSelectedModelParameters(models, canonicalTrimps)
         }
 
+    @Test
+    fun `non-positive duration backup rows never promote Edwards TRIMP to canonical fatigue`() =
+        runTest {
+            val day0Start = day0.atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val prefs =
+                UserPreferences(
+                    scoringZoneId = zoneId.id,
+                    maxHeartRate = 190,
+                    autoCalculateMaxHr = false,
+                    residualFatigueHalfLifeHours = config.halfLifeHours,
+                    residualFatigueGain = config.fatigueGain,
+                )
+
+            listOf(0L, -HOUR_MS).forEachIndexed { index, durationMs ->
+                val startTime = day0Start + 2 * HOUR_MS
+                val workout =
+                    workoutRecord(
+                        id = "invalid-backup-duration-$index",
+                        startTime = startTime,
+                        endTime = startTime + durationMs,
+                        trimp = 80f,
+                        modelTrimp = null,
+                    )
+
+                val pass =
+                    runProductionPass(
+                        workout = workout,
+                        prefs = prefs,
+                        includeHeartRateSample = false,
+                    )
+
+                assertEquals(
+                    0f,
+                    pass.firstCanonicalModelTrimp,
+                    EPSILON,
+                    "Duration $durationMs must canonicalize to zero, never stored Edwards TRIMP",
+                )
+                assertEquals(0f, pass.firstFatigue, EPSILON)
+                assertEquals(pass.firstFatigue, pass.secondFatigue, EPSILON)
+                assertNotEquals(80f, pass.firstCanonicalModelTrimp, EPSILON)
+            }
+        }
+
     private fun trimpModelPreferences(): List<UserPreferences> =
         listOf(
             UserPreferences(

@@ -392,7 +392,7 @@ class ScoringRepositoryImplTest {
                 )
             coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns listOf(workout)
             every {
-                computeWorkoutTrimpUseCase.execute(any(), any(), any(), any(), any(), any(), any(), any())
+                computeWorkoutTrimpUseCase.execute(any(), any(), any(), any(), any(), any(), any())
             } returns Result.success(55f)
             coEvery {
                 computeSleepMetricsUseCase(any())
@@ -436,7 +436,7 @@ class ScoringRepositoryImplTest {
                 )
             coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns listOf(workout)
             every {
-                computeWorkoutTrimpUseCase.execute(any(), any(), any(), any(), any(), any(), any(), any())
+                computeWorkoutTrimpUseCase.execute(any(), any(), any(), any(), any(), any(), any())
             } returns Result.success(55f)
             coEvery {
                 computeSleepMetricsUseCase(any())
@@ -534,7 +534,6 @@ class ScoringRepositoryImplTest {
             coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns listOf(mockWorkout)
             coEvery {
                 computeWorkoutTrimpUseCase.execute(
-                    any(),
                     any(),
                     any(),
                     any(),

@@ -2,7 +2,6 @@ package app.readylytics.health.core.healthconnect.domain.sync
 
 import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
-import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.RetentionBounds
@@ -76,12 +75,10 @@ class HealthSyncUseCase
                     }
                     return@withLock Result.success(Unit)
                 }
-                val zoneId = prefs.scoringZone()
-                val today = LocalDate.now(clock.withZone(zoneId))
-                val startDate = RetentionBounds.resolveResyncStartDate(prefs, today)
+                val historicalWindow = RetentionBounds.resolveHistoricalWindow(prefs, clock.instant())
                 resyncRangeUseCase.run(
-                    startDate = startDate,
-                    endDate = today,
+                    startDate = historicalWindow.startDate,
+                    endDate = historicalWindow.endDate,
                     chunkDays = 30,
                     onProgress = onProgress,
                 )

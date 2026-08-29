@@ -16,7 +16,6 @@ class ComputeDailyTrimpUseCase
             val id: String,
             val startTime: Long,
             val endTime: Long,
-            val storedTrimp: Float,
             val currentModelTrimp: Float?,
             val samples: List<ComputeWorkoutTrimpUseCase.HeartRateSample>,
         )
@@ -65,7 +64,6 @@ class ComputeDailyTrimpUseCase
                         samples = workout.samples,
                         prefs = prefs,
                         restingHrBaseline = rhrBaselineValue,
-                        storedTrimp = workout.storedTrimp,
                         frozenHrMax = frozenHrMax,
                     )
                 val workoutTrimp = workoutTrimpResult.getOrNull() ?: 0f

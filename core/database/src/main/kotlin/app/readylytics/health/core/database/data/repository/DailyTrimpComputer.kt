@@ -33,7 +33,6 @@ class DailyTrimpComputer(
                     id = workout.id,
                     startTime = workout.startTime,
                     endTime = workout.endTime,
-                    storedTrimp = workout.trimp,
                     currentModelTrimp = workout.modelTrimp,
                     samples = workoutHrSamples.map { sample ->
                         ComputeWorkoutTrimpUseCase.HeartRateSample(
