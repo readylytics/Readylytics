@@ -127,6 +127,18 @@ interface WorkoutDao {
     suspend fun getCanonicalFatigueSeed(startBeforeMs: Long): List<FatigueWorkoutInput>
 
     @Query(
+        "SELECT COUNT(*) FROM workout_records " +
+            "WHERE startTime < :startBeforeMs AND modelTrimp IS NULL",
+    )
+    suspend fun countUnbackfilledBefore(startBeforeMs: Long): Int
+
+    @Query(
+        "SELECT COUNT(*) FROM workout_records " +
+            "WHERE endTime <= :evaluationTimeMs AND modelTrimp IS NULL",
+    )
+    suspend fun countUnbackfilledThrough(evaluationTimeMs: Long): Int
+
+    @Query(
         "SELECT * FROM workout_records WHERE endTime >= :fromMs AND startTime <= :toMs ORDER BY startTime ASC, id ASC",
     )
     suspend fun getOverlapping(

@@ -188,6 +188,12 @@ class ScoringDayDataLoader
         suspend fun loadCanonicalFatigueSeed(startBeforeMs: Long): List<FatigueWorkoutInput> =
             workoutDao.getCanonicalFatigueSeed(startBeforeMs)
 
+        suspend fun loadUnbackfilledCountBefore(startBeforeMs: Long): Int =
+            workoutDao.countUnbackfilledBefore(startBeforeMs)
+
+        suspend fun loadUnbackfilledCountThrough(evaluationTimeMs: Long): Int =
+            workoutDao.countUnbackfilledThrough(evaluationTimeMs)
+
         // from fetchWalkForwardTrimpContext L146 / computeCalibratedSummary L546
         suspend fun loadEverydayTrimpPoints(fromMs: Long, toMs: Long): List<TimestampedTrimp> =
             dailySummaryDao.getEverydayTrimpPoints(fromMs, toMs)
