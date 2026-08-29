@@ -56,18 +56,34 @@ class ResidualFatigueComputer(
         if (!config.enabled) return null
 
         val evalMs = context.nextDayMidnightMs
-        return if (fatigueContext != null) {
-            if (fatigueContext.seedIncomplete) return null
-            advanceAccumulator(fatigueContext, evalMs, config)
-        } else {
-            if (dataLoader.loadUnbackfilledCountThrough(evalMs) > 0) return null
-            val workouts = dataLoader.loadCanonicalFatigueInputsThrough(evalMs)
-            computeResidualFatigueUseCase.compute(
-                evalMs,
-                workouts.map { ComputeResidualFatigueUseCase.FatigueWorkoutInput(it.endTimeMs, it.trimp) },
-                config,
-            )
+        return when (fatigueContext) {
+            null -> computeSingleDayFallback(evalMs, config)
+            else -> computeWalkForward(fatigueContext, evalMs, config)
         }
+    }
+
+    private fun computeWalkForward(
+        fatigueContext: WalkForwardFatigueContext,
+        evalMs: Long,
+        config: ResidualFatigueConfig,
+    ): Float? =
+        if (fatigueContext.seedIncomplete) {
+            null
+        } else {
+            advanceAccumulator(fatigueContext, evalMs, config)
+        }
+
+    private suspend fun computeSingleDayFallback(
+        evalMs: Long,
+        config: ResidualFatigueConfig,
+    ): Float? {
+        if (dataLoader.loadUnbackfilledCountThrough(evalMs) > 0) return null
+        val workouts = dataLoader.loadCanonicalFatigueInputsThrough(evalMs)
+        return computeResidualFatigueUseCase.compute(
+            evalMs,
+            workouts.map { ComputeResidualFatigueUseCase.FatigueWorkoutInput(it.endTimeMs, it.trimp) },
+            config,
+        )
     }
 
     /**

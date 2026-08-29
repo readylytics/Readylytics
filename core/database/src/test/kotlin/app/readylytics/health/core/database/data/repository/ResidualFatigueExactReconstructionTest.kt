@@ -102,7 +102,7 @@ class ResidualFatigueExactReconstructionTest {
         }
 
     @Test
-    fun `compute returns null on the single-day fallback when unbackfilled workouts exist through the evaluation point`() =
+    fun `single-day fallback returns null for unbackfilled workouts`() =
         runTest {
             coEvery { dataLoader.loadUnbackfilledCountThrough(any()) } returns 1
 

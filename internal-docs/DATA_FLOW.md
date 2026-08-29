@@ -1053,7 +1053,7 @@ retained workout that no walk-forward has touched (restore from a pre-SCORE-001 
 recompute failed) has `modelTrimp IS NULL`. The seed and fallback queries filter those rows out — correct,
 since Edwards `trimp` is never a fatigue fallback — which would otherwise leave the day silently *low*
 rather than *unknown*. Two things address that. First, `WorkoutDao.countUnbackfilledBefore` /
-`countUnbackfilledThrough`, surfaced by `ScoringDayDataLoader.loadUnbackfilledSeedCount` /
+`countUnbackfilledThrough`, surfaced by `ScoringDayDataLoader.loadUnbackfilledCountBefore` /
 `loadUnbackfilledCountThrough`, let the fatigue paths detect a dropped row (one `COUNT(*)` per walk-forward,
 not per day). Second, startup self-heals: `WorkoutDao.countUnbackfilledSince` behind the
 `WorkoutTrimpBackfillStatus` port (`core/model`, implemented by `WorkoutTrimpBackfillStatusImpl` in
@@ -1062,12 +1062,13 @@ alongside the stale-`scoringVersion` gate — both share one `scheduleResyncWork
 enqueue per launch, bounded by `RetentionBounds.resolveResyncStartDate(prefs)`. It converges: a recompute
 writes `modelTrimp` for every workout it touches (including `0f`), so the count reaches zero and the gate
 stops firing. This also closes the matching `COALESCE(modelTrimp, trimp)` inconsistency in ATL/CTL.
-The residual-fatigue computer wires the seed count into `WalkForwardFatigueContext.seedIncomplete`
-and persists `NULL` for a walk-forward day when the retained seed is incomplete. The single-day
-fallback similarly checks the count through its evaluation timestamp before reconstructing. Thus a
-partial walk over never-backfilled history is explicitly unknown rather than silently low until the
-self-healing recompute lands; canonical-only sourcing and the one-count-per-walk O(1) query cost are
-preserved.
+The remaining piece closes the loop: `WalkForwardFatigueContext.seedIncomplete` is set from
+`loadUnbackfilledCountBefore` when a walk-forward context is fetched, and `ResidualFatigueComputer.compute`
+returns `null` — not a low value — whenever that flag is set (walk-forward path) or
+`loadUnbackfilledCountThrough` is nonzero (single-day fallback path). A partial walk over never-backfilled
+history therefore persists `NULL` for every affected day until the startup self-heal's recompute-only
+resync lands and backfills the retained workout — at which point the seed is complete again and the walk
+reconstructs the same exact value as a full walk from `historyStartDate`.
 
 The **single-day fallback** (no walk-forward, e.g. ad-hoc day recompute) analogously reads every retained
 canonical impulse with `endTime <= evaluationTime` and sums it with
