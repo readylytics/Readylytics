@@ -578,7 +578,7 @@ class ResyncRangeUseCase
         }
     }
 
-private fun UserPreferences.scoringCheckpointIdentity(): String =
+internal fun UserPreferences.scoringCheckpointIdentity(): String =
     listOf(
         "goalSleepHours=$goalSleepHours",
         "hrvBaselineOverride=$hrvBaselineOverride",
@@ -613,4 +613,7 @@ private fun UserPreferences.scoringCheckpointIdentity(): String =
         "supplementalCutoffMinutesOfDay=$supplementalCutoffMinutesOfDay",
         "minimumCountedSleepSegmentMinutes=$minimumCountedSleepSegmentMinutes",
         "supplementalArchitectureCoveragePercent=$supplementalArchitectureCoveragePercent",
+        "residualFatigueEnabled=$residualFatigueEnabled",
+        "residualFatigueHalfLifeHours=$residualFatigueHalfLifeHours",
+        "residualFatigueGain=$residualFatigueGain",
     ).joinToString("|")

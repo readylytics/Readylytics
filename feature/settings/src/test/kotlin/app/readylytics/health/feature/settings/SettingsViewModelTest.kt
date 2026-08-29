@@ -13,6 +13,7 @@ import app.readylytics.health.core.model.domain.sync.HistoricalResyncState
 import app.readylytics.health.core.model.domain.workouts.WorkoutDetailLayoutRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -279,7 +280,7 @@ class SettingsViewModelTest {
         }
 
     @Test
-    fun `residual fatigue enabled event persists and does not trigger a recompute`() =
+    fun `residual fatigue enabled event persists and triggers a recompute`() =
         runTest {
             val viewModel =
                 UISettingsViewModel(
@@ -294,8 +295,11 @@ class SettingsViewModelTest {
             viewModel.onEvent(SettingsEvent.ResidualFatigueEnabledChanged(false))
             advanceUntilIdle()
 
-            coVerify { displaySettings.updateResidualFatigueEnabled(false) }
-            coVerify(exactly = 0) { healthDataRefresh.refreshHistorical() }
+            coVerifyOrder {
+                displaySettings.updateResidualFatigueEnabled(false)
+                healthDataRefresh.refreshHistorical()
+            }
+            coVerify(exactly = 1) { healthDataRefresh.refreshHistorical() }
             coVerify(exactly = 0) { healthDataRefresh.refreshAffectedWindow() }
 
             viewModel.viewModelScope.cancel()
@@ -303,7 +307,7 @@ class SettingsViewModelTest {
         }
 
     @Test
-    fun `residual fatigue half life event persists valid values and rejects invalid ones`() =
+    fun `residual fatigue half life persists and triggers historical recompute, rejects invalid`() =
         runTest {
             val viewModel =
                 UISettingsViewModel(
@@ -317,18 +321,24 @@ class SettingsViewModelTest {
 
             viewModel.onEvent(SettingsEvent.ResidualFatigueHalfLifeChanged(48f))
             advanceUntilIdle()
-            coVerify { displaySettings.updateResidualFatigueHalfLifeHours(48f) }
+            coVerifyOrder {
+                displaySettings.updateResidualFatigueHalfLifeHours(48f)
+                healthDataRefresh.refreshHistorical()
+            }
+            coVerify(exactly = 1) { healthDataRefresh.refreshHistorical() }
 
             viewModel.onEvent(SettingsEvent.ResidualFatigueHalfLifeChanged(5f))
             advanceUntilIdle()
             coVerify(exactly = 0) { displaySettings.updateResidualFatigueHalfLifeHours(5f) }
+            coVerify(exactly = 1) { healthDataRefresh.refreshHistorical() }
+            coVerify(exactly = 0) { healthDataRefresh.refreshAffectedWindow() }
 
             viewModel.viewModelScope.cancel()
             advanceUntilIdle()
         }
 
     @Test
-    fun `residual fatigue gain event persists valid values and rejects invalid ones`() =
+    fun `residual fatigue gain persists and triggers historical recompute, rejects invalid`() =
         runTest {
             val viewModel =
                 UISettingsViewModel(
@@ -342,11 +352,17 @@ class SettingsViewModelTest {
 
             viewModel.onEvent(SettingsEvent.ResidualFatigueGainChanged(2.5f))
             advanceUntilIdle()
-            coVerify { displaySettings.updateResidualFatigueGain(2.5f) }
+            coVerifyOrder {
+                displaySettings.updateResidualFatigueGain(2.5f)
+                healthDataRefresh.refreshHistorical()
+            }
+            coVerify(exactly = 1) { healthDataRefresh.refreshHistorical() }
 
             viewModel.onEvent(SettingsEvent.ResidualFatigueGainChanged(10f))
             advanceUntilIdle()
             coVerify(exactly = 0) { displaySettings.updateResidualFatigueGain(10f) }
+            coVerify(exactly = 1) { healthDataRefresh.refreshHistorical() }
+            coVerify(exactly = 0) { healthDataRefresh.refreshAffectedWindow() }
 
             viewModel.viewModelScope.cancel()
             advanceUntilIdle()

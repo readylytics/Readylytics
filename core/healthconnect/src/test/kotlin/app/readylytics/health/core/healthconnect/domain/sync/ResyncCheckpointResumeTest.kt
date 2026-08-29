@@ -422,6 +422,132 @@ class ResyncCheckpointResumeTest {
             }
             assertEquals(null, checkpointStore.value)
         }
+
+    @Test
+    fun `recompute restarts from start when residualFatigueEnabled changes`() =
+        runTest {
+            val startDate = LocalDate.of(2024, 6, 1)
+            val endDate = LocalDate.of(2024, 6, 3)
+            val oldPrefs = UserPreferences(residualFatigueEnabled = true)
+            val newPrefs = UserPreferences(residualFatigueEnabled = false)
+            val preferences = MutableStateFlow(newPrefs)
+            every { settingsRepo.userPreferences } returns preferences
+            checkpointStore.value =
+                ResyncCheckpoint(
+                    startDate = startDate,
+                    endDate = endDate,
+                    phase = ResyncPhase.RECOMPUTE,
+                    nextDate = startDate.plusDays(2),
+                    selectionHash = "RECOMPUTE_ONLY_V2||${oldPrefs.scoringCheckpointIdentity()}",
+                    baselineChangeTokens = emptyMap(),
+                )
+
+            useCase.run(
+                startDate = startDate,
+                endDate = endDate,
+                chunkDays = 30,
+                onProgress = null,
+                skipIngestAndPrune = true,
+            )
+
+            coVerifyOrder {
+                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(
+                    startDate.plusDays(1),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                )
+                scoringRepository.computeAndPersistDailySummary(endDate, any(), any(), any(), any(), any())
+            }
+            assertEquals(null, checkpointStore.value)
+        }
+
+    @Test
+    fun `recompute restarts from start when residualFatigueHalfLifeHours changes`() =
+        runTest {
+            val startDate = LocalDate.of(2024, 6, 1)
+            val endDate = LocalDate.of(2024, 6, 3)
+            val oldPrefs = UserPreferences(residualFatigueHalfLifeHours = 36f)
+            val newPrefs = UserPreferences(residualFatigueHalfLifeHours = 48f)
+            val preferences = MutableStateFlow(newPrefs)
+            every { settingsRepo.userPreferences } returns preferences
+            checkpointStore.value =
+                ResyncCheckpoint(
+                    startDate = startDate,
+                    endDate = endDate,
+                    phase = ResyncPhase.RECOMPUTE,
+                    nextDate = startDate.plusDays(2),
+                    selectionHash = "RECOMPUTE_ONLY_V2||${oldPrefs.scoringCheckpointIdentity()}",
+                    baselineChangeTokens = emptyMap(),
+                )
+
+            useCase.run(
+                startDate = startDate,
+                endDate = endDate,
+                chunkDays = 30,
+                onProgress = null,
+                skipIngestAndPrune = true,
+            )
+
+            coVerifyOrder {
+                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(
+                    startDate.plusDays(1),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                )
+                scoringRepository.computeAndPersistDailySummary(endDate, any(), any(), any(), any(), any())
+            }
+            assertEquals(null, checkpointStore.value)
+        }
+
+    @Test
+    fun `recompute restarts from start when residualFatigueGain changes`() =
+        runTest {
+            val startDate = LocalDate.of(2024, 6, 1)
+            val endDate = LocalDate.of(2024, 6, 3)
+            val oldPrefs = UserPreferences(residualFatigueGain = 1.0f)
+            val newPrefs = UserPreferences(residualFatigueGain = 2.5f)
+            val preferences = MutableStateFlow(newPrefs)
+            every { settingsRepo.userPreferences } returns preferences
+            checkpointStore.value =
+                ResyncCheckpoint(
+                    startDate = startDate,
+                    endDate = endDate,
+                    phase = ResyncPhase.RECOMPUTE,
+                    nextDate = startDate.plusDays(2),
+                    selectionHash = "RECOMPUTE_ONLY_V2||${oldPrefs.scoringCheckpointIdentity()}",
+                    baselineChangeTokens = emptyMap(),
+                )
+
+            useCase.run(
+                startDate = startDate,
+                endDate = endDate,
+                chunkDays = 30,
+                onProgress = null,
+                skipIngestAndPrune = true,
+            )
+
+            coVerifyOrder {
+                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(
+                    startDate.plusDays(1),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                )
+                scoringRepository.computeAndPersistDailySummary(endDate, any(), any(), any(), any(), any())
+            }
+            assertEquals(null, checkpointStore.value)
+        }
 }
 
 class InMemoryResyncCheckpointStore : ResyncCheckpointStore {
