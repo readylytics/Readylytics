@@ -139,6 +139,14 @@ interface WorkoutDao {
     suspend fun countUnbackfilledThrough(evaluationTimeMs: Long): Int
 
     @Query(
+        // Retention-bounded self-heal gate: rows older than the retention start can never be
+        // reached by the recompute-only resync, so counting them would re-enqueue on every launch.
+        "SELECT COUNT(*) FROM workout_records " +
+            "WHERE startTime >= :retentionStartMs AND modelTrimp IS NULL",
+    )
+    suspend fun countUnbackfilledSince(retentionStartMs: Long): Int
+
+    @Query(
         "SELECT * FROM workout_records WHERE endTime >= :fromMs AND startTime <= :toMs ORDER BY startTime ASC, id ASC",
     )
     suspend fun getOverlapping(

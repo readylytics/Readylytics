@@ -1,6 +1,5 @@
 package app.readylytics.health.data.preferences
 
-import app.readylytics.health.core.model.data.preferences.LegacyBanisterMultipliers
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import org.junit.Assert.assertEquals
 import org.junit.Test

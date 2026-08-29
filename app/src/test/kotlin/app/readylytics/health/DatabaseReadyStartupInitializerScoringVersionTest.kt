@@ -5,6 +5,7 @@ import app.readylytics.health.core.model.data.preferences.BackupSchedule
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
+import app.readylytics.health.core.model.domain.repository.WorkoutTrimpBackfillStatus
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.core.scoring.domain.scoring.BackfillHistoricalBaselinesUseCase
 import app.readylytics.health.data.preferences.PhysiologyPreferences
@@ -98,11 +99,82 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
             assertEquals(0, scheduler.recomputeOnlyRequests)
         }
 
+    @Test
+    fun `unbackfilled canonical trimp enqueues a recompute even on the current scoring version`() =
+        runTest {
+            val scheduler = FakeWorkerScheduler()
+            val initializer =
+                initializerWith(
+                    storedScoringVersion = SettingsDefaults.CURRENT_SCORING_VERSION,
+                    scheduler = scheduler,
+                    backfillStatus = FakeBackfillStatus(hasUnbackfilled = true),
+                )
+
+            initializer.initializeIfReady(DatabaseReadiness.Ready)
+
+            assertEquals(1, scheduler.recomputeOnlyRequests)
+        }
+
+    @Test
+    fun `fully backfilled history on the current scoring version enqueues nothing`() =
+        runTest {
+            val scheduler = FakeWorkerScheduler()
+            val initializer =
+                initializerWith(
+                    storedScoringVersion = SettingsDefaults.CURRENT_SCORING_VERSION,
+                    scheduler = scheduler,
+                    backfillStatus = FakeBackfillStatus(hasUnbackfilled = false),
+                )
+
+            initializer.initializeIfReady(DatabaseReadiness.Ready)
+
+            assertEquals(0, scheduler.recomputeOnlyRequests)
+        }
+
+    @Test
+    fun `stale version and unbackfilled rows together enqueue exactly one recompute`() =
+        runTest {
+            val scheduler = FakeWorkerScheduler()
+            val initializer =
+                initializerWith(
+                    storedScoringVersion = 0,
+                    scheduler = scheduler,
+                    backfillStatus = FakeBackfillStatus(hasUnbackfilled = true),
+                )
+
+            initializer.initializeIfReady(DatabaseReadiness.Ready)
+
+            assertEquals(1, scheduler.recomputeOnlyRequests)
+        }
+
+    @Test
+    fun `a failing backfill status query never blocks startup`() =
+        runTest {
+            val scheduler = FakeWorkerScheduler()
+            val failing =
+                object : WorkoutTrimpBackfillStatus {
+                    override suspend fun hasUnbackfilledWorkouts(retentionStartMs: Long): Boolean =
+                        throw IOException("database unavailable")
+                }
+            val initializer =
+                initializerWith(
+                    storedScoringVersion = SettingsDefaults.CURRENT_SCORING_VERSION,
+                    scheduler = scheduler,
+                    backfillStatus = failing,
+                )
+
+            val result = initializer.initializeIfReady(DatabaseReadiness.Ready)
+
+            assertEquals(StartupInitializationResult.COMPLETE, result)
+            assertEquals(0, scheduler.recomputeOnlyRequests)
+        }
+
     private fun initializerWith(
         storedScoringVersion: Int,
         scheduler: FakeWorkerScheduler,
         settings: SettingsRepository = mockk(relaxed = true),
         physiology: PhysiologyPreferences = mockk(relaxed = true),
+        backfillStatus: WorkoutTrimpBackfillStatus = FakeBackfillStatus(hasUnbackfilled = false),
     ): DatabaseReadyStartupInitializer {
         val healthSyncUseCase = mockk<HealthSyncUseCase>()
         coEvery { healthSyncUseCase.withSyncLock<Int>(any()) } coAnswers {
@@ -127,7 +199,14 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
             settingsRepository = settingsLazy,
             physiologyPreferences = physiologyLazy,
             workerScheduler = scheduler,
+            workoutTrimpBackfillStatus = Lazy { backfillStatus },
         )
+    }
+
+    private class FakeBackfillStatus(
+        private val hasUnbackfilled: Boolean,
+    ) : WorkoutTrimpBackfillStatus {
+        override suspend fun hasUnbackfilledWorkouts(retentionStartMs: Long): Boolean = hasUnbackfilled
     }
 
     private class FakeWorkerScheduler : WorkerScheduler {
