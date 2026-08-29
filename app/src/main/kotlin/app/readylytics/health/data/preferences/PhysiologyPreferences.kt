@@ -240,16 +240,13 @@ internal class PhysiologyPreferences
     }
 
 internal object TrimpMigrationHelper {
-    private val OLD_PROFILE_DEFAULTS = setOf(1.00f, 1.35f, 1.75f)
-
     fun migrateRasCalibration(
         storedValue: Float,
         alreadyMigrated: Boolean,
     ): Float =
         when {
             alreadyMigrated -> storedValue
-            // proto3 zero default = un-set, treat as needing migration
-            storedValue == 0.0f || storedValue in OLD_PROFILE_DEFAULTS -> 1.0f
+            storedValue == 0f -> 1f
             else -> storedValue
         }
 }

@@ -6,6 +6,7 @@ import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.dataStoreFile
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -62,14 +63,25 @@ class PhysiologyPreferencesTest {
         }
 
     @Test
-    fun `migrateTrimpDefaultsIfNeeded resets stored profile default to 1_0 and sets flag`() =
+    fun `migrateTrimpDefaultsIfNeeded normalizes unset 0_0 to 1_0 and sets flag`() =
+        runTest {
+            // Unset proto default rasCalibration is 0.0f
+            physiologyPreferences.migrateTrimpDefaultsIfNeeded()
+
+            val proto = dataStore.data.first()
+            assertEquals(1.0f, proto.rasCalibration, 0f)
+            assertEquals(true, proto.trimpNormalizationMigrated)
+        }
+
+    @Test
+    fun `migrateTrimpDefaultsIfNeeded preserves stored nonzero multiplier 1_35 and sets flag`() =
         runTest {
             physiologyPreferences.updateBanisterMultiplier(1.35f)
 
             physiologyPreferences.migrateTrimpDefaultsIfNeeded()
 
             val proto = dataStore.data.first()
-            assertEquals(1.0f, proto.rasCalibration, 0f)
+            assertEquals(1.35f, proto.rasCalibration, 0f)
             assertEquals(true, proto.trimpNormalizationMigrated)
         }
 
@@ -101,7 +113,7 @@ class PhysiologyPreferencesTest {
         }
 
     @Test
-    fun `migrateTrimpDefaultsIfNeeded leaves cheng beta and itrimp b unchanged`() =
+    fun `migrateTrimpDefaultsIfNeeded leaves cheng beta and itrimp b unchanged while preserving banister`() =
         runTest {
             physiologyPreferences.updateChengBeta(0.09f)
             physiologyPreferences.updateItrimB(2.1f)
@@ -112,7 +124,21 @@ class PhysiologyPreferencesTest {
             val proto = dataStore.data.first()
             assertEquals(0.09f, proto.chengBeta, 0f)
             assertEquals(2.1f, proto.itrimpB, 0f)
-            assertEquals(1.0f, proto.rasCalibration, 0f)
+            assertEquals(1.75f, proto.rasCalibration, 0f)
+            assertEquals(true, proto.trimpNormalizationMigrated)
+        }
+
+    @Test
+    fun `updatePhysiologyProfile sets banisterMultiplier to 1_0 for all profile types`() =
+        runTest {
+            for (profile in PhysiologyProfile.entries) {
+                assertEquals(1.0f, profile.banisterMultiplier, 0f)
+                physiologyPreferences.updatePhysiologyProfile(profile)
+                val proto = dataStore.data.first()
+                assertEquals(1.0f, proto.rasCalibration, 0f)
+                assertEquals(profile.defaultChengBeta, proto.chengBeta, 0f)
+                assertEquals(profile.defaultItrimB, proto.itrimpB, 0f)
+            }
         }
 
     @Test

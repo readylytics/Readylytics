@@ -758,10 +758,10 @@ profile-specific (they shape the model, they do not scale its output). Users can
 multiplier in Advanced Settings (`rasCalibration`, range 0.5–2.5). Existing users are migrated by a
 one-time DataStore migration: `PhysiologyPreferences.migrateTrimpDefaultsIfNeeded()`
 (`app/.../data/preferences/PhysiologyPreferences.kt`) runs at app startup in
-`DatabaseReadyStartupInitializer` (before any scoring) and resets a stored `rasCalibration` that still
-equals an old profile default {1.00, 1.35, 1.75} — or is unset (proto3 0.0) — to 1.0 via
-`TrimpMigrationHelper.migrateRasCalibration`, setting the `trimp_normalization_migrated` proto flag
-(field 90) to prevent re-running; any other stored value is left untouched. The multiplier change is a
+`DatabaseReadyStartupInitializer` (before any scoring) and normalizes an unset `rasCalibration` (proto3 0.0)
+to 1.0 via `TrimpMigrationHelper.migrateRasCalibration`, setting the `trimp_normalization_migrated` proto flag
+(field 90) to prevent re-running; any nonzero stored value is safely preserved since historical provenance cannot
+distinguish an accepted old default from an explicit override. The multiplier change is a
 historical-scope scoring input, so `SettingsDefaults.CURRENT_SCORING_VERSION` is bumped to **2**: startup
 enqueues a recompute-only resync (`WorkerScheduler.scheduleResyncWorker(recomputeOnly = true)` — gated on
 the migration succeeding) whenever `storedScoringVersion < CURRENT_SCORING_VERSION`, and
