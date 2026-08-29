@@ -24,6 +24,17 @@ import androidx.compose.ui.res.stringResource
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 
+/**
+ * M3 `Slider.steps` counts the stops *between* the endpoints, so the interval is
+ * `(max - min) / (steps + 1)`. 89 gives 90 one-hour stops across 6–96 h, which puts the documented
+ * 24 h default exactly on a stop. The previous 90 produced 0.989 h intervals, so the default was
+ * reachable only via Reset and the label rendered "23.9 h".
+ */
+internal const val RESIDUAL_FATIGUE_HALF_LIFE_SLIDER_STEPS = 89
+
+/** 48 gives 49 stops of 0.1 across 0.1–5.0, putting the documented 1.00 default on a stop. */
+internal const val RESIDUAL_FATIGUE_GAIN_SLIDER_STEPS = 48
+
 @Composable
 fun ResidualFatigueSubsection(
     uiState: UIState,
@@ -92,7 +103,7 @@ private fun ResidualFatigueControls(
             onUIEvent(SettingsEvent.ResidualFatigueHalfLifeChanged(halfLife))
         },
         valueRange = minHalfLife..maxHalfLife,
-        steps = 90,
+        steps = RESIDUAL_FATIGUE_HALF_LIFE_SLIDER_STEPS,
         displayValue = stringResource(R.string.advanced_residual_fatigue_half_life_hours, halfLife),
         description = stringResource(R.string.advanced_residual_fatigue_half_life_desc),
     )
@@ -111,7 +122,7 @@ private fun ResidualFatigueControls(
             onUIEvent(SettingsEvent.ResidualFatigueGainChanged(currentGain))
         },
         valueRange = minGain..maxGain,
-        steps = 49,
+        steps = RESIDUAL_FATIGUE_GAIN_SLIDER_STEPS,
         displayValue = stringResource(R.string.advanced_residual_fatigue_gain_value, currentGain),
         description = stringResource(R.string.advanced_residual_fatigue_gain_desc),
     )

@@ -146,6 +146,33 @@ class ComputeResidualFatigueUseCaseTest {
     }
 
     @Test
+    fun `snapshot is evaluated at day end, so the current day is a forward projection`() {
+        // ResidualFatigueComputer always evaluates at context.nextDayMidnightMs. For the current
+        // day that point is in the future, so the stored value is a projection to the end of today,
+        // not fatigue at the moment of the sync. That is deliberate: it keeps the series
+        // deterministic and wall-clock independent. Nothing may derive "fatigue now" from it.
+        val dayStartMs = 0L
+        val nextDayMidnightMs = (24 * 3_600_000).toLong()
+        val workoutEndMs = (17 * 3_600_000).toLong()
+        val workouts = listOf(workout(workoutEndMs, 100f))
+
+        val snapshot = useCase.compute(nextDayMidnightMs, workouts, defaultConfig)
+        val expected = (100.0 * 2.0.pow(-7.0 / 24.0)).toFloat()
+        assertEquals(expected, snapshot, 0.01f)
+
+        // Re-running the same day later in the day yields the identical value: the evaluation point
+        // is the day boundary, never the current wall clock.
+        val recomputedLaterInTheDay = useCase.compute(nextDayMidnightMs, workouts, defaultConfig)
+        assertEquals(snapshot, recomputedLaterInTheDay, 0f)
+
+        // And the snapshot is strictly lower than fatigue at the moment the workout ended, which is
+        // what a naive "fatigue now" reading of the stored value would assume it to be.
+        val atWorkoutEnd = useCase.compute(workoutEndMs, workouts, defaultConfig)
+        assertTrue(snapshot < atWorkoutEnd)
+        assertTrue(useCase.compute(dayStartMs, workouts, defaultConfig) < snapshot)
+    }
+
+    @Test
     fun `non-positive half-life yields a finite zero instead of NaN`() {
         // halfLifeMs == 0 makes -elapsed / halfLifeMs either NaN (elapsed 0) or -Infinity, and the
         // resulting NaN would be persisted into daily_summaries and survive into the backup JSON.

@@ -1012,6 +1012,21 @@ preferences snapshot and evaluates at **next-day midnight in the stored scoring 
 `DailySummary` (`DailySummary.residualFatigue`, persisted `NULL` when disabled). Zero-TRIMP and future
 workouts contribute nothing; rest days add no impulse, fatigue simply decays.
 
+Every snapshot is therefore an *end-of-day* value. For the current day the evaluation point is in the
+future, so today's row is a projection to the end of today, not fatigue at the moment of the sync. This
+keeps the series deterministic and wall-clock independent; a live "fatigue now" evaluation is out of scope
+for Phase 1 and must not be derived by reading the stored current-day value. The evaluation point must not
+be capped at `now` — that would make a day's value depend on when it happened to be recomputed.
+
+**Parameter validation.** `ResidualFatigueConfig` requires finite `halfLifeHours`/`fatigueGain` in its
+`init` block, and `ResidualFatigueConfig.clamped(...)` — the constructor `ResidualFatigueComputer` uses —
+coerces stored preferences into the `SettingsDefaults.MIN_/MAX_RESIDUAL_FATIGUE_*` bounds, falling back to
+the shipped default for a non-finite value. Coercion rather than rejection is deliberate: a bad stored pref
+degrades that day to the nearest valid parameter instead of failing the recompute. `compute()` and
+`advanceAccumulator()` additionally return a finite zero on a non-positive half-life, since `halfLifeMs` is
+the divisor in the decay exponent and a zero would otherwise produce a `NaN` that reaches
+`daily_summaries` and the backup JSON.
+
 **Walk-forward integration (WP-27).** Both walk-forward orchestrators (`DailySyncUseCase`,
 `ResyncRangeUseCase`) build one `WalkForwardFatigueContext` per run via
 `DailyRecomputeSupport.buildWalkForwardFatigueContext(...)` (alongside the WP-20 TRIMP and WP-22 baseline
@@ -1036,8 +1051,12 @@ paths stay shadow-only and independent of workout-only versus everyday-HR load-s
 **Settings (proto fields 91–93).** `residual_fatigue_enabled` / `residual_fatigue_half_life_hours` /
 `residual_fatigue_gain` on `user_preferences` — defaults `true` / 24 h / 1.0 via
 `SettingsDefaults.RESIDUAL_FATIGUE_*`, guardrails 6–96 h / 0.1–5.0 enforced in
-`PhysiologyPreferences.toValidFatigueHalfLife`/`toValidFatigueGain` and
-`SettingsValidators.FATIGUE_HALF_LIFE_RULE`/`FATIGUE_GAIN_RULE`. Resolved per-day from the preferences
+`PhysiologyPreferences.toValidFatigueHalfLife`/`toValidFatigueGain`,
+`SettingsValidators.FATIGUE_HALF_LIFE_RULE`/`FATIGUE_GAIN_RULE`, and at the domain boundary by
+`ResidualFatigueConfig.clamped`. The two sliders in `AdvancedResidualFatigueSection` use
+`RESIDUAL_FATIGUE_HALF_LIFE_SLIDER_STEPS = 89` and `RESIDUAL_FATIGUE_GAIN_SLIDER_STEPS = 48`: M3
+`Slider.steps` counts the stops *between* the endpoints, so those give exactly 1-hour and 0.1 increments
+and put the documented 24 h / 1.00 defaults on a stop. Resolved per-day from the preferences
 snapshot inside `ResidualFatigueComputer.compute`. Changing fatigue settings invalidates resync
 checkpoints and triggers a historical recompute via `HealthDataRefresh.refreshHistorical()`.
 

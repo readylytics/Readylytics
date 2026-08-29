@@ -1,6 +1,7 @@
 package app.readylytics.health.feature.settings
 
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.preferences.CircadianThresholdPreferences
 import app.readylytics.health.core.model.domain.preferences.DeviceSettings
@@ -35,6 +36,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SettingsViewModelTest {
@@ -367,6 +369,45 @@ class SettingsViewModelTest {
             viewModel.viewModelScope.cancel()
             advanceUntilIdle()
         }
+
+    @Test
+    fun `residual fatigue slider stops land on whole-hour and 0_1 increments`() {
+        // M3 Slider.steps counts the stops *between* the endpoints, so the interval is
+        // (max - min) / (steps + 1). A future range change that silently moves the documented
+        // defaults off-grid fails here rather than shipping a slider that renders "23.9 h".
+        val halfLifeInterval =
+            (
+                SettingsDefaults.MAX_RESIDUAL_FATIGUE_HALF_LIFE_HOURS -
+                    SettingsDefaults.MIN_RESIDUAL_FATIGUE_HALF_LIFE_HOURS
+            ) / (RESIDUAL_FATIGUE_HALF_LIFE_SLIDER_STEPS + 1)
+        assertEquals(1.0f, halfLifeInterval, 1e-4f)
+        assertOnStop(
+            value = SettingsDefaults.RESIDUAL_FATIGUE_HALF_LIFE_HOURS,
+            min = SettingsDefaults.MIN_RESIDUAL_FATIGUE_HALF_LIFE_HOURS,
+            interval = halfLifeInterval,
+        )
+
+        val gainInterval =
+            (
+                SettingsDefaults.MAX_RESIDUAL_FATIGUE_GAIN -
+                    SettingsDefaults.MIN_RESIDUAL_FATIGUE_GAIN
+            ) / (RESIDUAL_FATIGUE_GAIN_SLIDER_STEPS + 1)
+        assertEquals(0.1f, gainInterval, 1e-4f)
+        assertOnStop(
+            value = SettingsDefaults.RESIDUAL_FATIGUE_GAIN,
+            min = SettingsDefaults.MIN_RESIDUAL_FATIGUE_GAIN,
+            interval = gainInterval,
+        )
+    }
+
+    private fun assertOnStop(
+        value: Float,
+        min: Float,
+        interval: Float,
+    ) {
+        val stopIndex = (value - min) / interval
+        assertEquals(stopIndex.roundToInt().toFloat(), stopIndex, 1e-3f)
+    }
 
     @Test
     fun `ResetFatigueToDefaults event resets fatigue settings to defaults and triggers historical recompute`() =

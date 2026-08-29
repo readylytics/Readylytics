@@ -144,6 +144,7 @@ Residual Fatigue models the short-term exponential decay of workout fatigue acro
 
 - **Fatigue half-life:** Time required for workout fatigue to decay by half (default 24 h, range 6–96 h).
 - **Fatigue gain:** Scaling factor applied to workout impulses (default 1.00, range 0.10–5.00).
+- **End-of-day snapshot:** Each day's value is evaluated at the following midnight, so the current day shows a projection to the end of today rather than your fatigue right now. This keeps the history deterministic — a day's value never changes depending on when it was recalculated.
 - **Shadow mode:** Residual Fatigue is computed and stored as an unnormalized, provisional, workout-only signal for model evaluation. It does not affect Readiness or your daily scores.
 
 ---
