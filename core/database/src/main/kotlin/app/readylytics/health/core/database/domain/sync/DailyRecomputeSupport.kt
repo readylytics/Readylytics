@@ -155,10 +155,10 @@ class DailyRecomputeSupport
         ): WalkForwardBaselineContext = scoringRepository.fetchWalkForwardBaselineContext(startDate, endDate, zoneId)
 
         /**
-         * WP-27: prefetches the residual-fatigue workout-impulse series once for the whole
-         * `[startDate, endDate]` walk-forward (seeded with a 32-day lookback); pass the result to
-         * every [recomputeDay] call in that run, oldest day first, so the shared accumulator decays
-         * and adds impulses in the correct order.
+         * WP-27: prefetches historical seed impulses once for the whole `[startDate, endDate]`
+         * walk-forward for exact retained-history reconstruction; pass the result to every [recomputeDay]
+         * call in that run, oldest day first, so the shared accumulator decays and adds impulses in the
+         * correct order.
          */
         suspend fun buildWalkForwardFatigueContext(
             startDate: LocalDate,

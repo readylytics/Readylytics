@@ -430,8 +430,8 @@ class ResyncRangeUseCase
                         } else {
                             null
                         }
-                    // WP-27: prefetch the residual-fatigue workout-impulse series once for the whole
-                    // recompute walk-forward (32-day lookback seed). Null when the recompute range is
+                    // WP-27: prefetch historical seed impulses once for the whole recompute
+                    // walk-forward (exact retained history). Null when the recompute range is
                     // empty, mirroring trimpContext/baselineContext. The mutable accumulator advances
                     // across the chronological day loop below (including across chunk boundaries).
                     val fatigueContext =

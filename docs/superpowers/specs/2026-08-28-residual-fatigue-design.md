@@ -40,19 +40,18 @@ Only `banisterMultiplier` is normalized. Cheng beta and iTRIMP B retain their pr
 
 ### Existing User Migration
 
-`PhysiologyPreferences.updatePhysiologyProfile()` writes `profile.banisterMultiplier` (as `rasCalibration`), `profile.defaultChengBeta`, and `profile.defaultItrimB` to the proto DataStore at profile selection time. Existing users have old defaults baked into their stored preferences.
+`PhysiologyPreferences.updatePhysiologyProfile()` writes `profile.banisterMultiplier` (as `rasCalibration`), `profile.defaultChengBeta`, and `profile.defaultItrimB` to the proto DataStore at profile selection time.
 
 **Strategy:** One-time DataStore migration keyed on a version flag (`trimpNormalizationMigrated: Boolean`).
 
 Rules:
-- If stored `rasCalibration` matches old profile default (1.00 / 1.35 / 1.75), reset to 1.0
-- If stored value does not match any old default, leave it alone
-- Cheng beta and iTRIMP B are NOT migrated (they keep profile-specific defaults)
+- New profile defaults are `1.0` for all profiles
+- Cheng beta and iTRIMP B retain profile-specific defaults and are NOT normalized
+- The one-time migration preserves every nonzero legacy stored multiplier because historical preference data cannot prove whether an old-default-valued field was explicitly overridden
+- Stored multipliers of `0.0` (or unset/empty defaults) are normalized to `1.0`
 - Set `trimpNormalizationMigrated = true` to prevent re-running
 
-**Known limitation:** The heuristic "stored value matches old default" cannot distinguish a user who selected a profile and accepted the default multiplier from a user who explicitly typed in that same value. In practice, manually typing exactly 1.35 or 1.75 is unlikely — the slider/input UX makes round values like 1.5 or 2.0 far more common for intentional overrides. However, this edge case exists: if a user deliberately set their multiplier to exactly 1.35 (the old ACTIVE default), the migration will incorrectly reset it to 1.0. Document this in release notes. The alternative — never migrating defaults — leaves the majority of users on stale profile-specific multipliers indefinitely, which is worse.
-
-Migration runs at app startup (in the existing `DatabaseReadyStartupInitializer` or equivalent preference-migration path) before any scoring. The next sync/recompute picks up the new values.
+Migration runs at app startup before any scoring. The next sync/recompute picks up the new values.
 
 ### Affected Recalculation Paths
 
@@ -149,12 +148,12 @@ class ComputeResidualFatigueUseCase @Inject constructor() {
 
 - Pure Kotlin, zero Android dependencies
 - Uses `WorkoutRecordEntity.endTime` as impulse timestamp
-- **Workout TRIMP source — requires implementation-time verification:** The spec assumes `COALESCE(modelTrimp, trimp)` provides canonical per-workout training load. `modelTrimp` is the user-selected TRIMP model output (Banister/Cheng/iTRIMP); `trimp` is the legacy zone-weighted fallback. Before implementation, verify that fallback `trimp` represents the same canonical workout-load semantics as `modelTrimp` (i.e., both are integrated HR-based training impulse for the same workout boundary). If the semantics diverge (e.g., `trimp` uses a different HR integration method or includes non-workout time), prefer recomputing/backfilling `modelTrimp` for those rows rather than silently mixing models. This verification is a commit-3 prerequisite
+- **Canonical workout TRIMP source:** Impulses strictly use the user-selected canonical `modelTrimp` calculated by `ComputeWorkoutTrimpUseCase`. Edwards `trimp` is never used as a fallback. In-range impulses enter the accumulator only after same-pass calculation.
 - Elapsed time in milliseconds internally, half-life in hours externally
 - Superposition: workouts stack additively
 - Rest days add no impulse, fatigue decays
 - Workouts crossing midnight work correctly (continuous time, not calendar days)
-- **Daily snapshot timing:** `evaluationTimeMs` for persisted daily values is set to next-day midnight (00:00 of day+1 in the user's zone). This represents fatigue state at the end of the scoring day — it captures all workouts that ended on or before that day and applies full overnight decay. This is the value stored in `DailySummaryEntity.residualFatigue`. It is NOT necessarily the time at which Readiness is consumed by the user (which could be any time the next morning). The underlying model (`ComputeResidualFatigueUseCase.compute()`) accepts arbitrary `evaluationTimeMs` and can evaluate fatigue at any point in time — the daily snapshot is a persistence convenience, not a model limitation. Phase 2+ may evaluate at other timestamps (e.g., "current fatigue right now") using the same formula
+- **Daily snapshot timing:** `evaluationTimeMs` for persisted daily values is set to next-day midnight (00:00 of day+1 in `scoringZoneId` via `ScoringDayContext.nextDayMidnightMs`). This represents fatigue state at the end of the scoring day — it captures all workouts that ended on or before that day and applies full overnight decay. This is the value stored in `DailySummaryEntity.residualFatigue`. The underlying model (`ComputeResidualFatigueUseCase.compute()`) accepts arbitrary `evaluationTimeMs` and can evaluate fatigue at any point in time — the daily snapshot is a persistence convenience, not a model limitation. Phase 2+ may evaluate at other timestamps (e.g., "current fatigue right now") using the same formula
 - Zero TRIMP and future workouts contribute nothing
 - When disabled, returns 0f
 
@@ -175,7 +174,7 @@ Residual Fatigue always uses **workout-only TRIMP**, regardless of `LoadSourceMo
 
 The existing codebase computes per-workout TRIMP through `ComputeWorkoutTrimpUseCase` → `ComputeDailyTrimpUseCase` regardless of the selected load source mode. `WorkoutRecordEntity.modelTrimp` stores the result. Everyday-HR TRIMP is a separate, independent computation.
 
-Residual Fatigue reads from `WorkoutRecordEntity.endTime` and per-workout canonical TRIMP (see Section 2, COALESCE verification requirement). It never touches everyday-HR TRIMP data.
+Residual Fatigue reads from `WorkoutRecordEntity.endTime` and per-workout canonical `modelTrimp`. Edwards `trimp` is never an impulse source, and it never touches everyday-HR TRIMP data.
 
 Changing `LoadSourceMode` does NOT change Residual Fatigue values.
 
@@ -259,9 +258,7 @@ suspend fun updateResidualFatigueGain(value: Float)
 
 ### Recomputation Trigger
 
-Changing any fatigue parameter triggers `HealthSyncUseCase.recomputeRange()` over the full retained history (same pattern as TRIMP model changes via `SettingsEvent.RecalculateScores`). The walk-forward recompute regenerates all `residualFatigue` values deterministically.
-
-> **Implementation note — trigger deferred to Phase 2.** Phase 1 does NOT trigger a recompute on fatigue-parameter changes: the settings handlers persist the preference without `refreshHistorical()`, and a test locks this behavior. Because `residualFatigue` is shadow-only in Phase 1 (nothing reads it), stale persisted snapshots until the next natural sync/recompute pass are harmless — but they are documented here so the record stays accurate. The recompute trigger is deferred to Phase 2, when the value becomes user-visible.
+Changing any fatigue parameter (`residual_fatigue_enabled`, `residual_fatigue_half_life_hours`, `residual_fatigue_gain`, or resetting fatigue to defaults) invalidates resync checkpoints and triggers a historical recompute via `healthDataRefresh.refreshHistorical()`. The walk-forward recompute regenerates all `residualFatigue` values deterministically.
 
 ---
 
@@ -274,6 +271,14 @@ ALTER TABLE daily_summaries ADD COLUMN residualFatigue REAL DEFAULT NULL;
 ```
 
 Single column (not dual-variant). Residual Fatigue always uses workout-only TRIMP, independent of `LoadSourceMode`.
+
+### Room Migration 13 → 14
+
+```sql
+CREATE INDEX IF NOT EXISTS index_workout_records_endTime_id ON workout_records (endTime, id);
+```
+
+Adds index on `workout_records(endTime, id)` supporting stable, deterministic canonical residual-fatigue impulse ordering used by exact retained-history reconstruction.
 
 ### Entity Changes
 
@@ -303,9 +308,9 @@ No backup format version bump needed.
 
 ### Database Version
 
-`HealthDatabase.DATABASE_VERSION` bumps from 12 to 13.
+`HealthDatabase.DATABASE_VERSION` bumps to 14.
 
-`DatabaseMigrations` gains `MIGRATION_12_13` with the single ALTER TABLE statement.
+`DatabaseMigrations` includes `MIGRATION_12_13` (adding `residualFatigue`) and `MIGRATION_13_14` (adding `index_workout_records_endTime_id`).
 
 ---
 
@@ -317,32 +322,28 @@ New file: `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/r
 
 ```kotlin
 data class WalkForwardFatigueContext(
-    val workoutsByEndTimeMs: List<FatigueWorkoutInput>,
+    val pendingWorkouts: PriorityQueue<FatigueWorkoutInput>,
     var accumulatedFatigue: Double = 0.0,
     var lastEvaluationTimeMs: Long = Long.MIN_VALUE,
+    val registeredWorkoutIds: MutableSet<String> = mutableSetOf(),
 )
 ```
 
-**Prefetch:** One query per walk-forward from `WorkoutDao`, sorted by `endTime ASC`:
-- Range: `[walkForwardStart - seedLookbackDays, walkForwardEnd]`
-- Seed lookback = 8 * maxHalfLifeHours / 24 = 8 * 96 / 24 = 32 days (captures >99.6% of decayed signal)
-- Query: workouts with verified canonical TRIMP (see Section 3 — COALESCE verification)
-- Mapped to `FatigueWorkoutInput(endTimeMs, trimp)`
+**Exact retained-history seeding & same-pass registration:**
+- **Historical seed:** `WorkoutDao.getCanonicalFatigueSeed` queries Room for all workouts with `startTime < walkForwardStartMs` and non-null positive `modelTrimp`, ordered by `(endTime ASC, id ASC)`. There is no bounded 32-day lookback window — all earlier retained canonical workouts are loaded.
+- **In-range workouts:** Current-range workouts are not loaded from DB upfront. Instead, as each day's workouts are computed by `ComputeDailyTrimpUseCase`, `DailyTrimpComputer` emits canonical per-workout impulses and registers them with the accumulator via `registerWorkoutImpulse(workoutId, endTimeMs, modelTrimp)`. Registration is idempotent by workout ID.
+- Partitioning by workout start keeps boundary-straddling workouts in the seed so they are neither recalculated nor omitted.
 
-**State accumulator pattern — O(workouts + days), not O(days * lookback):**
+**State accumulator pattern — O(workouts + days):**
 
 During walk-forward processing, the fatigue context maintains a running accumulated state. For each scoring day:
 
 1. **Decay** accumulated fatigue from `lastEvaluationTimeMs` to current evaluation time: `accumulatedFatigue *= 2^(-(currentTimeMs - lastEvaluationTimeMs) / halfLifeMs)`
-2. **Add impulses** for any workouts with `endTimeMs` in `(lastEvaluationTimeMs, currentEvaluationTimeMs]`: `accumulatedFatigue += fatigueGain * trimp`
+2. **Add impulses** for any pending workouts with `endTimeMs <= currentEvaluationTimeMs`: `accumulatedFatigue += fatigueGain * trimp`
 3. **Persist** `accumulatedFatigue` as the day's `residualFatigue`
 4. **Advance** `lastEvaluationTimeMs = currentEvaluationTimeMs`
 
-The workout list is walked with a cursor index (no per-day filtering). Each workout is visited exactly once across the entire walk-forward. Total cost: O(W + D) where W = workouts in range, D = days recomputed.
-
-**Seed initialization:** Before day 1 of the walk-forward, iterate through all pre-range workouts (those in the lookback window before `walkForwardStart`) to compute the initial `accumulatedFatigue`. This seeds the accumulator so day 1 includes decayed contributions from prior workouts.
-
-**Equivalence:** The accumulator produces mathematically identical results to the summation formula `F(t) = Σ impulse_i * 2^(-(t - end_i) / halfLife)` — both are exact for exponential decay with superposition. The accumulator simply evaluates it incrementally.
+**Equivalence:** The accumulator produces mathematically identical results to the summation formula `F(t) = Σ impulse_i * 2^(-(t - end_i) / halfLife)` — both are exact for exponential decay with superposition.
 
 ### ScoringRepository Integration
 
@@ -356,21 +357,23 @@ suspend fun fetchWalkForwardFatigueContext(
 ```
 
 `ScoringRepositoryImpl`:
-- `fetchWalkForwardFatigueContext()` queries `WorkoutDao` with the lookback+range window, seeds the accumulator from pre-range workouts
-- `computeAndPersistDailySummary()` 5-arg overload gains optional `fatigueContext` parameter
+- `fetchWalkForwardFatigueContext()` queries `WorkoutDao` for historical seed workouts before `startDate` in `(endTime, id)` order
+- `computeAndPersistDailySummary()` overload passes `fatigueContext` parameter
 - Inside `computeDailySummary()`, after workouts are processed, advances the accumulator and reads the current fatigue value
 
-For single-day recompute (no walk-forward context), falls back to the summation formula over a per-day workout query. This path is only used for individual day rescores, never for bulk walk-forward.
+For single-day recompute (no walk-forward context), the fallback path queries all retained canonical impulses with `endTime <= evaluationTimeMs` and sums them via `ComputeResidualFatigueUseCase.compute()`.
 
 ### DailyRecomputeSupport
 
-`recomputeDay()` overloads gain an optional `WalkForwardFatigueContext` parameter, passed through to `ScoringRepository`.
+`recomputeDay()` overloads pass `WalkForwardFatigueContext` through to `ScoringRepository`.
 
 `buildWalkForwardFatigueContext()` added alongside existing `buildWalkForwardTrimpContext()` and `buildWalkForwardBaselineContext()`.
 
 ### Callers
 
-`DailySyncUseCase` and `ResyncRangeUseCase` already build walk-forward contexts before the day loop. They add a `fatigueContext = recomputeSupport.buildWalkForwardFatigueContext(...)` call alongside the existing TRIMP and baseline context builds, and pass it through. The fatigue context is mutable — each `recomputeDay` call advances its internal state.
+`DailySyncUseCase` and `ResyncRangeUseCase` build walk-forward contexts before the day loop:
+`fatigueContext = recomputeSupport.buildWalkForwardFatigueContext(...)`
+and pass it through oldest-day-first. The fatigue context is mutable — each `recomputeDay` call advances its internal state.
 
 ---
 
@@ -419,17 +422,17 @@ Eventually: `LoadReadiness = f(LoadScore, ResidualFatigue)`. Weights and functio
 ### Independence Guarantees
 
 Results must NOT depend on:
-- Sync range (partial vs full) — scoped to the fixed 32-day seed window (8 × max half-life of 96h): a partial resync starting inside the retained history sees only that lookback while a full resync sees more, a bounded divergence at the 96h half-life ceiling (~0.4% on boundary days, near-zero at the default 24h). This boundary behavior is the same "Cold Start" condition documented below, not a chunking artifact.
+- Sync range (partial vs full) — full, partial, resumed, incremental, and backfill paths reconstruct the exact same residual fatigue value for the same retained history.
 - Sync order (chronological requirement satisfied by walk-forward)
 - Chunk size (HC ingestion chunks don't affect persisted workout data)
 - Active `LoadSourceMode` (fatigue always uses workout-only TRIMP)
 
 ### How It's Achieved
 
-1. **Inputs are deterministic:** `WorkoutRecordEntity.endTime` and `COALESCE(modelTrimp, trimp)` are stable once ingested. TRIMP is recomputed deterministically from the same HR samples + settings.
+1. **Inputs are deterministic:** `WorkoutRecordEntity.endTime` and canonical `modelTrimp` are stable once ingested. TRIMP is recomputed deterministically from the same HR samples + settings without falling back to Edwards TRIMP.
 2. **Formula is pure:** `ComputeResidualFatigueUseCase.compute()` is a stateless function over its inputs.
 3. **Evaluation time is deterministic:** `nextDayMidnightMs` is derived from `targetDate` + `zoneId`, both fixed per scoring-day context.
-4. **Walk-forward context is complete:** The prefetched workout list covers the full lookback window, so partial vs full resync produces the same context for any given day.
+4. **Exact retained-history seeding:** The context seeds from all earlier retained canonical workouts before `walkForwardStart`, so partial vs full resync produces the exact same context for any given day.
 
 ### Cold Start
 
@@ -447,9 +450,9 @@ Document this boundary condition in developer documentation. When the metric bec
 
 ### Computation Cost
 
-- **Walk-forward N days (accumulator):** One prefetch query + O(W + D) where W = total workouts in range, D = days recomputed. Each workout is visited exactly once via cursor; each day performs one decay multiplication + impulse additions. Not O(D * W_lookback).
-- **Single-day recompute (fallback summation):** O(W_lookback) where W_lookback = workouts in 32-day window. Typical W_lookback = 30-60. Only used for individual day rescores outside walk-forward.
-- **Incremental daily sync (1 day):** O(W_lookback) via summation fallback. Negligible vs sleep/TRIMP computations.
+- **Walk-forward N days (accumulator):** Seed query for retained history + O(W + D) where W = total workouts, D = days recomputed. In-range workouts are registered during the same pass as they are computed; each day performs decay multiplication + impulse additions.
+- **Single-day recompute (fallback summation):** O(W_retained) where W_retained = retained canonical workouts at or before evaluation timestamp. Only used for individual day rescores outside walk-forward.
+- **Incremental daily sync (1 day):** O(W_retained) via exact seed reconstruction. Negligible vs sleep/TRIMP computations.
 - No raw-HR scan in any path.
 
 ### Data Flow
@@ -461,14 +464,14 @@ existing per-workout TRIMP (ComputeWorkoutTrimpUseCase)
       ↓
 WorkoutRecordEntity.modelTrimp (already persisted)
       ↓
-Residual Fatigue (reads persisted TRIMP, no HR re-scan)
+Residual Fatigue (reads canonical TRIMP, no HR re-scan)
 ```
 
 No new scan over raw HR records. No 5-minute buckets. Residual Fatigue consumes already-derived data.
 
 ### Memory
 
-Walk-forward fatigue context holds `List<FatigueWorkoutInput>` — two fields per workout (Long + Float = 12 bytes). 1000 workouts = 12 KB. Negligible.
+Walk-forward fatigue context holds `PriorityQueue<FatigueWorkoutInput>` and registered ID set. 1000 workouts ≈ few tens of KB. Negligible.
 
 ---
 
@@ -489,31 +492,29 @@ Walk-forward fatigue context holds `List<FatigueWorkoutInput>` — two fields pe
 | 7 | Zero TRIMP | Contributes nothing to sum |
 | 8 | Empty workout list | F = 0 |
 | 9 | Disabled config | Returns 0f |
-| 10 | Missing/incomplete workout (no modelTrimp) | Falls back to zone-weighted trimp via COALESCE |
 
 `ResidualFatigueDeterminismTest` (integration-level):
 
 | # | Test | Verifies |
 |---|------|----------|
-| 11 | Incremental vs full resync | Identical residualFatigue values |
-| 12 | Partial resync/backfill | Same result as full |
-| 13 | Settings change (half-life) | Recompute produces correct new values |
-| 14 | Settings change (gain) | Recompute produces correct new values |
-| 15 | TRIMP multiplier change | Fatigue changes proportionally |
-| 16 | Profile change | Fatigue uses new TRIMP, same fatigue params |
-| 17 | LoadSourceMode change | Fatigue unchanged |
+| 10 | Incremental vs full resync | Identical residualFatigue values |
+| 11 | Partial resync/backfill | Same result as full |
+| 12 | Settings change (half-life) | Recompute produces correct new values |
+| 13 | Settings change (gain) | Recompute produces correct new values |
+| 14 | TRIMP multiplier change | Fatigue changes proportionally |
+| 15 | Profile change | Fatigue uses new TRIMP, same fatigue params |
+| 16 | LoadSourceMode change | Fatigue unchanged |
 
 `TrimpNormalizationMigrationTest`:
 
 | # | Test | Verifies |
 |---|------|----------|
-| 18 | ACTIVE user with default 1.35 | Migrates to 1.0 |
-| 19 | SEDENTARY user with default 1.75 | Migrates to 1.0 |
-| 20 | ATHLETE user with 1.00 | Stays at 1.00 |
-| 21 | User who customized to 1.50 | Keeps 1.50 (not a known default) |
-| 22 | Migration flag prevents double-run | Second call is no-op |
-| 23 | Cheng beta unchanged by migration | Profile-specific values preserved |
-| 24 | iTRIMP B unchanged by migration | Profile-specific values preserved |
+| 17 | Nonzero stored multiplier (e.g. 1.35, 1.75, 1.50) | Preserved across migration |
+| 18 | Default / zero multiplier | Normalized to 1.00 |
+| 19 | ATHLETE user with 1.00 | Stays at 1.00 |
+| 20 | Migration flag prevents double-run | Second call is no-op |
+| 21 | Cheng beta unchanged by migration | Profile-specific values preserved |
+| 22 | iTRIMP B unchanged by migration | Profile-specific values preserved |
 
 ### Debug/Comparison Mechanism
 
@@ -663,7 +664,7 @@ None of the above is implemented now.
 
 1. **Proto field numbers:** Exact field numbers for new proto fields must be assigned from the project's field-number registry to avoid collisions.
 2. **SettingsDefaults constants location:** Decide whether fatigue defaults live in `SettingsDefaults` object (alongside `TRIMP_MODEL`) or inline in `ResidualFatigueConfig`. Recommend `SettingsDefaults` for consistency.
-3. **COALESCE(modelTrimp, trimp) semantic verification:** Confirm that fallback `trimp` and `modelTrimp` represent the same canonical workout-load semantics. If they diverge, plan a backfill of `modelTrimp` for legacy rows instead of mixing models. This is a commit-3 prerequisite (see Section 2).
+3. **Canonical modelTrimp source:** Residual fatigue impulses strictly consume `modelTrimp` calculated per workout by `ComputeWorkoutTrimpUseCase`. Edwards `trimp` is never used as a fallback.
 
 ### Risks
 

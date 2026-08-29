@@ -222,8 +222,8 @@ class DailySyncUseCase
                         recomputeSupport.buildWalkForwardTrimpContext(oldestTargetDay, today, zoneId)
                     val baselineContext =
                         recomputeSupport.buildWalkForwardBaselineContext(oldestTargetDay, today, zoneId)
-                    // WP-27: prefetch the residual-fatigue workout-impulse series once for the whole
-                    // walk-forward (32-day lookback seed). Mutable state accumulator, advanced once
+                    // WP-27: prefetch historical seed impulses once for the whole
+                    // walk-forward (exact retained history). Mutable state accumulator, advanced once
                     // per recomputed day in the chronological loop below.
                     val fatigueContext =
                         recomputeSupport.buildWalkForwardFatigueContext(oldestTargetDay, today, zoneId)

@@ -75,10 +75,9 @@ interface ScoringRepository {
     ): WalkForwardBaselineContext
 
     /**
-     * PERF-002/WP-27: prefetches the workout-impulse series (keyed by end time, ascending) needed by
-     * every day in `[startDate, endDate]`, seeded with a 32-day lookback so early days include
-     * decayed contributions from prior workouts. The caller holds the returned mutable
-     * [WalkForwardFatigueContext] across the whole walk-forward and passes it to every
+     * PERF-002/WP-27: prefetches historical seed impulses (workouts with startTime before startDate)
+     * needed for exact retained-history reconstruction across `[startDate, endDate]`. The caller holds
+     * the returned mutable [WalkForwardFatigueContext] across the whole walk-forward and passes it to every
      * [computeAndPersistDailySummary] call in that run.
      */
     suspend fun fetchWalkForwardFatigueContext(

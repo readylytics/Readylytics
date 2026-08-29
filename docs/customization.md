@@ -136,6 +136,18 @@ Readiness Absorption Score (RAS) is a motivational daily activity metric (PAI-st
 
 ---
 
+## Residual Fatigue (Advanced / Experimental)
+
+Residual Fatigue models the short-term exponential decay of workout fatigue across time.
+
+**Find it:** Settings → Advanced → Residual Fatigue
+
+- **Fatigue half-life:** Time required for workout fatigue to decay by half (default 24 h, range 6–96 h).
+- **Fatigue gain:** Scaling factor applied to workout impulses (default 1.00, range 0.10–5.00).
+- **Shadow mode:** Residual Fatigue is computed and stored as an unnormalized, provisional, workout-only signal for model evaluation. It does not affect Readiness or your daily scores.
+
+---
+
 ## Load source modes
 
 Two independent settings let you choose *where* the app pulls heart rate data for different calculations.

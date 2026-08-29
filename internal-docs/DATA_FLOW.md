@@ -1038,8 +1038,8 @@ paths stay shadow-only and independent of workout-only versus everyday-HR load-s
 `SettingsDefaults.RESIDUAL_FATIGUE_*`, guardrails 6–96 h / 0.1–5.0 enforced in
 `PhysiologyPreferences.toValidFatigueHalfLife`/`toValidFatigueGain` and
 `SettingsValidators.FATIGUE_HALF_LIFE_RULE`/`FATIGUE_GAIN_RULE`. Resolved per-day from the preferences
-snapshot inside `ResidualFatigueComputer.compute`; there is **no dedicated recompute trigger** on a fatigue
-settings change — persisted snapshots refresh on the next sync/recompute walk-forward.
+snapshot inside `ResidualFatigueComputer.compute`. Changing fatigue settings invalidates resync
+checkpoints and triggers a historical recompute via `HealthDataRefresh.refreshHistorical()`.
 
 ---
 
