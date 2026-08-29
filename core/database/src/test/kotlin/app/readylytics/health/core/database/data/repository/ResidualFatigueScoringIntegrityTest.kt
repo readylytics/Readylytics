@@ -169,6 +169,9 @@ class ResidualFatigueScoringIntegrityTest {
         runTest {
             seedDeterministicScenario(db)
             val basePrefs = basePreferences()
+            // Backfill canonical modelTrimp across the whole history first: a partial walk over
+            // never-backfilled rows deliberately yields null (unknown), not a low value (HIGH-2).
+            executeWalkForward(db, historyStartDate, evalEndDate, basePrefs)
             val baselineSummaries = executeWalkForward(db, evalStartDate, evalEndDate, basePrefs)
             val baselineFatigues = baselineSummaries.mapNotNull { it.residualFatigue }
 
@@ -225,6 +228,9 @@ class ResidualFatigueScoringIntegrityTest {
         runTest {
             seedDeterministicScenario(db)
             val basePrefs = basePreferences()
+            // Backfill canonical modelTrimp across the whole history first: a partial walk over
+            // never-backfilled rows deliberately yields null (unknown), not a low value (HIGH-2).
+            executeWalkForward(db, historyStartDate, evalEndDate, basePrefs)
 
             val resultsByMode = mutableMapOf<Pair<LoadSourceMode, LoadSourceMode>, List<Float?>>()
 
@@ -250,6 +256,9 @@ class ResidualFatigueScoringIntegrityTest {
         runTest {
             seedDeterministicScenario(db)
             val basePrefs = basePreferences()
+            // Backfill canonical modelTrimp across the whole history first: a partial walk over
+            // never-backfilled rows deliberately yields null (unknown), not a low value (HIGH-2).
+            executeWalkForward(db, historyStartDate, evalEndDate, basePrefs)
 
             val disabledPrefs = basePrefs.copy(residualFatigueEnabled = false)
             val defPrefs = basePrefs.copy(
@@ -315,6 +324,42 @@ class ResidualFatigueScoringIntegrityTest {
                 assertNotNull(min.residualFatigue, "Enabled min fatigue must produce non-null")
                 assertNotNull(max.residualFatigue, "Enabled max fatigue must produce non-null")
             }
+        }
+
+    @Test
+    fun `partial walk on never-backfilled history persists null instead of a silently low value`() =
+        runTest {
+            seedDeterministicScenario(db)
+            val basePrefs = basePreferences()
+
+            // No prior full walk backfills modelTrimp for workout-older-32d (2026-04-15), which
+            // sits before evalStartDate but after historyStartDate. The seed for evalStartDate is
+            // therefore incomplete.
+            val partialSummaries = executeWalkForward(db, evalStartDate, evalEndDate, basePrefs)
+
+            for (summary in partialSummaries) {
+                assertNull(
+                    summary.residualFatigue,
+                    "Partial walk over never-backfilled history must persist null (unknown), " +
+                        "not a low value that silently omits historical impulses",
+                )
+            }
+        }
+
+    @Test
+    fun `full walk backfills the seed and every day reconstructs a non-null residualFatigue`() =
+        runTest {
+            seedDeterministicScenario(db)
+            val basePrefs = basePreferences()
+
+            val fullSummaries = executeWalkForward(db, historyStartDate, evalEndDate, basePrefs)
+
+            val nonNullCount = fullSummaries.count { it.residualFatigue != null }
+            assertEquals(
+                fullSummaries.size,
+                nonNullCount,
+                "Every day must reconstruct a non-null residualFatigue once the seed is fully backfilled",
+            )
         }
 
     private fun basePreferences(): UserPreferences =
