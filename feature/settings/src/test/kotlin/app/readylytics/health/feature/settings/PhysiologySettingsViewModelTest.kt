@@ -82,4 +82,23 @@ class PhysiologySettingsViewModelTest {
         viewModel.onEvent(SettingsEvent.BirthdayChanged(date = futureDate))
         coVerify(timeout = 100, inverse = true) { userUseCase.updateBirthday(any()) }
     }
+
+    @Test
+    fun onEvent_physiologyProfileChanged_doesNotUpdateResidualFatigueSettings() {
+        viewModel.onEvent(
+            SettingsEvent.PhysiologyProfileChanged(
+                app.readylytics.health.core.model.data.preferences.PhysiologyProfile.ATHLETE,
+            ),
+        )
+
+        coVerify(timeout = 1000, exactly = 1) {
+            physiologySettings.updatePhysiologyProfile(
+                app.readylytics.health.core.model.data.preferences.PhysiologyProfile.ATHLETE,
+            )
+        }
+        coVerify(timeout = 1000, exactly = 0) { displaySettings.updateResidualFatigueEnabled(any()) }
+        coVerify(timeout = 1000, exactly = 0) { displaySettings.updateResidualFatigueHalfLifeHours(any()) }
+        coVerify(timeout = 1000, exactly = 0) { displaySettings.updateResidualFatigueGain(any()) }
+        coVerify(timeout = 1000, exactly = 0) { displaySettings.resetResidualFatigueToDefaults() }
+    }
 }

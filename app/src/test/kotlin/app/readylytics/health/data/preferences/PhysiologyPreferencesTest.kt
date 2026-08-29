@@ -184,4 +184,19 @@ class PhysiologyPreferencesTest {
             proto = dataStore.data.first()
             assertEquals(5.0f, proto.residualFatigueGain, 0f)
         }
+
+    @Test
+    fun `resetResidualFatigueToDefaults restores enabled, half-life, and gain to defaults`() =
+        runTest {
+            physiologyPreferences.updateResidualFatigueEnabled(false)
+            physiologyPreferences.updateResidualFatigueHalfLifeHours(48f)
+            physiologyPreferences.updateResidualFatigueGain(2.5f)
+
+            physiologyPreferences.resetResidualFatigueToDefaults()
+
+            val proto = dataStore.data.first()
+            assertEquals(true, proto.residualFatigueEnabled)
+            assertEquals(24f, proto.residualFatigueHalfLifeHours, 0f)
+            assertEquals(1.0f, proto.residualFatigueGain, 0f)
+        }
 }

@@ -369,6 +369,33 @@ class SettingsViewModelTest {
         }
 
     @Test
+    fun `ResetFatigueToDefaults event resets fatigue settings to defaults and triggers historical recompute`() =
+        runTest {
+            val viewModel =
+                UISettingsViewModel(
+                    settingsReader,
+                    displaySettings,
+                    healthDataRefresh,
+                    workoutDetailLayoutRepository = mockk<WorkoutDetailLayoutRepository>(relaxed = true),
+                )
+            viewModel.sharingStarted = SharingStarted.Eagerly
+            viewModel.uiState
+
+            viewModel.onEvent(SettingsEvent.ResetFatigueToDefaults)
+            advanceUntilIdle()
+
+            coVerifyOrder {
+                displaySettings.resetResidualFatigueToDefaults()
+                healthDataRefresh.refreshHistorical()
+            }
+            coVerify(exactly = 1) { healthDataRefresh.refreshHistorical() }
+            coVerify(exactly = 0) { healthDataRefresh.refreshAffectedWindow() }
+
+            viewModel.viewModelScope.cancel()
+            advanceUntilIdle()
+        }
+
+    @Test
     fun `SyncSettingsViewModel resync event enqueues worker and isResyncing follows durable state`() =
         runTest {
             val mockRefresh = mockk<HealthDataRefresh>(relaxed = true)

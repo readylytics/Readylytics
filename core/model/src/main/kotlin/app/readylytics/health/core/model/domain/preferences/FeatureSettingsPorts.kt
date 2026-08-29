@@ -93,6 +93,7 @@ interface DisplaySettings {
     suspend fun updateResidualFatigueEnabled(enabled: Boolean)
     suspend fun updateResidualFatigueHalfLifeHours(hours: Float)
     suspend fun updateResidualFatigueGain(value: Float)
+    suspend fun resetResidualFatigueToDefaults()
     suspend fun updateBulkDisplayModeNoticeDismissed(dismissed: Boolean)
     suspend fun updateLastGlobalDisplayMode(mode: DashboardCardDisplayMode?)
 }

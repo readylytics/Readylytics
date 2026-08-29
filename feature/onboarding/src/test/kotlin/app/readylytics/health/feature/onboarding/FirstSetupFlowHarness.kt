@@ -144,6 +144,8 @@ class FirstSetupFlowHarness(
         override suspend fun updateResidualFatigueGain(value: Float) =
             error("Unexpected call: updateResidualFatigueGain")
 
+        override suspend fun resetResidualFatigueToDefaults() = error("Unexpected call: resetResidualFatigueToDefaults")
+
         override suspend fun updateBulkDisplayModeNoticeDismissed(dismissed: Boolean) =
             error("Unexpected call: updateBulkDisplayModeNoticeDismissed")
 

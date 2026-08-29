@@ -265,6 +265,8 @@ sealed interface SettingsEvent {
         val value: Float,
     ) : SettingsEvent
 
+    data object ResetFatigueToDefaults : SettingsEvent
+
     data class UnitSystemChanged(
         val unitSystem: app.readylytics.health.core.model.data.preferences.UnitSystem,
     ) : SettingsEvent

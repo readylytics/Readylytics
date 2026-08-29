@@ -47,6 +47,9 @@ class UISettingsViewModel
                         banisterMultiplier = prefs.banisterMultiplier,
                         chengBeta = prefs.chengBeta,
                         itrimB = prefs.itrimB,
+                        residualFatigueEnabled = prefs.residualFatigueEnabled,
+                        residualFatigueHalfLifeHours = prefs.residualFatigueHalfLifeHours,
+                        residualFatigueGain = prefs.residualFatigueGain,
                         unitSystem = prefs.unitSystem,
                         weekStartDay = prefs.weekStartDay,
                         isCustomPaletteEnabled = prefs.isCustomPaletteEnabled,
@@ -163,6 +166,11 @@ class UISettingsViewModel
                         }
                     }
                 }
+                SettingsEvent.ResetFatigueToDefaults ->
+                    viewModelScope.launch {
+                        displaySettings.resetResidualFatigueToDefaults()
+                        healthDataRefresh.refreshHistorical()
+                    }
                 SettingsEvent.WorkoutDetailLayoutsResetConfirmed ->
                     viewModelScope.launch { workoutDetailLayoutRepository.resetAll() }
                 SettingsEvent.ResetTrimpToProfileDefaults ->

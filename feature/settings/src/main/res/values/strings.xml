@@ -34,6 +34,16 @@
         reading of the entire sleep period (e.g., 5%% = lowest 5%% threshold). Lower values = lower
         RHR estimate. Default: 5%%.</string>
 <string name="advanced_rhr_baseline_label">RHR Baseline (bpm)</string>
+<string name="advanced_residual_fatigue_title">Residual Fatigue</string>
+<string name="advanced_residual_fatigue_enabled_label">Residual Fatigue</string>
+<string name="advanced_residual_fatigue_enabled_desc">Models short-term exponential decay of workout fatigue. Defaults (24 h half-life, 1.0 gain) and bounds (6–96 h, 0.1–5.0 gain) are provisional product guardrails, not scientifically validated clinical ranges.</string>
+<string name="advanced_residual_fatigue_half_life_label">Fatigue half-life</string>
+<string name="advanced_residual_fatigue_half_life_hours">%1$.0f h</string>
+<string name="advanced_residual_fatigue_half_life_desc">Time required for workout fatigue to decay by half. Range (6–96 h) and default (24 h) are provisional product guardrails, not scientifically validated clinical ranges.</string>
+<string name="advanced_residual_fatigue_gain_label">Fatigue gain</string>
+<string name="advanced_residual_fatigue_gain_value">%1$.2f</string>
+<string name="advanced_residual_fatigue_gain_desc">Scaling factor applied to workout impulses. Range (0.1–5.0) and default (1.00) are provisional product guardrails, not scientifically validated clinical ranges.</string>
+<string name="advanced_residual_fatigue_reset_button">Reset fatigue to defaults</string>
 <string name="advanced_training_load_label">Training Load Model</string>
 <string name="advanced_trimp_banister">Banister</string>
 <string name="advanced_trimp_cheng">Cheng LT-TRIMP</string>

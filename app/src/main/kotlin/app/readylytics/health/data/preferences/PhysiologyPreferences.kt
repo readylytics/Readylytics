@@ -237,6 +237,17 @@ internal class PhysiologyPreferences
                 it.toBuilder().setResidualFatigueGain(value.toValidFatigueGain()).build()
             }
         }
+
+        suspend fun resetResidualFatigueToDefaults() {
+            dataStore.updateData {
+                it
+                    .toBuilder()
+                    .setResidualFatigueEnabled(SettingsDefaults.RESIDUAL_FATIGUE_ENABLED)
+                    .setResidualFatigueHalfLifeHours(SettingsDefaults.RESIDUAL_FATIGUE_HALF_LIFE_HOURS)
+                    .setResidualFatigueGain(SettingsDefaults.RESIDUAL_FATIGUE_GAIN)
+                    .build()
+            }
+        }
     }
 
 internal object TrimpMigrationHelper {

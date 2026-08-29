@@ -221,6 +221,8 @@ class SettingsRepository
 
         override suspend fun updateResidualFatigueGain(value: Float) = physiology.updateResidualFatigueGain(value)
 
+        override suspend fun resetResidualFatigueToDefaults() = physiology.resetResidualFatigueToDefaults()
+
         suspend fun updateInstallDate(date: LocalDate) = sync.updateInstallDate(date)
 
         suspend fun initializeInstallDateIfUnset() = sync.initializeInstallDateIfUnset()
