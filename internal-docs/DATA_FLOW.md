@@ -1110,26 +1110,25 @@ checkpoints and triggers a historical recompute via `HealthDataRefresh.refreshHi
 **Visualizations & Presentation Pipeline (optional, default-hidden).**
 While the calculation remains shadow-only (it does not modify Readiness, Load Score, or any recommendation), users can optionally visualize Residual Fatigue across two surfaces:
 1. **Dashboard Metric Card (`CardId.RESIDUAL_FATIGUE`):**
-   - Registered in `CardId` and default-hidden in `SettingsDefaults.DEFAULT_DASHBOARD_CARDS` (`visible = false`, `defaultDisplayMode = GAUGE`) and `DEFAULT_WORKOUT_CARDS` (`visible = false`).
-   - `DashboardMetricFactory.createUniversalPresentation` maps `DailySummary.residualFatigue` into a `UniversalMetricPresentation`: value formatted to 1 decimal place, unit empty/dimensionless, gauge min=0 / max=100, status classification via `ClassifyMetricStatusUseCase.classifyResidualFatigue(value)` (Optimal $\le$ 20, Neutral $\le$ 40, Warning $\le$ 70, Poor > 70), and subtitle `R.string.dashboard_metric_residual_fatigue_subtitle`.
-   - Renders via `UniversalMetricCard` / `M3ScoreGaugeCard` across Gauge, Bar, and Value display modes. Tapping the card emits `DashboardEvent.CardClicked(CardId.RESIDUAL_FATIGUE)` which navigates to the Workouts tab (`Screen.Workouts`).
+   - Registered in `CardId` and default-hidden in `SettingsDefaults.DEFAULT_DASHBOARD_CARDS` (`isVisible = false`, `defaultDisplayMode = GAUGE`).
+   - `DashboardMetricPresentationFactory` maps `DailySummary.residualFatigue` into a `UniversalMetricPresentation`: value formatted to 1 decimal place, unit empty/dimensionless, gauge min=0 / max=100, status classification (< 30 Optimal, 30..70 Neutral, > 70 Warning, null/disabled NO_DATA), and secondary text `card_residual_fatigue_secondary` ("Half-life: Xh").
+   - Renders via `UniversalMetricCard` across Gauge, Bar, and Value display modes. Tapping the card navigates to the Workouts tab (`onNavigateToWorkouts`).
 2. **Workouts 24-Hour Decay Curve Chart (`WorkoutChartId.RESIDUAL_FATIGUE_CURVE`):**
-   - Registered in `WorkoutChartId` and default-hidden in `SettingsDefaults.DEFAULT_WORKOUT_CHARTS` (`visible = false`).
+   - Registered in `WorkoutChartId` and default-hidden in `SettingsDefaults.DEFAULT_WORKOUT_CHARTS` (`isVisible = false`).
    - On-demand 24-hour sampling pipeline:
      ```
      Selected Date & WorkoutsUiState
        │
-       ▼ loads historical canonical fatigue seed & day's workouts
-     WorkoutDao.getCanonicalFatigueSeed(targetDayStartMs) (or WorkoutRepository.getCanonicalFatigueSeed)
-     + WorkoutRepository.getWorkoutsForDay(day)
+       ▼ loads historical canonical fatigue seed
+     WorkoutRepository.getCanonicalFatigueSeed(evalMs) -> WorkoutDao.getCanonicalFatigueSeed
        │
-       ▼ passed with active preferences (halfLifeHours, fatigueGain, enabled)
+       ▼ passed with active preferences (halfLifeHours, gain, enabled)
      Generate24hResidualFatigueCurveUseCase (core/scoring/.../domain/scoring/)
-       │  Samples 24-hour timeline at 15-minute intervals (97 points: 00:00 to 24:00)
-       │  + exact workout completion impulse timestamps
-       │  Computes continuous decay via ComputeResidualFatigueUseCase.compute()
+       │  Samples 24-hour timeline at 15-minute intervals (96 grid points: 00:00 to 23:45)
+       │  + exact workout completion impulse timestamps (TreeSet<Long>)
+       │  Computes continuous decay: F(t) = sum(gain * trimp * 2^(-(t - end) / halfLife))
        ▼
-     ResidualFatigueCurvePresentation (timePoints, points, minFatigue, maxFatigue, peakFatigue, endOfDayFatigue)
+     List<FatigueCurvePoint> (timestampMs, timeMinutesOfDay, fatigueValue)
        │
        ▼ rendered by
      ResidualFatigueCurveChart (feature/workouts/.../ResidualFatigueCurveChart.kt)
