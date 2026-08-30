@@ -245,6 +245,7 @@ object SettingsDefaults {
             WorkoutChartConfiguration(WorkoutChartId.WEEKLY_TRAINING, isVisible = true, position = 1),
             WorkoutChartConfiguration(WorkoutChartId.ACTIVITY_VOLUME, isVisible = true, position = 2),
             WorkoutChartConfiguration(WorkoutChartId.TRAINING_MIX, isVisible = true, position = 3),
+            WorkoutChartConfiguration(WorkoutChartId.RESIDUAL_FATIGUE_CURVE, isVisible = false, position = 4),
         )
 
     val DEFAULT_WORKOUT_HISTORY =

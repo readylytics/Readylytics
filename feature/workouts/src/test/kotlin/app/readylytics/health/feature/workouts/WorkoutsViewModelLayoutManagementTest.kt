@@ -275,6 +275,35 @@ class WorkoutsViewModelLayoutManagementTest {
         }
 
     @Test
+    fun `chart management toggle shows residual fatigue curve and persists on save`() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            advanceUntilIdle()
+
+            viewModel.toggleWorkoutsManagement()
+            advanceUntilIdle()
+            viewModel.onToggleChartVisibility(WorkoutChartId.RESIDUAL_FATIGUE_CURVE, visible = true)
+            advanceUntilIdle()
+            assertTrue(
+                viewModel.uiState.value.chartConfigurations
+                    .first { it.chartId == WorkoutChartId.RESIDUAL_FATIGUE_CURVE }
+                    .isVisible,
+            )
+
+            viewModel.toggleWorkoutsManagement()
+            advanceUntilIdle()
+            coVerify {
+                workoutsLayoutRepository.updateWorkoutChartConfigurations(
+                    match { charts ->
+                        charts.any { it.chartId == WorkoutChartId.RESIDUAL_FATIGUE_CURVE && it.isVisible }
+                    },
+                )
+            }
+            collector.cancel()
+        }
+
+    @Test
     fun `reorder charts updates chart positions and persists on save`() =
         runTest(testDispatcher) {
             viewModel = createViewModel()
