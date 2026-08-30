@@ -67,33 +67,40 @@ graph TD
 
 ---
 
-## 4. 24-Hour Residual Fatigue Timeline Chart (`WorkoutChartId.RESIDUAL_FATIGUE_CURVE`)
+## 4. Workouts Residual Fatigue Section & Multi-Range Curve Chart (`WorkoutChartId.RESIDUAL_FATIGUE_CURVE`)
 
-### 4.1 Chart Configuration & Defaults
-- **Enum Entry:** `WorkoutChartId.RESIDUAL_FATIGUE_CURVE`
+### 4.1 Section Layout & Range Configuration
+- **Placement:** Wrapped in `ResidualFatigueSection.kt` as an independent chart section inside `WorkoutsChartFactory`.
+- **Header:** `SectionHeader` with `title = stringResource(R.string.chart_residual_fatigue_curve_title)` and info tooltip.
+- **Range Selector:** M3 `SingleChoiceSegmentedButtonRow` offering `1D`, `3D`, and `7D` options (`FatigueCurveRange` enum), defaulting to `1D`.
 - **Default Visibility:** `isVisible = false` (hidden by default in `SettingsDefaults.DEFAULT_WORKOUT_CHARTS`).
-- **Placement:** Managed via Workouts chart reordering / visibility bottom sheet (`WorkoutsChartFactory`).
 
-### 4.2 Mathematical Sampling Engine (`Generate24hResidualFatigueCurveUseCase`)
+### 4.2 Mathematical Sampling Engine (`GenerateResidualFatigueCurveUseCase`)
 - **Inputs:**
-  - `selectedDate: LocalDate`
+  - `startDate: LocalDate` (e.g. `selectedDate.minusDays(range.days - 1L)`)
+  - `endDate: LocalDate` (e.g. `selectedDate`)
   - `scoringZoneId: ZoneId`
-  - `config: ResidualFatigueConfig` (`halfLifeHours`, `gain`)
-  - `retainedWorkouts: List<FatigueWorkoutInput>` (all canonical workouts with `startTime < dayEndMs`)
+  - `config: ResidualFatigueConfig` (`halfLifeHours`, `gain`, `enabled`)
+  - `retainedWorkouts: List<FatigueWorkoutInput>` (all canonical workouts through `endDate` dayEndMs)
 - **Sampling Strategy:**
-  - 96 quarter-hour grid points (every 15 minutes from `00:00` to `23:45`).
-  - Exact `endTimeMs` timestamps for every workout ending within the 24-hour day window.
-  - Merged and sorted chronologically: $t_0 < t_1 < \dots < t_N$.
+  - 96 quarter-hour grid points per day (every 15 minutes from 00:00 to 23:45 for each day in range).
+  - Exact `endTimeMs` timestamps for every workout ending between `startDate` start-of-day and `endDate` end-of-day.
+  - Merged and sorted chronologically: $t_0 < t_1 < \dots < t_N$ without duplicate timestamps.
 - **Evaluation Formula:**
   $$F(t) = \sum_{i: \text{endTime}_i \le t} \text{gain} \times \text{trimp}_i \times 2^{-\frac{t - \text{endTime}_i}{\text{halfLifeHours} \times 3600 \times 1000}}$$
-- **Output:** List of `FatiguePoint(timestampMs: Long, timeMinutesOfDay: Float, fatigueValue: Float)`
+- **Output:** List of `FatigueCurvePoint(timestampMs: Long, timeMinutesFromStart: Float, fatigueValue: Float)`
 
-### 4.3 Vico Chart Presentation (`ResidualFatigueCurveChart.kt`)
+### 4.3 Adaptive Vico Chart Presentation (`ResidualFatigueCurveChart.kt`)
 - **Line Layer:** Cubic Bézier interpolation with smooth curve rendering.
 - **Area Fill:** Gradient below the line from `MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)` to transparent.
-- **Y-Axis:** Dynamic range starting at 0 and scaling to $\max(100f, \text{peakToday})$.
-- **X-Axis:** 4-hour interval time labels (`00:00`, `04:00`, `08:00`, `12:00`, `16:00`, `20:00`, `24:00`).
-- **Touch Scrubber Tooltip:** Shows time in `HH:mm` format and exact fatigue value (e.g. `14:15 • Fatigue: 38.4`).
+- **Y-Axis:** Dynamic range starting at 0 and scaling to $\max(100f, \text{peakInRange})$.
+- **Adaptive X-Axis:**
+  - **1D (24h):** 4-hour interval time labels (`00:00`, `04:00`, `08:00`, `12:00`, `16:00`, `20:00`, `24:00`).
+  - **3D (72h):** Day ticks / 12-hour markers (`Mon 00:00`, `Mon 12:00`, `Tue 00:00` or `Mon`, `Tue`, `Wed`).
+  - **7D (168h):** Daily ticks displaying day of week (`Mon`, `Tue`, `Wed`, `Thu`, `Fri`, `Sat`, `Sun`).
+- **Touch Scrubber Tooltip:**
+  - **1D:** `"HH:mm • Fatigue: 38.4"`
+  - **3D / 7D:** `"EEE, MMM d, HH:mm • Fatigue: 38.4"` (e.g. `"Fri, Aug 28, 14:30 • Fatigue: 38.4"`).
 - **Container:** Native M3 `Card` with `MaterialTheme.shapes.large` (16dp) and `surfaceContainerLow` surface role.
 
 ---
