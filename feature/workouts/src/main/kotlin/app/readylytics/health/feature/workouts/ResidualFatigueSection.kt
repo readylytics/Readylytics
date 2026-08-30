@@ -52,7 +52,7 @@ fun ResidualFatigueSection(
                     onClick = { onRangeSelected(range) },
                     enabled = !uiState.isLoading,
                     shape = SegmentedButtonDefaults.itemShape(index = index, count = FatigueCurveRange.entries.size),
-                    label = { Text(range.label) },
+                    label = { Text(stringResource(range.labelResId)) },
                 )
             }
         }

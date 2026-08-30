@@ -14,6 +14,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.time.LocalDate
+import java.time.ZoneId
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -45,6 +47,54 @@ class ResidualFatigueCurveChartTest {
 
         assertEquals(listOf(0.0, 1.2346), residualFatigueChartXValues(points))
     }
+
+    @Test
+    fun residualFatigueMaxX_shrinksOnASpringForwardDay() {
+        val zone = ZoneId.of("Europe/Berlin")
+        val points = listOf(pointAt(LocalDate.of(2026, 3, 29), zone))
+
+        assertEquals(23 * 60.0, residualFatigueMaxX(points, FatigueCurveRange.ONE_DAY, zone), 0.001)
+    }
+
+    @Test
+    fun residualFatigueAxisTicks_placeDayBoundariesAtRealMidnights() {
+        val zone = ZoneId.of("Europe/Berlin")
+        val points = listOf(pointAt(LocalDate.of(2026, 3, 28), zone))
+
+        val ticks = residualFatigueAxisTicks(points, FatigueCurveRange.THREE_DAYS, zone)
+
+        // 28th is 24h, 29th is 23h (spring forward), so the boundaries are 0 / 1440 / 2820 / 4260 —
+        // not multiples of 1440.
+        assertEquals(listOf(0.0, 1440.0, 2820.0, 4260.0), ticks.values)
+        assertEquals(4260.0, residualFatigueMaxX(points, FatigueCurveRange.THREE_DAYS, zone), 0.001)
+    }
+
+    @Test
+    fun residualFatigueNowMarkerX_isSetOnlyForATruncatedCurve() {
+        val truncated =
+            listOf(
+                FatigueCurvePoint(timestampMs = 0L, timeMinutesFromStart = 0f, fatigueValue = 10f),
+                FatigueCurvePoint(timestampMs = 600_000L, timeMinutesFromStart = 610f, fatigueValue = 12f),
+            )
+        val complete =
+            listOf(
+                FatigueCurvePoint(timestampMs = 0L, timeMinutesFromStart = 0f, fatigueValue = 10f),
+                FatigueCurvePoint(timestampMs = 600_000L, timeMinutesFromStart = 1440f, fatigueValue = 12f),
+            )
+
+        assertEquals(610.0, residualFatigueNowMarkerX(truncated, maxX = 1440.0))
+        assertEquals(null, residualFatigueNowMarkerX(complete, maxX = 1440.0))
+        assertEquals(null, residualFatigueNowMarkerX(emptyList(), maxX = 1440.0))
+    }
+
+    private fun pointAt(
+        date: LocalDate,
+        zone: ZoneId,
+    ) = FatigueCurvePoint(
+        timestampMs = date.atStartOfDay(zone).toInstant().toEpochMilli(),
+        timeMinutesFromStart = 0f,
+        fatigueValue = 0f,
+    )
 
     @Test
     fun residualFatigueCurveChart_emptyData_displaysEmptyMessage() {

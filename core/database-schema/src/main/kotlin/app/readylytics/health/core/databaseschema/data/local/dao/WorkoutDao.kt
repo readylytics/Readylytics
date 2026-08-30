@@ -127,16 +127,31 @@ interface WorkoutDao {
     suspend fun getCanonicalFatigueSeed(startBeforeMs: Long): List<FatigueWorkoutInput>
 
     @Query(
+        // Retention-bounded, exactly like countUnbackfilledSince. This gate must never reach further
+        // back than the rows the startup self-heal can repair: a single null-modelTrimp row older
+        // than the retention start would otherwise pin residual fatigue to null forever, because no
+        // recompute will ever visit it to clear the count.
         "SELECT COUNT(*) FROM workout_records " +
-            "WHERE startTime < :startBeforeMs AND modelTrimp IS NULL",
+            "WHERE startTime >= :retentionStartMs AND startTime < :startBeforeMs AND modelTrimp IS NULL",
     )
-    suspend fun countUnbackfilledBefore(startBeforeMs: Long): Int
+    suspend fun countUnbackfilledBefore(
+        retentionStartMs: Long,
+        startBeforeMs: Long,
+    ): Int
 
     @Query(
+        // Retention-bounded for the same reason as countUnbackfilledBefore; this is the
+        // single-day fallback's gate.
         "SELECT COUNT(*) FROM workout_records " +
-            "WHERE endTime <= :evaluationTimeMs AND modelTrimp IS NULL",
+            // The lower bound filters startTime, matching countUnbackfilledSince exactly, so a
+            // workout straddling the retention boundary cannot be counted here while being
+            // invisible to the self-heal that would repair it.
+            "WHERE startTime >= :retentionStartMs AND endTime <= :evaluationTimeMs AND modelTrimp IS NULL",
     )
-    suspend fun countUnbackfilledThrough(evaluationTimeMs: Long): Int
+    suspend fun countUnbackfilledThrough(
+        retentionStartMs: Long,
+        evaluationTimeMs: Long,
+    ): Int
 
     @Query(
         // Retention-bounded self-heal gate: rows older than the retention start can never be

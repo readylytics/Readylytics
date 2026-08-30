@@ -65,12 +65,14 @@ abstract class DashboardMetricPresentationFactoryTestBase {
         physiologyProfile: PhysiologyProfile = PhysiologyProfile.ACTIVE,
         residualFatigueEnabled: Boolean = true,
         residualFatigueHalfLifeHours: Float = 24f,
+        residualFatigueGain: Float = 1f,
     ) = UserPreferences(
         heightCm = heightCm,
         gender = gender,
         physiologyProfile = physiologyProfile,
         residualFatigueEnabled = residualFatigueEnabled,
         residualFatigueHalfLifeHours = residualFatigueHalfLifeHours,
+        residualFatigueGain = residualFatigueGain,
     )
 
     protected val date = LocalDate.now()

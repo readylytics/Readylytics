@@ -38,9 +38,9 @@ class WorkoutRepositoryImpl
             dao.countByTimeRange(fromMs, toMs)
 
         override suspend fun getCanonicalFatigueSeed(
-            evalMs: Long,
+            startBeforeMs: Long,
         ): List<app.readylytics.health.core.model.domain.repository.FatigueWorkoutInput> =
-            dao.getCanonicalFatigueSeed(evalMs)
+            dao.getCanonicalFatigueSeed(startBeforeMs)
 
         override suspend fun getRoutePoints(workoutId: String): List<WorkoutRoutePoint> =
             routePointDao.getRoutePoints(workoutId).map { it.toDomain() }

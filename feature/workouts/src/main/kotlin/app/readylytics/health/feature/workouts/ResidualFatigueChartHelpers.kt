@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.workouts
 
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -12,17 +13,18 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.model.domain.workouts.FatigueCurvePoint
 import app.readylytics.health.core.model.domain.workouts.FatigueCurveRange
 import app.readylytics.health.core.ui.components.DataPointTooltipData
-import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
-import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianLayerRangeProvider
-import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
+import com.patrykandpatrick.vico.compose.cartesian.data.LineCartesianLayerModel
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.common.Fill
+import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
+import com.patrykandpatrick.vico.compose.common.data.ExtraStore
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -35,9 +37,8 @@ private const val CHART_CUBIC_INTERPOLATION = 0.2f
 private const val GRADIENT_START_ALPHA = 0.35f
 internal const val Y_AXIS_GRID_STEP = 25.0
 private const val VICO_X_VALUE_PRECISION = 10_000.0
-private const val MINUTES_PER_HOUR = 60
-private const val HOURS_PER_DAY = 24
-private const val MILLIS_PER_MINUTE = 60_000.0
+private const val NOW_MARKER_EPSILON_MINUTES = 0.5
+private val NOW_MARKER_SIZE = 6.dp
 
 internal data class ResidualFatigueOverlayState(
     val summary: String,
@@ -72,62 +73,17 @@ internal fun formatFatiguePoint(
     tooltipFormat: String,
     zoneId: ZoneId = ZoneId.systemDefault(),
 ): String {
+    // Always read the wall clock off the point's own instant. Deriving it from
+    // timeMinutesFromStart assumes a 24-hour day and is an hour out on either DST transition.
+    val zdt = Instant.ofEpochMilli(point.timestampMs).atZone(zoneId)
     val timeStr =
         if (range == FatigueCurveRange.ONE_DAY) {
-            val hours = (point.timeMinutesFromStart / MINUTES_PER_HOUR).toInt().coerceIn(0, HOURS_PER_DAY)
-            val minutes = (point.timeMinutesFromStart % MINUTES_PER_HOUR).toInt().coerceIn(0, MINUTES_PER_HOUR - 1)
-            String.format(Locale.getDefault(), "%02d:%02d", hours, minutes)
+            zdt.format(DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault()))
         } else {
-            val zdt = Instant.ofEpochMilli(point.timestampMs).atZone(zoneId)
             zdt.format(DateTimeFormatter.ofPattern("EEE, MMM d, HH:mm", Locale.getDefault()))
         }
     return String.format(Locale.getDefault(), tooltipFormat, timeStr, point.fatigueValue)
 }
-
-@Composable
-internal fun rememberResidualFatigueItemPlacer(range: FatigueCurveRange): HorizontalAxis.ItemPlacer {
-    val labels =
-        remember(range) {
-            when (range) {
-                FatigueCurveRange.ONE_DAY -> listOf(0.0, 240.0, 480.0, 720.0, 960.0, 1200.0, 1440.0)
-                FatigueCurveRange.THREE_DAYS -> (0..3).map { it * TOTAL_MINUTES_IN_DAY }
-                FatigueCurveRange.SEVEN_DAYS -> (0..7).map { it * TOTAL_MINUTES_IN_DAY }
-            }
-        }
-    return remember(labels) {
-        val base = HorizontalAxis.ItemPlacer.aligned(spacing = { 1 }, addExtremeLabelPadding = true)
-        object : HorizontalAxis.ItemPlacer by base {
-            override fun getLabelValues(
-                context: CartesianDrawingContext,
-                visibleXRange: ClosedFloatingPointRange<Double>,
-                fullXRange: ClosedFloatingPointRange<Double>,
-                maxLabelWidth: Float,
-            ): List<Double> = labels.filter { it in fullXRange }
-        }
-    }
-}
-
-@Composable
-internal fun rememberResidualFatigueValueFormatter(
-    range: FatigueCurveRange,
-    points: List<FatigueCurvePoint>,
-    zoneId: ZoneId = ZoneId.systemDefault(),
-): CartesianValueFormatter =
-    remember(range, points, zoneId) {
-        val startEpochMs = points.firstOrNull()?.timestampMs
-        CartesianValueFormatter { _, v, _ ->
-            if (range == FatigueCurveRange.ONE_DAY) {
-                val h = (v / MINUTES_PER_HOUR.toDouble()).roundToInt().coerceIn(0, HOURS_PER_DAY)
-                String.format(Locale.getDefault(), "%02d:00", h)
-            } else if (startEpochMs != null) {
-                val tickEpochMs = startEpochMs + (v * MILLIS_PER_MINUTE).toLong()
-                val zdt = Instant.ofEpochMilli(tickEpochMs).atZone(zoneId)
-                zdt.format(DateTimeFormatter.ofPattern("EEE", Locale.getDefault()))
-            } else {
-                ""
-            }
-        }
-    }
 
 @Composable
 internal fun rememberResidualFatigueAccessibilityActions(
@@ -209,8 +165,42 @@ internal fun ObserveTooltipSelection(
     }
 }
 
+/**
+ * X value (minutes from range start) at which to draw the "you are here" dot, or null when the
+ * curve is not truncated.
+ *
+ * The curve is generated only up to the present, so a series that stops short of the axis maximum
+ * is one whose last sample *is* now. For a fully elapsed range the last point sits at the range end
+ * and no marker is warranted.
+ */
+internal fun residualFatigueNowMarkerX(
+    points: List<FatigueCurvePoint>,
+    maxX: Double,
+): Double? {
+    val last = points.lastOrNull() ?: return null
+    val lastX = last.timeMinutesFromStart.toDouble()
+    return lastX.takeIf { it < maxX - NOW_MARKER_EPSILON_MINUTES }
+}
+
+/** Draws [point] only on the entry sitting at [targetX]; every other sample stays bare. */
+private class SingleEntryPointProvider(
+    private val point: LineCartesianLayer.Point,
+    private val targetX: Double,
+) : LineCartesianLayer.PointProvider {
+    override fun getPoint(
+        entry: LineCartesianLayerModel.Entry,
+        seriesIndex: Int,
+        extraStore: ExtraStore,
+    ): LineCartesianLayer.Point? = point.takeIf { kotlin.math.abs(entry.x - targetX) <= NOW_MARKER_EPSILON_MINUTES }
+
+    override fun getLargestPoint(extraStore: ExtraStore): LineCartesianLayer.Point = point
+}
+
 @Composable
-internal fun rememberResidualFatigueLineLayer(rangeProvider: CartesianLayerRangeProvider): LineCartesianLayer {
+internal fun rememberResidualFatigueLineLayer(
+    rangeProvider: CartesianLayerRangeProvider,
+    nowMarkerX: Double? = null,
+): LineCartesianLayer {
     val primaryColor = MaterialTheme.colorScheme.primary
     val lineFill = LineCartesianLayer.LineFill.single(Fill(primaryColor))
     val areaFill =
@@ -224,12 +214,20 @@ internal fun rememberResidualFatigueLineLayer(rangeProvider: CartesianLayerRange
                 ),
             ),
         )
+    val nowDotComponent = rememberShapeComponent(fill = Fill(primaryColor), shape = CircleShape)
+    val pointProvider =
+        remember(nowMarkerX, nowDotComponent) {
+            nowMarkerX?.let {
+                SingleEntryPointProvider(LineCartesianLayer.Point(nowDotComponent, NOW_MARKER_SIZE), it)
+            }
+        }
     return rememberLineCartesianLayer(
         lineProvider =
             LineCartesianLayer.LineProvider.series(
                 LineCartesianLayer.rememberLine(
                     fill = lineFill,
                     areaFill = areaFill,
+                    pointProvider = pointProvider,
                     interpolator = LineCartesianLayer.Interpolator.cubic(CHART_CUBIC_INTERPOLATION),
                 ),
             ),

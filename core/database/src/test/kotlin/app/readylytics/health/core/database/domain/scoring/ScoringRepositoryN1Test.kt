@@ -143,7 +143,7 @@ class ScoringRepositoryN1Test {
         // WP-27: single-day residual-fatigue fallback reads the same series via its own query.
         coEvery { workoutDao.getCanonicalFatigueInputsThrough(any()) } returns emptyList()
         coEvery { workoutDao.getCanonicalFatigueSeed(any()) } returns emptyList()
-        coEvery { workoutDao.countUnbackfilledThrough(any()) } returns 0
+        coEvery { workoutDao.countUnbackfilledThrough(any(), any()) } returns 0
 
         coEvery { hrvDao.getSleepRmssdValues(any()) } returns listOf(60f, 60f, 60f)
         coEvery { hrvDao.getSleepRmssdValuesSince(any(), any()) } returns listOf(60f, 60f, 60f)

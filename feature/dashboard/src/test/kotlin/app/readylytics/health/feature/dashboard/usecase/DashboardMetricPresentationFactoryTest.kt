@@ -39,6 +39,63 @@ class DashboardMetricPresentationFactoryTest : DashboardMetricPresentationFactor
     }
 
     @Test
+    fun `residual fatigue thresholds and gauge scale with the configured gain`() {
+        // At gain 5.0 the metric is produced on a five-times-larger scale, so 120 is the same
+        // relative load that 24 would be at gain 1.0 — Optimal, not Warning, and nowhere near the
+        // top of the gauge.
+        val summary = summary(residualFatigue = 120f)
+        val preferences =
+            preferences(
+                residualFatigueEnabled = true,
+                residualFatigueHalfLifeHours = 24f,
+                residualFatigueGain = 5f,
+            )
+
+        val presentation =
+            factory
+                .build(
+                    summary = summary,
+                    preferences = preferences,
+                    lastSleepSession = null,
+                    circadianResult = null,
+                    heartRateSummary = null,
+                )[CardId.RESIDUAL_FATIGUE]
+
+        assertEquals(MetricStatus.OPTIMAL, presentation?.status)
+        val score = presentation?.visual as UniversalMetricVisual.Score
+        assertEquals(500f, score.maxValue)
+        assertEquals(0.24f, score.markerFraction)
+    }
+
+    @Test
+    fun `residual fatigue at low gain is not forced to optimal by fixed thresholds`() {
+        // At gain 0.1 a value of 9 is 90% of the gauge and firmly Warning; fixed 30/70 cut-points
+        // would have called it Optimal and pinned the gauge to ~9%.
+        val summary = summary(residualFatigue = 9f)
+        val preferences =
+            preferences(
+                residualFatigueEnabled = true,
+                residualFatigueHalfLifeHours = 24f,
+                residualFatigueGain = 0.1f,
+            )
+
+        val presentation =
+            factory
+                .build(
+                    summary = summary,
+                    preferences = preferences,
+                    lastSleepSession = null,
+                    circadianResult = null,
+                    heartRateSummary = null,
+                )[CardId.RESIDUAL_FATIGUE]
+
+        assertEquals(MetricStatus.WARNING, presentation?.status)
+        val score = presentation?.visual as UniversalMetricVisual.Score
+        assertEquals(10f, score.maxValue, 0.0001f)
+        assertEquals(0.9f, score.markerFraction!!, 0.0001f)
+    }
+
+    @Test
     fun `build presents neutral status when residual fatigue is between 30 and 70`() {
         val summary = summary(residualFatigue = 50.0f)
         val preferences = preferences(residualFatigueEnabled = true, residualFatigueHalfLifeHours = 36f)

@@ -4,10 +4,12 @@ import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.FatigueWorkoutInput
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.scoring.ResidualFatigueConfig
+import app.readylytics.health.core.model.domain.util.RetentionBounds
 import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.time.LocalDate
@@ -44,8 +46,8 @@ class ResidualFatigueExactReconstructionTest {
                 val evaluationTimeMs = firstArg<Long>()
                 workouts.filter { it.endTimeMs <= evaluationTimeMs }
             }
-            coEvery { dataLoader.loadUnbackfilledCountBefore(any()) } returns 0
-            coEvery { dataLoader.loadUnbackfilledCountThrough(any()) } returns 0
+            coEvery { dataLoader.loadUnbackfilledCountBefore(any(), any()) } returns 0
+            coEvery { dataLoader.loadUnbackfilledCountThrough(any(), any()) } returns 0
 
             val full = runWalk(evaluationDay.minusDays(120), evaluationDay, workouts, startTimes)
             val partial = runWalk(evaluationDay, evaluationDay, workouts, startTimes)
@@ -82,9 +84,9 @@ class ResidualFatigueExactReconstructionTest {
     fun `fetchWalkForwardContext flags an incomplete seed when unbackfilled workouts exist before the boundary`() =
         runTest {
             coEvery { dataLoader.loadCanonicalFatigueSeed(any()) } returns emptyList()
-            coEvery { dataLoader.loadUnbackfilledCountBefore(any()) } returns 1
+            coEvery { dataLoader.loadUnbackfilledCountBefore(any(), any()) } returns 1
 
-            val context = computer.fetchWalkForwardContext(evaluationDay, zoneId)
+            val context = computer.fetchWalkForwardContext(evaluationDay, zoneId, prefs)
 
             assertTrue(context.seedIncomplete, "A dropped never-backfilled row must flag the seed incomplete")
         }
@@ -93,8 +95,8 @@ class ResidualFatigueExactReconstructionTest {
     fun `compute returns null on the walk-forward path when the seed is incomplete`() =
         runTest {
             coEvery { dataLoader.loadCanonicalFatigueSeed(any()) } returns emptyList()
-            coEvery { dataLoader.loadUnbackfilledCountBefore(any()) } returns 1
-            val fatigueContext = computer.fetchWalkForwardContext(evaluationDay, zoneId)
+            coEvery { dataLoader.loadUnbackfilledCountBefore(any(), any()) } returns 1
+            val fatigueContext = computer.fetchWalkForwardContext(evaluationDay, zoneId, prefs)
 
             val result = computer.compute(scoringContext(evaluationDay), fatigueContext)
 
@@ -102,9 +104,41 @@ class ResidualFatigueExactReconstructionTest {
         }
 
     @Test
+    fun `never-backfilled gate is bounded by the retention start so it can converge`() =
+        runTest {
+            val retentionPrefs = prefs.copy(retentionDaysEnabled = true, retentionDays = 365)
+            val expectedRetentionStartMs =
+                RetentionBounds.resolveHistoricalWindow(retentionPrefs).startTimeMs
+            val gateLowerBound = slot<Long>()
+            coEvery { dataLoader.loadCanonicalFatigueSeed(any()) } returns emptyList()
+            coEvery { dataLoader.loadUnbackfilledCountBefore(capture(gateLowerBound), any()) } returns 0
+
+            computer.fetchWalkForwardContext(evaluationDay, zoneId, retentionPrefs)
+
+            // The gate must not reach past the rows WorkoutTrimpBackfillStatus can repair; an
+            // unbounded gate would let one ancient null-modelTrimp row pin the metric to null.
+            assertEquals(expectedRetentionStartMs, gateLowerBound.captured)
+        }
+
+    @Test
+    fun `single-day fallback gate is bounded by the same retention start`() =
+        runTest {
+            val retentionPrefs = prefs.copy(retentionDaysEnabled = true, retentionDays = 365)
+            val expectedRetentionStartMs =
+                RetentionBounds.resolveHistoricalWindow(retentionPrefs).startTimeMs
+            val gateLowerBound = slot<Long>()
+            coEvery { dataLoader.loadUnbackfilledCountThrough(capture(gateLowerBound), any()) } returns 0
+            coEvery { dataLoader.loadCanonicalFatigueInputsThrough(any()) } returns emptyList()
+
+            computer.compute(scoringContext(evaluationDay, retentionPrefs), null)
+
+            assertEquals(expectedRetentionStartMs, gateLowerBound.captured)
+        }
+
+    @Test
     fun `single-day fallback returns null for unbackfilled workouts`() =
         runTest {
-            coEvery { dataLoader.loadUnbackfilledCountThrough(any()) } returns 1
+            coEvery { dataLoader.loadUnbackfilledCountThrough(any(), any()) } returns 1
 
             val result = computer.compute(scoringContext(evaluationDay), null)
 
@@ -117,7 +151,7 @@ class ResidualFatigueExactReconstructionTest {
         workouts: List<FatigueWorkoutInput>,
         startTimes: Map<String, Long>,
     ): Float {
-        val fatigueContext = computer.fetchWalkForwardContext(startDate, zoneId)
+        val fatigueContext = computer.fetchWalkForwardContext(startDate, zoneId, prefs)
         var day = startDate
         var fatigue = 0f
         while (!day.isAfter(endDate)) {
@@ -132,9 +166,12 @@ class ResidualFatigueExactReconstructionTest {
         return fatigue
     }
 
-    private fun scoringContext(day: LocalDate): ScoringDayContext =
+    private fun scoringContext(
+        day: LocalDate,
+        preferences: UserPreferences = this@ResidualFatigueExactReconstructionTest.prefs,
+    ): ScoringDayContext =
         mockk {
-            every { prefs } returns this@ResidualFatigueExactReconstructionTest.prefs
+            every { prefs } returns preferences
             every { nextDayMidnightMs } returns
                 day.plusDays(1)
                     .atStartOfDay(this@ResidualFatigueExactReconstructionTest.zoneId)

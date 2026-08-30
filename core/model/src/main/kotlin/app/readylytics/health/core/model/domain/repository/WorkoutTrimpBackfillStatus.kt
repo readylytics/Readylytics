@@ -11,6 +11,11 @@ package app.readylytics.health.core.model.domain.repository
  * recompute-only resync, which converges: a recompute writes `modelTrimp` for every workout it
  * touches (including `0f`), so the count reaches zero and the gate stops firing.
  *
+ * Convergence only holds because the residual-fatigue seed gate never looks further back than this
+ * one does. See [app.readylytics.health.core.model.domain.scoring.FatigueHorizon.gateStartMs]: a
+ * gate reaching past [hasUnbackfilledWorkouts]'s retention bound would block on rows this self-heal
+ * deliberately cannot repair, pinning residual fatigue to null forever.
+ *
  * Implemented in `core:database` over the workout DAO; kept here so `app` never reaches into a DAO.
  */
 interface WorkoutTrimpBackfillStatus {

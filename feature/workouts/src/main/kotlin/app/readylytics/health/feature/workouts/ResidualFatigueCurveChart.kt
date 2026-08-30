@@ -136,14 +136,14 @@ private fun ResidualFatigueChartContent(
             onSelectIndex = { selectedIndex = it },
         )
 
+    // No onHidden wiring: Vico hides its marker on finger lift, so clearing selection there would
+    // dismiss the tooltip on the same tap that opened it. Selection is cleared explicitly instead
+    // (tooltip dismiss, multi-touch, parent scroll, range change).
     val markerListener =
-        rememberChartMarkerVisibilityListener(
-            onPointSelected = { x, _, canvasX, canvasY ->
-                selectedPointOffset = Offset(canvasX, canvasY)
-                selectedIndex = points.indices.minByOrNull { abs(points[it].timeMinutesFromStart - x) } ?: 0
-            },
-            onPointHidden = ::clearSelection,
-        )
+        rememberChartMarkerVisibilityListener { x, _, canvasX, canvasY ->
+            selectedPointOffset = Offset(canvasX, canvasY)
+            selectedIndex = points.indices.minByOrNull { abs(points[it].timeMinutesFromStart - x) } ?: 0
+        }
 
     ResidualFatigueChartBox(
         points = points,
@@ -267,14 +267,16 @@ private fun ResidualFatigueCartesianHost(
 
     val peak = points.map { it.fatigueValue }.maxOrNull() ?: 0f
     val maxY = maxOf(100.0, ceil(peak.toDouble() / Y_AXIS_GRID_STEP) * Y_AXIS_GRID_STEP)
-    val maxX = range.days * TOTAL_MINUTES_IN_DAY
+    val axisTicks = remember(points, range, zoneId) { residualFatigueAxisTicks(points, range, zoneId) }
+    val maxX = remember(points, range, zoneId) { residualFatigueMaxX(points, range, zoneId) }
     val rangeProvider =
-        remember(points, range) {
+        remember(maxX, maxY) {
             CartesianLayerRangeProvider.fixed(minX = 0.0, maxX = maxX, minY = 0.0, maxY = maxY)
         }
-    val lineLayer = rememberResidualFatigueLineLayer(rangeProvider)
-    val itemPlacer = rememberResidualFatigueItemPlacer(range)
-    val valueFormatter = rememberResidualFatigueValueFormatter(range, points, zoneId)
+    val nowMarkerX = remember(points, maxX) { residualFatigueNowMarkerX(points, maxX) }
+    val lineLayer = rememberResidualFatigueLineLayer(rangeProvider, nowMarkerX)
+    val itemPlacer = rememberResidualFatigueItemPlacer(axisTicks)
+    val valueFormatter = rememberResidualFatigueValueFormatter(axisTicks)
     val label = ChartDefaults.labelTextComponent()
     val axisLabel = ChartDefaults.axisLabelTextComponent()
     val guideline = ChartDefaults.guidelineComponent()

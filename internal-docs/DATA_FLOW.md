@@ -1069,7 +1069,15 @@ since Edwards `trimp` is never a fatigue fallback — which would otherwise leav
 rather than *unknown*. Two things address that. First, `WorkoutDao.countUnbackfilledBefore` /
 `countUnbackfilledThrough`, surfaced by `ScoringDayDataLoader.loadUnbackfilledCountBefore` /
 `loadUnbackfilledCountThrough`, let the fatigue paths detect a dropped row (one `COUNT(*)` per walk-forward,
-not per day). Second, startup self-heals: `WorkoutDao.countUnbackfilledSince` behind the
+not per day). Both gate queries are **bounded below by `RetentionBounds.resolveHistoricalWindow(prefs).startTimeMs`**,
+the same instant `countUnbackfilledSince` uses, and both filter that lower bound on `startTime` so a
+boundary-straddling workout is classified identically by all three. That bound is what makes the gate
+terminate: an unbounded gate counts rows the recompute-only resync can never reach (history beyond
+`ABSOLUTE_MAX_DAYS` with retention disabled, or backup-restored rows awaiting the next `DataCleanupWorker`
+pass), so `seedIncomplete` would stay true on every sync and `daily_summaries.residualFatigue` would stay
+`NULL` forever while the self-heal deliberately never fires for those rows. The **seed query itself stays
+unbounded** — residual fatigue is exact over all retained history, not a fixed-window approximation; only the
+gate is clamped. Second, startup self-heals: `WorkoutDao.countUnbackfilledSince` behind the
 `WorkoutTrimpBackfillStatus` port (`core/model`, implemented by `WorkoutTrimpBackfillStatusImpl` in
 `core/database`) is a second gate on `DatabaseReadyStartupInitializer.scheduleRecomputeResyncIfNeeded`,
 alongside the stale-`scoringVersion` gate — both share one `scheduleResyncWorker(recomputeOnly = true)`
@@ -1111,7 +1119,7 @@ checkpoints and triggers a historical recompute via `HealthDataRefresh.refreshHi
 While the calculation remains shadow-only (it does not modify Readiness, Load Score, or any recommendation), users can optionally visualize Residual Fatigue across two surfaces:
 1. **Dashboard Metric Card (`CardId.RESIDUAL_FATIGUE`):**
    - Registered in `CardId` and default-hidden in `SettingsDefaults.DEFAULT_DASHBOARD_CARDS` (`isVisible = false`, `defaultDisplayMode = GAUGE`).
-   - `DashboardMetricPresentationFactory` maps `DailySummary.residualFatigue` into a `UniversalMetricPresentation`: value formatted to 1 decimal place, unit empty/dimensionless, gauge min=0 / max=100, status classification (< 30 Optimal, 30..70 Neutral, > 70 Warning, null/disabled NO_DATA), and secondary text `card_residual_fatigue_secondary` ("Half-life: Xh").
+   - `DashboardMetricPresentationFactory` maps `DailySummary.residualFatigue` into a `UniversalMetricPresentation`: value formatted to 1 decimal place, unit empty/dimensionless, and secondary text `card_residual_fatigue_secondary` ("Half-life: Xh"). The gauge scale and the status cut-points are **multiplied by the configured `residualFatigueGain`**, because the metric is `gain * sum(TRIMP) * decay` and gain is user-settable over 0.1–5.0: gauge min=0 / max=`100 * gain`, status classification (`< 30 * gain` Optimal, `<= 70 * gain` Neutral, above that Warning, null/disabled NO_DATA). Fixed cut-points would read Optimal with a pinned-to-zero gauge at gain 0.1 and Warning with a saturated gauge at gain 5.0.
    - Renders via `UniversalMetricCard` across Gauge, Bar, and Value display modes. Tapping the card navigates to the Workouts tab (`onNavigateToWorkouts`).
 2. **Workouts Residual Fatigue Curve Chart (`WorkoutChartId.RESIDUAL_FATIGUE_CURVE`):**
    - Registered in `WorkoutChartId` and default-hidden in `SettingsDefaults.DEFAULT_WORKOUT_CHARTS` (`isVisible = false`).
@@ -1125,18 +1133,26 @@ While the calculation remains shadow-only (it does not modify Readiness, Load Sc
        │
        ▼ passed with active workouts & preferences (halfLifeHours, gain, enabled)
       GenerateResidualFatigueCurveUseCase (core/scoring/.../domain/scoring/)
-        │  Samples continuous timeline at 15-minute intervals across start..end (96 points/day)
+        │  Samples the timeline in 15-minute steps taken through ZonedDateTime, not through raw
+        │  millis: a DST day is 92 or 100 points, never 96, so timeMinutesFromStart stays aligned
+        │  with wall clock and with the real day boundaries
         │  + exact workout completion impulse timestamps (TreeSet<Long>)
-        │  Computes continuous decay: F(t) = sum(gain * trimp * 2^(-(t - end) / halfLife))
+        │  Truncated at nowMs (System.currentTimeMillis() from the VM): nothing after the present
+        │  is drawn, since it would be a projection. For a past range the bound is inert.
+        │  Computes continuous decay: F(t) = sum(gain * trimp * 2^(-(t - end) / halfLife)),
+        │  evaluated as a single forward pass (decay the running total between samples, fold in
+        │  impulses as they fall due) — O(samples + workouts), same algebra as advanceAccumulator
         ▼
       List<FatigueCurvePoint> (timestampMs, timeMinutesFromStart, fatigueValue)
        │
        ▼ rendered by
      ResidualFatigueCurveChart (feature/workouts/.../ResidualFatigueCurveChart.kt)
        Canvas-based smooth Cubic Bézier curve with bottom area gradient fill,
-       range-adaptive X-axis tick placer and touch scrubber (HH:mm for 1D, MMM d HH:mm for 3D/7D),
-       dashed vertical marker for current time (when viewing today),
-       and interactive touch drag-scrubber with tooltip readout.
+       X-axis ticks and labels from ResidualFatigueAxis.kt (real zoned midnights / wall-clock hours,
+       so a DST day's boundaries are not assumed to sit on multiples of 1440 minutes),
+       a "now" dot on the final sample whenever the curve stops short of the axis maximum,
+       and interactive touch drag-scrubber with tooltip readout (HH:mm for 1D, EEE, MMM d, HH:mm
+       for 3D/7D, both read off the sample's own instant).
      ```
 
 ---
@@ -1351,12 +1367,13 @@ defaults when unset).
 | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/BaselineZScoreComputer.kt`                                 | Processing — Z-score computation                    | HRV & RHR Z-scores, nocturnal RHR delta BPM                                              |
 | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/RestorationScoreAssembler.kt` | Processing — restoration assembly | restoration score (sRest) assembly and contributor subscores |
 | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/ComputeResidualFatigueUseCase.kt` | Processing — residual fatigue (pure) | `compute()` summation + `advanceAccumulator()` decay/add step (§2.8) |
-| `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/GenerateResidualFatigueCurveUseCase.kt` | Processing — residual fatigue curve (pure) | generates multi-day timeline samples at 15m intervals + workout impulses (§2.8) |
+| `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/GenerateResidualFatigueCurveUseCase.kt` | Processing — residual fatigue curve (pure) | generates multi-day timeline samples at zoned 15m steps + workout impulses, truncated at `nowMs` (§2.8) |
 | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/scoring/ResidualFatigueConfig.kt` | Domain — fatigue parameters | enabled / halfLifeHours / fatigueGain (shadow mode, §2.8) |
 | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/repository/WalkForwardFatigueContext.kt` | Processing — walk-forward accumulator | prefetched impulse series + running accumulated fatigue (WP-27) |
 | `core/database/src/main/kotlin/app/readylytics/health/core/database/data/repository/ResidualFatigueComputer.kt` | Processing — fatigue snapshot | per-day snapshot at next-day midnight; exact retained-history seed (§2.8) |
 | `core/database/src/main/kotlin/app/readylytics/health/core/database/data/repository/FinalSummaryAssembler.kt` | Processing — summary assembly | stamps `residualFatigue` onto the assembled `DailySummary` (§2.8) |
-| `feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts/ResidualFatigueCurveChart.kt`     | UI — Canvas chart                                   | 24-hour continuous residual fatigue decay curve with touch scrubber |
+| `feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts/ResidualFatigueCurveChart.kt`     | UI — Canvas chart                                   | 1D/3D/7D continuous residual fatigue decay curve with touch scrubber and "now" dot |
+| `feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts/ResidualFatigueAxis.kt`           | UI — chart axis                                     | DST-aware x-axis tick positions and labels for the residual fatigue curve |
 | `feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard/DashboardViewModel.kt` | UI — dashboard state                                | summary, cards, RAS, recalc progress                                                     |
 | `ui/sync/SyncViewModel.kt`                                                 | UI — sync state                                     | `recalcProgress` forward                                                                 |
 | `feature/vitals/src/main/kotlin/app/readylytics/health/feature/vitals/overview/VitalsViewModel.kt`         | UI — vitals state                                   | HRV / RHR / SpO2 / body temperature trends + bands                                       |

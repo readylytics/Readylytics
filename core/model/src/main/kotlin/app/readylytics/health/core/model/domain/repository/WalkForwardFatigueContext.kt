@@ -27,9 +27,13 @@ data class FatigueWorkoutInput(
 class WalkForwardFatigueContext(
     seedInputs: List<FatigueWorkoutInput>,
     /**
-     * True when the seed query had to drop retained workouts whose canonical `modelTrimp` has
-     * never been backfilled. The accumulator cannot reconstruct those impulses, so the day's
-     * snapshot is unknown rather than merely low; [ResidualFatigueComputer] persists null.
+     * True when the seed query had to drop workouts inside the fatigue horizon whose canonical
+     * `modelTrimp` has never been backfilled. The accumulator cannot reconstruct those impulses, so
+     * the day's snapshot is unknown rather than merely low; [ResidualFatigueComputer] persists null.
+     *
+     * The window is bounded by
+     * [app.readylytics.health.core.model.domain.scoring.FatigueHorizon.gateStartMs] so the flag can
+     * always clear: rows the startup self-heal cannot reach must not hold the metric hostage.
      */
     val seedIncomplete: Boolean = false,
 ) {

@@ -124,6 +124,106 @@ class GenerateResidualFatigueCurveUseCaseTest {
     }
 
     @Test
+    fun `execute steps the grid in the zone so a spring-forward day yields 92 points`() {
+        // Europe/Berlin loses an hour at 02:00 on 2026-03-29: the day is 23 hours long.
+        val date = LocalDate.of(2026, 3, 29)
+        val zone = ZoneId.of("Europe/Berlin")
+        val config = ResidualFatigueConfig(halfLifeHours = 24f, fatigueGain = 1f)
+
+        val curve = useCase.execute(date, date, zone, config, emptyList())
+
+        assertEquals(23 * 4, curve.size)
+        val rangeEndMs = date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+        assertTrue(
+            "No sample may fall on or after the range end",
+            curve.all { it.timestampMs < rangeEndMs },
+        )
+        assertEquals((23 * 60 - 15).toFloat(), curve.last().timeMinutesFromStart, 0.01f)
+    }
+
+    @Test
+    fun `execute steps the grid in the zone so a fall-back day yields 100 points`() {
+        // Europe/Berlin repeats 02:00-03:00 on 2026-10-25: the day is 25 hours long.
+        val date = LocalDate.of(2026, 10, 25)
+        val zone = ZoneId.of("Europe/Berlin")
+        val config = ResidualFatigueConfig(halfLifeHours = 24f, fatigueGain = 1f)
+
+        val curve = useCase.execute(date, date, zone, config, emptyList())
+
+        assertEquals(25 * 4, curve.size)
+        assertEquals((25 * 60 - 15).toFloat(), curve.last().timeMinutesFromStart, 0.01f)
+    }
+
+    @Test
+    fun `execute truncates the curve at now and ends exactly on it`() {
+        val date = LocalDate.of(2026, 8, 29)
+        val zone = ZoneId.of("UTC")
+        val config = ResidualFatigueConfig(halfLifeHours = 24f, fatigueGain = 1f)
+        val dayStartMs = date.atStartOfDay(zone).toInstant().toEpochMilli()
+        val nowMs = dayStartMs + 10 * 3600 * 1000L + 7 * 60 * 1000L // 10:07
+
+        val curve = useCase.execute(date, date, zone, config, emptyList(), nowMs = nowMs)
+
+        // Grid points 00:00..10:00 inclusive (41), plus the exact now sample.
+        assertEquals(42, curve.size)
+        assertEquals(nowMs, curve.last().timestampMs)
+        assertTrue("Nothing may be plotted after now", curve.all { it.timestampMs <= nowMs })
+    }
+
+    @Test
+    fun `execute ignores a now bound that is after the range end`() {
+        val date = LocalDate.of(2026, 8, 29)
+        val zone = ZoneId.of("UTC")
+        val config = ResidualFatigueConfig(halfLifeHours = 24f, fatigueGain = 1f)
+        val nowMs = date.plusDays(5).atStartOfDay(zone).toInstant().toEpochMilli()
+
+        val curve = useCase.execute(date, date, zone, config, emptyList(), nowMs = nowMs)
+
+        assertEquals(96, curve.size)
+    }
+
+    @Test
+    fun `execute drops workout impulses that have not happened yet`() {
+        val date = LocalDate.of(2026, 8, 29)
+        val zone = ZoneId.of("UTC")
+        val config = ResidualFatigueConfig(halfLifeHours = 24f, fatigueGain = 1f)
+        val dayStartMs = date.atStartOfDay(zone).toInstant().toEpochMilli()
+        val nowMs = dayStartMs + 6 * 3600 * 1000L
+        val futureWorkout = FatigueWorkoutInput("w_future", dayStartMs + 20 * 3600 * 1000L, 80f)
+
+        val curve = useCase.execute(date, date, zone, config, listOf(futureWorkout), nowMs = nowMs)
+
+        assertTrue("A future workout must not add a sample", curve.none { it.timestampMs > nowMs })
+        curve.forEach { assertEquals(0f, it.fatigueValue, 0.0001f) }
+    }
+
+    @Test
+    fun `execute single-pass accumulation matches direct summation`() {
+        val startDate = LocalDate.of(2026, 8, 23)
+        val endDate = LocalDate.of(2026, 8, 29)
+        val zone = ZoneId.of("UTC")
+        val config = ResidualFatigueConfig(halfLifeHours = 18f, fatigueGain = 1.4f)
+        val startMs = startDate.atStartOfDay(zone).toInstant().toEpochMilli()
+        val workouts =
+            listOf(
+                FatigueWorkoutInput("w1", startMs + 5 * 3600 * 1000L, 55f),
+                FatigueWorkoutInput("w2", startMs + 37 * 3600 * 1000L + 11 * 60 * 1000L, 90f),
+                FatigueWorkoutInput("w3", startMs + 121 * 3600 * 1000L, 20f),
+            )
+
+        val curve = useCase.execute(startDate, endDate, zone, config, workouts)
+
+        curve.forEach { point ->
+            assertEquals(
+                "Accumulated value must match the direct sum at ${point.timestampMs}",
+                useCase.evaluateAt(point.timestampMs, config, workouts),
+                point.fatigueValue,
+                0.01f,
+            )
+        }
+    }
+
+    @Test
     fun `execute when disabled returns all zeroes`() {
         val date = LocalDate.of(2026, 8, 29)
         val zone = ZoneId.of("UTC")

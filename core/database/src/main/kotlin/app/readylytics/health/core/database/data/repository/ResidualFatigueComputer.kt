@@ -1,7 +1,9 @@
 package app.readylytics.health.core.database.data.repository
 
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.scoring.ResidualFatigueConfig
+import app.readylytics.health.core.model.domain.util.RetentionBounds
 import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase
 import java.time.LocalDate
 import java.time.ZoneId
@@ -20,19 +22,46 @@ class ResidualFatigueComputer(
      * Seeds a walk-forward with every retained canonical workout assigned before its start
      * boundary. Boundary-straddling workouts remain pending until their end timestamp reaches an
      * evaluation point.
+     *
+     * The seed itself is deliberately unbounded below — residual fatigue is exact over all retained
+     * history, not a fixed-window approximation. The never-backfilled gate is not: it is clamped to
+     * the retention start so it can only ever block on rows the startup self-heal can actually
+     * repair. See [retentionStartMs].
      */
     suspend fun fetchWalkForwardContext(
         startDate: LocalDate,
         zoneId: ZoneId,
+        prefs: UserPreferences,
     ): WalkForwardFatigueContext {
         val boundaryMs = startDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
         val seedInputs = dataLoader.loadCanonicalFatigueSeed(boundaryMs)
-        val unbackfilledCount = dataLoader.loadUnbackfilledCountBefore(boundaryMs)
+        val unbackfilledCount =
+            dataLoader.loadUnbackfilledCountBefore(
+                retentionStartMs = retentionStartMs(prefs),
+                startBeforeMs = boundaryMs,
+            )
         return WalkForwardFatigueContext(
             seedInputs = seedInputs,
             seedIncomplete = unbackfilledCount > 0,
         )
     }
+
+    private fun clampedConfig(prefs: UserPreferences): ResidualFatigueConfig =
+        // Coerce rather than require: a stored pref outside the validated range should degrade the
+        // day to the nearest valid parameter, never fail the whole recompute.
+        ResidualFatigueConfig.clamped(
+            enabled = prefs.residualFatigueEnabled,
+            halfLifeHours = prefs.residualFatigueHalfLifeHours,
+            fatigueGain = prefs.residualFatigueGain,
+        )
+
+    /**
+     * Lower bound of the never-backfilled gate, shared with `WorkoutTrimpBackfillStatus` and the
+     * cleanup worker through [RetentionBounds]. Rows older than this are unreachable by both the
+     * recompute-only resync and the self-heal, so counting them could never clear.
+     */
+    private fun retentionStartMs(prefs: UserPreferences): Long =
+        RetentionBounds.resolveHistoricalWindow(prefs).startTimeMs
 
     /**
      * Computes the day's residual-fatigue snapshot at next-day midnight. The walk-forward path
@@ -45,19 +74,12 @@ class ResidualFatigueComputer(
         context: ScoringDayContext,
         fatigueContext: WalkForwardFatigueContext?,
     ): Float? {
-        // Coerce rather than require: a stored pref outside the validated range should degrade the
-        // day to the nearest valid parameter, never fail the whole recompute.
-        val config =
-            ResidualFatigueConfig.clamped(
-                enabled = context.prefs.residualFatigueEnabled,
-                halfLifeHours = context.prefs.residualFatigueHalfLifeHours,
-                fatigueGain = context.prefs.residualFatigueGain,
-            )
+        val config = clampedConfig(context.prefs)
         if (!config.enabled) return null
 
         val evalMs = context.nextDayMidnightMs
         return when (fatigueContext) {
-            null -> computeSingleDayFallback(evalMs, config)
+            null -> computeSingleDayFallback(evalMs, config, context.prefs)
             else -> computeWalkForward(fatigueContext, evalMs, config)
         }
     }
@@ -76,8 +98,14 @@ class ResidualFatigueComputer(
     private suspend fun computeSingleDayFallback(
         evalMs: Long,
         config: ResidualFatigueConfig,
+        prefs: UserPreferences,
     ): Float? {
-        if (dataLoader.loadUnbackfilledCountThrough(evalMs) > 0) return null
+        val unbackfilled =
+            dataLoader.loadUnbackfilledCountThrough(
+                retentionStartMs = retentionStartMs(prefs),
+                evaluationTimeMs = evalMs,
+            )
+        if (unbackfilled > 0) return null
         val workouts = dataLoader.loadCanonicalFatigueInputsThrough(evalMs)
         return computeResidualFatigueUseCase.compute(
             evalMs,

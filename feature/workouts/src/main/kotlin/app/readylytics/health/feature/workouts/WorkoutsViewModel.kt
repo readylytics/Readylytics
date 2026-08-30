@@ -347,7 +347,6 @@ class WorkoutsViewModel
             prefs: UserPreferences,
             zoneId: ZoneId,
         ): List<FatigueCurvePoint> {
-            val fatigueInputs = repositories.workout.getCanonicalFatigueSeed(window.selectedDayEndMs)
             val config =
                 ResidualFatigueConfig.clamped(
                     enabled = prefs.residualFatigueEnabled,
@@ -355,12 +354,15 @@ class WorkoutsViewModel
                     fatigueGain = prefs.residualFatigueGain,
                 )
             val startDate = date.minusDays(fatigueRange.days.toLong() - 1L)
+            val fatigueInputs = repositories.workout.getCanonicalFatigueSeed(window.selectedDayEndMs)
             return useCases.generateResidualFatigueCurve.execute(
                 startDate = startDate,
                 endDate = date,
                 zoneId = zoneId,
                 config = config,
                 retainedWorkouts = fatigueInputs,
+                // Never draw past the present: everything after now would be a projection.
+                nowMs = System.currentTimeMillis(),
             )
         }
 
