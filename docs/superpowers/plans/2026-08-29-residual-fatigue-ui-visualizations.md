@@ -29,16 +29,17 @@
 
 **Files:**
 - Modify: `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/dashboard/CardId.kt`
+- Modify: `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/dashboard/CardIdExtensions.kt`
 - Modify: `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/dashboard/DashboardCardCatalog.kt`
 - Modify: `core/model/src/main/kotlin/app/readylytics/health/core/model/data/preferences/SettingsDefaults.kt`
-- Modify: `feature/settings/src/main/kotlin/app/readylytics/health/feature/settings/DashboardCardsSettingsViewModel.kt`
+- Modify: `feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard/CardIdExtensionsUi.kt`
 - Modify: `feature/dashboard/src/main/res/values/strings.xml`
 - Modify: `core/model/src/test/kotlin/app/readylytics/health/core/model/domain/dashboard/DashboardCardCatalogTest.kt`
 - Modify: `app/src/test/kotlin/app/readylytics/health/data/preferences/CardConfigurationRepositoryTest.kt`
 
 **Interfaces:**
 - Consumes: `CardId`, `CardConfiguration`, `ModeSpec`, `DashboardCardDisplayMode`.
-- Produces: `CardId.RESIDUAL_FATIGUE` entry in `CardId`, registered in `DashboardCardCatalog.specs` with all modes supported (`GAUGE`, `BAR`, `VALUE`), default mode `GAUGE`, and appended to `SettingsDefaults.DEFAULT_DASHBOARD_CARDS` with `isVisible = false`.
+- Produces: `CardId.RESIDUAL_FATIGUE` entry in `CardId`, registered in `DashboardCardCatalog.specs` with all modes supported (`GAUGE`, `BAR`, `VALUE`), default mode `GAUGE`, display name mappings, and appended to `SettingsDefaults.DEFAULT_DASHBOARD_CARDS` with `isVisible = false`.
 
 - [ ] **Step 1: Write failing domain and repository tests**
 
@@ -98,6 +99,11 @@ enum class CardId {
 }
 ```
 
+In `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/dashboard/CardIdExtensions.kt`:
+```kotlin
+CardId.RESIDUAL_FATIGUE -> "Residual Fatigue"
+```
+
 In `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/dashboard/DashboardCardCatalog.kt`:
 ```kotlin
 CardId.RESIDUAL_FATIGUE to ModeSpec(DashboardCardDisplayMode.GAUGE, ALL_MODES),
@@ -108,7 +114,7 @@ In `core/model/src/main/kotlin/app/readylytics/health/core/model/data/preference
 CardConfiguration(CardId.RESIDUAL_FATIGUE, isVisible = false, position = 19),
 ```
 
-In `feature/settings/src/main/kotlin/app/readylytics/health/feature/settings/DashboardCardsSettingsViewModel.kt` (map string title):
+In `feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard/CardIdExtensionsUi.kt`:
 ```kotlin
 CardId.RESIDUAL_FATIGUE -> R.string.card_residual_fatigue_title
 ```
@@ -129,7 +135,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add core/model/src/main/kotlin/app/readylytics/health/core/model/domain/dashboard/CardId.kt core/model/src/main/kotlin/app/readylytics/health/core/model/domain/dashboard/DashboardCardCatalog.kt core/model/src/main/kotlin/app/readylytics/health/core/model/data/preferences/SettingsDefaults.kt feature/settings/src/main/kotlin/app/readylytics/health/feature/settings/DashboardCardsSettingsViewModel.kt feature/dashboard/src/main/res/values/strings.xml core/model/src/test/kotlin/app/readylytics/health/core/model/domain/dashboard/DashboardCardCatalogTest.kt app/src/test/kotlin/app/readylytics/health/data/preferences/CardConfigurationRepositoryTest.kt
+git add core/model/src/main/kotlin/app/readylytics/health/core/model/domain/dashboard/CardId.kt core/model/src/main/kotlin/app/readylytics/health/core/model/domain/dashboard/CardIdExtensions.kt core/model/src/main/kotlin/app/readylytics/health/core/model/domain/dashboard/DashboardCardCatalog.kt core/model/src/main/kotlin/app/readylytics/health/core/model/data/preferences/SettingsDefaults.kt feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard/CardIdExtensionsUi.kt feature/dashboard/src/main/res/values/strings.xml core/model/src/test/kotlin/app/readylytics/health/core/model/domain/dashboard/DashboardCardCatalogTest.kt app/src/test/kotlin/app/readylytics/health/data/preferences/CardConfigurationRepositoryTest.kt
 git commit -m "feat: add CardId.RESIDUAL_FATIGUE domain definition and defaults"
 ```
 
