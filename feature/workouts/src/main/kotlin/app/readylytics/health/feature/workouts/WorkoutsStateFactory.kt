@@ -66,6 +66,7 @@ data class WorkoutsUiState(
     val strainRatioPeriodSummary: PeriodAverageSummary? = null,
     val residualFatigueCurve: List<FatigueCurvePoint> = emptyList(),
     val selectedFatigueRange: FatigueCurveRange = FatigueCurveRange.ONE_DAY,
+    val zoneId: ZoneId = ZoneId.systemDefault(),
     val cardConfigurations: List<CardConfiguration> = emptyList(),
     val isManagingCards: Boolean = false,
     val chartConfigurations: List<WorkoutChartConfiguration> = emptyList(),
@@ -498,5 +499,6 @@ private fun assembleWorkoutsUiState(
             strainRatioPeriodSummary = series.strainSummary,
             residualFatigueCurve = residualFatigueCurve,
             selectedFatigueRange = selectedFatigueRange,
+            zoneId = zoneId,
         )
     }

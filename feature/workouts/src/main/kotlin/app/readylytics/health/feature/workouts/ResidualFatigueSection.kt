@@ -60,6 +60,7 @@ fun ResidualFatigueSection(
         ResidualFatigueCurveChart(
             points = uiState.residualFatigueCurve,
             range = uiState.selectedFatigueRange,
+            zoneId = uiState.zoneId,
             isLoading = uiState.isLoading,
             parentScrollInProgress = parentScrollInProgress,
             modifier =

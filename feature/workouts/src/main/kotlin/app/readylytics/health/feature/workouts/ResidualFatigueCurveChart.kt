@@ -48,6 +48,7 @@ import com.patrykandpatrick.vico.compose.cartesian.data.lineModel
 import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerVisibilityListener
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
+import java.time.ZoneId
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.roundToInt
@@ -57,6 +58,7 @@ import app.readylytics.health.core.ui.R as CoreUiR
 fun ResidualFatigueCurveChart(
     points: List<FatigueCurvePoint>,
     range: FatigueCurveRange = FatigueCurveRange.ONE_DAY,
+    zoneId: ZoneId = ZoneId.systemDefault(),
     isLoading: Boolean = false,
     modifier: Modifier = Modifier,
     parentScrollInProgress: () -> Boolean = { false },
@@ -83,6 +85,7 @@ fun ResidualFatigueCurveChart(
                 ResidualFatigueChartContent(
                     points = points,
                     range = range,
+                    zoneId = zoneId,
                     parentScrollInProgress = parentScrollInProgress,
                 )
             }
@@ -94,6 +97,7 @@ fun ResidualFatigueCurveChart(
 private fun ResidualFatigueChartContent(
     points: List<FatigueCurvePoint>,
     range: FatigueCurveRange,
+    zoneId: ZoneId,
     parentScrollInProgress: () -> Boolean = { false },
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
@@ -107,25 +111,24 @@ private fun ResidualFatigueChartContent(
         selectedIndex = null
     }
 
+    val selectionData =
+        ResidualFatigueSelectionData(
+            selectedIndex = selectedIndex,
+            selectedPointOffset = selectedPointOffset,
+            points = points,
+            range = range,
+            tooltipFormat = tooltipFormat,
+            zoneId = zoneId,
+        )
+
     ObserveTooltipSelection(
-        selection =
-            ResidualFatigueSelectionData(
-                selectedIndex = selectedIndex,
-                selectedPointOffset = selectedPointOffset,
-                points = points,
-                range = range,
-                tooltipFormat = tooltipFormat,
-            ),
+        selection = selectionData,
         onUpdateTooltip = { tooltipState = it },
     )
 
     val overlayState =
         rememberResidualFatigueOverlayState(
-            selectedIndex = selectedIndex,
-            points = points,
-            range = range,
-            tooltipFormat = tooltipFormat,
-            pointOffset = selectedPointOffset,
+            selection = selectionData,
             tooltip = tooltipState,
             onSelectIndex = { selectedIndex = it },
         )
@@ -141,6 +144,7 @@ private fun ResidualFatigueChartContent(
     ResidualFatigueChartBox(
         points = points,
         range = range,
+        zoneId = zoneId,
         state = overlayState,
         markerListener = markerListener,
         onMultiTouch = {
@@ -153,31 +157,29 @@ private fun ResidualFatigueChartContent(
 
 @Composable
 private fun rememberResidualFatigueOverlayState(
-    selectedIndex: Int?,
-    points: List<FatigueCurvePoint>,
-    range: FatigueCurveRange,
-    tooltipFormat: String,
-    pointOffset: Offset?,
+    selection: ResidualFatigueSelectionData,
     tooltip: DataPointTooltipData?,
     onSelectIndex: (Int?) -> Unit,
 ): ResidualFatigueOverlayState {
     val customActionsList =
         rememberResidualFatigueAccessibilityActions(
-            selectedIndex = selectedIndex,
-            points = points,
+            selectedIndex = selection.selectedIndex,
+            points = selection.points,
             onSelectIndex = onSelectIndex,
         )
     val chartSummary = stringResource(R.string.chart_residual_fatigue_curve_description)
     val selectedValueDesc =
-        selectedIndex?.let { idx ->
-            points.getOrNull(idx)?.let { formatFatiguePoint(it, range, tooltipFormat) }
+        selection.selectedIndex?.let { idx ->
+            selection.points.getOrNull(idx)?.let {
+                formatFatiguePoint(it, selection.range, selection.tooltipFormat, selection.zoneId)
+            }
         } ?: stringResource(CoreUiR.string.chart_accessibility_no_selection)
 
     return ResidualFatigueOverlayState(
         summary = chartSummary,
         selectedValueDesc = selectedValueDesc,
         actions = customActionsList,
-        pointOffset = pointOffset,
+        pointOffset = selection.selectedPointOffset,
         tooltip = tooltip,
     )
 }
@@ -186,6 +188,7 @@ private fun rememberResidualFatigueOverlayState(
 private fun ResidualFatigueChartBox(
     points: List<FatigueCurvePoint>,
     range: FatigueCurveRange,
+    zoneId: ZoneId,
     state: ResidualFatigueOverlayState,
     markerListener: CartesianMarkerVisibilityListener,
     onMultiTouch: () -> Unit,
@@ -213,7 +216,12 @@ private fun ResidualFatigueChartBox(
                     }
                 },
     ) {
-        ResidualFatigueCartesianHost(points = points, range = range, markerListener = markerListener)
+        ResidualFatigueCartesianHost(
+            points = points,
+            range = range,
+            zoneId = zoneId,
+            markerListener = markerListener,
+        )
         VicoChartTooltipOverlay(
             selectedPointOffset = state.pointOffset,
             pulseColor = MaterialTheme.colorScheme.primary,
@@ -233,6 +241,7 @@ private fun ResidualFatigueChartBox(
 private fun ResidualFatigueCartesianHost(
     points: List<FatigueCurvePoint>,
     range: FatigueCurveRange,
+    zoneId: ZoneId,
     markerListener: CartesianMarkerVisibilityListener,
 ) {
     val modelProducer = remember { CartesianChartModelProducer() }
@@ -258,7 +267,7 @@ private fun ResidualFatigueCartesianHost(
         }
     val lineLayer = rememberResidualFatigueLineLayer(rangeProvider)
     val itemPlacer = rememberResidualFatigueItemPlacer(range)
-    val valueFormatter = rememberResidualFatigueValueFormatter(range, points)
+    val valueFormatter = rememberResidualFatigueValueFormatter(range, points, zoneId)
     val label = ChartDefaults.labelTextComponent()
     val axisLabel = ChartDefaults.axisLabelTextComponent()
     val guideline = ChartDefaults.guidelineComponent()

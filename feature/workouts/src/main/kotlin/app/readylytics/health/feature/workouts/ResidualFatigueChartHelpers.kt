@@ -52,12 +52,14 @@ internal data class ResidualFatigueSelectionData(
     val points: List<FatigueCurvePoint>,
     val range: FatigueCurveRange,
     val tooltipFormat: String,
+    val zoneId: ZoneId = ZoneId.systemDefault(),
 )
 
 internal fun formatFatiguePoint(
     point: FatigueCurvePoint,
     range: FatigueCurveRange,
     tooltipFormat: String,
+    zoneId: ZoneId = ZoneId.systemDefault(),
 ): String {
     val timeStr =
         if (range == FatigueCurveRange.ONE_DAY) {
@@ -65,7 +67,7 @@ internal fun formatFatiguePoint(
             val minutes = (point.timeMinutesFromStart % MINUTES_PER_HOUR).toInt().coerceIn(0, MINUTES_PER_HOUR - 1)
             String.format(Locale.getDefault(), "%02d:%02d", hours, minutes)
         } else {
-            val zdt = Instant.ofEpochMilli(point.timestampMs).atZone(ZoneId.systemDefault())
+            val zdt = Instant.ofEpochMilli(point.timestampMs).atZone(zoneId)
             zdt.format(DateTimeFormatter.ofPattern("EEE, MMM d, HH:mm", Locale.getDefault()))
         }
     return String.format(Locale.getDefault(), tooltipFormat, timeStr, point.fatigueValue)
@@ -98,8 +100,9 @@ internal fun rememberResidualFatigueItemPlacer(range: FatigueCurveRange): Horizo
 internal fun rememberResidualFatigueValueFormatter(
     range: FatigueCurveRange,
     points: List<FatigueCurvePoint>,
+    zoneId: ZoneId = ZoneId.systemDefault(),
 ): CartesianValueFormatter =
-    remember(range, points) {
+    remember(range, points, zoneId) {
         val startEpochMs = points.firstOrNull()?.timestampMs
         CartesianValueFormatter { _, v, _ ->
             if (range == FatigueCurveRange.ONE_DAY) {
@@ -107,7 +110,7 @@ internal fun rememberResidualFatigueValueFormatter(
                 String.format(Locale.getDefault(), "%02d:00", h)
             } else if (startEpochMs != null) {
                 val tickEpochMs = startEpochMs + (v * MILLIS_PER_MINUTE).toLong()
-                val zdt = Instant.ofEpochMilli(tickEpochMs).atZone(ZoneId.systemDefault())
+                val zdt = Instant.ofEpochMilli(tickEpochMs).atZone(zoneId)
                 zdt.format(DateTimeFormatter.ofPattern("EEE", Locale.getDefault()))
             } else {
                 ""
@@ -178,11 +181,12 @@ internal fun ObserveTooltipSelection(
         selection.points,
         selection.range,
         selection.selectedPointOffset,
+        selection.zoneId,
     ) {
         val idx = selection.selectedIndex
         if (idx != null && idx in selection.points.indices) {
             val point = selection.points[idx]
-            val formatted = formatFatiguePoint(point, selection.range, selection.tooltipFormat)
+            val formatted = formatFatiguePoint(point, selection.range, selection.tooltipFormat, selection.zoneId)
             val offset =
                 selection.selectedPointOffset?.let {
                     IntOffset(it.x.toInt(), it.y.toInt())
