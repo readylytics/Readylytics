@@ -1113,18 +1113,19 @@ While the calculation remains shadow-only (it does not modify Readiness, Load Sc
    - Registered in `CardId` and default-hidden in `SettingsDefaults.DEFAULT_DASHBOARD_CARDS` (`isVisible = false`, `defaultDisplayMode = GAUGE`).
    - `DashboardMetricPresentationFactory` maps `DailySummary.residualFatigue` into a `UniversalMetricPresentation`: value formatted to 1 decimal place, unit empty/dimensionless, gauge min=0 / max=100, status classification (< 30 Optimal, 30..70 Neutral, > 70 Warning, null/disabled NO_DATA), and secondary text `card_residual_fatigue_secondary` ("Half-life: Xh").
    - Renders via `UniversalMetricCard` across Gauge, Bar, and Value display modes. Tapping the card navigates to the Workouts tab (`onNavigateToWorkouts`).
-2. **Workouts 24-Hour Decay Curve Chart (`WorkoutChartId.RESIDUAL_FATIGUE_CURVE`):**
+2. **Workouts Residual Fatigue Curve Chart (`WorkoutChartId.RESIDUAL_FATIGUE_CURVE`):**
    - Registered in `WorkoutChartId` and default-hidden in `SettingsDefaults.DEFAULT_WORKOUT_CHARTS` (`isVisible = false`).
-   - On-demand 24-hour sampling pipeline:
+   - Encapsulated within `ResidualFatigueSection` (`feature/workouts/.../ResidualFatigueSection.kt`) which hosts a native Material 3 `SingleChoiceSegmentedButtonRow` for interactive `1D / 3D / 7D` range selection (`FatigueCurveRange`).
+   - Multi-day sampling pipeline across `startDate..endDate`:
      ```
-     Selected Date & WorkoutsUiState
+     Selected Date Range (FatigueCurveRange: 1D, 3D, or 7D) & WorkoutsUiState
        │
-       ▼ loads historical canonical fatigue seed
-     WorkoutRepository.getCanonicalFatigueSeed(evalMs) -> WorkoutDao.getCanonicalFatigueSeed
+       ▼ loads historical canonical fatigue seed (35 days before range start)
+     WorkoutRepository.getCanonicalFatigueSeed(startDate.atStartOfDay()) -> WorkoutDao.getCanonicalFatigueSeed
        │
-       ▼ passed with active preferences (halfLifeHours, gain, enabled)
+       ▼ passed with active workouts & preferences (halfLifeHours, gain, enabled)
       GenerateResidualFatigueCurveUseCase (core/scoring/.../domain/scoring/)
-        │  Samples timeline at 15-minute intervals (96 grid points per day)
+        │  Samples continuous timeline at 15-minute intervals across start..end (96 points/day)
         │  + exact workout completion impulse timestamps (TreeSet<Long>)
         │  Computes continuous decay: F(t) = sum(gain * trimp * 2^(-(t - end) / halfLife))
         ▼
@@ -1133,6 +1134,7 @@ While the calculation remains shadow-only (it does not modify Readiness, Load Sc
        ▼ rendered by
      ResidualFatigueCurveChart (feature/workouts/.../ResidualFatigueCurveChart.kt)
        Canvas-based smooth Cubic Bézier curve with bottom area gradient fill,
+       range-adaptive X-axis tick placer and touch scrubber (HH:mm for 1D, MMM d HH:mm for 3D/7D),
        dashed vertical marker for current time (when viewing today),
        and interactive touch drag-scrubber with tooltip readout.
      ```
@@ -1512,7 +1514,7 @@ Key behaviors:
 
 ### 3.8 Workouts Tab Layout Customization & Proto DataStore Persistence Pipeline
 
-The Workouts tab supports customizable layout ordering, visibility toggling, and display mode selection across three groups: **Cards** (Strain Ratio, Readiness, RAS Daily, Residual Fatigue — reusing the shared `CardId`/`CardConfiguration` model from `core/model/.../domain/dashboard`), **Diagrams** (the ACWR/TRIMP training-load chart, 24-hour residual fatigue curve, weekly training comparisons, activity volume, training mix), and **History** (recent workout list, status legend).
+The Workouts tab supports customizable layout ordering, visibility toggling, and display mode selection across three groups: **Cards** (Strain Ratio, Readiness, RAS Daily, Residual Fatigue — reusing the shared `CardId`/`CardConfiguration` model from `core/model/.../domain/dashboard`), **Diagrams** (the ACWR/TRIMP training-load chart, residual fatigue curve (1D/3D/7D), weekly training comparisons, activity volume, training mix), and **History** (recent workout list, status legend).
 
 ```
 WorkoutsManagementBottomSheet / WorkoutsScreen (UI interaction)
