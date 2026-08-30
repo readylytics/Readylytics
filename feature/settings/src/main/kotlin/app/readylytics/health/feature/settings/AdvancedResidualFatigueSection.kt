@@ -18,11 +18,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
+import app.readylytics.health.core.ui.components.MetricTooltip
 
 /**
  * M3 `Slider.steps` counts the stops *between* the endpoints, so the interval is
@@ -42,22 +44,20 @@ fun ResidualFatigueSubsection(
     onUIEvent: (SettingsEvent) -> Unit,
 ) {
     Column {
-        Text(
-            text = stringResource(R.string.advanced_residual_fatigue_title),
-            style = MaterialTheme.typography.labelLarge,
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium),
-        )
+        ) {
+            Text(
+                text = stringResource(R.string.advanced_residual_fatigue_title),
+                style = MaterialTheme.typography.labelLarge,
+            )
+            MetricTooltip(description = stringResource(R.string.advanced_residual_fatigue_info_tooltip))
+        }
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
 
         ListItem(
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            supportingContent = {
-                Text(
-                    text = stringResource(R.string.advanced_residual_fatigue_enabled_desc),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            },
             trailingContent = {
                 Switch(
                     checked = uiState.residualFatigueEnabled,
