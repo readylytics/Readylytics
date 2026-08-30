@@ -1098,12 +1098,45 @@ paths stay shadow-only and independent of workout-only versus everyday-HR load-s
 `SettingsDefaults.RESIDUAL_FATIGUE_*`, guardrails 6–96 h / 0.1–5.0 enforced in
 `PhysiologyPreferences.toValidFatigueHalfLife`/`toValidFatigueGain`,
 `SettingsValidators.FATIGUE_HALF_LIFE_RULE`/`FATIGUE_GAIN_RULE`, and at the domain boundary by
-`ResidualFatigueConfig.clamped`. The two sliders in `AdvancedResidualFatigueSection` use
+`ResidualFatigueConfig.clamped`. In `AdvancedResidualFatigueSection` (`feature/settings`), the section header
+features an info-icon tooltip (`residual_fatigue_header_tooltip`) with an explanatory dialog, and a compact
+`SettingsSwitchRow` toggle (`residual_fatigue_enabled_label`). The two sliders use
 `RESIDUAL_FATIGUE_HALF_LIFE_SLIDER_STEPS = 89` and `RESIDUAL_FATIGUE_GAIN_SLIDER_STEPS = 48`: M3
 `Slider.steps` counts the stops *between* the endpoints, so those give exactly 1-hour and 0.1 increments
 and put the documented 24 h / 1.00 defaults on a stop. Resolved per-day from the preferences
 snapshot inside `ResidualFatigueComputer.compute`. Changing fatigue settings invalidates resync
 checkpoints and triggers a historical recompute via `HealthDataRefresh.refreshHistorical()`.
+
+**Visualizations & Presentation Pipeline (optional, default-hidden).**
+While the calculation remains shadow-only (it does not modify Readiness, Load Score, or any recommendation), users can optionally visualize Residual Fatigue across two surfaces:
+1. **Dashboard Metric Card (`CardId.RESIDUAL_FATIGUE`):**
+   - Registered in `CardId` and default-hidden in `SettingsDefaults.DEFAULT_DASHBOARD_CARDS` (`visible = false`, `defaultDisplayMode = GAUGE`) and `DEFAULT_WORKOUT_CARDS` (`visible = false`).
+   - `DashboardMetricFactory.createUniversalPresentation` maps `DailySummary.residualFatigue` into a `UniversalMetricPresentation`: value formatted to 1 decimal place, unit empty/dimensionless, gauge min=0 / max=100, status classification via `ClassifyMetricStatusUseCase.classifyResidualFatigue(value)` (Optimal $\le$ 20, Neutral $\le$ 40, Warning $\le$ 70, Poor > 70), and subtitle `R.string.dashboard_metric_residual_fatigue_subtitle`.
+   - Renders via `UniversalMetricCard` / `M3ScoreGaugeCard` across Gauge, Bar, and Value display modes. Tapping the card emits `DashboardEvent.CardClicked(CardId.RESIDUAL_FATIGUE)` which navigates to the Workouts tab (`Screen.Workouts`).
+2. **Workouts 24-Hour Decay Curve Chart (`WorkoutChartId.RESIDUAL_FATIGUE_CURVE`):**
+   - Registered in `WorkoutChartId` and default-hidden in `SettingsDefaults.DEFAULT_WORKOUT_CHARTS` (`visible = false`).
+   - On-demand 24-hour sampling pipeline:
+     ```
+     Selected Date & WorkoutsUiState
+       │
+       ▼ loads historical canonical fatigue seed & day's workouts
+     WorkoutDao.getCanonicalFatigueSeed(targetDayStartMs) (or WorkoutRepository.getCanonicalFatigueSeed)
+     + WorkoutRepository.getWorkoutsForDay(day)
+       │
+       ▼ passed with active preferences (halfLifeHours, fatigueGain, enabled)
+     Generate24hResidualFatigueCurveUseCase (core/scoring/.../domain/scoring/)
+       │  Samples 24-hour timeline at 15-minute intervals (97 points: 00:00 to 24:00)
+       │  + exact workout completion impulse timestamps
+       │  Computes continuous decay via ComputeResidualFatigueUseCase.compute()
+       ▼
+     ResidualFatigueCurvePresentation (timePoints, points, minFatigue, maxFatigue, peakFatigue, endOfDayFatigue)
+       │
+       ▼ rendered by
+     ResidualFatigueCurveChart (feature/workouts/.../ResidualFatigueCurveChart.kt)
+       Canvas-based smooth Cubic Bézier curve with bottom area gradient fill,
+       dashed vertical marker for current time (when viewing today),
+       and interactive touch drag-scrubber with tooltip readout.
+     ```
 
 ---
 
@@ -1317,10 +1350,12 @@ defaults when unset).
 | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/BaselineZScoreComputer.kt`                                 | Processing — Z-score computation                    | HRV & RHR Z-scores, nocturnal RHR delta BPM                                              |
 | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/RestorationScoreAssembler.kt` | Processing — restoration assembly | restoration score (sRest) assembly and contributor subscores |
 | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/ComputeResidualFatigueUseCase.kt` | Processing — residual fatigue (pure) | `compute()` summation + `advanceAccumulator()` decay/add step (§2.8) |
+| `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/Generate24hResidualFatigueCurveUseCase.kt` | Processing — 24h fatigue curve (pure) | generates 24-hour timeline samples at 15m intervals + workout impulses (§2.8) |
 | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/scoring/ResidualFatigueConfig.kt` | Domain — fatigue parameters | enabled / halfLifeHours / fatigueGain (shadow mode, §2.8) |
 | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/repository/WalkForwardFatigueContext.kt` | Processing — walk-forward accumulator | prefetched impulse series + running accumulated fatigue (WP-27) |
 | `core/database/src/main/kotlin/app/readylytics/health/core/database/data/repository/ResidualFatigueComputer.kt` | Processing — fatigue snapshot | per-day snapshot at next-day midnight; exact retained-history seed (§2.8) |
 | `core/database/src/main/kotlin/app/readylytics/health/core/database/data/repository/FinalSummaryAssembler.kt` | Processing — summary assembly | stamps `residualFatigue` onto the assembled `DailySummary` (§2.8) |
+| `feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts/ResidualFatigueCurveChart.kt`     | UI — Canvas chart                                   | 24-hour continuous residual fatigue decay curve with touch scrubber |
 | `feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard/DashboardViewModel.kt` | UI — dashboard state                                | summary, cards, RAS, recalc progress                                                     |
 | `ui/sync/SyncViewModel.kt`                                                 | UI — sync state                                     | `recalcProgress` forward                                                                 |
 | `feature/vitals/src/main/kotlin/app/readylytics/health/feature/vitals/overview/VitalsViewModel.kt`         | UI — vitals state                                   | HRV / RHR / SpO2 / body temperature trends + bands                                       |
@@ -1478,7 +1513,7 @@ Key behaviors:
 
 ### 3.8 Workouts Tab Layout Customization & Proto DataStore Persistence Pipeline
 
-The Workouts tab supports customizable layout ordering, visibility toggling, and display mode selection across three groups: **Cards** (Strain Ratio, Readiness, RAS Daily — reusing the shared `CardId`/`CardConfiguration` model from `core/model/.../domain/dashboard`), **Diagrams** (the ACWR/TRIMP training-load chart), and **History** (recent workout list, status legend).
+The Workouts tab supports customizable layout ordering, visibility toggling, and display mode selection across three groups: **Cards** (Strain Ratio, Readiness, RAS Daily, Residual Fatigue — reusing the shared `CardId`/`CardConfiguration` model from `core/model/.../domain/dashboard`), **Diagrams** (the ACWR/TRIMP training-load chart, 24-hour residual fatigue curve, weekly training comparisons, activity volume, training mix), and **History** (recent workout list, status legend).
 
 ```
 WorkoutsManagementBottomSheet / WorkoutsScreen (UI interaction)
@@ -1508,6 +1543,7 @@ Key behaviors:
 - **Domain Seam:** Cards reuse the existing `CardId`/`CardConfiguration` (already shared with Dashboard/Sleep/Vitals). `WorkoutChartConfiguration`/`WorkoutChartId` and `WorkoutHistoryConfiguration`/`WorkoutHistoryId` are new pure domain models in `core/model` (zero Android dependencies).
 - **Auto-Healing Defaults:** On initialization or repository flow observation, `WorkoutsLayoutRepositoryImpl` checks stored configurations against `SettingsDefaults.DEFAULT_WORKOUT_CARDS`, `DEFAULT_WORKOUT_CHARTS`, and `DEFAULT_WORKOUT_HISTORY`. Any missing default items are automatically appended after the highest stored position.
 - **RAS Daily dual rendering:** `CardId.RAS_DAILY`'s VALUE mode (default) renders the rich weekly-breakdown card (`RasWeeklyCard`); switching to GAUGE mode renders a compact dial of today's RAS score, matching Strain Ratio/Readiness.
+- **Residual Fatigue (optional):** `CardId.RESIDUAL_FATIGUE` in Cards and `WorkoutChartId.RESIDUAL_FATIGUE_CURVE` in Diagrams are registered as default-hidden items (`visible = false`). Users can enable them via the Workouts layout management bottom sheet.
 - **Backup & Restore Integration:** `LocalBackupManager` streams active workout layout configurations (`workoutCards`, `workoutCharts`, `workoutHistory`) into `UserPreferencesBackup` within encrypted ZIP backups. `LocalRestoreManager` restores these back to `WorkoutsLayoutRepository` (Proto DataStore) during the post-database preference restoration stage.
 
 ---
