@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.workouts
 
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -7,6 +8,7 @@ import androidx.compose.ui.test.onNodeWithText
 import app.readylytics.health.core.designsystem.FitDashboardTheme
 import app.readylytics.health.core.model.domain.workouts.FatigueCurvePoint
 import app.readylytics.health.core.model.domain.workouts.FatigueCurveRange
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -18,6 +20,31 @@ import org.robolectric.annotation.Config
 class ResidualFatigueCurveChartTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    @Test
+    fun residualFatigueSelectedPointOffset_isHiddenWithoutSelection() {
+        val offset = Offset(12f, 24f)
+
+        assertEquals(
+            null,
+            residualFatigueSelectedPointOffset(isSelectionVisible = false, selectedPointOffset = offset),
+        )
+        assertEquals(
+            offset,
+            residualFatigueSelectedPointOffset(isSelectionVisible = true, selectedPointOffset = offset),
+        )
+    }
+
+    @Test
+    fun residualFatigueChartXValues_roundToVicoPrecision() {
+        val points =
+            listOf(
+                FatigueCurvePoint(timestampMs = 0L, timeMinutesFromStart = 0f, fatigueValue = 10f),
+                FatigueCurvePoint(timestampMs = 0L, timeMinutesFromStart = 1.234567f, fatigueValue = 20f),
+            )
+
+        assertEquals(listOf(0.0, 1.2346), residualFatigueChartXValues(points))
+    }
 
     @Test
     fun residualFatigueCurveChart_emptyData_displaysEmptyMessage() {
@@ -39,7 +66,7 @@ class ResidualFatigueCurveChartTest {
         val points =
             listOf(
                 FatigueCurvePoint(timestampMs = 0L, timeMinutesFromStart = 0f, fatigueValue = 10f),
-                FatigueCurvePoint(timestampMs = 900_000L, timeMinutesFromStart = 15f, fatigueValue = 25f),
+                FatigueCurvePoint(timestampMs = 900_000L, timeMinutesFromStart = 1.234567f, fatigueValue = 25f),
                 FatigueCurvePoint(timestampMs = 1_800_000L, timeMinutesFromStart = 30f, fatigueValue = 20f),
             )
 

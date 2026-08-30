@@ -105,11 +105,14 @@ private fun ResidualFatigueChartContent(
     var selectedIndex by remember { mutableStateOf<Int?>(null) }
     val tooltipFormat = stringResource(R.string.chart_residual_fatigue_tooltip_format)
 
-    ObserveParentScroll(parentScrollInProgress) {
+    fun clearSelection() {
         tooltipState = null
         selectedPointOffset = null
         selectedIndex = null
     }
+
+    ObserveParentScroll(parentScrollInProgress, ::clearSelection)
+    LaunchedEffect(range) { clearSelection() }
 
     val selectionData =
         ResidualFatigueSelectionData(
@@ -139,6 +142,7 @@ private fun ResidualFatigueChartContent(
                 selectedPointOffset = Offset(canvasX, canvasY)
                 selectedIndex = points.indices.minByOrNull { abs(points[it].timeMinutesFromStart - x) } ?: 0
             },
+            onPointHidden = ::clearSelection,
         )
 
     ResidualFatigueChartBox(
@@ -148,10 +152,9 @@ private fun ResidualFatigueChartContent(
         state = overlayState,
         markerListener = markerListener,
         onMultiTouch = {
-            tooltipState = null
-            selectedPointOffset = null
+            clearSelection()
         },
-        onDismissTooltip = { tooltipState = null },
+        onDismissTooltip = ::clearSelection,
     )
 }
 
@@ -223,7 +226,11 @@ private fun ResidualFatigueChartBox(
             markerListener = markerListener,
         )
         VicoChartTooltipOverlay(
-            selectedPointOffset = state.pointOffset,
+            selectedPointOffset =
+                residualFatigueSelectedPointOffset(
+                    isSelectionVisible = state.tooltip != null,
+                    selectedPointOffset = state.pointOffset,
+                ),
             pulseColor = MaterialTheme.colorScheme.primary,
             modifier = Modifier.fillMaxWidth().height(200.dp),
         )
@@ -250,7 +257,7 @@ private fun ResidualFatigueCartesianHost(
             modelProducer.runTransaction {
                 lineModel {
                     series(
-                        x = points.map { it.timeMinutesFromStart.toDouble() },
+                        x = residualFatigueChartXValues(points),
                         y = points.map { it.fatigueValue.toDouble() },
                     )
                 }

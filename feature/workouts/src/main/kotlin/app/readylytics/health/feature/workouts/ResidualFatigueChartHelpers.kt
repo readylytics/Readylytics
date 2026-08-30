@@ -34,6 +34,7 @@ internal const val TOTAL_MINUTES_IN_DAY = 1440.0
 private const val CHART_CUBIC_INTERPOLATION = 0.2f
 private const val GRADIENT_START_ALPHA = 0.35f
 internal const val Y_AXIS_GRID_STEP = 25.0
+private const val VICO_X_VALUE_PRECISION = 10_000.0
 private const val MINUTES_PER_HOUR = 60
 private const val HOURS_PER_DAY = 24
 private const val MILLIS_PER_MINUTE = 60_000.0
@@ -54,6 +55,16 @@ internal data class ResidualFatigueSelectionData(
     val tooltipFormat: String,
     val zoneId: ZoneId = ZoneId.systemDefault(),
 )
+
+internal fun residualFatigueSelectedPointOffset(
+    isSelectionVisible: Boolean,
+    selectedPointOffset: Offset?,
+): Offset? = selectedPointOffset.takeIf { isSelectionVisible }
+
+internal fun residualFatigueChartXValues(points: List<FatigueCurvePoint>): List<Double> =
+    points.map { point ->
+        (point.timeMinutesFromStart.toDouble() * VICO_X_VALUE_PRECISION).roundToInt() / VICO_X_VALUE_PRECISION
+    }
 
 internal fun formatFatiguePoint(
     point: FatigueCurvePoint,
