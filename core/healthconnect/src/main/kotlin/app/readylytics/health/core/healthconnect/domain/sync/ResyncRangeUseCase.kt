@@ -9,6 +9,7 @@ import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.core.model.domain.repository.HealthConnectWindowTimeoutException
+import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
 import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
 import app.readylytics.health.core.model.domain.util.logD
@@ -430,6 +431,16 @@ class ResyncRangeUseCase
                         } else {
                             null
                         }
+                    // WP-27: prefetch historical seed impulses once for the whole recompute
+                    // walk-forward (exact retained history). Null when the recompute range is
+                    // empty, mirroring trimpContext/baselineContext. The mutable accumulator advances
+                    // across the chronological day loop below (including across chunk boundaries).
+                    val fatigueContext =
+                        if (!recomputeStartDate.isAfter(endDate)) {
+                            recomputeSupport.buildWalkForwardFatigueContext(recomputeStartDate, endDate, zoneId)
+                        } else {
+                            null
+                        }
                     if (checkpoint == null || checkpoint.phase != ResyncPhase.RECOMPUTE) {
                         healthIngestionStore.clearFrozenBaselines(startDate, endDate.plusDays(1), zoneId)
                     }
@@ -465,18 +476,16 @@ class ResyncRangeUseCase
                                             stepsDevice != null -> stepsMap[day] ?: 0L
                                             else -> stepsMap[day]
                                         }
+                                    // The nullable fields already express "not available for this
+                                    // run", so no branch is needed: each computer handles a null
+                                    // context individually.
                                     val dayResult =
-                                        if (trimpContext != null && baselineContext != null) {
-                                            recomputeSupport.recomputeDay(
-                                                day,
-                                                stepsForDay,
-                                                prefs,
-                                                trimpContext,
-                                                baselineContext,
-                                            )
-                                        } else {
-                                            recomputeSupport.recomputeDay(day, stepsForDay, prefs)
-                                        }
+                                        recomputeSupport.recomputeDay(
+                                            day,
+                                            stepsForDay,
+                                            prefs,
+                                            WalkForwardContexts(trimpContext, baselineContext, fatigueContext),
+                                        )
                                     if (dayResult is Result.Failure) {
                                         logD(TELEMETRY_TAG) { "[RECOMPUTE] Failed at day $day: ${dayResult.reason}" }
                                         failure = dayResult
@@ -490,8 +499,14 @@ class ResyncRangeUseCase
                                 failure
                             }
                         if (chunkFailure != null) {
-                            // The chunk rolled back, so no checkpoint advance: the stored checkpoint
-                            // still starts at this chunk's first day and a retry redoes it whole.
+                            // The chunk does NOT roll back: recomputeDay catches and returns a
+                            // Result.Failure instead of throwing, so inRecomputeTransaction returns
+                            // normally and the days completed before the failure commit. Safety comes
+                            // from the checkpoint, not the transaction — it is not advanced, so it
+                            // still starts at this chunk's first day and a retry redoes the chunk
+                            // whole. Recompute is idempotent, and the retry rebuilds the fatigue
+                            // accumulator from the checkpoint boundary, so the partially committed
+                            // days are recomputed to the same values (see DATA_FLOW.md §2.8).
                             return@withContext chunkFailure
                         }
                         recomputedDays =
@@ -567,7 +582,7 @@ class ResyncRangeUseCase
         }
     }
 
-private fun UserPreferences.scoringCheckpointIdentity(): String =
+internal fun UserPreferences.scoringCheckpointIdentity(): String =
     listOf(
         "goalSleepHours=$goalSleepHours",
         "hrvBaselineOverride=$hrvBaselineOverride",
@@ -602,4 +617,7 @@ private fun UserPreferences.scoringCheckpointIdentity(): String =
         "supplementalCutoffMinutesOfDay=$supplementalCutoffMinutesOfDay",
         "minimumCountedSleepSegmentMinutes=$minimumCountedSleepSegmentMinutes",
         "supplementalArchitectureCoveragePercent=$supplementalArchitectureCoveragePercent",
+        "residualFatigueEnabled=$residualFatigueEnabled",
+        "residualFatigueHalfLifeHours=$residualFatigueHalfLifeHours",
+        "residualFatigueGain=$residualFatigueGain",
     ).joinToString("|")

@@ -40,28 +40,39 @@ abstract class DashboardMetricPresentationFactoryTestBase {
         // fall through to an empty-string default for them.
         every { resourceProvider.getString(any(), any(), any(), any()) } returns "mock_string"
         every { resourceProvider.getString(any(), any(), any(), any(), any()) } returns "mock_string"
+        every {
+            resourceProvider.getString(DashboardR.string.card_residual_fatigue_secondary, *anyVararg())
+        } answers { "Half-life: ${invocation.formatArguments()[0]}h" }
     }
 
     protected fun summary(
         weightKg: Float? = null,
         bodyFatPercent: Float? = null,
         strainRatio: Float? = null,
+        residualFatigue: Float? = null,
     ) = DailySummary(
         date = date,
         weightKg = weightKg,
         bodyFatPercent = bodyFatPercent,
         strainRatioWorkoutOnly = strainRatio,
         strainRatioEverydayHr = strainRatio,
+        residualFatigue = residualFatigue,
     )
 
     protected fun preferences(
         heightCm: Float = 180f,
         gender: Gender = Gender.MALE,
         physiologyProfile: PhysiologyProfile = PhysiologyProfile.ACTIVE,
+        residualFatigueEnabled: Boolean = true,
+        residualFatigueHalfLifeHours: Float = 24f,
+        residualFatigueGain: Float = 1f,
     ) = UserPreferences(
         heightCm = heightCm,
         gender = gender,
         physiologyProfile = physiologyProfile,
+        residualFatigueEnabled = residualFatigueEnabled,
+        residualFatigueHalfLifeHours = residualFatigueHalfLifeHours,
+        residualFatigueGain = residualFatigueGain,
     )
 
     protected val date = LocalDate.now()
@@ -81,6 +92,7 @@ abstract class DashboardMetricPresentationFactoryTestBase {
             DashboardR.string.tooltip_heart_rate_card to "tooltip heart rate",
             CoreUiR.string.tooltip_circadian_score to "tooltip circadian",
             CoreUiR.string.tooltip_strain_ratio to "tooltip strain ratio",
+            DashboardR.string.tooltip_residual_fatigue to "tooltip residual fatigue",
         )
 
     protected fun stubTooltips() {

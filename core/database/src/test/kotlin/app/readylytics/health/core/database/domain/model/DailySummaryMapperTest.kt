@@ -95,6 +95,32 @@ class DailySummaryMapperTest {
     }
 
     @Test
+    fun toEntityPreservesResidualFatigue() {
+        val scoringZone = ZoneId.of("Europe/Berlin")
+        val scoringDate = LocalDate.of(2026, 3, 29)
+        val domain = DailySummary(date = scoringDate, residualFatigue = 42.5f)
+
+        val entity = DailySummaryMapper.toEntity(domain, scoringZone)
+        val roundTrip = DailySummaryMapper.toDomain(entity, scoringZone)
+
+        assertEquals(42.5f, entity.residualFatigue)
+        assertEquals(42.5f, roundTrip.residualFatigue)
+    }
+
+    @Test
+    fun toEntityDefaultsResidualFatigueToNull() {
+        val scoringZone = ZoneId.of("Europe/Berlin")
+        val scoringDate = LocalDate.of(2026, 3, 29)
+        val domain = DailySummary(date = scoringDate)
+
+        val entity = DailySummaryMapper.toEntity(domain, scoringZone)
+        val roundTrip = DailySummaryMapper.toDomain(entity, scoringZone)
+
+        assertTrue(entity.residualFatigue == null)
+        assertTrue(roundTrip.residualFatigue == null)
+    }
+
+    @Test
     fun toEntityPersistsRecoveryFlagsFromReadinessResult() {
         val scoringZone = ZoneId.of("Europe/Berlin")
         val scoringDate = LocalDate.of(2026, 3, 29)

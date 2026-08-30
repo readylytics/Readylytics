@@ -47,6 +47,9 @@ class UISettingsViewModel
                         banisterMultiplier = prefs.banisterMultiplier,
                         chengBeta = prefs.chengBeta,
                         itrimB = prefs.itrimB,
+                        residualFatigueEnabled = prefs.residualFatigueEnabled,
+                        residualFatigueHalfLifeHours = prefs.residualFatigueHalfLifeHours,
+                        residualFatigueGain = prefs.residualFatigueGain,
                         unitSystem = prefs.unitSystem,
                         weekStartDay = prefs.weekStartDay,
                         isCustomPaletteEnabled = prefs.isCustomPaletteEnabled,
@@ -140,6 +143,34 @@ class UISettingsViewModel
                         }
                     }
                 }
+                is SettingsEvent.ResidualFatigueEnabledChanged ->
+                    viewModelScope.launch {
+                        displaySettings.updateResidualFatigueEnabled(event.enabled)
+                        healthDataRefresh.refreshHistorical()
+                    }
+                is SettingsEvent.ResidualFatigueHalfLifeChanged -> {
+                    val validation = SettingsValidators.FATIGUE_HALF_LIFE_RULE.validate(event.hours)
+                    if (validation is ValidationResult.Valid) {
+                        viewModelScope.launch {
+                            displaySettings.updateResidualFatigueHalfLifeHours(event.hours)
+                            healthDataRefresh.refreshHistorical()
+                        }
+                    }
+                }
+                is SettingsEvent.ResidualFatigueGainChanged -> {
+                    val validation = SettingsValidators.FATIGUE_GAIN_RULE.validate(event.value)
+                    if (validation is ValidationResult.Valid) {
+                        viewModelScope.launch {
+                            displaySettings.updateResidualFatigueGain(event.value)
+                            healthDataRefresh.refreshHistorical()
+                        }
+                    }
+                }
+                SettingsEvent.ResetFatigueToDefaults ->
+                    viewModelScope.launch {
+                        displaySettings.resetResidualFatigueToDefaults()
+                        healthDataRefresh.refreshHistorical()
+                    }
                 SettingsEvent.WorkoutDetailLayoutsResetConfirmed ->
                     viewModelScope.launch { workoutDetailLayoutRepository.resetAll() }
                 SettingsEvent.ResetTrimpToProfileDefaults ->

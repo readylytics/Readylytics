@@ -7,6 +7,7 @@ import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadIn
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
 import app.readylytics.health.core.scoring.domain.scoring.BuildLoadSeriesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
@@ -44,6 +45,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import app.readylytics.health.core.database.data.repository.ScoringDayUseCases
+import app.readylytics.health.core.database.data.repository.ScoringDataLoaders
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ScoringPointInTimeRegressionTest {
@@ -104,15 +107,20 @@ class ScoringPointInTimeRegressionTest {
             )
         repo =
             ScoringRepositoryImpl(
-                dataLoader,
-                bodyMetricsDataLoader,
-                seriesLoader,
+                ScoringDataLoaders(
+                    dataLoader,
+                    bodyMetricsDataLoader,
+                    seriesLoader,
+                ),
                 settingsRepo,
                 baselineComputer,
                 scoringConfigFactory,
-                ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
-                ResolveDailyBaselinesUseCase(baselineComputer),
-                AssembleEverydayLoadInputUseCase(),
+                ScoringDayUseCases(
+                    ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
+                    ComputeResidualFatigueUseCase(),
+                    ResolveDailyBaselinesUseCase(baselineComputer),
+                    AssembleEverydayLoadInputUseCase(),
+                ),
                 scoringHistoryRepository,
                 readinessSummaryCoordinator,
                 UnconfinedTestDispatcher(),

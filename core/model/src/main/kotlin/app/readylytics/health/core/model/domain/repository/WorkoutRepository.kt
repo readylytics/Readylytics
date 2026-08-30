@@ -40,6 +40,13 @@ interface WorkoutRepository {
 
     suspend fun countByTimeRange(fromMs: Long, toMs: Long): Int
 
+    /**
+     * Canonical fatigue impulses for every workout starting before [startBeforeMs]. The bound
+     * filters `startTime`, not the evaluation instant: a workout straddling the boundary stays
+     * pending until its end time is reached.
+     */
+    suspend fun getCanonicalFatigueSeed(startBeforeMs: Long): List<FatigueWorkoutInput>
+
     suspend fun getRoutePoints(workoutId: String): List<WorkoutRoutePoint>
 
     fun observeSince(fromMs: Long): Flow<List<WorkoutData>>

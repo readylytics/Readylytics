@@ -1,7 +1,9 @@
 package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
+import app.readylytics.health.core.model.data.preferences.LegacyBanisterMultipliers
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
 import app.readylytics.health.core.scoring.domain.scoring.RasCalculator
 import java.time.Clock
@@ -28,6 +30,18 @@ internal class PhysiologyPreferences
         private fun Float.toValidChengBeta() = coerceIn(0.04f, 0.12f)
 
         private fun Float.toValidItrimB() = coerceIn(1.0f, 4.5f)
+
+        private fun Float.toValidFatigueHalfLife() =
+            coerceIn(
+                SettingsDefaults.MIN_RESIDUAL_FATIGUE_HALF_LIFE_HOURS,
+                SettingsDefaults.MAX_RESIDUAL_FATIGUE_HALF_LIFE_HOURS,
+            )
+
+        private fun Float.toValidFatigueGain() =
+            coerceIn(
+                SettingsDefaults.MIN_RESIDUAL_FATIGUE_GAIN,
+                SettingsDefaults.MAX_RESIDUAL_FATIGUE_GAIN,
+            )
 
         suspend fun updateMaxHeartRate(bpm: Int) {
             dataStore.updateData { it.toBuilder().setMaxHeartRate(bpm.toValidMaxHr()).build() }
@@ -165,6 +179,24 @@ internal class PhysiologyPreferences
             }
         }
 
+        suspend fun migrateTrimpDefaultsIfNeeded() {
+            dataStore.updateData { proto ->
+                if (proto.trimpNormalizationMigrated) return@updateData proto
+                val profile = proto.physiologyProfile.toDomainProfile()
+                val newRasCal =
+                    TrimpMigrationHelper.migrateRasCalibration(
+                        storedValue = proto.rasCalibration,
+                        profile = profile,
+                        alreadyMigrated = false,
+                    )
+                proto
+                    .toBuilder()
+                    .setRasCalibration(newRasCal)
+                    .setTrimpNormalizationMigrated(true)
+                    .build()
+            }
+        }
+
         suspend fun updateTrimpModel(model: TrimpModel) {
             dataStore.updateData {
                 it
@@ -192,4 +224,47 @@ internal class PhysiologyPreferences
         suspend fun updateItrimB(value: Float) {
             dataStore.updateData { it.toBuilder().setItrimpB(value.toValidItrimB()).build() }
         }
+
+        suspend fun updateResidualFatigueEnabled(enabled: Boolean) {
+            dataStore.updateData { it.toBuilder().setResidualFatigueEnabled(enabled).build() }
+        }
+
+        suspend fun updateResidualFatigueHalfLifeHours(hours: Float) {
+            dataStore.updateData {
+                it.toBuilder().setResidualFatigueHalfLifeHours(hours.toValidFatigueHalfLife()).build()
+            }
+        }
+
+        suspend fun updateResidualFatigueGain(value: Float) {
+            dataStore.updateData {
+                it.toBuilder().setResidualFatigueGain(value.toValidFatigueGain()).build()
+            }
+        }
+
+        suspend fun resetResidualFatigueToDefaults() {
+            dataStore.updateData {
+                it
+                    .toBuilder()
+                    .setResidualFatigueEnabled(SettingsDefaults.RESIDUAL_FATIGUE_ENABLED)
+                    .setResidualFatigueHalfLifeHours(SettingsDefaults.RESIDUAL_FATIGUE_HALF_LIFE_HOURS)
+                    .setResidualFatigueGain(SettingsDefaults.RESIDUAL_FATIGUE_GAIN)
+                    .build()
+            }
+        }
     }
+
+internal object TrimpMigrationHelper {
+    fun migrateRasCalibration(
+        storedValue: Float,
+        profile: PhysiologyProfile,
+        alreadyMigrated: Boolean,
+    ): Float =
+        when {
+            alreadyMigrated -> storedValue
+            storedValue == 0f -> NORMALIZED_MULTIPLIER
+            storedValue == LegacyBanisterMultipliers.forProfile(profile) -> NORMALIZED_MULTIPLIER
+            else -> storedValue
+        }
+
+    private const val NORMALIZED_MULTIPLIER = 1.0f
+}

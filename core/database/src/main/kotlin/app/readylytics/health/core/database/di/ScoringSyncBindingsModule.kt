@@ -6,9 +6,11 @@ import app.readylytics.health.core.database.data.local.SessionLinkReconcilerImpl
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.core.database.data.repository.SelectedDateRepository
+import app.readylytics.health.core.database.data.repository.WorkoutTrimpBackfillStatusImpl
 import app.readylytics.health.core.model.domain.date.SelectedDateStore
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.model.domain.repository.ScoringRepository
+import app.readylytics.health.core.model.domain.repository.WorkoutTrimpBackfillStatus
 import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
 import app.readylytics.health.core.model.domain.sync.SelectedSourcePruner
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
@@ -44,4 +46,8 @@ abstract class ScoringSyncBindingsModule {
     @Binds
     @Singleton
     abstract fun bindSessionLinkReconciler(impl: SessionLinkReconcilerImpl): SessionLinkReconciler
+
+    @Binds
+    @Singleton
+    abstract fun bindWorkoutTrimpBackfillStatus(impl: WorkoutTrimpBackfillStatusImpl): WorkoutTrimpBackfillStatus
 }

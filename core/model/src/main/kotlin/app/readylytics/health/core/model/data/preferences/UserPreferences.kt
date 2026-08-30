@@ -111,6 +111,10 @@ data class UserPreferences(
     val lastRecalcSleepScoreWeightProfile: SleepScoreWeightProfile? = null,
     val lastRecalcGoalSleepHours: Float? = null,
     val lastRecalcHypersomniaOnsetPercent: Int? = null,
+    val trimpNormalizationMigrated: Boolean = false,
+    val residualFatigueEnabled: Boolean = SettingsDefaults.RESIDUAL_FATIGUE_ENABLED,
+    val residualFatigueHalfLifeHours: Float = SettingsDefaults.RESIDUAL_FATIGUE_HALF_LIFE_HOURS,
+    val residualFatigueGain: Float = SettingsDefaults.RESIDUAL_FATIGUE_GAIN,
 )
 
 /**

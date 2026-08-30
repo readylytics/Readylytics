@@ -213,6 +213,16 @@ class SettingsRepository
 
         override suspend fun updateItrimB(value: Float) = physiology.updateItrimB(value)
 
+        override suspend fun updateResidualFatigueEnabled(enabled: Boolean) =
+            physiology.updateResidualFatigueEnabled(enabled)
+
+        override suspend fun updateResidualFatigueHalfLifeHours(hours: Float) =
+            physiology.updateResidualFatigueHalfLifeHours(hours)
+
+        override suspend fun updateResidualFatigueGain(value: Float) = physiology.updateResidualFatigueGain(value)
+
+        override suspend fun resetResidualFatigueToDefaults() = physiology.resetResidualFatigueToDefaults()
+
         suspend fun updateInstallDate(date: LocalDate) = sync.updateInstallDate(date)
 
         suspend fun initializeInstallDateIfUnset() = sync.initializeInstallDateIfUnset()

@@ -20,6 +20,7 @@ import app.readylytics.health.core.scoring.domain.scoring.BuildLoadSeriesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.core.scoring.domain.scoring.CompositeScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.SleepMetricsCollaborators
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
@@ -42,6 +43,9 @@ import org.junit.runner.RunWith
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.test.assertEquals
+import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
+import app.readylytics.health.core.database.data.repository.ScoringDayUseCases
+import app.readylytics.health.core.database.data.repository.ScoringDataLoaders
 
 /**
  * F7 equivalence lock. Wrapping the walk-forward in one Room transaction must not change a single
@@ -180,15 +184,21 @@ class WalkForwardTransactionEquivalenceTest {
 
             val scoringRepository =
                 ScoringRepositoryImpl(
-                    dataLoader = dataLoader,
-                    bodyMetricsDataLoader = bodyMetricsDataLoader,
-                    seriesLoader = seriesLoader,
+                    loaders = ScoringDataLoaders(
+                        dataLoader,
+                        bodyMetricsDataLoader,
+                        seriesLoader,
+                    ),
                     settingsRepo = settingsRepo,
                     baselineComputer = baselineComputer,
                     scoringConfigFactory = scoringConfigFactory,
-                    computeDailyTrimpUseCase = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
-                    resolveDailyBaselinesUseCase = resolveDailyBaselinesUseCase,
-                    assembleEverydayLoadInputUseCase = AssembleEverydayLoadInputUseCase(),
+                    useCases =
+                        ScoringDayUseCases(
+                            ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
+                            ComputeResidualFatigueUseCase(),
+                            resolveDailyBaselinesUseCase,
+                            AssembleEverydayLoadInputUseCase(),
+                        ),
                     scoringHistoryRepository = scoringHistoryRepository,
                     readinessSummaryCoordinator = readinessSummaryCoordinator,
                     defaultDispatcher = UnconfinedTestDispatcher(),
@@ -197,18 +207,19 @@ class WalkForwardTransactionEquivalenceTest {
                 DailyRecomputeSupport(scoringRepository, settingsRepo, RoomTransactionRunner(db))
 
             val walkForward: suspend () -> Unit = {
-                val trimpContext =
-                    recomputeSupport.buildWalkForwardTrimpContext(startDate, endDate, zoneId)
-                val baselineContext =
-                    recomputeSupport.buildWalkForwardBaselineContext(startDate, endDate, zoneId)
+                val contexts =
+                    WalkForwardContexts(
+                        trimp = recomputeSupport.buildWalkForwardTrimpContext(startDate, endDate, zoneId),
+                        baseline = recomputeSupport.buildWalkForwardBaselineContext(startDate, endDate, zoneId),
+                        fatigue = recomputeSupport.buildWalkForwardFatigueContext(startDate, endDate, zoneId),
+                    )
                 var day = startDate
                 while (!day.isAfter(endDate)) {
                     recomputeSupport.recomputeDay(
                         day,
                         buildResult.stepsByDate[day],
                         prefs,
-                        trimpContext,
-                        baselineContext,
+                        contexts,
                     )
                     day = day.plusDays(1)
                 }

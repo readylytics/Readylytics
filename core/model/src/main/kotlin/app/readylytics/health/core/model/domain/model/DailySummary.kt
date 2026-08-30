@@ -57,4 +57,5 @@ data class DailySummary(
     val everydayLoadConfidence: String? = null,
     val supplementalSleepDurationMinutes: Int? = null,
     val napCount: Int? = null,
+    val residualFatigue: Float? = null,
 )

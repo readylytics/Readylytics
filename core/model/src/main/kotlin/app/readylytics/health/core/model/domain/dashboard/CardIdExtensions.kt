@@ -24,4 +24,5 @@ fun CardId.displayName(): String =
         CardId.AI_RECOMMENDATION -> "AI Training Recommendation"
         CardId.BODY_TEMPERATURE -> "Body Temperature"
         CardId.INSIGHTS -> "Insights"
+        CardId.RESIDUAL_FATIGUE -> "Residual Fatigue"
     }

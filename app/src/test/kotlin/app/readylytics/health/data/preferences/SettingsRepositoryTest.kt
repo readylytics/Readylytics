@@ -352,4 +352,53 @@ class SettingsRepositoryTest {
             constructorParamTypes.none { it.contains("DailySummaryDao") || it.contains("ScoringRepository") },
         )
     }
+
+    @Test
+    fun `default residual fatigue settings are exposed`() =
+        runTest {
+            val prefs = repository.userPreferences.first()
+            assertEquals(true, prefs.residualFatigueEnabled)
+            assertEquals(24f, prefs.residualFatigueHalfLifeHours, 0f)
+            assertEquals(1.0f, prefs.residualFatigueGain, 0f)
+        }
+
+    @Test
+    fun `legacy proto without residual fatigue fields resolves defaults`() {
+        val prefs = UserPreferencesProto.getDefaultInstance().toDomainModel()
+
+        assertEquals(true, prefs.residualFatigueEnabled)
+        assertEquals(24f, prefs.residualFatigueHalfLifeHours, 0f)
+        assertEquals(1.0f, prefs.residualFatigueGain, 0f)
+    }
+
+    @Test
+    fun `residual fatigue settings persist through serializer round trip`() =
+        runTest {
+            dataStore.updateData {
+                UserPreferences(
+                    residualFatigueEnabled = false,
+                    residualFatigueHalfLifeHours = 48f,
+                    residualFatigueGain = 2.5f,
+                ).toProto()
+            }
+
+            val prefs = repository.userPreferences.first()
+            assertEquals(false, prefs.residualFatigueEnabled)
+            assertEquals(48f, prefs.residualFatigueHalfLifeHours, 0f)
+            assertEquals(2.5f, prefs.residualFatigueGain, 0f)
+        }
+
+    @Test
+    fun `out-of-range residual fatigue proto values clamp to guardrails on read`() {
+        val prefs =
+            UserPreferencesProto
+                .newBuilder()
+                .setResidualFatigueHalfLifeHours(200f)
+                .setResidualFatigueGain(99f)
+                .build()
+                .toDomainModel()
+
+        assertEquals(96f, prefs.residualFatigueHalfLifeHours, 0f)
+        assertEquals(5.0f, prefs.residualFatigueGain, 0f)
+    }
 }

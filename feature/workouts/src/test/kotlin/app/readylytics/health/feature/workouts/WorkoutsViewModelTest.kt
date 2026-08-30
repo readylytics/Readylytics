@@ -14,6 +14,7 @@ import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.WorkoutIntensityLevel
 import app.readylytics.health.core.model.domain.scoring.WorkoutLoadLevel
 import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
+import app.readylytics.health.core.model.domain.workouts.FatigueCurveRange
 import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
 import app.readylytics.health.core.scoring.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
@@ -88,6 +89,7 @@ class WorkoutsViewModelTest {
         workoutRepository =
             mockk {
                 coEvery { getEarliestWorkoutTimestamp() } returns null
+                coEvery { getCanonicalFatigueSeed(any()) } returns emptyList()
                 coEvery { countByTimeRange(any(), any()) } answers {
                     workoutCount
                         ?: workouts.count {
@@ -177,7 +179,12 @@ class WorkoutsViewModelTest {
 
     private fun createViewModel(): WorkoutsViewModel =
         WorkoutsViewModel(
-            repositories = WorkoutsRepositories(dailySummaryRepository, workoutRepository, heartRateRepository),
+            repositories =
+                WorkoutsRepositories(
+                    dailySummaryRepository,
+                    workoutRepository,
+                    heartRateRepository,
+                ),
             selectedDateRepository = selectedDateRepository,
             scoringCalculator = scoringCalculator,
             settingsRepo = settingsRepo,
@@ -189,6 +196,8 @@ class WorkoutsViewModelTest {
                 WorkoutsUseCases(
                     getWorkoutDisplayMetricsUseCase,
                     ComputeWeeklyTrainingStatsUseCase(),
+                    app.readylytics.health.core.scoring.domain.scoring
+                        .GenerateResidualFatigueCurveUseCase(),
                     WorkoutsDistancePermissionGate { true },
                 ),
         )
@@ -1094,6 +1103,90 @@ class WorkoutsViewModelTest {
                     .currentWeek.totalDurationMinutes,
             )
             collectJob.cancel()
+        }
+
+    @Test
+    fun `workoutsViewModel loads 24h residual fatigue curve for selected day`() =
+        runTest(testDispatcher) {
+            val selectedDate = LocalDate.of(2026, 8, 29)
+            selectedDateFlow.value = selectedDate
+            val startOfDayMs = selectedDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            val workout =
+                WorkoutData(
+                    id = "fatigue-run-1",
+                    startTime = startOfDayMs + 8 * 3600 * 1000L,
+                    endTime = startOfDayMs + 9 * 3600 * 1000L + 7 * 60 * 1000L,
+                    exerciseType = "running",
+                    durationMinutes = 67,
+                    zone1Minutes = 0f,
+                    zone2Minutes = 0f,
+                    zone3Minutes = 0f,
+                    zone4Minutes = 0f,
+                    zone5Minutes = 0f,
+                    trimp = 100f,
+                    avgHr = 150f,
+                )
+            workouts.add(workout)
+            coEvery { workoutRepository.getCanonicalFatigueSeed(any()) } returns
+                listOf(
+                    app.readylytics.health.core.model.domain.repository.FatigueWorkoutInput(
+                        workoutId = "fatigue-run-1",
+                        endTimeMs = startOfDayMs + 9 * 3600 * 1000L + 7 * 60 * 1000L,
+                        trimp = 100f,
+                    ),
+                )
+            preferencesFlow.value =
+                UserPreferences(
+                    residualFatigueEnabled = true,
+                    residualFatigueHalfLifeHours = 24f,
+                    residualFatigueGain = 1.0f,
+                )
+
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            testScheduler.advanceUntilIdle()
+
+            val state = viewModel.uiState.first { it.residualFatigueCurve.isNotEmpty() }
+            // 96 15-min intervals + 1 workout endTime timestamp
+            assertEquals(97, state.residualFatigueCurve.size)
+            collectJob.cancelAndJoin()
+        }
+
+    @Test
+    fun `workoutsViewModel updates fatigue curve when fatigue range changes to 3D or 7D`() =
+        runTest(testDispatcher) {
+            val selectedDate = LocalDate.of(2026, 8, 29)
+            selectedDateFlow.value = selectedDate
+            preferencesFlow.value =
+                UserPreferences(
+                    residualFatigueEnabled = true,
+                    residualFatigueHalfLifeHours = 24f,
+                    residualFatigueGain = 1.0f,
+                )
+
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            testScheduler.advanceUntilIdle()
+
+            val state1D = viewModel.uiState.first { it.residualFatigueCurve.isNotEmpty() }
+            assertEquals(FatigueCurveRange.ONE_DAY, state1D.selectedFatigueRange)
+            assertEquals(96, state1D.residualFatigueCurve.size)
+
+            viewModel.onFatigueRangeSelected(FatigueCurveRange.THREE_DAYS)
+            testScheduler.advanceUntilIdle()
+
+            val state3D = viewModel.uiState.first { it.selectedFatigueRange == FatigueCurveRange.THREE_DAYS }
+            assertEquals(FatigueCurveRange.THREE_DAYS, state3D.selectedFatigueRange)
+            assertEquals(3 * 96, state3D.residualFatigueCurve.size)
+
+            viewModel.onFatigueRangeSelected(FatigueCurveRange.SEVEN_DAYS)
+            testScheduler.advanceUntilIdle()
+
+            val state7D = viewModel.uiState.first { it.selectedFatigueRange == FatigueCurveRange.SEVEN_DAYS }
+            assertEquals(FatigueCurveRange.SEVEN_DAYS, state7D.selectedFatigueRange)
+            assertEquals(7 * 96, state7D.residualFatigueCurve.size)
+
+            collectJob.cancelAndJoin()
         }
 
     private fun workoutOnDate(

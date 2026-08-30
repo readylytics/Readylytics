@@ -27,6 +27,8 @@ class DashboardCardCatalogTest {
             CardId.BODY_FAT to DashboardCardDisplayMode.VALUE,
             CardId.BLOOD_PRESSURE to DashboardCardDisplayMode.VALUE,
             CardId.OXYGEN_SATURATION to DashboardCardDisplayMode.VALUE,
+            CardId.BODY_TEMPERATURE to DashboardCardDisplayMode.VALUE,
+            CardId.RESIDUAL_FATIGUE to DashboardCardDisplayMode.GAUGE,
         )
 
     @Test
@@ -85,8 +87,8 @@ class DashboardCardCatalogTest {
     }
 
     @Test
-    fun `AI recommendation card is a visible default appended last`() {
-        val aiCard = SettingsDefaults.DEFAULT_DASHBOARD_CARDS.last()
+    fun `AI recommendation card is a visible default`() {
+        val aiCard = SettingsDefaults.DEFAULT_DASHBOARD_CARDS.first { it.cardId == CardId.AI_RECOMMENDATION }
 
         assertEquals(CardId.AI_RECOMMENDATION, aiCard.cardId)
         assertTrue(aiCard.isVisible)
@@ -167,5 +169,16 @@ class DashboardCardCatalogTest {
         assertEquals(CardId.STEPS, result.single().cardId)
         assertFalse(result.single().isVisible)
         assertEquals(3, result.single().position)
+    }
+
+    @Test
+    fun `DashboardCardCatalog registers RESIDUAL_FATIGUE spec with all display modes`() {
+        val spec = DashboardCardCatalog.spec(CardId.RESIDUAL_FATIGUE)
+        assertNotNull(spec)
+        assertEquals(DashboardCardDisplayMode.GAUGE, spec?.legacyDefaultMode)
+        assertEquals(
+            listOf(DashboardCardDisplayMode.GAUGE, DashboardCardDisplayMode.BAR, DashboardCardDisplayMode.VALUE),
+            spec?.supportedModes,
+        )
     }
 }

@@ -19,6 +19,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -152,7 +153,7 @@ class CardConfigurationRepositoryTest {
 
     @Test
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun init_appendsAiRecommendationOnceVisiblyAtEnd() =
+    fun init_appendsAiRecommendationOnceVisibly() =
         runTest {
             val capturedUpdate = slot<suspend (CardConfigurationsProto) -> CardConfigurationsProto>()
             coEvery { dataStore.updateData(capture(capturedUpdate)) } returns
@@ -173,7 +174,6 @@ class CardConfigurationRepositoryTest {
             val aiCards = updatedProto.dashboardCardsList.filter { it.cardId == CardId.AI_RECOMMENDATION.name }
             assertEquals(1, aiCards.size)
             assertTrue(aiCards.single().isVisible)
-            assertEquals(CardId.AI_RECOMMENDATION.name, updatedProto.dashboardCardsList.last().cardId)
         }
 
     @Test
@@ -437,4 +437,11 @@ class CardConfigurationRepositoryTest {
             assertNotNull(result.find { it.cardId == CardId.HRV })
             assertEquals(SettingsDefaults.DEFAULT_DASHBOARD_CARDS.size, result.size)
         }
+
+    @Test
+    fun `SettingsDefaults contains RESIDUAL_FATIGUE card hidden by default`() {
+        val config = SettingsDefaults.DEFAULT_DASHBOARD_CARDS.firstOrNull { it.cardId == CardId.RESIDUAL_FATIGUE }
+        assertNotNull(config)
+        assertFalse(requireNotNull(config).isVisible)
+    }
 }

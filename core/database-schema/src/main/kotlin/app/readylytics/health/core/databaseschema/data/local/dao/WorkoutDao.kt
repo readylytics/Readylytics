@@ -5,6 +5,7 @@ import androidx.room.Query
 import androidx.room.Upsert
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.model.domain.model.TimestampedTrimp
+import app.readylytics.health.core.model.domain.repository.FatigueWorkoutInput
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 
@@ -110,6 +111,55 @@ interface WorkoutDao {
         fromMs: Long,
         toMs: Long,
     ): List<WorkoutRecordEntity>
+
+    @Query(
+        "SELECT id AS workoutId, endTime AS endTimeMs, modelTrimp AS trimp FROM workout_records " +
+            "WHERE endTime <= :evaluationTimeMs AND modelTrimp IS NOT NULL AND modelTrimp > 0 " +
+            "ORDER BY endTime ASC, id ASC",
+    )
+    suspend fun getCanonicalFatigueInputsThrough(evaluationTimeMs: Long): List<FatigueWorkoutInput>
+
+    @Query(
+        "SELECT id AS workoutId, endTime AS endTimeMs, modelTrimp AS trimp FROM workout_records " +
+            "WHERE startTime < :startBeforeMs AND modelTrimp IS NOT NULL AND modelTrimp > 0 " +
+            "ORDER BY endTime ASC, id ASC",
+    )
+    suspend fun getCanonicalFatigueSeed(startBeforeMs: Long): List<FatigueWorkoutInput>
+
+    @Query(
+        // Retention-bounded, exactly like countUnbackfilledSince. This gate must never reach further
+        // back than the rows the startup self-heal can repair: a single null-modelTrimp row older
+        // than the retention start would otherwise pin residual fatigue to null forever, because no
+        // recompute will ever visit it to clear the count.
+        "SELECT COUNT(*) FROM workout_records " +
+            "WHERE startTime >= :retentionStartMs AND startTime < :startBeforeMs AND modelTrimp IS NULL",
+    )
+    suspend fun countUnbackfilledBefore(
+        retentionStartMs: Long,
+        startBeforeMs: Long,
+    ): Int
+
+    @Query(
+        // Retention-bounded for the same reason as countUnbackfilledBefore; this is the
+        // single-day fallback's gate.
+        "SELECT COUNT(*) FROM workout_records " +
+            // The lower bound filters startTime, matching countUnbackfilledSince exactly, so a
+            // workout straddling the retention boundary cannot be counted here while being
+            // invisible to the self-heal that would repair it.
+            "WHERE startTime >= :retentionStartMs AND endTime <= :evaluationTimeMs AND modelTrimp IS NULL",
+    )
+    suspend fun countUnbackfilledThrough(
+        retentionStartMs: Long,
+        evaluationTimeMs: Long,
+    ): Int
+
+    @Query(
+        // Retention-bounded self-heal gate: rows older than the retention start can never be
+        // reached by the recompute-only resync, so counting them would re-enqueue on every launch.
+        "SELECT COUNT(*) FROM workout_records " +
+            "WHERE startTime >= :retentionStartMs AND modelTrimp IS NULL",
+    )
+    suspend fun countUnbackfilledSince(retentionStartMs: Long): Int
 
     @Query(
         "SELECT * FROM workout_records WHERE endTime >= :fromMs AND startTime <= :toMs ORDER BY startTime ASC, id ASC",

@@ -15,6 +15,7 @@ import app.readylytics.health.core.database.data.security.SqlCipherKeyManager
 import app.readylytics.health.core.healthconnect.domain.sync.HealthSyncUseCase
 import app.readylytics.health.core.model.di.ApplicationScope
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
+import app.readylytics.health.core.model.domain.repository.WorkoutTrimpBackfillStatus
 import app.readylytics.health.core.model.domain.util.DomainLogSink
 import app.readylytics.health.core.model.domain.util.DomainLogger
 import app.readylytics.health.core.model.domain.util.LogContext
@@ -24,6 +25,7 @@ import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.core.scoring.domain.scoring.BackfillHistoricalBaselinesUseCase
 import app.readylytics.health.crashreport.CrashReportHandler
+import app.readylytics.health.data.preferences.PhysiologyPreferences
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.di.ReleaseLogSink
 import app.readylytics.health.domain.migration.DatabaseMigrationController
@@ -52,6 +54,12 @@ class HealthDashboardApplication :
 
     @Inject
     lateinit var backfillHistoricalBaselines: Lazy<BackfillHistoricalBaselinesUseCase>
+
+    @Inject
+    internal lateinit var physiologyPreferences: Lazy<PhysiologyPreferences>
+
+    @Inject
+    lateinit var workoutTrimpBackfillStatus: Lazy<WorkoutTrimpBackfillStatus>
 
     @Inject
     lateinit var healthSyncUseCase: Lazy<HealthSyncUseCase>
@@ -116,7 +124,9 @@ class HealthDashboardApplication :
                 healthSyncUseCase = healthSyncUseCase,
                 backfillHistoricalBaselines = backfillHistoricalBaselines,
                 settingsRepository = settingsRepo,
+                physiologyPreferences = physiologyPreferences,
                 workerScheduler = workerScheduler,
+                workoutTrimpBackfillStatus = workoutTrimpBackfillStatus,
             )
         val startupCoordinator = DatabaseReadyStartupCoordinator(startupInitializer)
         val preferencesPrewarmer = PreferencesPrewarmer(settingsRepo)

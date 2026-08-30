@@ -12,6 +12,7 @@ import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.core.model.domain.repository.HealthConnectWindowTimeoutException
 import app.readylytics.health.core.model.domain.repository.WalDiagnostics
+import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
 import app.readylytics.health.core.scoring.domain.scoring.RasSourceModeBootstrapUseCase
 import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
@@ -222,6 +223,11 @@ class DailySyncUseCase
                         recomputeSupport.buildWalkForwardTrimpContext(oldestTargetDay, today, zoneId)
                     val baselineContext =
                         recomputeSupport.buildWalkForwardBaselineContext(oldestTargetDay, today, zoneId)
+                    // WP-27: prefetch historical seed impulses once for the whole
+                    // walk-forward (exact retained history). Mutable state accumulator, advanced once
+                    // per recomputed day in the chronological loop below.
+                    val fatigueContext =
+                        recomputeSupport.buildWalkForwardFatigueContext(oldestTargetDay, today, zoneId)
 
                     var processedDays = 0
                     onProgress?.invoke(ResyncPhase.RECOMPUTE, processedDays, totalDays)
@@ -251,8 +257,7 @@ class DailySyncUseCase
                                     dayToScore,
                                     steps,
                                     prefs,
-                                    trimpContext,
-                                    baselineContext,
+                                    WalkForwardContexts(trimpContext, baselineContext, fatigueContext),
                                 )
 
                             when (result) {

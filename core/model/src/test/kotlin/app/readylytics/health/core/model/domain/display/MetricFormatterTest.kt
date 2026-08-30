@@ -178,4 +178,13 @@ class MetricFormatterTest {
     fun `formatRas null returns dash`() {
         assertEquals("—", MetricFormatter.formatRas(null))
     }
+
+    // ── formatDecimal ───────────────────────────────────────────────────────
+
+    @Test
+    fun `formatDecimal formats float with specified decimal places`() {
+        assertEquals("18.5", MetricFormatter.formatDecimal(18.5f, 1))
+        assertEquals("18.50", MetricFormatter.formatDecimal(18.5f, 2))
+        assertEquals("19", MetricFormatter.formatDecimal(18.5f, 0))
+    }
 }

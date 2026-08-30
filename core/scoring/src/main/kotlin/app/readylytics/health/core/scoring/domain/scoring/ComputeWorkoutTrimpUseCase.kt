@@ -23,99 +23,38 @@ class ComputeWorkoutTrimpUseCase
             samples: List<HeartRateSample>,
             prefs: UserPreferences,
             restingHrBaseline: Float? = null,
-            storedTrimp: Float? = null,
             frozenHrMax: Float? = null,
         ): Result<Float> =
             try {
-                val hrMax = frozenHrMax ?: HeartRateFormulas.resolveMaxHeartRate(prefs)
-
-                // RHR baseline resolution with exercise-aware fallback:
-                // 1. Use provided baseline if available (from BaselineComputer)
-                // 2. Use override if set
-                // 3. Estimate from workout data: workout-avg HR less the elevation during exercise
-                //    This fallback only triggers when no historical baseline exists (edge case).
-                //    For normal flow, ScoringRepositoryImpl always provides a calculated baseline.
-                val rhrBaseline =
-                    restingHrBaseline
-                        ?: prefs.rhrBaselineOverride
-                        ?: ScoringConstants.DEFAULT_RHR_BPM
-
-                // STRICT FILTER: Only use samples within the workout boundaries
+                val calculationContext =
+                    TrimpCalculationContext(
+                        prefs = prefs,
+                        rhrBaseline =
+                            restingHrBaseline
+                                ?: prefs.rhrBaselineOverride
+                                ?: ScoringConstants.DEFAULT_RHR_BPM,
+                        hrMax = frozenHrMax ?: HeartRateFormulas.resolveMaxHeartRate(prefs),
+                    )
                 val filteredSamples =
                     samples
                         .filter { it.timestamp.toEpochMilli() in workoutStartTime..workoutEndTime }
                         .sortedBy { it.timestamp }
-
-                // If no valid samples are in range, calculate a "pseudo-integrated" TRIMP based on the session average.
-                // This ensures that the fallback matches the integrated logic as closely as possible.
-                if (filteredSamples.isEmpty()) {
-                    val durationMinutes = (workoutEndTime - workoutStartTime) / 60_000f
-                    return@execute Result.success(
-                        if (durationMinutes > 0f) {
-                            RasCalculator.calculateDailyTrimp(
-                                durationMinutes = durationMinutes,
-                                hrAvg = workoutAvgHr,
-                                rhrBaseline = rhrBaseline,
-                                hrMax = hrMax,
-                                gender = prefs.gender,
-                                trimpModel = prefs.trimpModel,
-                                banisterMultiplier = prefs.banisterMultiplier,
-                                chengBeta = prefs.chengBeta,
-                                itrimB = prefs.itrimB,
-                                ltBpm = prefs.zone3MaxBpm.toFloat(),
-                            )
-                        } else {
-                            storedTrimp ?: 0f
-                        },
-                    )
-                }
-
-                var computedTrimp = 0f
-
-                // Handle leading gap: from workoutStartTime to the first sample
-                val firstSample = filteredSamples.first()
-                val leadingGapMin = (firstSample.timestamp.toEpochMilli() - workoutStartTime) / 60_000f
-                if (leadingGapMin > 0f) {
-                    computedTrimp +=
-                        RasCalculator.calculateDailyTrimp(
-                            durationMinutes = leadingGapMin,
-                            hrAvg = firstSample.bpm.toFloat(),
-                            rhrBaseline = rhrBaseline,
-                            hrMax = hrMax,
-                            gender = prefs.gender,
-                            trimpModel = prefs.trimpModel,
-                            banisterMultiplier = prefs.banisterMultiplier,
-                            chengBeta = prefs.chengBeta,
-                            itrimB = prefs.itrimB,
-                            ltBpm = prefs.zone3MaxBpm.toFloat(),
+                val computedTrimp =
+                    if (filteredSamples.isEmpty()) {
+                        computeWithoutSamples(
+                            workoutStartTime,
+                            workoutEndTime,
+                            workoutAvgHr,
+                            calculationContext,
                         )
-                }
-
-                filteredSamples.forEachIndexed { i, sample ->
-                    val nextMs =
-                        if (i < filteredSamples.lastIndex) {
-                            filteredSamples[i + 1].timestamp.toEpochMilli()
-                        } else {
-                            workoutEndTime
-                        }
-
-                    val durMin = (nextMs - sample.timestamp.toEpochMilli()) / 60_000f
-                    if (durMin > 0f) {
-                        computedTrimp +=
-                            RasCalculator.calculateDailyTrimp(
-                                durationMinutes = durMin,
-                                hrAvg = sample.bpm.toFloat(),
-                                rhrBaseline = rhrBaseline,
-                                hrMax = hrMax,
-                                gender = prefs.gender,
-                                trimpModel = prefs.trimpModel,
-                                banisterMultiplier = prefs.banisterMultiplier,
-                                chengBeta = prefs.chengBeta,
-                                itrimB = prefs.itrimB,
-                                ltBpm = prefs.zone3MaxBpm.toFloat(),
-                            )
+                    } else {
+                        integrateSamples(
+                            workoutStartTime,
+                            workoutEndTime,
+                            filteredSamples,
+                            calculationContext,
+                        )
                     }
-                }
                 Result.success(computedTrimp)
             } catch (e: Exception) {
                 logE("ComputeWorkoutTrimp", e) {
@@ -123,6 +62,78 @@ class ComputeWorkoutTrimpUseCase
                 }
                 Result.failure("Failed to compute workout TRIMP", "TRIMP_COMPUTATION_ERROR")
             }
+
+        private fun computeWithoutSamples(
+            workoutStartTime: Long,
+            workoutEndTime: Long,
+            workoutAvgHr: Float,
+            context: TrimpCalculationContext,
+        ): Float {
+            val durationMinutes = (workoutEndTime - workoutStartTime) / 60_000f
+            if (durationMinutes <= 0f) {
+                // Backup rows can contain equal/reversed timestamps. Edwards-style stored `trimp`
+                // is not an input here, so invalid duration canonicalizes to zero.
+                return 0f
+            }
+            return calculateTrimp(durationMinutes, workoutAvgHr, context)
+        }
+
+        private fun integrateSamples(
+            workoutStartTime: Long,
+            workoutEndTime: Long,
+            samples: List<HeartRateSample>,
+            context: TrimpCalculationContext,
+        ): Float {
+            val firstSample = samples.first()
+            var computedTrimp =
+                calculateTrimp(
+                    durationMinutes = (firstSample.timestamp.toEpochMilli() - workoutStartTime) / 60_000f,
+                    hrAvg = firstSample.bpm.toFloat(),
+                    context = context,
+                )
+            samples.forEachIndexed { index, sample ->
+                val nextMs =
+                    samples
+                        .getOrNull(index + 1)
+                        ?.timestamp
+                        ?.toEpochMilli()
+                        ?: workoutEndTime
+                computedTrimp +=
+                    calculateTrimp(
+                        durationMinutes = (nextMs - sample.timestamp.toEpochMilli()) / 60_000f,
+                        hrAvg = sample.bpm.toFloat(),
+                        context = context,
+                    )
+            }
+            return computedTrimp
+        }
+
+        private fun calculateTrimp(
+            durationMinutes: Float,
+            hrAvg: Float,
+            context: TrimpCalculationContext,
+        ): Float {
+            if (durationMinutes <= 0f) return 0f
+            val prefs = context.prefs
+            return RasCalculator.calculateDailyTrimp(
+                durationMinutes = durationMinutes,
+                hrAvg = hrAvg,
+                rhrBaseline = context.rhrBaseline,
+                hrMax = context.hrMax,
+                gender = prefs.gender,
+                trimpModel = prefs.trimpModel,
+                banisterMultiplier = prefs.banisterMultiplier,
+                chengBeta = prefs.chengBeta,
+                itrimB = prefs.itrimB,
+                ltBpm = prefs.zone3MaxBpm.toFloat(),
+            )
+        }
+
+        private data class TrimpCalculationContext(
+            val prefs: UserPreferences,
+            val rhrBaseline: Float,
+            val hrMax: Float,
+        )
 
         data class HeartRateSample(
             val timestamp: Instant,

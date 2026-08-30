@@ -5,6 +5,7 @@ import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadIn
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
 import app.readylytics.health.core.scoring.domain.scoring.BuildLoadSeriesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
@@ -99,15 +100,20 @@ class ScoringRepositoryImplTest {
                 AssembleDailySummaryUseCase(),
             )
         return ScoringRepositoryImpl(
-            dataLoader,
-            bodyMetricsDataLoader,
-            seriesLoader,
+            ScoringDataLoaders(
+                dataLoader,
+                bodyMetricsDataLoader,
+                seriesLoader,
+            ),
             settingsRepo,
             baselineComputer,
             scoringConfigFactory,
-            ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
-            ResolveDailyBaselinesUseCase(baselineComputer),
-            AssembleEverydayLoadInputUseCase(),
+            ScoringDayUseCases(
+                ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
+                ComputeResidualFatigueUseCase(),
+                ResolveDailyBaselinesUseCase(baselineComputer),
+                AssembleEverydayLoadInputUseCase(),
+            ),
             scoringHistoryRepository,
             readinessSummaryCoordinator,
             dispatcher,
@@ -386,7 +392,7 @@ class ScoringRepositoryImplTest {
                 )
             coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns listOf(workout)
             every {
-                computeWorkoutTrimpUseCase.execute(any(), any(), any(), any(), any(), any(), any(), any())
+                computeWorkoutTrimpUseCase.execute(any(), any(), any(), any(), any(), any(), any())
             } returns Result.success(55f)
             coEvery {
                 computeSleepMetricsUseCase(any())
@@ -430,7 +436,7 @@ class ScoringRepositoryImplTest {
                 )
             coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns listOf(workout)
             every {
-                computeWorkoutTrimpUseCase.execute(any(), any(), any(), any(), any(), any(), any(), any())
+                computeWorkoutTrimpUseCase.execute(any(), any(), any(), any(), any(), any(), any())
             } returns Result.success(55f)
             coEvery {
                 computeSleepMetricsUseCase(any())
@@ -528,7 +534,6 @@ class ScoringRepositoryImplTest {
             coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns listOf(mockWorkout)
             coEvery {
                 computeWorkoutTrimpUseCase.execute(
-                    any(),
                     any(),
                     any(),
                     any(),

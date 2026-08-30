@@ -5,4 +5,5 @@ enum class WorkoutChartId {
     WEEKLY_TRAINING,
     ACTIVITY_VOLUME,
     TRAINING_MIX,
+    RESIDUAL_FATIGUE_CURVE,
 }

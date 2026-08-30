@@ -138,12 +138,7 @@ internal fun AdvancedSectionWrapper(
         ) {
             AdvancedSettingsSection(
                 sleepState = states.sleepState,
-                hrrToleranceSeconds = states.uiState.hrrToleranceSeconds,
-                rasScalingFactor = states.uiState.rasScalingFactor,
-                trimpModel = states.uiState.trimpModel,
-                banisterMultiplier = states.uiState.banisterMultiplier,
-                chengBeta = states.uiState.chengBeta,
-                itrimB = states.uiState.itrimB,
+                uiState = states.uiState,
                 onEvent = intents.onSleepEvent,
                 onPhysiologyEvent = intents.onPhysiologyEvent,
                 onUIEvent = intents.onUIEvent,

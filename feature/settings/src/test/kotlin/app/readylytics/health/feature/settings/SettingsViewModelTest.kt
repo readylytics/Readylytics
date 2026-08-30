@@ -1,6 +1,7 @@
 package app.readylytics.health.feature.settings
 
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.preferences.CircadianThresholdPreferences
 import app.readylytics.health.core.model.domain.preferences.DeviceSettings
@@ -13,6 +14,7 @@ import app.readylytics.health.core.model.domain.sync.HistoricalResyncState
 import app.readylytics.health.core.model.domain.workouts.WorkoutDetailLayoutRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -34,6 +36,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SettingsViewModelTest {
@@ -273,6 +276,161 @@ class SettingsViewModelTest {
             advanceUntilIdle()
 
             coVerify(exactly = 0) { displaySettings.updateHrrToleranceSeconds(any()) }
+
+            viewModel.viewModelScope.cancel()
+            advanceUntilIdle()
+        }
+
+    @Test
+    fun `residual fatigue enabled event persists and triggers a recompute`() =
+        runTest {
+            val viewModel =
+                UISettingsViewModel(
+                    settingsReader,
+                    displaySettings,
+                    healthDataRefresh,
+                    workoutDetailLayoutRepository = mockk<WorkoutDetailLayoutRepository>(relaxed = true),
+                )
+            viewModel.sharingStarted = SharingStarted.Eagerly
+            viewModel.uiState
+
+            viewModel.onEvent(SettingsEvent.ResidualFatigueEnabledChanged(false))
+            advanceUntilIdle()
+
+            coVerifyOrder {
+                displaySettings.updateResidualFatigueEnabled(false)
+                healthDataRefresh.refreshHistorical()
+            }
+            coVerify(exactly = 1) { healthDataRefresh.refreshHistorical() }
+            coVerify(exactly = 0) { healthDataRefresh.refreshAffectedWindow() }
+
+            viewModel.viewModelScope.cancel()
+            advanceUntilIdle()
+        }
+
+    @Test
+    fun `residual fatigue half life persists and triggers historical recompute, rejects invalid`() =
+        runTest {
+            val viewModel =
+                UISettingsViewModel(
+                    settingsReader,
+                    displaySettings,
+                    healthDataRefresh,
+                    workoutDetailLayoutRepository = mockk<WorkoutDetailLayoutRepository>(relaxed = true),
+                )
+            viewModel.sharingStarted = SharingStarted.Eagerly
+            viewModel.uiState
+
+            viewModel.onEvent(SettingsEvent.ResidualFatigueHalfLifeChanged(48f))
+            advanceUntilIdle()
+            coVerifyOrder {
+                displaySettings.updateResidualFatigueHalfLifeHours(48f)
+                healthDataRefresh.refreshHistorical()
+            }
+            coVerify(exactly = 1) { healthDataRefresh.refreshHistorical() }
+
+            viewModel.onEvent(SettingsEvent.ResidualFatigueHalfLifeChanged(5f))
+            advanceUntilIdle()
+            coVerify(exactly = 0) { displaySettings.updateResidualFatigueHalfLifeHours(5f) }
+            coVerify(exactly = 1) { healthDataRefresh.refreshHistorical() }
+            coVerify(exactly = 0) { healthDataRefresh.refreshAffectedWindow() }
+
+            viewModel.viewModelScope.cancel()
+            advanceUntilIdle()
+        }
+
+    @Test
+    fun `residual fatigue gain persists and triggers historical recompute, rejects invalid`() =
+        runTest {
+            val viewModel =
+                UISettingsViewModel(
+                    settingsReader,
+                    displaySettings,
+                    healthDataRefresh,
+                    workoutDetailLayoutRepository = mockk<WorkoutDetailLayoutRepository>(relaxed = true),
+                )
+            viewModel.sharingStarted = SharingStarted.Eagerly
+            viewModel.uiState
+
+            viewModel.onEvent(SettingsEvent.ResidualFatigueGainChanged(2.5f))
+            advanceUntilIdle()
+            coVerifyOrder {
+                displaySettings.updateResidualFatigueGain(2.5f)
+                healthDataRefresh.refreshHistorical()
+            }
+            coVerify(exactly = 1) { healthDataRefresh.refreshHistorical() }
+
+            viewModel.onEvent(SettingsEvent.ResidualFatigueGainChanged(10f))
+            advanceUntilIdle()
+            coVerify(exactly = 0) { displaySettings.updateResidualFatigueGain(10f) }
+            coVerify(exactly = 1) { healthDataRefresh.refreshHistorical() }
+            coVerify(exactly = 0) { healthDataRefresh.refreshAffectedWindow() }
+
+            viewModel.viewModelScope.cancel()
+            advanceUntilIdle()
+        }
+
+    @Test
+    fun `residual fatigue slider stops land on whole-hour and 0_1 increments`() {
+        // M3 Slider.steps counts the stops *between* the endpoints, so the interval is
+        // (max - min) / (steps + 1). A future range change that silently moves the documented
+        // defaults off-grid fails here rather than shipping a slider that renders "23.9 h".
+        val halfLifeInterval =
+            (
+                SettingsDefaults.MAX_RESIDUAL_FATIGUE_HALF_LIFE_HOURS -
+                    SettingsDefaults.MIN_RESIDUAL_FATIGUE_HALF_LIFE_HOURS
+            ) / (RESIDUAL_FATIGUE_HALF_LIFE_SLIDER_STEPS + 1)
+        assertEquals(1.0f, halfLifeInterval, 1e-4f)
+        assertOnStop(
+            value = SettingsDefaults.RESIDUAL_FATIGUE_HALF_LIFE_HOURS,
+            min = SettingsDefaults.MIN_RESIDUAL_FATIGUE_HALF_LIFE_HOURS,
+            interval = halfLifeInterval,
+        )
+
+        val gainInterval =
+            (
+                SettingsDefaults.MAX_RESIDUAL_FATIGUE_GAIN -
+                    SettingsDefaults.MIN_RESIDUAL_FATIGUE_GAIN
+            ) / (RESIDUAL_FATIGUE_GAIN_SLIDER_STEPS + 1)
+        assertEquals(0.1f, gainInterval, 1e-4f)
+        assertOnStop(
+            value = SettingsDefaults.RESIDUAL_FATIGUE_GAIN,
+            min = SettingsDefaults.MIN_RESIDUAL_FATIGUE_GAIN,
+            interval = gainInterval,
+        )
+    }
+
+    private fun assertOnStop(
+        value: Float,
+        min: Float,
+        interval: Float,
+    ) {
+        val stopIndex = (value - min) / interval
+        assertEquals(stopIndex.roundToInt().toFloat(), stopIndex, 1e-3f)
+    }
+
+    @Test
+    fun `ResetFatigueToDefaults event resets fatigue settings to defaults and triggers historical recompute`() =
+        runTest {
+            val viewModel =
+                UISettingsViewModel(
+                    settingsReader,
+                    displaySettings,
+                    healthDataRefresh,
+                    workoutDetailLayoutRepository = mockk<WorkoutDetailLayoutRepository>(relaxed = true),
+                )
+            viewModel.sharingStarted = SharingStarted.Eagerly
+            viewModel.uiState
+
+            viewModel.onEvent(SettingsEvent.ResetFatigueToDefaults)
+            advanceUntilIdle()
+
+            coVerifyOrder {
+                displaySettings.resetResidualFatigueToDefaults()
+                healthDataRefresh.refreshHistorical()
+            }
+            coVerify(exactly = 1) { healthDataRefresh.refreshHistorical() }
+            coVerify(exactly = 0) { healthDataRefresh.refreshAffectedWindow() }
 
             viewModel.viewModelScope.cancel()
             advanceUntilIdle()

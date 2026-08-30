@@ -23,6 +23,11 @@ android {
         unitTests.isReturnDefaultValues = false
         unitTests.isIncludeAndroidResources = true
     }
+    sourceSets {
+        // Room exports the HealthDatabase schema JSONs to $projectDir/schemas; expose them as
+        // unit-test assets so MigrationTestHelper can run under Robolectric (testDebugUnitTest).
+        getByName("test").assets.srcDir("$projectDir/schemas")
+    }
 }
 
 dependencies {
@@ -49,6 +54,7 @@ dependencies {
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.junit)
     testImplementation(libs.mockk)
+    testImplementation(libs.room.testing)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.test.runner)

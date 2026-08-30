@@ -77,6 +77,7 @@ class WorkoutsViewModelLayoutManagementTest {
         workoutRepository =
             mockk {
                 coEvery { getEarliestWorkoutTimestamp() } returns null
+                coEvery { getCanonicalFatigueSeed(any()) } returns emptyList()
                 coEvery { countByTimeRange(any(), any()) } returns 0
                 coEvery { getInRangePaged(any(), any(), any(), any()) } returns emptyList()
                 coEvery { getInRange(any(), any()) } returns emptyList()
@@ -104,7 +105,12 @@ class WorkoutsViewModelLayoutManagementTest {
 
     private fun createViewModel(): WorkoutsViewModel =
         WorkoutsViewModel(
-            repositories = WorkoutsRepositories(dailySummaryRepository, workoutRepository, heartRateRepository),
+            repositories =
+                WorkoutsRepositories(
+                    dailySummaryRepository,
+                    workoutRepository,
+                    heartRateRepository,
+                ),
             selectedDateRepository = selectedDateRepository,
             scoringCalculator = scoringCalculator,
             settingsRepo = settingsRepo,
@@ -116,6 +122,8 @@ class WorkoutsViewModelLayoutManagementTest {
                 WorkoutsUseCases(
                     getWorkoutDisplayMetricsUseCase,
                     ComputeWeeklyTrainingStatsUseCase(),
+                    app.readylytics.health.core.scoring.domain.scoring
+                        .GenerateResidualFatigueCurveUseCase(),
                     WorkoutsDistancePermissionGate { true },
                 ),
         )
@@ -269,6 +277,35 @@ class WorkoutsViewModelLayoutManagementTest {
             coVerify {
                 workoutsLayoutRepository.updateWorkoutChartConfigurations(
                     match { charts -> charts.any { it.chartId == WorkoutChartId.TRAINING_MIX && !it.isVisible } },
+                )
+            }
+            collector.cancel()
+        }
+
+    @Test
+    fun `chart management toggle shows residual fatigue curve and persists on save`() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            advanceUntilIdle()
+
+            viewModel.toggleWorkoutsManagement()
+            advanceUntilIdle()
+            viewModel.onToggleChartVisibility(WorkoutChartId.RESIDUAL_FATIGUE_CURVE, visible = true)
+            advanceUntilIdle()
+            assertTrue(
+                viewModel.uiState.value.chartConfigurations
+                    .first { it.chartId == WorkoutChartId.RESIDUAL_FATIGUE_CURVE }
+                    .isVisible,
+            )
+
+            viewModel.toggleWorkoutsManagement()
+            advanceUntilIdle()
+            coVerify {
+                workoutsLayoutRepository.updateWorkoutChartConfigurations(
+                    match { charts ->
+                        charts.any { it.chartId == WorkoutChartId.RESIDUAL_FATIGUE_CURVE && it.isVisible }
+                    },
                 )
             }
             collector.cancel()

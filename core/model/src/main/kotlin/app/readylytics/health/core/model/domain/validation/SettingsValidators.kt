@@ -62,6 +62,20 @@ object SettingsValidators {
     val TRIMP_CHENG_BETA_RULE = TrimpParameterRule(0.04f, 0.12f, "Beta: 0.04–0.12")
     val TRIMP_ITRIMP_B_FACTOR_RULE = TrimpParameterRule(1.0f, 4.5f, "B Factor: 1.0–4.5")
 
+    // Residual Fatigue model parameters
+    val FATIGUE_HALF_LIFE_RULE =
+        FloatRangeRule(
+            SettingsDefaults.MIN_RESIDUAL_FATIGUE_HALF_LIFE_HOURS,
+            SettingsDefaults.MAX_RESIDUAL_FATIGUE_HALF_LIFE_HOURS,
+            "Half-life: 6–96 hours",
+        )
+    val FATIGUE_GAIN_RULE =
+        FloatRangeRule(
+            SettingsDefaults.MIN_RESIDUAL_FATIGUE_GAIN,
+            SettingsDefaults.MAX_RESIDUAL_FATIGUE_GAIN,
+            "Gain: 0.1–5.0",
+        )
+
     // Domain validators for measured/calculated values
     val HRV_BOUNDS_VALIDATOR = HrvBoundsValidator()
     val RHR_BOUNDS_VALIDATOR = RhrBoundsValidator()
