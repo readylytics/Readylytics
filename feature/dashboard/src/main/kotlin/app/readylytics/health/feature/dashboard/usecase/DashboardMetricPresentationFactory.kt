@@ -606,6 +606,66 @@ class DashboardMetricPresentationFactory
                     visual = strainVisual,
                 )
 
+            // 17. RESIDUAL FATIGUE
+            map[CardId.RESIDUAL_FATIGUE] =
+                buildResidualFatiguePresentation(
+                    summary = summary,
+                    preferences = preferences,
+                    unavailableValueText = unavailableValueText,
+                )
+
             return map
+        }
+
+        private fun buildResidualFatiguePresentation(
+            summary: DailySummary?,
+            preferences: UserPreferences,
+            unavailableValueText: String,
+        ): UniversalMetricPresentation {
+            val title = resourceProvider.getString(DashboardR.string.card_residual_fatigue_title)
+            val tooltip = resourceProvider.getString(DashboardR.string.tooltip_residual_fatigue)
+            val value = summary?.residualFatigue?.takeIf { preferences.residualFatigueEnabled }
+
+            val status =
+                when {
+                    value == null -> MetricStatus.NO_DATA
+                    value < 30f -> MetricStatus.OPTIMAL
+                    value <= 70f -> MetricStatus.NEUTRAL
+                    else -> MetricStatus.WARNING
+                }
+
+            val visual =
+                UniversalMetricVisual.Score(
+                    rawValue = value,
+                    minValue = 0f,
+                    maxValue = 100f,
+                    markerFraction = value?.let { (it / 100f).coerceIn(0f, 1f) },
+                    unavailableReason = if (value == null) UniversalMetricUnavailableReason.MISSING_VALUE else null,
+                )
+
+            val valueText = value?.let { MetricFormatter.formatDecimal(it, 1) } ?: unavailableValueText
+            val secondaryText =
+                resourceProvider.getString(
+                    DashboardR.string.card_residual_fatigue_secondary,
+                    preferences.residualFatigueHalfLifeHours.roundToInt(),
+                )
+            val statusText = classificationText(status)
+            val accessibility =
+                if (value != null) {
+                    resourceProvider.getString(DashboardR.string.semantics_card_residual_fatigue, valueText, statusText)
+                } else {
+                    unavailableDescription(title, UniversalMetricUnavailableReason.MISSING_VALUE)
+                }
+
+            return UniversalMetricPresentation(
+                title = title,
+                valueText = valueText,
+                unitText = "",
+                secondaryText = secondaryText,
+                status = status,
+                tooltip = tooltip,
+                accessibilityDescription = accessibility,
+                visual = visual,
+            )
         }
     }
