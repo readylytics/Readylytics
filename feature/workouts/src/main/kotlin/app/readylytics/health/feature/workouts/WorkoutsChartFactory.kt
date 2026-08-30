@@ -19,6 +19,7 @@ fun buildWorkoutsChartDataMap(
     zoomState: VicoZoomState,
     granularity: TrendGranularity,
     parentScrollInProgress: () -> Boolean,
+    onFatigueRangeSelected: (app.readylytics.health.core.model.domain.workouts.FatigueCurveRange) -> Unit = {},
 ): Map<WorkoutChartId, @Composable (WorkoutChartConfiguration) -> Unit> =
     mapOf(
         WorkoutChartId.ACWR_TRIMP to { _: WorkoutChartConfiguration ->
@@ -59,11 +60,11 @@ fun buildWorkoutsChartDataMap(
             )
         },
         WorkoutChartId.RESIDUAL_FATIGUE_CURVE to { _: WorkoutChartConfiguration ->
-            ResidualFatigueCurveChart(
-                points = uiState.residualFatigueCurve,
-                isLoading = uiState.isLoading,
+            ResidualFatigueSection(
+                uiState = uiState,
+                onRangeSelected = onFatigueRangeSelected,
                 parentScrollInProgress = parentScrollInProgress,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+                modifier = Modifier.fillMaxWidth(),
             )
         },
     )

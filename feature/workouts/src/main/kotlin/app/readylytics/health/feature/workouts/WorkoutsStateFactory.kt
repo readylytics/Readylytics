@@ -12,6 +12,7 @@ import app.readylytics.health.core.model.domain.repository.WorkoutData
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.model.domain.workouts.FatigueCurvePoint
+import app.readylytics.health.core.model.domain.workouts.FatigueCurveRange
 import app.readylytics.health.core.model.domain.workouts.WorkoutChartConfiguration
 import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryConfiguration
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
@@ -64,6 +65,7 @@ data class WorkoutsUiState(
     val trimpPeriodSummary: PeriodAverageSummary? = null,
     val strainRatioPeriodSummary: PeriodAverageSummary? = null,
     val residualFatigueCurve: List<FatigueCurvePoint> = emptyList(),
+    val selectedFatigueRange: FatigueCurveRange = FatigueCurveRange.ONE_DAY,
     val cardConfigurations: List<CardConfiguration> = emptyList(),
     val isManagingCards: Boolean = false,
     val chartConfigurations: List<WorkoutChartConfiguration> = emptyList(),
@@ -79,6 +81,7 @@ internal data class CombinedParams(
     val range: TimeRange,
     val date: LocalDate,
     val page: Int,
+    val fatigueRange: FatigueCurveRange = FatigueCurveRange.ONE_DAY,
 )
 
 internal data class WorkoutsRangeWindow(
@@ -171,6 +174,7 @@ internal data class WorkoutsStateInputs(
     val weeklyTraining: WeeklyTrainingStats? = null,
     val hasDistancePermission: Boolean = true,
     val residualFatigueCurve: List<FatigueCurvePoint> = emptyList(),
+    val selectedFatigueRange: FatigueCurveRange = FatigueCurveRange.ONE_DAY,
 )
 
 internal fun buildWorkoutsState(inputs: WorkoutsStateInputs): WorkoutsUiState =
@@ -493,5 +497,6 @@ private fun assembleWorkoutsUiState(
             trimpPeriodSummary = series.trimpSummary,
             strainRatioPeriodSummary = series.strainSummary,
             residualFatigueCurve = residualFatigueCurve,
+            selectedFatigueRange = selectedFatigueRange,
         )
     }

@@ -14,6 +14,7 @@ import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.WorkoutIntensityLevel
 import app.readylytics.health.core.model.domain.scoring.WorkoutLoadLevel
 import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
+import app.readylytics.health.core.model.domain.workouts.FatigueCurveRange
 import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
 import app.readylytics.health.core.scoring.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
@@ -1148,6 +1149,43 @@ class WorkoutsViewModelTest {
             val state = viewModel.uiState.first { it.residualFatigueCurve.isNotEmpty() }
             // 96 15-min intervals + 1 workout endTime timestamp
             assertEquals(97, state.residualFatigueCurve.size)
+            collectJob.cancelAndJoin()
+        }
+
+    @Test
+    fun `workoutsViewModel updates fatigue curve when fatigue range changes to 3D or 7D`() =
+        runTest(testDispatcher) {
+            val selectedDate = LocalDate.of(2026, 8, 29)
+            selectedDateFlow.value = selectedDate
+            preferencesFlow.value =
+                UserPreferences(
+                    residualFatigueEnabled = true,
+                    residualFatigueHalfLifeHours = 24f,
+                    residualFatigueGain = 1.0f,
+                )
+
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            testScheduler.advanceUntilIdle()
+
+            val state1D = viewModel.uiState.first { it.residualFatigueCurve.isNotEmpty() }
+            assertEquals(FatigueCurveRange.ONE_DAY, state1D.selectedFatigueRange)
+            assertEquals(96, state1D.residualFatigueCurve.size)
+
+            viewModel.onFatigueRangeSelected(FatigueCurveRange.THREE_DAYS)
+            testScheduler.advanceUntilIdle()
+
+            val state3D = viewModel.uiState.first { it.selectedFatigueRange == FatigueCurveRange.THREE_DAYS }
+            assertEquals(FatigueCurveRange.THREE_DAYS, state3D.selectedFatigueRange)
+            assertEquals(3 * 96, state3D.residualFatigueCurve.size)
+
+            viewModel.onFatigueRangeSelected(FatigueCurveRange.SEVEN_DAYS)
+            testScheduler.advanceUntilIdle()
+
+            val state7D = viewModel.uiState.first { it.selectedFatigueRange == FatigueCurveRange.SEVEN_DAYS }
+            assertEquals(FatigueCurveRange.SEVEN_DAYS, state7D.selectedFatigueRange)
+            assertEquals(7 * 96, state7D.residualFatigueCurve.size)
+
             collectJob.cancelAndJoin()
         }
 

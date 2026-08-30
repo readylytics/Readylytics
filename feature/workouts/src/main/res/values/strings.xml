@@ -165,8 +165,8 @@
     <string name="training_mix_accessibility_summary">Training mix: %1$s total. %2$s</string>
 
     <!-- Residual Fatigue Curve -->
-    <string name="chart_residual_fatigue_curve_title">Residual Fatigue (24h)</string>
-    <string name="chart_residual_fatigue_curve_description">24-hour continuous exponential decay curve showing workout fatigue spikes and decay throughout the day.</string>
-    <string name="chart_residual_fatigue_empty">No residual fatigue data available for this day.</string>
+    <string name="chart_residual_fatigue_curve_title">Residual Fatigue</string>
+    <string name="chart_residual_fatigue_curve_description">Continuous exponential decay curve showing workout fatigue spikes and decay over time.</string>
+    <string name="chart_residual_fatigue_empty">No residual fatigue data available for this range.</string>
     <string name="chart_residual_fatigue_tooltip_format">%1$s • Fatigue: %2$.1f</string>
 </resources>
