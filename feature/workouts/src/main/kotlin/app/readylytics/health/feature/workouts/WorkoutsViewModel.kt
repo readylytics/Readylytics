@@ -16,8 +16,10 @@ import app.readylytics.health.core.model.domain.preferences.UserPreferencesReade
 import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.WorkoutData
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
+import app.readylytics.health.core.model.domain.scoring.ResidualFatigueConfig
 import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.core.model.domain.util.WeekBounds
+import app.readylytics.health.core.model.domain.workouts.FatigueCurvePoint
 import app.readylytics.health.core.model.domain.workouts.WorkoutChartConfiguration
 import app.readylytics.health.core.model.domain.workouts.WorkoutChartId
 import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryConfiguration
@@ -213,6 +215,7 @@ class WorkoutsViewModel
                         val workoutOnlyGains = loadWorkoutOnlyGains(window, prefs, trimpSummaries)
                         val weeklyTraining = loadWeeklyTraining(params.date, prefs, zoneId)
                         val hasDistancePermission = useCases.distancePermissionGate.isGranted()
+                        val fatigueCurve = loadResidualFatigueCurve(params.date, window, prefs, zoneId)
 
                         buildWorkoutsState(
                             WorkoutsStateInputs(
@@ -231,6 +234,7 @@ class WorkoutsViewModel
                                 workoutOnlyGains = workoutOnlyGains,
                                 weeklyTraining = weeklyTraining,
                                 hasDistancePermission = hasDistancePermission,
+                                residualFatigueCurve = fatigueCurve,
                             ),
                         )
                     }
@@ -328,6 +332,27 @@ class WorkoutsViewModel
                     .toEpochMilli()
             val workouts = repositories.workout.getInRange(fromMs, toMs)
             return useCases.computeWeeklyTrainingStats.execute(workouts, anchor, prefs.weekStartDay, zoneId)
+        }
+
+        private suspend fun loadResidualFatigueCurve(
+            date: LocalDate,
+            window: WorkoutsRangeWindow,
+            prefs: UserPreferences,
+            zoneId: ZoneId,
+        ): List<FatigueCurvePoint> {
+            val fatigueInputs = repositories.workout.getCanonicalFatigueSeed(window.selectedDayEndMs)
+            val config =
+                ResidualFatigueConfig.clamped(
+                    enabled = prefs.residualFatigueEnabled,
+                    halfLifeHours = prefs.residualFatigueHalfLifeHours,
+                    fatigueGain = prefs.residualFatigueGain,
+                )
+            return useCases.generate24hResidualFatigueCurve.execute(
+                selectedDate = date,
+                zoneId = zoneId,
+                config = config,
+                retainedWorkouts = fatigueInputs,
+            )
         }
 
         fun onRangeSelected(range: TimeRange) {

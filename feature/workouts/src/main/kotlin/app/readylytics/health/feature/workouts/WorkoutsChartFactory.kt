@@ -58,4 +58,12 @@ fun buildWorkoutsChartDataMap(
                 modifier = Modifier.fillMaxWidth(),
             )
         },
+        WorkoutChartId.RESIDUAL_FATIGUE_CURVE to { _: WorkoutChartConfiguration ->
+            ResidualFatigueCurveChart(
+                points = uiState.residualFatigueCurve,
+                isLoading = uiState.isLoading,
+                parentScrollInProgress = parentScrollInProgress,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+            )
+        },
     )

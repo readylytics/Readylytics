@@ -40,6 +40,8 @@ interface WorkoutRepository {
 
     suspend fun countByTimeRange(fromMs: Long, toMs: Long): Int
 
+    suspend fun getCanonicalFatigueSeed(evalMs: Long): List<FatigueWorkoutInput>
+
     suspend fun getRoutePoints(workoutId: String): List<WorkoutRoutePoint>
 
     fun observeSince(fromMs: Long): Flow<List<WorkoutData>>

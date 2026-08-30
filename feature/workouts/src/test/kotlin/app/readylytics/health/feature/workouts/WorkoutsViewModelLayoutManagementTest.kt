@@ -77,6 +77,7 @@ class WorkoutsViewModelLayoutManagementTest {
         workoutRepository =
             mockk {
                 coEvery { getEarliestWorkoutTimestamp() } returns null
+                coEvery { getCanonicalFatigueSeed(any()) } returns emptyList()
                 coEvery { countByTimeRange(any(), any()) } returns 0
                 coEvery { getInRangePaged(any(), any(), any(), any()) } returns emptyList()
                 coEvery { getInRange(any(), any()) } returns emptyList()
@@ -104,7 +105,12 @@ class WorkoutsViewModelLayoutManagementTest {
 
     private fun createViewModel(): WorkoutsViewModel =
         WorkoutsViewModel(
-            repositories = WorkoutsRepositories(dailySummaryRepository, workoutRepository, heartRateRepository),
+            repositories =
+                WorkoutsRepositories(
+                    dailySummaryRepository,
+                    workoutRepository,
+                    heartRateRepository,
+                ),
             selectedDateRepository = selectedDateRepository,
             scoringCalculator = scoringCalculator,
             settingsRepo = settingsRepo,
@@ -116,6 +122,8 @@ class WorkoutsViewModelLayoutManagementTest {
                 WorkoutsUseCases(
                     getWorkoutDisplayMetricsUseCase,
                     ComputeWeeklyTrainingStatsUseCase(),
+                    app.readylytics.health.core.scoring.domain.scoring
+                        .Generate24hResidualFatigueCurveUseCase(),
                     WorkoutsDistancePermissionGate { true },
                 ),
         )

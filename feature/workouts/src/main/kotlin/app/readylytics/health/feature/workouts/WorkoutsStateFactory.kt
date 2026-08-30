@@ -11,6 +11,7 @@ import app.readylytics.health.core.model.domain.preferences.UnitSystem
 import app.readylytics.health.core.model.domain.repository.WorkoutData
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
+import app.readylytics.health.core.model.domain.workouts.FatigueCurvePoint
 import app.readylytics.health.core.model.domain.workouts.WorkoutChartConfiguration
 import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryConfiguration
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
@@ -62,6 +63,7 @@ data class WorkoutsUiState(
     val isRangeChanging: Boolean = false,
     val trimpPeriodSummary: PeriodAverageSummary? = null,
     val strainRatioPeriodSummary: PeriodAverageSummary? = null,
+    val residualFatigueCurve: List<FatigueCurvePoint> = emptyList(),
     val cardConfigurations: List<CardConfiguration> = emptyList(),
     val isManagingCards: Boolean = false,
     val chartConfigurations: List<WorkoutChartConfiguration> = emptyList(),
@@ -168,6 +170,7 @@ internal data class WorkoutsStateInputs(
     val todayStrainIncrease: Float? = null,
     val weeklyTraining: WeeklyTrainingStats? = null,
     val hasDistancePermission: Boolean = true,
+    val residualFatigueCurve: List<FatigueCurvePoint> = emptyList(),
 )
 
 internal fun buildWorkoutsState(inputs: WorkoutsStateInputs): WorkoutsUiState =
@@ -489,5 +492,6 @@ private fun assembleWorkoutsUiState(
             hasDistancePermission = hasDistancePermission,
             trimpPeriodSummary = series.trimpSummary,
             strainRatioPeriodSummary = series.strainSummary,
+            residualFatigueCurve = residualFatigueCurve,
         )
     }

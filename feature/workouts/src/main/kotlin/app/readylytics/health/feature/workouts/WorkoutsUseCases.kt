@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.workouts
 
+import app.readylytics.health.core.scoring.domain.scoring.Generate24hResidualFatigueCurveUseCase
 import app.readylytics.health.core.scoring.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.core.scoring.domain.workouts.weekly.ComputeWeeklyTrainingStatsUseCase
 import javax.inject.Inject
@@ -13,5 +14,6 @@ class WorkoutsUseCases
     constructor(
         val getWorkoutDisplayMetrics: GetWorkoutDisplayMetricsUseCase,
         val computeWeeklyTrainingStats: ComputeWeeklyTrainingStatsUseCase,
+        val generate24hResidualFatigueCurve: Generate24hResidualFatigueCurveUseCase,
         val distancePermissionGate: WorkoutsDistancePermissionGate,
     )
