@@ -30,4 +30,5 @@ val CardId.displayNameResId: Int
             CardId.AI_RECOMMENDATION -> R.string.card_title_ai_recommendation
             CardId.BODY_TEMPERATURE -> R.string.card_title_body_temperature
             CardId.INSIGHTS -> CoreUiR.string.card_title_insights
+            CardId.RESIDUAL_FATIGUE -> R.string.card_residual_fatigue_title
         }

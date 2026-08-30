@@ -154,6 +154,7 @@ object SettingsDefaults {
             CardConfiguration(CardId.INSIGHTS, isVisible = true, position = 16),
             CardConfiguration(CardId.BODY_TEMPERATURE, isVisible = true, position = 17),
             CardConfiguration(CardId.AI_RECOMMENDATION, isVisible = true, position = 18),
+            CardConfiguration(CardId.RESIDUAL_FATIGUE, isVisible = false, position = 19),
         )
 
     val DEFAULT_VITALS_CARDS =
