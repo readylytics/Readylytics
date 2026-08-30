@@ -138,8 +138,8 @@ private fun formatFatiguePoint(
     point: FatigueCurvePoint,
     tooltipFormat: String,
 ): String {
-    val hours = (point.timeMinutesOfDay / MINUTES_PER_HOUR).toInt().coerceIn(0, HOURS_PER_DAY)
-    val minutes = (point.timeMinutesOfDay % MINUTES_PER_HOUR).toInt().coerceIn(0, MINUTES_PER_HOUR - 1)
+    val hours = (point.timeMinutesFromStart / MINUTES_PER_HOUR).toInt().coerceIn(0, HOURS_PER_DAY)
+    val minutes = (point.timeMinutesFromStart % MINUTES_PER_HOUR).toInt().coerceIn(0, MINUTES_PER_HOUR - 1)
     val timeStr = String.format(Locale.getDefault(), "%02d:%02d", hours, minutes)
     return String.format(Locale.getDefault(), tooltipFormat, timeStr, point.fatigueValue)
 }
@@ -240,7 +240,7 @@ private fun ResidualFatigueChartContent(
         rememberChartMarkerVisibilityListener(
             onPointSelected = { x, _, canvasX, canvasY ->
                 selectedPointOffset = Offset(canvasX, canvasY)
-                selectedIndex = points.indices.minByOrNull { abs(points[it].timeMinutesOfDay - x) } ?: 0
+                selectedIndex = points.indices.minByOrNull { abs(points[it].timeMinutesFromStart - x) } ?: 0
             },
         )
 
@@ -383,7 +383,7 @@ private fun ResidualFatigueCartesianHost(
             modelProducer.runTransaction {
                 lineModel {
                     series(
-                        x = points.map { it.timeMinutesOfDay.toDouble() },
+                        x = points.map { it.timeMinutesFromStart.toDouble() },
                         y = points.map { it.fatigueValue.toDouble() },
                     )
                 }

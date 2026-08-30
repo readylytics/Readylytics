@@ -347,8 +347,9 @@ class WorkoutsViewModel
                     halfLifeHours = prefs.residualFatigueHalfLifeHours,
                     fatigueGain = prefs.residualFatigueGain,
                 )
-            return useCases.generate24hResidualFatigueCurve.execute(
-                selectedDate = date,
+            return useCases.generateResidualFatigueCurve.execute(
+                startDate = date,
+                endDate = date,
                 zoneId = zoneId,
                 config = config,
                 retainedWorkouts = fatigueInputs,

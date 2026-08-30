@@ -5,11 +5,12 @@ import app.readylytics.health.core.model.domain.scoring.ResidualFatigueConfig
 import app.readylytics.health.core.model.domain.workouts.FatigueCurvePoint
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import java.util.TreeSet
 import javax.inject.Inject
 import kotlin.math.pow
 
-class Generate24hResidualFatigueCurveUseCase
+class GenerateResidualFatigueCurveUseCase
     @Inject
     constructor() {
         companion object {
@@ -20,22 +21,36 @@ class Generate24hResidualFatigueCurveUseCase
         }
 
         fun execute(
-            selectedDate: LocalDate,
+            startDate: LocalDate,
+            endDate: LocalDate,
             zoneId: ZoneId,
             config: ResidualFatigueConfig,
             retainedWorkouts: List<FatigueWorkoutInput>,
         ): List<FatigueCurvePoint> {
-            val startZdt = selectedDate.atStartOfDay(zoneId)
-            val dayStartMs = startZdt.toInstant().toEpochMilli()
-            val dayEndMs = startZdt.plusDays(1).toInstant().toEpochMilli()
+            val startZdt = startDate.atStartOfDay(zoneId)
+            val rangeStartMs = startZdt.toInstant().toEpochMilli()
+            val rangeEndMs = endDate.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val totalDays = ChronoUnit.DAYS.between(startDate, endDate.plusDays(1)).toInt()
 
             val sampleTimes = TreeSet<Long>()
-            for (i in 0 until SAMPLES_PER_DAY) {
-                sampleTimes.add(dayStartMs + i * STEP_MINUTES * MILLIS_PER_MINUTE)
+            val totalGridPoints = totalDays * SAMPLES_PER_DAY
+            for (i in 0 until totalGridPoints) {
+                sampleTimes.add(rangeStartMs + i * STEP_MINUTES * MILLIS_PER_MINUTE)
             }
             for (w in retainedWorkouts) {
-                if (w.endTimeMs in dayStartMs until dayEndMs) {
+                if (w.endTimeMs in rangeStartMs until rangeEndMs) {
                     sampleTimes.add(w.endTimeMs)
+                }
+            }
+
+            if (!config.enabled || config.halfLifeHours <= 0f) {
+                return sampleTimes.map { t ->
+                    val minutesFromStart = ((t - rangeStartMs) / MILLIS_PER_MINUTE.toDouble()).toFloat()
+                    FatigueCurvePoint(
+                        timestampMs = t,
+                        timeMinutesFromStart = minutesFromStart,
+                        fatigueValue = 0f,
+                    )
                 }
             }
 
@@ -48,24 +63,21 @@ class Generate24hResidualFatigueCurveUseCase
 
             val halfLifeMs = config.halfLifeHours.toDouble() * MILLIS_PER_HOUR
             val gain = config.fatigueGain.toDouble()
-            val isEnabled = config.enabled && halfLifeMs > 0.0
 
             return sampleTimes.map { t ->
                 var sum = 0.0
-                if (isEnabled) {
-                    for (w in sortedWorkouts) {
-                        if (w.endTimeMs <= t) {
-                            val deltaMs = (t - w.endTimeMs).toDouble()
-                            sum += gain * w.trimp * 2.0.pow(-deltaMs / halfLifeMs)
-                        } else {
-                            break
-                        }
+                for (w in sortedWorkouts) {
+                    if (w.endTimeMs <= t) {
+                        val deltaMs = (t - w.endTimeMs).toDouble()
+                        sum += gain * w.trimp * 2.0.pow(-deltaMs / halfLifeMs)
+                    } else {
+                        break
                     }
                 }
-                val minutesOfDay = ((t - dayStartMs) / MILLIS_PER_MINUTE.toDouble()).toFloat()
+                val minutesFromStart = ((t - rangeStartMs) / MILLIS_PER_MINUTE.toDouble()).toFloat()
                 FatigueCurvePoint(
                     timestampMs = t,
-                    timeMinutesOfDay = minutesOfDay,
+                    timeMinutesFromStart = minutesFromStart,
                     fatigueValue = sum.toFloat(),
                 )
             }
@@ -76,8 +88,8 @@ class Generate24hResidualFatigueCurveUseCase
             config: ResidualFatigueConfig,
             retainedWorkouts: List<FatigueWorkoutInput>,
         ): Float {
+            if (!config.enabled || config.halfLifeHours <= 0f) return 0f
             val halfLifeMs = config.halfLifeHours.toDouble() * MILLIS_PER_HOUR
-            if (!config.enabled || halfLifeMs <= 0.0) return 0f
             val gain = config.fatigueGain.toDouble()
             var sum = 0.0
             for (w in retainedWorkouts) {

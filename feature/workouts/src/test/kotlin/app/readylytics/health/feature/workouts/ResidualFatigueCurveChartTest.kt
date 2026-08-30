@@ -37,9 +37,9 @@ class ResidualFatigueCurveChartTest {
     fun residualFatigueCurveChart_withPoints_rendersChart() {
         val points =
             listOf(
-                FatigueCurvePoint(timestampMs = 0L, timeMinutesOfDay = 0f, fatigueValue = 10f),
-                FatigueCurvePoint(timestampMs = 900_000L, timeMinutesOfDay = 15f, fatigueValue = 25f),
-                FatigueCurvePoint(timestampMs = 1_800_000L, timeMinutesOfDay = 30f, fatigueValue = 20f),
+                FatigueCurvePoint(timestampMs = 0L, timeMinutesFromStart = 0f, fatigueValue = 10f),
+                FatigueCurvePoint(timestampMs = 900_000L, timeMinutesFromStart = 15f, fatigueValue = 25f),
+                FatigueCurvePoint(timestampMs = 1_800_000L, timeMinutesFromStart = 30f, fatigueValue = 20f),
             )
 
         composeRule.setContent {

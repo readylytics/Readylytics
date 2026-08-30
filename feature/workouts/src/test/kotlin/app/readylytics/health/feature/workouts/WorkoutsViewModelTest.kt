@@ -196,7 +196,7 @@ class WorkoutsViewModelTest {
                     getWorkoutDisplayMetricsUseCase,
                     ComputeWeeklyTrainingStatsUseCase(),
                     app.readylytics.health.core.scoring.domain.scoring
-                        .Generate24hResidualFatigueCurveUseCase(),
+                        .GenerateResidualFatigueCurveUseCase(),
                     WorkoutsDistancePermissionGate { true },
                 ),
         )

@@ -1123,12 +1123,12 @@ While the calculation remains shadow-only (it does not modify Readiness, Load Sc
      WorkoutRepository.getCanonicalFatigueSeed(evalMs) -> WorkoutDao.getCanonicalFatigueSeed
        │
        ▼ passed with active preferences (halfLifeHours, gain, enabled)
-     Generate24hResidualFatigueCurveUseCase (core/scoring/.../domain/scoring/)
-       │  Samples 24-hour timeline at 15-minute intervals (96 grid points: 00:00 to 23:45)
-       │  + exact workout completion impulse timestamps (TreeSet<Long>)
-       │  Computes continuous decay: F(t) = sum(gain * trimp * 2^(-(t - end) / halfLife))
-       ▼
-     List<FatigueCurvePoint> (timestampMs, timeMinutesOfDay, fatigueValue)
+      GenerateResidualFatigueCurveUseCase (core/scoring/.../domain/scoring/)
+        │  Samples timeline at 15-minute intervals (96 grid points per day)
+        │  + exact workout completion impulse timestamps (TreeSet<Long>)
+        │  Computes continuous decay: F(t) = sum(gain * trimp * 2^(-(t - end) / halfLife))
+        ▼
+      List<FatigueCurvePoint> (timestampMs, timeMinutesFromStart, fatigueValue)
        │
        ▼ rendered by
      ResidualFatigueCurveChart (feature/workouts/.../ResidualFatigueCurveChart.kt)
@@ -1349,7 +1349,7 @@ defaults when unset).
 | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/BaselineZScoreComputer.kt`                                 | Processing — Z-score computation                    | HRV & RHR Z-scores, nocturnal RHR delta BPM                                              |
 | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/RestorationScoreAssembler.kt` | Processing — restoration assembly | restoration score (sRest) assembly and contributor subscores |
 | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/ComputeResidualFatigueUseCase.kt` | Processing — residual fatigue (pure) | `compute()` summation + `advanceAccumulator()` decay/add step (§2.8) |
-| `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/Generate24hResidualFatigueCurveUseCase.kt` | Processing — 24h fatigue curve (pure) | generates 24-hour timeline samples at 15m intervals + workout impulses (§2.8) |
+| `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/GenerateResidualFatigueCurveUseCase.kt` | Processing — residual fatigue curve (pure) | generates multi-day timeline samples at 15m intervals + workout impulses (§2.8) |
 | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/scoring/ResidualFatigueConfig.kt` | Domain — fatigue parameters | enabled / halfLifeHours / fatigueGain (shadow mode, §2.8) |
 | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/repository/WalkForwardFatigueContext.kt` | Processing — walk-forward accumulator | prefetched impulse series + running accumulated fatigue (WP-27) |
 | `core/database/src/main/kotlin/app/readylytics/health/core/database/data/repository/ResidualFatigueComputer.kt` | Processing — fatigue snapshot | per-day snapshot at next-day midnight; exact retained-history seed (§2.8) |
