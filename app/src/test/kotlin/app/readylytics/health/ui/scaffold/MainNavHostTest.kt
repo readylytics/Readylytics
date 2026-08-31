@@ -81,6 +81,42 @@ class MainNavHostTest {
     }
 
     @Test
+    fun `settings opens sync progress when a resync starts and nothing was dismissed`() {
+        val result =
+            resolveSyncProgressEntryAction(
+                isResyncing = true,
+                resyncScreenDismissed = false,
+            )
+
+        assertEquals(SyncProgressEntryAction.Open, result)
+    }
+
+    @Test
+    fun `settings does not reopen sync progress after continue in background`() {
+        val result =
+            resolveSyncProgressEntryAction(
+                isResyncing = true,
+                resyncScreenDismissed = true,
+            )
+
+        assertEquals(SyncProgressEntryAction.None, result)
+    }
+
+    @Test
+    fun `dismissal is cleared once the resync finishes so the next run can auto-open`() {
+        val dismissedWhileRunning =
+            resolveSyncProgressEntryAction(isResyncing = true, resyncScreenDismissed = true)
+        val finished =
+            resolveSyncProgressEntryAction(isResyncing = false, resyncScreenDismissed = true)
+        val nextRun =
+            resolveSyncProgressEntryAction(isResyncing = true, resyncScreenDismissed = false)
+
+        assertEquals(SyncProgressEntryAction.None, dismissedWhileRunning)
+        assertEquals(SyncProgressEntryAction.ClearDismissal, finished)
+        assertEquals(SyncProgressEntryAction.Open, nextRun)
+    }
+
+    @Test
     fun `sync progress dismisses when determinate progress disappears after being seen`() {
         val result =
             shouldAutoDismissSyncProgress(

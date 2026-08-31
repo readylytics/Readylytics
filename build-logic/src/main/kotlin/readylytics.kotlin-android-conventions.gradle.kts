@@ -9,9 +9,6 @@ plugins {
 pluginManager.withPlugin("com.android.library") {
     extensions.configure<KotlinAndroidProjectExtension> {
         jvmToolchain(17)
-        compilerOptions {
-            freeCompilerArgs.add("-Xannotation-default-target=param-property")
-        }
     }
 }
 

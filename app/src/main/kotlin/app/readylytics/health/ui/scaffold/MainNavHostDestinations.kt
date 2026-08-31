@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -163,9 +164,14 @@ internal fun NavGraphBuilder.aboutAndSyncProgressDestinations(
     }
 }
 
+/**
+ * [resyncScreenDismissed] is taken as a [State] rather than a `Boolean` on purpose: NavHost
+ * remembers its `builder` lambda, so this function runs once per graph. A plain `Boolean` would be
+ * captured at graph-creation time and never update, permanently reporting "not dismissed".
+ */
 internal fun NavGraphBuilder.settingsDestinations(
     navController: NavHostController,
-    resyncScreenDismissed: Boolean,
+    resyncScreenDismissed: State<Boolean>,
     onResetResyncScreenDismissed: () -> Unit,
 ) {
     composable<TabDestination.Settings> {
@@ -180,7 +186,7 @@ internal fun NavGraphBuilder.settingsDestinations(
 @Composable
 private fun SettingsDestination(
     navController: NavHostController,
-    resyncScreenDismissed: Boolean,
+    resyncScreenDismissed: State<Boolean>,
     onResetResyncScreenDismissed: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -191,10 +197,16 @@ private fun SettingsDestination(
     val syncSettingsViewModel: SyncSettingsViewModel = hiltViewModel()
     val syncSettingsState by syncSettingsViewModel.uiState.collectAsStateWithLifecycle()
     LaunchedEffect(syncSettingsState.isResyncing) {
-        if (syncSettingsState.isResyncing && !resyncScreenDismissed) {
-            navController.navigate(AppDestination.SyncProgress) { launchSingleTop = true }
-        } else if (!syncSettingsState.isResyncing) {
-            onResetResyncScreenDismissed()
+        when (
+            resolveSyncProgressEntryAction(
+                isResyncing = syncSettingsState.isResyncing,
+                resyncScreenDismissed = resyncScreenDismissed.value,
+            )
+        ) {
+            SyncProgressEntryAction.Open ->
+                navController.navigate(AppDestination.SyncProgress) { launchSingleTop = true }
+            SyncProgressEntryAction.ClearDismissal -> onResetResyncScreenDismissed()
+            SyncProgressEntryAction.None -> Unit
         }
     }
 

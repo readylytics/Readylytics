@@ -4,10 +4,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -39,6 +37,27 @@ internal fun shouldAutoDismissSyncProgress(
         else -> SyncProgressDismissalState.StayOpen
     }
 
+internal enum class SyncProgressEntryAction {
+    /** Auto-open the full-screen progress destination. */
+    Open,
+
+    /** Resync finished, so a previous "Continue in background" must not suppress the next run. */
+    ClearDismissal,
+
+    /** Resync is running but the user already dismissed the screen for this run. */
+    None,
+}
+
+internal fun resolveSyncProgressEntryAction(
+    isResyncing: Boolean,
+    resyncScreenDismissed: Boolean,
+): SyncProgressEntryAction =
+    when {
+        !isResyncing -> SyncProgressEntryAction.ClearDismissal
+        resyncScreenDismissed -> SyncProgressEntryAction.None
+        else -> SyncProgressEntryAction.Open
+    }
+
 @Composable
 fun MainNavHost(
     navController: NavHostController,
@@ -47,7 +66,12 @@ fun MainNavHost(
     // Survives navigation to/from AppDestination.SyncProgress (both destinations get
     // disposed/recomposed as they're pushed/popped) so returning from "Continue in background"
     // doesn't immediately re-trigger the Settings auto-redirect below.
-    var resyncScreenDismissed by rememberSaveable { mutableStateOf(false) }
+    //
+    // Passed down as the MutableState itself, never as its current Boolean: NavHost remembers the
+    // `builder` lambda (see its KDoc -- "the contents of the builder cannot be changed"), so this
+    // block runs exactly once. A Boolean read here would be frozen at `false` for the lifetime of
+    // the graph and every "Continue in background" would immediately bounce back to SyncProgress.
+    val resyncScreenDismissed = rememberSaveable { mutableStateOf(false) }
 
     NavHost(
         navController = navController,
@@ -75,12 +99,12 @@ fun MainNavHost(
         workoutsDestinations(navController)
         aboutAndSyncProgressDestinations(
             navController = navController,
-            onSetResyncScreenDismissed = { resyncScreenDismissed = true },
+            onSetResyncScreenDismissed = { resyncScreenDismissed.value = true },
         )
         settingsDestinations(
             navController = navController,
             resyncScreenDismissed = resyncScreenDismissed,
-            onResetResyncScreenDismissed = { resyncScreenDismissed = false },
+            onResetResyncScreenDismissed = { resyncScreenDismissed.value = false },
         )
     }
 }

@@ -124,7 +124,7 @@ class QueryOptimizationTest {
                 val records =
                     (0 until 100).map { j ->
                         HrvRecordEntity(
-                            sourceRecordRef = (i * 100L + j).toLong() + 1,
+                            sourceRecordRef = (i * 100L + j) + 1,
                             sessionId = sessionId,
                             recordType = "SLEEP",
                             timestampMs = baselineMs + (i * 24 * 3_600_000L) + (j * 300_000L),
@@ -201,7 +201,7 @@ class QueryOptimizationTest {
                 repeat(20) { sampleIdx ->
                     allRecords.add(
                         HeartRateRecordEntity(
-                            sourceRecordRef = (sessionIdx * 100L + sampleIdx).toLong() + 1,
+                            sourceRecordRef = (sessionIdx * 100L + sampleIdx) + 1,
                             sessionId = "sleep_$sessionIdx",
                             recordType = "SLEEP",
                             timestampMs = baselineMs + (sessionIdx * 24 * 3_600_000L) + (sampleIdx * 60_000L),
@@ -256,7 +256,7 @@ class QueryOptimizationTest {
                 repeat(50) { sampleIdx ->
                     hrRecords.add(
                         HeartRateRecordEntity(
-                            sourceRecordRef = (sessionIdx * 100L + sampleIdx).toLong() + 1,
+                            sourceRecordRef = (sessionIdx * 100L + sampleIdx) + 1,
                             sessionId = sessionId,
                             recordType = "SLEEP",
                             timestampMs = baselineMs + (sessionIdx * 24 * 3_600_000L) + (sampleIdx * 10_000L),
@@ -265,7 +265,7 @@ class QueryOptimizationTest {
                     )
                     hrvRecords.add(
                         HrvRecordEntity(
-                            sourceRecordRef = (sessionIdx * 100L + sampleIdx).toLong() + 1,
+                            sourceRecordRef = (sessionIdx * 100L + sampleIdx) + 1,
                             sessionId = sessionId,
                             recordType = "SLEEP",
                             timestampMs = baselineMs + (sessionIdx * 24 * 3_600_000L) + (sampleIdx * 10_000L),
