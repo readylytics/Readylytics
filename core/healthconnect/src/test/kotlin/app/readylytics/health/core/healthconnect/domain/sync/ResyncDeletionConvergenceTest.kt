@@ -1,8 +1,10 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
 import app.readylytics.health.core.database.domain.sync.DailyRecomputeSupport
-import app.readylytics.health.core.model.domain.model.DomainSleepSessionRecord
 import app.readylytics.health.core.model.domain.model.DomainExerciseSessionRecord
+import app.readylytics.health.core.model.domain.model.DomainHeartRateRecord
+import app.readylytics.health.core.model.domain.model.DomainHeartRateSample
+import app.readylytics.health.core.model.domain.model.DomainSleepSessionRecord
 import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.model.WorkoutRoutePoint
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
@@ -16,9 +18,12 @@ import app.readylytics.health.core.model.domain.sync.HealthIngestionBatch
 import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
 import app.readylytics.health.core.model.domain.sync.HeartRateInput
 import app.readylytics.health.core.model.domain.sync.HrvInput
+import app.readylytics.health.core.model.domain.sync.ResyncCheckpoint
+import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.sync.SelectedSourcePruner
 import app.readylytics.health.core.model.domain.sync.SleepSessionInput
+import app.readylytics.health.core.model.domain.sync.WeightInput
 import app.readylytics.health.core.model.domain.sync.WorkoutInput
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
 import io.mockk.coEvery
@@ -63,6 +68,12 @@ class ResyncDeletionConvergenceTest {
         coEvery { changeSynchronizer.applyPendingChanges() } returns HealthChangeSyncOutcome(emptySet(), false)
         coEvery { changeSynchronizer.captureChangesTokens() } returns emptyMap()
         coEvery { changeSynchronizer.commitTokens(any()) } returns Unit
+        coEvery { hcRepo.hasWeightPermission() } returns true
+        coEvery { hcRepo.hasBodyFatPermission() } returns true
+        coEvery { hcRepo.hasBloodPressurePermission() } returns true
+        coEvery { hcRepo.hasOxygenSaturationPermission() } returns true
+        coEvery { hcRepo.hasBodyTemperaturePermission() } returns true
+        coEvery { hcRepo.hasStepsPermission() } returns true
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
         coEvery { scoringRepository.fetchWalkForwardTrimpContext(any(), any(), any()) } returns
             WalkForwardTrimpContext(TreeMap(), TreeMap())
@@ -357,21 +368,124 @@ class ResyncDeletionConvergenceTest {
             assertNotNull("Session must not be deleted when skipIngestAndPrune is true", preserved)
         }
 
+    @Test
+    fun `Missing optional permissions do NOT trigger deletion of local records during resync`() =
+        runTest {
+            val startDate = LocalDate.of(2026, 6, 1)
+            val endDate = LocalDate.of(2026, 6, 5)
+
+            val localWeight =
+                WeightInput(
+                    id = "weight-local-1",
+                    timestampMs = Instant.parse("2026-06-02T12:00:00Z").toEpochMilli(),
+                    weightKg = 75.0f,
+                    deviceName = "Scale",
+                )
+            fakeStore.weights[localWeight.id] = localWeight
+
+            // Weight permission is NOT granted
+            coEvery { hcRepo.hasWeightPermission() } returns false
+            coEvery { hcRepo.readWeightRecords(any(), any()) } returns emptyList()
+
+            val result = useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
+
+            assertTrue("Resync must succeed", result.isSuccess)
+            val preserved = fakeStore.weights[localWeight.id]
+            assertNotNull("Weight record must NOT be deleted when weight permission is missing", preserved)
+        }
+
+    @Test
+    fun `Resuming chunk mid-stream with hrStartPageToken does NOT delete earlier streamed pages`() =
+        runTest {
+            val startDate = LocalDate.of(2026, 6, 1)
+            val endDate = LocalDate.of(2026, 6, 5)
+
+            val hrSamplePage1 =
+                HeartRateInput(
+                    id = "hr-page-1-sample",
+                    timestampMs = Instant.parse("2026-06-02T12:00:00Z").toEpochMilli(),
+                    beatsPerMinute = 65,
+                    recordType = "HEART_RATE",
+                    sessionId = null,
+                    deviceName = "Pixel Watch",
+                )
+            fakeStore.heartRateSamples[hrSamplePage1.id] = hrSamplePage1
+
+            val hrSamplePage2 =
+                DomainHeartRateRecord(
+                    id = "hr-page-2-record",
+                    deviceName = "Pixel Watch",
+                    samples =
+                        listOf(
+                            DomainHeartRateSample(
+                                time = Instant.parse("2026-06-02T13:00:00Z"),
+                                beatsPerMinute = 70,
+                            ),
+                        ),
+                )
+
+            // Setup checkpoint as if page 1 finished and hrPageToken is "token-page-2"
+            checkpointStore.save(
+                ResyncCheckpoint(
+                    startDate = startDate,
+                    endDate = endDate,
+                    phase = ResyncPhase.INGEST,
+                    nextDate = startDate,
+                    selectionHash = "",
+                    baselineChangeTokens = mapOf(HealthDataType.SLEEP to "token-1"),
+                    hrPageToken = "token-page-2",
+                ),
+            )
+
+            coEvery {
+                hcRepo.readHeartRateSamplesPaged(
+                    from = any(),
+                    to = any(),
+                    startPageToken = "token-page-2",
+                    onPage = any(),
+                )
+            } coAnswers {
+                @Suppress("UNCHECKED_CAST")
+                val onPage = it.invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
+                onPage(listOf(hrSamplePage2), null)
+            }
+
+            val result = useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
+
+            assertTrue("Resync must succeed", result.isSuccess)
+            assertNotNull(
+                "Page 1 sample must NOT be deleted on mid-stream resumed chunk",
+                fakeStore.heartRateSamples["hr-page-1-sample"],
+            )
+            assertTrue(
+                "Page 2 sample must be persisted",
+                fakeStore.heartRateSamples.values.any { it.beatsPerMinute == 70 },
+            )
+        }
+
     private class FakeReconcilingHealthIngestionStore : HealthIngestionStore {
         val sleepSessions = mutableMapOf<String, SleepSessionInput>()
         val workouts = mutableMapOf<String, WorkoutInput>()
+        val weights = mutableMapOf<String, WeightInput>()
+        val heartRateSamples = mutableMapOf<String, HeartRateInput>()
 
         fun clear() {
             sleepSessions.clear()
             workouts.clear()
+            weights.clear()
+            heartRateSamples.clear()
         }
 
         override suspend fun persist(batch: HealthIngestionBatch) {
             batch.sleepSessions.forEach { sleepSessions[it.id] = it }
             batch.workouts.forEach { workouts[it.id] = it }
+            batch.weights.forEach { weights[it.id] = it }
         }
 
-        override suspend fun persistHeartRateSamples(samples: List<HeartRateInput>) = Unit
+        override suspend fun persistHeartRateSamples(samples: List<HeartRateInput>) {
+            samples.forEach { heartRateSamples[it.id] = it }
+        }
+
         override suspend fun persistHrvSamples(samples: List<HrvInput>) = Unit
         override suspend fun clearFrozenBaselines(start: LocalDate, endExclusive: LocalDate, zoneId: ZoneId) = Unit
         override suspend fun countHeartRateInRange(startMs: Long, endMs: Long): Int = 0
@@ -415,6 +529,26 @@ class ResyncDeletionConvergenceTest {
                         zoneId = zoneId,
                         getStart = { it.startTime },
                         getEnd = { it.endTime },
+                    )
+                HealthDataType.WEIGHT ->
+                    reconcileItems(
+                        map = weights,
+                        windowStartMs = windowStartMs,
+                        windowEndMs = windowEndMs,
+                        hcIds = hcIds,
+                        zoneId = zoneId,
+                        getStart = { it.timestampMs },
+                        getEnd = { it.timestampMs },
+                    )
+                HealthDataType.HEART_RATE ->
+                    reconcileItems(
+                        map = heartRateSamples,
+                        windowStartMs = windowStartMs,
+                        windowEndMs = windowEndMs,
+                        hcIds = hcIds,
+                        zoneId = zoneId,
+                        getStart = { it.timestampMs },
+                        getEnd = { it.timestampMs },
                     )
                 else -> null
             }

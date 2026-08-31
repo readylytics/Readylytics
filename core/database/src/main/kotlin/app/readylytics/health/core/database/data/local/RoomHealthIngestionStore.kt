@@ -253,7 +253,6 @@ internal object HealthRecordDeletionReconciler {
                     getId = { it.id },
                     getTimestamp = { it.timestampMs },
                     deleteById = { daos.weightRecordDao.deleteById(it) },
-                    deleteBetween = { start, end -> daos.weightRecordDao.deleteBetween(start, end) },
                 )
             HealthDataType.BODY_FAT ->
                 reconcileCompositeMetric(
@@ -262,7 +261,6 @@ internal object HealthRecordDeletionReconciler {
                     getId = { it.id },
                     getTimestamp = { it.timestampMs },
                     deleteById = { daos.bodyFatRecordDao.deleteById(it) },
-                    deleteBetween = { start, end -> daos.bodyFatRecordDao.deleteBetween(start, end) },
                 )
             HealthDataType.BLOOD_PRESSURE ->
                 reconcileCompositeMetric(
@@ -271,7 +269,6 @@ internal object HealthRecordDeletionReconciler {
                     getId = { it.id },
                     getTimestamp = { it.timestampMs },
                     deleteById = { daos.bloodPressureRecordDao.deleteById(it) },
-                    deleteBetween = { start, end -> daos.bloodPressureRecordDao.deleteBetween(start, end) },
                 )
             HealthDataType.OXYGEN_SATURATION ->
                 reconcileCompositeMetric(
@@ -280,7 +277,6 @@ internal object HealthRecordDeletionReconciler {
                     getId = { it.id },
                     getTimestamp = { it.timestampMs },
                     deleteById = { daos.oxygenSaturationRecordDao.deleteById(it) },
-                    deleteBetween = { start, end -> daos.oxygenSaturationRecordDao.deleteBetween(start, end) },
                 )
             HealthDataType.BODY_TEMPERATURE ->
                 reconcileCompositeMetric(
@@ -289,7 +285,6 @@ internal object HealthRecordDeletionReconciler {
                     getId = { it.id },
                     getTimestamp = { it.timestampMs },
                     deleteById = { daos.bodyTemperatureRecordDao.deleteById(it) },
-                    deleteBetween = { start, end -> daos.bodyTemperatureRecordDao.deleteBetween(start, end) },
                 )
             else -> null
         }
@@ -356,16 +351,12 @@ internal object HealthRecordDeletionReconciler {
         getId: (T) -> String,
         getTimestamp: (T) -> Long,
         deleteById: suspend (String) -> Int,
-        deleteBetween: suspend (Long, Long) -> Int,
     ): ScoreInvalidation.AffectedRange? {
         val local = fetch(ctx.startMs, ctx.endMs)
         val toDelete = local.filter { getId(it) !in ctx.hcIds && getId(it).substringBefore('_') !in ctx.hcIds }
         if (toDelete.isEmpty()) return null
 
         toDelete.forEach { deleteById(getId(it)) }
-        if (ctx.hcIds.isEmpty()) {
-            deleteBetween(ctx.startMs, ctx.endMs)
-        }
         return toAffectedRange(toDelete.minOf { getTimestamp(it) }, toDelete.maxOf { getTimestamp(it) }, ctx.zoneId)
     }
 

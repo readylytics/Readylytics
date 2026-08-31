@@ -353,19 +353,7 @@ class HealthIngestionCoordinator
             val startMs = params.windowStart.toEpochMilli()
             val endMs = params.windowEnd.toEpochMilli() - 1
 
-            val typeToIds =
-                listOf(
-                    HealthDataType.SLEEP to raw.sleepSessions.mapTo(HashSet()) { it.id },
-                    HealthDataType.EXERCISE to raw.exerciseRecords.mapTo(HashSet()) { it.id },
-                    HealthDataType.HEART_RATE to heartIds.hr,
-                    HealthDataType.HRV to heartIds.hrv,
-                    HealthDataType.WEIGHT to raw.weightRecords.mapTo(HashSet()) { it.id },
-                    HealthDataType.BODY_FAT to raw.bodyFatRecords.mapTo(HashSet()) { it.id },
-                    HealthDataType.BLOOD_PRESSURE to raw.bloodPressureRecords.mapTo(HashSet()) { it.id },
-                    HealthDataType.OXYGEN_SATURATION to raw.spo2Records.mapTo(HashSet()) { it.id },
-                    HealthDataType.BODY_TEMPERATURE to raw.bodyTemperatureRecords.mapTo(HashSet()) { it.id },
-                    HealthDataType.STEPS to raw.stepsRecords.mapTo(HashSet()) { it.id },
-                )
+            val typeToIds = collectReconcilableTypes(params, raw, heartIds)
 
             val results =
                 typeToIds.associate { (type, ids) ->
@@ -384,6 +372,40 @@ class HealthIngestionCoordinator
 
             return ScoreInvalidation.merge(results.values)
         }
+
+        private suspend fun collectReconcilableTypes(
+            params: IngestWindowParams,
+            raw: RawBulkRecords,
+            heartIds: HeartIds,
+        ): List<Pair<HealthDataType, Set<String>>> =
+            buildList {
+                add(HealthDataType.SLEEP to raw.sleepSessions.mapTo(HashSet()) { it.id })
+                add(HealthDataType.EXERCISE to raw.exerciseRecords.mapTo(HashSet()) { it.id })
+                if (params.hrStartPageToken == null && params.hrvStartPageToken == null) {
+                    add(HealthDataType.HEART_RATE to heartIds.hr)
+                }
+                if (params.hrvStartPageToken == null) {
+                    add(HealthDataType.HRV to heartIds.hrv)
+                }
+                if (hcRepo.hasWeightPermission()) {
+                    add(HealthDataType.WEIGHT to raw.weightRecords.mapTo(HashSet()) { it.id })
+                }
+                if (hcRepo.hasBodyFatPermission()) {
+                    add(HealthDataType.BODY_FAT to raw.bodyFatRecords.mapTo(HashSet()) { it.id })
+                }
+                if (hcRepo.hasBloodPressurePermission()) {
+                    add(HealthDataType.BLOOD_PRESSURE to raw.bloodPressureRecords.mapTo(HashSet()) { it.id })
+                }
+                if (hcRepo.hasOxygenSaturationPermission()) {
+                    add(HealthDataType.OXYGEN_SATURATION to raw.spo2Records.mapTo(HashSet()) { it.id })
+                }
+                if (hcRepo.hasBodyTemperaturePermission()) {
+                    add(HealthDataType.BODY_TEMPERATURE to raw.bodyTemperatureRecords.mapTo(HashSet()) { it.id })
+                }
+                if (hcRepo.hasStepsPermission()) {
+                    add(HealthDataType.STEPS to raw.stepsRecords.mapTo(HashSet()) { it.id })
+                }
+            }
 
         companion object {
             const val RECONCILE_DELETIONS = true
