@@ -73,6 +73,72 @@ class DataRollupManagerTest {
             assertEquals(86.0, (buckets[0].avgBpm * 3 + buckets[1].avgBpm * 2) / 5.0, 0.01)
         }
 
+    // R2-DB-004 (review follow-up): confirms the seam between rollupExpiredHotTier and the new
+    // percentile columns end-to-end, using MinuteBucketDao.getBucketsForSession -- unlike
+    // getMinuteBuckets, that returns the full entity, including p5Bpm..p95Bpm. Same 12-sample
+    // 50..61 fixture as MinuteBucketAggregatorTest, so the expected values are the same
+    // hand-verified percentile math (see that test's header comment for the worked arithmetic).
+    @Test
+    fun rollupExpiredHotTierWritesPercentileSketchIntoBuckets() =
+        runBlocking {
+            val heartRateDao = database.heartRateDao()
+            val sourceRecordDao = database.sourceRecordDao()
+            val minuteBucketDao = database.minuteBucketDao()
+
+            val ref = sourceRecordDao.getOrCreateSourceRef("uuid-hr-percentile", "HEART_RATE", 0L)
+            heartRateDao.upsertAll(
+                (0 until 12).map { i -> hr(ref, i * 5_000L, 50 + i, "SLEEP", "s-percentile") },
+            )
+
+            rollupManager.rollupExpiredHotTier(cutoffMs = 60_000L)
+
+            val buckets = minuteBucketDao.getBucketsForSession("SLEEP", "s-percentile")
+            assertEquals(1, buckets.size)
+            val bucket = buckets.single()
+            assertEquals(50, bucket.minBpm)
+            assertEquals(61, bucket.maxBpm)
+            assertEquals(12, bucket.sampleCount)
+            assertEquals(55.5, bucket.avgBpm, 0.01)
+            assertEquals(51, bucket.p5Bpm)
+            assertEquals(53, bucket.p25Bpm)
+            assertEquals(56, bucket.p50Bpm)
+            assertEquals(58, bucket.p75Bpm)
+            assertEquals(60, bucket.p95Bpm)
+        }
+
+    // R2-DB-004 (review follow-up): the read/aggregate/delete pass is now chunked by UTC day
+    // instead of processing everything before the cutoff in one transaction (unbounded-memory
+    // risk on a large historical backlog). This proves day-chunking is transparent to callers:
+    // raw samples spread across three distinct UTC days still roll up into exactly the buckets a
+    // single unchunked pass would have produced, and every raw row before the cutoff is deleted.
+    @Test
+    fun rollupExpiredHotTierProducesIdenticalBucketsAcrossDayChunkBoundaries() =
+        runBlocking {
+            val heartRateDao = database.heartRateDao()
+            val sourceRecordDao = database.sourceRecordDao()
+            val minuteBucketDao = database.minuteBucketDao()
+            val dayMs = 24L * 60 * 60 * 1000
+
+            val ref = sourceRecordDao.getOrCreateSourceRef("uuid-hr-days", "HEART_RATE", 0L)
+            // One sample in each of three separate UTC days, all in the same minute-of-day so
+            // they'd collide into one bucket if day-chunking ever leaked across a day boundary.
+            heartRateDao.upsertAll(
+                listOf(
+                    hr(ref, 0L, 60, "RESTING", null),
+                    hr(ref, dayMs, 65, "RESTING", null),
+                    hr(ref, 2 * dayMs, 70, "RESTING", null),
+                ),
+            )
+
+            val deleted = rollupManager.rollupExpiredHotTier(cutoffMs = 3 * dayMs)
+
+            assertEquals(3, deleted)
+            assertEquals(0, heartRateDao.count())
+            val buckets = minuteBucketDao.getBucketsForSession("RESTING", "")
+            assertEquals(3, buckets.size)
+            assertEquals(setOf(60, 65, 70), buckets.map { it.minBpm }.toSet())
+        }
+
     private fun hr(
         ref: Long,
         timestampMs: Long,

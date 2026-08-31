@@ -216,6 +216,15 @@ interface HeartRateDao {
     @Query("DELETE FROM heart_rate_records WHERE timestampMs < :beforeMs")
     suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
 
+    // R2-DB-004: day-chunk-bounded delete for DataRollupManager -- deletes every raw row in
+    // [fromMs, toMs), plausible or not (matching deleteBeforeTimestamp's unconditional contract),
+    // scoped to one rollup day-chunk instead of everything before the cutoff at once.
+    @Query("DELETE FROM heart_rate_records WHERE timestampMs >= :fromMs AND timestampMs < :toMs")
+    suspend fun deleteInRange(
+        fromMs: Long,
+        toMs: Long,
+    ): Int
+
     // DB-002: keyset-bounded delete for RetentionCleanup -- deletes at most `limit` of the oldest
     // rows before `beforeMs` per call, so a large first-time cleanup opens many bounded
     // transactions instead of one unbounded delete (WAL growth).
@@ -345,12 +354,23 @@ interface HeartRateDao {
 
     // R2-DB-004: feeds the Kotlin-side rollup aggregator (MinuteBucketAggregator.kt) — SQLite has
     // no PERCENTILE_CONT, so the five-percentile warm-tier sketch is computed in Kotlin, not SQL.
-    // Ordered by (recordType, sessionId, timestampMs) so a single linear grouping pass produces
-    // buckets in ascending-timestamp order per (recordType, sessionId) key.
+    // Scoped to [fromMs, toMs) -- one rollup day-chunk -- rather than everything before the
+    // cutoff, so a large historical backlog is never read into memory in a single pass (this
+    // table is the same high-volume outlier RetentionCleanup/DB-002 batches for). Ordered by
+    // (recordType, sessionId, timestampMs) so a single linear grouping pass produces buckets in
+    // ascending-timestamp order per (recordType, sessionId) key.
     @Query(
         "SELECT * FROM heart_rate_records " +
-            "WHERE timestampMs < :beforeMs AND beatsPerMinute BETWEEN 30 AND 230 " +
+            "WHERE timestampMs >= :fromMs AND timestampMs < :toMs AND beatsPerMinute BETWEEN 30 AND 230 " +
             "ORDER BY recordType ASC, sessionId ASC, timestampMs ASC",
     )
-    suspend fun getPlausibleSamplesBeforeForRollup(beforeMs: Long): List<HeartRateRecordEntity>
+    suspend fun getPlausibleSamplesInRangeForRollup(
+        fromMs: Long,
+        toMs: Long,
+    ): List<HeartRateRecordEntity>
+
+    // R2-DB-004: anchors DataRollupManager's day-chunk loop to wherever raw data actually starts,
+    // and (re-queried after each chunk) to the next day containing data.
+    @Query("SELECT MIN(timestampMs) FROM heart_rate_records")
+    suspend fun getEarliestTimestampMs(): Long?
 }
