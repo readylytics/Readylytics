@@ -45,33 +45,28 @@ abstract class DatabaseModule {
             sqlCipherKeyManager: SqlCipherKeyManager,
             databaseReadinessGate: DatabaseReadinessGate,
         ): HealthDatabase {
-            android.os.Trace.beginSection("Readylytics.provideDatabase")
-            try {
-                val dbFile = context.getDatabasePath("health_dashboard.db")
-                sqlCipherKeyManager.migrateIfNeeded(dbFile)
-                requireDatabaseReady(databaseReadinessGate)
+            val dbFile = context.getDatabasePath("health_dashboard.db")
+            sqlCipherKeyManager.migrateIfNeeded(dbFile)
+            requireDatabaseReady(databaseReadinessGate)
 
-                val builder =
-                    Room
-                        .databaseBuilder<HealthDatabase>(context, "health_dashboard.db")
-                        .openHelperFactory(sqlCipherKeyManager.getOrCreateFactory())
-                        .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
-                        .setQueryCoroutineContext(Dispatchers.IO)
-                        .addMigrations(*DatabaseMigrations.all)
-                        .addCallback(
-                            object : RoomDatabase.Callback() {
-                                override fun onOpen(db: SupportSQLiteDatabase) {
-                                    super.onOpen(db)
-                                    db.execSQL("PRAGMA synchronous = NORMAL")
-                                    db.execSQL("PRAGMA foreign_keys = ON")
-                                }
-                            },
-                        )
+            val builder =
+                Room
+                    .databaseBuilder<HealthDatabase>(context, "health_dashboard.db")
+                    .openHelperFactory(sqlCipherKeyManager.getOrCreateFactory())
+                    .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
+                    .setQueryCoroutineContext(Dispatchers.IO)
+                    .addMigrations(*DatabaseMigrations.all)
+                    .addCallback(
+                        object : RoomDatabase.Callback() {
+                            override fun onOpen(db: SupportSQLiteDatabase) {
+                                super.onOpen(db)
+                                db.execSQL("PRAGMA synchronous = NORMAL")
+                                db.execSQL("PRAGMA foreign_keys = ON")
+                            }
+                        },
+                    )
 
-                return builder.build()
-            } finally {
-                android.os.Trace.endSection()
-            }
+            return builder.build()
         }
     }
 }
