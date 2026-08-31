@@ -257,7 +257,7 @@ so re-ingestion is idempotent, but entity construction itself happens one layer 
 | `OxygenSaturationDataMapper` | `core/healthconnect/src/main/kotlin/app/readylytics/health/core/healthconnect/data/mapper/OxygenSaturationDataMapper.kt` | `DomainOxygenSaturationRecord` → `OxygenSaturationRecordEntity` (%).                                                                               |
 | `BodyTemperatureDataMapper`  | `core/healthconnect/src/main/kotlin/app/readylytics/health/core/healthconnect/data/mapper/BodyTemperatureDataMapper.kt`  | `DomainBodyTemperatureRecord` → `BodyTemperatureRecordEntity` (°C). Ingested through `HealthIngestionCoordinator` exactly like the other optional-permission metrics — same upsert/idempotency contract, no special-casing. |
 
-### 1.4 Room storage — `HealthDatabase` (`@Database(version = 15)`)
+### 1.4 Room storage — `HealthDatabase` (`@Database(version = 16)`)
 
 Defined in `core/database/src/main/kotlin/app/readylytics/health/core/database/data/local/HealthDatabase.kt`;
 entities in `core/database-schema/src/main/kotlin/app/readylytics/health/core/databaseschema/data/local/entity/`, DAOs in
@@ -364,6 +364,16 @@ walk-forward accumulator, single-day fallback, shadow mode) is documented in §2
 Version 14 (`Migration13To14`) adds `index_workout_records_endTime_id` on
 `workout_records(endTime, id)`. It preserves all workout and daily-summary rows and supports the stable
 canonical residual-fatigue impulse order used by exact retained-history reconstruction.
+Version 15 (`Migration14To15`, `R2-DB-004`) adds nullable percentile-sketch columns `p5Bpm`..`p95Bpm` to
+`hr_minute_buckets` for richer warm-tier reconstruction.
+Version 16 (`Migration15To16`, `R2-DB-002`, `R2-ARCH-003`): changes `hr_minute_buckets` primary key to
+`(bucketStartMs, recordType, sessionId, deviceName)` to prevent collisions between different devices
+recording in the same minute; carries `deviceName` through `MinuteBucketAggregator`; allows
+`SelectedSourcePrunerImpl` to prune warm-tier buckets of non-selected devices via
+`MinuteBucketDao.deleteBucketsNotMatchingDevice`; includes warm-tier device names in
+`HealthDeviceRepository.getAvailableDevices()`; and normalizes empty-string device names (`""` → `NULL`)
+across the 5 vitals tables (`weight_records`, `body_fat_records`, `blood_pressure_records`,
+`oxygen_saturation_records`, `body_temperature_records`).
 
 **Workout distance and elevation come from separate records, not the session.** An
 `ExerciseSessionRecord` carries no distance — the recording app writes `DistanceRecord` and
@@ -428,7 +438,7 @@ skipped by the restore reader's `else -> skipValue()` branch.
 - **Hot tier (0–90 days):** raw 1-second `heart_rate_records`/`hrv_records` keyed by integer
   `sourceRecordRef`. `RetentionBounds.resolveHotTierCutoffMs()` is the single 90-day boundary.
 - **Warm tier (90 days → retention cutoff):** 1-minute `hr_minute_buckets` per
-  `(bucketStartMs, recordType, sessionId)`. `DataRollupWorker` (daily periodic) drives
+  `(bucketStartMs, recordType, sessionId, deviceName)`. `DataRollupWorker` (daily periodic) drives
   `DataRollupManager.rollupExpiredHotTier(cutoffMs)`, which atomically downsamples raw HR older than
   the boundary into buckets and deletes the raw rows — a crash can never drop a sample (either the
   raw row survives or it is already folded into a bucket). `ScoringRepositoryImpl` merges hot+warm
@@ -465,7 +475,7 @@ zero-drift result of one fixture (see `WarmTierReconstructionPropertyTest` and
 | `HeartRateRecordEntity`        | `heart_rate_records`        | `rowId: Long` (auto)                   | `sourceRecordRef` (FK → `health_source_records.id`), `(sourceRecordRef, timestampMs)` unique; `timestampMs`, `recordType`, `sessionId`, `deviceName` |
 | `HrvRecordEntity`              | `hrv_records`               | `rowId: Long` (auto)                   | `sourceRecordRef` (FK → `health_source_records.id`), `(sourceRecordRef, timestampMs)` unique; RMSSD ms, `timestampMs`, `recordType`, `sessionId`     |
 | `HealthSourceRecordEntity`     | `health_source_records`     | `id: Long` (auto)                      | `sourceRecordId` (base UUID, unique), `recordType`, `createdAtMs` — normalized source identity                                                      |
-| `HrMinuteBucketEntity`         | `hr_minute_buckets`         | `(bucketStartMs, recordType, sessionId)` | 1-minute warm-tier aggregates: `minBpm`/`maxBpm`/`avgBpm`/`sampleCount`; `sessionId` is `""` for no-session minutes; plus a p5/p25/p50/p75/p95 percentile sketch (nullable — `null` for buckets rolled up before the v15 migration)                                      |
+| `HrMinuteBucketEntity`         | `hr_minute_buckets`         | `(bucketStartMs, recordType, sessionId, deviceName)` | 1-minute warm-tier aggregates: `minBpm`/`maxBpm`/`avgBpm`/`sampleCount`; `sessionId` is `""` for no-session minutes; `deviceName` (default `""`); plus a p5/p25/p50/p75/p95 percentile sketch (nullable — `null` for buckets rolled up before the v15 migration) |
 | `WorkoutRecordEntity`          | `workout_records`           | `id: String` (HC id)                   | zone1–5 min, TRIMP, avg HR, `startTime`, `deviceName`, `modelTrimp`; route-derived display metrics `totalDistanceMeters`/`avgSpeedKmh`/`elevationGainMeters` (nullable) and `routeState` (IMPORTED/PERMISSION_REQUIRED/NOT_AVAILABLE) — display/insight fields, never scoring inputs |
 | `WorkoutRoutePointEntity`      | `workout_route_points`      | `id: Long` (auto)                      | `workoutId` (FK → `workout_records.id`, cascade delete), lat/lon/altitude, `timestampMs`, horizontal/vertical accuracy; `(workoutId, timestampMs)` indexed. Upserted alongside each workout ingest; replaced by `OnConflictStrategy.REPLACE` on identical `(workoutId, timestampMs)` — idempotent under chunked refetch |
 | `WeightRecordEntity`           | `weight_records`            | `id: String` (composite)               | kg, `timestampMs`, `deviceName`                                                                                                                           |

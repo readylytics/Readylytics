@@ -21,6 +21,6 @@ object BodyFatDataMapper {
     private fun extractBodyFatTimestamp(record: DomainBodyFatRecord): Long =
         MapperHelpers.extractTimestampMs(record.time)
 
-    private fun extractBodyFatDeviceName(record: DomainBodyFatRecord): String =
+    private fun extractBodyFatDeviceName(record: DomainBodyFatRecord): String? =
         MapperHelpers.extractDeviceName(record.deviceName)
 }

@@ -2,7 +2,6 @@ package app.readylytics.health.core.databaseschema.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.Index
-import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
 
 // @Serializable is load-bearing: LocalBackupManager.writeJsonStreaming encodes this entity
@@ -13,7 +12,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 @Entity(
     tableName = "hr_minute_buckets",
-    primaryKeys = ["bucketStartMs", "recordType", "sessionId"],
+    primaryKeys = ["bucketStartMs", "recordType", "sessionId", "deviceName"],
     indices = [
         Index(value = ["sessionId", "recordType"]),
         Index(value = ["bucketStartMs", "bucketEndMs"]),
@@ -28,7 +27,7 @@ data class HrMinuteBucketEntity(
     val sampleCount: Int,
     val recordType: String,
     val sessionId: String = "",
-    val deviceName: String? = null,
+    val deviceName: String = "",
     // R2-DB-004: percentile sketch (Room v14->v15). Nullable because rollup never reprocesses
     // already-rolled minutes -- buckets written before the v15 migration keep these `null`
     // forever. Task 4 (WarmTierReconstructor) branches its reconstruction on `p50Bpm != null`.

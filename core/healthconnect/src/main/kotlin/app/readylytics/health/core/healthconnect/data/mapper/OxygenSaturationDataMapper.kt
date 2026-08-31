@@ -21,6 +21,6 @@ object OxygenSaturationDataMapper {
     private fun extractOxygenSaturationTimestamp(record: DomainOxygenSaturationRecord): Long =
         MapperHelpers.extractTimestampMs(record.time)
 
-    private fun extractOxygenSaturationDeviceName(record: DomainOxygenSaturationRecord): String =
+    private fun extractOxygenSaturationDeviceName(record: DomainOxygenSaturationRecord): String? =
         MapperHelpers.extractDeviceName(record.deviceName)
 }

@@ -22,6 +22,6 @@ object BloodPressureDataMapper {
     private fun extractBloodPressureTimestamp(record: DomainBloodPressureRecord): Long =
         MapperHelpers.extractTimestampMs(record.time)
 
-    private fun extractBloodPressureDeviceName(record: DomainBloodPressureRecord): String =
+    private fun extractBloodPressureDeviceName(record: DomainBloodPressureRecord): String? =
         MapperHelpers.extractDeviceName(record.deviceName)
 }

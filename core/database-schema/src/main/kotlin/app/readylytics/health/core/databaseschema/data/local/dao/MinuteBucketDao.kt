@@ -71,4 +71,14 @@ interface MinuteBucketDao {
     // the deletion touched.
     @Query("SELECT MIN(bucketStartMs) FROM hr_minute_buckets WHERE bucketStartMs < :beforeMs")
     suspend fun minBucketStartBefore(beforeMs: Long): Long?
+
+    @Query(
+        "DELETE FROM hr_minute_buckets " +
+            "WHERE bucketStartMs >= :fromMs AND bucketEndMs <= :toMs " +
+            "AND (deviceName != :deviceName OR deviceName = '')",
+    )
+    suspend fun deleteBucketsNotMatchingDevice(fromMs: Long, toMs: Long, deviceName: String): Int
+
+    @Query("SELECT DISTINCT deviceName FROM hr_minute_buckets WHERE deviceName != ''")
+    suspend fun getDistinctDeviceNames(): List<String>
 }

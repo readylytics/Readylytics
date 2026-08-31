@@ -21,6 +21,6 @@ object WeightDataMapper {
     private fun extractWeightTimestamp(record: DomainWeightRecord): Long =
         MapperHelpers.extractTimestampMs(record.time)
 
-    private fun extractWeightDeviceName(record: DomainWeightRecord): String =
+    private fun extractWeightDeviceName(record: DomainWeightRecord): String? =
         MapperHelpers.extractDeviceName(record.deviceName)
 }

@@ -13,27 +13,39 @@ import app.readylytics.health.core.scoring.domain.util.percentile
  * [DataRollupManager.rollupDayChunk] -- see that class for why the rollup is chunked.
  */
 internal fun List<HeartRateRecordEntity>.aggregateIntoMinuteBuckets(): List<HrMinuteBucketEntity> =
-    groupBy { Triple((it.timestampMs / MINUTE_MS) * MINUTE_MS, it.recordType, it.sessionId ?: "") }
-        .map { (key, samples) ->
-            val (bucketStartMs, recordType, sessionId) = key
-            val sorted = samples.map { it.beatsPerMinute }.sorted()
-            HrMinuteBucketEntity(
-                bucketStartMs = bucketStartMs,
-                bucketEndMs = bucketStartMs + MINUTE_MS,
-                minBpm = sorted.first(),
-                maxBpm = sorted.last(),
-                avgBpm = sorted.average(),
-                sampleCount = sorted.size,
-                recordType = recordType,
-                sessionId = sessionId,
-                deviceName = null,
-                p5Bpm = sorted.percentile(P5),
-                p25Bpm = sorted.percentile(P25),
-                p50Bpm = sorted.percentile(P50),
-                p75Bpm = sorted.percentile(P75),
-                p95Bpm = sorted.percentile(P95),
-            )
-        }
+    groupBy {
+        BucketKey(
+            bucketStartMs = (it.timestampMs / MINUTE_MS) * MINUTE_MS,
+            recordType = it.recordType,
+            sessionId = it.sessionId ?: "",
+            deviceName = it.deviceName ?: "",
+        )
+    }.map { (key, samples) ->
+        val sorted = samples.map { it.beatsPerMinute }.sorted()
+        HrMinuteBucketEntity(
+            bucketStartMs = key.bucketStartMs,
+            bucketEndMs = key.bucketStartMs + MINUTE_MS,
+            minBpm = sorted.first(),
+            maxBpm = sorted.last(),
+            avgBpm = sorted.average(),
+            sampleCount = sorted.size,
+            recordType = key.recordType,
+            sessionId = key.sessionId,
+            deviceName = key.deviceName,
+            p5Bpm = sorted.percentile(P5),
+            p25Bpm = sorted.percentile(P25),
+            p50Bpm = sorted.percentile(P50),
+            p75Bpm = sorted.percentile(P75),
+            p95Bpm = sorted.percentile(P95),
+        )
+    }
+
+private data class BucketKey(
+    val bucketStartMs: Long,
+    val recordType: String,
+    val sessionId: String,
+    val deviceName: String,
+)
 
 private const val MINUTE_MS = 60_000L
 private const val P5 = 0.05

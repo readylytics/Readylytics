@@ -52,4 +52,19 @@ class MinuteBucketAggregatorTest {
         val buckets = samples.aggregateIntoMinuteBuckets()
         assertEquals(2, buckets.size)
     }
+
+    @Test
+    fun `splits samples with different deviceName in same minute into separate buckets`() {
+        val samples =
+            listOf(
+                HeartRateRecordEntity(1L, 0L, 60, "RESTING", "", deviceName = "Watch A"),
+                HeartRateRecordEntity(2L, 5_000L, 70, "RESTING", "", deviceName = "Watch B"),
+            )
+        val buckets = samples.aggregateIntoMinuteBuckets()
+        assertEquals(2, buckets.size)
+        assertEquals("Watch A", buckets[0].deviceName)
+        assertEquals(60, buckets[0].minBpm)
+        assertEquals("Watch B", buckets[1].deviceName)
+        assertEquals(70, buckets[1].minBpm)
+    }
 }

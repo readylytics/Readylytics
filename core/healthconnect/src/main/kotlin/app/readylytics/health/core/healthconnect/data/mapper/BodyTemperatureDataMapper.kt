@@ -21,6 +21,6 @@ object BodyTemperatureDataMapper {
     private fun extractBodyTemperatureTimestamp(record: DomainBodyTemperatureRecord): Long =
         MapperHelpers.extractTimestampMs(record.time)
 
-    private fun extractBodyTemperatureDeviceName(record: DomainBodyTemperatureRecord): String =
+    private fun extractBodyTemperatureDeviceName(record: DomainBodyTemperatureRecord): String? =
         MapperHelpers.extractDeviceName(record.deviceName)
 }

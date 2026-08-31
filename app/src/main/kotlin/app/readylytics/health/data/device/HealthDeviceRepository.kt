@@ -4,6 +4,7 @@ import android.os.SystemClock
 import androidx.annotation.VisibleForTesting
 import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao
+import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +30,7 @@ class HealthDeviceRepository
         private val heartRateDao: HeartRateDao,
         private val hrvDao: HrvDao,
         private val workoutDao: WorkoutDao,
+        private val minuteBucketDao: MinuteBucketDao,
     ) {
         // TTL in milliseconds (5 minutes)
         companion object {
@@ -102,6 +104,7 @@ class HealthDeviceRepository
                 (
                     sleepSessionDao.getDistinctDeviceNames() +
                         heartRateDao.getDistinctDeviceNames() +
+                        minuteBucketDao.getDistinctDeviceNames() +
                         hrvDao.getDistinctDeviceNames() +
                         workoutDao.getDistinctDeviceNames()
                 ).filterNot { it.isBlank() }.distinct().sorted()
