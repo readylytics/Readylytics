@@ -297,16 +297,14 @@ class DailySyncUseCase
                             "SYNC_PARTIAL_FAILURE",
                         )
                     }
-                    if (!requiresHistoricalResync) {
-                        changeSynchronizer.commitTokens(outcome.nextTokens)
-                    }
-                    settingsRepo.updateLastSyncTimestamp(clock.millis())
                     if (requiresHistoricalResync) {
                         Result.failure(
                             "Requires historical resync",
                             "REQUIRES_HISTORICAL_RESYNC",
                         )
                     } else {
+                        changeSynchronizer.commitTokens(outcome.nextTokens)
+                        settingsRepo.updateLastSyncTimestamp(clock.millis())
                         Result.success(Unit)
                     }
                 } catch (e: CancellationException) {

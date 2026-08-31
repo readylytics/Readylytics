@@ -680,4 +680,54 @@ class DailySyncUseCaseTest {
 
             assertEquals(0, depthDuringHcRead)
         }
+
+    @Test
+    fun `a sync that requires a historical resync does not advance lastSyncTimestamp`() =
+        runTest {
+            val zoneId = ZoneId.systemDefault()
+            val today = LocalDate.now(fixedClock.withZone(zoneId))
+            val oldestAffectedDay = today.minusDays(8)
+
+            coEvery { changeSynchronizer.applyPendingChanges() } returns
+                HealthChangeSyncOutcome(
+                    affectedDates = setOf(oldestAffectedDay),
+                    requiresFullResync = false,
+                    nextTokens = mapOf(HealthDataType.SLEEP to "next-sleep-token"),
+                )
+
+            val result = useCase.run(windowDays = 1, onProgress = null)
+
+            assertEquals(
+                "REQUIRES_HISTORICAL_RESYNC",
+                (result as app.readylytics.health.core.model.domain.model.Result.Failure).code,
+            )
+            coVerify(exactly = 0) { settingsRepo.updateLastSyncTimestamp(any()) }
+        }
+
+    @Test
+    fun `a sync with change synchronizer requesting full resync does not advance lastSyncTimestamp`() =
+        runTest {
+            coEvery { changeSynchronizer.applyPendingChanges() } returns
+                HealthChangeSyncOutcome(
+                    affectedDates = emptySet(),
+                    requiresFullResync = true,
+                )
+
+            val result = useCase.run(windowDays = 1, onProgress = null)
+
+            assertEquals(
+                "REQUIRES_HISTORICAL_RESYNC",
+                (result as app.readylytics.health.core.model.domain.model.Result.Failure).code,
+            )
+            coVerify(exactly = 0) { settingsRepo.updateLastSyncTimestamp(any()) }
+        }
+
+    @Test
+    fun `sync updates lastSyncTimestamp on success`() =
+        runTest {
+            val result = useCase.run(windowDays = 1, onProgress = null)
+
+            assertTrue(result is app.readylytics.health.core.model.domain.model.Result.Success)
+            coVerify(exactly = 1) { settingsRepo.updateLastSyncTimestamp(fixedClock.millis()) }
+        }
 }
