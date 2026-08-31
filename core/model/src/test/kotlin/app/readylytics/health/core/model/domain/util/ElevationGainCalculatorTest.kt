@@ -134,7 +134,7 @@ class ElevationGainCalculatorTest {
     fun smoothElevationProfile_keepsFlatRouteZerosAsReal() {
         val series = listOf(0.0 to 0.0, 1.0 to 0.0, 2.0 to 1.0, 3.0 to 0.0)
         val smoothed = ElevationGainCalculator.smoothElevationProfile(series)
-        assertEquals(series.map { it.first to it.second!! }, smoothed)
+        assertEquals(series, smoothed)
     }
 
     @Test

@@ -5,6 +5,8 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.changes.DeletionChange
 import androidx.health.connect.client.changes.UpsertionChange
 import androidx.health.connect.client.records.*
+import androidx.health.connect.client.records.metadata.DataOrigin
+import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.response.ChangesResponse
 import app.readylytics.health.core.databaseschema.data.local.dao.*
@@ -335,15 +337,18 @@ class HealthChangeSynchronizerRecordSyncTest {
         id: String,
         startTime: Instant,
         endTime: Instant,
-    ): ExerciseSessionRecord =
-        mockk<ExerciseSessionRecord>(relaxed = true) {
-            every { metadata } returns
-                mockk(relaxed = true) {
-                    every { this@mockk.id } returns id
-                    every { dataOrigin } returns mockk(relaxed = true) {
-                        every { packageName } returns "com.example.tracker"
-                    }
-                }
+    ): ExerciseSessionRecord {
+        val origin =
+            mockk<DataOrigin>(relaxed = true) {
+                every { packageName } returns "com.example.tracker"
+            }
+        val meta =
+            mockk<Metadata>(relaxed = true) {
+                every { this@mockk.id } returns id
+                every { dataOrigin } returns origin
+            }
+        return mockk<ExerciseSessionRecord>(relaxed = true) {
+            every { metadata } returns meta
             every { this@mockk.startTime } returns startTime
             every { this@mockk.endTime } returns endTime
             every { exerciseType } returns ExerciseSessionRecord.EXERCISE_TYPE_RUNNING
@@ -351,6 +356,7 @@ class HealthChangeSynchronizerRecordSyncTest {
             every { notes } returns "Tempo"
             every { exerciseRouteResult } returns ExerciseRouteResult.NoData()
         }
+    }
 
     private fun createExistingWorkoutEntity(
         id: String,
