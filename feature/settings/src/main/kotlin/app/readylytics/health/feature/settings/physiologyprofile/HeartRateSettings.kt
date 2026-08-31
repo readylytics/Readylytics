@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -38,15 +39,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.data.preferences.Gender
+import app.readylytics.health.core.model.domain.validation.HeartRateConstants
 import app.readylytics.health.core.ui.components.settings.BirthdayDatePickerField
 import app.readylytics.health.core.ui.settings.HeightInputField
-import app.readylytics.health.data.preferences.Gender
-import app.readylytics.health.domain.validation.HeartRateConstants
 import app.readylytics.health.feature.settings.HeartRateZonesState
 import app.readylytics.health.feature.settings.PhysiologySettingsState
 import app.readylytics.health.feature.settings.R
 import app.readylytics.health.feature.settings.SettingsEvent
-import app.readylytics.health.feature.settings.SettingsExpandState
+import app.readylytics.health.feature.settings.common.resyncGateEnabled
 import kotlin.math.roundToInt
 import app.readylytics.health.core.ui.R as CoreUiR
 
@@ -56,9 +57,9 @@ fun HeartRateZoneSection(
     physiologyState: PhysiologySettingsState,
     onEvent: (SettingsEvent) -> Unit,
     onPhysiologyEvent: (SettingsEvent) -> Unit,
-    expandState: SettingsExpandState,
-    onExpandStateChange: (SettingsExpandState) -> Unit,
+    isResyncing: Boolean = false,
 ) {
+    val controlsEnabled = resyncGateEnabled(isResyncing)
     var maxHrText by rememberSaveable(uiState.maxHeartRate) {
         mutableStateOf(uiState.maxHeartRate.toString())
     }
@@ -81,6 +82,7 @@ fun HeartRateZoneSection(
             Switch(
                 checked = uiState.autoCalculateMaxHr,
                 onCheckedChange = { onEvent(SettingsEvent.AutoCalculateMaxHrChanged(it)) },
+                enabled = controlsEnabled,
             )
         }
 
@@ -96,6 +98,7 @@ fun HeartRateZoneSection(
                     },
                     showDialog = showBirthdatePicker,
                     onDialogDismiss = { showBirthdatePicker = false },
+                    enabled = controlsEnabled,
                 )
                 Spacer(modifier = Modifier.height(MaterialTheme.spacing.extraSmall))
                 Text(
@@ -109,6 +112,7 @@ fun HeartRateZoneSection(
                     expanded = genderExpanded,
                     onExpandedChange = { genderExpanded = it },
                     onGenderSelected = { onPhysiologyEvent(SettingsEvent.GenderChanged(it)) },
+                    enabled = controlsEnabled,
                 )
                 Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
                 HeightInputField(
@@ -128,7 +132,7 @@ fun HeartRateZoneSection(
                 onEvent(SettingsEvent.MaxHeartRateChanged(it))
             },
             label = { Text(stringResource(R.string.hr_max_rate_label)) },
-            enabled = !uiState.autoCalculateMaxHr,
+            enabled = !uiState.autoCalculateMaxHr && controlsEnabled,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             supportingText = {
                 if (uiState.autoCalculateMaxHr) {
@@ -158,13 +162,14 @@ fun HeartRateZoneSection(
             Switch(
                 checked = uiState.manualZoneEditing,
                 onCheckedChange = { onEvent(SettingsEvent.ManualZoneEditingChanged(it)) },
+                enabled = controlsEnabled,
             )
         }
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
 
         if (uiState.manualZoneEditing) {
-            ZoneEditingSection(uiState = uiState, onEvent = onEvent)
+            ZoneEditingSection(uiState = uiState, onEvent = onEvent, enabled = controlsEnabled)
         } else {
             Text(
                 stringResource(R.string.hr_calculated_zones_header),
@@ -238,6 +243,7 @@ fun HeartRateZonesDisplay(
 fun ZoneEditingSection(
     uiState: HeartRateZonesState,
     onEvent: (SettingsEvent) -> Unit,
+    enabled: Boolean = true,
 ) {
     var z1Min by rememberSaveable { mutableStateOf(uiState.zone1MinBpm.toString()) }
     var z1Max by rememberSaveable { mutableStateOf(uiState.zone1MaxBpm.toString()) }
@@ -269,11 +275,20 @@ fun ZoneEditingSection(
             color = MaterialTheme.colorScheme.primary,
         )
 
-        ZoneRow(stringResource(CoreUiR.string.hr_zone_n, 1), z1Min, { z1Min = it }, true, z1Max, { z1Max = it }, true)
-        ZoneRow(stringResource(CoreUiR.string.hr_zone_n, 2), z1Max, null, false, z2Max, { z2Max = it }, true)
-        ZoneRow(stringResource(CoreUiR.string.hr_zone_n, 3), z2Max, null, false, z3Max, { z3Max = it }, true)
-        ZoneRow(stringResource(CoreUiR.string.hr_zone_n, 4), z3Max, null, false, z4Max, { z4Max = it }, true)
-        ZoneRow(stringResource(CoreUiR.string.hr_zone_n, 5), z4Max, null, false, maxHr.toString(), null, false)
+        ZoneRow(
+            stringResource(CoreUiR.string.hr_zone_n, 1),
+            z1Min,
+            { z1Min = it },
+            true,
+            z1Max,
+            { z1Max = it },
+            true,
+            enabled,
+        )
+        ZoneRow(stringResource(CoreUiR.string.hr_zone_n, 2), z1Max, null, false, z2Max, { z2Max = it }, true, enabled)
+        ZoneRow(stringResource(CoreUiR.string.hr_zone_n, 3), z2Max, null, false, z3Max, { z3Max = it }, true, enabled)
+        ZoneRow(stringResource(CoreUiR.string.hr_zone_n, 4), z3Max, null, false, z4Max, { z4Max = it }, true, enabled)
+        ZoneRow(stringResource(CoreUiR.string.hr_zone_n, 5), z4Max, null, false, maxHr.toString(), null, false, enabled)
 
         if (isValid) {
             Button(
@@ -288,6 +303,7 @@ fun ZoneEditingSection(
                         ),
                     )
                 },
+                enabled = enabled,
                 modifier =
                     Modifier
                         .fillMaxWidth()
@@ -314,6 +330,7 @@ fun ZoneRow(
     maxValue: String,
     onMaxChange: ((String) -> Unit)?,
     maxEditable: Boolean,
+    enabled: Boolean = true,
 ) {
     val minValid =
         minValue.toIntOrNull()?.let { it in HeartRateConstants.MIN_HEART_RATE..HeartRateConstants.MAX_HEART_RATE }
@@ -342,7 +359,7 @@ fun ZoneRow(
             onValueChange = { if (minEditable && onMinChange != null) onMinChange(it) },
             modifier = Modifier.width(72.dp),
             isError = minValue.isNotEmpty() && !minValid,
-            enabled = minEditable,
+            enabled = minEditable && enabled,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         )
 
@@ -353,7 +370,7 @@ fun ZoneRow(
             onValueChange = { if (maxEditable && onMaxChange != null) onMaxChange(it) },
             modifier = Modifier.width(72.dp),
             isError = maxValue.isNotEmpty() && !maxValid,
-            enabled = maxEditable,
+            enabled = maxEditable && enabled,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         )
     }
@@ -410,12 +427,13 @@ fun GenderSelector(
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     onGenderSelected: (Gender?) -> Unit,
+    enabled: Boolean = true,
 ) {
     val genders = Gender.entries
 
     ExposedDropdownMenuBox(
         expanded = expanded,
-        onExpandedChange = onExpandedChange,
+        onExpandedChange = { if (enabled) onExpandedChange(it) },
         modifier = Modifier.fillMaxWidth(),
     ) {
         OutlinedTextField(
@@ -424,6 +442,7 @@ fun GenderSelector(
                     ?: stringResource(app.readylytics.health.core.ui.R.string.label_not_set),
             onValueChange = {},
             readOnly = true,
+            enabled = enabled,
             label = { Text(stringResource(CoreUiR.string.label_gender)) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
             modifier =
@@ -431,9 +450,10 @@ fun GenderSelector(
                     .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                     .fillMaxWidth(),
         )
-        ExposedDropdownMenu(
+        DropdownMenu(
             expanded = expanded,
             onDismissRequest = { onExpandedChange(false) },
+            modifier = Modifier.exposedDropdownSize(),
         ) {
             genders.forEach { gender ->
                 DropdownMenuItem(

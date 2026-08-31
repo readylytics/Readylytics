@@ -12,7 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import app.readylytics.health.core.designsystem.spacing
-import app.readylytics.health.domain.model.MetricStatus
+import app.readylytics.health.core.model.domain.model.MetricStatus
 
 @Composable
 fun StatusPill(
@@ -51,13 +51,6 @@ fun HistoryCardLayout(
         shape = MaterialTheme.shapes.medium,
     ) {
         ListItem(
-            headlineContent = {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            },
             supportingContent = {
                 Text(
                     text = subtitle,
@@ -69,6 +62,12 @@ fun HistoryCardLayout(
                 StatusPill(label = pillLabel, status = pillStatus)
             },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        )
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }

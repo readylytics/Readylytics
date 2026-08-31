@@ -1,6 +1,13 @@
 package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
+import app.readylytics.health.core.model.data.preferences.normalizeCoreMergeGapMinutes
+import app.readylytics.health.core.model.data.preferences.normalizeHypersomniaOnsetPercent
+import app.readylytics.health.core.model.data.preferences.normalizeMinimumCountedSleepSegmentMinutes
+import app.readylytics.health.core.model.data.preferences.normalizeSupplementalArchitectureCoveragePercent
+import app.readylytics.health.core.model.data.preferences.normalizeSupplementalCutoffMinutesOfDay
+import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import javax.inject.Inject
 
 internal class SleepPreferences
@@ -30,7 +37,12 @@ internal class SleepPreferences
 
         suspend fun updateCoreMergeGapMinutes(minutes: Int) {
             dataStore.updateData {
-                it.toBuilder().setCoreMergeGapMinutes(normalizeCoreMergeGapMinutes(minutes)).build()
+                it
+                    .toBuilder()
+                    .setCoreMergeGapMinutes(
+                        app.readylytics.health.core.model.data.preferences
+                            .normalizeCoreMergeGapMinutes(minutes),
+                    ).build()
             }
         }
 
@@ -39,7 +51,9 @@ internal class SleepPreferences
                 it
                     .toBuilder()
                     .setSupplementalCutoffMinutesOfDay(
-                        normalizeSupplementalCutoffMinutesOfDay(minutes),
+                        app.readylytics.health.core.model.data.preferences.normalizeSupplementalCutoffMinutesOfDay(
+                            minutes,
+                        ),
                     ).build()
             }
         }
@@ -48,8 +62,11 @@ internal class SleepPreferences
             dataStore.updateData {
                 it
                     .toBuilder()
-                    .setMinimumCountedSleepSegmentMinutes(normalizeMinimumCountedSleepSegmentMinutes(minutes))
-                    .build()
+                    .setMinimumCountedSleepSegmentMinutes(
+                        app.readylytics.health.core.model.data.preferences.normalizeMinimumCountedSleepSegmentMinutes(
+                            minutes,
+                        ),
+                    ).build()
             }
         }
 
@@ -58,7 +75,10 @@ internal class SleepPreferences
                 it
                     .toBuilder()
                     .setSupplementalArchitectureCoveragePercent(
-                        normalizeSupplementalArchitectureCoveragePercent(percent),
+                        app.readylytics.health.core.model.data.preferences
+                            .normalizeSupplementalArchitectureCoveragePercent(
+                                percent,
+                            ),
                     ).build()
             }
         }
@@ -103,6 +123,56 @@ internal class SleepPreferences
         suspend fun updateHrrToleranceSeconds(value: Int) {
             dataStore.updateData {
                 it.toBuilder().setHrrToleranceSeconds(value.toValidHrrTolerance()).build()
+            }
+        }
+
+        suspend fun updateSleepScoreWeightProfile(profile: SleepScoreWeightProfile) {
+            dataStore.updateData { it.toBuilder().setSleepScoreWeightProfile(profile.toProto()).build() }
+        }
+
+        suspend fun updateSleepScoreRecalcBaseline(
+            weightProfile: SleepScoreWeightProfile,
+            goalSleepHours: Float,
+            hypersomniaOnsetPercent: Int,
+        ) {
+            dataStore.updateData {
+                it
+                    .toBuilder()
+                    .setLastRecalcSleepScoreWeightProfile(weightProfile.toProto())
+                    .setLastRecalcGoalSleepHours(goalSleepHours)
+                    .setLastRecalcHypersomniaOnsetPercent(hypersomniaOnsetPercent)
+                    .build()
+            }
+        }
+
+        private fun SleepScoreWeightProfile.toProto(): SleepScoreWeightProfileProto =
+            when (this) {
+                SleepScoreWeightProfile.BALANCED ->
+                    SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_BALANCED
+                SleepScoreWeightProfile.DURATION_FOCUSED ->
+                    SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_DURATION_FOCUSED
+                SleepScoreWeightProfile.RECOVERY_FOCUSED ->
+                    SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_RECOVERY_FOCUSED
+                SleepScoreWeightProfile.ARCHITECTURE_FOCUSED ->
+                    SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_ARCHITECTURE_FOCUSED
+                SleepScoreWeightProfile.CONTINUITY_FOCUSED ->
+                    SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_CONTINUITY_FOCUSED
+            }
+
+        suspend fun updateHypersomniaOnsetPercent(percent: Int) {
+            dataStore.updateData {
+                it
+                    .toBuilder()
+                    .setHypersomniaOnsetPercent(
+                        app.readylytics.health.core.model.data.preferences
+                            .normalizeHypersomniaOnsetPercent(percent),
+                    ).build()
+            }
+        }
+
+        suspend fun updateScoringVersion(version: Int) {
+            dataStore.updateData {
+                it.toBuilder().setScoringVersion(version).build()
             }
         }
     }

@@ -64,18 +64,7 @@ internal class DayOffsetTickCalculator(
             return zoomedOutValues.filter { it in (start - buffer)..(end + buffer) }
         }
 
-        val spacing =
-            when {
-                visibleDays <= 1.1 -> 1
-                visibleDays <= 3.5 -> 2
-                visibleDays <= 8.5 -> 2
-                visibleDays <= 15.5 -> 2
-                visibleDays <= 35.0 -> 5
-                visibleDays <= 70.0 -> 10
-                visibleDays <= 120.0 -> 15
-                else -> 35
-            }
-
+        val spacing = calculateSpacing(visibleDays)
         val candidates = candidatesBySpacing.getOrPut(spacing) { buildCandidates(spacing) }
 
         // Candidates are generated ascending, so the filtered result is already ascending.
@@ -96,35 +85,51 @@ internal class DayOffsetTickCalculator(
             visibleValues.add(0, firstDay)
         }
 
-        if (maxVal in visibleXRange && !visibleValues.contains(maxVal)) {
-            val minSeparation =
-                when {
-                    visibleDays <= 1.1 -> 0.1
-                    visibleDays <= 3.5 -> 0.1
-                    visibleDays <= 8.5 -> if (visibleDays <= 5.5) 0.5 else 1.1
-                    visibleDays <= 15.5 -> 1.1
-                    visibleDays <= 35.0 -> 4.0
-                    visibleDays <= 70.0 -> 8.0
-                    visibleDays <= 120.0 -> 12.0
-                    else -> 24.0
-                }
-            val lastValue = visibleValues.lastOrNull() ?: 0.0
-            if (maxVal - lastValue < minSeparation) {
-                // removeAt would throw IndexOutOfBoundsException on an empty visibleValues, but
-                // that is unreachable today: the zoomed-out early return and the minSeparation
-                // branch only ever see daily ranges. Bucketed (MONTHLY/EIGHT_WEEK) charts route
-                // through ChartDefaults.tickValuesFor's point-offset path, so DayOffsetTickCalculator
-                // never receives rangeDays=360. The invariant is re-checked by the rangeDays=360
-                // golden test in DayOffsetTickCalculatorTest.
-                visibleValues.removeAt(visibleValues.size - 1)
-            }
-            visibleValues.add(maxVal)
-        }
+        adjustMaxValBoundary(visibleXRange, visibleValues, visibleDays)
 
         // No .sorted(): candidates ascending + 0.0 prepended (<= every candidate) + maxVal appended
         // (>= every candidate, since candidates are capped at maxVal) => already ascending. Proven
         // by the golden test in DayOffsetTickCalculatorTest.
         return visibleValues
+    }
+
+    private fun calculateSpacing(visibleDays: Double): Int =
+        when {
+            visibleDays <= 1.1 -> 1
+            visibleDays <= 3.5 -> 2
+            visibleDays <= 8.5 -> 2
+            visibleDays <= 15.5 -> 2
+            visibleDays <= 35.0 -> 5
+            visibleDays <= 70.0 -> 10
+            visibleDays <= 120.0 -> 15
+            else -> 35
+        }
+
+    private fun calculateMinSeparation(visibleDays: Double): Double =
+        when {
+            visibleDays <= 1.1 -> 0.1
+            visibleDays <= 3.5 -> 0.1
+            visibleDays <= 8.5 -> if (visibleDays <= 5.5) 0.5 else 1.1
+            visibleDays <= 15.5 -> 1.1
+            visibleDays <= 35.0 -> 4.0
+            visibleDays <= 70.0 -> 8.0
+            visibleDays <= 120.0 -> 12.0
+            else -> 24.0
+        }
+
+    private fun adjustMaxValBoundary(
+        visibleXRange: ClosedFloatingPointRange<Double>,
+        visibleValues: ArrayList<Double>,
+        visibleDays: Double,
+    ) {
+        if (maxVal in visibleXRange && !visibleValues.contains(maxVal)) {
+            val minSeparation = calculateMinSeparation(visibleDays)
+            val lastValue = visibleValues.lastOrNull() ?: 0.0
+            if (maxVal - lastValue < minSeparation) {
+                visibleValues.removeAt(visibleValues.size - 1)
+            }
+            visibleValues.add(maxVal)
+        }
     }
 
     private fun buildCandidates(spacing: Int): DoubleArray {

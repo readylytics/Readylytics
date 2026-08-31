@@ -2,8 +2,8 @@ package app.readylytics.health.feature.onboarding
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.readylytics.health.data.preferences.AppTheme
-import app.readylytics.health.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.data.preferences.AppTheme
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map

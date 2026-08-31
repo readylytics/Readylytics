@@ -1,7 +1,7 @@
 package app.readylytics.health.feature.insights
 
-import app.readylytics.health.domain.insights.detail.InsightDetailType
-import app.readylytics.health.domain.model.InsightType
+import app.readylytics.health.core.model.domain.model.InsightType
+import app.readylytics.health.core.scoring.domain.insights.detail.InsightDetailType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test

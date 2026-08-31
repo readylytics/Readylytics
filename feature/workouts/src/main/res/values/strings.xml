@@ -41,6 +41,20 @@
     <string name="workout_stats_acwr_title">Training Load &amp; Strain Ratio (ACWR)</string>
     <string name="workout_stats_ras_title">Readylytics Activity Score</string>
     <string name="workout_stats_history_title">History</string>
+    <string name="workout_stats_weekly_title">Weekly training</string>
+    <string name="workout_stats_weekly_training_time">Training time</string>
+    <string name="workout_stats_weekly_workouts">Workouts</string>
+    <string name="workout_stats_weekly_active_days">Active days</string>
+    <string name="workout_stats_weekly_active_days_value">%1$d / 7</string>
+    <string name="workout_stats_weekly_vs_last_week">vs last week</string>
+    <string name="weekly_volume_trend_title">Training time comparison</string>
+    <string name="weekly_volume_trend_legend_this_week">This week</string>
+    <string name="weekly_volume_trend_legend_last_week">Last week</string>
+    <string name="weekly_volume_tooltip_this_week_format">This week: %1$s</string>
+    <string name="weekly_volume_tooltip_last_week_format">Last week: %1$s</string>
+    <string name="weekly_volume_tooltip_diff_format">%1$s vs last week</string>
+    <!-- java.time date pattern for the weekly volume tooltip heading, e.g. "Thu, Aug 20". -->
+    <string name="weekly_volume_tooltip_date_pattern">EEE, MMM d</string>
     <string name="workout_zones_title">Heart rate zones</string>
     <string name="workouts_manage_layout">Customize Workouts</string>
     <string name="workouts_management_cards_section_title">Cards</string>
@@ -76,4 +90,86 @@
     <string name="message_no_hr_data">No HR data available</string>
     <string name="label_minutes">Minutes</string>
     <string name="chart_accessibility_selected_trimp">Selected: %1$s at %2$s</string>
+
+    <!-- GPS & Performance Details -->
+    <string name="workout_metric_distance">Distance</string>
+    <string name="workout_metric_avg_pace">Avg. Pace</string>
+    <string name="workout_metric_avg_speed">Avg. Speed</string>
+    <string name="workout_metric_elevation_gain">Elevation Gain</string>
+    <string name="workout_metric_pace_unit_min_km">min/km</string>
+    <string name="workout_metric_pace_unit_min_mi">min/mi</string>
+    <string name="workout_metric_speed_unit_kmh">km/h</string>
+    <string name="workout_metric_speed_unit_mph">mph</string>
+    <string name="workout_metric_distance_unit_km">km</string>
+    <string name="workout_metric_distance_unit_mi">mi</string>
+    <string name="workout_metric_distance_unit_m">m</string>
+    <string name="workout_metric_elevation_unit_m">m</string>
+    <string name="workout_metric_elevation_unit_ft">ft</string>
+    <string name="workout_route_title">Route Contour</string>
+    <string name="workout_route_permission_required_title">Route data requires permission</string>
+    <string name="workout_route_permission_required_desc">Grant exercise route permissions in Health Connect to view GPS routes.</string>
+    <string name="workout_route_grant_permission">Grant permission</string>
+    <string name="workout_route_scale_format">%1$s</string>
+    <string name="workout_route_grid_legend">Grid: %1$s</string>
+    <string name="workout_route_grid_content_description">Route contour with a distance grid; each square is %1$s across.</string>
+    <string name="workout_chart_pace_title">Pace Profile</string>
+    <string name="workout_chart_speed_title">Speed Profile</string>
+    <string name="workout_chart_elevation_title">Elevation Profile</string>
+    <string name="workout_tooltip_distance">Total distance covered during the workout.</string>
+    <string name="workout_tooltip_avg_pace">Average pace over the duration of the workout.</string>
+    <string name="workout_tooltip_avg_speed">Average speed over the duration of the workout.</string>
+    <string name="workout_tooltip_elevation_gain">Total positive vertical ascent accumulated during the workout.</string>
+    <string name="chart_accessibility_pace_summary">Pace profile line chart showing workout pace along distance.</string>
+    <string name="chart_accessibility_speed_summary">Speed profile line chart showing workout speed along distance.</string>
+    <string name="chart_accessibility_elevation_summary">Elevation profile line chart showing altitude along distance.</string>
+    <string name="chart_accessibility_selected_pace">Selected: %1$s at %2$s</string>
+    <string name="chart_accessibility_selected_speed">Selected: %1$s at %2$s</string>
+    <string name="chart_accessibility_selected_elevation">Selected: %1$s at %2$s</string>
+
+    <!-- Workout Detail Customization -->
+    <string name="workout_detail_item_pace_speed">Avg. Pace / Speed</string>
+    <string name="workout_detail_item_pace_speed_chart">Pace / Speed profile</string>
+    <string name="workout_detail_manage_layout">Customize %1$s layout</string>
+    <string name="workout_detail_manage_items_section_title">Items</string>
+    <string name="workout_detail_item_unavailable">No data for this workout</string>
+    <string name="workout_layout_type_running">Running</string>
+    <string name="workout_layout_type_walking">Walking</string>
+    <string name="workout_layout_type_cycling">Cycling</string>
+    <string name="workout_layout_type_swimming">Swimming</string>
+    <string name="workout_layout_type_strength">Strength</string>
+    <string name="workout_layout_type_hiking">Hiking</string>
+    <string name="workout_layout_type_yoga">Yoga</string>
+    <string name="workout_layout_type_pilates">Pilates</string>
+    <string name="workout_layout_type_elliptical">Elliptical</string>
+    <string name="workout_layout_type_rowing">Rowing</string>
+    <string name="workout_layout_type_stairs">Stairs</string>
+    <string name="workout_layout_type_hiit">HIIT</string>
+    <string name="workout_layout_type_other">Other workouts</string>
+
+    <!-- Activity volume -->
+    <string name="activity_volume_title">Activity volume</string>
+    <string name="activity_volume_view_all">View all</string>
+    <string name="activity_volume_delta_missing">-</string>
+    <string name="activity_volume_empty">No workouts this week</string>
+    <string name="activity_volume_last_week">Last week %1$s</string>
+    <string name="activity_volume_distance_permission_warning">Distance access is off in Health Connect, so distance totals are missing.</string>
+    <string name="activity_volume_distance_permission_action">Turn on</string>
+
+    <!-- Training mix -->
+    <string name="training_mix_title">Training mix</string>
+    <string name="training_mix_empty">No workouts recorded this week</string>
+    <string name="training_mix_total">Total</string>
+    <string name="training_mix_percentage">%1$d%%</string>
+    <string name="training_mix_percentage_less_than_one">&lt;1%</string>
+    <string name="training_mix_item_accessibility">%1$s: %2$s, %3$s</string>
+    <string name="training_mix_accessibility_summary">Training mix: %1$s total. %2$s</string>
+
+    <!-- Residual Fatigue Curve -->
+    <string name="chart_residual_fatigue_curve_title">Residual Fatigue</string>
+    <string name="fatigue_range_one_day">1D</string>
+    <string name="fatigue_range_three_days">3D</string>
+    <string name="fatigue_range_seven_days">7D</string>
+    <string name="chart_residual_fatigue_curve_description">Continuous exponential decay curve showing workout fatigue spikes and decay over time.</string>
+    <string name="chart_residual_fatigue_empty">No residual fatigue data available for this range.</string>
+    <string name="chart_residual_fatigue_tooltip_format">%1$s • Fatigue: %2$.1f</string>
 </resources>

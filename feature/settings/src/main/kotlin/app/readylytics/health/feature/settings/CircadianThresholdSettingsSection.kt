@@ -21,12 +21,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
-import app.readylytics.health.data.preferences.PhysiologyProfile
-import app.readylytics.health.domain.circadian.CircadianThresholdDefaults
+import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
+import app.readylytics.health.core.model.domain.circadian.CircadianThresholdDefaults
 import app.readylytics.health.feature.settings.R
 import app.readylytics.health.core.ui.R as CoreUiR
-
-private const val THRESHOLD_SLIDER_STEPS = 8 // Results in: 0, 10, 20, ..., 90 (Issue #9)
 
 @Composable
 fun CircadianThresholdSettingsSection(
@@ -37,6 +35,7 @@ fun CircadianThresholdSettingsSection(
     isLoading: Boolean = false,
     error: String? = null,
     onErrorDismissed: () -> Unit = {},
+    enabled: Boolean = true,
 ) {
     val profileDefault = CircadianThresholdDefaults.getProfileDefault(profile)
     var thresholdValue by remember(currentOverride) {
@@ -121,6 +120,7 @@ fun CircadianThresholdSettingsSection(
                 onOverrideChanged(null)
             },
             modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium),
+            enabled = enabled,
         )
     }
 }
@@ -132,6 +132,7 @@ private fun ThresholdSlider(
     onValueChanged: (Float) -> Unit,
     onReset: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -163,6 +164,7 @@ private fun ThresholdSlider(
                 IconButton(
                     onClick = onReset,
                     modifier = Modifier.size(MaterialTheme.dimens.iconContainerLarge),
+                    enabled = enabled,
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Refresh,
@@ -181,6 +183,7 @@ private fun ThresholdSlider(
         Slider(
             value = value,
             onValueChange = onValueChanged,
+            enabled = enabled,
             valueRange = 0f..90f,
             steps = 8, // 0, 10, 20, 30, 40, 50, 60, 70, 80, 90
             modifier =

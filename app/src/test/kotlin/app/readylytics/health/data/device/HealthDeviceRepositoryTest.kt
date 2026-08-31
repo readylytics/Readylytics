@@ -1,9 +1,9 @@
 package app.readylytics.health.data.device
 
-import app.readylytics.health.data.local.dao.HeartRateDao
-import app.readylytics.health.data.local.dao.HrvDao
-import app.readylytics.health.data.local.dao.SleepSessionDao
-import app.readylytics.health.data.local.dao.WorkoutDao
+import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
+import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao
+import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
+import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -14,11 +14,22 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class HealthDeviceRepositoryTest {
+    private companion object {
+        /** Mirrors the private `HealthDeviceRepository.CACHE_TTL_MS` (5 minutes). */
+        const val CACHE_TTL_MS = 5 * 60 * 1000L
+    }
+
     private lateinit var sleepSessionDao: SleepSessionDao
     private lateinit var heartRateDao: HeartRateDao
     private lateinit var hrvDao: HrvDao
     private lateinit var workoutDao: WorkoutDao
     private lateinit var repository: HealthDeviceRepository
+
+    /**
+     * Drives [HealthDeviceRepository.elapsedRealtimeMs]. Held explicitly rather than left to
+     * `SystemClock`, which has no JVM implementation and therefore cannot advance in a unit test.
+     */
+    private var fakeElapsedRealtimeMs = 0L
 
     @Before
     fun setup() {
@@ -26,19 +37,19 @@ class HealthDeviceRepositoryTest {
         heartRateDao = mockk()
         hrvDao = mockk()
         workoutDao = mockk()
+        fakeElapsedRealtimeMs = 0L
         repository =
             HealthDeviceRepository(
                 sleepSessionDao,
                 heartRateDao,
                 hrvDao,
                 workoutDao,
-            )
+            ).apply { elapsedRealtimeMs = { fakeElapsedRealtimeMs } }
     }
 
     @Test
     fun `getAvailableDevices fetches and caches devices`() =
         runTest {
-            val dbDevices = listOf("Device1", "Device2")
             val expected = listOf("Device1", "Device2").sorted()
 
             coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Device1")
@@ -163,11 +174,13 @@ class HealthDeviceRepositoryTest {
             val devices1 = repository.getAvailableDevices()
             coVerify(exactly = 1) { sleepSessionDao.getDistinctDeviceNames() }
 
-            // Second call within TTL: cache hit — no new fetch
+            // Second call, clock advanced but still inside the 5-minute TTL: cache hit
+            fakeElapsedRealtimeMs = 60_000L
             val devices2 = repository.getAvailableDevices()
             coVerify(exactly = 1) { sleepSessionDao.getDistinctDeviceNames() }
 
-            // Third call within TTL: cache hit — still no new fetch
+            // Third call, still inside the TTL: cache hit — still no new fetch
+            fakeElapsedRealtimeMs = CACHE_TTL_MS
             val devices3 = repository.getAvailableDevices()
             coVerify(exactly = 1) { sleepSessionDao.getDistinctDeviceNames() }
 
@@ -178,6 +191,30 @@ class HealthDeviceRepositoryTest {
                 actual = devices1 == devices2,
                 message = "Hit rate should be 66% (2/3 calls served from cache)",
             )
+        }
+
+    @Test
+    fun `getAvailableDevices refetches once the TTL has elapsed`() =
+        runTest {
+            coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Device1")
+            coEvery { heartRateDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
+
+            assertEquals(listOf("Device1"), repository.getAvailableDevices())
+            coVerify(exactly = 1) { sleepSessionDao.getDistinctDeviceNames() }
+
+            // Exactly at the TTL the entry is still valid — expiry is strictly greater-than.
+            fakeElapsedRealtimeMs = CACHE_TTL_MS
+            repository.getAvailableDevices()
+            coVerify(exactly = 1) { sleepSessionDao.getDistinctDeviceNames() }
+
+            // One millisecond past the TTL the entry is stale and must be refetched.
+            fakeElapsedRealtimeMs = CACHE_TTL_MS + 1
+            coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Device2")
+
+            assertEquals(listOf("Device2"), repository.getAvailableDevices())
+            coVerify(exactly = 2) { sleepSessionDao.getDistinctDeviceNames() }
         }
 
     @Test

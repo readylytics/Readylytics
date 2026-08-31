@@ -25,31 +25,20 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
 import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarker
 import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerVisibilityListener
 import com.patrykandpatrick.vico.compose.cartesian.marker.LineCartesianLayerMarkerTarget
 
-/**
- * A custom invisible [CartesianMarker] that allows Vico to handle gestures, touch
- * tracking, zooming, and scrolling natively while rendering nothing itself.
- * The actual visual feedback is rendered using the standard Jetpack Compose Canvas overlay.
- */
-object InvisibleMarker : CartesianMarker {
-    override fun drawUnderLayers(
-        context: CartesianDrawingContext,
-        targets: List<CartesianMarker.Target>,
-    ) {
-        // Do nothing to keep the marker invisible.
-    }
-
-    override fun drawOverLayers(
-        context: CartesianDrawingContext,
-        targets: List<CartesianMarker.Target>,
-    ) {
-        // Do nothing to keep the marker invisible.
-    }
-}
+private data class TooltipOverlayParams(
+    val selectedPointOffset: Offset?,
+    val externalCanvasX: Float?,
+    val externalDataY: Double?,
+    val minY: Double?,
+    val maxY: Double?,
+    val containerWidthPx: Float,
+    val containerHeightPx: Float,
+    val pulseColor: Color,
+)
 
 /**
  * A Compose helper to create and remember a [CartesianMarkerVisibilityListener].
@@ -88,6 +77,9 @@ fun rememberChartMarkerVisibilityListener(
             override fun onHidden(marker: CartesianMarker) {
                 // Do not clear state automatically on finger lift, allowing the
                 // custom Compose tooltip to remain visible until explicitly dismissed.
+                // A hidden-callback parameter cannot be added here without routing it through
+                // rememberUpdatedState as well: this listener is remembered with no keys, so a
+                // directly captured lambda would be pinned to its first instance forever.
             }
 
             private fun handleTargets(targets: List<CartesianMarker.Target>) {
@@ -138,47 +130,82 @@ fun VicoChartTooltipOverlay(
                     containerHeightPx = size.height.toFloat()
                 },
     ) {
-        val tapX = selectedPointOffset?.x ?: externalCanvasX
-        if (tapX != null && containerWidthPx > 0 && containerHeightPx > 0) {
-            val clampedTapX = tapX.coerceIn(0f, containerWidthPx)
-
-            val tapY =
-                if (selectedPointOffset != null) {
-                    selectedPointOffset.y
-                } else if (externalDataY != null && minY != null && maxY != null) {
-                    val yRatio = ((maxY - externalDataY) / (maxY - minY)).coerceIn(0.0, 1.0).toFloat()
-                    // Approximate Vico layer bounds (top padding ~8dp, bottom axis ~24dp).
-                    // A +1dp correction compensates for the systematic upward shift observed
-                    // in the split-chart coordinated mode.
-                    val density = androidx.compose.ui.platform.LocalDensity.current
-                    val topPad = with(density) { 8.dp.toPx() }
-                    val bottomPad = with(density) { 24.dp.toPx() }
-                    val correction = with(density) { 1.dp.toPx() }
-                    topPad + yRatio * (containerHeightPx - topPad - bottomPad) + correction
-                } else {
-                    null
-                }
-
-            val primaryColor = MaterialTheme.colorScheme.primary
-
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                drawLine(
-                    color = primaryColor.copy(alpha = 0.4f),
-                    start = Offset(clampedTapX, 0f),
-                    end = Offset(clampedTapX, size.height),
-                    strokeWidth = 1.5.dp.toPx(),
+        if (containerWidthPx > 0 && containerHeightPx > 0) {
+            val params =
+                TooltipOverlayParams(
+                    selectedPointOffset = selectedPointOffset,
+                    externalCanvasX = externalCanvasX,
+                    externalDataY = externalDataY,
+                    minY = minY,
+                    maxY = maxY,
+                    containerWidthPx = containerWidthPx,
+                    containerHeightPx = containerHeightPx,
+                    pulseColor = pulseColor,
                 )
-            }
-
-            if (tapY != null) {
-                PulsingPointHalo(
-                    center = Offset(clampedTapX, tapY),
-                    color = pulseColor,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
+            renderTooltipOverlayContent(params)
         }
     }
+}
+
+@Composable
+private fun renderTooltipOverlayContent(params: TooltipOverlayParams) {
+    val tapX = params.selectedPointOffset?.x ?: params.externalCanvasX
+    if (tapX == null) return
+
+    val clampedTapX = tapX.coerceIn(0f, params.containerWidthPx)
+    val tapY =
+        calculateTapYCoordinate(
+            selectedPointOffset = params.selectedPointOffset,
+            externalDataY = params.externalDataY,
+            minY = params.minY,
+            maxY = params.maxY,
+            containerHeightPx = params.containerHeightPx,
+        )
+
+    val primaryColor = MaterialTheme.colorScheme.primary
+
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        drawLine(
+            color = primaryColor.copy(alpha = 0.4f),
+            start = Offset(clampedTapX, 0f),
+            end = Offset(clampedTapX, size.height),
+            strokeWidth = 1.5.dp.toPx(),
+        )
+    }
+
+    if (tapY != null) {
+        PulsingPointHalo(
+            center = Offset(clampedTapX, tapY),
+            color = params.pulseColor,
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
+}
+
+@Composable
+private fun calculateTapYCoordinate(
+    selectedPointOffset: Offset?,
+    externalDataY: Double?,
+    minY: Double?,
+    maxY: Double?,
+    containerHeightPx: Float,
+): Float? = selectedPointOffset?.y ?: calculateYFromDataCoordinate(externalDataY, minY, maxY, containerHeightPx)
+
+@Composable
+private fun calculateYFromDataCoordinate(
+    externalDataY: Double?,
+    minY: Double?,
+    maxY: Double?,
+    containerHeightPx: Float,
+): Float? {
+    if (externalDataY == null || minY == null || maxY == null) return null
+
+    val yRatio = ((maxY - externalDataY) / (maxY - minY)).coerceIn(0.0, 1.0).toFloat()
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val topPad = with(density) { 8.dp.toPx() }
+    val bottomPad = with(density) { 24.dp.toPx() }
+    val correction = with(density) { 1.dp.toPx() }
+    return topPad + yRatio * (containerHeightPx - topPad - bottomPad) + correction
 }
 
 @Composable
@@ -187,6 +214,15 @@ private fun PulsingPointHalo(
     color: Color,
     modifier: Modifier = Modifier,
 ) {
+    val (haloRadiusCoeff, haloAlpha) = rememberHaloAnimations()
+
+    Canvas(modifier = modifier.testTag(VICO_POINT_HALO_TAG)) {
+        drawHaloCircles(center, color, haloAlpha, haloRadiusCoeff)
+    }
+}
+
+@Composable
+private fun rememberHaloAnimations(): Pair<Float, Float> {
     val infiniteTransition = rememberInfiniteTransition(label = "vicoHaloTransition")
     val haloRadiusCoeff by infiniteTransition.animateFloat(
         initialValue = 1.0f,
@@ -208,17 +244,23 @@ private fun PulsingPointHalo(
             ),
         label = "vicoHaloAlpha",
     )
+    return haloRadiusCoeff to haloAlpha
+}
 
-    Canvas(modifier = modifier.testTag(VICO_POINT_HALO_TAG)) {
-        drawCircle(
-            color = color.copy(alpha = haloAlpha),
-            center = center,
-            radius = 8.dp.toPx() * haloRadiusCoeff,
-        )
-        drawCircle(
-            color = color,
-            center = center,
-            radius = 4.dp.toPx(),
-        )
-    }
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawHaloCircles(
+    center: Offset,
+    color: Color,
+    haloAlpha: Float,
+    haloRadiusCoeff: Float,
+) {
+    drawCircle(
+        color = color.copy(alpha = haloAlpha),
+        center = center,
+        radius = 8.dp.toPx() * haloRadiusCoeff,
+    )
+    drawCircle(
+        color = color,
+        center = center,
+        radius = 4.dp.toPx(),
+    )
 }

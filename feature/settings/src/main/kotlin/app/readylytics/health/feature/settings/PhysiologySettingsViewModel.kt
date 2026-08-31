@@ -1,17 +1,18 @@
 package app.readylytics.health.feature.settings
 
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.model.domain.model.Result
+import app.readylytics.health.core.model.domain.model.getOrNull
+import app.readylytics.health.core.model.domain.preferences.DisplaySettings
+import app.readylytics.health.core.model.domain.preferences.PhysiologySettings
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.sync.HealthDataRefresh
+import app.readylytics.health.core.model.domain.user.UserProfileActions
+import app.readylytics.health.core.model.domain.util.logD
+import app.readylytics.health.core.model.domain.validation.SettingsValidators
+import app.readylytics.health.core.model.domain.validation.ValidationResult
+import app.readylytics.health.core.scoring.domain.scoring.RasCalculator
 import app.readylytics.health.core.ui.common.BaseViewModel
-import app.readylytics.health.domain.model.Result
-import app.readylytics.health.domain.model.getOrNull
-import app.readylytics.health.domain.preferences.DisplaySettings
-import app.readylytics.health.domain.preferences.PhysiologySettings
-import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.scoring.RasCalculator
-import app.readylytics.health.domain.sync.HealthDataRefresh
-import app.readylytics.health.domain.user.UserProfileActions
-import app.readylytics.health.domain.validation.SettingsValidators
-import app.readylytics.health.domain.validation.ValidationResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -64,6 +65,7 @@ class PhysiologySettingsViewModel
                             try {
                                 LocalDate.parse(it)
                             } catch (e: Exception) {
+                                logD("PhysiologySettings") { "Unparseable stored birth date: ${e.message}" }
                                 null
                             }
                         }

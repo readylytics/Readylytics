@@ -1,8 +1,8 @@
 package app.readylytics.health.data.preferences
 
-import app.readylytics.health.domain.dashboard.CardConfiguration
-import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
+import app.readylytics.health.core.model.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 
 object CardConfigurationMapper {
     fun toDomain(proto: CardConfigurationProto): CardConfiguration? {

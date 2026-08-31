@@ -12,8 +12,9 @@ class CanonicalMetricDisplayAuditTest {
                 "feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard/DashboardCardFactory.kt",
                 "feature/sleep/src/main/kotlin/app/readylytics/health/feature/sleep/SleepScreen.kt",
                 "feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts/WorkoutsCardFactory.kt",
-                "feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts/WorkoutMetricsDisplay.kt",
-                "feature/dashboard/src/main/kotlin/app/readylytics/health/domain/dashboard/GetWorkoutMetricsUseCase.kt",
+                "feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts/WorkoutMetricTiles.kt",
+                "feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard/" +
+                    "domain/dashboard/GetWorkoutMetricsUseCase.kt",
             ).map(::resolveAuditedFile)
 
         val missingFiles = auditedFiles.filterNot { it.exists() }
@@ -27,7 +28,7 @@ class CanonicalMetricDisplayAuditTest {
                 .mapNotNull { file ->
                     val text = file.readText()
                     val suspicious =
-                        forbiddenPatternsFor(file)
+                        forbiddenPatternsFor()
                             .filter { pattern -> pattern in text }
                     if (suspicious.isEmpty()) null else file.path to suspicious
                 }
@@ -40,7 +41,7 @@ class CanonicalMetricDisplayAuditTest {
         )
     }
 
-    private fun forbiddenPatternsFor(file: File): List<String> {
+    private fun forbiddenPatternsFor(): List<String> {
         val commonDecimalFormatting =
             listOf(
                 "\"%.2f\".format",

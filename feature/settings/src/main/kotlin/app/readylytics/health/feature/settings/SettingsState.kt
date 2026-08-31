@@ -1,18 +1,20 @@
 package app.readylytics.health.feature.settings
 
+import app.readylytics.health.core.model.data.preferences.AppTheme
+import app.readylytics.health.core.model.data.preferences.BackupSchedule
+import app.readylytics.health.core.model.data.preferences.FallbackThemeColor
+import app.readylytics.health.core.model.data.preferences.Gender
+import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
+import app.readylytics.health.core.model.data.preferences.SyncPreference
+import app.readylytics.health.core.model.data.preferences.UnitSystem
+import app.readylytics.health.core.model.domain.backup.BackupFileInfo
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
+import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
+import app.readylytics.health.core.model.domain.scoring.TrimpModel
 import app.readylytics.health.core.ui.common.UiText
-import app.readylytics.health.data.preferences.AppTheme
-import app.readylytics.health.data.preferences.BackupSchedule
-import app.readylytics.health.data.preferences.FallbackThemeColor
-import app.readylytics.health.data.preferences.Gender
-import app.readylytics.health.data.preferences.PhysiologyProfile
-import app.readylytics.health.data.preferences.SettingsDefaults
-import app.readylytics.health.data.preferences.SyncPreference
-import app.readylytics.health.data.preferences.UnitSystem
-import app.readylytics.health.domain.backup.BackupFileInfo
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
-import app.readylytics.health.domain.scoring.LoadSourceMode
-import app.readylytics.health.domain.scoring.TrimpModel
+import java.time.DayOfWeek
 import java.time.LocalDate
 
 data class ThresholdSettingsState(
@@ -41,6 +43,9 @@ data class SleepSettingsState(
     val minimumCountedSleepSegmentMinutes: Int = SettingsDefaults.MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES,
     val supplementalArchitectureCoveragePercent: Int =
         SettingsDefaults.SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT,
+    val sleepScoreWeightProfile: SleepScoreWeightProfile = SleepScoreWeightProfile.DEFAULT,
+    val hypersomniaOnsetPercent: Int = SettingsDefaults.HYPERSOMNIA_ONSET_PERCENT,
+    val hasPendingSleepScoreRecalc: Boolean = false,
 )
 
 data class PhysiologySettingsState(
@@ -101,7 +106,11 @@ data class UIState(
     val banisterMultiplier: Float = PhysiologyProfile.ACTIVE.banisterMultiplier,
     val chengBeta: Float = PhysiologyProfile.ACTIVE.defaultChengBeta,
     val itrimB: Float = PhysiologyProfile.ACTIVE.defaultItrimB,
+    val residualFatigueEnabled: Boolean = SettingsDefaults.RESIDUAL_FATIGUE_ENABLED,
+    val residualFatigueHalfLifeHours: Float = SettingsDefaults.RESIDUAL_FATIGUE_HALF_LIFE_HOURS,
+    val residualFatigueGain: Float = SettingsDefaults.RESIDUAL_FATIGUE_GAIN,
     val unitSystem: UnitSystem = SettingsDefaults.UNIT_SYSTEM,
+    val weekStartDay: DayOfWeek = SettingsDefaults.WEEK_START_DAY,
     val isCustomPaletteEnabled: Boolean = false,
     val customSecondaryColor: Long = SettingsDefaults.CUSTOM_SECONDARY_COLOR,
     val customTertiaryColor: Long = SettingsDefaults.CUSTOM_TERTIARY_COLOR,

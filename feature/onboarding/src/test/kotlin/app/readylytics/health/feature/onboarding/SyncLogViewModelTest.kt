@@ -1,6 +1,6 @@
 package app.readylytics.health.feature.onboarding
 
-import app.readylytics.health.domain.logcat.LogcatCaptureStore
+import app.readylytics.health.core.model.domain.logcat.LogcatCaptureStore
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk

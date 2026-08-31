@@ -3,9 +3,9 @@ package app.readylytics.health.feature.insights
 import androidx.annotation.AnyRes
 import androidx.annotation.ArrayRes
 import androidx.annotation.StringRes
-import app.readylytics.health.domain.insights.detail.InsightConfidence
-import app.readylytics.health.domain.insights.detail.InsightDetailType
-import app.readylytics.health.domain.model.InsightType
+import app.readylytics.health.core.model.domain.model.InsightType
+import app.readylytics.health.core.scoring.domain.insights.detail.InsightConfidence
+import app.readylytics.health.core.scoring.domain.insights.detail.InsightDetailType
 import app.readylytics.health.feature.insights.R
 
 data class InsightDetailResourceSpec(

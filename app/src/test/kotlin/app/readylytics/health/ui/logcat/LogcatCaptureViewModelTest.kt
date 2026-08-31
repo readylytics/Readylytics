@@ -1,6 +1,6 @@
 package app.readylytics.health.ui.logcat
 
-import app.readylytics.health.domain.logcat.LogcatCaptureStore
+import app.readylytics.health.core.model.domain.logcat.LogcatCaptureStore
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

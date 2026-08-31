@@ -3,16 +3,17 @@ package app.readylytics.health.data.backup
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
-import app.readylytics.health.data.local.HealthDatabase
+import app.readylytics.health.core.database.data.local.HealthDatabase
+import app.readylytics.health.core.model.domain.audit.AuditEvent
+import app.readylytics.health.core.model.domain.audit.AuditTrailRepository
+import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
+import app.readylytics.health.core.model.domain.sleep.SleepLayoutRepository
+import app.readylytics.health.core.model.domain.vitals.VitalsLayoutRepository
+import app.readylytics.health.core.model.domain.workouts.WorkoutDetailLayoutRepository
+import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
+import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.security.EncryptionManager
-import app.readylytics.health.domain.audit.AuditEvent
-import app.readylytics.health.domain.audit.AuditTrailRepository
-import app.readylytics.health.domain.dashboard.CardConfigurationRepository
-import app.readylytics.health.domain.sleep.SleepLayoutRepository
-import app.readylytics.health.domain.vitals.VitalsLayoutRepository
-import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
-import app.readylytics.health.workers.WorkerScheduler
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -38,6 +39,7 @@ abstract class LocalRestoreManagerTestBase {
     protected lateinit var vitalsLayoutRepo: VitalsLayoutRepository
     protected lateinit var sleepLayoutRepo: SleepLayoutRepository
     protected lateinit var workoutsLayoutRepo: WorkoutsLayoutRepository
+    protected lateinit var workoutDetailLayoutRepo: WorkoutDetailLayoutRepository
     protected lateinit var workerScheduler: WorkerScheduler
     protected lateinit var auditTrailRepository: FakeAuditTrailRepository
     protected lateinit var manager: LocalRestoreManager
@@ -64,6 +66,7 @@ abstract class LocalRestoreManagerTestBase {
         vitalsLayoutRepo = mockk<VitalsLayoutRepository>(relaxed = true)
         sleepLayoutRepo = mockk<SleepLayoutRepository>(relaxed = true)
         workoutsLayoutRepo = mockk<WorkoutsLayoutRepository>(relaxed = true)
+        workoutDetailLayoutRepo = mockk<WorkoutDetailLayoutRepository>(relaxed = true)
         workerScheduler = mockk<WorkerScheduler>(relaxed = true)
         auditTrailRepository = FakeAuditTrailRepository()
         manager =
@@ -71,11 +74,19 @@ abstract class LocalRestoreManagerTestBase {
                 context,
                 db,
                 settingsRepo,
-                cardConfigRepo,
-                vitalsLayoutRepo,
-                sleepLayoutRepo,
-                workoutsLayoutRepo,
-                workerScheduler,
+                RestoreBatchLoader(db, RestoreVitalsLoader(db)),
+                RestorePreferencesApplier(
+                    settingsRepo,
+                    RestoreLayoutRepositories(
+                        cardConfigRepo,
+                        vitalsLayoutRepo,
+                        sleepLayoutRepo,
+                        workoutsLayoutRepo,
+                        workoutDetailLayoutRepo,
+                    ),
+                    workerScheduler,
+                    encryptionManager,
+                ),
                 encryptionManager,
                 auditTrailRepository,
                 Dispatchers.Unconfined,

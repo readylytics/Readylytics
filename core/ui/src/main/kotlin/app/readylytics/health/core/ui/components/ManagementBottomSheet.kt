@@ -32,8 +32,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.ui.R
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 
 data class ManagementItem(
     val key: String,
@@ -73,45 +73,17 @@ fun ManagementBottomSheet(
                     .fillMaxWidth()
                     .padding(vertical = MaterialTheme.spacing.pageSectionGap),
         ) {
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            start = MaterialTheme.spacing.pageHorizontal,
-                            end = MaterialTheme.spacing.pageHorizontal,
-                            bottom = MaterialTheme.spacing.small,
-                        ),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineSmall,
-                )
-                IconButton(onClick = onResetToDefaults) {
-                    Icon(
-                        imageVector = Icons.Outlined.RestartAlt,
-                        contentDescription = stringResource(R.string.action_reset_to_defaults),
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
+            ManagementHeader(
+                title = title,
+                onResetToDefaults = onResetToDefaults,
+            )
 
             if (sections.size > 1) {
-                PrimaryTabRow(
+                ManagementTabs(
+                    sections = sections,
                     selectedTabIndex = selectedTabIndex,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    sections.forEachIndexed { index, section ->
-                        Tab(
-                            selected = selectedTabIndex == index,
-                            onClick = { selectedTabIndex = index },
-                            text = { Text(section.title) },
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+                    onTabSelected = { selectedTabIndex = it },
+                )
             }
 
             val activeSection = sections.getOrElse(selectedTabIndex) { sections.first() }
@@ -141,15 +113,61 @@ fun ManagementBottomSheet(
 }
 
 @Composable
+private fun ManagementHeader(
+    title: String,
+    onResetToDefaults: () -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(
+                    start = MaterialTheme.spacing.pageHorizontal,
+                    end = MaterialTheme.spacing.pageHorizontal,
+                    bottom = MaterialTheme.spacing.small,
+                ),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineSmall,
+        )
+        IconButton(onClick = onResetToDefaults) {
+            Icon(
+                imageVector = Icons.Outlined.RestartAlt,
+                contentDescription = stringResource(R.string.action_reset_to_defaults),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ManagementTabs(
+    sections: List<ManagementSection>,
+    selectedTabIndex: Int,
+    onTabSelected: (Int) -> Unit,
+) {
+    PrimaryTabRow(
+        selectedTabIndex = selectedTabIndex,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        sections.forEachIndexed { index, section ->
+            Tab(
+                selected = selectedTabIndex == index,
+                onClick = { onTabSelected(index) },
+                text = { Text(section.title) },
+            )
+        }
+    }
+    Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+}
+
+@Composable
 private fun ManagementRow(item: ManagementItem) {
     if (item.supportedModes.isNotEmpty()) {
         ListItem(
-            headlineContent = {
-                Text(
-                    text = item.label,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            },
             supportingContent = {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -159,23 +177,8 @@ private fun ManagementRow(item: ManagementItem) {
                         selectedMode = item.requestedMode,
                         supportedModes = item.supportedModes,
                         onModeSelected = item.onDisplayModeChanged,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Checkbox(
-                        checked = item.isVisible,
-                        onCheckedChange = item.onVisibilityChanged,
                     )
                 }
-            },
-            modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall),
-        )
-    } else {
-        ListItem(
-            headlineContent = {
-                Text(
-                    text = item.label,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
             },
             trailingContent = {
                 Checkbox(
@@ -183,7 +186,25 @@ private fun ManagementRow(item: ManagementItem) {
                     onCheckedChange = item.onVisibilityChanged,
                 )
             },
-            modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall),
-        )
+        ) {
+            Text(
+                text = item.label,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+    } else {
+        ListItem(
+            trailingContent = {
+                Checkbox(
+                    checked = item.isVisible,
+                    onCheckedChange = item.onVisibilityChanged,
+                )
+            },
+        ) {
+            Text(
+                text = item.label,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
     }
 }

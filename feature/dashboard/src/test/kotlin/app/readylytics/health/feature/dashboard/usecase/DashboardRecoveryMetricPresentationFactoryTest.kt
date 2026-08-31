@@ -1,13 +1,12 @@
 package app.readylytics.health.feature.dashboard.usecase
+import app.readylytics.health.core.model.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.model.MetricStatus
+import app.readylytics.health.core.model.domain.model.SleepSessionSummary
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
+import app.readylytics.health.core.model.domain.util.ResourceProvider
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
-import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.domain.dashboard.GetWorkoutMetricsUseCase
-import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.model.MetricStatus
-import app.readylytics.health.domain.model.SleepSessionSummary
-import app.readylytics.health.domain.preferences.UserPreferences
-import app.readylytics.health.domain.scoring.LoadSourceMode
-import app.readylytics.health.domain.util.ResourceProvider
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert.assertEquals
@@ -53,7 +52,6 @@ class DashboardRecoveryMetricPresentationFactoryTest {
         factory =
             DashboardMetricPresentationFactory(
                 resourceProvider,
-                mockk<GetWorkoutMetricsUseCase>(relaxed = true),
             )
 
         every {
@@ -250,5 +248,5 @@ class DashboardRecoveryMetricPresentationFactoryTest {
         summary: DailySummary?,
         preferences: UserPreferences,
         session: SleepSessionSummary?,
-    ) = factory.build(summary, preferences, date, session, null, null)
+    ) = factory.build(summary, preferences, session, null, null)
 }

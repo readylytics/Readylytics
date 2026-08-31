@@ -1,7 +1,7 @@
 package app.readylytics.health.feature.workouts
 
 import androidx.annotation.StringRes
-import app.readylytics.health.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.ui.R as CoreUiR
 
 // Local duplicate of feature/dashboard's CardIdExtensionsUi.kt — feature/workouts cannot see

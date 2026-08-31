@@ -2,13 +2,14 @@ package app.readylytics.health.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.readylytics.health.data.preferences.FallbackThemeColor
-import app.readylytics.health.domain.preferences.DisplaySettings
-import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.scoring.TrimpModel
-import app.readylytics.health.domain.sync.HealthDataRefresh
-import app.readylytics.health.domain.validation.SettingsValidators
-import app.readylytics.health.domain.validation.ValidationResult
+import app.readylytics.health.core.model.data.preferences.FallbackThemeColor
+import app.readylytics.health.core.model.domain.preferences.DisplaySettings
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.scoring.TrimpModel
+import app.readylytics.health.core.model.domain.sync.HealthDataRefresh
+import app.readylytics.health.core.model.domain.validation.SettingsValidators
+import app.readylytics.health.core.model.domain.validation.ValidationResult
+import app.readylytics.health.core.model.domain.workouts.WorkoutDetailLayoutRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -25,6 +26,7 @@ class UISettingsViewModel
         private val settingsRepo: UserPreferencesReader,
         private val displaySettings: DisplaySettings,
         private val healthDataRefresh: HealthDataRefresh,
+        private val workoutDetailLayoutRepository: WorkoutDetailLayoutRepository,
     ) : ViewModel() {
         // Internal property to allow overriding in tests
         var sharingStarted: SharingStarted = SharingStarted.WhileSubscribed(5000)
@@ -45,7 +47,11 @@ class UISettingsViewModel
                         banisterMultiplier = prefs.banisterMultiplier,
                         chengBeta = prefs.chengBeta,
                         itrimB = prefs.itrimB,
+                        residualFatigueEnabled = prefs.residualFatigueEnabled,
+                        residualFatigueHalfLifeHours = prefs.residualFatigueHalfLifeHours,
+                        residualFatigueGain = prefs.residualFatigueGain,
                         unitSystem = prefs.unitSystem,
+                        weekStartDay = prefs.weekStartDay,
                         isCustomPaletteEnabled = prefs.isCustomPaletteEnabled,
                         customSecondaryColor = prefs.customSecondaryColor,
                         customTertiaryColor = prefs.customTertiaryColor,
@@ -137,6 +143,36 @@ class UISettingsViewModel
                         }
                     }
                 }
+                is SettingsEvent.ResidualFatigueEnabledChanged ->
+                    viewModelScope.launch {
+                        displaySettings.updateResidualFatigueEnabled(event.enabled)
+                        healthDataRefresh.refreshHistorical()
+                    }
+                is SettingsEvent.ResidualFatigueHalfLifeChanged -> {
+                    val validation = SettingsValidators.FATIGUE_HALF_LIFE_RULE.validate(event.hours)
+                    if (validation is ValidationResult.Valid) {
+                        viewModelScope.launch {
+                            displaySettings.updateResidualFatigueHalfLifeHours(event.hours)
+                            healthDataRefresh.refreshHistorical()
+                        }
+                    }
+                }
+                is SettingsEvent.ResidualFatigueGainChanged -> {
+                    val validation = SettingsValidators.FATIGUE_GAIN_RULE.validate(event.value)
+                    if (validation is ValidationResult.Valid) {
+                        viewModelScope.launch {
+                            displaySettings.updateResidualFatigueGain(event.value)
+                            healthDataRefresh.refreshHistorical()
+                        }
+                    }
+                }
+                SettingsEvent.ResetFatigueToDefaults ->
+                    viewModelScope.launch {
+                        displaySettings.resetResidualFatigueToDefaults()
+                        healthDataRefresh.refreshHistorical()
+                    }
+                SettingsEvent.WorkoutDetailLayoutsResetConfirmed ->
+                    viewModelScope.launch { workoutDetailLayoutRepository.resetAll() }
                 SettingsEvent.ResetTrimpToProfileDefaults ->
                     viewModelScope.launch {
                         val profile = settingsRepo.userPreferences.first().physiologyProfile
@@ -148,6 +184,8 @@ class UISettingsViewModel
                     }
                 is SettingsEvent.UnitSystemChanged ->
                     viewModelScope.launch { displaySettings.updateUnitSystem(unitSystem = event.unitSystem) }
+                is SettingsEvent.WeekStartDayChanged ->
+                    viewModelScope.launch { displaySettings.updateWeekStartDay(day = event.weekStartDay) }
                 is SettingsEvent.CustomPaletteEnabledChanged ->
                     viewModelScope.launch { displaySettings.updateCustomPaletteEnabled(enabled = event.enabled) }
                 is SettingsEvent.CustomSecondaryColorChanged ->

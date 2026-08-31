@@ -2,12 +2,15 @@ package app.readylytics.health.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.readylytics.health.di.ApplicationScope
-import app.readylytics.health.domain.preferences.SleepSettings
-import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.repository.ScoringRepository
-import app.readylytics.health.domain.validation.SettingsValidators
-import app.readylytics.health.domain.validation.ValidationResult
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
+import app.readylytics.health.core.model.di.ApplicationScope
+import app.readylytics.health.core.model.domain.preferences.SleepSettings
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.repository.ScoringRepository
+import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
+import app.readylytics.health.core.model.domain.sync.HistoricalResyncController
+import app.readylytics.health.core.model.domain.validation.SettingsValidators
+import app.readylytics.health.core.model.domain.validation.ValidationResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
@@ -15,6 +18,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.Clock
+import java.time.LocalDate
 import javax.inject.Inject
 
 @HiltViewModel
@@ -24,7 +29,9 @@ class SleepSettingsViewModel
         private val settingsReader: UserPreferencesReader,
         private val sleepSettings: SleepSettings,
         private val scoringRepository: ScoringRepository,
+        private val historicalResyncController: HistoricalResyncController,
         @param:ApplicationScope private val appScope: CoroutineScope,
+        private val clock: Clock,
     ) : ViewModel() {
         val uiState: StateFlow<SleepSettingsState> =
             settingsReader.userPreferences
@@ -40,6 +47,15 @@ class SleepSettingsViewModel
                         supplementalCutoffMinutesOfDay = prefs.supplementalCutoffMinutesOfDay,
                         minimumCountedSleepSegmentMinutes = prefs.minimumCountedSleepSegmentMinutes,
                         supplementalArchitectureCoveragePercent = prefs.supplementalArchitectureCoveragePercent,
+                        sleepScoreWeightProfile = prefs.sleepScoreWeightProfile,
+                        hypersomniaOnsetPercent = prefs.hypersomniaOnsetPercent,
+                        hasPendingSleepScoreRecalc =
+                            prefs.sleepScoreWeightProfile !=
+                                (prefs.lastRecalcSleepScoreWeightProfile ?: SleepScoreWeightProfile.DEFAULT) ||
+                                prefs.goalSleepHours !=
+                                (prefs.lastRecalcGoalSleepHours ?: SettingsDefaults.GOAL_SLEEP_HOURS) ||
+                                prefs.hypersomniaOnsetPercent !=
+                                (prefs.lastRecalcHypersomniaOnsetPercent ?: SettingsDefaults.HYPERSOMNIA_ONSET_PERCENT),
                     )
                 }.stateIn(
                     scope = viewModelScope,
@@ -47,13 +63,39 @@ class SleepSettingsViewModel
                     initialValue = SleepSettingsState(),
                 )
 
+        private suspend fun recomputeToday() {
+            scoringRepository.computeAndPersistDailySummary(LocalDate.now(clock))
+        }
+
         fun onEvent(event: SettingsEvent) {
             when (event) {
                 is SettingsEvent.GoalSleepHoursChanged ->
                     appScope.launch {
                         sleepSettings.updateGoalSleepHours(hours = event.hours)
-                        scoringRepository.computeAndPersistDailySummary()
+                        recomputeToday()
                     }
+
+                is SettingsEvent.SleepScoreWeightProfileChanged ->
+                    appScope.launch {
+                        sleepSettings.updateSleepScoreWeightProfile(event.profile)
+                        recomputeToday()
+                    }
+
+                is SettingsEvent.HypersomniaOnsetPercentChanged -> {
+                    val isValid =
+                        SettingsValidators.HYPERSOMNIA_ONSET_PERCENT_RULE.validate(
+                            event.percent,
+                        ) is ValidationResult.Valid
+                    if (isValid) {
+                        appScope.launch {
+                            sleepSettings.updateHypersomniaOnsetPercent(event.percent)
+                            recomputeToday()
+                        }
+                    }
+                }
+
+                SettingsEvent.RecalculateScores ->
+                    appScope.launch { historicalResyncController.requestScoreRecompute() }
 
                 is SettingsEvent.HrvBaselineChanged -> {
                     val value = event.text.toIntOrNull()?.toFloat()
@@ -62,7 +104,7 @@ class SleepSettingsViewModel
                     if (isValid) {
                         appScope.launch {
                             sleepSettings.updateHrvBaselineOverride(rmssdMs = value)
-                            scoringRepository.computeAndPersistDailySummary()
+                            recomputeToday()
                         }
                     }
                 }
@@ -70,7 +112,7 @@ class SleepSettingsViewModel
                 SettingsEvent.HrvBaselineCleared ->
                     appScope.launch {
                         sleepSettings.updateHrvBaselineOverride(rmssdMs = null)
-                        scoringRepository.computeAndPersistDailySummary()
+                        recomputeToday()
                     }
 
                 is SettingsEvent.CoreMergeGapMinutesChanged -> {
@@ -79,7 +121,7 @@ class SleepSettingsViewModel
                     if (isValid) {
                         appScope.launch {
                             sleepSettings.updateCoreMergeGapMinutes(event.minutes)
-                            scoringRepository.computeAndPersistDailySummary()
+                            recomputeToday()
                         }
                     }
                 }
@@ -91,7 +133,7 @@ class SleepSettingsViewModel
                     if (isValid) {
                         appScope.launch {
                             sleepSettings.updateSupplementalCutoffMinutesOfDay(event.minutes)
-                            scoringRepository.computeAndPersistDailySummary()
+                            recomputeToday()
                         }
                     }
                 }
@@ -103,7 +145,7 @@ class SleepSettingsViewModel
                     if (isValid) {
                         appScope.launch {
                             sleepSettings.updateMinimumCountedSleepSegmentMinutes(event.minutes)
-                            scoringRepository.computeAndPersistDailySummary()
+                            recomputeToday()
                         }
                     }
                 }
@@ -115,7 +157,7 @@ class SleepSettingsViewModel
                     if (isValid) {
                         appScope.launch {
                             sleepSettings.updateSupplementalArchitectureCoveragePercent(event.percent)
-                            scoringRepository.computeAndPersistDailySummary()
+                            recomputeToday()
                         }
                     }
                 }
@@ -127,7 +169,7 @@ class SleepSettingsViewModel
                     if (isValid) {
                         appScope.launch {
                             sleepSettings.updateRhrBaselineOverride(bpm = value)
-                            scoringRepository.computeAndPersistDailySummary()
+                            recomputeToday()
                         }
                     }
                 }
@@ -135,7 +177,7 @@ class SleepSettingsViewModel
                 SettingsEvent.RhrBaselineCleared ->
                     appScope.launch {
                         sleepSettings.updateRhrBaselineOverride(bpm = null)
-                        scoringRepository.computeAndPersistDailySummary()
+                        recomputeToday()
                     }
 
                 is SettingsEvent.RestingHrPercentileChanged -> {
@@ -144,7 +186,7 @@ class SleepSettingsViewModel
                     if (validation is ValidationResult.Valid) {
                         appScope.launch {
                             sleepSettings.updateRestingHrPercentile(percentile = event.percentile)
-                            scoringRepository.computeAndPersistDailySummary()
+                            recomputeToday()
                         }
                     }
                 }

@@ -1,23 +1,22 @@
 package app.readylytics.health.feature.sleep
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.model.data.preferences.AppTheme
+import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.date.SelectedDateStore
+import app.readylytics.health.core.model.domain.model.DailyMetrics
+import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.repository.DailyMetricsRepository
+import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
+import app.readylytics.health.core.model.domain.repository.HeartRateRecordData
+import app.readylytics.health.core.model.domain.repository.HeartRateRepository
+import app.readylytics.health.core.model.domain.repository.SleepSessionData
+import app.readylytics.health.core.model.domain.repository.SleepSessionRepository
+import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
+import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
+import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.core.ui.common.TimeRange
-import app.readylytics.health.data.preferences.AppTheme
-import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.domain.date.SelectedDateStore
-import app.readylytics.health.domain.model.DailyMetrics
-import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.repository.DailyMetricsRepository
-import app.readylytics.health.domain.repository.DailySummaryRepository
-import app.readylytics.health.domain.repository.HeartRateRecordData
-import app.readylytics.health.domain.repository.HeartRateRepository
-import app.readylytics.health.domain.repository.SleepSessionData
-import app.readylytics.health.domain.repository.SleepSessionRepository
-import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
-import app.readylytics.health.domain.scoring.CircadianConsistencyResult
-import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -28,6 +27,7 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -40,6 +40,8 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -55,15 +57,16 @@ class SleepViewModelTest {
     private val selectedDateRepository: SelectedDateStore = mockk(relaxed = true)
     private val circadianRepo: CircadianConsistencyRepository = mockk(relaxed = true)
     private val foregroundSyncController: ForegroundSyncGateway = mockk(relaxed = true)
-    private val savedStateHandle: SavedStateHandle = mockk(relaxed = true)
 
-    private val sleepLayoutRepository: app.readylytics.health.domain.sleep.SleepLayoutRepository = mockk(relaxed = true)
+    private val sleepLayoutRepository: app.readylytics.health.core.model.domain.sleep.SleepLayoutRepository =
+        mockk(relaxed = true)
 
     private val selectedDateFlow = MutableStateFlow(LocalDate.of(2026, 6, 11))
     private val selectedSummaryFlow = MutableStateFlow<DailySummary?>(null)
     private val selectedMetricsFlow = MutableStateFlow<DailyMetrics?>(null)
     private val yesterdaySummaryFlow = MutableStateFlow<DailySummary?>(null)
     private val isSyncingFlow = MutableStateFlow(false)
+    private val clock = Clock.fixed(Instant.parse("2026-06-11T10:00:00Z"), ZoneId.systemDefault())
     private lateinit var viewModel: SleepViewModel
 
     @Before
@@ -77,8 +80,12 @@ class SleepViewModelTest {
         every { dailyMetricsRepository.observeByDate(any()) } returns selectedMetricsFlow
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences(goalSleepHours = 8f))
 
-        every { dailySummaryRepository.observeSince(any()) } returns flowOf(emptyList())
-        coEvery { dailySummaryRepository.getByDate(any()) } returns null
+        every { dailySummaryRepository.observeSince(any()) } answers {
+            selectedSummaryFlow.map { listOfNotNull(it) }
+        }
+        coEvery { dailySummaryRepository.getByDate(any()) } answers {
+            selectedSummaryFlow.value
+        }
         every { dailySummaryRepository.observeByDate(any()) } answers {
             val requestedMidnightMs = firstArg<Long>()
             val selectedMidnightMs =
@@ -94,11 +101,11 @@ class SleepViewModelTest {
         every { sleepSessionRepository.observeSince(any()) } returns flowOf(emptyList())
         every { sleepSessionRepository.observeFirstSessionEndingInRange(any(), any()) } returns flowOf(null)
         every { sleepLayoutRepository.sleepTopCardConfigurations() } returns
-            flowOf(app.readylytics.health.data.preferences.SettingsDefaults.DEFAULT_SLEEP_TOP_CARDS)
+            flowOf(app.readylytics.health.core.model.data.preferences.SettingsDefaults.DEFAULT_SLEEP_TOP_CARDS)
         every { sleepLayoutRepository.sleepChartConfigurations() } returns
-            flowOf(app.readylytics.health.data.preferences.SettingsDefaults.DEFAULT_SLEEP_CHARTS)
+            flowOf(app.readylytics.health.core.model.data.preferences.SettingsDefaults.DEFAULT_SLEEP_CHARTS)
         every { sleepLayoutRepository.sleepMetricCardConfigurations() } returns
-            flowOf(app.readylytics.health.data.preferences.SettingsDefaults.DEFAULT_SLEEP_METRIC_CARDS)
+            flowOf(app.readylytics.health.core.model.data.preferences.SettingsDefaults.DEFAULT_SLEEP_METRIC_CARDS)
     }
 
     @After
@@ -112,18 +119,20 @@ class SleepViewModelTest {
 
     private fun createViewModel() =
         SleepViewModel(
-            dailySummaryRepository = dailySummaryRepository,
-            dailyMetricsRepository = dailyMetricsRepository,
-            sleepSessionRepository = sleepSessionRepository,
-            heartRateRepository = heartRateRepository,
+            repositories =
+                SleepRepositories(
+                    dailySummary = dailySummaryRepository,
+                    dailyMetrics = dailyMetricsRepository,
+                    sleepSession = sleepSessionRepository,
+                    heartRate = heartRateRepository,
+                    circadian = circadianRepo,
+                    sleepLayout = sleepLayoutRepository,
+                ),
             settingsRepo = settingsRepo,
             selectedDateRepository = selectedDateRepository,
-            circadianRepo = circadianRepo,
             foregroundSyncController = foregroundSyncController,
-            savedStateHandle = savedStateHandle,
-            sleepLayoutRepository = sleepLayoutRepository,
-            ioDispatcher = testDispatcher,
-            defaultDispatcher = testDispatcher,
+            dispatchers = SleepDispatchers(testDispatcher, testDispatcher),
+            clock = clock,
         )
 
     @Test
@@ -164,15 +173,10 @@ class SleepViewModelTest {
         runTest(testDispatcher) {
             val zoneId = ZoneId.systemDefault()
             val selectedDate = LocalDate.of(2026, 6, 11)
-            val selectedMidnightMs =
-                selectedDate
-                    .atStartOfDay(zoneId)
-                    .toInstant()
-                    .toEpochMilli()
+            val selectedMidnightMs = selectedDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
             val session =
-                SleepSessionData(
+                sleepSession(
                     id = "session_1",
-                    deviceName = "SmartRing",
                     startTime =
                         selectedDate
                             .minusDays(1)
@@ -187,10 +191,6 @@ class SleepViewModelTest {
                             .toInstant()
                             .toEpochMilli(),
                     durationMinutes = 510,
-                    efficiency = 0.93f,
-                    deepSleepMinutes = 90,
-                    lightSleepMinutes = 300,
-                    remSleepMinutes = 90,
                     awakeMinutes = 30,
                     sleepScore = 85f,
                 )
@@ -216,40 +216,9 @@ class SleepViewModelTest {
         runTest(testDispatcher) {
             val zoneId = ZoneId.systemDefault()
             val selectedDate = LocalDate.of(2026, 6, 11)
-            val session =
-                SleepSessionData(
-                    id = "session_1",
-                    deviceName = "SmartRing",
-                    startTime =
-                        selectedDate
-                            .minusDays(1)
-                            .atTime(22, 0)
-                            .atZone(zoneId)
-                            .toInstant()
-                            .toEpochMilli(),
-                    endTime =
-                        selectedDate
-                            .atTime(6, 0)
-                            .atZone(zoneId)
-                            .toInstant()
-                            .toEpochMilli(),
-                    durationMinutes = 480,
-                    efficiency = 0.93f,
-                    deepSleepMinutes = 90,
-                    lightSleepMinutes = 300,
-                    remSleepMinutes = 90,
-                    awakeMinutes = 30,
-                )
-            val hrSamples =
-                listOf(
-                    HeartRateRecordData(
-                        id = "hr1",
-                        timestampMs = session.startTime + 60_000L,
-                        beatsPerMinute = 54,
-                        recordType = "SLEEP",
-                        sessionId = session.id,
-                    ),
-                )
+            val session = buildSleepSessionWithHr(selectedDate, zoneId)
+            val hrSamples = listOf(buildHeartRateSample("hr1", session.id, session.startTime + 60_000L, 54))
+
             every { sleepSessionRepository.observeFirstSessionEndingInRange(any(), any()) } returns flowOf(session)
             every { sleepSessionRepository.observeSessionStages(session.id) } returns flowOf(emptyList())
             every { heartRateRepository.observeSleepHrTimelineForSession(session.id) } returns flowOf(hrSamples)
@@ -290,9 +259,8 @@ class SleepViewModelTest {
         runTest(testDispatcher) {
             val zoneId = ZoneId.systemDefault()
             val session =
-                SleepSessionData(
+                sleepSession(
                     id = "session_1",
-                    deviceName = "SmartRing",
                     startTime =
                         LocalDate
                             .of(2026, 6, 10)
@@ -308,10 +276,6 @@ class SleepViewModelTest {
                             .toInstant()
                             .toEpochMilli(),
                     durationMinutes = 480,
-                    efficiency = 0.93f,
-                    deepSleepMinutes = 90,
-                    lightSleepMinutes = 300,
-                    remSleepMinutes = 90,
                     awakeMinutes = 30,
                     sleepScore = 85f,
                 )
@@ -398,37 +362,7 @@ class SleepViewModelTest {
     fun `trend overlap tie-breaking preserves the session source name`() =
         runTest(testDispatcher) {
             val zoneId = ZoneId.systemDefault()
-            val scoreDay = selectedDateFlow.value
-            val earlierStart =
-                scoreDay
-                    .minusDays(1)
-                    .atTime(22, 0)
-                    .atZone(zoneId)
-                    .toInstant()
-                    .toEpochMilli()
-            val laterStart =
-                scoreDay
-                    .minusDays(1)
-                    .atTime(22, 30)
-                    .atZone(zoneId)
-                    .toInstant()
-                    .toEpochMilli()
-            val stableIdWinnerWithoutSource =
-                sleepSession(
-                    id = "a-stable-id",
-                    startTime = earlierStart,
-                    endTime = earlierStart + 480 * 60_000L,
-                    durationMinutes = 480,
-                    deviceName = "z-source",
-                )
-            val sourceWinner =
-                sleepSession(
-                    id = "z-stable-id",
-                    startTime = laterStart,
-                    endTime = laterStart + 480 * 60_000L,
-                    durationMinutes = 480,
-                    deviceName = "a-source",
-                )
+            val (stableIdWinnerWithoutSource, sourceWinner) = buildOverlapTiebreakerSessions(zoneId)
             every { sleepSessionRepository.observeSince(any()) } returns
                 flowOf(listOf(stableIdWinnerWithoutSource, sourceWinner))
 
@@ -436,7 +370,7 @@ class SleepViewModelTest {
             testDispatcher.scheduler.advanceUntilIdle()
 
             val state = viewModel.uiState.first { !it.isLoading && it.trendDays.last().coreStartTimeMs != null }
-            assertEquals(laterStart, state.trendDays.last().coreStartTimeMs)
+            assertEquals(sourceWinner.startTime, state.trendDays.last().coreStartTimeMs)
         }
 
     @Test
@@ -444,20 +378,7 @@ class SleepViewModelTest {
         runTest(testDispatcher) {
             val zoneId = ZoneId.systemDefault()
             val scoreDay = selectedDateFlow.value
-            val startTime =
-                scoreDay
-                    .minusDays(1)
-                    .atTime(22, 0)
-                    .atZone(zoneId)
-                    .toInstant()
-                    .toEpochMilli()
-            val session =
-                sleepSession(
-                    id = "legacy-zero-duration",
-                    startTime = startTime,
-                    endTime = startTime + 8 * 60 * 60_000L,
-                    durationMinutes = 0,
-                )
+            val session = buildLegacyZeroDurationSession(scoreDay, zoneId)
             every { sleepSessionRepository.observeSince(any()) } returns flowOf(listOf(session))
 
             viewModel = createViewModel()
@@ -473,26 +394,7 @@ class SleepViewModelTest {
         runTest(testDispatcher) {
             val zoneId = ZoneId.systemDefault()
             val scoreDay = selectedDateFlow.value
-            val cutoffStart =
-                scoreDay
-                    .minusDays(1)
-                    .atTime(20, 0)
-                    .atZone(zoneId)
-                    .toInstant()
-                    .toEpochMilli()
-            val session =
-                sleepSession(
-                    id = "cutoff",
-                    startTime = cutoffStart,
-                    endTime =
-                        scoreDay
-                            .minusDays(1)
-                            .atTime(20, 30)
-                            .atZone(zoneId)
-                            .toInstant()
-                            .toEpochMilli(),
-                    durationMinutes = 30,
-                )
+            val session = buildCutoffBoundarySession(scoreDay, zoneId)
             every { sleepSessionRepository.observeSince(any()) } returns flowOf(listOf(session))
 
             viewModel = createViewModel()
@@ -507,34 +409,7 @@ class SleepViewModelTest {
     fun `trend assigns sessions using the configured scoring zone instead of the device zone`() =
         runTest(testDispatcher) {
             val deviceZoneId = ZoneId.systemDefault()
-            val scoreDay = selectedDateFlow.value
-            val cutoffMinutes = 20 * 60
-            // Device zone may be a UTC-equivalent alias (Etc/UTC, GMT, Iceland, Azores in summer,
-            // ...) whose ID differs from "UTC" but has an identical offset. Comparing IDs would pick
-            // a scoring zone with the same offset and no instant could diverge, so pick a candidate
-            // scoring zone whose actual offset differs from the device zone's.
-            val referenceInstant = scoreDay.minusDays(1).atStartOfDay(ZoneId.of("UTC")).toInstant()
-            val deviceOffsetSeconds = deviceZoneId.rules.getOffset(referenceInstant).totalSeconds
-            val scoringZoneId =
-                listOf("America/New_York", "Pacific/Kiritimati", "Pacific/Pago_Pago")
-                    .asSequence()
-                    .map(ZoneId::of)
-                    .first { zone ->
-                        zone.rules.getOffset(referenceInstant).totalSeconds != deviceOffsetSeconds
-                    }
-            val sessionStart =
-                (0..(48 * 60))
-                    .asSequence()
-                    .map { minuteOffset ->
-                        scoreDay
-                            .minusDays(1)
-                            .atStartOfDay(ZoneId.of("UTC"))
-                            .plusMinutes(minuteOffset.toLong())
-                            .toInstant()
-                    }.first { instant ->
-                        scoreDayFor(instant, scoringZoneId, cutoffMinutes) == scoreDay &&
-                            scoreDayFor(instant, deviceZoneId, cutoffMinutes) != scoreDay
-                    }.toEpochMilli()
+            val (scoringZoneId, sessionStart) = buildScoringZoneSessionData(deviceZoneId)
             val session = sleepSession("zone", sessionStart, sessionStart + 30 * 60_000L, 30)
             every { settingsRepo.userPreferences } returns flowOf(UserPreferences(scoringZoneId = scoringZoneId.id))
             every { sleepSessionRepository.observeSince(any()) } returns flowOf(listOf(session))
@@ -625,33 +500,14 @@ class SleepViewModelTest {
             collectJob.cancelAndJoin()
         }
 
-    private fun sleepSession(
-        id: String,
-        startTime: Long,
-        endTime: Long,
-        durationMinutes: Int,
-        deviceName: String = "SmartRing",
-    ) = SleepSessionData(
-        id = id,
-        deviceName = deviceName,
-        startTime = startTime,
-        endTime = endTime,
-        durationMinutes = durationMinutes,
-        efficiency = 0.93f,
-        deepSleepMinutes = 90,
-        lightSleepMinutes = 300,
-        remSleepMinutes = 90,
-        awakeMinutes = 0,
-    )
+    private fun buildOverlapTiebreakerSessions(zoneId: ZoneId): Pair<SleepSessionData, SleepSessionData> {
+        val scoreDay = selectedDateFlow.value
+        return buildOverlapTiebreakerSessions(scoreDay, zoneId)
+    }
 
-    private fun scoreDayFor(
-        instant: java.time.Instant,
-        zoneId: ZoneId,
-        cutoffMinutes: Int,
-    ): LocalDate {
-        val localTime = instant.atZone(zoneId)
-        val minutesOfDay = localTime.hour * 60 + localTime.minute
-        return if (minutesOfDay < cutoffMinutes) localTime.toLocalDate() else localTime.toLocalDate().plusDays(1)
+    private fun buildScoringZoneSessionData(deviceZoneId: ZoneId): Pair<ZoneId, Long> {
+        val scoreDay = selectedDateFlow.value
+        return buildScoringZoneSessionData(scoreDay, deviceZoneId)
     }
 
     @Test
@@ -731,32 +587,7 @@ class SleepViewModelTest {
             // chart has historical data to show, so no skeleton should appear during this sync.
             val zoneId = ZoneId.systemDefault()
             val selectedDate = selectedDateFlow.value
-            val priorSession =
-                SleepSessionData(
-                    id = "session_prior",
-                    deviceName = "SmartRing",
-                    startTime =
-                        selectedDate
-                            .minusDays(3)
-                            .atTime(22, 0)
-                            .atZone(zoneId)
-                            .toInstant()
-                            .toEpochMilli(),
-                    endTime =
-                        selectedDate
-                            .minusDays(2)
-                            .atTime(6, 0)
-                            .atZone(zoneId)
-                            .toInstant()
-                            .toEpochMilli(),
-                    durationMinutes = 480,
-                    efficiency = 0.93f,
-                    deepSleepMinutes = 90,
-                    lightSleepMinutes = 300,
-                    remSleepMinutes = 90,
-                    awakeMinutes = 30,
-                    sleepScore = 85f,
-                )
+            val priorSession = buildPriorSleepSession(selectedDate, zoneId)
             every { sleepSessionRepository.observeSince(any()) } returns flowOf(listOf(priorSession))
             // observeFirstSessionEndingInRange (today's session) and getByDate/observeByDate
             // (today's summary) stay at their setUp() defaults: null.
@@ -788,30 +619,8 @@ class SleepViewModelTest {
             val zoneId = ZoneId.systemDefault()
             val selectedDate = selectedDateFlow.value
             val session =
-                SleepSessionData(
-                    id = "session_1",
-                    deviceName = "SmartRing",
-                    startTime =
-                        selectedDate
-                            .minusDays(1)
-                            .atTime(22, 0)
-                            .atZone(zoneId)
-                            .toInstant()
-                            .toEpochMilli(),
-                    endTime =
-                        selectedDate
-                            .atTime(6, 0)
-                            .atZone(zoneId)
-                            .toInstant()
-                            .toEpochMilli(),
-                    durationMinutes = 480,
-                    efficiency = 0.93f,
-                    deepSleepMinutes = 90,
-                    lightSleepMinutes = 300,
-                    remSleepMinutes = 90,
-                    awakeMinutes = 30,
-                    sleepScore = 85f,
-                )
+                buildSleepSessionWithHr(selectedDate, zoneId)
+                    .copy(sleepScore = 85f)
             every { sleepSessionRepository.observeFirstSessionEndingInRange(any(), any()) } returns flowOf(session)
             every { sleepSessionRepository.observeSessionStages(session.id) } returns flowOf(emptyList())
             every { heartRateRepository.observeSleepHrTimelineForSession(session.id) } returns flowOf(emptyList())

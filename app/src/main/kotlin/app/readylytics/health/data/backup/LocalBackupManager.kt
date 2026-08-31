@@ -3,36 +3,25 @@ package app.readylytics.health.data.backup
 import android.content.Context
 import android.net.Uri
 import androidx.core.net.toUri
-import androidx.documentfile.provider.DocumentFile
-import app.readylytics.health.data.local.HealthDatabase
+import app.readylytics.health.core.model.di.IoDispatcher
+import app.readylytics.health.core.model.domain.audit.AuditEvent
+import app.readylytics.health.core.model.domain.audit.AuditTrailRepository
+import app.readylytics.health.core.model.domain.backup.BackupFileInfo
+import app.readylytics.health.core.model.domain.backup.BackupLocation
+import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.security.EncryptionManager
-import app.readylytics.health.di.IoDispatcher
-import app.readylytics.health.domain.audit.AuditEvent
-import app.readylytics.health.domain.audit.AuditTrailRepository
-import app.readylytics.health.domain.backup.BackupFileInfo
-import app.readylytics.health.domain.backup.BackupLocation
-import app.readylytics.health.domain.dashboard.CardConfigurationRepository
-import app.readylytics.health.domain.sleep.SleepLayoutRepository
-import app.readylytics.health.domain.vitals.VitalsLayoutRepository
-import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import net.lingala.zip4j.ZipFile
 import net.lingala.zip4j.model.ZipParameters
 import net.lingala.zip4j.model.enums.AesKeyStrength
 import net.lingala.zip4j.model.enums.EncryptionMethod
-import java.io.BufferedWriter
 import java.io.File
 import java.io.FileOutputStream
-import java.io.OutputStream
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -44,26 +33,19 @@ class LocalBackupManager
     @Inject
     constructor(
         @param:ApplicationContext private val context: Context,
-        private val healthDatabase: HealthDatabase,
         private val settingsRepository: SettingsRepository,
-        private val cardConfigurationRepository: CardConfigurationRepository,
-        private val vitalsLayoutRepository: VitalsLayoutRepository,
-        private val sleepLayoutRepository: SleepLayoutRepository,
-        private val workoutsLayoutRepository: WorkoutsLayoutRepository,
+        private val backupStreamWriter: BackupStreamWriter,
         private val encryptionManager: EncryptionManager,
         private val auditTrailRepository: AuditTrailRepository,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+        private val backupStoreFactory: BackupStoreFactory = DefaultBackupStoreFactory(context),
     ) {
         private val defaultBackupDir = File(context.filesDir, "backups")
-        private val json = Json { encodeDefaults = true }
 
         suspend fun createBackup(): Result<File?> =
             withContext(ioDispatcher) {
                 var tempJsonFile: File? = null
                 var tempZipFile: File? = null
-                var partialDefaultFile: File? = null
-                var partialSafFile: DocumentFile? = null
-                var backupCompleted = false
                 try {
                     val prefs = settingsRepository.userPreferences.first()
                     val customUri = prefs.backupDirectoryUri?.toUri()
@@ -80,42 +62,22 @@ class LocalBackupManager
                     val jsonFile = File(context.cacheDir, jsonFilename)
                     tempJsonFile = jsonFile
                     FileOutputStream(jsonFile).use { fos ->
-                        writeJsonStreaming(fos)
+                        backupStreamWriter.writeJsonStreaming(fos)
                     }
 
                     // 2. Fetch and decrypt backup password
                     val password =
                         prefs.backupPasswordHash?.let { hash ->
                             encryptionManager.decrypt(hash)
-                        } ?: throw IllegalStateException("Backup password not set")
+                        } ?: error("Backup password not set")
 
                     // 3. Create ZIP file
-                    val finalFile: File?
                     tempZipFile = File(context.cacheDir, zipFilename)
                     createZip(jsonFile, tempZipFile, password)
 
-                    if (customUri != null) {
-                        val dir =
-                            DocumentFile.fromTreeUri(context, customUri)
-                                ?: throw IllegalStateException("Could not access custom backup directory")
-                        val file =
-                            dir.createFile("application/zip", zipFilename)
-                                ?: throw IllegalStateException("Could not create backup file in custom directory")
-                        partialSafFile = file
-
-                        context.contentResolver.openOutputStream(file.uri)?.use { os ->
-                            tempZipFile.inputStream().use { it.copyTo(os) }
-                        } ?: throw IllegalStateException("Could not write backup file")
-                        backupCompleted = true
-                        finalFile = null
-                    } else {
-                        defaultBackupDir.mkdirs()
-                        val file = File(defaultBackupDir, zipFilename)
-                        partialDefaultFile = file
-                        moveTempZipToFinal(tempZipFile, file)
-                        backupCompleted = true
-                        finalFile = file
-                    }
+                    val store = backupStoreFactory.create(customUri)
+                    store.publish(tempZipFile, zipFilename)
+                    val finalFile = if (customUri != null) null else File(defaultBackupDir, zipFilename)
 
                     auditTrailRepository.appendBestEffort(
                         "LocalBackupManager",
@@ -129,45 +91,26 @@ class LocalBackupManager
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // The UI turns this into a bare "Backup failed"; without a log the cause
+                    // never reaches logcat and the failure is undiagnosable on a real device.
+                    logE("LocalBackupManager", e) { "createBackup failed" }
                     Result.failure(e)
                 } finally {
                     tempJsonFile?.delete()
                     tempZipFile?.delete()
-                    if (!backupCompleted) {
-                        partialDefaultFile?.delete()
-                        partialSafFile?.delete()
-                    }
                 }
             }
 
         suspend fun deleteBackup(uri: Uri): Result<Unit> =
             withContext(ioDispatcher) {
                 try {
-                    if (uri.scheme == "content") {
-                        val documentFile = DocumentFile.fromSingleUri(context, uri)
-                        if (documentFile?.delete() == false) {
-                            val prefs = settingsRepository.userPreferences.first()
-                            val customUri = prefs.backupDirectoryUri?.toUri()
-                            if (customUri != null) {
-                                val root = DocumentFile.fromTreeUri(context, customUri)
-                                val file = root?.findFile(documentFile.name ?: "")
-                                if (file?.delete() == false) {
-                                    throw IllegalStateException("Failed to delete SAF document")
-                                }
-                            } else {
-                                throw IllegalStateException("Failed to delete document")
-                            }
-                        }
-                    } else if (uri.scheme == "file") {
-                        val file = File(uri.path!!)
-                        if (file.exists() && !file.delete()) {
-                            throw IllegalStateException("Failed to delete local file")
-                        }
-                    }
+                    val store = backupStoreFactory.create(uri)
+                    store.delete(BackupLocation(uri.toString()))
                     Result.success(Unit)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    logE("LocalBackupManager", e) { "deleteBackup failed for $uri" }
                     Result.failure(e)
                 }
             }
@@ -178,64 +121,16 @@ class LocalBackupManager
         ): Result<Unit> =
             withContext(ioDispatcher) {
                 try {
-                    val backups = listBackups()
+                    val prefs = settingsRepository.userPreferences.first()
+                    val customUri = prefs.backupDirectoryUri?.toUri()
+                    val store = backupStoreFactory.create(customUri)
+                    val backups = store.list()
                     val tempDir = File(context.cacheDir, "reencrypt_temp")
                     tempDir.mkdirs()
 
                     try {
                         backups.forEach { info ->
-                            val tempZip = File(tempDir, info.name)
-                            val tempJson = File(tempDir, info.name.replace(".zip", ".json"))
-                            val newZipPath = File(tempDir, "reencrypt_new_${System.currentTimeMillis()}.zip")
-                            val backupUri = info.location.value.toUri()
-
-                            // 1. Copy to temp zip
-                            if (backupUri.scheme == "content") {
-                                context.contentResolver.openInputStream(backupUri)?.use { input ->
-                                    tempZip.outputStream().use { output -> input.copyTo(output) }
-                                } ?: throw IllegalStateException("Could not read backup")
-                            } else {
-                                File(backupUri.path!!).inputStream().use { input ->
-                                    tempZip.outputStream().use { output -> input.copyTo(output) }
-                                }
-                            }
-
-                            // 2. Extract
-                            val zipFile = ZipFile(tempZip, oldPassword?.toCharArray())
-                            zipFile.extractAll(tempDir.absolutePath)
-
-                            // 3. Re-zip with new password to separate temp path (atomic write)
-                            val tempZipForNew = File(tempDir, "temp_new_plain.zip")
-                            val newZip = ZipFile(tempZipForNew, newPassword?.toCharArray())
-                            val parameters =
-                                ZipParameters().apply {
-                                    if (newPassword != null) {
-                                        isEncryptFiles = true
-                                        encryptionMethod = EncryptionMethod.AES
-                                        aesKeyStrength = AesKeyStrength.KEY_STRENGTH_256
-                                    }
-                                }
-                            newZip.addFile(tempJson, parameters)
-                            newZip.close()
-
-                            if (!tempZipForNew.renameTo(newZipPath)) {
-                                tempZipForNew.copyTo(newZipPath, overwrite = true)
-                                tempZipForNew.delete()
-                            }
-
-                            // 4. Overwrite original (atomic rename-swap)
-                            if (backupUri.scheme == "content") {
-                                context.contentResolver.openOutputStream(backupUri, "wt")?.use { output ->
-                                    newZipPath.inputStream().use { it.copyTo(output) }
-                                } ?: throw IllegalStateException("Could not write re-encrypted backup")
-                            } else {
-                                newZipPath.renameTo(File(backupUri.path!!))
-                            }
-
-                            // 5. Cleanup per-backup temp files
-                            tempZip.delete()
-                            tempJson.delete()
-                            newZipPath.delete()
+                            reencryptOneBackup(store, info, tempDir, oldPassword, newPassword)
                         }
                     } finally {
                         tempDir.deleteRecursively()
@@ -252,6 +147,9 @@ class LocalBackupManager
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // The audit trail records only the exception class name; the message and
+                    // stack are what actually identify a provider-specific SAF failure.
+                    logE("LocalBackupManager", e) { "reencryptBackups failed" }
                     auditTrailRepository.appendBestEffort(
                         "LocalBackupManager",
                         AuditEvent(
@@ -264,14 +162,66 @@ class LocalBackupManager
                 }
             }
 
-        private fun moveTempZipToFinal(
-            tempZipFile: File,
-            finalFile: File,
+        private suspend fun reencryptOneBackup(
+            store: BackupStore,
+            info: BackupFileInfo,
+            tempDir: File,
+            oldPassword: String?,
+            newPassword: String?,
         ) {
-            finalFile.delete()
-            if (!tempZipFile.renameTo(finalFile)) {
-                tempZipFile.copyTo(finalFile, overwrite = true)
-                tempZipFile.delete()
+            val tempZip = File(tempDir, info.name)
+            val newZipPath = File(tempDir, "reencrypt_new_${System.currentTimeMillis()}.zip")
+
+            // 1. Copy source to temp zip
+            store.read(info.location).use { input ->
+                tempZip.outputStream().use { output -> input.copyTo(output) }
+            }
+
+            // 2. Stream entries directly to new zip with new password (no plaintext JSON on disk)
+            ZipFile(tempZip, oldPassword?.toCharArray()).use { source ->
+                streamZipEntries(source, newZipPath, newPassword)
+            }
+
+            // 3. Publish re-encrypted archive atomically
+            store.publish(newZipPath, info.name)
+
+            // 4. Cleanup temp zip files
+            tempZip.delete()
+            newZipPath.delete()
+        }
+
+        private fun streamZipEntries(
+            source: ZipFile,
+            newZipPath: File,
+            newPassword: String?,
+        ) {
+            net.lingala.zip4j.io.outputstream
+                .ZipOutputStream(
+                    newZipPath.outputStream(),
+                    newPassword?.toCharArray(),
+                ).use { sink ->
+                    writeSourceEntriesToSink(source, sink, newPassword)
+                }
+        }
+
+        private fun writeSourceEntriesToSink(
+            source: ZipFile,
+            sink: net.lingala.zip4j.io.outputstream.ZipOutputStream,
+            newPassword: String?,
+        ) {
+            source.fileHeaders.forEach { header ->
+                val params =
+                    ZipParameters().apply {
+                        fileNameInZip = header.fileName
+                        if (newPassword != null) {
+                            isEncryptFiles = true
+                            encryptionMethod = EncryptionMethod.AES
+                            aesKeyStrength = AesKeyStrength.KEY_STRENGTH_256
+                        }
+                    }
+                sink.putNextEntry(params)
+                source.getInputStream(header).use { it.copyTo(sink) }
+                sink.closeEntry()
             }
         }
 
@@ -280,411 +230,31 @@ class LocalBackupManager
             zipFile: File,
             password: String?,
         ) {
-            val zip = ZipFile(zipFile, password?.toCharArray())
-            val parameters =
-                ZipParameters().apply {
-                    if (password != null) {
-                        isEncryptFiles = true
-                        encryptionMethod = EncryptionMethod.AES
-                        aesKeyStrength = AesKeyStrength.KEY_STRENGTH_256
+            ZipFile(zipFile, password?.toCharArray()).use { zip ->
+                val parameters =
+                    ZipParameters().apply {
+                        if (password != null) {
+                            isEncryptFiles = true
+                            encryptionMethod = EncryptionMethod.AES
+                            aesKeyStrength = AesKeyStrength.KEY_STRENGTH_256
+                        }
                     }
-                }
-            zip.addFile(inputFile, parameters)
-        }
-
-        private suspend fun writeJsonStreaming(outputStream: OutputStream) {
-            val sleepSessionDao = healthDatabase.sleepSessionDao()
-            val heartRateDao = healthDatabase.heartRateDao()
-            val hrvDao = healthDatabase.hrvDao()
-            val workoutDao = healthDatabase.workoutDao()
-            val dailySummaryDao = healthDatabase.dailySummaryDao()
-            val weightRecordDao = healthDatabase.weightRecordDao()
-            val bodyFatRecordDao = healthDatabase.bodyFatRecordDao()
-            val bloodPressureRecordDao = healthDatabase.bloodPressureRecordDao()
-            val oxygenSaturationRecordDao = healthDatabase.oxygenSaturationRecordDao()
-            val bodyTemperatureRecordDao = healthDatabase.bodyTemperatureRecordDao()
-            val stepRecordDao = healthDatabase.stepRecordDao()
-
-            val writer = outputStream.bufferedWriter()
-            writer.write("{\n")
-            writer.write("  \"schemaVersion\": ${HealthDatabase.DATABASE_VERSION},\n")
-            writer.write("  \"exportedAt\": \"${Instant.now()}\",\n")
-
-            val rowCounts =
-                coroutineScope {
-                    val counts =
-                        listOf(
-                            "sleepSessions" to async { sleepSessionDao.count() },
-                            "heartRateRecords" to async { heartRateDao.count() },
-                            "hrvRecords" to async { hrvDao.count() },
-                            "workouts" to async { workoutDao.count() },
-                            "dailySummaries" to async { dailySummaryDao.count() },
-                            "weightRecords" to async { weightRecordDao.count() },
-                            "bodyFatRecords" to async { bodyFatRecordDao.count() },
-                            "bloodPressureRecords" to async { bloodPressureRecordDao.count() },
-                            "oxygenSaturationRecords" to async { oxygenSaturationRecordDao.count() },
-                            "bodyTemperatureRecords" to async { bodyTemperatureRecordDao.count() },
-                            "stepRecords" to async { stepRecordDao.count() },
-                        )
-                    counts.associate { (key, deferred) -> key to deferred.await() }
-                }
-
-            writer.write("  \"rowCounts\": ${json.encodeToString(rowCounts)},\n")
-
-            writer.write("  \"preferences\": ")
-            writePreferences(writer)
-            writer.write(",\n")
-
-            writer.write("  \"sleepSessions\": [\n")
-            var offset = 0
-            var first = true
-            while (true) {
-                val batch = sleepSessionDao.getPaged(0, 100, offset)
-                if (batch.isEmpty()) break
-                batch.forEach {
-                    if (!first) writer.write(",\n")
-                    writer.write("    ${json.encodeToString(it)}")
-                    first = false
-                }
-                offset += 100
+                zip.addFile(inputFile, parameters)
             }
-            writer.write("\n  ],\n")
-
-            writer.write("  \"heartRateRecords\": [\n")
-            offset = 0
-            first = true
-            while (true) {
-                val batch = heartRateDao.getPaged(0, 500, offset)
-                if (batch.isEmpty()) break
-                batch.forEach {
-                    if (!first) writer.write(",\n")
-                    writer.write("    ${json.encodeToString(it)}")
-                    first = false
-                }
-                offset += 500
-            }
-            writer.write("\n  ],\n")
-
-            writer.write("  \"hrvRecords\": [\n")
-            offset = 0
-            first = true
-            while (true) {
-                val batch = hrvDao.getPaged(0, 500, offset)
-                if (batch.isEmpty()) break
-                batch.forEach {
-                    if (!first) writer.write(",\n")
-                    writer.write("    ${json.encodeToString(it)}")
-                    first = false
-                }
-                offset += 500
-            }
-            writer.write("\n  ],\n")
-
-            writer.write("  \"workouts\": [\n")
-            offset = 0
-            first = true
-            while (true) {
-                val batch = workoutDao.getPaged(0, 100, offset)
-                if (batch.isEmpty()) break
-                batch.forEach {
-                    if (!first) writer.write(",\n")
-                    writer.write("    ${json.encodeToString(it)}")
-                    first = false
-                }
-                offset += 100
-            }
-            writer.write("\n  ],\n")
-
-            writer.write("  \"dailySummaries\": [\n")
-            offset = 0
-            first = true
-            while (true) {
-                val batch = dailySummaryDao.getPaged(0, 100, offset)
-                if (batch.isEmpty()) break
-                batch.forEach {
-                    if (!first) writer.write(",\n")
-                    writer.write("    ${json.encodeToString(it)}")
-                    first = false
-                }
-                offset += 100
-            }
-            writer.write("\n  ],\n")
-
-            writer.write("  \"weightRecords\": [\n")
-            offset = 0
-            first = true
-            while (true) {
-                val batch = weightRecordDao.getPaged(0, 100, offset)
-                if (batch.isEmpty()) break
-                batch.forEach {
-                    if (!first) writer.write(",\n")
-                    writer.write("    ${json.encodeToString(it)}")
-                    first = false
-                }
-                offset += 100
-            }
-            writer.write("\n  ],\n")
-
-            writer.write("  \"bodyFatRecords\": [\n")
-            offset = 0
-            first = true
-            while (true) {
-                val batch = bodyFatRecordDao.getPaged(0, 100, offset)
-                if (batch.isEmpty()) break
-                batch.forEach {
-                    if (!first) writer.write(",\n")
-                    writer.write("    ${json.encodeToString(it)}")
-                    first = false
-                }
-                offset += 100
-            }
-            writer.write("\n  ],\n")
-
-            writer.write("  \"bloodPressureRecords\": [\n")
-            offset = 0
-            first = true
-            while (true) {
-                val batch = bloodPressureRecordDao.getPaged(0, 100, offset)
-                if (batch.isEmpty()) break
-                batch.forEach {
-                    if (!first) writer.write(",\n")
-                    writer.write("    ${json.encodeToString(it)}")
-                    first = false
-                }
-                offset += 100
-            }
-            writer.write("\n  ],\n")
-
-            writer.write("  \"oxygenSaturationRecords\": [\n")
-            offset = 0
-            first = true
-            while (true) {
-                val batch = oxygenSaturationRecordDao.getPaged(0, 100, offset)
-                if (batch.isEmpty()) break
-                batch.forEach {
-                    if (!first) writer.write(",\n")
-                    writer.write("    ${json.encodeToString(it)}")
-                    first = false
-                }
-                offset += 100
-            }
-            writer.write("\n  ],\n")
-
-            writer.write("  \"bodyTemperatureRecords\": [\n")
-            offset = 0
-            first = true
-            while (true) {
-                val batch = bodyTemperatureRecordDao.getPaged(0, 100, offset)
-                if (batch.isEmpty()) break
-                batch.forEach {
-                    if (!first) writer.write(",\n")
-                    writer.write("    ${json.encodeToString(it)}")
-                    first = false
-                }
-                offset += 100
-            }
-            writer.write("\n  ],\n")
-
-            writer.write("  \"stepRecords\": [\n")
-            offset = 0
-            first = true
-            while (true) {
-                val batch = stepRecordDao.getPaged(0, 500, offset)
-                if (batch.isEmpty()) break
-                batch.forEach {
-                    if (!first) writer.write(",\n")
-                    writer.write("    ${json.encodeToString(it)}")
-                    first = false
-                }
-                offset += 500
-            }
-            writer.write("\n  ]\n")
-
-            writer.write("}\n")
-            writer.flush()
-        }
-
-        private suspend fun writePreferences(writer: BufferedWriter) {
-            val prefs = settingsRepository.userPreferences.first()
-            val cards = cardConfigurationRepository.dashboardCardConfigurations().first()
-            val vitalsCards = vitalsLayoutRepository.vitalsCardConfigurations().first()
-            val vitalsCharts = vitalsLayoutRepository.vitalsChartConfigurations().first()
-            val sleepTopCards = sleepLayoutRepository.sleepTopCardConfigurations().first()
-            val sleepCharts = sleepLayoutRepository.sleepChartConfigurations().first()
-            val sleepMetricCards = sleepLayoutRepository.sleepMetricCardConfigurations().first()
-            val workoutCards = workoutsLayoutRepository.workoutCardConfigurations().first()
-            val workoutCharts = workoutsLayoutRepository.workoutChartConfigurations().first()
-            val workoutHistory = workoutsLayoutRepository.workoutHistoryConfigurations().first()
-            val backup =
-                UserPreferencesBackup(
-                    goalSleepHours = prefs.goalSleepHours,
-                    hrvBaselineOverride = prefs.hrvBaselineOverride,
-                    rhrBaselineOverride = prefs.rhrBaselineOverride,
-                    syncPreference = prefs.syncPreference.name,
-                    syncIntervalHours = prefs.syncIntervalHours,
-                    backgroundSyncEnabled = prefs.backgroundSyncEnabled,
-                    backgroundSyncIntervalMinutes = prefs.backgroundSyncIntervalMinutes,
-                    lastSyncTimestamp = prefs.lastSyncTimestamp,
-                    maxHeartRate = prefs.maxHeartRate,
-                    autoCalculateMaxHr = prefs.autoCalculateMaxHr,
-                    manualZoneEditing = prefs.manualZoneEditing,
-                    zone1MinPercent = prefs.zone1MinPercent,
-                    zone1MaxPercent = prefs.zone1MaxPercent,
-                    zone2MaxPercent = prefs.zone2MaxPercent,
-                    zone3MaxPercent = prefs.zone3MaxPercent,
-                    zone4MaxPercent = prefs.zone4MaxPercent,
-                    zone1MinBpm = prefs.zone1MinBpm,
-                    zone1MaxBpm = prefs.zone1MaxBpm,
-                    zone2MaxBpm = prefs.zone2MaxBpm,
-                    zone3MaxBpm = prefs.zone3MaxBpm,
-                    zone4MaxBpm = prefs.zone4MaxBpm,
-                    age = prefs.age,
-                    birthDate = prefs.birthDate,
-                    // Extract day, month, year from birthDate for backward compatibility
-                    birthDay =
-                        prefs.birthDate?.let {
-                            try {
-                                java.time.LocalDate
-                                    .parse(it)
-                                    .dayOfMonth
-                            } catch (
-                                e: Exception,
-                            ) {
-                                null
-                            }
-                        },
-                    birthMonth =
-                        prefs.birthDate?.let {
-                            try {
-                                java.time.LocalDate
-                                    .parse(it)
-                                    .monthValue
-                            } catch (
-                                e: Exception,
-                            ) {
-                                null
-                            }
-                        },
-                    birthYear =
-                        prefs.birthDate?.let {
-                            try {
-                                java.time.LocalDate
-                                    .parse(it)
-                                    .year
-                            } catch (
-                                e: Exception,
-                            ) {
-                                null
-                            }
-                        },
-                    gender = prefs.gender?.name,
-                    heightCm = prefs.heightCm,
-                    hrvOptimalThreshold = prefs.hrvOptimalThreshold,
-                    hrvWarningThreshold = prefs.hrvWarningThreshold,
-                    rhrOptimalThreshold = prefs.rhrOptimalThreshold,
-                    rhrWarningThreshold = prefs.rhrWarningThreshold,
-                    hrrToleranceSeconds = prefs.hrrToleranceSeconds,
-                    appTheme = prefs.appTheme.name,
-                    backupSchedule = prefs.backupSchedule.name,
-                    lastBackupTimestamp = prefs.lastBackupTimestamp,
-                    consistencyThresholdMinutes = prefs.consistencyThresholdMinutes,
-                    consistencyEvaluationDays = prefs.consistencyEvaluationDays,
-                    consistencyBaselineDays = prefs.consistencyBaselineDays,
-                    rasScalingFactor = prefs.rasScalingFactor,
-                    stepGoal = prefs.stepGoal,
-                    retentionDaysEnabled = prefs.retentionDaysEnabled,
-                    retentionDays = prefs.retentionDays,
-                    collapseHealthConnect = prefs.collapseHealthConnect,
-                    collapseBaselinesThresholds = prefs.collapseBaselinesThresholds,
-                    collapseDisplay = prefs.collapseDisplay,
-                    collapseAdvanced = prefs.collapseAdvanced,
-                    aboutDismissed = prefs.aboutDismissed,
-                    physiologyProfile = prefs.physiologyProfile.name,
-                    installDate = prefs.installDate,
-                    circadianThresholdOverride = prefs.circadianThresholdOverride,
-                    dynamicColorEnabled = prefs.dynamicColorEnabled,
-                    trimpModel = prefs.trimpModel.name,
-                    banisterMultiplier = prefs.banisterMultiplier,
-                    chengBeta = prefs.chengBeta,
-                    itrimB = prefs.itrimB,
-                    primaryDeviceName = prefs.primaryDeviceName,
-                    deviceByDataType = prefs.deviceByDataType.takeIf { it.isNotEmpty() },
-                    backupDirectoryUri = prefs.backupDirectoryUri,
-                    dashboardCards = cards,
-                    vitalsCards = vitalsCards,
-                    vitalsCharts = vitalsCharts,
-                    sleepTopCards = sleepTopCards,
-                    sleepCharts = sleepCharts,
-                    sleepMetricCards = sleepMetricCards,
-                    workoutCards = workoutCards,
-                    workoutCharts = workoutCharts,
-                    workoutHistory = workoutHistory,
-                )
-            writer.write(json.encodeToString(backup))
         }
 
         suspend fun listBackups(): List<BackupFileInfo> =
             withContext(ioDispatcher) {
                 val prefs = settingsRepository.userPreferences.first()
                 val customUri = prefs.backupDirectoryUri?.toUri()
-
-                if (customUri != null) {
-                    val dir = DocumentFile.fromTreeUri(context, customUri)
-                    dir
-                        ?.listFiles()
-                        ?.filter { it.name?.startsWith("backup_") == true && it.name?.endsWith(".zip") == true }
-                        ?.map {
-                            BackupFileInfo(
-                                it.name!!,
-                                it.lastModified(),
-                                it.length(),
-                                BackupLocation(it.uri.toString()),
-                            )
-                        }?.sortedByDescending { it.lastModified }
-                        ?: emptyList()
-                } else {
-                    defaultBackupDir.mkdirs()
-                    defaultBackupDir
-                        .listFiles { f -> f.name.startsWith("backup_") && f.name.endsWith(".zip") }
-                        ?.map {
-                            BackupFileInfo(
-                                it.name,
-                                it.lastModified(),
-                                it.length(),
-                                BackupLocation(Uri.fromFile(it).toString()),
-                            )
-                        }?.sortedByDescending { it.lastModified }
-                        ?: emptyList()
-                }
+                val store = backupStoreFactory.create(customUri)
+                store.list()
             }
 
-        private fun pruneOldBackups(customUri: Uri?) {
-            val now = System.currentTimeMillis()
-
-            // 1. Prune internal directory
-            if (defaultBackupDir.exists()) {
-                defaultBackupDir
-                    .listFiles { f ->
-                        f.name.startsWith("backup_") && f.name.endsWith(".zip") && f.isFile
-                    }?.filter { now - it.lastModified() > RETENTION_PERIOD_MS }
-                    ?.forEach { it.delete() }
-            }
-
-            // 2. Prune custom SAF directory if provided
+        private suspend fun pruneOldBackups(customUri: Uri?) {
+            backupStoreFactory.createDefault().prune(RETENTION_PERIOD_MS)
             if (customUri != null) {
-                val treeDir =
-                    if (customUri.scheme == "content") {
-                        DocumentFile.fromTreeUri(context, customUri)
-                    } else {
-                        // Support for file:// URIs (e.g. in tests)
-                        customUri.path?.let { DocumentFile.fromFile(File(it)) }
-                    }
-                treeDir
-                    ?.listFiles()
-                    ?.filter {
-                        it.isFile && it.name?.startsWith("backup_") == true && it.name?.endsWith(".zip") == true
-                    }?.filter { now - it.lastModified() > RETENTION_PERIOD_MS }
-                    ?.forEach { it.delete() }
+                backupStoreFactory.create(customUri).prune(RETENTION_PERIOD_MS)
             }
         }
 

@@ -1,6 +1,7 @@
 package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
+import app.readylytics.health.core.model.data.preferences.BackupSchedule
 import javax.inject.Inject
 
 internal class BackupPreferences

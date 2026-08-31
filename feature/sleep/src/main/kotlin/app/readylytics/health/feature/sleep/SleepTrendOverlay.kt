@@ -16,7 +16,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
@@ -32,7 +31,6 @@ fun SleepTrendOverlay(
     selectedState: SleepTrendSelectedState?,
     barColor: Color,
     lineColor: Color,
-    layerBounds: Rect?,
     modifier: Modifier = Modifier,
     barThicknessDp: Dp = 8.dp,
     chartHeight: Dp = 220.dp,
@@ -48,7 +46,6 @@ fun SleepTrendOverlay(
                 selectedState = selectedState,
                 barColor = barColor,
                 lineColor = lineColor,
-                layerBounds = layerBounds,
                 barThicknessDp = barThicknessDp,
             )
         }
@@ -60,7 +57,6 @@ private fun SleepTrendOverlayContent(
     selectedState: SleepTrendSelectedState,
     barColor: Color,
     lineColor: Color,
-    layerBounds: Rect?,
     barThicknessDp: Dp,
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "sleepTrendHaloTransition")

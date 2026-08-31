@@ -2,8 +2,8 @@ package app.readylytics.health.core.ui.components.reorder
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.domain.vitals.VitalsChartId
+import app.readylytics.health.core.model.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.vitals.VitalsChartId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

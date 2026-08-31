@@ -110,8 +110,8 @@ The app uses Training Impulse (TRIMP) to quantify workout intensity and duration
 **Find it:** Settings → Advanced → Load Models
 
 **Banister model** (default):
-- Classic exponential decay model. The multiplier (default 1.0–1.75 depending on profile) scales how much load an athlete experiences.
-- Athletes use 1.0×; sedentary users get 1.75× to reflect the same workout feeling "heavier."
+- Classic exponential decay model. The multiplier scales how much load a workout contributes; the default is **1.0 for every physiology profile**, so TRIMP is a consistent, profile-independent measure of training load.
+- You can adjust the multiplier (0.5–2.5) in Advanced Settings if you want a personal load-magnitude scale.
 
 **Cheng model:**
 - Beta-based variant. Adjust the beta parameter (0.04–0.12) to tune sensitivity.
@@ -133,6 +133,21 @@ Readiness Absorption Score (RAS) is a motivational daily activity metric (PAI-st
 - Higher values make RAS accumulate faster, increasing daily motivation.
 - Lower values require more activity to reach the same daily cap.
 - Profiles have different defaults; you can reset to yours.
+
+---
+
+## Residual Fatigue (Advanced / Experimental)
+
+Residual Fatigue models the short-term exponential decay of workout fatigue across time.
+
+**Find it:** Settings → Advanced → Residual Fatigue
+
+- **Fatigue half-life:** Time required for workout fatigue to decay by half (default 24 h, range 6–96 h).
+- **Fatigue gain:** Scaling factor applied to workout impulses (default 1.0, range 0.1–5.0).
+- **End-of-day snapshot:** Each day's value is evaluated at the following midnight, so the current day shows a projection to the end of today rather than your fatigue right now. This keeps the history deterministic — a day's value never changes depending on when it was recalculated.
+- **Shadow mode:** Residual Fatigue is computed and stored as an unnormalized, provisional, workout-only signal for model evaluation. It does not affect Readiness or your daily scores.
+- **Dashboard card (optional):** An end-of-day Residual Fatigue metric card (`CardId.RESIDUAL_FATIGUE`) is available for your Dashboard. It is hidden by default and can be enabled via Dashboard Layout Management. It supports Gauge, Bar, and Value display modes, and tapping it navigates directly to the Workouts tab.
+- **Decay curve chart (optional):** A continuous residual fatigue decay curve chart (`WorkoutChartId.RESIDUAL_FATIGUE_CURVE`) can be enabled on the Workouts tab via Workouts Layout Management. It features an interactive 1D, 3D, and 7D multi-day range selector and samples the timeline at quarter-hour intervals alongside exact workout impulse completion times, rendering a smooth Bézier curve with touch scrubbing, adaptive date/time axis formatting, and a current-time marker.
 
 ---
 

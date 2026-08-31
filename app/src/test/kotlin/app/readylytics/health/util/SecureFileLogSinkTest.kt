@@ -2,13 +2,13 @@ package app.readylytics.health.util
 
 import android.content.Context
 import android.util.Log
+import app.readylytics.health.core.model.domain.util.DomainLogSink
+import app.readylytics.health.core.model.domain.util.DomainLogger
+import app.readylytics.health.core.model.domain.util.LogContext
+import app.readylytics.health.core.model.domain.util.LogLevel
+import app.readylytics.health.core.model.domain.util.logD
+import app.readylytics.health.core.model.domain.util.logI
 import app.readylytics.health.data.security.SecureFileStore
-import app.readylytics.health.domain.util.DomainLogSink
-import app.readylytics.health.domain.util.DomainLogger
-import app.readylytics.health.domain.util.LogContext
-import app.readylytics.health.domain.util.LogLevel
-import app.readylytics.health.domain.util.logD
-import app.readylytics.health.domain.util.logI
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic

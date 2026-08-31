@@ -1,23 +1,22 @@
 package app.readylytics.health.feature.sleep
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import app.readylytics.health.data.preferences.SettingsDefaults
-import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
-import app.readylytics.health.domain.date.SelectedDateStore
-import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.repository.DailyMetricsRepository
-import app.readylytics.health.domain.repository.DailySummaryRepository
-import app.readylytics.health.domain.repository.HeartRateRepository
-import app.readylytics.health.domain.repository.SleepSessionRepository
-import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
-import app.readylytics.health.domain.scoring.CircadianConsistencyResult
-import app.readylytics.health.domain.sleep.SleepChartId
-import app.readylytics.health.domain.sleep.SleepLayoutRepository
-import app.readylytics.health.domain.sleep.SleepMetricCardId
-import app.readylytics.health.domain.sleep.SleepTopCardId
-import app.readylytics.health.domain.sync.ForegroundSyncGateway
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
+import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.date.SelectedDateStore
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.repository.DailyMetricsRepository
+import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
+import app.readylytics.health.core.model.domain.repository.HeartRateRepository
+import app.readylytics.health.core.model.domain.repository.SleepSessionRepository
+import app.readylytics.health.core.model.domain.sleep.SleepChartId
+import app.readylytics.health.core.model.domain.sleep.SleepLayoutRepository
+import app.readylytics.health.core.model.domain.sleep.SleepMetricCardId
+import app.readylytics.health.core.model.domain.sleep.SleepTopCardId
+import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
+import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
+import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -42,11 +41,15 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SleepViewModelLayoutManagementTest {
     private val testDispatcher = StandardTestDispatcher()
+    private val clock = Clock.fixed(Instant.parse("2026-06-11T10:00:00Z"), ZoneId.systemDefault())
 
     private val dailySummaryRepository: DailySummaryRepository = mockk(relaxed = true)
     private val dailyMetricsRepository: DailyMetricsRepository = mockk(relaxed = true)
@@ -56,7 +59,6 @@ class SleepViewModelLayoutManagementTest {
     private val selectedDateRepository: SelectedDateStore = mockk(relaxed = true)
     private val circadianRepo: CircadianConsistencyRepository = mockk(relaxed = true)
     private val foregroundSyncController: ForegroundSyncGateway = mockk(relaxed = true)
-    private val savedStateHandle: SavedStateHandle = mockk(relaxed = true)
     private val sleepLayoutRepository: SleepLayoutRepository = mockk(relaxed = true)
 
     private val selectedDateFlow = MutableStateFlow(LocalDate.of(2026, 6, 11))
@@ -97,18 +99,20 @@ class SleepViewModelLayoutManagementTest {
 
     private fun createViewModel() =
         SleepViewModel(
-            dailySummaryRepository = dailySummaryRepository,
-            dailyMetricsRepository = dailyMetricsRepository,
-            sleepSessionRepository = sleepSessionRepository,
-            heartRateRepository = heartRateRepository,
+            repositories =
+                SleepRepositories(
+                    dailySummary = dailySummaryRepository,
+                    dailyMetrics = dailyMetricsRepository,
+                    sleepSession = sleepSessionRepository,
+                    heartRate = heartRateRepository,
+                    circadian = circadianRepo,
+                    sleepLayout = sleepLayoutRepository,
+                ),
             settingsRepo = settingsRepo,
             selectedDateRepository = selectedDateRepository,
-            circadianRepo = circadianRepo,
             foregroundSyncController = foregroundSyncController,
-            savedStateHandle = savedStateHandle,
-            sleepLayoutRepository = sleepLayoutRepository,
-            ioDispatcher = testDispatcher,
-            defaultDispatcher = testDispatcher,
+            dispatchers = SleepDispatchers(testDispatcher, testDispatcher),
+            clock = clock,
         )
 
     @Test

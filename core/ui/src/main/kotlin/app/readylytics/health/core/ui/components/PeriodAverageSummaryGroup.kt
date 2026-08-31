@@ -11,7 +11,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.LocalStatusColors
@@ -27,16 +26,6 @@ import app.readylytics.health.core.ui.common.rememberPeriodOrdinalLabel
 import app.readylytics.health.core.ui.common.resolveOrNull
 import java.time.LocalDate
 import kotlin.math.roundToInt
-
-/**
- * One labeled series (e.g. "Systolic", tinted to match its chart legend swatch) feeding
- * into [PeriodAverageSummaryGroup].
- */
-data class LabeledPeriodAverage(
-    val label: String,
-    val color: Color,
-    val summary: PeriodAverageSummary,
-)
 
 /**
  * Two-metric variant of [PeriodAverageSummaryRow]: one shared period header

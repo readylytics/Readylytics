@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Enable KVM
         run: |
@@ -28,7 +28,7 @@ jobs:
           sudo udevadm trigger --name-match=kvm
 
       - name: Set up JDK 17
-        uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5.4.0
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
         with:
           java-version: "17"
           distribution: "temurin"
@@ -55,7 +55,7 @@ jobs:
 
       - name: Create AVD snapshot
         if: steps.avd-cache.outputs.cache-hit != 'true'
-        uses: reactivecircus/android-emulator-runner@e89f39f1abbbd05b1113a29cf4db69e7540cae5a # v2.34.0
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.34.0
         with:
           api-level: 36
           target: google_apis
@@ -67,7 +67,7 @@ jobs:
           script: echo "Generated AVD snapshot."
 
       - name: Run instrumented tests
-        uses: reactivecircus/android-emulator-runner@e89f39f1abbbd05b1113a29cf4db69e7540cae5a # v2.34.0
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.34.0
         with:
           api-level: 36
           target: google_apis

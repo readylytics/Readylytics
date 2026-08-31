@@ -1,5 +1,8 @@
 package app.readylytics.health.di
 
+import app.readylytics.health.core.model.di.DefaultDispatcher
+import app.readylytics.health.core.model.di.IoDispatcher
+import app.readylytics.health.core.model.di.MainDispatcher
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

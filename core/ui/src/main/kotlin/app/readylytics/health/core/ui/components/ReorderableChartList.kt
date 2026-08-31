@@ -3,10 +3,10 @@ package app.readylytics.health.core.ui.components
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
+import app.readylytics.health.core.model.domain.vitals.VitalsChartConfiguration
+import app.readylytics.health.core.model.domain.vitals.VitalsChartId
 import app.readylytics.health.core.ui.components.reorder.DragController
 import app.readylytics.health.core.ui.components.reorder.ReorderableList
-import app.readylytics.health.domain.vitals.VitalsChartConfiguration
-import app.readylytics.health.domain.vitals.VitalsChartId
 
 @Immutable
 data class ChartConfigurationsList(

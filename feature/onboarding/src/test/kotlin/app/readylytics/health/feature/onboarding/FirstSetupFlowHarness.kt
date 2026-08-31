@@ -1,21 +1,22 @@
 package app.readylytics.health.feature.onboarding
 
-import app.readylytics.health.data.preferences.Gender
-import app.readylytics.health.data.preferences.PhysiologyProfile
-import app.readylytics.health.data.preferences.UnitSystem
-import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
-import app.readylytics.health.domain.model.Result
-import app.readylytics.health.domain.preferences.DisplaySettings
-import app.readylytics.health.domain.preferences.PhysiologySettings
-import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.scoring.TrimpModel
-import app.readylytics.health.domain.service.BmiService
-import app.readylytics.health.domain.sync.HealthDataRefresh
-import app.readylytics.health.domain.user.UserProfileActions
+import app.readylytics.health.core.model.data.preferences.Gender
+import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
+import app.readylytics.health.core.model.data.preferences.UnitSystem
+import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.model.Result
+import app.readylytics.health.core.model.domain.preferences.DisplaySettings
+import app.readylytics.health.core.model.domain.preferences.PhysiologySettings
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.scoring.TrimpModel
+import app.readylytics.health.core.model.domain.service.BmiService
+import app.readylytics.health.core.model.domain.sync.HealthDataRefresh
+import app.readylytics.health.core.model.domain.user.UserProfileActions
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import java.time.DayOfWeek
 import java.time.LocalDate
 
 class FirstSetupFlowHarness(
@@ -93,11 +94,13 @@ class FirstSetupFlowHarness(
             preferences.update { it.copy(unitSystem = unitSystem) }
         }
 
-        override suspend fun updateAppTheme(theme: app.readylytics.health.data.preferences.AppTheme) =
+        override suspend fun updateWeekStartDay(day: DayOfWeek) = error("Unexpected call: updateWeekStartDay")
+
+        override suspend fun updateAppTheme(theme: app.readylytics.health.core.model.data.preferences.AppTheme) =
             error("Unexpected call: updateAppTheme")
 
         override suspend fun updateFallbackThemeColor(
-            color: app.readylytics.health.data.preferences.FallbackThemeColor,
+            color: app.readylytics.health.core.model.data.preferences.FallbackThemeColor,
         ) = error("Unexpected call: updateFallbackThemeColor")
 
         override suspend fun updateCustomPaletteEnabled(enabled: Boolean) =
@@ -131,6 +134,17 @@ class FirstSetupFlowHarness(
         override suspend fun updateChengBeta(value: Float) = error("Unexpected call: updateChengBeta")
 
         override suspend fun updateItrimB(value: Float) = error("Unexpected call: updateItrimB")
+
+        override suspend fun updateResidualFatigueEnabled(enabled: Boolean) =
+            error("Unexpected call: updateResidualFatigueEnabled")
+
+        override suspend fun updateResidualFatigueHalfLifeHours(hours: Float) =
+            error("Unexpected call: updateResidualFatigueHalfLifeHours")
+
+        override suspend fun updateResidualFatigueGain(value: Float) =
+            error("Unexpected call: updateResidualFatigueGain")
+
+        override suspend fun resetResidualFatigueToDefaults() = error("Unexpected call: resetResidualFatigueToDefaults")
 
         override suspend fun updateBulkDisplayModeNoticeDismissed(dismissed: Boolean) =
             error("Unexpected call: updateBulkDisplayModeNoticeDismissed")

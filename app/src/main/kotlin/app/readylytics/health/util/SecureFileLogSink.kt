@@ -2,11 +2,11 @@ package app.readylytics.health.util
 
 import android.content.Context
 import android.util.Log
+import app.readylytics.health.core.model.domain.util.DomainLogSink
+import app.readylytics.health.core.model.domain.util.LogContext
+import app.readylytics.health.core.model.domain.util.LogLevel
 import app.readylytics.health.data.security.SecureFileStore
 import app.readylytics.health.data.security.TinkSecureFileStore
-import app.readylytics.health.domain.util.DomainLogSink
-import app.readylytics.health.domain.util.LogContext
-import app.readylytics.health.domain.util.LogLevel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -88,6 +88,10 @@ class SecureFileLogSink(
             try {
                 bufferLog(level, tag, message, throwable, context)
             } catch (e: Exception) {
+                // Deliberately broad: this is the logging sink itself, running detached in
+                // `scope.launch`. bufferLog does file I/O, formatting and sanitisation, so a
+                // narrower type would let an unexpected failure escape into the scope's handler
+                // and take down logging (or the app) because a log line could not be written.
                 Log.e("SecureFileLogSink", "Failed to write log to file", e)
             }
         }

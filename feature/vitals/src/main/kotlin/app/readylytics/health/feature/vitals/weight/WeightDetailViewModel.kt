@@ -2,6 +2,16 @@ package app.readylytics.health.feature.vitals.weight
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.model.data.preferences.UnitSystem
+import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.di.IoDispatcher
+import app.readylytics.health.core.model.domain.date.SelectedDateStore
+import app.readylytics.health.core.model.domain.display.MetricFormatter
+import app.readylytics.health.core.model.domain.model.BodyCompositionAssessment
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.repository.WeightRepository
+import app.readylytics.health.core.model.domain.util.UnitConverter
+import app.readylytics.health.core.scoring.domain.calculation.HealthMetricsCalculator
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.PeriodAverageSummary
 import app.readylytics.health.core.ui.common.TimeRange
@@ -11,16 +21,6 @@ import app.readylytics.health.core.ui.common.WeightHistoryItem
 import app.readylytics.health.core.ui.common.bucketBy
 import app.readylytics.health.core.ui.common.buildPeriodAverageSummary
 import app.readylytics.health.core.ui.common.padToRange
-import app.readylytics.health.data.preferences.UnitSystem
-import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.di.IoDispatcher
-import app.readylytics.health.domain.calculation.HealthMetricsCalculator
-import app.readylytics.health.domain.date.SelectedDateStore
-import app.readylytics.health.domain.display.MetricFormatter
-import app.readylytics.health.domain.model.BodyCompositionAssessment
-import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.repository.WeightRepository
-import app.readylytics.health.domain.util.UnitConverter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow

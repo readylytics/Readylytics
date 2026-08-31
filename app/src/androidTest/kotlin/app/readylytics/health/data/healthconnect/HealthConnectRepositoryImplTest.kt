@@ -1,9 +1,9 @@
 package app.readylytics.health.data.healthconnect
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
-import app.readylytics.health.domain.repository.HealthConnectRepository
-import app.readylytics.health.domain.repository.PermissionStatus
+import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
+import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.PermissionStatus
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

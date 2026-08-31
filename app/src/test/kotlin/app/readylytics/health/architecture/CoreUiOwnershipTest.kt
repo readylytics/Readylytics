@@ -27,9 +27,9 @@ class CoreUiOwnershipTest {
                 "core/ui/src/main/kotlin/app/readylytics/health/core/ui/common/DailyDataPoint.kt",
                 "core/ui/src/main/kotlin/app/readylytics/health/core/ui/common/TimeRange.kt",
                 "core/ui/src/main/kotlin/app/readylytics/health/core/ui/common/UiText.kt",
-                "core/ui/src/main/kotlin/app/readylytics/health/core/ui/components/DateSwitcher.kt",
-                "core/ui/src/main/kotlin/app/readylytics/health/core/ui/components/settings/HeightInputField.kt",
-                "core/ui/src/main/kotlin/app/readylytics/health/core/ui/components/settings/UnitSystemSelector.kt",
+                "core/ui/src/main/kotlin/app/readylytics/health/core/ui/dashboard/DateSwitcher.kt",
+                "core/ui/src/main/kotlin/app/readylytics/health/core/ui/settings/HeightInputField.kt",
+                "core/ui/src/main/kotlin/app/readylytics/health/core/ui/settings/common/UnitSystemSelector.kt",
             )
 
         appPaths.forEach { path ->

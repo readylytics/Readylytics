@@ -13,20 +13,6 @@ import java.util.Locale
 import kotlin.math.pow
 import kotlin.math.roundToInt
 
-/**
- * Latest-bucket-vs-prior-bucket summary for a bucketed trend series.
- * [average] is the latest populated bucket's average, [previousAverage] the bucket before it.
- * Labels are intentionally not preformatted: [periodStartDate]/[previousPeriodStartDate] carry the
- * bucket midpoint dates so the UI layer can format them (quarter labels come from `strings.xml`).
- */
-data class PeriodAverageSummary(
-    val granularity: TrendGranularity,
-    val periodStartDate: LocalDate,
-    val previousPeriodStartDate: LocalDate,
-    val average: Float?,
-    val previousAverage: Float?,
-)
-
 private data class Bucket(
     val start: LocalDate,
     val points: List<DailyDataPoint>,
@@ -139,6 +125,51 @@ fun List<DailyDataPoint>.bucketBy(
                 .roundToDecimalPlaces(valueDecimalPlaces)
         DailyDataPoint(bucketMidpointOffset(bucket.start, granularity, startDate, endDate), average)
     }
+}
+
+/**
+ * A non-overlapping, fixed-length day-bucket used only by the Vitals baseline overlay at 7D/30D.
+ * Buckets are anchored at day-offset 0 (the caller's `startDate`) rather than at a calendar
+ * boundary, so pairing is deterministic regardless of which real-world dates the window spans.
+ * [lastDayOffset] is the x-axis position of the bucket's point (the bucket's last day), which for
+ * the final bucket equals the window's last day so the overlay line reaches it.
+ */
+data class FixedDayBucket(
+    val startDayOffset: Int,
+    val endDayOffsetExclusive: Int,
+    val lastDayOffset: Int,
+    val value: Float,
+)
+
+/**
+ * Groups [DailyDataPoint]s into non-overlapping [bucketSizeDays]-day windows anchored at day
+ * offset 0, averaging each bucket's non-null values and rounding to [valueDecimalPlaces].
+ * Buckets with zero non-null values are omitted entirely, mirroring [bucketBy]'s null-filtering
+ * convention. [bucketSizeDays] == 1 yields one bucket per populated day (no averaging).
+ * [rangeEndOffsetExclusive] clips the final bucket's end boundary to the selected window. Each
+ * bucket's point is positioned at the bucket's last day ([FixedDayBucket.lastDayOffset]), so the
+ * final bucket's point lands on the window's last day.
+ */
+fun List<DailyDataPoint>.bucketByFixedSize(
+    bucketSizeDays: Int,
+    rangeEndOffsetExclusive: Int,
+    valueDecimalPlaces: Int = 0,
+): List<FixedDayBucket> {
+    require(bucketSizeDays >= 1) { "bucketSizeDays must be >= 1" }
+    return filter { it.value != null }
+        .groupBy { it.dayOffset / bucketSizeDays }
+        .toSortedMap()
+        .map { (bucketIndex, points) ->
+            val startOffset = bucketIndex * bucketSizeDays
+            val endOffsetExclusive = (startOffset + bucketSizeDays).coerceAtMost(rangeEndOffsetExclusive)
+            val average =
+                points
+                    .mapNotNull(DailyDataPoint::value)
+                    .average()
+                    .toFloat()
+                    .roundToDecimalPlaces(valueDecimalPlaces)
+            FixedDayBucket(startOffset, endOffsetExclusive, endOffsetExclusive - 1, average)
+        }
 }
 
 private fun Float.roundToDecimalPlaces(decimalPlaces: Int): Float {

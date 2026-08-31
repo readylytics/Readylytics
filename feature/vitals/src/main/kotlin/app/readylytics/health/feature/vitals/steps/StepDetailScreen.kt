@@ -113,18 +113,6 @@ fun StepDetailScreen(
             } else {
                 val stepCount = uiState.latestSummary?.stepCount
                 val stepGoal = uiState.stepGoal
-                val stepsDelta =
-                    if (stepCount != null && stepGoal > 0) {
-                        val diff = stepCount - stepGoal
-                        val formattedDiff = String.format(java.util.Locale.US, "%,d", kotlin.math.abs(diff))
-                        when {
-                            diff > 0 -> stringResource(CoreUiR.string.delta_up) + " $formattedDiff"
-                            diff < 0 -> stringResource(CoreUiR.string.delta_down) + " $formattedDiff"
-                            else -> stringResource(CoreUiR.string.delta_no_change)
-                        }
-                    } else {
-                        null
-                    }
                 StepsCard(
                     stepCount = stepCount,
                     stepGoal = stepGoal,
@@ -177,7 +165,6 @@ fun StepDetailScreen(
                         points = uiState.dailySteps,
                         rangeStartMs = uiState.rangeStartMs,
                         rangeDays = uiState.selectedRange.days,
-                        metricName = stringResource(CoreUiR.string.label_steps),
                         baselineUnit = stringResource(CoreUiR.string.unit_steps),
                         hideUnitInTooltip = true,
                         baseline = uiState.stepGoal.toFloat(),

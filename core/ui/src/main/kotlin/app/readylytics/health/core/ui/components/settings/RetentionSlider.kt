@@ -34,71 +34,97 @@ fun RetentionSlider(
     modifier: Modifier = Modifier,
     showEnableToggle: Boolean = true,
 ) {
-    var retentionMonths by remember(retentionDays) {
-        mutableFloatStateOf(kotlin.math.round(retentionDays / 30f))
-    }
-
     Column(modifier = modifier) {
         if (showEnableToggle) {
-            ListItem(
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                headlineContent = {
-                    Text(
-                        stringResource(R.string.settings_retention_enabled_label),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                },
-                trailingContent = {
-                    Switch(
-                        checked = enabled,
-                        onCheckedChange = onEnabledChanged,
-                    )
-                },
+            RetentionToggleItem(
+                enabled = enabled,
+                onEnabledChanged = onEnabledChanged,
             )
         }
 
         AnimatedVisibility(visible = enabled) {
-            Column(
-                modifier =
-                    Modifier.padding(
-                        horizontal = MaterialTheme.spacing.medium,
-                        vertical = MaterialTheme.spacing.extraSmall,
-                    ),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        stringResource(R.string.settings_retention_period_label),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
-                    Text(
-                        text =
-                            pluralStringResource(
-                                R.plurals.settings_retention_months,
-                                retentionMonths.toInt(),
-                                retentionMonths.toInt(),
-                            ),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-                Slider(
-                    value = retentionMonths,
-                    onValueChange = { retentionMonths = it },
-                    onValueChangeFinished = {
-                        onRetentionDaysChanged((retentionMonths.toInt() * 30))
-                    },
-                    valueRange = 3f..60f,
-                    steps = 18,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Text(
-                    text = stringResource(R.string.settings_retention_description),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = MaterialTheme.spacing.extraSmall),
-                )
-            }
+            RetentionSliderControls(
+                retentionDays = retentionDays,
+                onRetentionDaysChanged = onRetentionDaysChanged,
+            )
         }
+    }
+}
+
+@Composable
+private fun RetentionToggleItem(
+    enabled: Boolean,
+    onEnabledChanged: (Boolean) -> Unit,
+) {
+    ListItem(
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        trailingContent = {
+            Switch(
+                checked = enabled,
+                onCheckedChange = onEnabledChanged,
+            )
+        },
+    ) {
+        Text(
+            stringResource(R.string.settings_retention_enabled_label),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    }
+}
+
+@Composable
+private fun RetentionSliderControls(
+    retentionDays: Int,
+    onRetentionDaysChanged: (Int) -> Unit,
+) {
+    var retentionMonths by remember(retentionDays) {
+        mutableFloatStateOf(kotlin.math.round(retentionDays / 30f))
+    }
+
+    Column(
+        modifier =
+            Modifier.padding(
+                horizontal = MaterialTheme.spacing.medium,
+                vertical = MaterialTheme.spacing.extraSmall,
+            ),
+    ) {
+        RetentionPeriodHeader(retentionMonths = retentionMonths.toInt())
+        Slider(
+            value = retentionMonths,
+            onValueChange = { retentionMonths = it },
+            onValueChangeFinished = {
+                onRetentionDaysChanged((retentionMonths.toInt() * 30))
+            },
+            valueRange = 3f..60f,
+            steps = 18,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Text(
+            text = stringResource(R.string.settings_retention_description),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = MaterialTheme.spacing.extraSmall),
+        )
+    }
+}
+
+@Composable
+private fun RetentionPeriodHeader(retentionMonths: Int) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            stringResource(R.string.settings_retention_period_label),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Spacer(modifier = Modifier.weight(1f))
+        Text(
+            text =
+                pluralStringResource(
+                    R.plurals.settings_retention_months,
+                    retentionMonths,
+                    retentionMonths,
+                ),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary,
+        )
     }
 }

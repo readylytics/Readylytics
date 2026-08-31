@@ -1,10 +1,10 @@
 package app.readylytics.health.feature.vitals.overview
 
-import app.readylytics.health.domain.dashboard.CardConfiguration
-import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.domain.dashboard.CardManagementDelegate
-import app.readylytics.health.domain.repository.HealthConnectRepository
-import app.readylytics.health.domain.vitals.VitalsLayoutRepository
+import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
+import app.readylytics.health.core.model.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.dashboard.CardManagementDelegate
+import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.vitals.VitalsLayoutRepository
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk

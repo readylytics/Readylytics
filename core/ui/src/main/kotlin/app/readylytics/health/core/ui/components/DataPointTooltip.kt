@@ -137,53 +137,61 @@ fun DataPointTooltip(
                 enter = fadeIn(initialAlpha = 0.5f),
                 exit = fadeOut(),
             ) {
-                Surface(
-                    shape = TooltipCaretShape(),
-                    color = MaterialTheme.colorScheme.inverseSurface,
-                    modifier =
-                        modifier
-                            .widthIn(min = 70.dp, max = 150.dp)
-                            .padding(horizontal = MaterialTheme.spacing.small)
-                            .testTag(DATA_POINT_TOOLTIP_TAG),
-                ) {
-                    val hasExtraContent = data.preDateLines.isNotEmpty() || data.extraLine != null
-                    Column(
-                        horizontalAlignment = if (hasExtraContent) Alignment.Start else Alignment.CenterHorizontally,
-                        modifier =
-                            Modifier
-                                .padding(
-                                    horizontal = MaterialTheme.spacing.small,
-                                    vertical = MaterialTheme.spacing.extraSmallMedium,
-                                )
-                                // extra padding to clear caret
-                                .padding(bottom = MaterialTheme.spacing.extraSmallMedium),
-                    ) {
-                        Text(
-                            text = data.valueText,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.inverseOnSurface,
-                        )
-                        Text(
-                            text = data.dateText,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.9f),
-                        )
-                        data.preDateLines.forEach { line ->
-                            Text(
-                                text = line,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.9f),
-                            )
-                        }
-                        data.extraLine?.let { extra ->
-                            Text(
-                                text = extra,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.85f),
-                            )
-                        }
-                    }
-                }
+                DataPointTooltipSurface(data = data, modifier = modifier)
+            }
+        }
+    }
+}
+
+@Composable
+private fun DataPointTooltipSurface(
+    data: DataPointTooltipData,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        shape = TooltipCaretShape(),
+        color = MaterialTheme.colorScheme.inverseSurface,
+        modifier =
+            modifier
+                .widthIn(min = 70.dp, max = 150.dp)
+                .padding(horizontal = MaterialTheme.spacing.small)
+                .testTag(DATA_POINT_TOOLTIP_TAG),
+    ) {
+        val hasExtraContent = data.preDateLines.isNotEmpty() || data.extraLine != null
+        Column(
+            horizontalAlignment = if (hasExtraContent) Alignment.Start else Alignment.CenterHorizontally,
+            modifier =
+                Modifier
+                    .padding(
+                        horizontal = MaterialTheme.spacing.small,
+                        vertical = MaterialTheme.spacing.extraSmallMedium,
+                    )
+                    // extra padding to clear caret
+                    .padding(bottom = MaterialTheme.spacing.extraSmallMedium),
+        ) {
+            Text(
+                text = data.valueText,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.inverseOnSurface,
+            )
+            Text(
+                text = data.dateText,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.9f),
+            )
+            data.preDateLines.forEach { line ->
+                Text(
+                    text = line,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.9f),
+                )
+            }
+            data.extraLine?.let { extra ->
+                Text(
+                    text = extra,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.85f),
+                )
             }
         }
     }

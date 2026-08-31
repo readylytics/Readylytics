@@ -14,15 +14,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import app.readylytics.health.core.designsystem.FitDashboardTheme
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardCatalog
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.model.MetricStatus
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCard
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricScalePreparer
 import app.readylytics.health.core.ui.components.metriccard.toDashboardMode
 import app.readylytics.health.core.ui.components.metriccard.toUniversalMode
-import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.domain.dashboard.DashboardCardCatalog
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
-import app.readylytics.health.domain.model.MetricStatus
 
 // Compose Preview fixtures for DashboardMetricCard, covering every visual/render-mode combination
 // the Task 10 brief calls out for visual accessibility review in Android Studio. These carry no
@@ -138,7 +138,7 @@ private fun goalUnavailablePresentation(): UniversalMetricPresentation {
 
 @Preview(showBackground = true)
 @Composable
-private fun DashboardScoreGaugePreview() {
+internal fun DashboardScoreGaugePreview() {
     FitDashboardTheme {
         UniversalMetricCard(
             presentation = sleepScorePresentation(),
@@ -152,7 +152,7 @@ private fun DashboardScoreGaugePreview() {
 
 @Preview(showBackground = true)
 @Composable
-private fun DashboardScoreBarPreview() {
+internal fun DashboardScoreBarPreview() {
     FitDashboardTheme {
         UniversalMetricCard(
             presentation = sleepScorePresentation(),
@@ -166,7 +166,7 @@ private fun DashboardScoreBarPreview() {
 
 @Preview(showBackground = true)
 @Composable
-private fun DashboardScoreValuePreview() {
+internal fun DashboardScoreValuePreview() {
     FitDashboardTheme {
         UniversalMetricCard(
             presentation = sleepScorePresentation(),
@@ -180,7 +180,7 @@ private fun DashboardScoreValuePreview() {
 
 @Preview(showBackground = true, name = "Goal Bar - above target")
 @Composable
-private fun DashboardGoalAboveTargetBarPreview() {
+internal fun DashboardGoalAboveTargetBarPreview() {
     FitDashboardTheme {
         UniversalMetricCard(
             presentation = goalAboveTargetPresentation(),
@@ -194,7 +194,7 @@ private fun DashboardGoalAboveTargetBarPreview() {
 
 @Preview(showBackground = true, name = "Baseline Gauge - within range")
 @Composable
-private fun DashboardBaselineWithinRangeGaugePreview() {
+internal fun DashboardBaselineWithinRangeGaugePreview() {
     FitDashboardTheme {
         UniversalMetricCard(
             presentation = baselineWithinRangePresentation(),
@@ -208,7 +208,7 @@ private fun DashboardBaselineWithinRangeGaugePreview() {
 
 @Preview(showBackground = true, name = "Weight Bar - reference range at BMI 21.7")
 @Composable
-private fun DashboardWeightReferenceRangeBarPreview() {
+internal fun DashboardWeightReferenceRangeBarPreview() {
     FitDashboardTheme {
         UniversalMetricCard(
             presentation = weightReferenceRangePresentation(),
@@ -222,7 +222,7 @@ private fun DashboardWeightReferenceRangeBarPreview() {
 
 @Preview(showBackground = true, name = "Goal Bar - unavailable (grey)")
 @Composable
-private fun DashboardGoalUnavailableBarPreview() {
+internal fun DashboardGoalUnavailableBarPreview() {
     FitDashboardTheme {
         UniversalMetricCard(
             presentation = goalUnavailablePresentation(),
@@ -236,7 +236,7 @@ private fun DashboardGoalUnavailableBarPreview() {
 
 @Preview(showBackground = true, name = "Edit mode - openable selector control")
 @Composable
-private fun DashboardEditModeSelectorPreview() {
+internal fun DashboardEditModeSelectorPreview() {
     FitDashboardTheme {
         var mode by remember { mutableStateOf(DashboardCardDisplayMode.GAUGE) }
         UniversalMetricCard(
@@ -251,7 +251,7 @@ private fun DashboardEditModeSelectorPreview() {
 
 @Preview(showBackground = true, name = "Selector/card - default font scale")
 @Composable
-private fun DashboardCardFontScaleDefaultPreview() {
+internal fun DashboardCardFontScaleDefaultPreview() {
     FitDashboardTheme {
         Column(
             modifier = Modifier.padding(MaterialTheme.spacing.medium),
@@ -270,7 +270,7 @@ private fun DashboardCardFontScaleDefaultPreview() {
 
 @Preview(showBackground = true, fontScale = 1.5f, name = "Selector/card - fontScale 1.5x")
 @Composable
-private fun DashboardCardFontScaleLargePreview() {
+internal fun DashboardCardFontScaleLargePreview() {
     FitDashboardTheme {
         Column(
             modifier = Modifier.padding(MaterialTheme.spacing.medium),

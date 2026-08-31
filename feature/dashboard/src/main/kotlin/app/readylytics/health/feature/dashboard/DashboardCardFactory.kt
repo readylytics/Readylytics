@@ -19,6 +19,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
+import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
+import app.readylytics.health.core.model.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardCatalog
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.model.InsightType
+import app.readylytics.health.core.model.domain.model.LoadSourceSelector
+import app.readylytics.health.core.scoring.domain.insights.InsightParams
+import app.readylytics.health.core.scoring.domain.insights.detail.DailyInsightContext
+import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
+import app.readylytics.health.core.scoring.domain.scoring.toStatus
+import app.readylytics.health.core.scoring.domain.scoring.toTimeString
 import app.readylytics.health.core.ui.common.CardLoader
 import app.readylytics.health.core.ui.common.MetricCardSkeleton
 import app.readylytics.health.core.ui.common.ScoreDialSkeleton
@@ -30,18 +42,6 @@ import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPrese
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.core.ui.components.metriccard.toDashboardMode
 import app.readylytics.health.core.ui.components.metriccard.toUniversalMode
-import app.readylytics.health.data.preferences.SettingsDefaults
-import app.readylytics.health.domain.dashboard.CardConfiguration
-import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.domain.dashboard.DashboardCardCatalog
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
-import app.readylytics.health.domain.insights.InsightParams
-import app.readylytics.health.domain.insights.detail.DailyInsightContext
-import app.readylytics.health.domain.model.InsightType
-import app.readylytics.health.domain.model.LoadSourceSelector
-import app.readylytics.health.domain.scoring.CircadianConsistencyResult
-import app.readylytics.health.domain.scoring.toStatus
-import app.readylytics.health.domain.scoring.toTimeString
 import kotlin.math.roundToInt
 
 // Renders a single catalog-registered metric card: resolves requested/render mode through
@@ -365,6 +365,18 @@ fun buildCardDataMap(
             isEditing = isEditing,
             isLoading = isLoading,
             onClick = onNavigateToVitals,
+            onCardDisplayModeChanged = onCardDisplayModeChanged,
+        )
+    }
+
+    cardMap[CardId.RESIDUAL_FATIGUE] = { configuration ->
+        ConfigurableMetricCard(
+            cardId = CardId.RESIDUAL_FATIGUE,
+            presentation = uiState.cardDataMap[CardId.RESIDUAL_FATIGUE],
+            configuration = configuration,
+            isEditing = isEditing,
+            isLoading = isLoading,
+            onClick = onNavigateToWorkouts,
             onCardDisplayModeChanged = onCardDisplayModeChanged,
         )
     }

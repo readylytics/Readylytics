@@ -1,0 +1,7 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>LongMethod:ContributorsSection.kt$@Composable fun ContributorsSection()</ID>
+  </CurrentIssues>
+</SmellBaseline>

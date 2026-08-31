@@ -1,11 +1,11 @@
 package app.readylytics.health.feature.settings
 
-import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.domain.preferences.DisplaySettings
-import app.readylytics.health.domain.preferences.PhysiologySettings
-import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.sync.HealthDataRefresh
-import app.readylytics.health.domain.user.UserProfileActions
+import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.DisplaySettings
+import app.readylytics.health.core.model.domain.preferences.PhysiologySettings
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.sync.HealthDataRefresh
+import app.readylytics.health.core.model.domain.user.UserProfileActions
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
@@ -81,5 +81,24 @@ class PhysiologySettingsViewModelTest {
         val futureDate = LocalDate.now().plusDays(1)
         viewModel.onEvent(SettingsEvent.BirthdayChanged(date = futureDate))
         coVerify(timeout = 100, inverse = true) { userUseCase.updateBirthday(any()) }
+    }
+
+    @Test
+    fun onEvent_physiologyProfileChanged_doesNotUpdateResidualFatigueSettings() {
+        viewModel.onEvent(
+            SettingsEvent.PhysiologyProfileChanged(
+                app.readylytics.health.core.model.data.preferences.PhysiologyProfile.ATHLETE,
+            ),
+        )
+
+        coVerify(timeout = 1000, exactly = 1) {
+            physiologySettings.updatePhysiologyProfile(
+                app.readylytics.health.core.model.data.preferences.PhysiologyProfile.ATHLETE,
+            )
+        }
+        coVerify(timeout = 1000, exactly = 0) { displaySettings.updateResidualFatigueEnabled(any()) }
+        coVerify(timeout = 1000, exactly = 0) { displaySettings.updateResidualFatigueHalfLifeHours(any()) }
+        coVerify(timeout = 1000, exactly = 0) { displaySettings.updateResidualFatigueGain(any()) }
+        coVerify(timeout = 1000, exactly = 0) { displaySettings.resetResidualFatigueToDefaults() }
     }
 }

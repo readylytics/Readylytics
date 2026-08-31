@@ -1,7 +1,8 @@
 package app.readylytics.health.core.ui.components
 
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.SheetValue
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.isToggleable
@@ -9,7 +10,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -39,7 +40,7 @@ class ManagementBottomSheetTest {
                     ),
                 onResetToDefaults = {},
                 onDismiss = {},
-                sheetState = rememberModalBottomSheetState(),
+                sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden),
             )
         }
         composeTestRule.onNodeWithText("Cards").assertIsNotDisplayed()
@@ -57,7 +58,7 @@ class ManagementBottomSheetTest {
                     ),
                 onResetToDefaults = {},
                 onDismiss = {},
-                sheetState = rememberModalBottomSheetState(),
+                sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden),
             )
         }
         composeTestRule.onNodeWithText("Cards").assertIsDisplayed()
@@ -82,7 +83,7 @@ class ManagementBottomSheetTest {
                     ),
                 onResetToDefaults = {},
                 onDismiss = {},
-                sheetState = rememberModalBottomSheetState(),
+                sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden),
             )
         }
         // The mode-capable row's dropdown shows its selected value.
@@ -107,7 +108,7 @@ class ManagementBottomSheetTest {
                     ),
                 onResetToDefaults = {},
                 onDismiss = {},
-                sheetState = rememberModalBottomSheetState(),
+                sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden),
             )
         }
         composeTestRule.onNode(isToggleable()).performClick()
@@ -125,7 +126,7 @@ class ManagementBottomSheetTest {
                 sections = listOf(ManagementSection(title = "Cards", items = listOf(item("cardA", "Card A")))),
                 onResetToDefaults = { reset = true },
                 onDismiss = { dismissed = true },
-                sheetState = rememberModalBottomSheetState(),
+                sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden),
             )
         }
         composeTestRule.onNodeWithText("Done").performClick()

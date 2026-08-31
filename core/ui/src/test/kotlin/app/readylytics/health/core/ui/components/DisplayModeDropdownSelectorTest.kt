@@ -2,7 +2,7 @@ package app.readylytics.health.core.ui.components
 
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

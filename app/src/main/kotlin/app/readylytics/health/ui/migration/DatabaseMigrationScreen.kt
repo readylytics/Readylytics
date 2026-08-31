@@ -25,8 +25,8 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.R
-import app.readylytics.health.domain.migration.DatabaseMigrationProgress
-import app.readylytics.health.domain.migration.DatabaseReadiness
+import app.readylytics.health.core.model.domain.migration.DatabaseMigrationProgress
+import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import java.text.NumberFormat
 
 @Composable

@@ -9,11 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -32,284 +27,243 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
+import app.readylytics.health.core.model.domain.validation.SettingsValidators
+import app.readylytics.health.core.model.domain.validation.ValidationResult
+import app.readylytics.health.core.model.domain.validation.ValidationRule
 import app.readylytics.health.core.ui.components.MetricTooltip
-import app.readylytics.health.data.preferences.SettingsDefaults
-import app.readylytics.health.domain.scoring.TrimpModel
-import app.readylytics.health.domain.validation.SettingsValidators
-import app.readylytics.health.domain.validation.ValidationResult
-import app.readylytics.health.feature.settings.R
+import app.readylytics.health.feature.settings.common.resyncGateEnabled
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdvancedSettingsSection(
     sleepState: SleepSettingsState,
-    hrrToleranceSeconds: Int,
-    rasScalingFactor: Float,
-    trimpModel: TrimpModel,
-    banisterMultiplier: Float,
-    chengBeta: Float,
-    itrimB: Float,
+    uiState: UIState,
     onEvent: (SettingsEvent) -> Unit,
     onPhysiologyEvent: (SettingsEvent) -> Unit,
     onUIEvent: (SettingsEvent) -> Unit,
+    isResyncing: Boolean = false,
 ) {
-    val trimpModelOptions =
-        listOf(
-            TrimpModel.BANISTER to stringResource(R.string.advanced_trimp_banister),
-            TrimpModel.CHENG to stringResource(R.string.advanced_trimp_cheng),
-            TrimpModel.I_TRIMP to stringResource(R.string.advanced_trimp_itrimp),
+    val controlsEnabled = resyncGateEnabled(isResyncing)
+
+    Column {
+        BaselineOverridesSubsection(
+            sleepState = sleepState,
+            controlsEnabled = controlsEnabled,
+            onEvent = onEvent,
         )
 
-    var hrvText by remember(sleepState.hrvBaselineOverride) {
-        mutableStateOf(sleepState.hrvBaselineOverride?.toInt()?.toString() ?: "")
-    }
-    var rhrText by remember(sleepState.rhrBaselineOverride) {
-        mutableStateOf(sleepState.rhrBaselineOverride?.toInt()?.toString() ?: "")
-    }
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
 
+        RestingHrPercentileSubsection(
+            sleepState = sleepState,
+            controlsEnabled = controlsEnabled,
+            onEvent = onEvent,
+        )
+
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
+
+        RecoveryToleranceSubsection(
+            hrrToleranceSeconds = uiState.hrrToleranceSeconds,
+            controlsEnabled = controlsEnabled,
+            onUIEvent = onUIEvent,
+        )
+
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
+
+        RasScalingSubsection(
+            rasScalingFactor = uiState.rasScalingFactor,
+            controlsEnabled = controlsEnabled,
+            onPhysiologyEvent = onPhysiologyEvent,
+            onUIEvent = onUIEvent,
+        )
+
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
+
+        TrainingLoadSubsection(
+            uiState = uiState,
+            controlsEnabled = controlsEnabled,
+            isResyncing = isResyncing,
+            onUIEvent = onUIEvent,
+        )
+
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
+
+        ResidualFatigueSubsection(
+            uiState = uiState,
+            controlsEnabled = controlsEnabled,
+            onUIEvent = onUIEvent,
+        )
+    }
+}
+
+@Composable
+private fun BaselineOverridesSubsection(
+    sleepState: SleepSettingsState,
+    controlsEnabled: Boolean,
+    onEvent: (SettingsEvent) -> Unit,
+) {
+    Column(modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium)) {
+        Text(
+            stringResource(R.string.advanced_baseline_overrides_title),
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.padding(bottom = MaterialTheme.spacing.small),
+        )
+        BaselineOverrideField(
+            initialValue = sleepState.hrvBaselineOverride?.toInt()?.toString() ?: "",
+            label = stringResource(R.string.advanced_hrv_baseline_label),
+            controlsEnabled = controlsEnabled,
+            validator = SettingsValidators.HRV_BASELINE_RULE,
+            onValidValue = { onEvent(SettingsEvent.HrvBaselineChanged(it)) },
+            onCleared = { onEvent(SettingsEvent.HrvBaselineCleared) },
+        )
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+        BaselineOverrideField(
+            initialValue = sleepState.rhrBaselineOverride?.toInt()?.toString() ?: "",
+            label = stringResource(R.string.advanced_rhr_baseline_label),
+            controlsEnabled = controlsEnabled,
+            validator = SettingsValidators.RHR_BASELINE_RULE,
+            onValidValue = { onEvent(SettingsEvent.RhrBaselineChanged(it)) },
+            onCleared = { onEvent(SettingsEvent.RhrBaselineCleared) },
+        )
+    }
+}
+
+@Composable
+private fun BaselineOverrideField(
+    initialValue: String,
+    label: String,
+    controlsEnabled: Boolean,
+    validator: ValidationRule<String>,
+    onValidValue: (String) -> Unit,
+    onCleared: () -> Unit,
+) {
+    var text by remember(initialValue) { mutableStateOf(initialValue) }
+    val validation = validator.validate(text)
+
+    OutlinedTextField(
+        value = text,
+        enabled = controlsEnabled,
+        onValueChange = { value ->
+            text = value
+            val result = validator.validate(value)
+            if (result is ValidationResult.Valid) {
+                value.toIntOrNull()?.let { onValidValue(it.toString()) }
+            }
+        },
+        label = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(label)
+                MetricTooltip(description = stringResource(R.string.advanced_baseline_override_tooltip))
+            }
+        },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        isError = text.isNotEmpty() && validation is ValidationResult.Invalid,
+        supportingText = {
+            if (validation is ValidationResult.Invalid) Text(validation.message)
+        },
+        trailingIcon = {
+            if (text.isNotEmpty()) {
+                IconButton(
+                    onClick = {
+                        text = ""
+                        onCleared()
+                    },
+                    enabled = controlsEnabled,
+                ) {
+                    Icon(Icons.Filled.Clear, contentDescription = stringResource(R.string.accessibility_clear))
+                }
+            }
+        },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+@Composable
+private fun RestingHrPercentileSubsection(
+    sleepState: SleepSettingsState,
+    controlsEnabled: Boolean,
+    onEvent: (SettingsEvent) -> Unit,
+) {
     var percentileValue by remember(sleepState.restingHrPercentile) {
         mutableIntStateOf(sleepState.restingHrPercentile)
     }
 
-    val hrvValidation = SettingsValidators.HRV_BASELINE_RULE.validate(hrvText)
-    val rhrValidation = SettingsValidators.RHR_BASELINE_RULE.validate(rhrText)
-
-    Column {
-        Column(modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium)) {
+    Column(modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.advanced_resting_hr_percentile_label))
+            MetricTooltip(description = stringResource(R.string.advanced_resting_hr_percentile_tooltip))
+        }
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Slider(
+                value = percentileValue.toFloat(),
+                enabled = controlsEnabled,
+                onValueChange = { percentileValue = it.toInt() },
+                onValueChangeFinished = {
+                    val validation =
+                        SettingsValidators.RESTING_HR_PERCENTILE_RULE.validate(percentileValue.toString())
+                    if (validation is ValidationResult.Valid) {
+                        onEvent(SettingsEvent.RestingHrPercentileChanged(percentileValue))
+                    }
+                },
+                valueRange = 1f..15f,
+                steps = 13,
+                modifier = Modifier.weight(1f),
+            )
             Text(
-                stringResource(R.string.advanced_baseline_overrides_title),
-                style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.padding(bottom = MaterialTheme.spacing.small),
+                "$percentileValue",
+                modifier = Modifier.padding(start = MaterialTheme.spacing.medium),
+                style = MaterialTheme.typography.bodyMedium,
             )
-            OutlinedTextField(
-                value = hrvText,
-                onValueChange = { value ->
-                    hrvText = value
-                    val validation = SettingsValidators.HRV_BASELINE_RULE.validate(value)
-                    if (validation is ValidationResult.Valid) {
-                        value.toIntOrNull()?.let { onEvent(SettingsEvent.HrvBaselineChanged(it.toString())) }
-                    }
-                },
-                label = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.advanced_hrv_baseline_label))
-                        MetricTooltip(
-                            description = stringResource(R.string.advanced_baseline_override_tooltip),
-                        )
-                    }
-                },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                isError = hrvText.isNotEmpty() && hrvValidation is ValidationResult.Invalid,
-                supportingText = {
-                    if (hrvValidation is ValidationResult.Invalid) Text(hrvValidation.message)
-                },
-                trailingIcon = {
-                    if (hrvText.isNotEmpty()) {
-                        IconButton(onClick = {
-                            hrvText = ""
-                            onEvent(SettingsEvent.HrvBaselineCleared)
-                        }) {
-                            Icon(Icons.Filled.Clear, contentDescription = stringResource(R.string.accessibility_clear))
-                        }
-                    }
-                },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-            OutlinedTextField(
-                value = rhrText,
-                onValueChange = { value ->
-                    rhrText = value
-                    val validation = SettingsValidators.RHR_BASELINE_RULE.validate(value)
-                    if (validation is ValidationResult.Valid) {
-                        value.toIntOrNull()?.let { onEvent(SettingsEvent.RhrBaselineChanged(it.toString())) }
-                    }
-                },
-                label = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.advanced_rhr_baseline_label))
-                        MetricTooltip(
-                            description = stringResource(R.string.advanced_baseline_override_tooltip),
-                        )
-                    }
-                },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                isError = rhrText.isNotEmpty() && rhrValidation is ValidationResult.Invalid,
-                supportingText = {
-                    if (rhrValidation is ValidationResult.Invalid) Text(rhrValidation.message)
-                },
-                trailingIcon = {
-                    if (rhrText.isNotEmpty()) {
-                        IconButton(onClick = {
-                            rhrText = ""
-                            onEvent(SettingsEvent.RhrBaselineCleared)
-                        }) {
-                            Icon(Icons.Filled.Clear, contentDescription = stringResource(R.string.accessibility_clear))
-                        }
-                    }
-                },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
-
-        Column(modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.advanced_resting_hr_percentile_label))
-                MetricTooltip(
-                    description = stringResource(R.string.advanced_resting_hr_percentile_tooltip),
-                )
-            }
-            Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Slider(
-                    value = percentileValue.toFloat(),
-                    onValueChange = { percentileValue = it.toInt() },
-                    onValueChangeFinished = {
-                        val validation =
-                            SettingsValidators.RESTING_HR_PERCENTILE_RULE.validate(percentileValue.toString())
-                        if (validation is ValidationResult.Valid) {
-                            onEvent(SettingsEvent.RestingHrPercentileChanged(percentileValue))
-                        }
-                    },
-                    valueRange = 1f..15f,
-                    steps = 13,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    "$percentileValue",
-                    modifier = Modifier.padding(start = MaterialTheme.spacing.medium),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-        }
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
-
-        var hrrTolerance by remember(hrrToleranceSeconds) {
-            mutableFloatStateOf(hrrToleranceSeconds.toFloat())
-        }
-        val hrrToleranceRange =
-            SettingsDefaults.MIN_HRR_TOLERANCE_SECONDS.toFloat()..SettingsDefaults.MAX_HRR_TOLERANCE_SECONDS.toFloat()
-        ThresholdSliderItem(
-            label = stringResource(R.string.advanced_hrr_tolerance_label),
-            value = hrrTolerance,
-            onValueChange = { hrrTolerance = it },
-            onValueChangeFinished = {
-                onUIEvent(SettingsEvent.HrrToleranceSecondsChanged(hrrTolerance.toInt()))
-            },
-            valueRange = hrrToleranceRange,
-            steps = 8,
-            displayValue = stringResource(R.string.advanced_hrr_tolerance_seconds, hrrTolerance.toInt()),
-            description = stringResource(R.string.advanced_hrr_tolerance_tooltip),
-        )
-
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
-
-        var rasScaling by remember(rasScalingFactor) { mutableFloatStateOf(rasScalingFactor) }
-        ThresholdSliderItem(
-            label = stringResource(R.string.advanced_ras_scaling_label),
-            value = rasScaling,
-            onValueChange = { rasScaling = it },
-            onValueChangeFinished = { onUIEvent(SettingsEvent.RasScalingFactorChanged(rasScaling)) },
-            onReset = { onPhysiologyEvent(SettingsEvent.ResetRasScalingFactor) },
-            valueRange = 0.1f..0.3f,
-            steps = 20,
-            displayValue = "%.2f".format(rasScaling),
-            description = stringResource(R.string.advanced_ras_scaling_tooltip),
-        )
-
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
-        Text(
-            stringResource(R.string.advanced_training_load_label),
-            style = MaterialTheme.typography.labelLarge,
-            modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium),
-        )
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-        val selectedModelLabel =
-            trimpModelOptions.firstOrNull { it.first == trimpModel }?.second
-                ?: stringResource(R.string.advanced_trimp_banister)
-        var trimpDropdownExpanded by remember { mutableStateOf(false) }
-        ExposedDropdownMenuBox(
-            expanded = trimpDropdownExpanded,
-            onExpandedChange = { trimpDropdownExpanded = !trimpDropdownExpanded },
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = MaterialTheme.spacing.medium),
-        ) {
-            OutlinedTextField(
-                value = selectedModelLabel,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text(stringResource(R.string.advanced_training_load_label)) },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = trimpDropdownExpanded) },
-                modifier =
-                    Modifier
-                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, true)
-                        .fillMaxWidth(),
-            )
-            ExposedDropdownMenu(
-                expanded = trimpDropdownExpanded,
-                onDismissRequest = { trimpDropdownExpanded = false },
-            ) {
-                trimpModelOptions.forEach { (model, label) ->
-                    DropdownMenuItem(
-                        text = { Text(label) },
-                        onClick = {
-                            onUIEvent(SettingsEvent.TrimpModelChanged(model))
-                            trimpDropdownExpanded = false
-                        },
-                    )
-                }
-            }
-        }
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-        when (trimpModel) {
-            TrimpModel.BANISTER -> {
-                var multiplier by remember(banisterMultiplier) { mutableFloatStateOf(banisterMultiplier) }
-                ThresholdSliderItem(
-                    label = stringResource(R.string.advanced_banister_multiplier_label),
-                    value = multiplier,
-                    onValueChange = { multiplier = it },
-                    onValueChangeFinished = { onUIEvent(SettingsEvent.BanisterMultiplierChanged(multiplier)) },
-                    onReset = { onUIEvent(SettingsEvent.ResetTrimpToProfileDefaults) },
-                    valueRange = 0.5f..2.5f,
-                    steps = 40,
-                    displayValue = "%.2f".format(multiplier),
-                    description = stringResource(R.string.advanced_banister_multiplier_desc),
-                )
-            }
-            TrimpModel.CHENG -> {
-                var beta by remember(chengBeta) { mutableFloatStateOf(chengBeta) }
-                ThresholdSliderItem(
-                    label = stringResource(R.string.advanced_cheng_beta_label),
-                    value = beta,
-                    onValueChange = { beta = it },
-                    onValueChangeFinished = { onUIEvent(SettingsEvent.ChengBetaChanged(beta)) },
-                    onReset = { onUIEvent(SettingsEvent.ResetTrimpToProfileDefaults) },
-                    valueRange = 0.04f..0.12f,
-                    steps = 16,
-                    displayValue = "%.3f".format(beta),
-                    description = stringResource(R.string.advanced_cheng_beta_desc),
-                )
-            }
-            TrimpModel.I_TRIMP -> {
-                var b by remember(itrimB) { mutableFloatStateOf(itrimB) }
-                ThresholdSliderItem(
-                    label = stringResource(R.string.advanced_itrimp_b_factor_label),
-                    value = b,
-                    onValueChange = { b = it },
-                    onValueChangeFinished = { onUIEvent(SettingsEvent.ItrimBChanged(b)) },
-                    onReset = { onUIEvent(SettingsEvent.ResetTrimpToProfileDefaults) },
-                    valueRange = 1.0f..4.5f,
-                    steps = 35,
-                    displayValue = "%.1f".format(b),
-                    description = stringResource(R.string.advanced_itrimp_b_factor_desc),
-                )
-            }
         }
     }
+}
+
+@Composable
+private fun RecoveryToleranceSubsection(
+    hrrToleranceSeconds: Int,
+    controlsEnabled: Boolean,
+    onUIEvent: (SettingsEvent) -> Unit,
+) {
+    var hrrTolerance by remember(hrrToleranceSeconds) {
+        mutableFloatStateOf(hrrToleranceSeconds.toFloat())
+    }
+    val hrrToleranceRange =
+        SettingsDefaults.MIN_HRR_TOLERANCE_SECONDS.toFloat()..SettingsDefaults.MAX_HRR_TOLERANCE_SECONDS.toFloat()
+    ThresholdSliderItem(
+        label = stringResource(R.string.advanced_hrr_tolerance_label),
+        enabled = controlsEnabled,
+        value = hrrTolerance,
+        onValueChange = { hrrTolerance = it },
+        onValueChangeFinished = {
+            onUIEvent(SettingsEvent.HrrToleranceSecondsChanged(hrrTolerance.toInt()))
+        },
+        valueRange = hrrToleranceRange,
+        steps = 8,
+        displayValue = stringResource(R.string.advanced_hrr_tolerance_seconds, hrrTolerance.toInt()),
+        description = stringResource(R.string.advanced_hrr_tolerance_tooltip),
+    )
+}
+
+@Composable
+private fun RasScalingSubsection(
+    rasScalingFactor: Float,
+    controlsEnabled: Boolean,
+    onPhysiologyEvent: (SettingsEvent) -> Unit,
+    onUIEvent: (SettingsEvent) -> Unit,
+) {
+    var rasScaling by remember(rasScalingFactor) { mutableFloatStateOf(rasScalingFactor) }
+    ThresholdSliderItem(
+        label = stringResource(R.string.advanced_ras_scaling_label),
+        value = rasScaling,
+        onValueChange = { rasScaling = it },
+        onValueChangeFinished = { onUIEvent(SettingsEvent.RasScalingFactorChanged(rasScaling)) },
+        onReset = { onPhysiologyEvent(SettingsEvent.ResetRasScalingFactor) },
+        valueRange = 0.1f..0.3f,
+        steps = 20,
+        displayValue = "%.2f".format(rasScaling),
+        description = stringResource(R.string.advanced_ras_scaling_tooltip),
+        enabled = controlsEnabled,
+    )
 }

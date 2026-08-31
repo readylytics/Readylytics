@@ -1,19 +1,19 @@
 package app.readylytics.health.feature.settings
 
-import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.domain.dashboard.CardConfiguration
-import app.readylytics.health.domain.dashboard.CardConfigurationRepository
-import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
-import app.readylytics.health.domain.preferences.DisplaySettings
-import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.sleep.SleepLayoutRepository
-import app.readylytics.health.domain.sleep.SleepMetricCardConfiguration
-import app.readylytics.health.domain.sleep.SleepMetricCardId
-import app.readylytics.health.domain.sleep.SleepTopCardConfiguration
-import app.readylytics.health.domain.sleep.SleepTopCardId
-import app.readylytics.health.domain.vitals.VitalsLayoutRepository
-import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
+import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
+import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
+import app.readylytics.health.core.model.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.preferences.DisplaySettings
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.sleep.SleepLayoutRepository
+import app.readylytics.health.core.model.domain.sleep.SleepMetricCardConfiguration
+import app.readylytics.health.core.model.domain.sleep.SleepMetricCardId
+import app.readylytics.health.core.model.domain.sleep.SleepTopCardConfiguration
+import app.readylytics.health.core.model.domain.sleep.SleepTopCardId
+import app.readylytics.health.core.model.domain.vitals.VitalsLayoutRepository
+import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
 import io.mockk.coEvery
 import io.mockk.coJustRun
 import io.mockk.coVerify
@@ -157,7 +157,10 @@ class DashboardCardsSettingsViewModelTest {
     @Test
     fun `apply when notice already dismissed writes immediately without showing the dialog`() =
         runTest(testDispatcher) {
-            val (viewModel, configsFlow, vitalsConfigsFlow, _) = buildViewModel(noticeDismissed = true)
+            val harness = buildViewModel(noticeDismissed = true)
+            val viewModel = harness.viewModel
+            val configsFlow = harness.dashboardConfigs
+            val vitalsConfigsFlow = harness.vitalsConfigs
             val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
 
             viewModel.onEvent(SettingsEvent.DashboardGlobalDisplayModeApplyRequested(DashboardCardDisplayMode.GAUGE))
@@ -180,7 +183,9 @@ class DashboardCardsSettingsViewModelTest {
     @Test
     fun `apply when notice not dismissed shows the confirm dialog and does not write yet`() =
         runTest(testDispatcher) {
-            val (viewModel, configsFlow, _, _) = buildViewModel(noticeDismissed = false)
+            val harness = buildViewModel(noticeDismissed = false)
+            val viewModel = harness.viewModel
+            val configsFlow = harness.dashboardConfigs
             val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
 
             viewModel.onEvent(SettingsEvent.DashboardGlobalDisplayModeApplyRequested(DashboardCardDisplayMode.BAR))
@@ -195,7 +200,9 @@ class DashboardCardsSettingsViewModelTest {
     @Test
     fun `confirming the dialog writes the mode and hides the dialog`() =
         runTest(testDispatcher) {
-            val (viewModel, configsFlow, _, _) = buildViewModel(noticeDismissed = false)
+            val harness = buildViewModel(noticeDismissed = false)
+            val viewModel = harness.viewModel
+            val configsFlow = harness.dashboardConfigs
             val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
 
             viewModel.onEvent(SettingsEvent.DashboardGlobalDisplayModeApplyRequested(DashboardCardDisplayMode.BAR))
@@ -215,7 +222,9 @@ class DashboardCardsSettingsViewModelTest {
     @Test
     fun `confirming with dont show again persists the notice flag`() =
         runTest(testDispatcher) {
-            val (viewModel, _, _, displaySettings) = buildViewModel(noticeDismissed = false)
+            val harness = buildViewModel(noticeDismissed = false)
+            val viewModel = harness.viewModel
+            val displaySettings = harness.displaySettings
             val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
 
             viewModel.onEvent(SettingsEvent.DashboardGlobalDisplayModeApplyRequested(DashboardCardDisplayMode.VALUE))
@@ -231,7 +240,9 @@ class DashboardCardsSettingsViewModelTest {
     @Test
     fun `dismissing the dialog does not write any changes`() =
         runTest(testDispatcher) {
-            val (viewModel, configsFlow, _, _) = buildViewModel(noticeDismissed = false)
+            val harness = buildViewModel(noticeDismissed = false)
+            val viewModel = harness.viewModel
+            val configsFlow = harness.dashboardConfigs
             val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
 
             viewModel.onEvent(SettingsEvent.DashboardGlobalDisplayModeApplyRequested(DashboardCardDisplayMode.BAR))
@@ -319,7 +330,8 @@ class DashboardCardsSettingsViewModelTest {
     @Test
     fun `uiState reflects the persisted current global mode`() =
         runTest(testDispatcher) {
-            val (viewModel, _, _, _) = buildViewModel(currentGlobalMode = DashboardCardDisplayMode.GAUGE)
+            val harness = buildViewModel(currentGlobalMode = DashboardCardDisplayMode.GAUGE)
+            val viewModel = harness.viewModel
             val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
 
             advanceUntilIdle()
@@ -332,7 +344,9 @@ class DashboardCardsSettingsViewModelTest {
     @Test
     fun `apply persists the applied mode as the new current global mode`() =
         runTest(testDispatcher) {
-            val (viewModel, _, _, displaySettings) = buildViewModel(noticeDismissed = true)
+            val harness = buildViewModel(noticeDismissed = true)
+            val viewModel = harness.viewModel
+            val displaySettings = harness.displaySettings
             val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
 
             viewModel.onEvent(SettingsEvent.DashboardGlobalDisplayModeApplyRequested(DashboardCardDisplayMode.BAR))
@@ -346,7 +360,7 @@ class DashboardCardsSettingsViewModelTest {
     @Test
     fun `reset when notice already dismissed clears every card and the current mode`() =
         runTest(testDispatcher) {
-            val (viewModel, configsFlow, vitalsConfigsFlow, displaySettings) =
+            val harness =
                 buildViewModel(
                     noticeDismissed = true,
                     currentGlobalMode = DashboardCardDisplayMode.GAUGE,
@@ -365,6 +379,10 @@ class DashboardCardsSettingsViewModelTest {
                             ),
                         ),
                 )
+            val viewModel = harness.viewModel
+            val configsFlow = harness.dashboardConfigs
+            val vitalsConfigsFlow = harness.vitalsConfigs
+            val displaySettings = harness.displaySettings
             val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
 
             viewModel.onEvent(SettingsEvent.DashboardGlobalDisplayModeResetRequested)
@@ -383,7 +401,7 @@ class DashboardCardsSettingsViewModelTest {
     @Test
     fun `reset when notice not dismissed shows the confirm dialog flagged as a reset`() =
         runTest(testDispatcher) {
-            val (viewModel, configsFlow, _, _) =
+            val harness =
                 buildViewModel(
                     noticeDismissed = false,
                     initialConfigs =
@@ -394,6 +412,8 @@ class DashboardCardsSettingsViewModelTest {
                             ),
                         ),
                 )
+            val viewModel = harness.viewModel
+            val configsFlow = harness.dashboardConfigs
             val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
 
             viewModel.onEvent(SettingsEvent.DashboardGlobalDisplayModeResetRequested)
@@ -412,7 +432,7 @@ class DashboardCardsSettingsViewModelTest {
     @Test
     fun `confirming a pending reset resets and clears the reset flag`() =
         runTest(testDispatcher) {
-            val (viewModel, configsFlow, _, _) =
+            val harness =
                 buildViewModel(
                     noticeDismissed = false,
                     initialConfigs =
@@ -423,6 +443,8 @@ class DashboardCardsSettingsViewModelTest {
                             ),
                         ),
                 )
+            val viewModel = harness.viewModel
+            val configsFlow = harness.dashboardConfigs
             val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
 
             viewModel.onEvent(SettingsEvent.DashboardGlobalDisplayModeResetRequested)

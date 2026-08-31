@@ -27,12 +27,12 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.R
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.domain.githubissue.ReportChannel
 import app.readylytics.health.crashreport.CrashReportFileExport
 import app.readylytics.health.crashreport.GithubIssueIntentResult
 import app.readylytics.health.crashreport.buildCrashReportShareIntent
 import app.readylytics.health.crashreport.buildGithubIssueIntent
 import app.readylytics.health.crashreport.buildOversizedFallbackIntent
-import app.readylytics.health.domain.githubissue.ReportChannel
 
 @Composable
 fun CrashReportPrompt(viewModel: CrashReportViewModel = hiltViewModel()) {

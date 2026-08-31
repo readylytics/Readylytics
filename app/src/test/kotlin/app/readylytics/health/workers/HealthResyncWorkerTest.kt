@@ -5,14 +5,19 @@ import android.content.pm.ServiceInfo
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
-import app.readylytics.health.domain.migration.DatabaseReadiness
-import app.readylytics.health.domain.migration.DatabaseReadinessInspector
-import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
-import app.readylytics.health.domain.sync.ForegroundSyncController
-import app.readylytics.health.domain.sync.FullHistoricalResyncUseCase
-import app.readylytics.health.domain.sync.ResyncPhase
+import app.readylytics.health.core.healthconnect.domain.sync.ForegroundSyncController
+import app.readylytics.health.core.healthconnect.domain.sync.FullHistoricalResyncUseCase
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
+import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
+import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspector
+import app.readylytics.health.core.model.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
+import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
+import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import dagger.Lazy
 import io.mockk.*
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Test
@@ -30,6 +35,8 @@ class HealthResyncWorkerTest {
     private val databaseReadinessGate = mockk<DatabaseReadinessInspector>()
     private val foregroundSyncController = mockk<ForegroundSyncController>(relaxed = true)
     private val foregroundSyncControllerLazy = mockk<Lazy<ForegroundSyncController>>()
+    private val settingsRepository = mockk<SettingsRepository>(relaxed = true)
+    private val settingsRepositoryLazy = mockk<Lazy<SettingsRepository>>()
 
     @Before
     fun setUp() {
@@ -40,6 +47,9 @@ class HealthResyncWorkerTest {
         every { useCaseLazy.get() } returns useCase
         every { foregroundSyncControllerLazy.get() } returns foregroundSyncController
         every { databaseReadinessGate.inspect() } returns DatabaseReadiness.Ready
+        every { settingsRepositoryLazy.get() } returns settingsRepository
+        coEvery { settingsRepository.userPreferences } returns
+            MutableStateFlow(UserPreferences(scoringVersion = 0))
 
         val progressUpdater = mockk<androidx.work.ProgressUpdater>()
         every { workerParams.progressUpdater } returns progressUpdater
@@ -77,7 +87,7 @@ class HealthResyncWorkerTest {
             coEvery { useCase.execute(any(), any()) } answers {
                 val progressCallback = secondArg<(ResyncPhase, Int, Int) -> Unit>()
                 progressCallback(ResyncPhase.RECOMPUTE, 1, 10)
-                app.readylytics.health.domain.model.Result
+                app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
             }
             val worker = createWorker()
@@ -103,7 +113,7 @@ class HealthResyncWorkerTest {
                     .build()
             val recomputeOnlySlot = slot<Boolean>()
             coEvery { useCase.execute(capture(recomputeOnlySlot), any()) } returns
-                app.readylytics.health.domain.model.Result
+                app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
 
             val worker = createWorker()
@@ -117,7 +127,7 @@ class HealthResyncWorkerTest {
         runBlocking {
             val recomputeOnlySlot = slot<Boolean>()
             coEvery { useCase.execute(capture(recomputeOnlySlot), any()) } returns
-                app.readylytics.health.domain.model.Result
+                app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
 
             val worker = createWorker()
@@ -130,7 +140,7 @@ class HealthResyncWorkerTest {
     fun `doWork returns retry when resync usecase fails`() =
         runBlocking {
             coEvery { useCase.execute(any(), any()) } returns
-                app.readylytics.health.domain.model.Result
+                app.readylytics.health.core.model.domain.model.Result
                     .Failure("error", "network error")
             val worker = createWorker()
             val result = worker.doWork()
@@ -186,6 +196,76 @@ class HealthResyncWorkerTest {
             verify(exactly = 0) { foregroundSyncControllerLazy.get() }
         }
 
+    @Test
+    fun `success bumps scoring version and marks the sleep-score recalc baseline`() =
+        runBlocking {
+            coEvery { useCase.execute(any(), any()) } returns
+                app.readylytics.health.core.model.domain.model.Result
+                    .Success(Unit)
+            createWorker().doWork()
+
+            coVerify { settingsRepository.updateScoringVersion(SettingsDefaults.CURRENT_SCORING_VERSION) }
+            coVerify {
+                settingsRepository.updateSleepScoreRecalcBaseline(
+                    SleepScoreWeightProfile.BALANCED,
+                    SettingsDefaults.GOAL_SLEEP_HOURS,
+                    SettingsDefaults.HYPERSOMNIA_ONSET_PERCENT,
+                )
+            }
+        }
+
+    @Test
+    fun `success with a current scoring version skips the bump but still marks the baseline`() =
+        runBlocking {
+            coEvery { useCase.execute(any(), any()) } returns
+                app.readylytics.health.core.model.domain.model.Result
+                    .Success(Unit)
+            coEvery { settingsRepository.userPreferences } returns
+                MutableStateFlow(UserPreferences(scoringVersion = SettingsDefaults.CURRENT_SCORING_VERSION))
+            createWorker().doWork()
+
+            coVerify(exactly = 0) { settingsRepository.updateScoringVersion(any()) }
+            coVerify { settingsRepository.updateSleepScoreRecalcBaseline(any(), any(), any()) }
+        }
+
+    @Test
+    fun `retry path does not persist scoring version or baseline`() =
+        runBlocking {
+            coEvery { useCase.execute(any(), any()) } returns
+                app.readylytics.health.core.model.domain.model.Result
+                    .Failure("error", "network error")
+            createWorker().doWork()
+
+            coVerify(exactly = 0) { settingsRepository.updateScoringVersion(any()) }
+            coVerify(exactly = 0) { settingsRepository.updateSleepScoreRecalcBaseline(any(), any(), any()) }
+        }
+
+    @Test
+    fun `exception path does not persist scoring version or baseline`() =
+        runBlocking {
+            coEvery { useCase.execute(any(), any()) } throws RuntimeException("critical error")
+            createWorker().doWork()
+
+            coVerify(exactly = 0) { settingsRepository.updateScoringVersion(any()) }
+            coVerify(exactly = 0) { settingsRepository.updateSleepScoreRecalcBaseline(any(), any(), any()) }
+        }
+
+    @Test
+    fun `persistence failure does not fail the worker`() =
+        runBlocking {
+            coEvery { useCase.execute(any(), any()) } returns
+                app.readylytics.health.core.model.domain.model.Result
+                    .Success(Unit)
+            coEvery { settingsRepository.userPreferences } throws
+                RuntimeException("datastore io failure")
+            val result = createWorker().doWork()
+            assertEquals(
+                androidx.work.ListenableWorker.Result
+                    .success(),
+                result,
+            )
+        }
+
     private fun createWorker() =
         HealthResyncWorker(
             appContext = context,
@@ -193,5 +273,6 @@ class HealthResyncWorkerTest {
             fullHistoricalResyncUseCase = useCaseLazy,
             foregroundSyncController = foregroundSyncControllerLazy,
             databaseReadinessGate = databaseReadinessGate,
+            settingsRepository = settingsRepositoryLazy,
         )
 }

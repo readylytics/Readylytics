@@ -35,15 +35,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.domain.layout.ReorderableItem
 import app.readylytics.health.core.ui.R
-import app.readylytics.health.domain.layout.ReorderableItem
 
 /**
  * Single-column list supporting drag-and-drop reordering, generic over any [ReorderableItem].
- *
- * Single-column counterpart to [ReorderableGrid]: every item is full-width, one per row, so the
- * paired-row layout branch is absent. Dropping onto the bottom "hide" zone calls [onItemHide]
- * (a reversible visibility toggle) instead of removal.
  */
 @Composable
 fun <Id : Any, Config : ReorderableItem<Id>> ReorderableList(
@@ -55,49 +51,100 @@ fun <Id : Any, Config : ReorderableItem<Id>> ReorderableList(
     modifier: Modifier = Modifier,
     controller: DragController<Id>? = null,
 ) {
-    val configById: Map<Id, Config> =
-        remember(items, dataMap.keys) {
-            items
-                .filter { it.isVisible && dataMap.containsKey(it.id) }
-                .associateBy { it.id }
-        }
-
-    val dragController =
-        remember {
-            controller ?: DragController(
-                items
-                    .filter { it.isVisible && dataMap.containsKey(it.id) }
-                    .sortedBy { it.position }
-                    .map { it.id },
-            )
-        }
+    val configById: Map<Id, Config> = rememberListConfigMap(items, dataMap.keys)
+    val dragController = rememberListDragController(controller, items, dataMap.keys)
 
     LaunchedEffect(items, dataMap.keys) {
-        val upstreamOrder =
-            items
-                .filter { it.isVisible && dataMap.containsKey(it.id) }
-                .sortedBy { it.position }
-                .map { it.id }
-        dragController.syncFromUpstream(upstreamOrder)
+        dragController.syncFromUpstream(extractListUpstreamOrder(items, dataMap.keys))
     }
 
-    val displayableItems: List<Config> =
-        dragController.pendingOrder.mapNotNull { configById[it] }
-
+    val displayableItems: List<Config> = dragController.pendingOrder.mapNotNull { configById[it] }
     var rootCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
     var hideZoneTopPx by remember { mutableStateOf<Float?>(null) }
-
     val handleBounds = remember { mutableStateMapOf<Id, Rect>() }
-    val hapticFeedback = LocalHapticFeedback.current
 
-    val draggedId = dragController.draggedCardId
+    val currentPerformDragEnd by rememberUpdatedState(
+        createListDragEndHandler(dragController, configById, onItemHide, onItemReorder),
+    )
+    val currentHideZoneTopPx by rememberUpdatedState(hideZoneTopPx)
 
-    val performDragEnd = {
+    val listModifier =
+        buildListModifier(
+            modifier = modifier,
+            isEditing = isEditing,
+            onRootPositioned = { rootCoords = it },
+            handleBounds = handleBounds,
+            dragController = dragController,
+            onPerformDragEnd = { currentPerformDragEnd() },
+            hideZoneTopPx = { currentHideZoneTopPx },
+        )
+
+    Column(
+        modifier = listModifier,
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+    ) {
+        ReorderableListContent(
+            displayableItems = displayableItems,
+            dataMap = dataMap,
+            isEditing = isEditing,
+            draggedId = dragController.draggedCardId,
+            dragController = dragController,
+            rootCoords = rootCoords,
+            onHandlePositioned = { id, coords ->
+                rootCoords?.let { root -> handleBounds[id] = root.localBoundingBoxOf(coords) }
+            },
+        )
+
+        if (isEditing) {
+            HideDropZone(
+                isHovered = dragController.hoveringDeleteZone,
+                onPositioned = { top -> hideZoneTopPx = top },
+                rootCoords = rootCoords,
+            )
+        }
+    }
+}
+
+@Composable
+private fun <Id : Any, Config : ReorderableItem<Id>> rememberListConfigMap(
+    items: List<Config>,
+    validKeys: Set<Id>,
+): Map<Id, Config> =
+    remember(items, validKeys) {
+        items.filter { it.isVisible && validKeys.contains(it.id) }.associateBy { it.id }
+    }
+
+@Composable
+private fun <Id : Any, Config : ReorderableItem<Id>> rememberListDragController(
+    controller: DragController<Id>?,
+    items: List<Config>,
+    validKeys: Set<Id>,
+): DragController<Id> =
+    remember {
+        controller ?: DragController(extractListUpstreamOrder(items, validKeys))
+    }
+
+private fun <Id : Any, Config : ReorderableItem<Id>> extractListUpstreamOrder(
+    items: List<Config>,
+    validKeys: Set<Id>,
+): List<Id> =
+    items
+        .filter { it.isVisible && validKeys.contains(it.id) }
+        .sortedBy { it.position }
+        .map { it.id }
+
+private fun <Id : Any, Config : ReorderableItem<Id>> createListDragEndHandler(
+    dragController: DragController<Id>,
+    configById: Map<Id, Config>,
+    onItemHide: (Id) -> Unit,
+    onItemReorder: (List<Config>) -> Unit,
+): () -> Unit =
+    {
         val result = dragController.onDragEnd()
-        val draggedId = result.draggedId
-        if (draggedId != null) {
+        val dragged = result.draggedId
+        if (dragged != null) {
             if (result.delete) {
-                onItemHide(draggedId)
+                onItemHide(dragged)
             } else {
                 val updated = result.finalOrder.mapNotNull { id -> configById[id] }
                 onItemReorder(updated)
@@ -105,125 +152,138 @@ fun <Id : Any, Config : ReorderableItem<Id>> ReorderableList(
         }
     }
 
-    val onHandlePositioned: (Id, LayoutCoordinates) -> Unit = { id, coords ->
-        rootCoords?.let { root -> handleBounds[id] = root.localBoundingBoxOf(coords) }
-    }
-
-    val currentHideZoneTopPx by rememberUpdatedState(hideZoneTopPx)
-    val currentPerformDragEnd by rememberUpdatedState(performDragEnd)
-
-    Column(
-        modifier =
-            modifier
-                .onGloballyPositioned { rootCoords = it }
-                .then(
-                    if (isEditing) {
-                        Modifier.pointerInput(Unit) {
-                            detectDragGesturesAfterLongPress(
-                                onDragStart = { offset ->
-                                    val targetId =
-                                        handleBounds.entries
-                                            .firstOrNull { (_, rect) -> rect.contains(offset) }
-                                            ?.key
-                                    if (targetId != null) {
-                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        dragController.onDragStart(targetId)
-                                    }
-                                },
-                                onDragEnd = { currentPerformDragEnd() },
-                                onDragCancel = { currentPerformDragEnd() },
-                                onDrag = { change, dragAmount ->
-                                    change.consume()
-                                    if (dragController.draggedCardId != null) {
-                                        dragController.onDrag(dragAmount, currentHideZoneTopPx)
-                                    }
-                                },
-                            )
-                        }
-                    } else {
-                        Modifier
-                    },
-                ),
-        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
-    ) {
-        displayableItems.forEach { item ->
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .zIndex(if (draggedId == item.id) 1f else 0f)
-                        .onGloballyPositioned { coords ->
-                            rootCoords?.let { root ->
-                                dragController.updateSlotBounds(item.id, root.localBoundingBoxOf(coords))
+@Composable
+private fun <Id : Any> buildListModifier(
+    modifier: Modifier,
+    isEditing: Boolean,
+    onRootPositioned: (LayoutCoordinates) -> Unit,
+    handleBounds: Map<Id, Rect>,
+    dragController: DragController<Id>,
+    onPerformDragEnd: () -> Unit,
+    hideZoneTopPx: () -> Float?,
+): Modifier {
+    val hapticFeedback = LocalHapticFeedback.current
+    return modifier
+        .onGloballyPositioned(onRootPositioned)
+        .then(
+            if (isEditing) {
+                Modifier.pointerInput(Unit) {
+                    detectDragGesturesAfterLongPress(
+                        onDragStart = { offset ->
+                            val targetId =
+                                handleBounds.entries
+                                    .firstOrNull { (_, rect) -> rect.contains(offset) }
+                                    ?.key
+                            if (targetId != null) {
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                dragController.onDragStart(targetId)
                             }
                         },
-            ) {
-                key(item.id) {
-                    ReorderableSlot(
-                        id = item.id,
-                        content = remember(item, dataMap[item.id]) { { dataMap[item.id]!!(item) } },
-                        isEditing = isEditing,
-                        isDragged = draggedId == item.id,
-                        controller = dragController,
-                        onHandlePositioned = onHandlePositioned,
-                        fixedHeight = false,
-                        modifier = Modifier.fillMaxWidth(),
+                        onDragEnd = onPerformDragEnd,
+                        onDragCancel = onPerformDragEnd,
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            if (dragController.draggedCardId != null) {
+                                dragController.onDrag(dragAmount, hideZoneTopPx())
+                            }
+                        },
                     )
                 }
+            } else {
+                Modifier
+            },
+        )
+}
+
+@Composable
+private fun <Id : Any, Config : ReorderableItem<Id>> ReorderableListContent(
+    displayableItems: List<Config>,
+    dataMap: Map<Id, @Composable (Config) -> Unit>,
+    isEditing: Boolean,
+    draggedId: Id?,
+    dragController: DragController<Id>,
+    rootCoords: LayoutCoordinates?,
+    onHandlePositioned: (Id, LayoutCoordinates) -> Unit,
+) {
+    displayableItems.forEach { item ->
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .zIndex(if (draggedId == item.id) 1f else 0f)
+                    .onGloballyPositioned { coords ->
+                        rootCoords?.let { root ->
+                            dragController.updateSlotBounds(item.id, root.localBoundingBoxOf(coords))
+                        }
+                    },
+        ) {
+            key(item.id) {
+                ReorderableSlot(
+                    id = item.id,
+                    content = remember(item, dataMap[item.id]) { { dataMap[item.id]!!(item) } },
+                    isEditing = isEditing,
+                    isDragged = draggedId == item.id,
+                    controller = dragController,
+                    onHandlePositioned = onHandlePositioned,
+                    fixedHeight = false,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         }
+    }
+}
 
-        // Hide drop zone at the bottom when editing. Reuses the delete-zone mechanism —
-        // dropping here hides the item (reversible), not removes it.
-        if (isEditing) {
-            Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
-            val isHovered = dragController.hoveringDeleteZone
-            Surface(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(80.dp)
-                        .onGloballyPositioned { coords ->
-                            rootCoords?.let { root ->
-                                hideZoneTopPx = root.localBoundingBoxOf(coords).top
-                            }
-                        },
+@Composable
+private fun HideDropZone(
+    isHovered: Boolean,
+    onPositioned: (Float) -> Unit,
+    rootCoords: LayoutCoordinates?,
+) {
+    Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
+    Surface(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(80.dp)
+                .onGloballyPositioned { coords ->
+                    rootCoords?.let { root ->
+                        onPositioned(root.localBoundingBoxOf(coords).top)
+                    }
+                },
+        color =
+            if (isHovered) {
+                MaterialTheme.colorScheme.errorContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceContainer
+            },
+        shape = MaterialTheme.shapes.large,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.VisibilityOff,
+                contentDescription = null,
+                tint =
+                    if (isHovered) {
+                        MaterialTheme.colorScheme.onErrorContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+            )
+            Spacer(modifier = Modifier.height(MaterialTheme.spacing.extraSmall))
+            Text(
+                text = stringResource(R.string.action_hide_drop_zone),
+                style = MaterialTheme.typography.labelSmall,
                 color =
                     if (isHovered) {
-                        MaterialTheme.colorScheme.errorContainer
+                        MaterialTheme.colorScheme.onErrorContainer
                     } else {
-                        MaterialTheme.colorScheme.surfaceContainer
+                        MaterialTheme.colorScheme.onSurfaceVariant
                     },
-                shape = MaterialTheme.shapes.large,
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.VisibilityOff,
-                        contentDescription = null,
-                        tint =
-                            if (isHovered) {
-                                MaterialTheme.colorScheme.onErrorContainer
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                    )
-                    Spacer(modifier = Modifier.height(MaterialTheme.spacing.extraSmall))
-                    Text(
-                        text = stringResource(R.string.action_hide_drop_zone),
-                        style = MaterialTheme.typography.labelSmall,
-                        color =
-                            if (isHovered) {
-                                MaterialTheme.colorScheme.onErrorContainer
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                    )
-                }
-            }
+            )
         }
     }
 }

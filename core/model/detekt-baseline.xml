@@ -1,0 +1,20 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>TooManyFunctions:DailyMetricsMapper.kt$DailyMetricsMapper</ID>
+    <ID>TooManyFunctions:DateRangeService.kt$DateRangeService</ID>
+    <ID>TooManyFunctions:FeatureSettingsPorts.kt$DisplaySettings</ID>
+    <ID>TooManyFunctions:FeatureSettingsPorts.kt$SleepSettings</ID>
+    <ID>TooManyFunctions:HealthConnectRepository.kt$HealthConnectRepository</ID>
+    <ID>TooManyFunctions:HealthMetricsService.kt$HealthMetricsService</ID>
+    <ID>TooManyFunctions:LoadSourceSelector.kt$LoadSourceSelector</ID>
+    <ID>TooManyFunctions:MetricFormatter.kt$MetricFormatter</ID>
+    <ID>TooManyFunctions:MetricStatusExtensions.kt$app.readylytics.health.core.model.domain.model.MetricStatusExtensions.kt</ID>
+    <ID>TooManyFunctions:PreferenceService.kt$PreferenceService</ID>
+    <ID>TooManyFunctions:Result.kt$app.readylytics.health.core.model.domain.model.Result.kt</ID>
+    <ID>TooManyFunctions:ScoringHistoryRepository.kt$ScoringHistoryRepository</ID>
+    <ID>TooManyFunctions:UnitConverter.kt$UnitConverter</ID>
+    <ID>TooManyFunctions:VitalAssessment.kt$app.readylytics.health.core.model.domain.model.VitalAssessment.kt</ID>
+  </CurrentIssues>
+</SmellBaseline>

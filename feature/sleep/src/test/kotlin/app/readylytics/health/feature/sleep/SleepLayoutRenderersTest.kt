@@ -1,12 +1,13 @@
 package app.readylytics.health.feature.sleep
 
-import app.readylytics.health.domain.scoring.CircadianConsistencyResult
-import app.readylytics.health.domain.sleep.SleepMetricCardId
-import app.readylytics.health.domain.sleep.SleepTopCardId
+import app.readylytics.health.core.model.domain.sleep.SleepMetricCardId
+import app.readylytics.health.core.model.domain.sleep.SleepTopCardId
+import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test
 import java.io.File
+import java.time.LocalDate
 
 class SleepLayoutRenderersTest {
     @Test
@@ -25,14 +26,19 @@ class SleepLayoutRenderersTest {
 
     @Test
     fun `top card data map covers every top card id`() {
-        val map = buildSleepTopCardDataMap(SleepUiState(), null)
+        val map = buildSleepTopCardDataMap(SleepUiState(selectedDate = LocalDate.of(2026, 6, 11)), null)
         assertEquals(SleepTopCardId.entries.toSet(), map.keys)
         SleepTopCardId.entries.forEach { assertNotNull(map[it]) }
     }
 
     @Test
     fun `metric card data map covers every metric card id`() {
-        val map = buildSleepMetricCardDataMap(SleepUiState(), CircadianConsistencyResult.Calibrating, null)
+        val map =
+            buildSleepMetricCardDataMap(
+                SleepUiState(selectedDate = LocalDate.of(2026, 6, 11)),
+                CircadianConsistencyResult.Calibrating,
+                null,
+            )
         assertEquals(SleepMetricCardId.entries.toSet(), map.keys)
         SleepMetricCardId.entries.forEach { assertNotNull(map[it]) }
     }

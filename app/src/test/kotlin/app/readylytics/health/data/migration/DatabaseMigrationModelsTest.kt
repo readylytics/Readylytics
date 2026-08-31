@@ -1,11 +1,12 @@
 package app.readylytics.health.data.migration
 
-import app.readylytics.health.data.migration.DatabaseReadinessGate
-import app.readylytics.health.data.security.SqlCipherKeyManager
-import app.readylytics.health.domain.migration.DatabaseMigrationProgress
-import app.readylytics.health.domain.migration.DatabaseReadiness
-import app.readylytics.health.domain.migration.V7MigrationPhase
-import app.readylytics.health.domain.migration.fraction
+import app.readylytics.health.core.database.data.migration.DatabaseReadinessGate
+import app.readylytics.health.core.database.data.migration.ExistingDatabaseState
+import app.readylytics.health.core.database.data.security.SqlCipherKeyManager
+import app.readylytics.health.core.model.domain.migration.DatabaseMigrationProgress
+import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
+import app.readylytics.health.core.model.domain.migration.V7MigrationPhase
+import app.readylytics.health.core.model.domain.migration.fraction
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -146,7 +147,7 @@ class DatabaseMigrationModelsTest {
     fun `exported v7 identities match migrator identity`() {
         val schema =
             readRepoFile(
-                "core/database/schemas/app.readylytics.health.data.local.HealthDatabase/7.json",
+                "core/database/schemas/app.readylytics.health.core.database.data.local.HealthDatabase/7.json",
             )
         val topLevelIdentity =
             Regex(""""identityHash":\s*"([0-9a-f]+)"""")

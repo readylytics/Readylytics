@@ -40,18 +40,19 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.data.preferences.BackgroundSyncInterval
+import app.readylytics.health.core.model.data.preferences.SyncPreference
+import app.readylytics.health.core.model.domain.model.HealthDataCategory
+import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.ui.components.DropdownPreferenceItem
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.SettingsToggleItem
 import app.readylytics.health.core.ui.components.settings.RetentionSlider
-import app.readylytics.health.data.preferences.BackgroundSyncInterval
-import app.readylytics.health.data.preferences.SyncPreference
-import app.readylytics.health.domain.model.HealthDataCategory
-import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.feature.settings.R
 import app.readylytics.health.feature.settings.SettingsEvent
 import app.readylytics.health.feature.settings.SyncSettingsState
 import app.readylytics.health.feature.settings.UIState
+import app.readylytics.health.feature.settings.common.resyncGateEnabled
 
 @Composable
 fun SyncSettingsSection(
@@ -76,12 +77,6 @@ fun SyncSettingsSection(
     Column {
         ListItem(
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            headlineContent = {
-                Text(
-                    stringResource(R.string.sync_on_app_open_label),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-            },
             trailingContent = {
                 Switch(
                     checked = uiState.syncPreference != SyncPreference.NEVER,
@@ -94,7 +89,12 @@ fun SyncSettingsSection(
                     },
                 )
             },
-        )
+        ) {
+            Text(
+                stringResource(R.string.sync_on_app_open_label),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        }
 
         SettingsToggleItem(
             label = stringResource(R.string.background_sync_label),
@@ -156,6 +156,7 @@ fun DataManagementSection(
     onEvent: (SettingsEvent) -> Unit,
     onSyncEvent: (SettingsEvent) -> Unit,
 ) {
+    val controlsEnabled = resyncGateEnabled(isResyncing)
     Column {
         RetentionSlider(
             enabled = uiState.retentionDaysEnabled,
@@ -175,7 +176,7 @@ fun DataManagementSection(
         ) {
             Button(
                 onClick = { onSyncEvent(SettingsEvent.ResyncHealthConnect) },
-                enabled = !isResyncing,
+                enabled = controlsEnabled,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 if (isResyncing) {

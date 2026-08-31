@@ -41,13 +41,22 @@ You'll see all three on your dashboard once enough data has been collected. Unti
 
 ## Sleep Score
 
-A 100-point summary of last night's sleep, made of three parts:
+A 100-point summary of last night's sleep, made of four parts (under the default **Balanced** profile):
 
-- **Duration (50%)** — how much sleep you got, compared to your goal (default 8 hours, configurable). If you sleep in multiple segments (biphasic sleep or naps), all sleep periods count toward your total duration. Includes a small adjustment for how efficient your time in bed was.
-- **Architecture (25%)** — how much of your sleep was deep (slow-wave) sleep and REM. Both matter. Deep sleep is when most physical recovery happens; REM is when your brain processes memory and emotion. Targets are age-specific to account for the natural biological decline in deep sleep across the lifespan (Ohayon 2004).
+- **Duration (40%)** — how much sleep you got, compared to your goal (default 8 hours, configurable). Scoring follows a smooth continuous logistic curve below your goal. A configurable oversleep dead zone (default 125% of goal) prevents penalizing modest sleep-ins while gently decaying scores for excessive hypersomnia. If you sleep in multiple segments (biphasic sleep or naps), all sleep periods count toward your total duration (naps add duration without altering overnight metrics). Includes a continuous adjustment for how efficient your time in bed was.
+- **Architecture (20%)** — how much of your sleep was deep (slow-wave) sleep and REM. Both matter. Deep sleep is when most physical recovery happens; REM is when your brain processes memory and emotion. Targets are age-continuous to account for the natural biological decline in deep sleep across the lifespan (Ohayon 2004).
 - **Restoration (25%)** — how rested your estimated recovery-related physiology looks. We use the natural log of RMSSD (**lnRMSSD**) and overnight resting heart rate (**RHR**) to compute Z-scores. The log transformation is the scientific gold standard (Plews 2013, Buchheit 2014) for monitoring recovery, as it normalizes the skewed distribution of raw HRV data.
+- **Fragmentation (15%)** — evaluates sleep continuity using Wake After Sleep Onset (**WASO**) between sleep onset and final awakening, alongside discrete awakenings of at least 1.5 minutes. Because normal adult sleep includes brief wake periods, a grace allowance of 20 minutes of WASO and 2 awakenings is permitted before continuous exponential penalties apply.
 
-If a source provides a sleep session with no stage records, Readylytics uses the raw session span as total sleep duration. Because Architecture is unavailable, the Sleep Score reweights to Duration 75%, Architecture 0%, and Restoration 25%. This differs from suspicious but non-empty stage data: the source supplied stages, but their distribution failed plausibility checks.
+**Weight emphasis profiles**
+
+You can customize the relative emphasis of each sleep component in Settings to suit your recovery focus (Balanced, Duration Focused, Recovery Focused, Architecture Focused, or Continuity Focused). Changing your weight profile requires running the **Recalculate scores** action in Settings to apply the new weighting across your history.
+
+**Sleep Regularity multiplier**
+
+Your sleep score incorporates **Sleep Regularity** as a penalty-only multiplier between 0.92 and 1.00 derived from your circadian consistency score. Consistent sleep timing preserves 100% of your score (multiplier 1.00), while irregular schedules incur a mild proportional deduction. During baseline calibration or when circadian data is missing, the multiplier remains neutral (1.00).
+
+If a source provides a sleep session with no stage records, Readylytics uses the raw session span as total sleep duration. Because Architecture and Fragmentation are unavailable, the Sleep Score renormalizes the remaining sub-scores (Duration and Restoration) according to your active weight profile. This differs from suspicious but non-empty stage data: the source supplied stages, but their distribution failed plausibility checks.
 
 **Reading the score**
 
@@ -306,6 +315,20 @@ a display-only insight, entirely outside the scoring engine.
 
 ---
 
+## Workout GPS and Route Details
+
+When outdoor workouts include GPS location tracks, Readylytics visualizes route contours, pace, and elevation profiles directly inside workout details.
+
+- **Privacy-preserving offline Canvas rendering** — routes are drawn entirely on-device using native Android Canvas vector graphics. The app never embeds or initializes third-party mapping SDKs (such as Google Maps or Mapbox), downloads no raster or vector map tiles, and executes zero network calls. Location coordinates remain strictly private on the device.
+- **Douglas-Peucker line simplification** — GPS tracks containing hundreds or thousands of raw coordinates are simplified on-device via the Douglas-Peucker algorithm using an adaptive tolerance. This preserves sharp turns, curves, and route shape while keeping rendering lightweight and responsive.
+- **Pace and elevation performance charts** — route waypoints provide distance, altitude, and timestamp metrics used to generate elevation profiles and pace or speed progression charts across the activity.
+- **Local storage and cascade lifecycle** — route coordinates are stored in the local encrypted Room database (`workout_route_points` table). When a workout session is deleted or purged during historical retention cleanup, all associated route points are immediately cascade-deleted.
+- **Optional permission & graceful fallback** — reading route data requires the optional Health Connect exercise route permission. If route permissions are not granted or route data is unavailable for a session, the app continues to display heart-rate metrics, zone distribution, TRIMP, and recovery analysis normally without route contours.
+
+_Implemented in: `RouteSimplifier.kt`, `RouteDistanceCalculator.kt`, `RouteContourCard.kt`, `WorkoutPerformanceCharts.kt`, `WorkoutDetailScreen.kt`_
+
+---
+
 ## What the app needs from you
 
 We read from Android Health Connect:
@@ -314,6 +337,8 @@ We read from Android Health Connect:
 - **Heart rate** during sleep (for restoration metrics)
 - **Heart rate variability (RMSSD)** during sleep
 - **Heart rate** during exercise sessions (for training load)
+- **Exercise routes & GPS data** (optional, for offline route visualization, pace, and elevation profiles)
+- **Distance & elevation gained** (optional, so a workout shows the same figures as the app that recorded it — re-measuring the GPS track instead reads about 1–3% short)
 
 The app reads only — it never writes. You can revoke access at any time in Health Connect settings.
 
@@ -364,9 +389,10 @@ A few smaller modifiers shape the numbers behind the scenes. We list them here f
 
 - **HRV-score saturation.** Above a Z-score of 1.5, additional HRV improvement contributes less to your Restoration score (a 0.25 slope beyond that point) — so an extraordinarily high reading doesn't dominate the score the way a moderate one does.
 - **Late-nadir penalty.** If your lowest overnight heart rate occurs in the final third of your sleep period (after 67% of total sleep time has elapsed), we apply a small 0.95 multiplier to the restoration component. A very late RHR nadir often reflects a shortened or fragmented night rather than genuine recovery.
-- **Per-profile training-load multiplier.** Your Banister training-load model uses a profile-specific multiplier when converting heart-rate-reserve intensity into TRIMP: Athlete ×1.0, Active ×1.35, Sedentary ×1.75. This reflects that the same relative effort represents a larger physiological load for someone who trains less.
+- **Banister training-load multiplier.** Your Banister training-load model converts heart-rate-reserve intensity into TRIMP using a multiplier of **1.0 for every physiology profile**, so TRIMP is a consistent, profile-independent measure of training load — the same effort produces the same load regardless of profile (under the default Banister model). The multiplier remains adjustable in Advanced Settings if you want to scale your personal TRIMP magnitude.
+- **Residual Fatigue (shadow mode).** The app calculates an internal, exponential-decay residual fatigue metric from your logged workouts using continuous timestamps and customizable half-life (default 24 h, range 6–96 h) and gain (default 1.0, range 0.1–5.0) parameters. Each day's value is an end-of-day snapshot evaluated at the following midnight, so the current day is a projection to the end of today rather than your fatigue at this moment. Residual Fatigue is raw, non-normalized, provisional, workout-only, and strictly shadow-only — it does not modify Readiness, Load Score, or any other user-facing score. Users can optionally visualize it by enabling the default-hidden Residual Fatigue card on the Dashboard or the decay curve chart (with selectable 1D, 3D, and 7D time ranges) on the Workouts tab via their respective layout customization sheets. The curve is drawn only up to the present moment, with a dot marking where "now" sits; the remainder of the day is left blank rather than projected. The card's status colours and gauge scale move with your configured gain, so changing gain re-scales the reading rather than pushing every day to one extreme.
 - **Readylytics Activity Score (RAS).** RAS is a PAI-style motivational activity metric with a daily cap and rolling 7-day accumulation. It is separate from the physiological Load Score: RAS never feeds Readiness, and Readiness/load continue to use TRIMP → ATL → CTL → Strain Ratio → Load Score.
-- **Suspicious sleep-stage reweight.** If your wearable's sleep-stage data for a night looks implausible (e.g., no deep or REM sleep detected at all), we reweight the Sleep Score: Duration rises to 75% and Architecture drops to 0%, while Restoration stays at 25%. This avoids penalising you for a wearable data glitch rather than your actual sleep.
+- **Suspicious sleep-stage reweight.** If your wearable's sleep-stage data for a night looks implausible (e.g., no deep or REM sleep detected at all), we reweight the Sleep Score: Architecture and Fragmentation drop out and the score renormalizes Duration and Restoration according to your active weight profile. This avoids penalising you for a wearable data glitch rather than your actual sleep.
 - **Missing-day handling in load averages.** Acute and chronic training-load averages (ATL/CTL) are exponential moving averages where a day with no logged exercise counts as zero TRIMP, not "no data". When you only have one day of history, that single day's value is used directly as the starting average.
 - **Estimated max heart rate.** If you haven't entered your own max heart rate, we estimate it from your age using the Tanaka formula (`208 − 0.7 × age`), which is more accurate across adult age ranges than the older "220 − age" rule of thumb.
 

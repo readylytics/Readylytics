@@ -1,13 +1,13 @@
 package app.readylytics.health.feature.dashboard.usecase
+import app.readylytics.health.core.model.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.model.MetricStatus
+import app.readylytics.health.core.model.domain.model.SleepSessionSummary
+import app.readylytics.health.core.model.domain.model.efficiencyStatus
+import app.readylytics.health.core.model.domain.repository.SleepSessionData
+import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricUnavailableReason
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
-import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.domain.model.MetricStatus
-import app.readylytics.health.domain.model.SleepSessionSummary
-import app.readylytics.health.domain.model.efficiencyStatus
-import app.readylytics.health.domain.repository.SleepSessionData
-import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import io.mockk.every
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -24,7 +24,6 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
             factory.build(
                 summary().copy(avgSleepingSpo2 = 94.6f),
                 preferences(),
-                date,
                 null,
                 null,
                 null,
@@ -35,7 +34,7 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
 
     @Test
     fun `spo2 uses 80 to 100 bounds`() {
-        val cards = factory.build(summary(), preferences(), date, null, null, null)
+        val cards = factory.build(summary(), preferences(), null, null, null)
         val visual = cards.getValue(CardId.OXYGEN_SATURATION).visual as UniversalMetricVisual.Score
         assertEquals(80f, visual.minValue)
         assertEquals(100f, visual.maxValue)
@@ -43,7 +42,7 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
 
     @Test
     fun `hrv uses baseline scale`() {
-        val cards = factory.build(summary(), preferences(), date, null, null, null)
+        val cards = factory.build(summary(), preferences(), null, null, null)
         val visual = cards.getValue(CardId.HRV).visual as UniversalMetricVisual.PersonalBaseline
         assertNull(visual.ratio)
     }
@@ -58,7 +57,6 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
                     hrvMuMssd = kotlin.math.ln(41.0).toFloat(),
                 ),
                 preferences(),
-                date,
                 null,
                 null,
                 null,
@@ -72,7 +70,7 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
 
     @Test
     fun `rhr uses baseline scale`() {
-        val cards = factory.build(summary(), preferences(), date, null, null, null)
+        val cards = factory.build(summary(), preferences(), null, null, null)
         val visual = cards.getValue(CardId.RESTING_HR).visual as UniversalMetricVisual.PersonalBaseline
         assertNull(visual.ratio)
     }
@@ -86,7 +84,6 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
                     restingHrRatio = 1.11f,
                 ),
                 preferences().copy(rhrBaselineOverride = 55.6f),
-                date,
                 null,
                 null,
                 null,
@@ -112,7 +109,6 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
                     rhrBpm = null,
                 ),
                 preferences().copy(rhrBaselineOverride = null),
-                date,
                 null,
                 null,
                 null,
@@ -149,7 +145,6 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
                     rhrOptimalThreshold = 1.05f,
                     rhrWarningThreshold = 1.15f,
                 ),
-                date,
                 null,
                 null,
                 null,
@@ -172,7 +167,7 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
 
     @Test
     fun `strain ratio uses bands from 0 to 2`() {
-        val cards = factory.build(summary(), preferences(), date, null, null, null)
+        val cards = factory.build(summary(), preferences(), null, null, null)
         val visual = cards.getValue(CardId.STRAIN_RATIO).visual as UniversalMetricVisual.Score
         assertEquals(0f, visual.minValue)
         assertEquals(2f, visual.maxValue)
@@ -202,7 +197,7 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
             )
 
         expectations.forEach { (rawStrainRatio, expectedStatus) ->
-            val cards = factory.build(summary(strainRatio = rawStrainRatio), preferences(), date, null, null, null)
+            val cards = factory.build(summary(strainRatio = rawStrainRatio), preferences(), null, null, null)
 
             assertEquals(expectedStatus, cards.getValue(CardId.STRAIN_RATIO).status)
         }
@@ -219,7 +214,6 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
                 factory.build(
                     summary().copy(sleepScore = score, readinessWorkoutOnly = score),
                     preferences(),
-                    date,
                     null,
                     null,
                     null,
@@ -244,7 +238,6 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
                 factory.build(
                     summary(),
                     preferences(),
-                    date,
                     SleepSessionSummary(efficiency = efficiency, startTime = 0L, endTime = 0L),
                     null,
                     null,
@@ -267,7 +260,6 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
                 factory.build(
                     summary(),
                     preferences(),
-                    date,
                     null,
                     CircadianConsistencyResult.Ready(score, 0, 0, 0, 0),
                     null,
@@ -282,7 +274,7 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
         every { resourceProvider.getString(CoreUiR.string.delta_up) } returns "↑"
         every { resourceProvider.getString(CoreUiR.string.delta_up_format, "↑", "0.23") } returns "↑ 0.23"
 
-        val cards = factory.build(summary(), preferences(), date, null, null, null, 0.234f)
+        val cards = factory.build(summary(), preferences(), null, null, null, 0.234f)
 
         assertEquals("↑ 0.23", cards.getValue(CardId.STRAIN_RATIO).secondaryText)
     }
@@ -291,14 +283,14 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
     fun `strain increase at the no-change threshold uses the no-change glyph`() {
         every { resourceProvider.getString(CoreUiR.string.delta_no_change) } returns "—"
 
-        val cards = factory.build(summary(), preferences(), date, null, null, null, 0.005f)
+        val cards = factory.build(summary(), preferences(), null, null, null, 0.005f)
 
         assertEquals("—", cards.getValue(CardId.STRAIN_RATIO).secondaryText)
     }
 
     @Test
     fun `unavailable strain increase has no secondary text`() {
-        val cards = factory.build(summary(), preferences(), date, null, null, null, null)
+        val cards = factory.build(summary(), preferences(), null, null, null, null)
 
         assertNull(cards.getValue(CardId.STRAIN_RATIO).secondaryText)
     }
@@ -319,7 +311,7 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
 
     @Test
     fun `heart rate and blood pressure are value only`() {
-        val cards = factory.build(summary(), preferences(), date, null, null, null)
+        val cards = factory.build(summary(), preferences(), null, null, null)
         assertTrue(cards.getValue(CardId.HEART_RATE).visual is UniversalMetricVisual.ValueOnly)
         assertTrue(cards.getValue(CardId.BLOOD_PRESSURE).visual is UniversalMetricVisual.ValueOnly)
     }
@@ -329,7 +321,7 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
         val heartRateSummary = HeartRateDaySummary(minBpm = 45, maxBpm = 147, avgBpm = 84)
         every { resourceProvider.getString(CoreUiR.string.hr_avg_display, 84) } returns "pulses · average 84"
 
-        val cards = factory.build(summary(), preferences(), date, null, null, heartRateSummary)
+        val cards = factory.build(summary(), preferences(), null, null, heartRateSummary)
         val presentation = cards.getValue(CardId.HEART_RATE)
 
         assertEquals("45–147", presentation.valueText)
@@ -340,14 +332,14 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
 
     @Test
     fun `missing heart rate summary is calibrating`() {
-        val cards = factory.build(summary(), preferences(), date, null, null, null)
+        val cards = factory.build(summary(), preferences(), null, null, null)
 
         assertEquals(MetricStatus.CALIBRATING, cards.getValue(CardId.HEART_RATE).status)
     }
 
     @Test
     fun `missing summary reports em dash and missing value for score based cards`() {
-        val cards = factory.build(null, preferences(), date, null, null, null)
+        val cards = factory.build(null, preferences(), null, null, null)
 
         val sleep = cards.getValue(CardId.SLEEP_SCORE)
         val sleepVisual = sleep.visual as UniversalMetricVisual.Score
@@ -367,7 +359,6 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
             factory.build(
                 summary(weightKg = 70f),
                 preferences().copy(heightCm = 0f),
-                date,
                 null,
                 null,
                 null,
@@ -382,7 +373,6 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
             factory.build(
                 summary(weightKg = 70f),
                 preferences().copy(heightCm = null),
-                date,
                 null,
                 null,
                 null,
@@ -398,7 +388,6 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
             factory.build(
                 summary().copy(sleepDurationMinutes = 600),
                 preferences().copy(goalSleepHours = 8f),
-                date,
                 null,
                 null,
                 null,
@@ -411,7 +400,7 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
 
     @Test
     fun `missing sleep session reports missing value for sleep efficiency instead of a zero reading`() {
-        val cards = factory.build(summary(), preferences(), date, null, null, null)
+        val cards = factory.build(summary(), preferences(), null, null, null)
         val presentation = cards.getValue(CardId.SLEEP_EFFICIENCY)
         val visual = presentation.visual as UniversalMetricVisual.Score
         assertEquals("—", presentation.valueText)
@@ -426,7 +415,6 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
                 factory.build(
                     summary(),
                     preferences(),
-                    date,
                     SleepSessionSummary(efficiency = efficiency, startTime = 0L, endTime = 0L),
                     null,
                     null,
@@ -445,7 +433,7 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
     @Test
     fun `a genuine zero efficiency reading is treated as real data not missing`() {
         val lastSleepSession = SleepSessionSummary(efficiency = 0f, startTime = 0L, endTime = 0L)
-        val cards = factory.build(summary(), preferences(), date, lastSleepSession, null, null)
+        val cards = factory.build(summary(), preferences(), lastSleepSession, null, null)
         val presentation = cards.getValue(CardId.SLEEP_EFFICIENCY)
         val visual = presentation.visual as UniversalMetricVisual.Score
         assertEquals("0%", presentation.valueText)
@@ -469,7 +457,7 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
 
     @Test
     fun `all 15 cards produce a non-blank accessibility description when data is missing`() {
-        val cards = factory.build(null, preferences(), date, null, null, null)
+        val cards = factory.build(null, preferences(), null, null, null)
 
         val allCardIds =
             listOf(
@@ -504,7 +492,7 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
         stubAccessibilityStatusText()
         val lastSleepSession = SleepSessionSummary(efficiency = 0.88f, startTime = 0L, endTime = 0L)
         val circadianResult =
-            app.readylytics.health.domain.scoring.CircadianConsistencyResult
+            app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
                 .Ready(85f, 0, 0, 0, 0)
         val heartRateSummary =
             app.readylytics.health.core.ui.model
@@ -523,7 +511,6 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
                     bloodPressureDiastolic = 80,
                 ),
                 preferences(heightCm = 180f),
-                date,
                 lastSleepSession,
                 circadianResult,
                 heartRateSummary,
@@ -548,7 +535,6 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
                 .build(
                     summary().copy(sleepDurationMinutes = 600),
                     preferences().copy(goalSleepHours = 8f),
-                    date,
                     null,
                     null,
                     null,

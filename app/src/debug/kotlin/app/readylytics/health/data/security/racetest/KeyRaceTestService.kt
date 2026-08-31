@@ -10,7 +10,7 @@ import android.os.Message
 import android.os.Messenger
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteOpenHelper
-import app.readylytics.health.data.security.SqlCipherKeyManager
+import app.readylytics.health.core.database.data.security.SqlCipherKeyManager
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.File
 import java.util.concurrent.CountDownLatch
@@ -132,7 +132,7 @@ open class KeyRaceTestService : Service() {
     ) {
         val helper =
             keyManager
-                .getOrCreateFactory(File(dbPath))
+                .getOrCreateFactory()
                 .create(
                     SupportSQLiteOpenHelper.Configuration
                         .builder(this)

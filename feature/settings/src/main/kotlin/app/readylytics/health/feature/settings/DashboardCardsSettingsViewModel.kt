@@ -2,16 +2,16 @@ package app.readylytics.health.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.readylytics.health.domain.dashboard.CardConfigurationRepository
-import app.readylytics.health.domain.dashboard.DashboardCardCatalog
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
-import app.readylytics.health.domain.preferences.DisplaySettings
-import app.readylytics.health.domain.preferences.SettingsDefaults
-import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.sleep.SleepCardCatalog
-import app.readylytics.health.domain.sleep.SleepLayoutRepository
-import app.readylytics.health.domain.vitals.VitalsLayoutRepository
-import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
+import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardCatalog
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.preferences.DisplaySettings
+import app.readylytics.health.core.model.domain.preferences.SettingsDefaults
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.sleep.SleepCardCatalog
+import app.readylytics.health.core.model.domain.sleep.SleepLayoutRepository
+import app.readylytics.health.core.model.domain.vitals.VitalsLayoutRepository
+import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,6 +41,11 @@ class DashboardCardsSettingsViewModel
 
         private var applyJob: Job? = null
 
+        // Eagerly is intentional, not an oversight: initialValue = false is a "not yet
+        // dismissed" sentinel. Routing this through the `sharingStarted` test seam would let
+        // it go cold and re-emit false on resubscribe, before the real preference reloads --
+        // a dismissed notice would visibly reappear. See
+        // internal-docs/plans/POST_REMEDIATION_FOLLOWUPS.md, Item 2.
         private val noticeDismissed =
             settingsReader.userPreferences.map { it.bulkDisplayModeNoticeDismissed }.stateIn(
                 scope = viewModelScope,
@@ -48,6 +53,11 @@ class DashboardCardsSettingsViewModel
                 initialValue = false,
             )
 
+        // Eagerly is intentional, not an oversight: initialValue = null is an "unknown mode"
+        // sentinel. Routing this through the `sharingStarted` test seam would let it go cold
+        // and re-emit null on resubscribe, before the real preference reloads -- the global
+        // display mode would briefly read as unset. See
+        // internal-docs/plans/POST_REMEDIATION_FOLLOWUPS.md, Item 2.
         private val currentGlobalMode =
             settingsReader.userPreferences.map { it.lastGlobalDisplayMode }.stateIn(
                 scope = viewModelScope,

@@ -4,6 +4,7 @@ import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.BodyTemperatureRecord
+import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
@@ -11,22 +12,22 @@ import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.WeightRecord
-import app.readylytics.health.domain.model.DomainBloodPressureRecord
-import app.readylytics.health.domain.model.DomainBodyFatRecord
-import app.readylytics.health.domain.model.DomainBodyTemperatureRecord
-import app.readylytics.health.domain.model.DomainExerciseSessionRecord
-import app.readylytics.health.domain.model.DomainHeartRateRecord
-import app.readylytics.health.domain.model.DomainHeartRateSample
-import app.readylytics.health.domain.model.DomainHrvRecord
-import app.readylytics.health.domain.model.DomainOxygenSaturationRecord
-import app.readylytics.health.domain.model.DomainSleepSessionRecord
-import app.readylytics.health.domain.model.DomainSleepStage
-import app.readylytics.health.domain.model.DomainSleepStageType
-import app.readylytics.health.domain.model.DomainStepsRecord
-import app.readylytics.health.domain.model.DomainWeightRecord
-import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
-import app.readylytics.health.domain.repository.HealthConnectRepository
-import app.readylytics.health.domain.repository.PermissionStatus
+import app.readylytics.health.core.model.domain.model.DomainBloodPressureRecord
+import app.readylytics.health.core.model.domain.model.DomainBodyFatRecord
+import app.readylytics.health.core.model.domain.model.DomainBodyTemperatureRecord
+import app.readylytics.health.core.model.domain.model.DomainExerciseSessionRecord
+import app.readylytics.health.core.model.domain.model.DomainHeartRateRecord
+import app.readylytics.health.core.model.domain.model.DomainHeartRateSample
+import app.readylytics.health.core.model.domain.model.DomainHrvRecord
+import app.readylytics.health.core.model.domain.model.DomainOxygenSaturationRecord
+import app.readylytics.health.core.model.domain.model.DomainSleepSessionRecord
+import app.readylytics.health.core.model.domain.model.DomainSleepStage
+import app.readylytics.health.core.model.domain.model.DomainSleepStageType
+import app.readylytics.health.core.model.domain.model.DomainStepsRecord
+import app.readylytics.health.core.model.domain.model.DomainWeightRecord
+import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
+import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.PermissionStatus
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -193,6 +194,7 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
     override suspend fun readExerciseSessions(
         from: Instant,
         to: Instant,
+        includeDetails: Boolean,
     ): List<DomainExerciseSessionRecord> {
         translateCritical(FakeOp.Exercise)
         val total = totalInRange(exerciseCount, from, to)
@@ -288,6 +290,9 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
     override suspend fun hasWeightPermission(): Boolean =
         granted.contains(HealthPermission.getReadPermission(WeightRecord::class))
 
+    override suspend fun hasDistancePermission(): Boolean =
+        granted.contains(HealthPermission.getReadPermission(DistanceRecord::class))
+
     override suspend fun hasBodyFatPermission(): Boolean =
         granted.contains(HealthPermission.getReadPermission(BodyFatRecord::class))
 
@@ -296,6 +301,12 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
 
     override suspend fun hasOxygenSaturationPermission(): Boolean =
         granted.contains(HealthPermission.getReadPermission(OxygenSaturationRecord::class))
+
+    override suspend fun readExerciseSession(id: String): DomainExerciseSessionRecord? = null
+
+    override suspend fun hasExerciseRoutesPermission(): Boolean =
+        granted.contains("android.permission.health.READ_EXERCISE_ROUTES") ||
+            granted.contains("com.google.android.apps.healthdata.permission.READ_EXERCISE_ROUTES")
 
     override suspend fun discoverDevices(windowDays: Int): List<String> {
         lastDiscoveryWindowDays = windowDays

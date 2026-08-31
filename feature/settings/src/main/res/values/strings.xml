@@ -13,7 +13,7 @@
 <string name="action_restore">Restore</string>
 <string name="action_set">Set</string>
 <string name="action_verify">Verify</string>
-<string name="advanced_banister_multiplier_desc">Sedentary=1.75, Active=1.35, Athlete=1.00.</string>
+<string name="advanced_banister_multiplier_desc">Default: 1.00 for all profiles.</string>
 <string name="advanced_banister_multiplier_label">Banister Multiplier</string>
 <string name="advanced_baseline_override_tooltip">Overrides the 30-day rolling median used in
         scoring.</string>
@@ -34,6 +34,16 @@
         reading of the entire sleep period (e.g., 5%% = lowest 5%% threshold). Lower values = lower
         RHR estimate. Default: 5%%.</string>
 <string name="advanced_rhr_baseline_label">RHR Baseline (bpm)</string>
+<string name="advanced_residual_fatigue_title">Residual Fatigue</string>
+<string name="advanced_residual_fatigue_enabled_label">Enabled</string>
+<string name="advanced_residual_fatigue_info_tooltip">Tracks training fatigue that accumulates from workouts and decays exponentially. Shadow mode: it does not affect Readiness or any other score. Configured half-life (24 h default) and gain (1.0 gain default) are provisional product guardrails, not scientifically validated ranges.</string>
+<string name="advanced_residual_fatigue_half_life_label">Fatigue half-life</string>
+<string name="advanced_residual_fatigue_half_life_hours">%1$.0f h</string>
+<string name="advanced_residual_fatigue_half_life_desc">Time required for workout fatigue to decay by half. Range (6–96 h) and default (24 h) are provisional product guardrails, not scientifically validated clinical ranges.</string>
+<string name="advanced_residual_fatigue_gain_label">Fatigue gain</string>
+<string name="advanced_residual_fatigue_gain_value">%1$.2f</string>
+<string name="advanced_residual_fatigue_gain_desc">Scaling factor applied to workout impulses. Range (0.1–5.0) and default (1.00) are provisional product guardrails, not scientifically validated clinical ranges.</string>
+<string name="advanced_residual_fatigue_reset_button">Reset fatigue to defaults</string>
 <string name="advanced_training_load_label">Training Load Model</string>
 <string name="advanced_trimp_banister">Banister</string>
 <string name="advanced_trimp_cheng">Cheng LT-TRIMP</string>
@@ -182,6 +192,21 @@
 <string name="settings_sleep_minutes_value">%1$d min</string>
 <string name="settings_sleep_percent_value">%1$d%%</string>
 <string name="settings_sleep_time_value">%1$02d:%2$02d</string>
+<string name="settings_sleep_score_emphasis_label">Sleep score emphasis</string>
+<string name="settings_sleep_profile_balanced">Balanced</string>
+<string name="settings_sleep_profile_balanced_description">Even weighting; duration still leads.</string>
+<string name="settings_sleep_profile_duration_focused">Duration Focused</string>
+<string name="settings_sleep_profile_duration_focused_description">Total sleep time dominates the score.</string>
+<string name="settings_sleep_profile_recovery_focused">Recovery Focused</string>
+<string name="settings_sleep_profile_recovery_focused_description">Restoration (HRV and RHR recovery) leads the score.</string>
+<string name="settings_sleep_profile_architecture_focused">Architecture Focused</string>
+<string name="settings_sleep_profile_architecture_focused_description">Prioritizes deep and REM stage composition.</string>
+<string name="settings_sleep_profile_continuity_focused">Continuity Focused</string>
+<string name="settings_sleep_profile_continuity_focused_description">Weights night-time wake-ups and fragmentation more heavily.</string>
+<string name="settings_sleep_hypersomnia_onset_label">Oversleep penalty starts at</string>
+<string name="settings_sleep_hypersomnia_onset_value">%1$d%% of goal</string>
+<string name="settings_recalculate_scores_title">Recalculate scores</string>
+<string name="settings_recalculate_scores_description">Rebuild every stored score from data already on this device.</string>
 <string name="load_source_option_everyday_hr">Everyday HR load</string>
 <string name="load_source_option_workout_only">Workout only</string>
 <string name="load_sources_ras_help">Controls RAS only, independent of the Strain / Training Load source above.</string>
@@ -263,6 +288,12 @@
 <string name="threshold_rhr_warning_desc">RHR ratio to baseline to be considered Warning (e.g.
         100-120%%).</string>
 <string name="threshold_rhr_warning_label">RHR Warning</string>
+<string name="workout_detail_layouts_section_header">Workout details</string>
+<string name="workout_detail_layouts_reset_button">Reset all workout detail layouts</string>
+<string name="workout_detail_layouts_reset_desc">Returns the workout detail screen to the default layout for every workout type.</string>
+<string name="workout_detail_layouts_reset_dialog_title">Reset workout detail layouts?</string>
+<string name="workout_detail_layouts_reset_dialog_body">Every workout type returns to the default layout. Customizations you made per type are discarded. This cannot be undone.</string>
+<string name="workout_detail_layouts_reset_dialog_confirm">Reset</string>
 <plurals name="accessibility_circadian_threshold_state">
         <item quantity="one">Current value: %1$d minute</item>
         <item quantity="other">Current value: %1$d minutes</item>

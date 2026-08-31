@@ -46,7 +46,7 @@ data class Dimens(
     val metricGaugeMarkerDiameter: Dp = 6.dp,
     val metricGaugeTickDiameter: Dp = 4.dp,
     val metricGaugeValueUnitSpacing: Dp = 2.dp,
-    val metricGaugeValueVerticalOffset: Dp = 6.dp,
+    val metricGaugeValueVerticalOffset: Dp = 2.dp,
     val syncProgressBarThickness: Dp = 4.dp,
 )
 

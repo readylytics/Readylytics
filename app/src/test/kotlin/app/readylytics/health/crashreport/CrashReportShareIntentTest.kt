@@ -4,9 +4,9 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.R
-import app.readylytics.health.domain.githubissue.GitHubIssueType
-import app.readylytics.health.domain.githubissue.IssueReportRequest
-import app.readylytics.health.domain.githubissue.ReportChannel
+import app.readylytics.health.core.model.domain.githubissue.GitHubIssueType
+import app.readylytics.health.core.model.domain.githubissue.IssueReportRequest
+import app.readylytics.health.core.model.domain.githubissue.ReportChannel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

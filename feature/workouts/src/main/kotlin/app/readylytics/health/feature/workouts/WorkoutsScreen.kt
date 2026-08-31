@@ -1,9 +1,7 @@
 package app.readylytics.health.feature.workouts
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,46 +9,24 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.core.designsystem.spacing
-import app.readylytics.health.core.ui.common.CardLoader
-import app.readylytics.health.core.ui.common.ScoreDialSkeleton
 import app.readylytics.health.core.ui.common.ScreenHeaderSection
-import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.common.TimeRange
-import app.readylytics.health.core.ui.components.CardConfigurationsList
 import app.readylytics.health.core.ui.components.CardDataMap
 import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.EditModeFab
-import app.readylytics.health.core.ui.components.ReorderableCardGrid
-import app.readylytics.health.core.ui.components.ReorderableWorkoutChartList
-import app.readylytics.health.core.ui.components.ReorderableWorkoutHistoryList
-import app.readylytics.health.core.ui.components.SectionHeader
-import app.readylytics.health.core.ui.components.StatusLegend
-import app.readylytics.health.core.ui.components.WorkoutChartConfigurationsList
 import app.readylytics.health.core.ui.components.WorkoutChartDataMap
-import app.readylytics.health.core.ui.components.WorkoutHistoryConfigurationsList
 import app.readylytics.health.core.ui.components.WorkoutHistoryDataMap
 import app.readylytics.health.core.ui.components.rememberManageLayoutState
-import app.readylytics.health.core.ui.dashboard.DateSwitcher
-import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
 fun WorkoutsRoute(
@@ -81,10 +57,12 @@ fun WorkoutsRoute(
         onToggleHistoryVisibility = viewModel::onToggleHistoryVisibility,
         onReorderHistory = viewModel::onReorderHistory,
         onResetWorkoutsToDefaults = viewModel::onResetWorkoutsToDefaults,
+        onFatigueRangeSelected = viewModel::onFatigueRangeSelected,
     )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
+@Suppress("LongMethod", "LongParameterList")
 @Composable
 fun WorkoutsScreen(
     uiState: WorkoutsUiState,
@@ -100,17 +78,26 @@ fun WorkoutsScreen(
     earliestDate: java.time.LocalDate? = null,
     onToggleWorkoutsManagement: () -> Unit = {},
     onCancelWorkoutsManagement: () -> Unit = {},
-    onToggleCardVisibility: (app.readylytics.health.domain.dashboard.CardId, Boolean) -> Unit = { _, _ -> },
-    onReorderCards: (List<app.readylytics.health.domain.dashboard.CardConfiguration>) -> Unit = {},
+    onToggleCardVisibility: (app.readylytics.health.core.model.domain.dashboard.CardId, Boolean) -> Unit = { _, _ -> },
+    onReorderCards: (List<app.readylytics.health.core.model.domain.dashboard.CardConfiguration>) -> Unit = {},
     onWorkoutsCardDisplayModeChanged: (
-        app.readylytics.health.domain.dashboard.CardId,
-        app.readylytics.health.domain.dashboard.DashboardCardDisplayMode,
+        app.readylytics.health.core.model.domain.dashboard.CardId,
+        app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode,
     ) -> Unit = { _, _ -> },
-    onToggleChartVisibility: (app.readylytics.health.domain.workouts.WorkoutChartId, Boolean) -> Unit = { _, _ -> },
-    onReorderCharts: (List<app.readylytics.health.domain.workouts.WorkoutChartConfiguration>) -> Unit = {},
-    onToggleHistoryVisibility: (app.readylytics.health.domain.workouts.WorkoutHistoryId, Boolean) -> Unit = { _, _ -> },
-    onReorderHistory: (List<app.readylytics.health.domain.workouts.WorkoutHistoryConfiguration>) -> Unit = {},
+    onToggleChartVisibility: (
+        app.readylytics.health.core.model.domain.workouts.WorkoutChartId,
+        Boolean,
+    ) -> Unit = { _, _ -> },
+    onReorderCharts: (List<app.readylytics.health.core.model.domain.workouts.WorkoutChartConfiguration>) -> Unit = {},
+    onToggleHistoryVisibility: (
+        app.readylytics.health.core.model.domain.workouts.WorkoutHistoryId,
+        Boolean,
+    ) -> Unit = { _, _ -> },
+    onReorderHistory: (
+        List<app.readylytics.health.core.model.domain.workouts.WorkoutHistoryConfiguration>,
+    ) -> Unit = {},
     onResetWorkoutsToDefaults: () -> Unit = {},
+    onFatigueRangeSelected: (app.readylytics.health.core.model.domain.workouts.FatigueCurveRange) -> Unit = {},
 ) {
     val scrollState = rememberScrollState()
     val manageState = rememberManageLayoutState()
@@ -132,7 +119,7 @@ fun WorkoutsScreen(
             )
         }
     val chartDataMap =
-        remember(uiState, selectedRange, chartScrollState, chartZoomState) {
+        remember(uiState, selectedRange, chartScrollState, chartZoomState, onFatigueRangeSelected) {
             WorkoutChartDataMap(
                 buildWorkoutsChartDataMap(
                     uiState = uiState,
@@ -141,6 +128,7 @@ fun WorkoutsScreen(
                     zoomState = chartZoomState,
                     granularity = selectedRange.granularity,
                     parentScrollInProgress = { scrollState.isScrollInProgress },
+                    onFatigueRangeSelected = onFatigueRangeSelected,
                 ),
             )
         }
@@ -176,18 +164,13 @@ fun WorkoutsScreen(
 
         Column(modifier = Modifier.fillMaxSize()) {
             ScreenHeaderSection(isLoading = uiState.isRefreshing) { isDisabled ->
-                DateSwitcher(
+                DateSwitcherSection(
                     selectedDate = uiState.selectedDate,
                     onPreviousDay = onPreviousDay,
                     onNextDay = onNextDay,
                     onDateSelected = onDateSelected,
                     earliestDate = earliestDate,
-                    enabled = !isDisabled,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = MaterialTheme.spacing.pageHorizontal)
-                            .padding(top = MaterialTheme.spacing.pageTop),
+                    isDisabled = isDisabled,
                 )
             }
 
@@ -202,110 +185,43 @@ fun WorkoutsScreen(
                             bottom = MaterialTheme.spacing.pageBottom,
                         ),
             ) {
-                CardLoader(
+                CardsDisplaySection(
+                    uiState = uiState,
+                    cardDataMap = cardDataMap,
+                    isManagingCards = uiState.isManagingCards,
+                    onToggleCardVisibility = onToggleCardVisibility,
+                    onReorderCards = onReorderCards,
+                )
+
+                AcwrRangeSection(
+                    selectedRange = selectedRange,
                     isLoading = uiState.isLoading,
-                    skeleton = { WorkoutsCardsSkeleton() },
-                    content = {
-                        ReorderableCardGrid(
-                            cardConfigurations = CardConfigurationsList(uiState.cardConfigurations),
-                            cardDataMap = cardDataMap,
-                            isEditing = uiState.isManagingCards,
-                            onCardRemove = { cardId -> onToggleCardVisibility(cardId, false) },
-                            onCardReorder = onReorderCards,
-                            modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
-                            additionalFullWidthIds = setOf(CardId.RAS_DAILY),
-                        )
-                    },
+                    isRangeChanging = uiState.isRangeChanging,
+                    onRangeSelected = onRangeSelected,
                 )
 
-                Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
-                SectionHeader(
-                    title = stringResource(R.string.workout_stats_acwr_title),
-                    enabled = !uiState.isLoading,
-                )
-                Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
-                SingleChoiceSegmentedButtonRow(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
-                ) {
-                    TimeRange.entries.forEachIndexed { index, range ->
-                        SegmentedButton(
-                            selected = selectedRange == range,
-                            onClick = { onRangeSelected(range) },
-                            enabled = !uiState.isLoading && !uiState.isRangeChanging,
-                            shape = SegmentedButtonDefaults.itemShape(index = index, count = TimeRange.entries.size),
-                            label = { Text(range.label) },
-                        )
-                    }
-                }
-                Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
-
-                CardLoader(
-                    isLoading = uiState.isLoading || uiState.isRangeChanging,
-                    skeleton = {
-                        SkeletonCard(
-                            height = 220.dp,
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
-                        )
-                    },
-                    content = {
-                        ReorderableWorkoutChartList(
-                            chartConfigurations = WorkoutChartConfigurationsList(uiState.chartConfigurations),
-                            chartDataMap = chartDataMap,
-                            isEditing = uiState.isManagingCharts,
-                            onChartHide = { chartId -> onToggleChartVisibility(chartId, false) },
-                            onChartReorder = onReorderCharts,
-                        )
-                    },
+                ChartsDisplaySection(
+                    uiState = uiState,
+                    chartDataMap = chartDataMap,
+                    isManagingCharts = uiState.isManagingCharts,
+                    onToggleChartVisibility = onToggleChartVisibility,
+                    onReorderCharts = onReorderCharts,
                 )
 
                 Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
 
-                CardLoader(
-                    isLoading = uiState.isLoading,
-                    skeleton = { WorkoutListSectionSkeleton() },
-                    content = {
-                        ReorderableWorkoutHistoryList(
-                            historyConfigurations = WorkoutHistoryConfigurationsList(uiState.historyConfigurations),
-                            historyDataMap = historyDataMap,
-                            isEditing = uiState.isManagingHistory,
-                            onHistoryHide = { historyId -> onToggleHistoryVisibility(historyId, false) },
-                            onHistoryReorder = onReorderHistory,
-                        )
-                    },
+                HistoryDisplaySection(
+                    uiState = uiState,
+                    historyDataMap = historyDataMap,
+                    isManagingHistory = uiState.isManagingHistory,
+                    onToggleHistoryVisibility = onToggleHistoryVisibility,
+                    onReorderHistory = onReorderHistory,
                 )
 
-                Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
-
-                StatusLegend()
-
-                if (!uiState.isManagingWorkoutsLayout) {
-                    FilledTonalButton(
-                        onClick = onToggleWorkoutsManagement,
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(
-                                    horizontal = MaterialTheme.spacing.pageHorizontal,
-                                    vertical = MaterialTheme.spacing.pageSectionGap,
-                                ),
-                        colors =
-                            ButtonDefaults.filledTonalButtonColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                contentColor = MaterialTheme.colorScheme.onSurface,
-                            ),
-                    ) {
-                        Text(
-                            text = stringResource(CoreUiR.string.action_customize),
-                            style = MaterialTheme.typography.labelLarge,
-                        )
-                    }
-                }
+                StatusAndFooterSection(
+                    isManagingWorkoutsLayout = uiState.isManagingWorkoutsLayout,
+                    onToggleWorkoutsManagement = onToggleWorkoutsManagement,
+                )
             }
         }
 
@@ -316,37 +232,5 @@ fun WorkoutsScreen(
             onManageClick = manageState.openManage,
             modifier = Modifier.align(Alignment.BottomEnd).padding(MaterialTheme.spacing.pageHorizontal),
         )
-    }
-}
-
-@Composable
-private fun WorkoutsCardsSkeleton() {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = MaterialTheme.spacing.pageHorizontal, vertical = MaterialTheme.spacing.small),
-        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
-    ) {
-        ScoreDialSkeleton(height = 156.dp, modifier = Modifier.weight(1f))
-        ScoreDialSkeleton(height = 156.dp, modifier = Modifier.weight(1f))
-    }
-}
-
-@Composable
-private fun WorkoutListSectionSkeleton() {
-    Column(
-        modifier =
-            Modifier.padding(
-                horizontal = MaterialTheme.spacing.pageHorizontal,
-                vertical = MaterialTheme.spacing.pageSectionGap,
-            ),
-    ) {
-        repeat(3) {
-            SkeletonCard(
-                height = 80.dp,
-                modifier = Modifier.fillMaxWidth().padding(bottom = MaterialTheme.spacing.small),
-            )
-        }
     }
 }

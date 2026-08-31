@@ -1,14 +1,14 @@
 package app.readylytics.health.feature.workouts
 
 import androidx.compose.runtime.Immutable
-import app.readylytics.health.domain.dashboard.CardConfiguration
-import app.readylytics.health.domain.dashboard.CardManagementDelegate
-import app.readylytics.health.domain.layout.LayoutManagementDelegate
-import app.readylytics.health.domain.workouts.WorkoutChartConfiguration
-import app.readylytics.health.domain.workouts.WorkoutChartId
-import app.readylytics.health.domain.workouts.WorkoutHistoryConfiguration
-import app.readylytics.health.domain.workouts.WorkoutHistoryId
-import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
+import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
+import app.readylytics.health.core.model.domain.dashboard.CardManagementDelegate
+import app.readylytics.health.core.model.domain.layout.LayoutManagementDelegate
+import app.readylytics.health.core.model.domain.workouts.WorkoutChartConfiguration
+import app.readylytics.health.core.model.domain.workouts.WorkoutChartId
+import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryConfiguration
+import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryId
+import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 

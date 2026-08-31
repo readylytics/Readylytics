@@ -21,10 +21,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.domain.githubissue.GitHubIssueType
+import app.readylytics.health.core.model.domain.githubissue.IssueReportRequest
+import app.readylytics.health.core.model.domain.githubissue.ReportChannel
 import app.readylytics.health.core.ui.components.SettingsToggleItem
-import app.readylytics.health.domain.githubissue.GitHubIssueType
-import app.readylytics.health.domain.githubissue.IssueReportRequest
-import app.readylytics.health.domain.githubissue.ReportChannel
 import app.readylytics.health.feature.settings.R
 import kotlin.math.roundToInt
 

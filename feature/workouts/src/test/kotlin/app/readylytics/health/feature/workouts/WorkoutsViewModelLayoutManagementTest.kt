@@ -2,21 +2,22 @@ package app.readylytics.health.feature.workouts
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import app.readylytics.health.data.preferences.SettingsDefaults
-import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.domain.date.SelectedDateStore
-import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.repository.DailySummaryRepository
-import app.readylytics.health.domain.repository.HeartRateRepository
-import app.readylytics.health.domain.repository.WorkoutRepository
-import app.readylytics.health.domain.scoring.GetWorkoutDisplayMetricsUseCase
-import app.readylytics.health.domain.scoring.ScoringCalculator
-import app.readylytics.health.domain.sync.ForegroundSyncGateway
-import app.readylytics.health.domain.workouts.WorkoutChartId
-import app.readylytics.health.domain.workouts.WorkoutHistoryId
-import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
+import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.date.SelectedDateStore
+import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
+import app.readylytics.health.core.model.domain.repository.HeartRateRepository
+import app.readylytics.health.core.model.domain.repository.WorkoutRepository
+import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
+import app.readylytics.health.core.model.domain.workouts.WorkoutChartId
+import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryId
+import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
+import app.readylytics.health.core.scoring.domain.scoring.GetWorkoutDisplayMetricsUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
+import app.readylytics.health.core.scoring.domain.workouts.weekly.ComputeWeeklyTrainingStatsUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -76,6 +77,7 @@ class WorkoutsViewModelLayoutManagementTest {
         workoutRepository =
             mockk {
                 coEvery { getEarliestWorkoutTimestamp() } returns null
+                coEvery { getCanonicalFatigueSeed(any()) } returns emptyList()
                 coEvery { countByTimeRange(any(), any()) } returns 0
                 coEvery { getInRangePaged(any(), any(), any(), any()) } returns emptyList()
                 coEvery { getInRange(any(), any()) } returns emptyList()
@@ -103,18 +105,27 @@ class WorkoutsViewModelLayoutManagementTest {
 
     private fun createViewModel(): WorkoutsViewModel =
         WorkoutsViewModel(
-            dailySummaryRepository = dailySummaryRepository,
-            workoutRepository = workoutRepository,
-            heartRateRepository = heartRateRepository,
+            repositories =
+                WorkoutsRepositories(
+                    dailySummaryRepository,
+                    workoutRepository,
+                    heartRateRepository,
+                ),
             selectedDateRepository = selectedDateRepository,
             scoringCalculator = scoringCalculator,
             settingsRepo = settingsRepo,
-            getWorkoutDisplayMetricsUseCase = getWorkoutDisplayMetricsUseCase,
             foregroundSyncController = foregroundSyncController,
             workoutsLayoutRepository = workoutsLayoutRepository,
-            savedStateHandle = SavedStateHandle(),
-            ioDispatcher = testDispatcher,
-            defaultDispatcher = testDispatcher,
+            selectedRangeStore = WorkoutsSelectedRangeStore(SavedStateHandle()),
+            dispatchers = WorkoutsDispatchers(testDispatcher, testDispatcher),
+            useCases =
+                WorkoutsUseCases(
+                    getWorkoutDisplayMetricsUseCase,
+                    ComputeWeeklyTrainingStatsUseCase(),
+                    app.readylytics.health.core.scoring.domain.scoring
+                        .GenerateResidualFatigueCurveUseCase(),
+                    WorkoutsDistancePermissionGate { true },
+                ),
         )
 
     @After
@@ -165,7 +176,10 @@ class WorkoutsViewModelLayoutManagementTest {
             viewModel = createViewModel()
             val collector = backgroundScope.launch { viewModel.uiState.collect() }
             advanceUntilIdle()
-            assertEquals(1, viewModel.uiState.value.chartConfigurations.size)
+            assertEquals(
+                SettingsDefaults.DEFAULT_WORKOUT_CHARTS.size,
+                viewModel.uiState.value.chartConfigurations.size,
+            )
 
             viewModel.toggleWorkoutsManagement()
             advanceUntilIdle()
@@ -182,6 +196,146 @@ class WorkoutsViewModelLayoutManagementTest {
             coVerify {
                 workoutsLayoutRepository.updateWorkoutChartConfigurations(
                     match { charts -> charts.any { it.chartId == WorkoutChartId.ACWR_TRIMP && !it.isVisible } },
+                )
+            }
+            collector.cancel()
+        }
+
+    @Test
+    fun `chart management toggle hides weekly training section and persists on save`() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            advanceUntilIdle()
+
+            viewModel.toggleWorkoutsManagement()
+            advanceUntilIdle()
+            viewModel.onToggleChartVisibility(WorkoutChartId.WEEKLY_TRAINING, visible = false)
+            advanceUntilIdle()
+            assertFalse(
+                viewModel.uiState.value.chartConfigurations
+                    .first { it.chartId == WorkoutChartId.WEEKLY_TRAINING }
+                    .isVisible,
+            )
+
+            viewModel.toggleWorkoutsManagement()
+            advanceUntilIdle()
+            coVerify {
+                workoutsLayoutRepository.updateWorkoutChartConfigurations(
+                    match { charts -> charts.any { it.chartId == WorkoutChartId.WEEKLY_TRAINING && !it.isVisible } },
+                )
+            }
+            collector.cancel()
+        }
+
+    @Test
+    fun `chart management toggle hides activity volume section and persists on save`() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            advanceUntilIdle()
+
+            viewModel.toggleWorkoutsManagement()
+            advanceUntilIdle()
+            viewModel.onToggleChartVisibility(WorkoutChartId.ACTIVITY_VOLUME, visible = false)
+            advanceUntilIdle()
+            assertFalse(
+                viewModel.uiState.value.chartConfigurations
+                    .first { it.chartId == WorkoutChartId.ACTIVITY_VOLUME }
+                    .isVisible,
+            )
+
+            viewModel.toggleWorkoutsManagement()
+            advanceUntilIdle()
+            coVerify {
+                workoutsLayoutRepository.updateWorkoutChartConfigurations(
+                    match { charts -> charts.any { it.chartId == WorkoutChartId.ACTIVITY_VOLUME && !it.isVisible } },
+                )
+            }
+            collector.cancel()
+        }
+
+    @Test
+    fun `chart management toggle hides training mix section and persists on save`() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            advanceUntilIdle()
+
+            viewModel.toggleWorkoutsManagement()
+            advanceUntilIdle()
+            viewModel.onToggleChartVisibility(WorkoutChartId.TRAINING_MIX, visible = false)
+            advanceUntilIdle()
+            assertFalse(
+                viewModel.uiState.value.chartConfigurations
+                    .first { it.chartId == WorkoutChartId.TRAINING_MIX }
+                    .isVisible,
+            )
+
+            viewModel.toggleWorkoutsManagement()
+            advanceUntilIdle()
+            coVerify {
+                workoutsLayoutRepository.updateWorkoutChartConfigurations(
+                    match { charts -> charts.any { it.chartId == WorkoutChartId.TRAINING_MIX && !it.isVisible } },
+                )
+            }
+            collector.cancel()
+        }
+
+    @Test
+    fun `chart management toggle shows residual fatigue curve and persists on save`() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            advanceUntilIdle()
+
+            viewModel.toggleWorkoutsManagement()
+            advanceUntilIdle()
+            viewModel.onToggleChartVisibility(WorkoutChartId.RESIDUAL_FATIGUE_CURVE, visible = true)
+            advanceUntilIdle()
+            assertTrue(
+                viewModel.uiState.value.chartConfigurations
+                    .first { it.chartId == WorkoutChartId.RESIDUAL_FATIGUE_CURVE }
+                    .isVisible,
+            )
+
+            viewModel.toggleWorkoutsManagement()
+            advanceUntilIdle()
+            coVerify {
+                workoutsLayoutRepository.updateWorkoutChartConfigurations(
+                    match { charts ->
+                        charts.any { it.chartId == WorkoutChartId.RESIDUAL_FATIGUE_CURVE && it.isVisible }
+                    },
+                )
+            }
+            collector.cancel()
+        }
+
+    @Test
+    fun `reorder charts updates chart positions and persists on save`() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            advanceUntilIdle()
+
+            viewModel.toggleWorkoutsManagement()
+            advanceUntilIdle()
+
+            val current = viewModel.uiState.value.chartConfigurations
+            val trainingMixConfig = current.first { it.chartId == WorkoutChartId.TRAINING_MIX }
+            val newOrder = listOf(trainingMixConfig) + current.filter { it.chartId != WorkoutChartId.TRAINING_MIX }
+            viewModel.onReorderCharts(newOrder)
+            advanceUntilIdle()
+
+            val reordered = viewModel.uiState.value.chartConfigurations
+            assertEquals(WorkoutChartId.TRAINING_MIX, reordered[0].chartId)
+
+            viewModel.toggleWorkoutsManagement()
+            advanceUntilIdle()
+
+            coVerify {
+                workoutsLayoutRepository.updateWorkoutChartConfigurations(
+                    match { charts -> charts.first().chartId == WorkoutChartId.TRAINING_MIX },
                 )
             }
             collector.cancel()

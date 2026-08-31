@@ -2,6 +2,7 @@ package app.readylytics.health.core.designsystem
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import java.util.Locale
 
 val Purple80 = Color(0xFFD0BCFF)
 val PurpleGrey80 = Color(0xFFCCC2DC)
@@ -48,4 +49,4 @@ val TurquoiseSeed = Color(0xFF006A60)
 val GreenSeed = Color(0xFF386A20)
 val RecoveryBlueSeed = Color(0xFF0061A4)
 
-fun Color.toHexCode(): String = String.format("#%06X", (0xFFFFFF and this.toArgb()))
+fun Color.toHexCode(): String = String.format(Locale.ROOT, "#%06X", (0xFFFFFF and this.toArgb()))

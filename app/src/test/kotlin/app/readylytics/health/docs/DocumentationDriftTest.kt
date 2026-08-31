@@ -1,15 +1,17 @@
 package app.readylytics.health.docs
 
-import app.readylytics.health.data.local.HealthDatabase
-import app.readylytics.health.data.preferences.PhysiologyProfile
-import app.readylytics.health.data.preferences.SettingsDefaults
-import app.readylytics.health.domain.circadian.CircadianThresholdDefaults
-import app.readylytics.health.domain.scoring.LoadCoverageConfidence
-import app.readylytics.health.domain.scoring.LoadSourceMode
-import app.readylytics.health.domain.scoring.ScoringConfigFactory
-import app.readylytics.health.domain.scoring.ScoringConstants
-import app.readylytics.health.domain.scoring.components.Phase
-import app.readylytics.health.domain.scoring.components.SleepArchitectureTargets
+import app.readylytics.health.core.database.data.local.HealthDatabase
+import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
+import app.readylytics.health.core.model.domain.circadian.CircadianThresholdDefaults
+import app.readylytics.health.core.model.domain.scoring.LoadCoverageConfidence
+import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants
+import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
+import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
+import app.readylytics.health.core.scoring.domain.scoring.components.Phase
+import app.readylytics.health.core.scoring.domain.scoring.components.SleepArchitectureTargetFactory
+import app.readylytics.health.core.scoring.domain.scoring.components.SleepArchitectureTargets
 import org.junit.Test
 import java.io.File
 import kotlin.test.assertEquals
@@ -49,12 +51,11 @@ class DocumentationDriftTest {
             "feature/settings/src/main/res/values/strings.xml",
             "feature/onboarding/src/main/res/values/strings.xml",
         ).mapNotNull { path ->
-            try {
-                readRepoFile(path)
-            } catch (e: Throwable) {
-                null
-            }
+            listOf(File(path), File("../$path"), File("../../$path"))
+                .firstOrNull { it.exists() }
+                ?.readText()
         }.joinToString("\n")
+    private val customizationMd = readRepoFile("docs/customization.md")
     private val dataFlowMd = readRepoFile("internal-docs/DATA_FLOW.md")
     private val buildGradleKts = readRepoFile("app/build.gradle.kts")
     private val governanceDocPaths =
@@ -67,13 +68,23 @@ class DocumentationDriftTest {
 
     @Test
     fun `sleep score weights match ABOUT md`() {
-        assertEquals(0.50f, ScoringConstants.Sleep.WEIGHT_DURATION)
-        assertEquals(0.25f, ScoringConstants.Sleep.WEIGHT_ARCHITECTURE)
-        assertEquals(0.25f, ScoringConstants.Sleep.WEIGHT_RESTORATION)
+        val profile = SleepScoreWeightProfile.BALANCED
+        assertEquals(0.40f, profile.durationWeight)
+        assertEquals(0.20f, profile.architectureWeight)
+        assertEquals(0.25f, profile.restorationWeight)
+        assertEquals(0.15f, profile.fragmentationWeight)
 
-        assertTrue(aboutMd.contains("Duration (50%)"))
-        assertTrue(aboutMd.contains("Architecture (25%)"))
+        assertTrue(aboutMd.contains("Duration (40%)"))
+        assertTrue(aboutMd.contains("Architecture (20%)"))
         assertTrue(aboutMd.contains("Restoration (25%)"))
+        assertTrue(aboutMd.contains("Fragmentation (15%)"))
+    }
+
+    @Test
+    fun `fragmentation and regularity are documented`() {
+        assertTrue(aboutMd.contains("Sleep Regularity"))
+        assertTrue(aboutMd.contains("WASO"))
+        assertTrue(stringsXml.contains("Fragmentation"))
     }
 
     @Test
@@ -81,9 +92,8 @@ class DocumentationDriftTest {
         val requiredStageLessPhrases =
             listOf(
                 "raw session span",
-                "Duration 75%",
-                "Architecture 0%",
-                "Restoration 25%",
+                "renormalizes",
+                "Duration and Restoration",
             )
 
         for ((surface, text) in listOf(
@@ -155,22 +165,34 @@ class DocumentationDriftTest {
 
     @Test
     fun `age-banded deep and REM sleep targets match ABOUT md table`() {
-        assertAgeBandInAboutMd("18–29", SleepArchitectureTargets.AgeRange18To29())
-        assertAgeBandInAboutMd("30–49", SleepArchitectureTargets.AgeRange30To49())
-        assertAgeBandInAboutMd("50–59", SleepArchitectureTargets.AgeRange50To59())
-        assertAgeBandInAboutMd("60+", SleepArchitectureTargets.AgeRange60Plus())
+        assertAgeBandInAboutMd("18–29", SleepArchitectureTargetFactory.create(25))
+        assertAgeBandInAboutMd("30–49", SleepArchitectureTargetFactory.create(40))
+        assertAgeBandInAboutMd("50–59", SleepArchitectureTargetFactory.create(55))
+        assertAgeBandInAboutMd("60+", SleepArchitectureTargetFactory.create(70))
     }
+
+    private val ageBandTolerances =
+        mapOf(
+            "18–29" to 0.004f,
+            "30–49" to 0.004f,
+            "50–59" to 0.005f,
+            "60+" to 0.011f,
+        )
 
     private fun assertAgeBandInAboutMd(
         ageRangeLabel: String,
-        targets: SleepArchitectureTargets,
+        targets: app.readylytics.health.core.scoring.domain.scoring.components.SleepArchitectureTargets,
     ) {
-        val deepPercent = "${(targets.deepPercentage * 100).toInt()}%"
-        val remPercent = "${(targets.remPercentage * 100).toInt()}%"
         val row = aboutMd.lineSequence().firstOrNull { it.contains("| $ageRangeLabel") }
         assertTrue(row != null, "expected a table row for age range $ageRangeLabel in ABOUT.md")
-        assertTrue(row.contains(deepPercent), "row for $ageRangeLabel should contain deep target $deepPercent")
-        assertTrue(row.contains(remPercent), "row for $ageRangeLabel should contain REM target $remPercent")
+        val parts = row.split("|").map { it.trim() }.filter { it.isNotEmpty() }
+        val deepPercent = parts[1].removeSuffix("%").toFloat() / 100f
+        val remPercent = parts[2].removeSuffix("%").toFloat() / 100f
+        val tolerance =
+            ageBandTolerances[ageRangeLabel]
+                ?: error("No tolerance defined for age band $ageRangeLabel")
+        assertEquals(targets.deepPercentage, deepPercent, tolerance, "Deep target mismatch for $ageRangeLabel")
+        assertEquals(targets.remPercentage, remPercent, tolerance, "REM target mismatch for $ageRangeLabel")
     }
 
     @Test
@@ -345,6 +367,98 @@ class DocumentationDriftTest {
         for (profile in listOf("Athlete", "Active", "Sedentary")) {
             assertTrue(aboutMd.contains("**$profile**"), "ABOUT.md should describe profile $profile")
             assertTrue(stringsXml.contains(profile), "strings.xml should reference profile $profile")
+        }
+    }
+
+    @Test
+    fun `workout GPS and route details documentation is synchronized across About surfaces and DATA_FLOW md`() {
+        val requiredRoutePhrases =
+            listOf(
+                "Douglas-Peucker",
+                "Canvas",
+                "workout_route_points",
+            )
+
+        for ((surface, text) in listOf(
+            "ABOUT.md" to aboutMd,
+            "docs/about.md" to publicAboutMd,
+            "DATA_FLOW.md" to dataFlowMd,
+        )) {
+            for (phrase in requiredRoutePhrases) {
+                assertTrue(text.contains(phrase), "$surface must contain '$phrase'")
+            }
+        }
+    }
+
+    /**
+     * User-facing surfaces that document the Residual Fatigue parameters: the two About pages, the
+     * public customization guide, and the in-app Advanced Settings copy.
+     */
+    private val residualFatigueSurfaces
+        get() =
+            listOf(
+                "ABOUT.md" to aboutMd,
+                "docs/about.md" to publicAboutMd,
+                "docs/customization.md" to customizationMd,
+                "strings.xml" to stringsXml,
+            )
+
+    @Test
+    fun `residual fatigue defaults and bounds match documented numbers`() {
+        assertEquals(24f, SettingsDefaults.RESIDUAL_FATIGUE_HALF_LIFE_HOURS)
+        assertEquals(6f, SettingsDefaults.MIN_RESIDUAL_FATIGUE_HALF_LIFE_HOURS)
+        assertEquals(96f, SettingsDefaults.MAX_RESIDUAL_FATIGUE_HALF_LIFE_HOURS)
+        assertEquals(1.0f, SettingsDefaults.RESIDUAL_FATIGUE_GAIN)
+        assertEquals(0.1f, SettingsDefaults.MIN_RESIDUAL_FATIGUE_GAIN)
+        assertEquals(5.0f, SettingsDefaults.MAX_RESIDUAL_FATIGUE_GAIN)
+
+        for ((surface, text) in residualFatigueSurfaces) {
+            val normalized = normalizeWhitespace(text)
+            assertTrue(normalized.contains("24 h"), "$surface must document the 24 h half-life default")
+            assertTrue(normalized.contains("6–96 h"), "$surface must document the 6–96 h half-life bounds")
+            assertTrue(normalized.contains("0.1–5.0"), "$surface must document the 0.1–5.0 gain bounds")
+            assertTrue(normalized.contains("1.0 gain") || normalized.contains("default 1.0"))
+        }
+    }
+
+    @Test
+    fun `residual fatigue shadow-only claim is present on every surface`() {
+        val surfaces = residualFatigueSurfaces + ("DATA_FLOW.md" to dataFlowMd)
+        for ((surface, text) in surfaces) {
+            val normalized = normalizeWhitespace(text)
+            assertTrue(
+                normalized.contains("does not modify Readiness") ||
+                    normalized.contains("does not affect Readiness"),
+                "$surface must state that Residual Fatigue does not modify Readiness (Phase 1 shadow mode)",
+            )
+        }
+    }
+
+    /**
+     * The profile-independent multiplier claim. It is true rather than aspirational only because the
+     * DataStore migration normalizes the legacy per-profile defaults (1.35 Active / 1.75 Sedentary) to
+     * 1.0 for users onboarded before the change — see `TrimpMigrationHelper.migrateRasCalibration` and
+     * DATA_FLOW.md "Banister multiplier normalization". Without that migration every onboarded user
+     * would still be running the old profile default and the documented claim would be false.
+     */
+    @Test
+    fun `banister multiplier is profile-independent and documented as such`() {
+        for (profile in PhysiologyProfile.values()) {
+            assertEquals(1.0f, profile.banisterMultiplier, "profile $profile must ship multiplier 1.0")
+        }
+
+        for ((surface, text) in listOf(
+            "ABOUT.md" to aboutMd,
+            "docs/about.md" to publicAboutMd,
+            "docs/customization.md" to customizationMd,
+            "DATA_FLOW.md" to dataFlowMd,
+        )) {
+            val normalized = normalizeWhitespace(text)
+            assertTrue(
+                normalized.contains("1.0 for every physiology profile") ||
+                    normalized.contains("1.0 for every profile"),
+                "$surface must document the profile-independent Banister multiplier",
+            )
         }
     }
 

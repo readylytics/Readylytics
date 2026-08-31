@@ -2,17 +2,17 @@ package app.readylytics.health.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.model.di.IoDispatcher
+import app.readylytics.health.core.model.domain.backup.BackupFileInfo
+import app.readylytics.health.core.model.domain.backup.BackupService
+import app.readylytics.health.core.model.domain.backup.RestoreResult
+import app.readylytics.health.core.model.domain.backup.RestoreService
+import app.readylytics.health.core.model.domain.backup.WrongBackupPasswordException
+import app.readylytics.health.core.model.domain.preferences.BackupSettings
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.security.EncryptionManager
+import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.ui.common.UiText
-import app.readylytics.health.di.IoDispatcher
-import app.readylytics.health.domain.backup.BackupFileInfo
-import app.readylytics.health.domain.backup.BackupService
-import app.readylytics.health.domain.backup.RestoreResult
-import app.readylytics.health.domain.backup.RestoreService
-import app.readylytics.health.domain.backup.WrongBackupPasswordException
-import app.readylytics.health.domain.preferences.BackupSettings
-import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.security.EncryptionManager
-import app.readylytics.health.domain.util.logE
 import app.readylytics.health.feature.settings.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
@@ -243,11 +243,10 @@ class LocalBackupViewModel
                             if (currentHash == null) {
                                 event.test.isEmpty()
                             } else {
-                                try {
-                                    encryptionManager.decrypt(currentHash) == event.test
-                                } catch (_: Exception) {
-                                    false
-                                }
+                                // EncryptionManager.decrypt already catches internally and returns
+                                // null on failure, so this cannot throw; a null result compares
+                                // false against the entered password, which is the desired outcome.
+                                encryptionManager.decrypt(currentHash) == event.test
                             }
                         transientState.update { it.copy(passwordVerificationResult = matches) }
                     }

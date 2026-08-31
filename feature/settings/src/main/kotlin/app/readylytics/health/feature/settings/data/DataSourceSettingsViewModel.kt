@@ -2,11 +2,11 @@ package app.readylytics.health.feature.settings.data
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.readylytics.health.domain.model.HealthDataType
-import app.readylytics.health.domain.preferences.DeviceSettings
-import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.sync.HistoricalResyncController
-import app.readylytics.health.domain.sync.HistoricalResyncState
+import app.readylytics.health.core.model.domain.model.HealthDataType
+import app.readylytics.health.core.model.domain.preferences.DeviceSettings
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.sync.HistoricalResyncController
+import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.feature.settings.DataSourceSettingsState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -47,13 +47,19 @@ class DataSourceSettingsViewModel
         // Internal property to allow overriding in tests
         var sharingStarted: SharingStarted = SharingStarted.WhileSubscribed(5000)
 
-        private val persistedDeviceByDataType =
+        private val persistedDeviceByDataType: StateFlow<Map<String, String>> by lazy {
             settingsReader.userPreferences.map { it.deviceByDataType }.stateIn(
                 scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5000),
+                started = sharingStarted,
                 initialValue = emptyMap(),
             )
+        }
 
+        // Eagerly is intentional, not an oversight: initialValue = false is a "not yet
+        // dismissed" sentinel. Routing this through the `sharingStarted` test seam would let
+        // it go cold and re-emit false on resubscribe, before the real preference reloads --
+        // a dismissed notice would visibly reappear. See
+        // internal-docs/plans/POST_REMEDIATION_FOLLOWUPS.md, Item 2.
         private val deviceChangeNoticeDismissed =
             settingsReader.userPreferences.map { it.deviceChangeNoticeDismissed }.stateIn(
                 scope = viewModelScope,
@@ -68,7 +74,7 @@ class DataSourceSettingsViewModel
                 persistedDeviceByDataType,
                 availableDevicesFlow,
                 pendingOverrides,
-                historicalResyncController.state,
+                historicalResyncController.state.map { it.running },
                 showDeviceChangeNoticeFlow,
                 isLoadingDevicesFlow,
             ) { args: Array<Any?> ->
@@ -80,7 +86,7 @@ class DataSourceSettingsViewModel
 
                 @Suppress("UNCHECKED_CAST")
                 val pending = args[2] as Map<HealthDataType, String?>
-                val resyncState = args[3] as HistoricalResyncState
+                val isResyncing = args[3] as Boolean
                 val showNotice = args[4] as Boolean
                 val isLoadingDevices = args[5] as Boolean
 
@@ -92,7 +98,7 @@ class DataSourceSettingsViewModel
                     availableDevices = availableDevices,
                     deviceByDataType = effective,
                     hasPendingChanges = pending.isNotEmpty(),
-                    isResyncing = resyncState.running,
+                    isResyncing = isResyncing,
                     showDeviceChangeNotice = showNotice,
                     isLoadingDevices = isLoadingDevices,
                 )
@@ -116,6 +122,7 @@ class DataSourceSettingsViewModel
                     deviceSettings.clearDeviceCache()
                     availableDevicesFlow.value = deviceSettings.getAvailableDevices()
                 } catch (e: Exception) {
+                    logE("DataSourceSettings", e) { "Failed to clear device cache" }
                     availableDevicesFlow.value = emptyList()
                 } finally {
                     isLoadingDevicesFlow.value = false

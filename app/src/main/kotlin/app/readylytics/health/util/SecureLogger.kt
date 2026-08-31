@@ -1,7 +1,7 @@
 package app.readylytics.health.util
 
-import app.readylytics.health.domain.util.logD
-import app.readylytics.health.domain.util.logE
+import app.readylytics.health.core.model.domain.util.logD
+import app.readylytics.health.core.model.domain.util.logE
 
 /**
  * Logging utility that prevents leakage of sensitive health data.

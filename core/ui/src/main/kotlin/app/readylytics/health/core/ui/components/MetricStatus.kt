@@ -4,16 +4,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import app.readylytics.health.core.designsystem.LocalExtendedColors
-import app.readylytics.health.domain.model.MetricStatus
-import app.readylytics.health.domain.model.strainRatioStatus
-
-internal enum class MetricContainerTone {
-    DEFAULT_CARD,
-    NEUTRAL,
-    PRIMARY,
-    WARNING,
-    ERROR,
-}
+import app.readylytics.health.core.model.domain.model.MetricStatus
+import app.readylytics.health.core.model.domain.model.strainRatioStatus
 
 internal fun MetricStatus.containerTone(): MetricContainerTone =
     when (this) {

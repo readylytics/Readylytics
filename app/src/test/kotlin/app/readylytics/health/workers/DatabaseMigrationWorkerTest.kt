@@ -7,10 +7,10 @@ import androidx.work.Data
 import androidx.work.ForegroundInfo
 import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
+import app.readylytics.health.core.model.domain.migration.DatabaseMigrationProgress
+import app.readylytics.health.core.model.domain.migration.V7MigrationPhase
+import app.readylytics.health.core.model.domain.migration.V7MigrationResult
 import app.readylytics.health.data.migration.V7DatabaseMigrator
-import app.readylytics.health.domain.migration.DatabaseMigrationProgress
-import app.readylytics.health.domain.migration.V7MigrationPhase
-import app.readylytics.health.domain.migration.V7MigrationResult
 import com.google.common.util.concurrent.Futures
 import io.mockk.coEvery
 import io.mockk.coVerify

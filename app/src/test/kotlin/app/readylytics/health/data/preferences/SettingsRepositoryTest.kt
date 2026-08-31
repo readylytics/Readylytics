@@ -6,12 +6,15 @@ import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.dataStoreFile
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -42,6 +45,11 @@ class SettingsRepositoryTest {
                 sync = mockk<SyncPreferences>(relaxed = true),
                 backup = mockk<BackupPreferences>(relaxed = true),
             )
+    }
+
+    @After
+    fun tearDown() {
+        runCatching { context.deleteFile("test_settings.pb") }
     }
 
     @Test
@@ -218,6 +226,115 @@ class SettingsRepositoryTest {
             assertEquals(100, prefs.supplementalArchitectureCoveragePercent)
         }
 
+    @Test
+    fun `default sleep score preferences and scoring version are exposed`() =
+        runTest {
+            val prefs = repository.userPreferences.first()
+            assertEquals(SleepScoreWeightProfile.BALANCED, prefs.sleepScoreWeightProfile)
+            assertEquals(125, prefs.hypersomniaOnsetPercent)
+            assertEquals(0, prefs.scoringVersion)
+        }
+
+    @Test
+    fun `updating sleep score weight profile, oversleep onset, and scoring version persists correctly`() =
+        runTest {
+            repository.updateSleepScoreWeightProfile(SleepScoreWeightProfile.DURATION_FOCUSED)
+            repository.updateHypersomniaOnsetPercent(110)
+            repository.updateScoringVersion(1)
+
+            val prefs = repository.userPreferences.first()
+            assertEquals(SleepScoreWeightProfile.DURATION_FOCUSED, prefs.sleepScoreWeightProfile)
+            assertEquals(110, prefs.hypersomniaOnsetPercent)
+            assertEquals(1, prefs.scoringVersion)
+        }
+
+    @Test
+    fun `hypersomnia onset percent normalizes into supported stepped range`() =
+        runTest {
+            repository.updateHypersomniaOnsetPercent(123)
+            var prefs = repository.userPreferences.first()
+            assertEquals(125, prefs.hypersomniaOnsetPercent)
+
+            repository.updateHypersomniaOnsetPercent(98)
+            prefs = repository.userPreferences.first()
+            assertEquals(100, prefs.hypersomniaOnsetPercent)
+
+            repository.updateHypersomniaOnsetPercent(107)
+            prefs = repository.userPreferences.first()
+            assertEquals(105, prefs.hypersomniaOnsetPercent)
+        }
+
+    @Test
+    fun `sleep score preferences persist through serializer round trip`() =
+        runTest {
+            dataStore.updateData {
+                UserPreferences(
+                    sleepScoreWeightProfile = SleepScoreWeightProfile.RECOVERY_FOCUSED,
+                    hypersomniaOnsetPercent = 115,
+                    scoringVersion = 2,
+                ).toProto()
+            }
+
+            val prefs = repository.userPreferences.first()
+            assertEquals(SleepScoreWeightProfile.RECOVERY_FOCUSED, prefs.sleepScoreWeightProfile)
+            assertEquals(115, prefs.hypersomniaOnsetPercent)
+            assertEquals(2, prefs.scoringVersion)
+        }
+
+    @Test
+    fun `recalc baseline fields persist through serializer round trip`() =
+        runTest {
+            dataStore.updateData {
+                UserPreferences(
+                    lastRecalcSleepScoreWeightProfile = SleepScoreWeightProfile.RECOVERY_FOCUSED,
+                    lastRecalcGoalSleepHours = 9.5f,
+                    lastRecalcHypersomniaOnsetPercent = 115,
+                ).toProto()
+            }
+
+            val prefs = repository.userPreferences.first()
+            assertEquals(SleepScoreWeightProfile.RECOVERY_FOCUSED, prefs.lastRecalcSleepScoreWeightProfile)
+            assertEquals(9.5f, prefs.lastRecalcGoalSleepHours)
+            assertEquals(115, prefs.lastRecalcHypersomniaOnsetPercent)
+        }
+
+    @Test
+    fun `recalc baseline fields are null until first historical recompute`() =
+        runTest {
+            val prefs = repository.userPreferences.first()
+            assertEquals(null, prefs.lastRecalcSleepScoreWeightProfile)
+            assertEquals(null, prefs.lastRecalcGoalSleepHours)
+            assertEquals(null, prefs.lastRecalcHypersomniaOnsetPercent)
+        }
+
+    @Test
+    fun `BALANCED recalc baseline round-trips as BALANCED not null`() =
+        runTest {
+            dataStore.updateData {
+                UserPreferences(
+                    lastRecalcSleepScoreWeightProfile = SleepScoreWeightProfile.BALANCED,
+                ).toProto()
+            }
+
+            val prefs = repository.userPreferences.first()
+            assertEquals(SleepScoreWeightProfile.BALANCED, prefs.lastRecalcSleepScoreWeightProfile)
+        }
+
+    @Test
+    fun `updateSleepScoreRecalcBaseline persists the three snapshot fields`() =
+        runTest {
+            repository.updateSleepScoreRecalcBaseline(
+                weightProfile = SleepScoreWeightProfile.ARCHITECTURE_FOCUSED,
+                goalSleepHours = 8f,
+                hypersomniaOnsetPercent = 100,
+            )
+
+            val prefs = repository.userPreferences.first()
+            assertEquals(SleepScoreWeightProfile.ARCHITECTURE_FOCUSED, prefs.lastRecalcSleepScoreWeightProfile)
+            assertEquals(8f, prefs.lastRecalcGoalSleepHours)
+            assertEquals(100, prefs.lastRecalcHypersomniaOnsetPercent)
+        }
+
     /**
      * US-03 acceptance criterion: switching a load-source preference must never write to
      * daily_summaries. SettingsRepository (the sole owner of preference setters) has no
@@ -234,5 +351,54 @@ class SettingsRepositoryTest {
             true,
             constructorParamTypes.none { it.contains("DailySummaryDao") || it.contains("ScoringRepository") },
         )
+    }
+
+    @Test
+    fun `default residual fatigue settings are exposed`() =
+        runTest {
+            val prefs = repository.userPreferences.first()
+            assertEquals(true, prefs.residualFatigueEnabled)
+            assertEquals(24f, prefs.residualFatigueHalfLifeHours, 0f)
+            assertEquals(1.0f, prefs.residualFatigueGain, 0f)
+        }
+
+    @Test
+    fun `legacy proto without residual fatigue fields resolves defaults`() {
+        val prefs = UserPreferencesProto.getDefaultInstance().toDomainModel()
+
+        assertEquals(true, prefs.residualFatigueEnabled)
+        assertEquals(24f, prefs.residualFatigueHalfLifeHours, 0f)
+        assertEquals(1.0f, prefs.residualFatigueGain, 0f)
+    }
+
+    @Test
+    fun `residual fatigue settings persist through serializer round trip`() =
+        runTest {
+            dataStore.updateData {
+                UserPreferences(
+                    residualFatigueEnabled = false,
+                    residualFatigueHalfLifeHours = 48f,
+                    residualFatigueGain = 2.5f,
+                ).toProto()
+            }
+
+            val prefs = repository.userPreferences.first()
+            assertEquals(false, prefs.residualFatigueEnabled)
+            assertEquals(48f, prefs.residualFatigueHalfLifeHours, 0f)
+            assertEquals(2.5f, prefs.residualFatigueGain, 0f)
+        }
+
+    @Test
+    fun `out-of-range residual fatigue proto values clamp to guardrails on read`() {
+        val prefs =
+            UserPreferencesProto
+                .newBuilder()
+                .setResidualFatigueHalfLifeHours(200f)
+                .setResidualFatigueGain(99f)
+                .build()
+                .toDomainModel()
+
+        assertEquals(96f, prefs.residualFatigueHalfLifeHours, 0f)
+        assertEquals(5.0f, prefs.residualFatigueGain, 0f)
     }
 }

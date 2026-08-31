@@ -1,12 +1,13 @@
 package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
-import app.readylytics.health.di.ApplicationScope
-import app.readylytics.health.domain.dashboard.CardConfiguration
-import app.readylytics.health.domain.layout.LayoutDefaultsMerger
-import app.readylytics.health.domain.workouts.WorkoutChartConfiguration
-import app.readylytics.health.domain.workouts.WorkoutHistoryConfiguration
-import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
+import app.readylytics.health.core.model.di.ApplicationScope
+import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
+import app.readylytics.health.core.model.domain.layout.LayoutDefaultsMerger
+import app.readylytics.health.core.model.domain.workouts.WorkoutChartConfiguration
+import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryConfiguration
+import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch

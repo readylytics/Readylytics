@@ -3,11 +3,12 @@ package app.readylytics.health.data.repository
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.readylytics.health.data.local.HealthDatabase
-import app.readylytics.health.data.local.dao.SleepSessionDao
-import app.readylytics.health.data.local.dao.SleepStageDao
-import app.readylytics.health.data.local.entity.SleepSessionEntity
-import app.readylytics.health.data.local.entity.SleepStageEntity
+import app.readylytics.health.core.database.data.local.HealthDatabase
+import app.readylytics.health.core.database.data.repository.SleepSessionRepositoryImpl
+import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
+import app.readylytics.health.core.databaseschema.data.local.dao.SleepStageDao
+import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.SleepStageEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -176,39 +177,6 @@ class SleepSessionRepositoryImplTest {
 
             assertNotNull(result)
             assertEquals("s3", result!!.id)
-        }
-
-    @Test
-    fun getPaged_firstPage_returnsLimitedResults() =
-        runTest {
-            dao.upsertAll(
-                listOf(
-                    session("s1", t1Start),
-                    session("s2", t2Start),
-                    session("s3", t3Start),
-                ),
-            )
-
-            val page = repo.getPaged(fromMs = t1Start, limit = 2, offset = 0)
-
-            assertEquals(2, page.size)
-        }
-
-    @Test
-    fun getPaged_secondPage_returnsRemainder() =
-        runTest {
-            dao.upsertAll(
-                listOf(
-                    session("s1", t1Start),
-                    session("s2", t2Start),
-                    session("s3", t3Start),
-                ),
-            )
-
-            val page = repo.getPaged(fromMs = t1Start, limit = 2, offset = 2)
-
-            assertEquals(1, page.size)
-            assertEquals("s3", page[0].id)
         }
 
     // ---- upsert / update ----

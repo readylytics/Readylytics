@@ -1,7 +1,7 @@
 package app.readylytics.health.feature.settings
 
 import androidx.lifecycle.ViewModel
-import app.readylytics.health.domain.crashreport.CrashReportStore
+import app.readylytics.health.core.model.domain.crashreport.CrashReportStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

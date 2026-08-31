@@ -109,7 +109,8 @@ class DataPointTooltipTest {
         val dateBounds = composeRule.onNodeWithText("01.08").fetchSemanticsNode().boundsInRoot
         assertTrue(
             kotlin.math.abs(valueBounds.center.x - dateBounds.center.x) <= 1f,
-            "value and date must share the same center axis: value=${valueBounds.center.x}, date=${dateBounds.center.x}",
+            "value and date must share the same center axis: " +
+                "value=${valueBounds.center.x}, date=${dateBounds.center.x}",
         )
 
         val bubble = boundsOfTag(DATA_POINT_TOOLTIP_TAG)

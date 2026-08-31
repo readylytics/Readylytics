@@ -1,7 +1,7 @@
 package app.readylytics.health.ui.scaffold
 
-import app.readylytics.health.domain.sync.RecalcProgress
-import app.readylytics.health.domain.sync.ResyncPhase
+import app.readylytics.health.core.model.domain.sync.RecalcProgress
+import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -78,6 +78,42 @@ class MainNavHostTest {
             )
 
         assertEquals(SyncProgressDismissalState.MarkProgressSeen, result)
+    }
+
+    @Test
+    fun `settings opens sync progress when a resync starts and nothing was dismissed`() {
+        val result =
+            resolveSyncProgressEntryAction(
+                isResyncing = true,
+                resyncScreenDismissed = false,
+            )
+
+        assertEquals(SyncProgressEntryAction.Open, result)
+    }
+
+    @Test
+    fun `settings does not reopen sync progress after continue in background`() {
+        val result =
+            resolveSyncProgressEntryAction(
+                isResyncing = true,
+                resyncScreenDismissed = true,
+            )
+
+        assertEquals(SyncProgressEntryAction.None, result)
+    }
+
+    @Test
+    fun `dismissal is cleared once the resync finishes so the next run can auto-open`() {
+        val dismissedWhileRunning =
+            resolveSyncProgressEntryAction(isResyncing = true, resyncScreenDismissed = true)
+        val finished =
+            resolveSyncProgressEntryAction(isResyncing = false, resyncScreenDismissed = true)
+        val nextRun =
+            resolveSyncProgressEntryAction(isResyncing = true, resyncScreenDismissed = false)
+
+        assertEquals(SyncProgressEntryAction.None, dismissedWhileRunning)
+        assertEquals(SyncProgressEntryAction.ClearDismissal, finished)
+        assertEquals(SyncProgressEntryAction.Open, nextRun)
     }
 
     @Test

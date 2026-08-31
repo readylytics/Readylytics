@@ -1,9 +1,9 @@
 package app.readylytics.health.feature.dashboard
 
+import app.readylytics.health.core.model.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.dashboard.ModeSpec
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCardSpec
 import app.readylytics.health.core.ui.components.metriccard.toUniversalMode
-import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.domain.dashboard.ModeSpec
 
 internal fun ModeSpec.toUniversalSpec(usesDeltaPill: Boolean): UniversalMetricCardSpec =
     UniversalMetricCardSpec(

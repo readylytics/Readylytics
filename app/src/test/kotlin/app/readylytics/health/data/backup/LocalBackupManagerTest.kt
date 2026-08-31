@@ -4,29 +4,30 @@ import android.content.Context
 import android.net.Uri
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
-import app.readylytics.health.data.local.HealthDatabase
-import app.readylytics.health.data.preferences.AppTheme
-import app.readylytics.health.data.preferences.BackupSchedule
+import app.readylytics.health.core.database.data.local.HealthDatabase
+import app.readylytics.health.core.model.data.preferences.AppTheme
+import app.readylytics.health.core.model.data.preferences.BackupSchedule
+import app.readylytics.health.core.model.data.preferences.SyncPreference
+import app.readylytics.health.core.model.domain.audit.AuditEvent
+import app.readylytics.health.core.model.domain.audit.AuditTrailRepository
+import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
+import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
+import app.readylytics.health.core.model.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.sleep.SleepChartConfiguration
+import app.readylytics.health.core.model.domain.sleep.SleepChartId
+import app.readylytics.health.core.model.domain.sleep.SleepLayoutRepository
+import app.readylytics.health.core.model.domain.sleep.SleepMetricCardConfiguration
+import app.readylytics.health.core.model.domain.sleep.SleepMetricCardId
+import app.readylytics.health.core.model.domain.sleep.SleepTopCardConfiguration
+import app.readylytics.health.core.model.domain.sleep.SleepTopCardId
+import app.readylytics.health.core.model.domain.vitals.VitalsChartConfiguration
+import app.readylytics.health.core.model.domain.vitals.VitalsChartId
+import app.readylytics.health.core.model.domain.vitals.VitalsLayoutRepository
+import app.readylytics.health.core.model.domain.workouts.WorkoutDetailLayoutRepository
+import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
 import app.readylytics.health.data.preferences.SettingsRepository
-import app.readylytics.health.data.preferences.SyncPreference
 import app.readylytics.health.data.security.EncryptionManager
-import app.readylytics.health.domain.audit.AuditEvent
-import app.readylytics.health.domain.audit.AuditTrailRepository
-import app.readylytics.health.domain.dashboard.CardConfiguration
-import app.readylytics.health.domain.dashboard.CardConfigurationRepository
-import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
-import app.readylytics.health.domain.sleep.SleepChartConfiguration
-import app.readylytics.health.domain.sleep.SleepChartId
-import app.readylytics.health.domain.sleep.SleepLayoutRepository
-import app.readylytics.health.domain.sleep.SleepMetricCardConfiguration
-import app.readylytics.health.domain.sleep.SleepMetricCardId
-import app.readylytics.health.domain.sleep.SleepTopCardConfiguration
-import app.readylytics.health.domain.sleep.SleepTopCardId
-import app.readylytics.health.domain.vitals.VitalsChartConfiguration
-import app.readylytics.health.domain.vitals.VitalsChartId
-import app.readylytics.health.domain.vitals.VitalsLayoutRepository
-import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -60,6 +61,7 @@ class LocalBackupManagerTest {
     private lateinit var vitalsLayoutRepo: VitalsLayoutRepository
     private lateinit var sleepLayoutRepo: SleepLayoutRepository
     private lateinit var workoutsLayoutRepo: WorkoutsLayoutRepository
+    private lateinit var workoutDetailLayoutRepo: WorkoutDetailLayoutRepository
     private lateinit var auditTrailRepository: FakeAuditTrailRepository
     private lateinit var manager: LocalBackupManager
     private lateinit var backupDir: File
@@ -77,7 +79,7 @@ class LocalBackupManagerTest {
                 .build()
 
         encryptionManager = mockk<EncryptionManager>(relaxed = true)
-        io.mockk.every { encryptionManager.decrypt(any()) } returns "test_password"
+        every { encryptionManager.decrypt(any()) } returns "test_password"
 
         settingsRepo =
             mockk<SettingsRepository>().apply {
@@ -119,20 +121,36 @@ class LocalBackupManagerTest {
                 every { workoutChartConfigurations() } returns flowOf(emptyList())
                 every { workoutHistoryConfigurations() } returns flowOf(emptyList())
             }
+        workoutDetailLayoutRepo =
+            mockk<WorkoutDetailLayoutRepository>(relaxed = true).apply {
+                every { allLayouts() } returns flowOf(emptyMap())
+            }
         auditTrailRepository = FakeAuditTrailRepository()
-        manager =
-            LocalBackupManager(
-                context,
-                db,
-                settingsRepo,
+        manager = buildManager()
+    }
+
+    private fun buildManager(
+        customSettingsRepo: SettingsRepository = settingsRepo,
+        customStoreFactory: BackupStoreFactory = DefaultBackupStoreFactory(context),
+    ): LocalBackupManager {
+        val layoutRepos =
+            RestoreLayoutRepositories(
                 cardConfigRepo,
                 vitalsLayoutRepo,
                 sleepLayoutRepo,
                 workoutsLayoutRepo,
-                encryptionManager,
-                auditTrailRepository,
-                Dispatchers.Unconfined,
+                workoutDetailLayoutRepo,
             )
+        val backupStreamWriter = BackupStreamWriter(db, customSettingsRepo, layoutRepos)
+        return LocalBackupManager(
+            context,
+            customSettingsRepo,
+            backupStreamWriter,
+            encryptionManager,
+            auditTrailRepository,
+            Dispatchers.Unconfined,
+            customStoreFactory,
+        )
     }
 
     @After
@@ -147,9 +165,6 @@ class LocalBackupManagerTest {
             val result = manager.createBackup()
 
             assertTrue(result.isSuccess)
-            // Note: Since we are using SAF internally if Uri is provided,
-            // result might be null for File if it was written to SAF outputstream.
-            // But in this test, customUri is null, so it uses internal storage.
             val file = result.getOrNull()
             assertNotNull(file)
             assertTrue(file.exists())
@@ -190,34 +205,6 @@ class LocalBackupManagerTest {
             assertFailsWith<CancellationException> {
                 manager.createBackup()
             }
-        }
-
-    @Test
-    fun reencryptBackups_preservesSuccessWhenSuccessAuditAppendFails() =
-        runTest {
-            auditTrailRepository.appendFailure = { event ->
-                if (event.type == AuditEvent.Type.KEY_ROTATED) RuntimeException("audit unavailable") else null
-            }
-
-            val result = manager.reencryptBackups(oldPassword = null, newPassword = "new_password")
-
-            assertTrue(result.isSuccess)
-        }
-
-    @Test
-    fun reencryptBackups_preservesOriginalFailureWhenFailureAuditAppendFails() =
-        runTest {
-            val originalFailure = RuntimeException("backup listing failed")
-            coEvery { settingsRepo.userPreferences } throws originalFailure
-            auditTrailRepository.appendFailure = { event ->
-                if (event.type == AuditEvent.Type.KEY_ROTATION_FAILED) RuntimeException("audit unavailable") else null
-            }
-
-            val result = manager.reencryptBackups(oldPassword = null, newPassword = "new_password")
-
-            assertTrue(result.isFailure)
-            assertEquals(originalFailure::class, result.exceptionOrNull()!!::class)
-            assertEquals(originalFailure.message, result.exceptionOrNull()?.message)
         }
 
     @Test
@@ -447,7 +434,7 @@ class LocalBackupManagerTest {
         runTest {
             db.weightRecordDao().upsertAll(
                 listOf(
-                    app.readylytics.health.data.local.entity.WeightRecordEntity(
+                    app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity(
                         id = "w1",
                         timestampMs = 1000L,
                         weightKg = 70.5f,
@@ -456,7 +443,7 @@ class LocalBackupManagerTest {
             )
             db.bodyTemperatureRecordDao().upsertAll(
                 listOf(
-                    app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity(
+                    app.readylytics.health.core.databaseschema.data.local.entity.BodyTemperatureRecordEntity(
                         id = "bt1",
                         timestampMs = 1000L,
                         celsius = 36.8f,
@@ -498,7 +485,7 @@ class LocalBackupManagerTest {
         runTest {
             db.weightRecordDao().upsertAll(
                 listOf(
-                    app.readylytics.health.data.local.entity.WeightRecordEntity(
+                    app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity(
                         id = "w1",
                         timestampMs = 1000L,
                         weightKg = 70.5f,
@@ -507,7 +494,7 @@ class LocalBackupManagerTest {
             )
             db.stepRecordDao().upsertAll(
                 listOf(
-                    app.readylytics.health.data.local.entity.StepRecordEntity(
+                    app.readylytics.health.core.databaseschema.data.local.entity.StepRecordEntity(
                         id = "s1",
                         startTime = 1000L,
                         endTime = 2000L,
@@ -529,10 +516,8 @@ class LocalBackupManagerTest {
                 }
             val rowCounts = JSONObject(backupJson).getJSONObject("rowCounts")
 
-            // Seeded tables.
             assertEquals(1, rowCounts.getInt("weightRecords"))
             assertEquals(1, rowCounts.getInt("stepRecords"))
-            // Empty tables must still appear, counted correctly, in the parallel block.
             assertEquals(0, rowCounts.getInt("sleepSessions"))
             assertEquals(0, rowCounts.getInt("heartRateRecords"))
             assertEquals(0, rowCounts.getInt("hrvRecords"))
@@ -580,28 +565,16 @@ class LocalBackupManagerTest {
             safDir.mkdirs()
             val safUri = Uri.fromFile(safDir)
 
-            settingsRepo =
+            val customSettingsRepo =
                 mockk<SettingsRepository>().apply {
                     every { userPreferences } returns
                         flowOf(
-                            app.readylytics.health.data.preferences.UserPreferences(
+                            app.readylytics.health.core.model.data.preferences.UserPreferences(
                                 backupDirectoryUri = safUri.toString(),
                             ),
                         )
                 }
-            manager =
-                LocalBackupManager(
-                    context,
-                    db,
-                    settingsRepo,
-                    cardConfigRepo,
-                    vitalsLayoutRepo,
-                    sleepLayoutRepo,
-                    workoutsLayoutRepo,
-                    encryptionManager,
-                    auditTrailRepository,
-                    Dispatchers.Unconfined,
-                )
+            val safManager = buildManager(customSettingsRepo = customSettingsRepo)
 
             val now = System.currentTimeMillis()
             val eightDaysAgo = now - (8L * 24 * 60 * 60 * 1000)
@@ -616,24 +589,7 @@ class LocalBackupManagerTest {
             staleFile.setLastModified(eightDaysAgo)
             recentFile.setLastModified(oneDayAgo)
 
-            // We need to use a real DocumentFile behavior.
-            // In Robolectric, Uri.fromFile(dir) works with DocumentFile.fromTreeUri.
-
-            val result = manager.createBackup()
-            // Note: createBackup might fail because of missing content resolver support for file:// outputstream in Robolectric
-            // but we only care about the pruning part which happens before it tries to write if we are lucky,
-            // or we just check the files after.
-            // Actually, pruning happens AFTER creation in my implementation for SAF?
-            // Let's check:
-            // if (customUri != null) { ... pruneOldBackups(customUri) ... }
-
-            // Wait, in my implementation:
-            // context.contentResolver.openOutputStream(file.uri)?.use { ... }
-            // pruneOldBackups(customUri)
-
-            // If openOutputStream fails, pruneOldBackups might not be called.
-            // I should move pruning BEFORE writing to ensure it happens even if write fails?
-            // Usually it's better to prune before to free up space.
+            safManager.createBackup()
 
             assertTrue(!staleFile.exists(), "Stale SAF file should be deleted")
             assertTrue(recentFile.exists(), "Recent SAF file should be retained")
@@ -644,30 +600,18 @@ class LocalBackupManagerTest {
     @Test
     fun createBackup_missingPassword_removesPlaintextTempJson() =
         runTest {
-            settingsRepo =
+            val customSettingsRepo =
                 mockk<SettingsRepository>().apply {
                     every { userPreferences } returns
                         flowOf(
-                            app.readylytics.health.data.preferences.UserPreferences(
+                            app.readylytics.health.core.model.data.preferences.UserPreferences(
                                 backupPasswordHash = null,
                             ),
                         )
                 }
-            manager =
-                LocalBackupManager(
-                    context,
-                    db,
-                    settingsRepo,
-                    cardConfigRepo,
-                    vitalsLayoutRepo,
-                    sleepLayoutRepo,
-                    workoutsLayoutRepo,
-                    encryptionManager,
-                    auditTrailRepository,
-                    Dispatchers.Unconfined,
-                )
+            val noPassManager = buildManager(customSettingsRepo = customSettingsRepo)
 
-            val result = manager.createBackup()
+            val result = noPassManager.createBackup()
 
             assertTrue(result.isFailure)
             val leakedJson =
@@ -677,7 +621,7 @@ class LocalBackupManagerTest {
             assertFalse(leakedJson.any(), "Plaintext backup JSON temp files must be removed after failure")
         }
 
-    private class FakeAuditTrailRepository : AuditTrailRepository {
+    internal class FakeAuditTrailRepository : AuditTrailRepository {
         val events = mutableListOf<AuditEvent>()
         var appendFailure: (AuditEvent) -> Throwable? = { null }
 

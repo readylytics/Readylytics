@@ -1,10 +1,13 @@
 package app.readylytics.health.ui.navigation
 
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
@@ -83,7 +86,7 @@ class RootNavigationTest {
 
     @Test
     fun verifyTabSwitching() {
-        val dashboardTab = composeRule.onNodeWithText("Dashboard")
+        val dashboardTab = composeRule.onNode(isTabWithText("Dashboard"))
         waitUntilDisplayed(dashboardTab)
         dashboardTab.assertIsSelected()
 
@@ -91,10 +94,13 @@ class RootNavigationTest {
     }
 
     private fun selectTab(label: String) {
-        val tab = composeRule.onNodeWithText(label)
+        val tab = composeRule.onNode(isTabWithText(label))
         tab.performClick()
         tab.assertIsSelected()
     }
+
+    private fun isTabWithText(label: String): SemanticsMatcher =
+        SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab) and hasText(label)
 
     private fun waitUntilDisplayed(
         node: SemanticsNodeInteraction,

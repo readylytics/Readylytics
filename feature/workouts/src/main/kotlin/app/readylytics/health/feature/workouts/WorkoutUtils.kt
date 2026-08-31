@@ -1,27 +1,24 @@
 package app.readylytics.health.feature.workouts
 
+import app.readylytics.health.core.model.domain.workouts.detail.WorkoutLayoutType
+import app.readylytics.health.core.model.domain.workouts.detail.WorkoutLayoutTypeMapper
+
+/**
+ * Display name for a raw Health Connect exercise type. Grouped types delegate to
+ * [WorkoutLayoutTypeMapper] so this cannot drift from the per-type layout grouping;
+ * ungrouped types keep the previous free-text formatting.
+ */
 fun exerciseTypeToDisplayName(type: String): String =
-    when (type) {
-        "56" -> "Running"
-        "79" -> "Walking"
-        "8" -> "Cycling"
-        "74",
-        "73",
-        -> "Swimming"
-        "70" -> "Strength"
-        "37" -> "Hiking"
-        "83" -> "Yoga"
-        "48" -> "Pilates"
-        "25" -> "Elliptical"
-        "54" -> "Rowing"
-        "68",
-        "69",
-        -> "Stairs"
-        "36" -> "HIIT"
-        else ->
+    when (val layoutType = WorkoutLayoutTypeMapper.fromExerciseType(type)) {
+        WorkoutLayoutType.OTHER ->
             type
                 .replace("EXERCISE_TYPE_", "")
                 .lowercase()
                 .replaceFirstChar { it.uppercase() }
                 .replace("_", " ")
+        WorkoutLayoutType.HIIT -> "HIIT"
+        else ->
+            layoutType.name
+                .lowercase()
+                .replaceFirstChar { it.uppercase() }
     }

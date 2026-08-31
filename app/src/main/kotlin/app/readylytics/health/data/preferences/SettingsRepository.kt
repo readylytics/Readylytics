@@ -1,23 +1,32 @@
 package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
-import app.readylytics.health.domain.preferences.AboutPreferences
-import app.readylytics.health.domain.preferences.BackupSettings
-import app.readylytics.health.domain.preferences.DeviceSettings
-import app.readylytics.health.domain.preferences.DisplaySettings
-import app.readylytics.health.domain.preferences.HeartRateZoneSettings
-import app.readylytics.health.domain.preferences.PhysiologySettings
-import app.readylytics.health.domain.preferences.SleepSettings
-import app.readylytics.health.domain.preferences.SyncSettings
-import app.readylytics.health.domain.preferences.ThresholdSettings
-import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.scoring.LoadSourceMode
-import app.readylytics.health.domain.scoring.TrimpModel
+import app.readylytics.health.core.model.data.preferences.AppTheme
+import app.readylytics.health.core.model.data.preferences.BackupSchedule
+import app.readylytics.health.core.model.data.preferences.FallbackThemeColor
+import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
+import app.readylytics.health.core.model.data.preferences.SyncPreference
+import app.readylytics.health.core.model.data.preferences.UnitSystem
+import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.preferences.AboutPreferences
+import app.readylytics.health.core.model.domain.preferences.BackupSettings
+import app.readylytics.health.core.model.domain.preferences.DeviceSettings
+import app.readylytics.health.core.model.domain.preferences.DisplaySettings
+import app.readylytics.health.core.model.domain.preferences.HeartRateZoneSettings
+import app.readylytics.health.core.model.domain.preferences.PhysiologySettings
+import app.readylytics.health.core.model.domain.preferences.SleepSettings
+import app.readylytics.health.core.model.domain.preferences.SyncSettings
+import app.readylytics.health.core.model.domain.preferences.ThresholdSettings
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
+import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
+import app.readylytics.health.core.model.domain.scoring.TrimpModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import java.io.IOException
+import java.time.DayOfWeek
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -33,7 +42,7 @@ class SettingsRepository
         private val ui: UIPreferences,
         private val sync: SyncPreferences,
         private val backup: BackupPreferences,
-    ) : app.readylytics.health.domain.preferences.SettingsRepository,
+    ) : app.readylytics.health.core.model.domain.preferences.SettingsRepository,
         UserPreferencesReader,
         AboutPreferences,
         PhysiologySettings,
@@ -105,6 +114,19 @@ class SettingsRepository
 
         override suspend fun updateSupplementalArchitectureCoveragePercent(percent: Int) =
             sleep.updateSupplementalArchitectureCoveragePercent(percent)
+
+        override suspend fun updateSleepScoreWeightProfile(profile: SleepScoreWeightProfile) =
+            sleep.updateSleepScoreWeightProfile(profile)
+
+        override suspend fun updateHypersomniaOnsetPercent(percent: Int) = sleep.updateHypersomniaOnsetPercent(percent)
+
+        override suspend fun updateScoringVersion(version: Int) = sleep.updateScoringVersion(version)
+
+        override suspend fun updateSleepScoreRecalcBaseline(
+            weightProfile: SleepScoreWeightProfile,
+            goalSleepHours: Float,
+            hypersomniaOnsetPercent: Int,
+        ) = sleep.updateSleepScoreRecalcBaseline(weightProfile, goalSleepHours, hypersomniaOnsetPercent)
 
         override suspend fun updateHrvBaselineOverride(rmssdMs: Float?) = physiology.updateHrvBaselineOverride(rmssdMs)
 
@@ -191,6 +213,16 @@ class SettingsRepository
 
         override suspend fun updateItrimB(value: Float) = physiology.updateItrimB(value)
 
+        override suspend fun updateResidualFatigueEnabled(enabled: Boolean) =
+            physiology.updateResidualFatigueEnabled(enabled)
+
+        override suspend fun updateResidualFatigueHalfLifeHours(hours: Float) =
+            physiology.updateResidualFatigueHalfLifeHours(hours)
+
+        override suspend fun updateResidualFatigueGain(value: Float) = physiology.updateResidualFatigueGain(value)
+
+        override suspend fun resetResidualFatigueToDefaults() = physiology.resetResidualFatigueToDefaults()
+
         suspend fun updateInstallDate(date: LocalDate) = sync.updateInstallDate(date)
 
         suspend fun initializeInstallDateIfUnset() = sync.initializeInstallDateIfUnset()
@@ -265,6 +297,8 @@ class SettingsRepository
         override suspend fun clearDeviceCache() = ui.clearDeviceCache()
 
         override suspend fun updateUnitSystem(unitSystem: UnitSystem) = ui.updateUnitSystem(unitSystem)
+
+        override suspend fun updateWeekStartDay(day: DayOfWeek) = ui.updateWeekStartDay(day)
 
         override suspend fun updateHrrToleranceSeconds(value: Int) = sleep.updateHrrToleranceSeconds(value)
 

@@ -1,14 +1,14 @@
 package app.readylytics.health.feature.vitals.steps
 
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.date.SelectedDateStore
+import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.model.MetricStatus
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.TimeRange
-import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.domain.date.SelectedDateStore
-import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.model.MetricStatus
-import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.repository.DailySummaryRepository
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk

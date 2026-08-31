@@ -1,0 +1,30 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>LongMethod:CrashReportPrompt.kt$@Composable fun CrashReportPrompt(viewModel: CrashReportViewModel = hiltViewModel())</ID>
+    <ID>LongMethod:DataStoreModule.kt$DataStoreModule.&lt;no name provided&gt;$override suspend fun migrate(currentData: UserPreferencesProto): UserPreferencesProto</ID>
+    <ID>LongMethod:DatabaseRecoveryScreen.kt$@Composable fun DatabaseRecoveryScreen( onResetDatabase: () -&gt; Unit, onRestoreBackup: (Uri, onResult: (Boolean, String?) -&gt; Unit) -&gt; Unit, )</ID>
+    <ID>LongMethod:LocalRestoreValidationTest.kt$LocalRestoreValidationTest$@Test fun applyRestore_restoresSleepTopCardsChartsAndMetricCards()</ID>
+    <ID>LongMethod:LocalRestoreValidationTest.kt$LocalRestoreValidationTest$@Test fun applyRestore_restoresVitalsCardsAndCharts()</ID>
+    <ID>LongMethod:MainActivity.kt$MainActivity$override fun onCreate(savedInstanceState: Bundle?)</ID>
+    <ID>LongMethod:ProductionReadinessStaticTest.kt$ProductionReadinessStaticTest$@Test fun `data backup and transfer exclusions are fully configured`()</ID>
+    <ID>LongMethod:V7DatabaseMigrator.kt$V7DatabaseMigrator$private suspend fun runStateMachine(onProgress: suspend (DatabaseMigrationProgress) -&gt; Unit)</ID>
+    <ID>ReturnCount:CanonicalMetricDisplayAuditTest.kt$CanonicalMetricDisplayAuditTest$private fun resolveAuditedFile(pathFromRepoRoot: String): File</ID>
+    <ID>ReturnCount:DataCleanupWorker.kt$DataCleanupWorker$override suspend fun doWork(): Result</ID>
+    <ID>ReturnCount:DatabaseMigrationController.kt$DatabaseMigrationControllerImpl$private fun mapState(workInfos: List&lt;WorkInfo&gt;): DatabaseMigrationUiState</ID>
+    <ID>ReturnCount:DatabaseReadyStartupInitializer.kt$DatabaseReadyStartupCoordinator$private suspend fun initializeWithRetry( states: StateFlow&lt;DatabaseMigrationUiState&gt;, readiness: DatabaseReadiness, )</ID>
+    <ID>ReturnCount:DatabaseReadyStartupInitializer.kt$DatabaseReadyStartupInitializer$suspend fun initializeIfReady(readiness: DatabaseReadiness): StartupInitializationResult</ID>
+    <ID>ReturnCount:LogSlotStoreTest.kt$LogSlotStoreTest.AdAwareSecureFileStore$override fun readText( file: File, associatedData: ByteArray, ): String</ID>
+    <ID>ReturnCount:V7DatabaseMigrator.kt$V7DatabaseMigrator$suspend fun migrate(onProgress: suspend (DatabaseMigrationProgress) -&gt; Unit): V7MigrationResult</ID>
+    <ID>TooManyFunctions:CrashReportShareIntent.kt$app.readylytics.health.crashreport.CrashReportShareIntent.kt</ID>
+    <ID>TooManyFunctions:FeaturePortModule.kt$FeaturePortModule</ID>
+    <ID>TooManyFunctions:LogSlotStore.kt$LogSlotStore</ID>
+    <ID>TooManyFunctions:PhysiologyPreferences.kt$PhysiologyPreferences</ID>
+    <ID>TooManyFunctions:SettingsRepository.kt$SettingsRepository : SettingsRepositoryUserPreferencesReaderAboutPreferencesPhysiologySettingsHeartRateZoneSettingsSleepSettingsThresholdSettingsDisplaySettingsSyncSettingsDeviceSettingsBackupSettings</ID>
+    <ID>TooManyFunctions:SleepPreferences.kt$SleepPreferences</ID>
+    <ID>TooManyFunctions:SyncPreferences.kt$SyncPreferences</ID>
+    <ID>TooManyFunctions:UIPreferences.kt$UIPreferences</ID>
+    <ID>TooManyFunctions:V7DatabaseMigrator.kt$V7DatabaseMigrator</ID>
+  </CurrentIssues>
+</SmellBaseline>

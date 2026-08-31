@@ -2,18 +2,18 @@ package app.readylytics.health.data.backup
 
 import android.net.Uri
 import android.util.JsonReader
-import app.readylytics.health.data.local.HealthDatabase
+import app.readylytics.health.core.database.data.local.HealthDatabase
+import app.readylytics.health.core.model.domain.backup.RestoreResult
+import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
+import app.readylytics.health.core.model.domain.sleep.SleepChartConfiguration
+import app.readylytics.health.core.model.domain.sleep.SleepChartId
+import app.readylytics.health.core.model.domain.sleep.SleepMetricCardConfiguration
+import app.readylytics.health.core.model.domain.sleep.SleepMetricCardId
+import app.readylytics.health.core.model.domain.sleep.SleepTopCardConfiguration
+import app.readylytics.health.core.model.domain.sleep.SleepTopCardId
+import app.readylytics.health.core.model.domain.vitals.VitalsChartConfiguration
+import app.readylytics.health.core.model.domain.vitals.VitalsChartId
 import app.readylytics.health.data.preferences.UserPreferencesProto
-import app.readylytics.health.domain.backup.RestoreResult
-import app.readylytics.health.domain.dashboard.CardConfiguration
-import app.readylytics.health.domain.sleep.SleepChartConfiguration
-import app.readylytics.health.domain.sleep.SleepChartId
-import app.readylytics.health.domain.sleep.SleepMetricCardConfiguration
-import app.readylytics.health.domain.sleep.SleepMetricCardId
-import app.readylytics.health.domain.sleep.SleepTopCardConfiguration
-import app.readylytics.health.domain.sleep.SleepTopCardId
-import app.readylytics.health.domain.vitals.VitalsChartConfiguration
-import app.readylytics.health.domain.vitals.VitalsChartId
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -137,20 +137,32 @@ class LocalRestoreValidationTest : LocalRestoreManagerTestBase() {
             val zipFile = createBackupZipFile("legacy-v5.zip", json)
 
             assertTrue(manager.applyRestore(Uri.fromFile(zipFile)) is RestoreResult.SuccessRequiresRestart)
-            assertEquals(
-                "hc-heart",
+            val heartRef =
                 db
                     .heartRateDao()
                     .getSince(0)
                     .single()
+                    .sourceRecordRef
+            assertEquals(
+                "hc-heart",
+                db
+                    .sourceRecordDao()
+                    .getAll()
+                    .single { it.id == heartRef }
                     .sourceRecordId,
             )
-            assertEquals(
-                "hc-hrv",
+            val hrvRef =
                 db
                     .hrvDao()
                     .getSince(0)
                     .single()
+                    .sourceRecordRef
+            assertEquals(
+                "hc-hrv",
+                db
+                    .sourceRecordDao()
+                    .getAll()
+                    .single { it.id == hrvRef }
                     .sourceRecordId,
             )
             zipFile.delete()
@@ -187,20 +199,32 @@ class LocalRestoreValidationTest : LocalRestoreManagerTestBase() {
             val zipFile = createBackupZipFile("legacy-malformed-suffix-v6.zip", json)
 
             assertTrue(manager.applyRestore(Uri.fromFile(zipFile)) is RestoreResult.SuccessRequiresRestart)
-            assertEquals(
-                malformedHeartId,
+            val heartRef =
                 db
                     .heartRateDao()
                     .getSince(0)
                     .single()
+                    .sourceRecordRef
+            assertEquals(
+                malformedHeartId,
+                db
+                    .sourceRecordDao()
+                    .getAll()
+                    .single { it.id == heartRef }
                     .sourceRecordId,
             )
-            assertEquals(
-                mismatchedHrvId,
+            val hrvRef =
                 db
                     .hrvDao()
                     .getSince(0)
                     .single()
+                    .sourceRecordRef
+            assertEquals(
+                mismatchedHrvId,
+                db
+                    .sourceRecordDao()
+                    .getAll()
+                    .single { it.id == hrvRef }
                     .sourceRecordId,
             )
             zipFile.delete()
@@ -253,12 +277,8 @@ class LocalRestoreValidationTest : LocalRestoreManagerTestBase() {
         val controlCharacters = (0x00..0x1f).map { it.toChar() }.joinToString("")
         val source = JSONObject().put("value", controlCharacters).toString()
         val reader = JsonReader(StringReader(source))
-        val readNextObjectAsString =
-            LocalRestoreManager::class.java
-                .getDeclaredMethod("readNextObjectAsString", JsonReader::class.java)
-                .apply { isAccessible = true }
-
-        val reemitted = readNextObjectAsString.invoke(manager, reader) as String
+        val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+        val reemitted = readNextObjectAsString(json, reader)
 
         assertTrue(reemitted.none { it.code in 0x00..0x1f })
     }
@@ -351,7 +371,7 @@ class LocalRestoreValidationTest : LocalRestoreManagerTestBase() {
             val expectedCards =
                 listOf(
                     CardConfiguration(
-                        cardId = app.readylytics.health.domain.dashboard.CardId.READINESS,
+                        cardId = app.readylytics.health.core.model.domain.dashboard.CardId.READINESS,
                         isVisible = true,
                         position = 2,
                         requestedDisplayMode = null,
@@ -415,13 +435,13 @@ class LocalRestoreValidationTest : LocalRestoreManagerTestBase() {
             val expectedCards =
                 listOf(
                     CardConfiguration(
-                        cardId = app.readylytics.health.domain.dashboard.CardId.RESTING_HR,
+                        cardId = app.readylytics.health.core.model.domain.dashboard.CardId.RESTING_HR,
                         isVisible = true,
                         position = 0,
                         requestedDisplayMode = null,
                     ),
                     CardConfiguration(
-                        cardId = app.readylytics.health.domain.dashboard.CardId.HRV,
+                        cardId = app.readylytics.health.core.model.domain.dashboard.CardId.HRV,
                         isVisible = false,
                         position = 1,
                         requestedDisplayMode = null,

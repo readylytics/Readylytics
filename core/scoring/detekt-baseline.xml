@@ -1,0 +1,67 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>CyclomaticComplexMethod:ComputeSleepMetricsUseCase.kt$ComputeSleepMetricsUseCase$suspend operator fun invoke(request: SleepMetricsRequest): Result&lt;DailySummary&gt;</ID>
+    <ID>CyclomaticComplexMethod:GetDailyPromptDataUseCase.kt$GetDailyPromptDataUseCase$suspend fun execute(today: LocalDate): DailyPromptData</ID>
+    <ID>CyclomaticComplexMethod:InsightCauseRanker.kt$InsightCauseRanker$private fun score( insightId: InsightType, context: DailyInsightContext, hint: CauseRankHint, ): Int</ID>
+    <ID>CyclomaticComplexMethod:LoadScoringStrategy.kt$LoadScoringStrategy$fun computeRecoveryFlags( zLnHrv: Float?, zRhr: Float?, rhrDeltaBpm: Float?, yesterdayZLnHrv: Float?, yesterdayZRhr: Float?, hrvMissing: Boolean, stagesSuspicious: Boolean, isLateNadir: Boolean, isCalibrating: Boolean, emergencyFlags: EmergencyFlagThresholds?, yesterdayTrimp: Float? = null, yesterdayHrv: Float? = null, currentHrv: Float? = null, hrvOptimalThreshold: Float = 1.0f, isCurrentHrvOptimal: Boolean = false, isCurrentRhrOptimal: Boolean = false, isPreviousHrvOptimal: Boolean = false, ): Set&lt;RecoveryFlag&gt;</ID>
+    <ID>CyclomaticComplexMethod:RasScoringStrategy.kt$RasScoringStrategy$private fun computeEmaSeries( dailyTrimpByDate: Map&lt;LocalDate, Float&gt;, windowDays: Long, seriesStart: LocalDate, seriesEnd: LocalDate, ): Map&lt;LocalDate, Float&gt;</ID>
+    <ID>LargeClass:ComputeSleepMetricsUseCase.kt$ComputeSleepMetricsUseCase</ID>
+    <ID>LongMethod:BaselineComputer.kt$BaselineComputer$suspend fun computeBackfillBaselines( summaries: List&lt;DailySummary&gt;, percentile: Int, sleepDayPolicy: SleepDayPolicy? = null, ): Map&lt;LocalDate, BackfillBaseline&gt;</ID>
+    <ID>LongMethod:ComputeSleepMetricsUseCase.kt$ComputeSleepMetricsUseCase$suspend operator fun invoke(request: SleepMetricsRequest): Result&lt;DailySummary&gt;</ID>
+    <ID>LongMethod:ComputeWorkoutLoadMetricsUseCaseTest.kt$ComputeWorkoutLoadMetricsUseCaseTest$@Test fun `uses stored workout trimp and returns rounded display values`()</ID>
+    <ID>LongMethod:ComputeWorkoutTrimpUseCase.kt$ComputeWorkoutTrimpUseCase$fun execute( workoutStartTime: Long, workoutEndTime: Long, workoutAvgHr: Float, samples: List&lt;HeartRateSample&gt;, prefs: UserPreferences, restingHrBaseline: Float? = null, storedTrimp: Float? = null, frozenHrMax: Float? = null, ): Result&lt;Float&gt;</ID>
+    <ID>LongMethod:DailyPromptFormatterTest.kt$DailyPromptFormatterTest$private fun populatedPromptData(): DailyPromptData</ID>
+    <ID>LongMethod:GetDailyPromptDataUseCase.kt$GetDailyPromptDataUseCase$suspend fun execute(today: LocalDate): DailyPromptData</ID>
+    <ID>LongMethod:GetWorkoutDisplayMetricsUseCaseTest.kt$GetWorkoutDisplayMetricsUseCaseTest$@Test fun `clamps pre-fetched historicalSummaries to the same 42-day window as the self-fetch path`()</ID>
+    <ID>LongMethod:GetWorkoutDisplayMetricsUseCaseTest.kt$GetWorkoutDisplayMetricsUseCaseTest$@Test fun `executes calculations and fetches history in the scoring zone`()</ID>
+    <ID>LongMethod:GetWorkoutDisplayMetricsUseCaseTest.kt$GetWorkoutDisplayMetricsUseCaseTest$@Test fun `gainedStrain is identical whether history is self-fetched or passed in pre-fetched`()</ID>
+    <ID>LongMethod:GetWorkoutDisplayMetricsUseCaseTest.kt$GetWorkoutDisplayMetricsUseCaseTest$@Test fun `uses pre-fetched historicalSummaries instead of querying the repository`()</ID>
+    <ID>LongMethod:HistoricalSleepDayAssembler.kt$HistoricalSleepDayAssembler$suspend fun buildHistoricalSleepDays( sessions: List&lt;SleepSession&gt;, percentile: Int, sleepDayPolicy: SleepDayPolicy?, assumeCoverageValid: Boolean = false, ): List&lt;HistoricalSleepDay&gt;</ID>
+    <ID>LongMethod:InsightEngineTest.kt$InsightEngineTest$@Test fun `all registered rules can fire together`()</ID>
+    <ID>LongMethod:SleepDayAggregatorTest.kt$SleepDayAggregatorTest$@Test fun canonicalizesOverlapWithoutSelectedSourceUsingLockedFallbackOrder()</ID>
+    <ID>LongMethod:SleepDayAggregatorTest.kt$SleepDayAggregatorTest$@Test fun groupsCoreClusterCountsEligibleSupplementalAndSeversExactCutoffToNextDay()</ID>
+    <ID>LongParameterList:AssembleDailySummaryUseCase.kt$AssembleDailySummaryUseCase$( baseSummary: DailySummary, targetDate: LocalDate, computedHrvBaseline: Int?, finalBaselines: ResolveDailyBaselinesUseCase.FinalBaselines, avgSpo2: Float?, avgBodyTemp: Float?, resolvedHrMax: Float, scoringConfigRasScalingFactor: Float, prefs: UserPreferences, )</ID>
+    <ID>LongParameterList:AssembleEverydayLoadInputUseCase.kt$AssembleEverydayLoadInputUseCase$( dayStartMs: Long, dayEndMs: Long, hrBuckets: List&lt;HrMinuteBucketRow&gt;, sleepIntervalsMs: List&lt;LongInterval&gt;, workoutIntervalsMs: List&lt;LongInterval&gt;, workoutOnlyTrimp: Float, rhrBaseline: Float, hrMax: Float, prefs: UserPreferences, )</ID>
+    <ID>LongParameterList:ComputeSleepMetricsUseCase.kt$ComputeSleepMetricsUseCase$( targetDate: LocalDate, dayMidnight: Instant, dayEndMs: Long, frozenBaseline: Boolean, isCalibrating: Boolean, hrvMuHistorySize: Int, rhrValuesSize: Int, sessionId: String, currentHrvMean: Float?, currentNocturnalRhr: Int?, durationMinutes: Int, loadScore: Float, frozenHrvMu: Float?, frozenHrvSigma: Float?, activeHrvMu: Float?, activeHrvSigma: Float?, frozenRhr: Float?, effectiveRhrSigma: Float?, zLnHrv: Float?, zRhr: Float?, sRest: Float?, sleepScore: Float?, readinessScore: Float?, recoveryFlags: String?, )</ID>
+    <ID>LongParameterList:HistoricalSleepDayAssembler.kt$HistoricalSleepDayAssembler$( scoreDay: LocalDate, coreSessionIds: List&lt;String&gt;, durationMinutes: Int, deepMinutes: Int, remMinutes: Int, hrvMean: Float?, hrSamples: List&lt;Int&gt;, percentile: Int, assumeCoverageValid: Boolean, )</ID>
+    <ID>LongParameterList:LoadScoringStrategy.kt$LoadScoringStrategy$( zLnHrv: Float?, zRhr: Float?, rhrDeltaBpm: Float?, yesterdayZLnHrv: Float?, yesterdayZRhr: Float?, hrvMissing: Boolean, stagesSuspicious: Boolean, isLateNadir: Boolean, isCalibrating: Boolean, emergencyFlags: EmergencyFlagThresholds?, yesterdayTrimp: Float? = null, yesterdayHrv: Float? = null, currentHrv: Float? = null, hrvOptimalThreshold: Float = 1.0f, isCurrentHrvOptimal: Boolean = false, isCurrentRhrOptimal: Boolean = false, isPreviousHrvOptimal: Boolean = false, )</ID>
+    <ID>LongParameterList:ScoringCalculator.kt$ScoringCalculator$( zLnHrv: Float?, zRhr: Float?, rhrDeltaBpm: Float?, yesterdayZLnHrv: Float?, yesterdayZRhr: Float?, hrvMissing: Boolean, stagesSuspicious: Boolean, isLateNadir: Boolean, isCalibrating: Boolean, emergencyFlags: app.readylytics.health.core.scoring.domain.scoring.components.EmergencyFlagThresholds? = null, yesterdayTrimp: Float? = null, yesterdayHrv: Float? = null, currentHrv: Float? = null, hrvOptimalThreshold: Float = 1.0f, isCurrentHrvOptimal: Boolean = false, isCurrentRhrOptimal: Boolean = false, isPreviousHrvOptimal: Boolean = false, )</ID>
+    <ID>LongParameterList:SleepScoringStrategy.kt$SleepScoringStrategy$( currentHrvMean: Float, muHrvHistory: List&lt;Float&gt;, sigmaHrvHistory: List&lt;Float&gt;, sigmaPrior: Float, currentNocturnalRhr: Float, rhrValues: List&lt;Int&gt;, rhrBaselineOverride: Float?, hrvBaselineOverride: Float?, restorationWeights: RestorationWeights?, frozenLnMu: Float?, frozenLnSigma: Float?, frozenRhrSigma: Float? = null, saturationZ: Float = ScoringConstants.HRV_SCORE_SATURATION_Z, )</ID>
+    <ID>LongParameterList:SleepScoringStrategy.kt$SleepScoringStrategy$( durationMinutes: Int, efficiency: Float, deepSleepMinutes: Int, remSleepMinutes: Int, goalSleepHours: Float, sRest: Float, userAge: Int, stagesSuspicious: Boolean, sleepTargets: SleepArchitectureTargets?, fragmentation: SleepFragmentation? = null, weightProfile: SleepScoreWeightProfile = SleepScoreWeightProfile.DEFAULT, regularityScore: Float? = null, hypersomniaOnsetRatio: Float = Sleep.DEFAULT_HYPERSOMNIA_ONSET_RATIO, )</ID>
+    <ID>ReturnCount:BaselineComputer.kt$BaselineComputer$suspend fun computeAdaptiveBaselineRhrBpm( dayMidnight: Instant, rhrBaselineOverride: Float?, percentile: Int, sleepDayPolicy: SleepDayPolicy? = null, ): Float?</ID>
+    <ID>ReturnCount:BaselineComputer.kt$BaselineComputer$suspend fun computeAdaptiveBaselineRhrBpmBetween( fromMs: Long, toMs: Long, percentile: Int, sleepDayPolicy: SleepDayPolicy? = null, prefetchedSessions: List&lt;SleepSession&gt;? = null, ): Float?</ID>
+    <ID>ReturnCount:BaselineComputer.kt$BaselineComputer$suspend fun computeBackfillBaselines( summaries: List&lt;DailySummary&gt;, percentile: Int, sleepDayPolicy: SleepDayPolicy? = null, ): Map&lt;LocalDate, BackfillBaseline&gt;</ID>
+    <ID>ReturnCount:BaselineComputer.kt$BaselineComputer$suspend fun computeHrvBaseline( dayMidnight: Instant, hrvBaselineOverride: Float?, ): Int?</ID>
+    <ID>ReturnCount:BaselineComputer.kt$BaselineComputer$suspend fun computeHrvBaselineBetween( fromMs: Long, toMs: Long, hrvBaselineOverride: Float?, sleepDayPolicy: SleepDayPolicy? = null, prefetchedSessions: List&lt;SleepSession&gt;? = null, ): Int?</ID>
+    <ID>ReturnCount:BpElevatedHighStrainRule.kt$BpElevatedHighStrainRule$override fun evaluate(context: InsightContext): InsightFinding?</ID>
+    <ID>ReturnCount:CircadianConsistencyRepository.kt$CircadianConsistencyRepository$private fun compute( sessions: List&lt;SleepSessionData&gt;, prefs: UserPreferences, anchorDate: LocalDate, ): CircadianConsistencyResult</ID>
+    <ID>ReturnCount:CircadianShiftRecoveryMissRule.kt$CircadianShiftRecoveryMissRule$override fun evaluate(context: InsightContext): InsightFinding?</ID>
+    <ID>ReturnCount:HighStrainSleepDeficitRule.kt$HighStrainSleepDeficitRule$override fun evaluate(context: InsightContext): InsightFinding?</ID>
+    <ID>ReturnCount:HrvBaselineProvider.kt$HrvBaselineProvider$suspend fun getPreciseHrvBaseline(date: LocalDate): Double?</ID>
+    <ID>ReturnCount:HrvDeclineStreakRule.kt$HrvDeclineStreakRule$override fun evaluate(context: InsightContext): InsightFinding?</ID>
+    <ID>ReturnCount:HrvDeclineStreakRule.kt$HrvDeclineStreakRule$private fun isBelowRoundedBaseline( day: DailySummary, context: InsightContext, ): Boolean</ID>
+    <ID>ReturnCount:HrvDropLowSpo2Rule.kt$HrvDropLowSpo2Rule$override fun evaluate(context: InsightContext): InsightFinding?</ID>
+    <ID>ReturnCount:LateNadirElevatedRhrRule.kt$LateNadirElevatedRhrRule$override fun evaluate(context: InsightContext): InsightFinding?</ID>
+    <ID>ReturnCount:LateNadirShortSleepRule.kt$LateNadirShortSleepRule$override fun evaluate(context: InsightContext): InsightFinding?</ID>
+    <ID>ReturnCount:LoadSpikeRecoveryStrainRule.kt$LoadSpikeRecoveryStrainRule$override fun evaluate(context: InsightContext): InsightFinding?</ID>
+    <ID>ReturnCount:RasCalculator.kt$RasCalculator$fun calculateDailyTrimp( durationMinutes: Float, hrAvg: Float, rhrBaseline: Float, hrMax: Float, gender: Gender?, trimpModel: TrimpModel = TrimpModel.BANISTER, banisterMultiplier: Float = 1.0f, chengBeta: Float = 0.09f, itrimB: Float = 2.1f, ltBpm: Float = 0f, ): Float</ID>
+    <ID>ReturnCount:RasDepletionHighStrainRule.kt$RasDepletionHighStrainRule$override fun evaluate(context: InsightContext): InsightFinding?</ID>
+    <ID>ReturnCount:RasScoringStrategy.kt$RasScoringStrategy$private fun computeEma( data: List&lt;Float&gt;, seed: Float, windowDays: Long, ): Float</ID>
+    <ID>ReturnCount:RasScoringStrategy.kt$RasScoringStrategy$private fun computeEmaSeries( dailyTrimpByDate: Map&lt;LocalDate, Float&gt;, windowDays: Long, seriesStart: LocalDate, seriesEnd: LocalDate, ): Map&lt;LocalDate, Float&gt;</ID>
+    <ID>ReturnCount:RasScoringStrategy.kt$RasScoringStrategy$private fun computeEmaWithDecay( dailyTrimpByDate: Map&lt;LocalDate, Float&gt;, windowDays: Long, rangeEnd: LocalDate, ): Float</ID>
+    <ID>ReturnCount:RasWeeklyUnderperformanceRule.kt$RasWeeklyUnderperformanceRule$override fun evaluate(context: InsightContext): InsightFinding?</ID>
+    <ID>ReturnCount:RhrBaselineProvider.kt$AdaptiveRhrBaselineProvider$override suspend fun getPreciseRhrBaseline(date: LocalDate): Double</ID>
+    <ID>ReturnCount:RhrBaselineProvider.kt$AdaptiveRhrBaselineProvider$override suspend fun getRoundedRhrBaseline(date: LocalDate): Int</ID>
+    <ID>ReturnCount:SleepPercentileRhrCalculator.kt$SleepPercentileRhrCalculator$fun List&lt;SleepHrSample&gt;?.getPercentileValue(percentile: Int): Int?</ID>
+    <ID>ReturnCount:StepShortfallRule.kt$StepShortfallRule$override fun evaluate(context: InsightContext): InsightFinding?</ID>
+    <ID>ReturnCount:WeightDriftTrainingLoadRule.kt$WeightDriftTrainingLoadRule$override fun evaluate(context: InsightContext): InsightFinding?</ID>
+    <ID>TooManyFunctions:BaselineComputer.kt$BaselineComputer</ID>
+    <ID>TooManyFunctions:CompositeScoringCalculator.kt$CompositeScoringCalculator : ScoringCalculator</ID>
+    <ID>TooManyFunctions:DailyPromptFormatter.kt$DailyPromptFormatter</ID>
+    <ID>TooManyFunctions:InsightCauseRanker.kt$InsightCauseRanker</ID>
+    <ID>TooManyFunctions:ScoringCalculator.kt$ScoringCalculator</ID>
+    <ID>TooManyFunctions:SleepDayAggregator.kt$SleepDayAggregator</ID>
+  </CurrentIssues>
+</SmellBaseline>

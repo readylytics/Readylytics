@@ -20,12 +20,6 @@ fun SettingsToggleItem(
 ) {
     ListItem(
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        headlineContent = {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyLarge,
-            )
-        },
         supportingContent = {
             Text(
                 text = description,
@@ -41,5 +35,10 @@ fun SettingsToggleItem(
             )
         },
         modifier = modifier,
-    )
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+        )
+    }
 }

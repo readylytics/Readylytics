@@ -3,9 +3,9 @@ package app.readylytics.health.crashreport
 import android.content.Context
 import android.os.Build
 import app.readylytics.health.BuildConfig
+import app.readylytics.health.core.model.domain.crashreport.CrashReportMetadata
+import app.readylytics.health.core.model.domain.crashreport.formatCrashReport
 import app.readylytics.health.data.crashreport.CrashReportStoreImpl
-import app.readylytics.health.domain.crashreport.CrashReportMetadata
-import app.readylytics.health.domain.crashreport.formatCrashReport
 import java.time.Instant
 
 /**

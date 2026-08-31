@@ -1,4 +1,5 @@
 import com.github.triplet.gradle.androidpublisher.ReleaseStatus
+import io.gitlab.arturbosch.detekt.Detekt
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.provider.MapProperty
@@ -54,6 +55,7 @@ abstract class VerifyReleaseSigningInputsTask : DefaultTask() {
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.androidx.baselineprofile)
+    alias(libs.plugins.detekt)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
@@ -124,9 +126,6 @@ val machineIdSegment = rawHostname.map(DebugInstallIdentity::sanitizeMachineId)
 
 kotlin {
     jvmToolchain(17)
-    compilerOptions {
-        freeCompilerArgs.add("-Xannotation-default-target=param-property")
-    }
 }
 
 composeCompiler {
@@ -163,8 +162,13 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         testOptions {
-            unitTests.isReturnDefaultValues = true
+            // Unstubbed Android framework calls must throw, not silently return 0/null — a frozen
+            // SystemClock had already left HealthDeviceRepository's 5-minute TTL untested.
+            unitTests.isReturnDefaultValues = false
             unitTests.isIncludeAndroidResources = true
+            // CleanArchTest parses every source file with the Kotlin PSI in a single forked JVM;
+            // the default heap OOMs at the current repo size.
+            unitTests.all { test -> test.maxHeapSize = "4g" }
         }
     }
 
@@ -202,32 +206,16 @@ android {
     }
     sourceSets {
         getByName("benchmark").apply {
-            kotlin.srcDirs("src/profileSupport/kotlin", "src/profileSeed/kotlin")
+            kotlin.directories.addAll(listOf("src/profileSupport/kotlin", "src/profileSeed/kotlin"))
             baselineProfiles {
-                srcDir("src/release/generated/baselineProfiles")
+                directories.add("src/release/generated/baselineProfiles")
             }
         }
         configureEach {
             when (name) {
                 "nonMinifiedRelease" ->
-                    kotlin.apply {
-                        srcDirs("src/profileSupport/kotlin", "src/profileSeed/kotlin")
-                        val releaseBenchmarkStubs =
-                            setOf(
-                                project
-                                    .file(
-                                        "src/release/kotlin/app/readylytics/health/benchmark/BenchmarkDataSeeder.kt",
-                                    ).absoluteFile,
-                                project
-                                    .file(
-                                        "src/release/kotlin/app/readylytics/health/benchmark/BenchmarkSemantics.kt",
-                                    ).absoluteFile,
-                            )
-                        (this as com.android.build.gradle.api.AndroidSourceDirectorySet).filter.exclude {
-                            it.file.absoluteFile in releaseBenchmarkStubs
-                        }
-                    }
-                "test" -> kotlin.srcDir("src/profileSeed/kotlin")
+                    kotlin.directories.addAll(listOf("src/profileSupport/kotlin", "src/profileSeed/kotlin"))
+                "test" -> kotlin.directories.add("src/profileSeed/kotlin")
             }
         }
     }
@@ -244,7 +232,25 @@ android {
         abortOnError = true
         warningsAsErrors = true
         xmlReport = true
-        disable += listOf("GradleDependency", "NewerVersionAvailable")
+        // Requires network dependency lookups that aren't meaningful/stable in CI.
+        disable += listOf("NewerVersionAvailable")
+        // "A newer AGP/Gradle or dependency version is available" is noise, not a bug: it must
+        // never block a Play release, and in normal CI it should be visible without failing the
+        // build. releasePipeline (set only by the release workflow) fully suppresses these;
+        // otherwise they're downgraded to informational, which warningsAsErrors does not promote.
+        val releasePipeline =
+            providers.gradleProperty("readylytics.lint.releasePipeline").orElse("false").map(String::toBoolean)
+        if (releasePipeline.get()) {
+            disable += listOf("GradleDependency", "AndroidGradlePluginVersion")
+        } else {
+            informational += listOf("GradleDependency", "AndroidGradlePluginVersion")
+        }
+    }
+}
+
+androidComponents {
+    onVariants(selector().withBuildType("release")) { variant ->
+        variant.sources.kotlin?.addStaticSourceDirectory("src/releaseStubs/kotlin")
     }
 }
 
@@ -290,6 +296,27 @@ ktlint {
     version.set("1.5.0")
 }
 
+detekt {
+    buildUponDefaultConfig = true
+    allRules = false
+    parallel = true
+    config.setFrom(rootProject.layout.projectDirectory.file("config/detekt/detekt.yml"))
+    // Per-module baseline — see the comment in readylytics.kotlin-android-conventions.gradle.kts.
+    baseline = layout.projectDirectory.file("detekt-baseline.xml").asFile
+}
+
+tasks.withType<Detekt>().configureEach {
+    reports {
+        html.required.set(true)
+        xml.required.set(true)
+        txt.required.set(false)
+        sarif.required.set(true)
+        html.outputLocation.set(layout.buildDirectory.file("reports/detekt/$name.html"))
+        xml.outputLocation.set(layout.buildDirectory.file("reports/detekt/$name.xml"))
+        sarif.outputLocation.set(layout.buildDirectory.file("reports/detekt/$name.sarif"))
+    }
+}
+
 jacoco {
     toolVersion = "0.8.11"
 }
@@ -325,6 +352,7 @@ dependencies {
     implementation(project(":feature:vitals"))
     implementation(project(":feature:workouts"))
     implementation(project(":core:model"))
+    implementation(project(":core:database-schema"))
     implementation(project(":core:designsystem"))
     implementation(project(":core:ui"))
     implementation(project(":core:scoring"))
@@ -360,6 +388,9 @@ dependencies {
     implementation(libs.room.ktx)
     implementation(libs.sqlcipher.android)
     implementation(libs.androidx.sqlite)
+    // Room KSP for androidTest: prototype DAOs used by conflict-strategy research
+    // (UpsertConflictStrategyInstrumentedTest) live in the androidTest source set.
+    kspAndroidTest(libs.room.compiler)
 
     // DataStore
     implementation(libs.androidx.datastore.preferences)

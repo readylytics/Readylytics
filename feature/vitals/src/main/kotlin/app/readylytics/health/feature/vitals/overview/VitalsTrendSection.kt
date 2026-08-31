@@ -8,18 +8,17 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.domain.preferences.UnitSystem
+import app.readylytics.health.core.model.domain.vitals.VitalsChartConfiguration
+import app.readylytics.health.core.model.domain.vitals.VitalsChartId
 import app.readylytics.health.core.ui.common.CardLoader
 import app.readylytics.health.core.ui.common.DeltaDirection
 import app.readylytics.health.core.ui.common.SkeletonCard
-import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.core.ui.components.ChartConfigurationsList
 import app.readylytics.health.core.ui.components.ChartDataMap
 import app.readylytics.health.core.ui.components.ReorderableChartList
 import app.readylytics.health.core.ui.components.TrendCard
 import app.readylytics.health.core.ui.components.TrendChart
-import app.readylytics.health.domain.preferences.UnitSystem
-import app.readylytics.health.domain.vitals.VitalsChartConfiguration
-import app.readylytics.health.domain.vitals.VitalsChartId
 import app.readylytics.health.feature.vitals.R
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
@@ -33,6 +32,7 @@ import app.readylytics.health.core.ui.R as CoreUiR
 @Composable
 internal fun VitalsTrendSection(
     chartInputs: VitalsChartInputs,
+    modifier: Modifier = Modifier,
     chartConfigurations: List<VitalsChartConfiguration> =
         VitalsChartId.entries.mapIndexed { index, chartId -> VitalsChartConfiguration(chartId, true, index) },
     isEditing: Boolean = false,
@@ -41,7 +41,6 @@ internal fun VitalsTrendSection(
     chartScrollState: VicoScrollState,
     chartZoomState: VicoZoomState,
     parentScrollInProgress: () -> Boolean,
-    modifier: Modifier = Modifier,
 ) {
     val chartDataMap =
         VitalsChartId.entries.associateWith { chartId ->
@@ -131,17 +130,16 @@ private fun HrvTrendChartBlock(
                     points = chartSeries.hrv,
                     rangeStartMs = chartInputs.rangeStartMs,
                     rangeDays = chartInputs.selectedRange.days,
-                    metricName = stringResource(CoreUiR.string.label_hrv),
                     baselineUnit = stringResource(CoreUiR.string.unit_ms),
                     modifier = Modifier.testTag("HrvTrendChart"),
                     baseline =
-                        chartSeries.historicalHrvBaselineAverage?.toFloat()
-                            ?: presentation.hrv.baseline?.toFloat(),
+                        presentation.hrv.baseline?.toFloat()
+                            ?: chartSeries.historicalHrvBaselineAverage?.toFloat(),
                     showBaseline = presentation.hrv.baseline != null,
                     scrollState = chartScrollState,
                     zoomState = chartZoomState,
                     zoneBands =
-                        if (chartInputs.selectedRange.granularity == TrendGranularity.DAILY) {
+                        if (chartSeries.historicalHrvBaseline.isEmpty()) {
                             presentation.hrv.zoneBands
                         } else {
                             chartSeries.historicalHrvZoneBands
@@ -179,17 +177,16 @@ private fun RhrTrendChartBlock(
                     points = chartSeries.rhr,
                     rangeStartMs = chartInputs.rangeStartMs,
                     rangeDays = chartInputs.selectedRange.days,
-                    metricName = stringResource(CoreUiR.string.label_rhr),
                     baselineUnit = stringResource(CoreUiR.string.unit_bpm),
                     modifier = Modifier.testTag("RestingHeartRateTrendChart"),
                     baseline =
-                        chartSeries.historicalRhrBaselineAverage?.toFloat()
-                            ?: presentation.rhr.baseline?.toFloat(),
+                        presentation.rhr.baseline?.toFloat()
+                            ?: chartSeries.historicalRhrBaselineAverage?.toFloat(),
                     showBaseline = presentation.rhr.baseline != null,
                     scrollState = chartScrollState,
                     zoomState = chartZoomState,
                     zoneBands =
-                        if (chartInputs.selectedRange.granularity == TrendGranularity.DAILY) {
+                        if (chartSeries.historicalRhrBaseline.isEmpty()) {
                             presentation.rhr.zoneBands
                         } else {
                             chartSeries.historicalRhrZoneBands
@@ -227,7 +224,6 @@ private fun Spo2TrendChartBlock(
                     points = chartSeries.spo2,
                     rangeStartMs = chartInputs.rangeStartMs,
                     rangeDays = chartInputs.selectedRange.days,
-                    metricName = stringResource(CoreUiR.string.label_spo2),
                     baselineUnit = stringResource(CoreUiR.string.unit_percent),
                     modifier = Modifier.testTag("OxygenSaturationTrendChart"),
                     baseline = 95f,
@@ -271,7 +267,6 @@ private fun BodyTempTrendChartBlock(
                     points = chartSeries.bodyTemp,
                     rangeStartMs = chartInputs.rangeStartMs,
                     rangeDays = chartInputs.selectedRange.days,
-                    metricName = stringResource(CoreUiR.string.label_body_temperature),
                     baselineUnit =
                         if (presentation.bodyTempUnitSystem == UnitSystem.IMPERIAL) {
                             stringResource(CoreUiR.string.unit_fahrenheit)

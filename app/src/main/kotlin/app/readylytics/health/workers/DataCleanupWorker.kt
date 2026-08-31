@@ -4,11 +4,12 @@ import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import app.readylytics.health.data.local.RetentionCleanup
+import app.readylytics.health.core.database.data.local.RetentionCleanup
+import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
+import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspector
+import app.readylytics.health.core.model.domain.util.RetentionBounds
+import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.data.preferences.SettingsRepository
-import app.readylytics.health.domain.migration.DatabaseReadiness
-import app.readylytics.health.domain.migration.DatabaseReadinessInspector
-import app.readylytics.health.domain.util.RetentionBounds
 import dagger.Lazy
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -41,6 +42,7 @@ class DataCleanupWorker
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                logE("DataCleanupWorker", e) { "Data cleanup failed" }
                 Result.failure()
             }
         }

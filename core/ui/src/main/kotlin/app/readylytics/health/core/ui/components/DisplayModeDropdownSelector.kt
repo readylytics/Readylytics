@@ -2,6 +2,7 @@ package app.readylytics.health.core.ui.components
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -18,8 +19,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.ui.R
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 
 /**
  * Read-only exposed dropdown for picking a card's visualization mode. Shows only the modes a
@@ -55,9 +56,10 @@ fun DisplayModeDropdownSelector(
                     .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                     .fillMaxWidth(),
         )
-        ExposedDropdownMenu(
+        DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
+            modifier = Modifier.exposedDropdownSize(),
         ) {
             supportedModes.forEach { option ->
                 DropdownMenuItem(

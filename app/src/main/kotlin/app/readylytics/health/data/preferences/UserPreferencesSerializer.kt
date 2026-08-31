@@ -2,12 +2,13 @@ package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.CorruptionException
 import androidx.datastore.core.Serializer
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
-import app.readylytics.health.domain.scoring.LoadSourceMode
+import app.readylytics.health.core.model.data.preferences.FallbackThemeColor
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
+import app.readylytics.health.core.model.data.preferences.UserPreferences
 import com.google.protobuf.InvalidProtocolBufferException
 import java.io.InputStream
 import java.io.OutputStream
-import java.time.LocalDate
+import java.time.DayOfWeek
 
 object UserPreferencesSerializer : Serializer<UserPreferencesProto> {
     override val defaultValue: UserPreferencesProto =
@@ -70,6 +71,10 @@ object UserPreferencesSerializer : Serializer<UserPreferencesProto> {
             .setCustomTertiaryColor(SettingsDefaults.CUSTOM_TERTIARY_COLOR)
             .setCustomPrimaryColor(SettingsDefaults.CUSTOM_PRIMARY_COLOR)
             .setBodyTempElevatedThresholdCelsius(SettingsDefaults.BODY_TEMP_ELEVATED_THRESHOLD_CELSIUS)
+            .setSleepScoreWeightProfile(SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_BALANCED)
+            .setHypersomniaOnsetPercent(SettingsDefaults.HYPERSOMNIA_ONSET_PERCENT)
+            .setScoringVersion(0)
+            .setWeekStartDay(SettingsDefaults.WEEK_START_DAY.toProto())
             .build()
 
     override suspend fun readFrom(input: InputStream): UserPreferencesProto {
@@ -97,122 +102,23 @@ fun FallbackThemeColor.toProto(): FallbackThemeColorProto =
         FallbackThemeColor.ICON_ELEMENTS -> FallbackThemeColorProto.FALLBACK_ICON_ELEMENTS
     }
 
-fun UserPreferences.toProto(): UserPreferencesProto {
-    val domain = this
-    val builder = UserPreferencesProto.newBuilder()
-    builder
-        .setGoalSleepHours(domain.goalSleepHours)
-        .setCoreMergeGapMinutes(domain.coreMergeGapMinutes)
-        .setSupplementalCutoffMinutesOfDay(domain.supplementalCutoffMinutesOfDay)
-        .setMinimumCountedSleepSegmentMinutes(domain.minimumCountedSleepSegmentMinutes)
-        .setSupplementalArchitectureCoveragePercent(domain.supplementalArchitectureCoveragePercent)
-        .setSyncPreference(SyncPreferenceProto.valueOf("SYNC_${domain.syncPreference.name}"))
-        .setSyncIntervalHours(domain.syncIntervalHours)
-        .setLastSyncTimestamp(domain.lastSyncTimestamp)
-        .setMaxHeartRate(domain.maxHeartRate)
-        .setAutoCalculateMaxHr(domain.autoCalculateMaxHr)
-        .setManualZoneEditing(domain.manualZoneEditing)
-        .setZone1MinPercent(domain.zone1MinPercent)
-        .setZone1MaxPercent(domain.zone1MaxPercent)
-        .setZone2MaxPercent(domain.zone2MaxPercent)
-        .setZone3MaxPercent(domain.zone3MaxPercent)
-        .setZone4MaxPercent(domain.zone4MaxPercent)
-        .setZone1MinBpm(domain.zone1MinBpm)
-        .setZone1MaxBpm(domain.zone1MaxBpm)
-        .setZone2MaxBpm(domain.zone2MaxBpm)
-        .setZone3MaxBpm(domain.zone3MaxBpm)
-        .setZone4MaxBpm(domain.zone4MaxBpm)
-        .setAge(domain.age)
-        // Extract birth day, month, year from the ISO-8601 birthDate string for proto storage
-        .apply {
-            if (domain.birthDate != null) {
-                try {
-                    val date = LocalDate.parse(domain.birthDate)
-                    setBirthDay(date.dayOfMonth)
-                    setBirthMonth(date.monthValue)
-                    setBirthYear(date.year)
-                } catch (e: Exception) {
-                    // If parsing fails, keep default values
-                }
-            }
-        }.setHrvOptimalThreshold(domain.hrvOptimalThreshold)
-        .setHrvWarningThreshold(domain.hrvWarningThreshold)
-        .setRhrOptimalThreshold(domain.rhrOptimalThreshold)
-        .setRhrWarningThreshold(domain.rhrWarningThreshold)
-        .setAppTheme(AppThemeProto.valueOf("THEME_${domain.appTheme.name}"))
-        .setDynamicColorEnabled(domain.dynamicColorEnabled)
-        .setFallbackThemeColor(domain.fallbackThemeColor.toProto())
-        .setBackupSchedule(BackupScheduleProto.valueOf("BACKUP_${domain.backupSchedule.name}"))
-        .setLastBackupTimestamp(domain.lastBackupTimestamp)
-        .setConsistencyThresholdMinutes(domain.consistencyThresholdMinutes)
-        .setConsistencyEvaluationDays(domain.consistencyEvaluationDays)
-        .setConsistencyBaselineDays(domain.consistencyBaselineDays)
-        .setHrrToleranceSeconds(domain.hrrToleranceSeconds)
-        .setRasScalingFactor(domain.rasScalingFactor)
-        .setStepGoal(domain.stepGoal)
-        .setRetentionDaysEnabled(domain.retentionDaysEnabled)
-        .setRetentionDays(domain.retentionDays)
-        .setCollapseHealthConnect(domain.collapseHealthConnect)
-        .setCollapseBaselinesThresholds(domain.collapseBaselinesThresholds)
-        .setCollapseDisplay(domain.collapseDisplay)
-        .setCollapseAdvanced(domain.collapseAdvanced)
-        .setAboutDismissed(domain.aboutDismissed)
-        .setPhysiologyProfile(PhysiologyProfileProto.valueOf("PROFILE_${domain.physiologyProfile.name}"))
-        .setInstallDate(domain.installDate)
-        .setTrimpMethod(
-            when (domain.trimpModel) {
-                app.readylytics.health.domain.scoring.TrimpModel.BANISTER -> TrimpMethodProto.TRIMP_BANISTER
-                app.readylytics.health.domain.scoring.TrimpModel.I_TRIMP -> TrimpMethodProto.TRIMP_ITRIMP
-                app.readylytics.health.domain.scoring.TrimpModel.CHENG -> TrimpMethodProto.TRIMP_CHENG
-            },
-        ).setRasCalibration(domain.banisterMultiplier)
-        .setChengBeta(domain.chengBeta)
-        .setItrimpB(domain.itrimB)
-        .setScoringZoneId(domain.scoringZoneId)
-        .setBackgroundSyncEnabled(domain.backgroundSyncEnabled)
-        .setBackgroundSyncIntervalMinutes(domain.backgroundSyncIntervalMinutes)
-        .setIsCustomPaletteEnabled(domain.isCustomPaletteEnabled)
-        .setCustomSecondaryColor(domain.customSecondaryColor)
-        .setCustomTertiaryColor(domain.customTertiaryColor)
-        .setCustomPrimaryColor(domain.customPrimaryColor)
-        .setBodyTempElevatedThresholdCelsius(domain.bodyTempElevatedThresholdCelsius)
+fun DayOfWeek.toProto(): DayOfWeekProto =
+    when (this) {
+        DayOfWeek.MONDAY -> DayOfWeekProto.DAY_OF_WEEK_MONDAY
+        DayOfWeek.TUESDAY -> DayOfWeekProto.DAY_OF_WEEK_TUESDAY
+        DayOfWeek.WEDNESDAY -> DayOfWeekProto.DAY_OF_WEEK_WEDNESDAY
+        DayOfWeek.THURSDAY -> DayOfWeekProto.DAY_OF_WEEK_THURSDAY
+        DayOfWeek.FRIDAY -> DayOfWeekProto.DAY_OF_WEEK_FRIDAY
+        DayOfWeek.SATURDAY -> DayOfWeekProto.DAY_OF_WEEK_SATURDAY
+        DayOfWeek.SUNDAY -> DayOfWeekProto.DAY_OF_WEEK_SUNDAY
+    }
 
-    domain.hrvBaselineOverride?.let { builder.setHrvBaselineOverride(it) }
-    domain.rhrBaselineOverride?.let { builder.setRhrBaselineOverride(it) }
-    domain.gender?.let { builder.setGender(it.name) }
-    domain.heightCm?.let { builder.setHeightCm(it) }
-    domain.circadianThresholdOverride?.let { builder.setCircadianThresholdOverride(it) }
-    domain.primaryDeviceName?.let { builder.setPrimaryDeviceName(it) }
-    domain.backupDirectoryUri?.let { builder.setBackupDirectoryUri(it) }
-    domain.backupPasswordHash?.let { builder.setBackupPasswordHash(it) }
-    builder.setIsBirthdayConfigured(domain.isBirthdayConfigured)
-    builder.setRestingHrPercentile(domain.restingHrPercentile)
-    builder.setUnitSystem(
-        when (domain.unitSystem) {
-            UnitSystem.METRIC -> UnitSystemProto.UNIT_METRIC
-            UnitSystem.IMPERIAL -> UnitSystemProto.UNIT_IMPERIAL
-        },
-    )
-    builder.setStrainLoadSourceMode(
-        when (domain.strainLoadSourceMode) {
-            LoadSourceMode.WORKOUT_ONLY -> LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY
-            LoadSourceMode.EVERYDAY_HEART_RATE -> LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE
-        },
-    )
-    builder.setRasSourceMode(
-        when (domain.rasSourceMode) {
-            LoadSourceMode.WORKOUT_ONLY -> LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY
-            LoadSourceMode.EVERYDAY_HEART_RATE -> LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE
-        },
-    )
-    builder.setLastGlobalDisplayMode(
-        when (domain.lastGlobalDisplayMode) {
-            DashboardCardDisplayMode.VALUE -> DashboardCardDisplayModeProto.DASHBOARD_CARD_DISPLAY_MODE_VALUE
-            DashboardCardDisplayMode.GAUGE -> DashboardCardDisplayModeProto.DASHBOARD_CARD_DISPLAY_MODE_GAUGE
-            DashboardCardDisplayMode.BAR -> DashboardCardDisplayModeProto.DASHBOARD_CARD_DISPLAY_MODE_BAR
-            null -> DashboardCardDisplayModeProto.DASHBOARD_CARD_DISPLAY_MODE_UNSET
-        },
-    )
-
-    return builder.build()
-}
+fun UserPreferences.toProto(): UserPreferencesProto =
+    UserPreferencesProto
+        .newBuilder()
+        .applySyncAndBaselineFields(this)
+        .applyZoneAndDemographicFields(this)
+        .applyThresholdAndDisplayFields(this)
+        .applyPaletteAndUiFields(this)
+        .applyScoringAndRecalcFields(this)
+        .build()

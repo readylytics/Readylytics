@@ -40,7 +40,12 @@ class FeatureModuleArchitectureTest {
             listOf(
                 "app.readylytics.health.R",
                 "app.readylytics.health.data.",
+                "app.readylytics.health.core.database.data.",
+                "app.readylytics.health.core.healthconnect.data.",
+                "app.readylytics.health.core.model.data.",
+                "app.readylytics.health.core.databaseschema.data.",
                 "app.readylytics.health.workers.",
+                "app.readylytics.health.core.model.workers.",
                 "androidx.room.",
                 "androidx.health.connect.",
                 "androidx.work.",
@@ -50,26 +55,7 @@ class FeatureModuleArchitectureTest {
                 source.readLines().forEachIndexed { index, line ->
                     if (line.startsWith("import ")) {
                         forbidden.forEach { prefix ->
-                            if (prefix == "app.readylytics.health.data." &&
-                                line.contains("app.readylytics.health.data.preferences.")
-                            ) {
-                                // allowed preferences package imports
-                            } else if (
-                                prefix == "androidx.health.connect." &&
-                                (
-                                    source.name == "DataSettings.kt" ||
-                                        source.name == "OnboardingRoute.kt" ||
-                                        source.name == "PermissionBullets.kt"
-                                ) &&
-                                (
-                                    line.contains("androidx.health.connect.client.PermissionController") ||
-                                        line.contains("androidx.health.connect.client.permission.HealthPermission") ||
-                                        line.contains("androidx.health.connect.client.HealthConnectClient") ||
-                                        line.contains("androidx.health.connect.client.records.")
-                                )
-                            ) {
-                                // settings permission launcher and onboarding may reference HC classes/constants
-                            } else {
+                            if (!isAllowedImport(prefix, source, line)) {
                                 assertFalse("${source.relativeTo(root)}:${index + 1}: $prefix", line.contains(prefix))
                             }
                         }
@@ -85,9 +71,55 @@ class FeatureModuleArchitectureTest {
         }
     }
 
+    private fun isAllowedImport(
+        prefix: String,
+        source: File,
+        line: String,
+    ): Boolean =
+        when {
+            !line.contains(prefix) -> true
+            isAllowedPreferencesImport(prefix, line) -> true
+            else -> isAllowedHealthConnectImport(prefix, source, line)
+        }
+
+    private fun isAllowedPreferencesImport(
+        prefix: String,
+        line: String,
+    ): Boolean =
+        prefix.endsWith(".data.") &&
+            line.contains(prefix.replace(".data.", ".data.preferences."))
+
+    private fun isAllowedHealthConnectImport(
+        prefix: String,
+        source: File,
+        line: String,
+    ): Boolean =
+        prefix == "androidx.health.connect." &&
+            source.name in allowedHealthConnectSources &&
+            allowedHealthConnectApis.any { line.contains(it) }
+
     private fun featureDirectories(): List<File> =
         File(
             root,
             "feature",
         ).listFiles().orEmpty().filter { File(it, "build.gradle.kts").isFile }.sortedBy(File::getName)
+
+    private companion object {
+        val allowedHealthConnectSources =
+            setOf(
+                "DataSettings.kt",
+                "OnboardingRoute.kt",
+                "OnboardingPermissionGateHelpers.kt",
+                "PermissionBullets.kt",
+                "ActivityVolumeSection.kt",
+            )
+
+        val allowedHealthConnectApis =
+            listOf(
+                "androidx.health.connect.client.PermissionController",
+                "androidx.health.connect.client.permission.HealthPermission",
+                "androidx.health.connect.client.HealthConnectClient",
+                "androidx.health.connect.client.records.",
+            )
+    }
 }

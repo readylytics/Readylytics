@@ -44,7 +44,8 @@ import androidx.core.graphics.toColorInt
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.designsystem.toHexCode
-import app.readylytics.health.data.preferences.FallbackThemeColor
+import app.readylytics.health.core.model.data.preferences.FallbackThemeColor
+import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.feature.settings.R
 
 private fun FallbackThemeColor.labelRes(): Int =
@@ -70,6 +71,7 @@ private fun parseHexColor(hex: String): Color? {
             null
         }
     } catch (e: Exception) {
+        logD("CustomColorPicker") { "Invalid color input: ${e.message}" }
         null
     }
 }

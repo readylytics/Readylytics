@@ -1,9 +1,9 @@
 package app.readylytics.health.feature.sleep
 
-import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.model.MetricStatus
-import app.readylytics.health.domain.model.scoreStatus
-import app.readylytics.health.domain.repository.SleepSessionData
+import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.model.MetricStatus
+import app.readylytics.health.core.model.domain.model.scoreStatus
+import app.readylytics.health.core.model.domain.repository.SleepSessionData
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

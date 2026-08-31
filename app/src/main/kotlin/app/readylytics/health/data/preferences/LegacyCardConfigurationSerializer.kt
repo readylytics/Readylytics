@@ -1,8 +1,8 @@
 package app.readylytics.health.data.preferences
 
-import app.readylytics.health.domain.dashboard.CardConfiguration
-import app.readylytics.health.domain.util.logE
-import app.readylytics.health.domain.util.logW
+import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
+import app.readylytics.health.core.model.domain.util.logE
+import app.readylytics.health.core.model.domain.util.logW
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json

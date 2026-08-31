@@ -4,7 +4,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.readylytics.health.data.preferences.Gender
+import app.readylytics.health.core.model.data.preferences.Gender
 import app.readylytics.health.feature.settings.physiologyprofile.GenderSelector
 import org.junit.Rule
 import org.junit.Test

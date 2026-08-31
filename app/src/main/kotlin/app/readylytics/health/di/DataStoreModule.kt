@@ -13,8 +13,9 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
+import app.readylytics.health.core.model.di.ApplicationScope
+import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.data.preferences.*
-import app.readylytics.health.domain.util.logE
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -131,6 +132,21 @@ object DataStoreModule {
                 },
             scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
             produceFile = { context.dataStoreFile("workouts_layout_configurations.pb") },
+        )
+
+    @Provides
+    @Singleton
+    fun provideWorkoutDetailLayoutConfigurationsDataStore(
+        @ApplicationContext context: Context,
+    ): DataStore<WorkoutDetailLayoutConfigurationsProto> =
+        DataStoreFactory.create(
+            serializer = WorkoutDetailLayoutConfigurationsSerializer,
+            corruptionHandler =
+                ReplaceFileCorruptionHandler {
+                    WorkoutDetailLayoutConfigurationsSerializer.defaultValue
+                },
+            scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+            produceFile = { context.dataStoreFile("workout_detail_layout_configurations.pb") },
         )
 
     @Provides
@@ -306,7 +322,7 @@ object DataStoreModule {
                                 .build()
                         }
 
-                        override suspend fun cleanUp() {}
+                        override suspend fun cleanUp() = Unit
                     },
                     // Canonicalize removed profiles: stored PROFILE_GENERAL / PROFILE_SHIFT_WORKER are
                     // rewritten to PROFILE_ACTIVE so persisted storage matches the supported set.
@@ -322,7 +338,7 @@ object DataStoreModule {
                                 .setPhysiologyProfile(PhysiologyProfileProto.PROFILE_ACTIVE)
                                 .build()
 
-                        override suspend fun cleanUp() {}
+                        override suspend fun cleanUp() = Unit
                     },
                 ),
             produceFile = { context.dataStoreFile("user_preferences.pb") },

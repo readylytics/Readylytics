@@ -2,8 +2,8 @@ package app.readylytics.health.core.ui.components.settings
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.ui.components.DropdownPreferenceItem
-import app.readylytics.health.data.preferences.PhysiologyProfile
 
 @Composable
 fun PhysiologyProfilePicker(
@@ -11,6 +11,7 @@ fun PhysiologyProfilePicker(
     onProfileSelected: (PhysiologyProfile) -> Unit,
     modifier: Modifier = Modifier,
     label: String = "Activity Profile",
+    enabled: Boolean = true,
 ) {
     val profileLabel: (PhysiologyProfile) -> String = { profile ->
         when (profile) {
@@ -27,5 +28,6 @@ fun PhysiologyProfilePicker(
         optionLabel = profileLabel,
         onOptionSelected = onProfileSelected,
         modifier = modifier,
+        enabled = enabled,
     )
 }

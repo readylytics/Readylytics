@@ -2,13 +2,13 @@ package app.readylytics.health.feature.insights
 
 import android.content.Context
 import android.content.res.Resources
-import app.readylytics.health.domain.insights.InsightParams
-import app.readylytics.health.domain.insights.detail.CauseRankHint
-import app.readylytics.health.domain.insights.detail.DailyInsightContext
-import app.readylytics.health.domain.insights.detail.InsightCause
-import app.readylytics.health.domain.insights.detail.InsightCauseRanker
-import app.readylytics.health.domain.insights.detail.InsightDetailContent
-import app.readylytics.health.domain.model.InsightType
+import app.readylytics.health.core.model.domain.model.InsightType
+import app.readylytics.health.core.scoring.domain.insights.InsightParams
+import app.readylytics.health.core.scoring.domain.insights.detail.CauseRankHint
+import app.readylytics.health.core.scoring.domain.insights.detail.DailyInsightContext
+import app.readylytics.health.core.scoring.domain.insights.detail.InsightCause
+import app.readylytics.health.core.scoring.domain.insights.detail.InsightCauseRanker
+import app.readylytics.health.core.scoring.domain.insights.detail.InsightDetailContent
 import app.readylytics.health.feature.insights.R
 
 class InsightDetailRepository(
@@ -57,59 +57,94 @@ class InsightDetailRepository(
     private fun getFormattedDescription(
         resId: Int,
         params: InsightParams,
-    ): String {
-        val typeName = resources.getResourceTypeName(resId)
-        return if (typeName == "plurals") {
-            when (params) {
-                is InsightParams.HighStrainSleepDeficit ->
-                    resources.getQuantityString(
-                        resId,
-                        params.sleepDeficitMinutes,
-                        params.strainRatio,
-                        params.sleepDeficitMinutes,
-                    )
-                is InsightParams.LateNadirShortSleep -> {
-                    val deficit = params.goalSleepMinutes - params.sleepDurationMinutes
-                    resources.getQuantityString(resId, deficit, deficit, params.goalSleepMinutes)
-                }
-                is InsightParams.HrvDeclineStreak ->
-                    resources.getQuantityString(resId, params.days, params.days)
-                is InsightParams.StepShortfall ->
-                    resources.getQuantityString(resId, params.stepCount, params.stepCount, params.stepGoal)
-                is InsightParams.CircadianShift ->
-                    resources.getQuantityString(resId, params.bedtimeOffsetMinutes, params.bedtimeOffsetMinutes)
-                else -> resources.getQuantityString(resId, 1)
+    ): String =
+        runCatching {
+            val typeName = resources.getResourceTypeName(resId)
+            if (typeName == "plurals") {
+                formatPluralDescription(resId, params)
+            } else {
+                formatStringDescription(resId, params)
             }
-        } else {
-            when (params) {
-                is InsightParams.CircadianShift -> resources.getString(resId, params.bedtimeOffsetMinutes)
-                is InsightParams.HighStrainSleepDeficit ->
-                    resources.getString(
-                        resId,
-                        params.strainRatio,
-                        params.sleepDeficitMinutes,
-                    )
-                is InsightParams.LateNadirShortSleep -> {
-                    val deficit = params.goalSleepMinutes - params.sleepDurationMinutes
-                    resources.getString(resId, deficit, params.goalSleepMinutes)
-                }
-                is InsightParams.HrvSpo2 -> resources.getString(resId, params.zLnHrv, params.spo2)
-                is InsightParams.LateNadirElevatedRhr -> resources.getString(resId, params.rhrDeltaBpm)
-                is InsightParams.BpElevatedStrain ->
-                    resources.getString(
-                        resId,
-                        params.systolicDriftMmHg,
-                        params.strainRatio,
-                    )
-                is InsightParams.RasDepletionStrain -> resources.getString(resId, params.totalRas, params.strainRatio)
-                is InsightParams.HrvDeclineStreak -> resources.getString(resId, params.days)
-                is InsightParams.StepShortfall -> resources.getString(resId, params.stepCount, params.stepGoal)
-                is InsightParams.RasWeeklyShortfall -> resources.getString(resId, params.weeklyRas, params.target)
-                is InsightParams.WeightDrift -> resources.getString(resId, params.deltaKg, params.percent)
-                else -> resources.getString(resId)
-            }
+        }.getOrElse {
+            runCatching { resources.getString(resId) }.getOrDefault("")
         }
-    }
+
+    private fun formatPluralDescription(
+        resId: Int,
+        params: InsightParams,
+    ): String =
+        when (params) {
+            is InsightParams.HighStrainSleepDeficit ->
+                resources.getQuantityString(
+                    resId,
+                    params.sleepDeficitMinutes,
+                    params.strainRatio,
+                    params.sleepDeficitMinutes,
+                )
+            is InsightParams.LateNadirShortSleep -> {
+                val deficit = params.goalSleepMinutes - params.sleepDurationMinutes
+                resources.getQuantityString(resId, deficit, deficit, params.goalSleepMinutes)
+            }
+            is InsightParams.HrvDeclineStreak ->
+                resources.getQuantityString(resId, params.days, params.days)
+            is InsightParams.StepShortfall ->
+                resources.getQuantityString(resId, params.stepCount, params.stepCount, params.stepGoal)
+            is InsightParams.CircadianShift ->
+                resources.getQuantityString(resId, params.bedtimeOffsetMinutes, params.bedtimeOffsetMinutes)
+            else -> fallbackPluralDescription(resId)
+        }
+
+    private fun fallbackPluralDescription(resId: Int): String =
+        when (resId) {
+            R.plurals.insight_high_strain_sleep_deficit_body ->
+                resources.getQuantityString(resId, 1, 0f, 0)
+            R.plurals.insight_late_nadir_short_sleep_body ->
+                resources.getQuantityString(resId, 1, 0, 0)
+            R.plurals.insight_step_shortfall_body ->
+                resources.getQuantityString(resId, 1, 0, 0)
+            R.plurals.insight_circadian_shift_body ->
+                resources.getQuantityString(resId, 1, 0)
+            R.plurals.insight_hrv_decline_streak_body ->
+                resources.getQuantityString(resId, 1, 0)
+            else -> resources.getQuantityString(resId, 1, 0)
+        }
+
+    private fun formatStringDescription(
+        resId: Int,
+        params: InsightParams,
+    ): String =
+        when (params) {
+            is InsightParams.CircadianShift -> resources.getString(resId, params.bedtimeOffsetMinutes)
+            is InsightParams.HighStrainSleepDeficit ->
+                resources.getString(
+                    resId,
+                    params.strainRatio,
+                    params.sleepDeficitMinutes,
+                )
+            is InsightParams.LateNadirShortSleep -> {
+                val deficit = params.goalSleepMinutes - params.sleepDurationMinutes
+                resources.getString(resId, deficit, params.goalSleepMinutes)
+            }
+            is InsightParams.HrvSpo2 -> resources.getString(resId, params.zLnHrv, params.spo2)
+            is InsightParams.LateNadirElevatedRhr -> resources.getString(resId, params.rhrDeltaBpm)
+            is InsightParams.BpElevatedStrain ->
+                resources.getString(
+                    resId,
+                    params.systolicDriftMmHg,
+                    params.strainRatio,
+                )
+            is InsightParams.RasDepletionStrain ->
+                resources.getString(
+                    resId,
+                    params.totalRas,
+                    params.strainRatio,
+                )
+            is InsightParams.HrvDeclineStreak -> resources.getString(resId, params.days)
+            is InsightParams.StepShortfall -> resources.getString(resId, params.stepCount, params.stepGoal)
+            is InsightParams.RasWeeklyShortfall -> resources.getString(resId, params.weeklyRas, params.target)
+            is InsightParams.WeightDrift -> resources.getString(resId, params.deltaKg, params.percent)
+            else -> resources.getString(resId)
+        }
 
     private fun parseCause(value: String): InsightCause {
         val parts = value.split("|", limit = 3)

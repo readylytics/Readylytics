@@ -2,15 +2,15 @@ package app.readylytics.health.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.model.domain.circadian.CircadianThresholdValue
+import app.readylytics.health.core.model.domain.preferences.CircadianThresholdPreferences
+import app.readylytics.health.core.model.domain.preferences.ThresholdSettings
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.repository.ScoringRepository
+import app.readylytics.health.core.model.domain.util.logE
+import app.readylytics.health.core.model.domain.validation.SettingsValidators
+import app.readylytics.health.core.model.domain.validation.ValidationResult
 import app.readylytics.health.core.ui.common.UiText
-import app.readylytics.health.domain.circadian.CircadianThresholdValue
-import app.readylytics.health.domain.preferences.CircadianThresholdPreferences
-import app.readylytics.health.domain.preferences.ThresholdSettings
-import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.repository.ScoringRepository
-import app.readylytics.health.domain.util.logE
-import app.readylytics.health.domain.validation.SettingsValidators
-import app.readylytics.health.domain.validation.ValidationResult
 import app.readylytics.health.feature.settings.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +20,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Clock
+import java.time.LocalDate
 import javax.inject.Inject
 
 @HiltViewModel
@@ -30,6 +32,7 @@ class ThresholdSettingsViewModel
         private val thresholdSettings: ThresholdSettings,
         private val scoringRepository: ScoringRepository,
         private val circadianThresholdPreferences: CircadianThresholdPreferences,
+        private val clock: Clock,
     ) : ViewModel() {
         val uiState: StateFlow<ThresholdSettingsState> =
             combine(
@@ -121,7 +124,7 @@ class ThresholdSettingsViewModel
                                 .onSuccess { _ ->
                                     transientState.update { it.copy(isUpdating = true, error = null) }
                                     circadianThresholdPreferences.setOverride(minutes = event.minutes)
-                                    scoringRepository.computeAndPersistDailySummary()
+                                    scoringRepository.computeAndPersistDailySummary(LocalDate.now(clock))
                                     transientState.update { it.copy(isUpdating = false) }
                                 }.onFailure { _ ->
                                     transientState.update {

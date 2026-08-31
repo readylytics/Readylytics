@@ -1,0 +1,9 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ReturnCount:DragController.kt$DragController$fun onDrag( delta: Offset, deleteZoneTop: Float?, )</ID>
+    <ID>TooManyFunctions:ChartDefaults.kt$ChartDefaults</ID>
+    <ID>TooManyFunctions:TrendPeriodAggregation.kt$app.readylytics.health.core.ui.common.TrendPeriodAggregation.kt</ID>
+  </CurrentIssues>
+</SmellBaseline>

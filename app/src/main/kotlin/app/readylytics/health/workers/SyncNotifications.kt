@@ -6,11 +6,11 @@ import android.app.NotificationManager
 import android.content.Context
 import androidx.core.app.NotificationCompat
 import app.readylytics.health.R
-import app.readylytics.health.domain.migration.DatabaseMigrationProgress
-import app.readylytics.health.domain.migration.fraction
-import app.readylytics.health.domain.sync.RecalcProgress
-import app.readylytics.health.domain.sync.ResyncPhase
-import app.readylytics.health.domain.sync.fraction
+import app.readylytics.health.core.model.domain.migration.DatabaseMigrationProgress
+import app.readylytics.health.core.model.domain.migration.fraction
+import app.readylytics.health.core.model.domain.sync.RecalcProgress
+import app.readylytics.health.core.model.domain.sync.ResyncPhase
+import app.readylytics.health.core.model.domain.sync.fraction
 import kotlin.math.roundToInt
 import app.readylytics.health.core.ui.R as CoreUiR
 

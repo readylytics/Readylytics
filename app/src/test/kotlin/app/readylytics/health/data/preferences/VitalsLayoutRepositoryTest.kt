@@ -1,11 +1,12 @@
 package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
-import app.readylytics.health.domain.dashboard.CardConfiguration
-import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
-import app.readylytics.health.domain.vitals.VitalsChartId
-import app.readylytics.health.domain.vitals.VitalsLayoutRepository
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
+import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
+import app.readylytics.health.core.model.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.vitals.VitalsChartId
+import app.readylytics.health.core.model.domain.vitals.VitalsLayoutRepository
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -241,7 +242,7 @@ class VitalsLayoutRepositoryTest {
 
             val newCharts =
                 listOf(
-                    app.readylytics.health.domain.vitals.VitalsChartConfiguration(
+                    app.readylytics.health.core.model.domain.vitals.VitalsChartConfiguration(
                         VitalsChartId.SPO2_TREND,
                         isVisible = false,
                         position = 4,
@@ -278,7 +279,7 @@ class VitalsLayoutRepositoryTest {
 
             val newCharts =
                 listOf(
-                    app.readylytics.health.domain.vitals.VitalsChartConfiguration(
+                    app.readylytics.health.core.model.domain.vitals.VitalsChartConfiguration(
                         VitalsChartId.SPO2_TREND,
                         isVisible = false,
                         position = 4,

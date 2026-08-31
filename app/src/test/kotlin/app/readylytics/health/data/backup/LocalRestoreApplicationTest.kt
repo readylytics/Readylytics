@@ -1,14 +1,15 @@
 package app.readylytics.health.data.backup
 
 import android.net.Uri
-import app.readylytics.health.data.preferences.BackupSchedule
+import app.readylytics.health.core.model.data.preferences.BackupSchedule
+import app.readylytics.health.core.model.domain.audit.AuditEvent
+import app.readylytics.health.core.model.domain.backup.RestoreResult
+import app.readylytics.health.core.model.domain.backup.RestoreStage
+import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.data.preferences.BackupScheduleProto
+import app.readylytics.health.data.preferences.SleepScoreWeightProfileProto
 import app.readylytics.health.data.preferences.UserPreferencesProto
-import app.readylytics.health.domain.audit.AuditEvent
-import app.readylytics.health.domain.backup.RestoreResult
-import app.readylytics.health.domain.backup.RestoreStage
-import app.readylytics.health.domain.dashboard.CardConfiguration
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -53,7 +54,7 @@ class LocalRestoreApplicationTest : LocalRestoreManagerTestBase() {
             val expectedCards =
                 listOf(
                     CardConfiguration(
-                        cardId = app.readylytics.health.domain.dashboard.CardId.READINESS,
+                        cardId = app.readylytics.health.core.model.domain.dashboard.CardId.READINESS,
                         isVisible = true,
                         position = 2,
                         requestedDisplayMode = null,
@@ -92,7 +93,7 @@ class LocalRestoreApplicationTest : LocalRestoreManagerTestBase() {
             val expectedCards =
                 listOf(
                     CardConfiguration(
-                        cardId = app.readylytics.health.domain.dashboard.CardId.HRV,
+                        cardId = app.readylytics.health.core.model.domain.dashboard.CardId.HRV,
                         isVisible = true,
                         position = 3,
                         requestedDisplayMode = DashboardCardDisplayMode.BAR,
@@ -130,7 +131,7 @@ class LocalRestoreApplicationTest : LocalRestoreManagerTestBase() {
             val expectedCards =
                 listOf(
                     CardConfiguration(
-                        cardId = app.readylytics.health.domain.dashboard.CardId.STEPS,
+                        cardId = app.readylytics.health.core.model.domain.dashboard.CardId.STEPS,
                         isVisible = true,
                         position = 5,
                         requestedDisplayMode = null,
@@ -342,6 +343,55 @@ class LocalRestoreApplicationTest : LocalRestoreManagerTestBase() {
         }
 
     @Test
+    fun applyRestore_restoresLastRecalcSleepScoreBaseline() =
+        runTest {
+            val json = createValidBackupJson()
+            json
+                .getJSONObject("preferences")
+                .put("lastRecalcSleepScoreWeightProfile", "RECOVERY_FOCUSED")
+                .put("lastRecalcGoalSleepHours", 9.5)
+                .put("lastRecalcHypersomniaOnsetPercent", 115)
+            val zipFile = createBackupZipFile("last_recalc_baseline_backup.zip", json)
+
+            val builderSlot = io.mockk.slot<UserPreferencesProto.Builder.() -> Unit>()
+            coEvery { settingsRepo.batchUpdate(capture(builderSlot)) } returns Unit
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
+
+            val builder = UserPreferencesProto.newBuilder()
+            builderSlot.captured(builder)
+            assertEquals(
+                SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_RECOVERY_FOCUSED,
+                builder.lastRecalcSleepScoreWeightProfile,
+            )
+            assertEquals(9.5f, builder.lastRecalcGoalSleepHours)
+            assertEquals(115, builder.lastRecalcHypersomniaOnsetPercent)
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_missingLastRecalcFieldsLeaveThemUnset() =
+        runTest {
+            val zipFile = createBackupZipFile("last_recalc_absent_backup.zip", createValidBackupJson())
+
+            val builderSlot = io.mockk.slot<UserPreferencesProto.Builder.() -> Unit>()
+            coEvery { settingsRepo.batchUpdate(capture(builderSlot)) } returns Unit
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
+
+            val builder = UserPreferencesProto.newBuilder()
+            builderSlot.captured(builder)
+            assertTrue(!builder.hasLastRecalcSleepScoreWeightProfile())
+            assertTrue(!builder.hasLastRecalcGoalSleepHours())
+            assertTrue(!builder.hasLastRecalcHypersomniaOnsetPercent())
+            zipFile.delete()
+        }
+
+    @Test
     fun applyRestore_whenPreferencesFail_returnsPartialSuccessWithCommittedDatabase() =
         runTest {
             val json = createValidBackupJson()
@@ -367,7 +417,7 @@ class LocalRestoreApplicationTest : LocalRestoreManagerTestBase() {
         runTest {
             db.weightRecordDao().upsertAll(
                 listOf(
-                    app.readylytics.health.data.local.entity.WeightRecordEntity(
+                    app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity(
                         id = "existing_weight",
                         timestampMs = 5000L,
                         weightKg = 72.0f,
@@ -394,7 +444,7 @@ class LocalRestoreApplicationTest : LocalRestoreManagerTestBase() {
         runTest {
             db.weightRecordDao().upsertAll(
                 listOf(
-                    app.readylytics.health.data.local.entity.WeightRecordEntity(
+                    app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity(
                         id = "stale_weight",
                         timestampMs = 5000L,
                         weightKg = 72.0f,
@@ -423,6 +473,65 @@ class LocalRestoreApplicationTest : LocalRestoreManagerTestBase() {
             val remainingWeights = db.weightRecordDao().getSince(0)
             assertEquals(1, remainingWeights.size)
             assertEquals("restored_weight", remainingWeights.single().id)
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_legacyDailySummaryWithoutResidualFatigueRestoresNull() =
+        runTest {
+            val json = createValidBackupJson()
+            val summariesJson =
+                JSONArray().apply {
+                    put(
+                        JSONObject().apply {
+                            put("dateMidnightMs", 1779926400000L)
+                            put("sleepScore", 85.0)
+                            put("napCount", 1)
+                        },
+                    )
+                }
+            json.put("dailySummaries", summariesJson)
+            val zipFile = createBackupZipFile("legacy_summary_backup.zip", json)
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
+            val summaries = db.dailySummaryDao().getAllSummaries()
+            assertEquals(1, summaries.size)
+            val restored = summaries.single()
+            assertEquals(1779926400000L, restored.dateMidnightMs)
+            assertEquals(85.0f, restored.sleepScore)
+            assertEquals(1, restored.napCount)
+            assertEquals(null, restored.residualFatigue)
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_currentDailySummaryWithResidualFatiguePreservesValueAndDate() =
+        runTest {
+            val json = createValidBackupJson()
+            val summariesJson =
+                JSONArray().apply {
+                    put(
+                        JSONObject().apply {
+                            put("dateMidnightMs", 1779926400000L)
+                            put("sleepScore", 90.0)
+                            put("residualFatigue", 42.5)
+                        },
+                    )
+                }
+            json.put("dailySummaries", summariesJson)
+            val zipFile = createBackupZipFile("current_summary_backup.zip", json)
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
+            val summaries = db.dailySummaryDao().getAllSummaries()
+            assertEquals(1, summaries.size)
+            val restored = summaries.single()
+            assertEquals(1779926400000L, restored.dateMidnightMs)
+            assertEquals(90.0f, restored.sleepScore)
+            assertEquals(42.5f, restored.residualFatigue)
             zipFile.delete()
         }
 }

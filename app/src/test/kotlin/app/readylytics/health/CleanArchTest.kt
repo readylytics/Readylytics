@@ -6,6 +6,52 @@ import com.lemonappdev.konsist.api.verify.assertTrue
 import org.junit.Test
 
 class CleanArchTest {
+    private val domainPackageGlobs =
+        listOf(
+            "app.readylytics.health.domain.migration..",
+            "app.readylytics.health.domain.security..",
+            "app.readylytics.health.domain.sync..",
+            "app.readylytics.health.domain.user..",
+            "app.readylytics.health.core.model.domain..",
+            "app.readylytics.health.core.scoring.domain..",
+            "app.readylytics.health.core.database.domain..",
+            "app.readylytics.health.core.healthconnect.domain..",
+            "app.readylytics.health.feature.dashboard.domain..",
+        )
+
+    private val dataLayerPackagePrefixes =
+        listOf(
+            "app.readylytics.health.data.backup.",
+            "app.readylytics.health.data.crashreport.",
+            "app.readylytics.health.data.device.",
+            "app.readylytics.health.data.logcat.",
+            "app.readylytics.health.data.migration.",
+            "app.readylytics.health.data.preferences.",
+            "app.readylytics.health.data.security.",
+            "app.readylytics.health.data.util.",
+            "app.readylytics.health.core.database.data.",
+            "app.readylytics.health.core.healthconnect.data.",
+            "app.readylytics.health.core.model.data.",
+            "app.readylytics.health.core.databaseschema.data.",
+        )
+
+    private val dataPackageGlobs =
+        dataLayerPackagePrefixes.map { it.dropLast(1) + ".." }
+
+    private val allowedDataImports =
+        setOf(
+            "app.readylytics.health.core.model.data.preferences.UserPreferences",
+            "app.readylytics.health.core.model.data.preferences.Gender",
+            "app.readylytics.health.core.model.data.preferences.AppTheme",
+            "app.readylytics.health.core.model.data.preferences.SettingsDefaults",
+            "app.readylytics.health.core.model.data.preferences.PhysiologyProfile",
+            "app.readylytics.health.core.model.data.preferences.UnitSystem",
+            "app.readylytics.health.core.model.data.preferences.SyncPreference",
+            "app.readylytics.health.core.model.data.preferences.BackgroundSyncInterval",
+            "app.readylytics.health.core.model.data.preferences.FallbackThemeColor",
+            "app.readylytics.health.core.model.data.preferences.BackupSchedule",
+        )
+
     @Test
     fun `ui package does not import room daos`() {
         Konsist
@@ -15,7 +61,9 @@ class CleanArchTest {
             .assertTrue { file ->
                 val hasDaoImport =
                     file.imports.any { import ->
-                        import.name.startsWith("app.readylytics.health.data.local.dao")
+                        // Matched as a contained segment (not startsWith) so this stays valid
+                        // across module renames: catches both legacy and renamed DAO packages.
+                        import.name.contains(".data.local.dao.")
                     }
                 !hasDaoImport
             }
@@ -35,7 +83,7 @@ class CleanArchTest {
             Konsist
                 .scopeFromProject()
                 .files
-                .filter { it.hasPackage("app.readylytics.health.domain..") }
+                .filter { file -> domainPackageGlobs.any { file.hasPackage(it) } }
                 .flatMap { file ->
                     file.imports
                         .filter { import ->
@@ -51,32 +99,17 @@ class CleanArchTest {
 
     @Test
     fun `domain package does not import data package`() {
-        // Value types that are domain-shaped but live under data.preferences for proto-schema reasons.
-        // Only these specific types are allowed; data-layer impls (mappers, serializers, repos) are not.
-        val allowedDataImports =
-            setOf(
-                "app.readylytics.health.data.preferences.UserPreferences",
-                "app.readylytics.health.data.preferences.Gender",
-                "app.readylytics.health.data.preferences.AppTheme",
-                "app.readylytics.health.data.preferences.SettingsDefaults",
-                "app.readylytics.health.data.preferences.PhysiologyProfile",
-                "app.readylytics.health.data.preferences.UnitSystem",
-                "app.readylytics.health.data.preferences.SyncPreference",
-                "app.readylytics.health.data.preferences.BackgroundSyncInterval",
-                "app.readylytics.health.data.preferences.FallbackThemeColor",
-                "app.readylytics.health.data.preferences.BackupSchedule",
-            )
         val violations =
             Konsist
                 .scopeFromProject()
                 .files
-                .filter {
-                    it.hasPackage("app.readylytics.health.domain..") &&
-                        (it.path.contains("/src/main/") || it.path.contains("\\src\\main\\"))
+                .filter { file ->
+                    domainPackageGlobs.any { file.hasPackage(it) } &&
+                        (file.path.contains("/src/main/") || file.path.contains("\\src\\main\\"))
                 }.flatMap { file ->
                     file.imports
                         .filter { import ->
-                            import.name.startsWith("app.readylytics.health.data.") &&
+                            dataLayerPackagePrefixes.any { prefix -> import.name.startsWith(prefix) } &&
                                 import.name !in allowedDataImports
                         }.map { import -> "${file.name}: ${import.name}" }
                 }
@@ -89,34 +122,28 @@ class CleanArchTest {
 
     @Test
     fun `domain package does not reference data package via fully-qualified names`() {
-        val allowedDataReferences =
-            setOf(
-                "app.readylytics.health.data.preferences.UserPreferences",
-                "app.readylytics.health.data.preferences.Gender",
-                "app.readylytics.health.data.preferences.AppTheme",
-                "app.readylytics.health.data.preferences.SettingsDefaults",
-                "app.readylytics.health.data.preferences.PhysiologyProfile",
-                "app.readylytics.health.data.preferences.UnitSystem",
-                "app.readylytics.health.data.preferences.SyncPreference",
-                "app.readylytics.health.data.preferences.BackgroundSyncInterval",
-                "app.readylytics.health.data.preferences.FallbackThemeColor",
-                "app.readylytics.health.data.preferences.BackupSchedule",
-            )
+        val dataRootAlternation =
+            dataLayerPackagePrefixes
+                .map { it.removePrefix("app.readylytics.health.").removeSuffix(".").replace(".", "\\.") }
+                .sortedByDescending { it.length }
+                .joinToString("|")
+        val fqnRegex =
+            Regex("""app\.readylytics\.health\.(?:$dataRootAlternation)\.[a-zA-Z0-9.]+""")
 
         val violations =
             Konsist
                 .scopeFromProject()
                 .files
-                .filter {
-                    it.hasPackage("app.readylytics.health.domain..") &&
-                        (it.path.contains("/src/main/") || it.path.contains("\\src\\main\\"))
+                .filter { file ->
+                    domainPackageGlobs.any { file.hasPackage(it) } &&
+                        (file.path.contains("/src/main/") || file.path.contains("\\src\\main\\"))
                 }.flatMap { file ->
                     val text = file.text
-                    val matches = Regex("""app\.readylytics\.health\.data\.[a-zA-Z0-9.]+""").findAll(text)
+                    val matches = fqnRegex.findAll(text)
                     matches
                         .map { it.value }
                         .filter { ref ->
-                            allowedDataReferences.none { allowed ->
+                            allowedDataImports.none { allowed ->
                                 ref == allowed || ref.startsWith("$allowed.")
                             }
                         }.map { violation -> "${file.name}: referenced FQN $violation" }
@@ -135,16 +162,13 @@ class CleanArchTest {
             Konsist
                 .scopeFromProject()
                 .files
-                .filter {
+                .filter { file ->
                     (
-                        it.hasPackage(
-                            "app.readylytics.health.domain..",
-                        ) ||
-                            it.hasPackage("app.readylytics.health.data..")
+                        domainPackageGlobs.any { file.hasPackage(it) } ||
+                            dataPackageGlobs.any { file.hasPackage(it) }
                     ) &&
-                        (it.path.contains("/src/main/") || it.path.contains("\\src\\main\\")) &&
-                        !it.path.contains("/feature/") &&
-                        !it.path.contains("\\feature\\")
+                        (file.path.contains("/src/main/") || file.path.contains("\\src\\main\\")) &&
+                        !file.hasPackage("app.readylytics.health.feature..")
                 }.flatMap { file ->
                     file.imports
                         .filter { import ->
@@ -153,9 +177,9 @@ class CleanArchTest {
                 }
 
         org.junit.Assert.assertTrue(
-            "Domain and Data layers must not import feature modules. Forbidden imports:\n${violations.joinToString(
-                "\n",
-            )}",
+            "Domain and Data layers must not import feature modules. Forbidden imports:\n${
+                violations.joinToString("\n")
+            }",
             violations.isEmpty(),
         )
     }
@@ -201,8 +225,8 @@ class CleanArchTest {
                     val isSource = (path.contains("/src/main/") || path.contains("\\src\\main\\"))
                     val isDi = (path.contains("/di/") || path.contains("\\di\\"))
                     val isDomainOrDataOrVm =
-                        file.hasPackage("app.readylytics.health.domain..") ||
-                            file.hasPackage("app.readylytics.health.data..") ||
+                        domainPackageGlobs.any { file.hasPackage(it) } ||
+                            dataPackageGlobs.any { file.hasPackage(it) } ||
                             (file.hasPackage("app.readylytics.health.feature..") && file.name.endsWith("ViewModel.kt"))
                     isSource && !isDi && isDomainOrDataOrVm
                 }.flatMap { file ->
@@ -230,6 +254,40 @@ class CleanArchTest {
 
         org.junit.Assert.assertTrue(
             "Doubled package segments are forbidden. Violations:\n${violations.joinToString("\n")}",
+            violations.isEmpty(),
+        )
+    }
+
+    @Test
+    fun `suspend functions do not swallow CancellationException`() {
+        val broadCatch = Regex("""catch \(\w+: (?:Exception|Throwable)\)""")
+        val exceptionCatch = Regex("""catch \(\w+: Exception\)""")
+        val rethrowsCaughtThrowable = Regex("""catch \((\w+): Throwable\)[\s\S]*?throw \1\b""")
+
+        val violations =
+            Konsist
+                .scopeFromProject()
+                .functions(includeNested = true, includeLocal = true)
+                .filter {
+                    (
+                        it.containingFile.path.contains("/src/main/") ||
+                            it.containingFile.path.contains("\\src\\main\\")
+                    )
+                }.filter { it.hasSuspendModifier }
+                .filter { broadCatch.containsMatchIn(it.text) }
+                .filter { function ->
+                    val text = function.text
+                    when {
+                        text.contains("CancellationException") -> false
+                        exceptionCatch.containsMatchIn(text) -> true
+                        else -> !rethrowsCaughtThrowable.containsMatchIn(text)
+                    }
+                }.map { "${it.containingFile.name}:${it.name}() swallows CancellationException" }
+
+        org.junit.Assert.assertTrue(
+            "Suspend functions must rethrow CancellationException before catching " +
+                "Exception/Throwable (or rethrow the caught Throwable unchanged). " +
+                "Violations:\n${violations.joinToString("\n")}",
             violations.isEmpty(),
         )
     }

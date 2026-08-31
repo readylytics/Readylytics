@@ -1,17 +1,20 @@
 package app.readylytics.health.feature.dashboard
 
-import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.domain.dashboard.CardConfiguration
-import app.readylytics.health.domain.dashboard.CardConfigurationRepository
-import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.domain.dashboard.CardManagementDelegate
-import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.repository.DailySummaryRepository
-import app.readylytics.health.domain.repository.HealthConnectRepository
-import app.readylytics.health.domain.repository.InsightDismissalRepository
-import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
-import app.readylytics.health.domain.scoring.CircadianConsistencyResult
-import app.readylytics.health.domain.service.BodyTemperatureBaselineProvider
+import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
+import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
+import app.readylytics.health.core.model.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.dashboard.CardManagementDelegate
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
+import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.InsightDismissalRepository
+import app.readylytics.health.core.model.domain.service.BodyTemperatureBaselineProvider
+import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
+import app.readylytics.health.core.model.domain.sync.RecalcProgress
+import app.readylytics.health.core.model.domain.sync.ResyncPhase
+import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
+import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -203,6 +206,40 @@ class DashboardFlowIntermediateTest {
 
             assertTrue(result.pendingConfiguration.orEmpty().none { it.cardId == CardId.BODY_TEMPERATURE })
             assertTrue(result.pendingConfiguration.orEmpty().any { it.cardId == CardId.SLEEP_SCORE })
+        }
+
+    @Test
+    fun `createDashboardRealtimeStateFlow combines isSyncing and recalcProgress`() =
+        runTest {
+            val isSyncing = MutableStateFlow(false)
+            val recalcProgress = MutableStateFlow<RecalcProgress?>(null)
+            val gateway =
+                mockk<ForegroundSyncGateway> {
+                    every { this@mockk.isSyncing } returns isSyncing
+                    every { this@mockk.recalcProgress } returns recalcProgress
+                }
+
+            val emissions = mutableListOf<DashboardRealtimeState>()
+            val job =
+                backgroundScope.launch {
+                    createDashboardRealtimeStateFlow(gateway).collect(emissions::add)
+                }
+            runCurrent()
+
+            assertEquals(DashboardRealtimeState(isSyncing = false, recalcProgress = null), emissions.last())
+
+            isSyncing.value = true
+            recalcProgress.value = RecalcProgress(ResyncPhase.INGEST, current = 2, total = 0)
+            runCurrent()
+
+            assertEquals(
+                DashboardRealtimeState(
+                    isSyncing = true,
+                    recalcProgress = RecalcProgress(ResyncPhase.INGEST, current = 2, total = 0),
+                ),
+                emissions.last(),
+            )
+            job.cancel()
         }
 
     private fun mockCardManagementDelegate(

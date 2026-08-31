@@ -48,11 +48,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.domain.model.SleepStageType
+import app.readylytics.health.core.model.domain.repository.SleepSessionData
+import app.readylytics.health.core.model.domain.repository.SleepStageData
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
-import app.readylytics.health.domain.model.SleepStageType
-import app.readylytics.health.domain.repository.SleepSessionData
-import app.readylytics.health.domain.repository.SleepStageData
 import app.readylytics.health.feature.sleep.R
 import java.time.Instant
 import java.time.ZoneId
@@ -67,7 +67,7 @@ private val SHAPE_CORNER = 6.dp
 private val LABEL_WIDTH = 64.dp
 private val CHART_TOTAL_HEIGHT = LANE_HEIGHT * 4
 
-private val NINE_HOURS_MS = 9L * 3_600_000L
+private const val NINE_HOURS_MS = 9L * 3_600_000L
 
 private fun getStageColor(
     stageType: String,

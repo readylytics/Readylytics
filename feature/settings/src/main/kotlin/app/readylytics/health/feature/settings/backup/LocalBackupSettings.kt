@@ -45,10 +45,10 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.data.preferences.BackupSchedule
+import app.readylytics.health.core.model.domain.backup.BackupFileInfo
 import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.core.ui.components.DropdownPreferenceItem
-import app.readylytics.health.data.preferences.BackupSchedule
-import app.readylytics.health.domain.backup.BackupFileInfo
 import app.readylytics.health.feature.settings.LocalBackupState
 import app.readylytics.health.feature.settings.R
 import app.readylytics.health.feature.settings.SettingsEvent
@@ -424,12 +424,6 @@ private fun BackupDirectoryItem(
 
     ListItem(
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        headlineContent = {
-            Text(
-                text = stringResource(R.string.backup_directory_label),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        },
         supportingContent = {
             Text(
                 text = displayPath,
@@ -442,7 +436,12 @@ private fun BackupDirectoryItem(
                 Text(stringResource(R.string.action_change))
             }
         },
-    )
+    ) {
+        Text(
+            text = stringResource(R.string.backup_directory_label),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    }
 }
 
 @Composable
@@ -469,12 +468,6 @@ private fun BackupFileItem(
                 tint = MaterialTheme.colorScheme.primary,
             )
         },
-        headlineContent = {
-            Text(
-                text = backupDate,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        },
         supportingContent = {
             Text(
                 text = stringResource(R.string.backup_size_kb, file.sizeBytes / 1024),
@@ -498,7 +491,12 @@ private fun BackupFileItem(
                 }
             }
         },
-    )
+    ) {
+        Text(
+            text = backupDate,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    }
 }
 
 @Composable

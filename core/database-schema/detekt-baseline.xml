@@ -1,0 +1,16 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>TooManyFunctions:BloodPressureRecordDao.kt$BloodPressureRecordDao</ID>
+    <ID>TooManyFunctions:BodyFatRecordDao.kt$BodyFatRecordDao</ID>
+    <ID>TooManyFunctions:BodyTemperatureRecordDao.kt$BodyTemperatureRecordDao</ID>
+    <ID>TooManyFunctions:DailySummaryDao.kt$DailySummaryDao</ID>
+    <ID>TooManyFunctions:HeartRateDao.kt$HeartRateDao</ID>
+    <ID>TooManyFunctions:HrvDao.kt$HrvDao</ID>
+    <ID>TooManyFunctions:OxygenSaturationRecordDao.kt$OxygenSaturationRecordDao</ID>
+    <ID>TooManyFunctions:SleepSessionDao.kt$SleepSessionDao</ID>
+    <ID>TooManyFunctions:WeightRecordDao.kt$WeightRecordDao</ID>
+    <ID>TooManyFunctions:WorkoutDao.kt$WorkoutDao</ID>
+  </CurrentIssues>
+</SmellBaseline>

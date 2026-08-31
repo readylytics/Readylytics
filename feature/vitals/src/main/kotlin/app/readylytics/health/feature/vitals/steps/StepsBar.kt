@@ -38,6 +38,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.domain.model.StepsStatusClassifier
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
@@ -46,9 +47,8 @@ import app.readylytics.health.core.ui.components.SegmentHitBox
 import app.readylytics.health.core.ui.components.containerColor
 import app.readylytics.health.core.ui.components.detectCanvasTap
 import app.readylytics.health.core.ui.components.gaugeColor
-import app.readylytics.health.domain.model.StepsStatusClassifier
 import app.readylytics.health.feature.vitals.R
-import java.text.NumberFormat
+import app.readylytics.health.feature.vitals.common.VitalsDisplayFormatters
 import java.time.LocalDate
 import app.readylytics.health.core.ui.R as CoreUiR
 
@@ -103,16 +103,8 @@ fun StepsBar(
     val nextActionLabel = stringResource(CoreUiR.string.action_next_point)
     val clearActionLabel = stringResource(CoreUiR.string.action_clear_selection)
 
-    val formattedCount =
-        stepCount?.let {
-            java.text.NumberFormat
-                .getNumberInstance()
-                .format(it)
-        } ?: "--"
-    val formattedGoal =
-        java.text.NumberFormat
-            .getNumberInstance()
-            .format(stepGoal)
+    val formattedCount = VitalsDisplayFormatters.formatNumberOrDash(stepCount)
+    val formattedGoal = VitalsDisplayFormatters.formatNumber(stepGoal)
 
     val selectedValueDescription =
         if (activeTapOffset != null) {
@@ -312,16 +304,6 @@ fun StepsBar(
         Spacer(Modifier.height(MaterialTheme.spacing.extraSmallMedium))
         Row(modifier = Modifier.fillMaxWidth()) {
             Spacer(Modifier.weight(1f))
-            val formattedCount =
-                stepCount?.let {
-                    java.text.NumberFormat
-                        .getNumberInstance()
-                        .format(it)
-                } ?: "--"
-            val formattedGoal =
-                java.text.NumberFormat
-                    .getNumberInstance()
-                    .format(stepGoal)
             Text(
                 text = stringResource(R.string.steps_fraction_display, formattedCount, formattedGoal),
                 style = MaterialTheme.typography.labelSmall,
@@ -330,5 +312,3 @@ fun StepsBar(
         }
     }
 }
-
-internal fun Int.formatSteps(): String = NumberFormat.getNumberInstance().format(this)

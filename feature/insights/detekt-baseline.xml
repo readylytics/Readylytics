@@ -1,0 +1,9 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>CyclomaticComplexMethod:InsightDetailSheet.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun InsightDetailSheet( content: InsightDetailContent, onDismiss: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>LongMethod:InsightDetailSheet.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun InsightDetailSheet( content: InsightDetailContent, onDismiss: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>LongParameterList:InsightDetailResourceSpec.kt$InsightDetailResourceSpec.Companion$( id: InsightType, @StringRes title: Int, @AnyRes card: Int, @StringRes observed: Int, confidence: InsightConfidence, @ArrayRes causes: Int, @ArrayRes recommendations: Int, @ArrayRes caveats: Int?, @StringRes safety: Int?, )</ID>
+  </CurrentIssues>
+</SmellBaseline>

@@ -1,27 +1,29 @@
 package app.readylytics.health.feature.dashboard
 
-import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.domain.airecommendation.DailyPromptData
-import app.readylytics.health.domain.airecommendation.GetDailyPromptDataUseCase
-import app.readylytics.health.domain.airecommendation.LoadStatePromptData
-import app.readylytics.health.domain.airecommendation.TodayPromptData
-import app.readylytics.health.domain.airecommendation.WorkoutPatternSummary
-import app.readylytics.health.domain.cache.DailyMetricCache
-import app.readylytics.health.domain.dashboard.CardConfigurationRepository
-import app.readylytics.health.domain.date.SelectedDateStore
-import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.model.InsightType
-import app.readylytics.health.domain.model.Result
-import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.repository.DailySummaryRepository
-import app.readylytics.health.domain.repository.HealthConnectRepository
-import app.readylytics.health.domain.repository.HeartRateRepository
-import app.readylytics.health.domain.repository.InsightDismissalRepository
-import app.readylytics.health.domain.repository.SleepSessionData
-import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
-import app.readylytics.health.domain.scoring.CircadianConsistencyResult
-import app.readylytics.health.domain.service.BodyTemperatureBaselineProvider
-import app.readylytics.health.domain.sync.ForegroundSyncGateway
+import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.cache.DailyMetricCache
+import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
+import app.readylytics.health.core.model.domain.date.SelectedDateStore
+import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.model.InsightType
+import app.readylytics.health.core.model.domain.model.Result
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
+import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.HeartRateRepository
+import app.readylytics.health.core.model.domain.repository.InsightDismissalRepository
+import app.readylytics.health.core.model.domain.repository.SleepSessionData
+import app.readylytics.health.core.model.domain.service.BodyTemperatureBaselineProvider
+import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
+import app.readylytics.health.core.model.domain.sync.RecalcProgress
+import app.readylytics.health.core.model.domain.sync.ResyncPhase
+import app.readylytics.health.core.scoring.domain.airecommendation.DailyPromptData
+import app.readylytics.health.core.scoring.domain.airecommendation.GetDailyPromptDataUseCase
+import app.readylytics.health.core.scoring.domain.airecommendation.LoadStatePromptData
+import app.readylytics.health.core.scoring.domain.airecommendation.TodayPromptData
+import app.readylytics.health.core.scoring.domain.airecommendation.WorkoutPatternSummary
+import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
+import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.feature.dashboard.usecase.GetDashboardDataUseCase
 import app.readylytics.health.feature.dashboard.usecase.ObserveDashboardRasIncreaseUseCase
 import app.readylytics.health.feature.dashboard.usecase.ObserveDashboardStrainIncreaseUseCase
@@ -34,15 +36,19 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -313,7 +319,6 @@ class DashboardViewModelTest {
 
     @Test
     fun toggleCardManagement_togglesState() {
-        val initialState = viewModel.isManagingCards.value
         viewModel.toggleCardManagement()
         // Note: would need stateflow emission to verify state changed
         // This is a basic structure test
@@ -430,6 +435,132 @@ class DashboardViewModelTest {
                 )
             }
         }
+
+    @Test
+    fun `uiState sets isComputingMetrics to true when syncing and summary is null`() =
+        runTest(testDispatcher) {
+            val isSyncing = MutableStateFlow(true)
+            val recalcProgress = MutableStateFlow<RecalcProgress?>(null)
+            val selectedDate = configureDashboardFlows(isSyncing, recalcProgress, summary = null)
+
+            val state = viewModel.uiState.first { it.isComputingMetrics }
+
+            assertTrue(state.isComputingMetrics)
+            assertTrue(state.isRefreshing)
+            assertEquals(selectedDate, state.selectedDate)
+        }
+
+    @Test
+    fun `uiState sets isComputingMetrics to false when syncing and cached summary exists`() =
+        runTest(testDispatcher) {
+            val isSyncing = MutableStateFlow(true)
+            val recalcProgress = MutableStateFlow<RecalcProgress?>(null)
+            val summary = DailySummary(date = LocalDate.of(2026, 7, 29))
+            configureDashboardFlows(isSyncing, recalcProgress, summary = summary)
+
+            val state = viewModel.uiState.first { it.summary != null }
+
+            assertFalse(state.isComputingMetrics)
+            assertTrue(state.isRefreshing)
+        }
+
+    @Test
+    fun `uiState sets isComputingMetrics to false when not syncing and summary is null`() =
+        runTest(testDispatcher) {
+            val isSyncing = MutableStateFlow(false)
+            val recalcProgress = MutableStateFlow<RecalcProgress?>(null)
+            val selectedDate = configureDashboardFlows(isSyncing, recalcProgress, summary = null)
+
+            val state = viewModel.uiState.first { it.selectedDate == selectedDate }
+
+            assertFalse(state.isComputingMetrics)
+            assertFalse(state.isRefreshing)
+        }
+
+    @Test
+    fun `uiState propagates recalcProgress updates cleanly from sync gateway`() =
+        runTest(testDispatcher) {
+            val isSyncing = MutableStateFlow(true)
+            val recalcProgress = MutableStateFlow<RecalcProgress?>(null)
+            configureDashboardFlows(isSyncing, recalcProgress, summary = null)
+
+            val states = mutableListOf<DashboardUiState>()
+            val job = backgroundScope.launch { viewModel.uiState.collect(states::add) }
+            runCurrent()
+
+            val progress = RecalcProgress(ResyncPhase.RECONCILE, current = 0, total = 0)
+            recalcProgress.value = progress
+            runCurrent()
+
+            assertEquals(progress, states.last().recalcProgress)
+            job.cancel()
+        }
+
+    private fun configureDashboardFlows(
+        isSyncing: MutableStateFlow<Boolean>,
+        recalcProgress: MutableStateFlow<RecalcProgress?>,
+        summary: DailySummary?,
+    ): LocalDate {
+        val selectedDate = LocalDate.of(2026, 7, 29)
+        val preferences = UserPreferences(scoringZoneId = "UTC")
+        every { selectedDateRepository.selectedDate } returns MutableStateFlow(selectedDate)
+        every { selectedDateRepository.earliestDate } returns MutableStateFlow(selectedDate.minusDays(30))
+        every { settingsRepo.userPreferences } returns MutableStateFlow(preferences)
+        every { dailySummaryRepository.observeByDate(any()) } returns flowOf(summary)
+        every { dailySummaryRepository.observeSince(any()) } returns flowOf(listOfNotNull(summary))
+        every { dailySummaryRepository.observeFirstSessionEndingInRange(any(), any()) } returns flowOf(null)
+        every { cardConfigRepository.dashboardCardConfigurations() } returns flowOf(emptyList())
+        every { circadianRepo.resultFor(any()) } returns flowOf(CircadianConsistencyResult.MissingData)
+        every { insightDismissalRepository.observeForDate(any()) } returns flowOf(emptySet())
+        every { heartRateRepository.observeAggregateByTimeRange(any(), any()) } returns flowOf(null)
+        every { foregroundSyncController.isSyncing } returns isSyncing
+        every { foregroundSyncController.recalcProgress } returns recalcProgress
+        every { observeDashboardStrainIncreaseUseCase.invoke(any(), any()) } returns flowOf(0.23f)
+        every { observeDashboardRasIncreaseUseCase.invoke(any(), any()) } returns flowOf(null)
+        every { bodyTemperatureBaselineProvider.observeBaseline(any()) } returns flowOf(null)
+        coEvery { healthConnectRepository.hasBodyTemperaturePermission() } returns true
+        every {
+            getDashboardDataUseCase.invoke(
+                summary = any(),
+                prefs = any(),
+                date = any(),
+                lastSleepSession = any(),
+                rasSummaries = any(),
+                circadianResult = any(),
+                heartRateSummary = any(),
+                todayStrainIncrease = any(),
+                todayRasIncrease = any(),
+                bodyTempBaseline = any(),
+            )
+        } returns
+            Result.success(
+                GetDashboardDataUseCase.DashboardCards(
+                    cardDataMap = emptyMap(),
+                    rasDailyBreakdown = emptyList(),
+                ),
+            )
+        viewModel =
+            DashboardViewModel(
+                dailySummaryRepository = dailySummaryRepository,
+                getDashboardDataUseCase = getDashboardDataUseCase,
+                foregroundSyncController = foregroundSyncController,
+                selectedDateRepository = selectedDateRepository,
+                settingsRepo = settingsRepo,
+                cardConfigRepository = cardConfigRepository,
+                circadianRepo = circadianRepo,
+                dailyMetricCache = dailyMetricCache,
+                heartRateRepository = heartRateRepository,
+                insightDismissalRepository = insightDismissalRepository,
+                observeDashboardStrainIncreaseUseCase = observeDashboardStrainIncreaseUseCase,
+                observeDashboardRasIncreaseUseCase = observeDashboardRasIncreaseUseCase,
+                getDailyPromptDataUseCase = getDailyPromptDataUseCase,
+                bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
+                healthConnectRepository = healthConnectRepository,
+                clock = java.time.Clock.systemDefaultZone(),
+                defaultDispatcher = testDispatcher,
+            )
+        return selectedDate
+    }
 
     private fun sleepSession(
         durationMinutes: Int,

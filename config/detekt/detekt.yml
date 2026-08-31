@@ -1,0 +1,64 @@
+build:
+  maxIssues: 0
+  excludeCorrectable: false
+  weights:
+    complexity: 1
+    exceptions: 1
+
+config:
+  validation: true
+  warningsAsErrors: false
+  checkExhaustiveness: false
+
+complexity:
+  active: true
+  LongMethod:
+    active: true
+    threshold: 60
+  LongParameterList:
+    active: true
+    functionThreshold: 8
+    constructorThreshold: 10
+    ignoreDefaultParameters: true
+    ignoreDataClasses: true
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 15
+    ignoreSingleWhenExpression: true
+
+exceptions:
+  active: true
+  SwallowedException:
+    active: true
+    ignoredExceptionTypes:
+      - 'CancellationException'
+      - 'InterruptedException'
+      - 'NumberFormatException'
+      - 'ParseException'
+      - 'DateTimeParseException'
+  TooGenericExceptionCaught:
+    active: false
+  # Conflicts with CleanArchTest's `suspend functions do not swallow
+  # CancellationException`, which *requires* `catch (e: CancellationException) { throw e }`.
+  # Konsist owns this policy; detekt must not fight it.
+  RethrowCaughtException:
+    active: false
+
+# Rules below are disabled because the project has already made the opposite
+# decision deliberately elsewhere. Leaving them on froze 996 of the 1638 baseline
+# entries — noise that buries the ~295 findings this integration exists to track.
+naming:
+  # .editorconfig sets `ktlint_standard_function-naming = disabled` for backtick
+  # test names and @Composable PascalCase. 280 baseline entries.
+  FunctionNaming:
+    active: false
+
+style:
+  # .editorconfig sets `ktlint_standard_no-wildcard-imports = disabled`. 22 entries.
+  WildcardImport:
+    active: false
+  # 694 entries, overwhelmingly scoring coefficients in domain/scoring, where the
+  # constants ARE the domain and live beside their derivations. Re-enable scoped to
+  # non-scoring packages if it ever earns its keep.
+  MagicNumber:
+    active: false
