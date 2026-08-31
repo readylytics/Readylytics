@@ -2582,6 +2582,13 @@ with exactly one recompute, not several.
 
 **Prerequisites.** Phase 0 complete (pinnable clock + characterization tests).
 
+> **Scope amendment (2026-08-31, OD-1).** Per the user's resolution of OD-1, this phase now
+> includes a Room **v14 → v15** schema migration (percentile-sketch columns on
+> `hr_minute_buckets`) — the "No Room schema change" claim below is superseded for that one
+> change. Phase 2's WP-14 (device-provenance PK change on the same table) must be renumbered
+> **v15 → v16**. Execution detail lives in
+> `docs/superpowers/plans/2026-08-31-phase1-correctness-data-integrity.md`, not inline here.
+
 **Exact implementation steps**
 
 1. **Union the tiers** (`R2-DB-001`). In `ScoringHistoryRepositoryImpl`, rewrite
@@ -3182,6 +3189,13 @@ ordering-regression test green.
 
 **Phase** 1 · **Findings** `R2-DB-004` · **Depends on** WP-03, WP-04 · **Complexity** M ·
 **Blocked on** OD-1
+
+> **Superseded (2026-08-31).** OD-1 resolved to a percentile sketch (not plain 3-point) with the
+> schema change pulled into Phase 1 — see the OD-1 status note above. This WP's plain min/avg/max
+> sketch is replaced by `docs/superpowers/plans/2026-08-31-phase1-correctness-data-integrity.md`
+> Tasks 3 (schema + Kotlin rollup aggregation) and 4 (percentile reconstruction + drift docs); the
+> 3-point method described below survives only as the fallback path for buckets rolled up before
+> the v15 migration.
 
 **Files:** `core/database/.../data/local/WarmTierReconstructor.kt` ·
 new `core/database/src/test/.../WarmTierReconstructionPropertyTest.kt` ·
@@ -3857,6 +3871,17 @@ computation, and this is undocumented. Any answer is defensible; the current sta
 *Recommended default.* **(a)** — it preserves the nadir that the RHR percentile actually needs, at
 zero storage cost, and (b) reverses a deliberate decision landed in `01c944f7`.
 
+*Status (2026-08-31).* **Resolved — richer than (a).** The user chose to store a full percentile
+sketch (min, max, avg, p5, p25, p50, p75, p95) per warm bucket rather than plain min/avg/max, and
+explicitly directed that the schema change be pulled into Phase 1 rather than deferred to Phase 2's
+WP-14 migration — overriding this document's Phase 1 "no Room schema change" scope rule for this one
+change. Room bumps **v14 → v15** in Phase 1; Phase 2's WP-14 (device-provenance PK change on the
+same table) must be renumbered **v15 → v16** by whoever plans Phase 2 next. See
+`docs/superpowers/plans/2026-08-31-phase1-correctness-data-integrity.md` (Tasks 3–4) for the full
+design (Kotlin-side rollup aggregation, since SQLite has no `PERCENTILE_CONT`; piecewise-linear
+percentile reconstruction; graceful fallback to 3-point for pre-v15 buckets, which keep `null`
+percentiles forever).
+
 ---
 
 **OD-2 · What does "no step data for a selected device" mean?**
@@ -3871,6 +3896,9 @@ depending on which flow ran. Whichever answer is chosen, some users' historical 
 *Recommended default.* **(a)**, because the resync is the authority for historical values and
 choosing (b) would make a full resync unable to correct a wrong stored step count.
 
+*Status (2026-08-31).* **Resolved: (a).** Implemented in
+`docs/superpowers/plans/2026-08-31-phase1-correctness-data-integrity.md` Task 6 (`StepAttribution`).
+
 ---
 
 **OD-3 · Should the raw HR timeline chart show implausible samples?**
@@ -3884,6 +3912,9 @@ choosing (b) would make a full resync unable to correct a wrong stored step coun
 *Recommended default.* **(a)**, with the exception documented in `DATA_FLOW.md` and a KDoc line on
 each query. Scoring queries are unified regardless.
 
+*Status (2026-08-31).* **Resolved: (a).** Implemented in
+`docs/superpowers/plans/2026-08-31-phase1-correctness-data-integrity.md` Task 2.
+
 ---
 
 **OD-4 · Keep the 5 bpm TRIMP dead zone?**
@@ -3895,6 +3926,9 @@ currently invisible to users and to the documentation.
  (b) **Smooth ramp** over `[rhr, rhr+5]`. Changes every historical Load score.
 *Recommended default.* **(a)** — per the audit brief, a heuristic is not a defect, and (b) would
 move scores for a benefit no evidence in this repository supports.
+
+*Status (2026-08-31).* **Resolved: (a).** Implemented in
+`docs/superpowers/plans/2026-08-31-phase1-correctness-data-integrity.md` Task 8.
 
 ---
 

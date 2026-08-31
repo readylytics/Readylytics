@@ -342,4 +342,15 @@ interface HeartRateDao {
         dayStartMs: Long,
         dayEndMs: Long,
     ): List<HrMinuteBucketRow>
+
+    // R2-DB-004: feeds the Kotlin-side rollup aggregator (MinuteBucketAggregator.kt) — SQLite has
+    // no PERCENTILE_CONT, so the five-percentile warm-tier sketch is computed in Kotlin, not SQL.
+    // Ordered by (recordType, sessionId, timestampMs) so a single linear grouping pass produces
+    // buckets in ascending-timestamp order per (recordType, sessionId) key.
+    @Query(
+        "SELECT * FROM heart_rate_records " +
+            "WHERE timestampMs < :beforeMs AND beatsPerMinute BETWEEN 30 AND 230 " +
+            "ORDER BY recordType ASC, sessionId ASC, timestampMs ASC",
+    )
+    suspend fun getPlausibleSamplesBeforeForRollup(beforeMs: Long): List<HeartRateRecordEntity>
 }
