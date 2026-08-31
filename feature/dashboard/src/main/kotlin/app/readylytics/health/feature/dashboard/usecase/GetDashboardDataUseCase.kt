@@ -38,6 +38,7 @@ class GetDashboardDataUseCase
             todayStrainIncrease: Float? = null,
             todayRasIncrease: Float? = null,
             bodyTempBaseline: Float? = null,
+            currentResidualFatigue: Float? = null,
         ): Result<DashboardCards> =
             try {
                 val cardDataMap =
@@ -50,6 +51,7 @@ class GetDashboardDataUseCase
                         todayStrainIncrease,
                         todayRasIncrease,
                         bodyTempBaseline,
+                        currentResidualFatigue,
                     )
                 val rasDailyBreakdown = buildRasBreakdown(date, rasSummaries, prefs)
 

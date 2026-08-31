@@ -293,4 +293,32 @@ class GetDashboardDataUseCaseTest {
         assertEquals("—", card?.valueText)
         assertEquals(MetricStatus.CALIBRATING, card?.status)
     }
+
+    @Test
+    fun `invoke forwards currentResidualFatigue to factory build`() {
+        val summary =
+            mockk<DailySummary>(relaxed = true) {
+                every { residualFatigue } returns 60.7f
+            }
+        val prefs =
+            UserPreferences(
+                residualFatigueEnabled = true,
+                residualFatigueHalfLifeHours = 24f,
+                residualFatigueGain = 1f,
+            )
+
+        val result =
+            useCase(
+                summary = summary,
+                prefs = prefs,
+                date = LocalDate.now(),
+                lastSleepSession = null,
+                rasSummaries = emptyList(),
+                currentResidualFatigue = 97.8f,
+            )
+
+        val card = result.getOrNull()?.cardDataMap?.get(CardId.RESIDUAL_FATIGUE)
+        assertNotNull(card)
+        assertEquals("97.8", card?.valueText)
+    }
 }
