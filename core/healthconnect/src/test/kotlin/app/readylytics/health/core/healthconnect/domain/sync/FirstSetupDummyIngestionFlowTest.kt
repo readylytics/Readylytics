@@ -321,17 +321,19 @@ class FirstSetupDummyIngestionFlowTest {
         override suspend fun readHeartRateSamplesPaged(
             from: Instant,
             to: Instant,
-            onPage: suspend (List<DomainHeartRateRecord>) -> Unit,
+            startPageToken: String?,
+            onPage: suspend (List<DomainHeartRateRecord>, String?) -> Unit,
         ) {
-            onPage(heartRateRecords)
+            onPage(heartRateRecords, null)
         }
 
         override suspend fun readHrvSamplesPaged(
             from: Instant,
             to: Instant,
-            onPage: suspend (List<DomainHrvRecord>) -> Unit,
+            startPageToken: String?,
+            onPage: suspend (List<DomainHrvRecord>, String?) -> Unit,
         ) {
-            onPage(listOf(hrvRecord))
+            onPage(listOf(hrvRecord), null)
         }
 
         override suspend fun readExerciseSessions(

@@ -24,6 +24,10 @@ data class ResyncCheckpoint(
      * use the caller-supplied `chunkDays`.
      */
     val chunkDaysOverride: Int? = null,
+    /** R2-HC-002: Next page token for resuming HR stream in current chunk. Null when at start or finished. */
+    val hrPageToken: String? = null,
+    /** R2-HC-002: Next page token for resuming HRV stream in current chunk. Null when at start or finished. */
+    val hrvPageToken: String? = null,
 )
 
 interface ResyncCheckpointStore {

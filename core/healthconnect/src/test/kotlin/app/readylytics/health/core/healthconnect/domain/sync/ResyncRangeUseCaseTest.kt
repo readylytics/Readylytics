@@ -100,8 +100,8 @@ class ResyncRangeUseCaseTest {
             val hrvFromSlot = slot<Instant>()
             val hrFromSlot = slot<Instant>()
             coEvery { hcRepo.readSleepSessions(capture(sleepFromSlot), any()) } returns emptyList()
-            coJustRun { hcRepo.readHrvSamplesPaged(capture(hrvFromSlot), any(), any()) }
-            coJustRun { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any()) }
+            coJustRun { hcRepo.readHrvSamplesPaged(capture(hrvFromSlot), any(), any(), any()) }
+            coJustRun { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any(), any()) }
             useCase.run(startDate, endDate, chunkDays = 30, onProgress = null)
 
             // The first chunk of resyncRange must reach back one extra day to capture
@@ -126,8 +126,8 @@ class ResyncRangeUseCaseTest {
 
             val hrvFromInstants = mutableListOf<Instant>()
             val hrFromInstants = mutableListOf<Instant>()
-            coJustRun { hcRepo.readHrvSamplesPaged(capture(hrvFromInstants), any(), any()) }
-            coJustRun { hcRepo.readHeartRateSamplesPaged(capture(hrFromInstants), any(), any()) }
+            coJustRun { hcRepo.readHrvSamplesPaged(capture(hrvFromInstants), any(), any(), any()) }
+            coJustRun { hcRepo.readHeartRateSamplesPaged(capture(hrFromInstants), any(), any(), any()) }
             useCase.run(startDate, endDate, chunkDays = chunkDays, onProgress = null)
 
             val secondChunkStart = startDate.plusDays(chunkDays.toLong())
@@ -158,8 +158,8 @@ class ResyncRangeUseCaseTest {
             val hrToInstants = mutableListOf<Instant>()
             coEvery { hcRepo.readSleepSessions(any(), capture(sleepToInstants)) } returns emptyList()
             coEvery { hcRepo.readExerciseSessions(any(), capture(workoutToInstants)) } returns emptyList()
-            coJustRun { hcRepo.readHrvSamplesPaged(any(), capture(hrvToInstants), any()) }
-            coJustRun { hcRepo.readHeartRateSamplesPaged(any(), capture(hrToInstants), any()) }
+            coJustRun { hcRepo.readHrvSamplesPaged(any(), capture(hrvToInstants), any(), any()) }
+            coJustRun { hcRepo.readHeartRateSamplesPaged(any(), capture(hrToInstants), any(), any()) }
             useCase.run(
                 startDate = startDate,
                 endDate = LocalDate.of(2024, 7, 2),
@@ -404,8 +404,8 @@ class ResyncRangeUseCaseTest {
             coVerify(exactly = 0) { hcRepo.readSteps(any(), any()) }
             coVerify(exactly = 0) { hcRepo.readStepsRecords(any(), any()) }
             coVerify(exactly = 0) { hcRepo.readSleepSessions(any(), any()) }
-            coVerify(exactly = 0) { hcRepo.readHeartRateSamplesPaged(any(), any(), any()) }
-            coVerify(exactly = 0) { hcRepo.readHrvSamplesPaged(any(), any(), any()) }
+            coVerify(exactly = 0) { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) }
+            coVerify(exactly = 0) { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) }
             coVerify(exactly = 0) { selectedSourcePruner.prune(any(), any(), any(), any()) }
             coVerify(exactly = 0) { changeSynchronizer.captureChangesTokens() }
             coVerify(exactly = 0) { changeSynchronizer.applyPendingChanges() }
@@ -487,7 +487,7 @@ class ResyncRangeUseCaseTest {
                     operation = "read",
                     recordType = "HeartRateRecord",
                 )
-            coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any()) } throws expected
+            coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } throws expected
 
             val actual =
                 assertFailsWith<HealthConnectPermissionRevokedException> {

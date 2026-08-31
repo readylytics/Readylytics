@@ -217,6 +217,18 @@ class ResyncRangeUseCase
                         // chunkDays once a window succeeds -- a shrink is a recovery measure for
                         // unusually dense data, not a permanent downgrade.
                         var effectiveChunkDays = checkpoint?.chunkDaysOverride ?: chunkDays
+                        var activeHrToken =
+                            if (checkpoint?.phase == ResyncPhase.INGEST && checkpoint.nextDate == chunkStart) {
+                                checkpoint.hrPageToken
+                            } else {
+                                null
+                            }
+                        var activeHrvToken =
+                            if (checkpoint?.phase == ResyncPhase.INGEST && checkpoint.nextDate == chunkStart) {
+                                checkpoint.hrvPageToken
+                            } else {
+                                null
+                            }
                         while (!chunkStart.isAfter(endDate)) {
                             ensureActive()
                             val chunkEndExclusive =
@@ -224,6 +236,7 @@ class ResyncRangeUseCase
                             val ingestFromDate = chunkStart.minusDays(1)
                             val windowStart = ingestFromDate.atStartOfDay(zoneId).toInstant()
                             val windowEnd = chunkEndExclusive.atStartOfDay(zoneId).toInstant()
+                            val chunkOverride = if (effectiveChunkDays != chunkDays) effectiveChunkDays else null
 
                             try {
                                 retryWithBackoff {
@@ -231,9 +244,30 @@ class ResyncRangeUseCase
                                         windowStart = windowStart,
                                         windowEnd = windowEnd,
                                         prefs = prefs,
+                                        hrStartPageToken = activeHrToken,
+                                        hrvStartPageToken = activeHrvToken,
+                                        onTokenUpdated = { hrToken, hrvToken ->
+                                            activeHrToken = hrToken
+                                            activeHrvToken = hrvToken
+                                            checkpointStore.save(
+                                                ResyncCheckpoint(
+                                                    startDate = startDate,
+                                                    endDate = endDate,
+                                                    phase = ResyncPhase.INGEST,
+                                                    nextDate = chunkStart,
+                                                    selectionHash = selectionHash,
+                                                    baselineChangeTokens = baselineChangeTokens,
+                                                    chunkDaysOverride = chunkOverride,
+                                                    hrPageToken = hrToken,
+                                                    hrvPageToken = hrvToken,
+                                                ),
+                                            )
+                                        },
                                     )
                                 }
                             } catch (e: HealthConnectWindowTimeoutException) {
+                                activeHrToken = null
+                                activeHrvToken = null
                                 if (effectiveChunkDays <= MIN_CHUNK_DAYS) {
                                     logD(TELEMETRY_TAG) {
                                         "[INGESTION] Window $windowStart..$windowEnd timed out even at the " +
@@ -256,11 +290,15 @@ class ResyncRangeUseCase
                                         selectionHash = selectionHash,
                                         baselineChangeTokens = baselineChangeTokens,
                                         chunkDaysOverride = effectiveChunkDays,
+                                        hrPageToken = null,
+                                        hrvPageToken = null,
                                     ),
                                 )
                                 continue
                             }
 
+                            activeHrToken = null
+                            activeHrvToken = null
                             effectiveChunkDays = chunkDays
                             val nextPhase =
                                 if (chunkEndExclusive.isAfter(endDate)) {
@@ -284,6 +322,8 @@ class ResyncRangeUseCase
                                     selectionHash = selectionHash,
                                     baselineChangeTokens = baselineChangeTokens,
                                     chunkDaysOverride = null,
+                                    hrPageToken = null,
+                                    hrvPageToken = null,
                                 ),
                             )
                             chunksCompleted++

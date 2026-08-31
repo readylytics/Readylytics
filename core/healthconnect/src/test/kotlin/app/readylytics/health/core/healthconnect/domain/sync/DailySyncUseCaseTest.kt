@@ -273,21 +273,21 @@ class DailySyncUseCaseTest {
     @Test
     fun `sync fetches and upserts all heart-related record types`() =
         runTest {
-            // HR/HRV are streamed page-by-page (HC-001); drive one non-empty page through each
-            // callback to ensure the per-page mapping/persist logic is triggered.
-            coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any()) } coAnswers {
-                thirdArg<suspend (List<DomainHeartRateRecord>) -> Unit>().invoke(listOf(mockk(relaxed = true)))
+            coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } coAnswers {
+                val callback = it.invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
+                callback(listOf(mockk(relaxed = true)), null)
             }
-            coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any()) } coAnswers {
-                thirdArg<suspend (List<DomainHrvRecord>) -> Unit>().invoke(listOf(mockk(relaxed = true)))
+            coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } coAnswers {
+                val callback = it.invocation.args[3] as suspend (List<DomainHrvRecord>, String?) -> Unit
+                callback(listOf(mockk(relaxed = true)), null)
             }
             coEvery { hcRepo.readSteps(any(), any()) } returns 0L
 
             useCase.run(windowDays = 8, onProgress = null)
 
             coVerify {
-                hcRepo.readHeartRateSamplesPaged(any(), any(), any())
-                hcRepo.readHrvSamplesPaged(any(), any(), any())
+                hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any())
+                hcRepo.readHrvSamplesPaged(any(), any(), any(), any())
                 hcRepo.readSteps(any(), any())
                 healthIngestionStore.persist(any())
                 healthIngestionStore.persistHeartRateSamples(any())
@@ -300,8 +300,8 @@ class DailySyncUseCaseTest {
         runTest {
             val hrvFromSlot = slot<Instant>()
             val hrFromSlot = slot<Instant>()
-            coJustRun { hcRepo.readHrvSamplesPaged(capture(hrvFromSlot), any(), any()) }
-            coJustRun { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any()) }
+            coJustRun { hcRepo.readHrvSamplesPaged(capture(hrvFromSlot), any(), any(), any()) }
+            coJustRun { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any(), any()) }
 
             useCase.run(windowDays = 1, onProgress = null)
 
@@ -424,7 +424,7 @@ class DailySyncUseCaseTest {
                     requiresFullResync = false,
                     nextTokens = mapOf(HealthDataType.SLEEP to "next-sleep-token"),
                 )
-            coJustRun { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any()) }
+            coJustRun { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any(), any()) }
             coJustRun {
                 scoringRepository.computeAndPersistDailySummary(
                     capture(scoredDays),
@@ -461,7 +461,7 @@ class DailySyncUseCaseTest {
                     requiresFullResync = false,
                     nextTokens = nextTokens,
                 )
-            coJustRun { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any()) }
+            coJustRun { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any(), any()) }
             coJustRun {
                 scoringRepository.computeAndPersistDailySummary(
                     capture(scoredDays),
@@ -642,10 +642,10 @@ class DailySyncUseCaseTest {
             val onProgress: (ResyncPhase, Int, Int) -> Unit = { phase, current, total ->
                 progressEvents += Triple(phase, current, total)
             }
-            coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any()) } coAnswers {
-                val callback = thirdArg<suspend (List<DomainHeartRateRecord>) -> Unit>()
-                callback(listOf(mockk(relaxed = true), mockk(relaxed = true)))
-                callback(listOf(mockk(relaxed = true)))
+            coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } coAnswers {
+                val callback = it.invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
+                callback(listOf(mockk(relaxed = true), mockk(relaxed = true)), "page-2")
+                callback(listOf(mockk(relaxed = true)), null)
             }
 
             useCase.run(windowDays = 1, onProgress = onProgress)

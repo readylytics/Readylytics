@@ -85,20 +85,21 @@ interface HealthConnectRepository {
     /**
      * Streams heart-rate samples page-by-page instead of materializing the whole [from]..[to]
      * range in memory (HC-001). [onPage] is invoked once per Health Connect page, in the order
-     * pages are returned; pages are not guaranteed to be globally sorted across page boundaries,
-     * only within Health Connect's own per-page ordering.
+     * pages are returned, passing the page of records and the next page token (R2-HC-002).
      */
     suspend fun readHeartRateSamplesPaged(
         from: Instant,
         to: Instant,
-        onPage: suspend (List<DomainHeartRateRecord>) -> Unit,
+        startPageToken: String? = null,
+        onPage: suspend (records: List<DomainHeartRateRecord>, nextPageToken: String?) -> Unit,
     )
 
     /** HRV equivalent of [readHeartRateSamplesPaged]. */
     suspend fun readHrvSamplesPaged(
         from: Instant,
         to: Instant,
-        onPage: suspend (List<DomainHrvRecord>) -> Unit,
+        startPageToken: String? = null,
+        onPage: suspend (records: List<DomainHrvRecord>, nextPageToken: String?) -> Unit,
     )
 
     /**

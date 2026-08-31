@@ -44,9 +44,23 @@ class HealthIngestionCoordinator
             prefs: UserPreferences,
             windowBudgetMs: Long = 3 * 60_000L,
             onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)? = null,
+            hrStartPageToken: String? = null,
+            hrvStartPageToken: String? = null,
+            onTokenUpdated: (suspend (hrToken: String?, hrvToken: String?) -> Unit)? = null,
         ) {
             try {
-                ingestWindowWithinBudget(windowStart, windowEnd, prefs, windowBudgetMs, onProgress)
+                ingestWindowWithinBudget(
+                    IngestWindowParams(
+                        windowStart = windowStart,
+                        windowEnd = windowEnd,
+                        prefs = prefs,
+                        windowBudgetMs = windowBudgetMs,
+                        onProgress = onProgress,
+                        hrStartPageToken = hrStartPageToken,
+                        hrvStartPageToken = hrvStartPageToken,
+                        onTokenUpdated = onTokenUpdated,
+                    ),
+                )
             } catch (e: TimeoutCancellationException) {
                 // Not a CancellationException from here on -- HC-002: callers (ResyncRangeUseCase)
                 // must be able to tell "this window is too dense for its budget" apart from
@@ -55,232 +69,294 @@ class HealthIngestionCoordinator
             }
         }
 
-        private suspend fun ingestWindowWithinBudget(
+        private suspend fun ingestWindowWithinBudget(params: IngestWindowParams) {
+            withTimeout(params.windowBudgetMs) {
+                val sessionContext = fetchAndPersistBulkRecords(params.windowStart, params.windowEnd, params.prefs)
+                streamAndPersistHeartSamples(params, sessionContext)
+            }
+        }
+
+        private suspend fun fetchAndPersistBulkRecords(
             windowStart: Instant,
             windowEnd: Instant,
             prefs: UserPreferences,
-            windowBudgetMs: Long,
-            onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)?,
+        ): IngestionSessionContext {
+            val raw = fetchBulkRecords(windowStart, windowEnd)
+            val sleepInputs = raw.sleepSessions.map { SleepDataMapper.mapSleepSession(it) }
+            val workoutInputs = raw.exerciseRecords.map { WorkoutMapper.mapExerciseSession(it) }
+            val deviceByType = prefs.deviceByDataType
+            fun deviceFor(type: HealthDataType): String? = deviceByType[type.name]?.takeIf { it.isNotBlank() }
+
+            val filteredSleep =
+                DeviceSourceFilter.filterToDevice(
+                    sleepInputs,
+                    deviceFor(HealthDataType.SLEEP),
+                ) { it.deviceName }
+            val filteredWorkouts =
+                DeviceSourceFilter.filterToDevice(
+                    workoutInputs,
+                    deviceFor(HealthDataType.EXERCISE),
+                ) { it.deviceName }
+
+            val vitals = mapAndFilterVitals(raw, prefs)
+            val filteredSleepIds = filteredSleep.mapTo(HashSet()) { it.id }
+            val allStages =
+                raw.sleepSessions
+                    .flatMap {
+                        SleepDataMapper.mapSleepSessionStages(it)
+                    }.filter { it.sessionId in filteredSleepIds }
+
+            val stepRecordInputs =
+                raw.stepsRecords.map { record ->
+                    StepRecordInput(
+                        id = record.id,
+                        startTime = record.startTime.toEpochMilli(),
+                        endTime = record.endTime.toEpochMilli(),
+                        count = record.count,
+                        deviceName = record.deviceName,
+                    )
+                }
+
+            healthIngestionStore.persist(
+                HealthIngestionBatch(
+                    sleepSessions = filteredSleep,
+                    sleepStages = allStages,
+                    heartRateSamples = emptyList(),
+                    hrvSamples = emptyList(),
+                    workouts = filteredWorkouts,
+                    weights = vitals.weights,
+                    bodyFatSamples = vitals.bodyFatSamples,
+                    bloodPressureSamples = vitals.bloodPressureSamples,
+                    oxygenSaturationSamples = vitals.oxygenSaturationSamples,
+                    bodyTemperatureSamples = vitals.bodyTemperatureSamples,
+                    stepRecords = stepRecordInputs,
+                ),
+            )
+
+            return IngestionSessionContext(
+                sleepInputs = sleepInputs,
+                workoutInputs = workoutInputs,
+            )
+        }
+
+        private suspend fun fetchBulkRecords(
+            windowStart: Instant,
+            windowEnd: Instant,
+        ): RawBulkRecords {
+            val sleepSessions = retryWithBackoff { hcRepo.readSleepSessions(windowStart, windowEnd) }
+            val exerciseRecords =
+                retryWithBackoff {
+                    hcRepo.readExerciseSessions(windowStart, windowEnd, includeDetails = true)
+                }
+            val weightRecords = retryWithBackoff { hcRepo.readWeightRecords(windowStart, windowEnd) }
+            val bodyFatRecords = retryWithBackoff { hcRepo.readBodyFatRecords(windowStart, windowEnd) }
+            val bloodPressureRecords =
+                retryWithBackoff { hcRepo.readBloodPressureRecords(windowStart, windowEnd) }
+            val spo2Records = retryWithBackoff { hcRepo.readOxygenSaturationRecords(windowStart, windowEnd) }
+            val bodyTemperatureRecords =
+                retryWithBackoff { hcRepo.readBodyTemperatureRecords(windowStart, windowEnd) }
+            val stepsRecords = retryWithBackoff { hcRepo.readStepsRecords(windowStart, windowEnd) }
+            return RawBulkRecords(
+                sleepSessions = sleepSessions,
+                exerciseRecords = exerciseRecords,
+                weightRecords = weightRecords,
+                bodyFatRecords = bodyFatRecords,
+                bloodPressureRecords = bloodPressureRecords,
+                spo2Records = spo2Records,
+                bodyTemperatureRecords = bodyTemperatureRecords,
+                stepsRecords = stepsRecords,
+            )
+        }
+
+        private fun mapAndFilterVitals(
+            raw: RawBulkRecords,
+            prefs: UserPreferences,
+        ): FilteredVitals {
+            val (weights, bodyFat) = mapAndFilterBodyComp(raw, prefs)
+            val (bp, spo2, temp) = mapAndFilterCardioVitals(raw, prefs)
+            return FilteredVitals(
+                weights = weights,
+                bodyFatSamples = bodyFat,
+                bloodPressureSamples = bp,
+                oxygenSaturationSamples = spo2,
+                bodyTemperatureSamples = temp,
+            )
+        }
+
+        private fun mapAndFilterBodyComp(
+            raw: RawBulkRecords,
+            prefs: UserPreferences,
+        ): Pair<List<WeightInput>, List<BodyFatInput>> {
+            val deviceByType = prefs.deviceByDataType
+            fun deviceFor(type: HealthDataType): String? = deviceByType[type.name]?.takeIf { it.isNotBlank() }
+
+            val weightInputs =
+                raw.weightRecords.map {
+                    WeightInput(
+                        id = "${it.id}_${it.time.toEpochMilli()}",
+                        timestampMs = it.time.toEpochMilli(),
+                        weightKg = it.weightKg,
+                        deviceName = it.deviceName,
+                    )
+                }
+            val bodyFatInputs =
+                raw.bodyFatRecords.map {
+                    BodyFatInput(
+                        id = "${it.id}_${it.time.toEpochMilli()}",
+                        timestampMs = it.time.toEpochMilli(),
+                        bodyFatPercent = it.percentage,
+                        deviceName = it.deviceName,
+                    )
+                }
+
+            val filteredWeights =
+                DeviceSourceFilter.filterToDevice(weightInputs, deviceFor(HealthDataType.WEIGHT)) { it.deviceName }
+            val filteredBodyFat =
+                DeviceSourceFilter.filterToDevice(bodyFatInputs, deviceFor(HealthDataType.BODY_FAT)) { it.deviceName }
+            return Pair(filteredWeights, filteredBodyFat)
+        }
+
+        private fun mapAndFilterCardioVitals(
+            raw: RawBulkRecords,
+            prefs: UserPreferences,
+        ): Triple<List<BloodPressureInput>, List<OxygenSaturationInput>, List<BodyTemperatureInput>> {
+            val deviceByType = prefs.deviceByDataType
+            fun deviceFor(type: HealthDataType): String? = deviceByType[type.name]?.takeIf { it.isNotBlank() }
+
+            val bpInputs =
+                raw.bloodPressureRecords.map {
+                    BloodPressureInput(
+                        id = "${it.id}_${it.time.toEpochMilli()}",
+                        timestampMs = it.time.toEpochMilli(),
+                        systolicMmHg = it.systolicMmHg,
+                        diastolicMmHg = it.diastolicMmHg,
+                        deviceName = it.deviceName,
+                    )
+                }
+            val spo2Inputs =
+                raw.spo2Records.map {
+                    OxygenSaturationInput(
+                        id = "${it.id}_${it.time.toEpochMilli()}",
+                        timestampMs = it.time.toEpochMilli(),
+                        percentage = it.percentage,
+                        deviceName = it.deviceName,
+                    )
+                }
+            val tempInputs =
+                raw.bodyTemperatureRecords.map {
+                    BodyTemperatureInput(
+                        id = "${it.id}_${it.time.toEpochMilli()}",
+                        timestampMs = it.time.toEpochMilli(),
+                        celsius = it.celsius,
+                        deviceName = it.deviceName,
+                    )
+                }
+
+            val filteredBp =
+                DeviceSourceFilter.filterToDevice(bpInputs, deviceFor(HealthDataType.BLOOD_PRESSURE)) { it.deviceName }
+            val filteredSpo2 =
+                DeviceSourceFilter.filterToDevice(
+                    spo2Inputs,
+                    deviceFor(HealthDataType.OXYGEN_SATURATION),
+                ) { it.deviceName }
+            val filteredTemp =
+                DeviceSourceFilter.filterToDevice(
+                    tempInputs,
+                    deviceFor(HealthDataType.BODY_TEMPERATURE),
+                ) { it.deviceName }
+            return Triple(filteredBp, filteredSpo2, filteredTemp)
+        }
+
+        private suspend fun streamAndPersistHeartSamples(
+            params: IngestWindowParams,
+            sessionContext: IngestionSessionContext,
         ) {
-            withTimeout(windowBudgetMs) {
-                val sleepSessions = retryWithBackoff { hcRepo.readSleepSessions(windowStart, windowEnd) }
-                val exerciseRecords =
-                    retryWithBackoff {
-                        hcRepo.readExerciseSessions(windowStart, windowEnd, includeDetails = true)
-                    }
-                val weightRecords = retryWithBackoff { hcRepo.readWeightRecords(windowStart, windowEnd) }
-                val bodyFatRecords = retryWithBackoff { hcRepo.readBodyFatRecords(windowStart, windowEnd) }
-                val bloodPressureRecords =
-                    retryWithBackoff { hcRepo.readBloodPressureRecords(windowStart, windowEnd) }
-                val spo2Records = retryWithBackoff { hcRepo.readOxygenSaturationRecords(windowStart, windowEnd) }
-                val bodyTemperatureRecords =
-                    retryWithBackoff { hcRepo.readBodyTemperatureRecords(windowStart, windowEnd) }
-                // Raw steps records aren't used for the daily total (StepCountFetcher's
-                // aggregate/device-filtered reads are) -- persisted purely so a later
-                // changes-path deletion can resolve its own date range (HC-005).
-                val stepsRecords = retryWithBackoff { hcRepo.readStepsRecords(windowStart, windowEnd) }
+            var pagesIngested = 0
+            val deviceByType = params.prefs.deviceByDataType
+            fun deviceFor(type: HealthDataType): String? = deviceByType[type.name]?.takeIf { it.isNotBlank() }
 
-                val sleepInputs = sleepSessions.map { SleepDataMapper.mapSleepSession(it) }
-
-                logD("HealthIngestionCoordinator") {
-                    "Bulk HC fetch complete: sleep=${sleepInputs.size} exercise=${exerciseRecords.size} " +
-                        "weight=${weightRecords.size} bodyfat=${bodyFatRecords.size} " +
-                        "bp=${bloodPressureRecords.size} spo2=${spo2Records.size} " +
-                        "bodyTemp=${bodyTemperatureRecords.size}"
+            val hrDevice = deviceFor(HealthDataType.HEART_RATE)
+            var hrSampleCount = 0
+            if (params.hrvStartPageToken == null) {
+                hcRepo.readHeartRateSamplesPaged(
+                    from = params.windowStart,
+                    to = params.windowEnd,
+                    startPageToken = params.hrStartPageToken,
+                ) { page, nextToken ->
+                    logD("HealthSync.Ingest") { "HR page size=${page.size}" }
+                    val hrInputs =
+                        HeartRateMapper.mapToInputs(
+                            page,
+                            sessionContext.sleepInputs,
+                            sessionContext.workoutInputs,
+                        )
+                    val filteredHr = DeviceSourceFilter.filterToDevice(hrInputs, hrDevice) { it.deviceName }
+                    healthIngestionStore.persistHeartRateSamples(filteredHr)
+                    hrSampleCount += filteredHr.size
+                    pagesIngested++
+                    params.onProgress?.invoke(ResyncPhase.INGEST, pagesIngested, 0)
+                    params.onTokenUpdated?.invoke(nextToken, null)
                 }
+            }
 
-                val workoutInputs = exerciseRecords.map { WorkoutMapper.mapExerciseSession(it) }
+            val hrvDevice = deviceFor(HealthDataType.HRV)
+            var hrvSampleCount = 0
+            hcRepo.readHrvSamplesPaged(
+                from = params.windowStart,
+                to = params.windowEnd,
+                startPageToken = params.hrvStartPageToken,
+            ) { page, nextToken ->
+                logD("HealthSync.Ingest") { "HRV page size=${page.size}" }
+                val hrvInputs =
+                    HrvMapper.mapToInputs(
+                        page,
+                        sessionContext.sleepInputs,
+                    )
+                val filteredHrv = DeviceSourceFilter.filterToDevice(hrvInputs, hrvDevice) { it.deviceName }
+                healthIngestionStore.persistHrvSamples(filteredHrv)
+                hrvSampleCount += filteredHrv.size
+                pagesIngested++
+                params.onProgress?.invoke(ResyncPhase.INGEST, pagesIngested, 0)
+                params.onTokenUpdated?.invoke(null, nextToken)
+            }
 
-                val deviceByType = prefs.deviceByDataType
-
-                fun deviceFor(type: HealthDataType): String? = deviceByType[type.name]?.takeIf { it.isNotBlank() }
-
-                val filteredSleep =
-                    DeviceSourceFilter.filterToDevice(
-                        sleepInputs,
-                        deviceFor(HealthDataType.SLEEP),
-                    ) { it.deviceName }
-                val filteredWorkouts =
-                    DeviceSourceFilter.filterToDevice(
-                        workoutInputs,
-                        deviceFor(HealthDataType.EXERCISE),
-                    ) { it.deviceName }
-
-                val weightInputs =
-                    weightRecords.map { record ->
-                        WeightInput(
-                            id = "${record.id}_${record.time.toEpochMilli()}",
-                            timestampMs = record.time.toEpochMilli(),
-                            weightKg = record.weightKg,
-                            deviceName = record.deviceName,
-                        )
-                    }
-                val filteredWeight =
-                    DeviceSourceFilter.filterToDevice(
-                        weightInputs,
-                        deviceFor(HealthDataType.WEIGHT),
-                    ) { it.deviceName }
-
-                val bodyFatInputs =
-                    bodyFatRecords.map { record ->
-                        BodyFatInput(
-                            id = "${record.id}_${record.time.toEpochMilli()}",
-                            timestampMs = record.time.toEpochMilli(),
-                            bodyFatPercent = record.percentage,
-                            deviceName = record.deviceName,
-                        )
-                    }
-                val filteredBodyFat =
-                    DeviceSourceFilter.filterToDevice(
-                        bodyFatInputs,
-                        deviceFor(HealthDataType.BODY_FAT),
-                    ) { it.deviceName }
-
-                val bloodPressureInputs =
-                    bloodPressureRecords.map { record ->
-                        BloodPressureInput(
-                            id = "${record.id}_${record.time.toEpochMilli()}",
-                            timestampMs = record.time.toEpochMilli(),
-                            systolicMmHg = record.systolicMmHg,
-                            diastolicMmHg = record.diastolicMmHg,
-                            deviceName = record.deviceName,
-                        )
-                    }
-                val filteredBloodPressure =
-                    DeviceSourceFilter.filterToDevice(
-                        bloodPressureInputs,
-                        deviceFor(HealthDataType.BLOOD_PRESSURE),
-                    ) { it.deviceName }
-
-                val spo2Inputs =
-                    spo2Records.map { record ->
-                        OxygenSaturationInput(
-                            id = "${record.id}_${record.time.toEpochMilli()}",
-                            timestampMs = record.time.toEpochMilli(),
-                            percentage = record.percentage,
-                            deviceName = record.deviceName,
-                        )
-                    }
-                val filteredSpo2 =
-                    DeviceSourceFilter.filterToDevice(
-                        spo2Inputs,
-                        deviceFor(HealthDataType.OXYGEN_SATURATION),
-                    ) { it.deviceName }
-
-                val bodyTemperatureInputs =
-                    bodyTemperatureRecords.map { record ->
-                        BodyTemperatureInput(
-                            id = "${record.id}_${record.time.toEpochMilli()}",
-                            timestampMs = record.time.toEpochMilli(),
-                            celsius = record.celsius,
-                            deviceName = record.deviceName,
-                        )
-                    }
-                val filteredBodyTemperature =
-                    DeviceSourceFilter.filterToDevice(
-                        bodyTemperatureInputs,
-                        deviceFor(HealthDataType.BODY_TEMPERATURE),
-                    ) { it.deviceName }
-
-                logD("HealthIngestionCoordinator") {
-                    "Device filtering: sleep=${filteredSleep.size} workouts=${filteredWorkouts.size} " +
-                        "weight=${filteredWeight.size} bodyfat=${filteredBodyFat.size} " +
-                        "bp=${filteredBloodPressure.size} spo2=${filteredSpo2.size} " +
-                        "bodyTemp=${filteredBodyTemperature.size}"
-                }
-
-                // Only persist stages whose parent session survived device filtering. Stages carry a
-                // foreign key (sessionId) to SleepSessionEntity, so emitting stages for a filtered-out
-                // session would orphan them (or violate the FK constraint). Filter on the stage's own
-                // sessionId so the match is against the exact FK target, not the raw DTO id.
-                val filteredSleepIds = filteredSleep.mapTo(HashSet()) { it.id }
-                val allStages =
-                    sleepSessions
-                        .flatMap {
-                            SleepDataMapper.mapSleepSessionStages(it)
-                        }.filter { it.sessionId in filteredSleepIds }
-
-                // Unlike the other record types, step_records isn't device-filtered: it's never read
-                // for scoring (StepCountFetcher's aggregate/device-filtered reads own the visible daily
-                // total), only for resolving a future deletion's date range, so storing every device's
-                // raw rows is strictly more correct (HC-005).
-                val stepRecordInputs =
-                    stepsRecords.map { record ->
-                        StepRecordInput(
-                            id = record.id,
-                            startTime = record.startTime.toEpochMilli(),
-                            endTime = record.endTime.toEpochMilli(),
-                            count = record.count,
-                            deviceName = record.deviceName,
-                        )
-                    }
-
-                // Sessions + low-volume types commit first, in one transaction -- matches this
-                // method's previous ordering, where the parent transaction always preceded the
-                // heart-rate/HRV batch transactions.
-                healthIngestionStore.persist(
-                    HealthIngestionBatch(
-                        sleepSessions = filteredSleep,
-                        sleepStages = allStages,
-                        heartRateSamples = emptyList(),
-                        hrvSamples = emptyList(),
-                        workouts = filteredWorkouts,
-                        weights = filteredWeight,
-                        bodyFatSamples = filteredBodyFat,
-                        bloodPressureSamples = filteredBloodPressure,
-                        oxygenSaturationSamples = filteredSpo2,
-                        bodyTemperatureSamples = filteredBodyTemperature,
-                        stepRecords = stepRecordInputs,
-                    ),
-                )
-
-                // Deliberately NOT reset on retry (unlike hrSampleCount below): this is a
-                // UI-facing progress counter, and a page count that regresses on retry would look
-                // like sync going backwards.
-                var pagesIngested = 0
-
-                val hrDevice = deviceFor(HealthDataType.HEART_RATE)
-                var hrSampleCount = 0
-                retryWithBackoff {
-                    hrSampleCount = 0
-                    hcRepo.readHeartRateSamplesPaged(windowStart, windowEnd) { page ->
-                        logD("HealthSync.Ingest") { "HR page size=${page.size}" }
-                        val hrInputs =
-                            HeartRateMapper.mapToInputs(
-                                page,
-                                sleepInputs,
-                                workoutInputs,
-                            )
-                        val filteredHr = DeviceSourceFilter.filterToDevice(hrInputs, hrDevice) { it.deviceName }
-                        healthIngestionStore.persistHeartRateSamples(filteredHr)
-                        hrSampleCount += filteredHr.size
-                        pagesIngested++
-                        onProgress?.invoke(ResyncPhase.INGEST, pagesIngested, 0)
-                    }
-                }
-
-                val hrvDevice = deviceFor(HealthDataType.HRV)
-                var hrvSampleCount = 0
-                retryWithBackoff {
-                    hrvSampleCount = 0
-                    hcRepo.readHrvSamplesPaged(windowStart, windowEnd) { page ->
-                        logD("HealthSync.Ingest") { "HRV page size=${page.size}" }
-                        val hrvInputs =
-                            HrvMapper.mapToInputs(
-                                page,
-                                sleepInputs,
-                            )
-                        val filteredHrv = DeviceSourceFilter.filterToDevice(hrvInputs, hrvDevice) { it.deviceName }
-                        healthIngestionStore.persistHrvSamples(filteredHrv)
-                        hrvSampleCount += filteredHrv.size
-                        pagesIngested++
-                        onProgress?.invoke(ResyncPhase.INGEST, pagesIngested, 0)
-                    }
-                }
-
-                logD("HealthIngestionCoordinator") {
-                    "Streamed samples: hr=$hrSampleCount hrv=$hrvSampleCount"
-                }
+            logD("HealthIngestionCoordinator") {
+                "Streamed samples: hr=$hrSampleCount hrv=$hrvSampleCount"
             }
         }
     }
+
+private data class RawBulkRecords(
+    val sleepSessions: List<app.readylytics.health.core.model.domain.model.DomainSleepSessionRecord>,
+    val exerciseRecords: List<app.readylytics.health.core.model.domain.model.DomainExerciseSessionRecord>,
+    val weightRecords: List<app.readylytics.health.core.model.domain.model.DomainWeightRecord>,
+    val bodyFatRecords: List<app.readylytics.health.core.model.domain.model.DomainBodyFatRecord>,
+    val bloodPressureRecords: List<app.readylytics.health.core.model.domain.model.DomainBloodPressureRecord>,
+    val spo2Records: List<app.readylytics.health.core.model.domain.model.DomainOxygenSaturationRecord>,
+    val bodyTemperatureRecords: List<app.readylytics.health.core.model.domain.model.DomainBodyTemperatureRecord>,
+    val stepsRecords: List<app.readylytics.health.core.model.domain.model.DomainStepsRecord>,
+)
+
+private data class FilteredVitals(
+    val weights: List<WeightInput>,
+    val bodyFatSamples: List<BodyFatInput>,
+    val bloodPressureSamples: List<BloodPressureInput>,
+    val oxygenSaturationSamples: List<OxygenSaturationInput>,
+    val bodyTemperatureSamples: List<BodyTemperatureInput>,
+)
+
+private data class IngestWindowParams(
+    val windowStart: Instant,
+    val windowEnd: Instant,
+    val prefs: UserPreferences,
+    val windowBudgetMs: Long,
+    val onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)?,
+    val hrStartPageToken: String?,
+    val hrvStartPageToken: String?,
+    val onTokenUpdated: (suspend (hrToken: String?, hrvToken: String?) -> Unit)?,
+)
+
+private data class IngestionSessionContext(
+    val sleepInputs: List<SleepSessionInput>,
+    val workoutInputs: List<WorkoutInput>,
+)

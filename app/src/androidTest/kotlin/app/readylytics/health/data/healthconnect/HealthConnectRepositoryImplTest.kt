@@ -232,7 +232,7 @@ class HealthConnectRepositoryImplTest {
             }
             var total = 0
             var pagesSeen = 0
-            repo.readHeartRateSamplesPaged(t0, t7) { page ->
+            repo.readHeartRateSamplesPaged(t0, t7) { page, _ ->
                 total += page.size
                 pagesSeen++
             }
@@ -245,7 +245,7 @@ class HealthConnectRepositoryImplTest {
         fake.hrCount[t1] = 1
         fake.errors[FakeOp.HeartRate] = SecurityException("revoked")
         assertThrows(HealthConnectPermissionRevokedException::class.java) {
-            runBlocking { repo.readHeartRateSamplesPaged(t0, t7) { } }
+            runBlocking { repo.readHeartRateSamplesPaged(t0, t7) { _, _ -> } }
         }
     }
 
@@ -292,7 +292,7 @@ class HealthConnectRepositoryImplTest {
             fake.hrvCount[t2] = 1
             fake.hrvCount[t3] = 1
             var total = 0
-            repo.readHrvSamplesPaged(t0, t7) { page -> total += page.size }
+            repo.readHrvSamplesPaged(t0, t7) { page, _ -> total += page.size }
             assertEquals(3, total)
         }
 
@@ -301,7 +301,7 @@ class HealthConnectRepositoryImplTest {
         fake.hrvCount[t1] = 1
         fake.errors[FakeOp.Hrv] = SecurityException("revoked")
         assertThrows(HealthConnectPermissionRevokedException::class.java) {
-            runBlocking { repo.readHrvSamplesPaged(t0, t7) { } }
+            runBlocking { repo.readHrvSamplesPaged(t0, t7) { _, _ -> } }
         }
     }
 
