@@ -373,4 +373,10 @@ interface HeartRateDao {
     // and (re-queried after each chunk) to the next day containing data.
     @Query("SELECT MIN(timestampMs) FROM heart_rate_records")
     suspend fun getEarliestTimestampMs(): Long?
+
+    // R2-CACHE-001: lets RetentionCleanup report the earliest raw-HR timestamp it is about to
+    // delete (before deleting it), so callers can compute the ScoreInvalidation.AffectedRange the
+    // deletion touched.
+    @Query("SELECT MIN(timestampMs) FROM heart_rate_records WHERE timestampMs < :beforeMs")
+    suspend fun minTimestampBefore(beforeMs: Long): Long?
 }

@@ -6,10 +6,12 @@ import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRec
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.time.LocalDate
 
 @RunWith(RobolectricTestRunner::class)
 class DataRollupManagerTest {
@@ -61,9 +63,11 @@ class DataRollupManagerTest {
                 ),
             )
 
-            val deleted = rollupManager.rollupExpiredHotTier(cutoffMs = 120_000L)
+            val touched = rollupManager.rollupExpiredHotTier(cutoffMs = 120_000L)
 
-            assertEquals(5, deleted)
+            // All 5 rolled-up samples (ts 0..90_000ms) fall on the same 1970-01-01 UTC day.
+            assertEquals(LocalDate.of(1970, 1, 1), touched?.start)
+            assertEquals(LocalDate.of(1970, 1, 1), touched?.endInclusive)
             assertEquals(0, heartRateDao.countInRange(0L, 119_999L))
             assertEquals(1, heartRateDao.countInRange(120_000L, 180_000L))
 
@@ -130,13 +134,24 @@ class DataRollupManagerTest {
                 ),
             )
 
-            val deleted = rollupManager.rollupExpiredHotTier(cutoffMs = 3 * dayMs)
+            val touched = rollupManager.rollupExpiredHotTier(cutoffMs = 3 * dayMs)
 
-            assertEquals(3, deleted)
+            // Merged across three day-chunks: earliest sample's day .. latest sample's day.
+            assertEquals(LocalDate.of(1970, 1, 1), touched?.start)
+            assertEquals(LocalDate.of(1970, 1, 3), touched?.endInclusive)
             assertEquals(0, heartRateDao.count())
             val buckets = minuteBucketDao.getBucketsForSession("RESTING", "")
             assertEquals(3, buckets.size)
             assertEquals(setOf(60, 65, 70), buckets.map { it.minBpm }.toSet())
+        }
+
+    // R2-CACHE-001: an empty hot tier (nothing before the cutoff) must return null so
+    // DataRollupWorker enqueues no recompute.
+    @Test
+    fun rollupExpiredHotTierReturnsNullWhenThereIsNothingToRollUp() =
+        runBlocking {
+            val touched = rollupManager.rollupExpiredHotTier(cutoffMs = 120_000L)
+            assertNull(touched)
         }
 
     private fun hr(

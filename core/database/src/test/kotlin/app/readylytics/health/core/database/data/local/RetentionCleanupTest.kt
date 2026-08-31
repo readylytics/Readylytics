@@ -367,7 +367,12 @@ class RetentionCleanupTest {
             )
 
             // Execute cleanup
-            retentionCleanup.deleteBefore(cutoffMs)
+            val touched = retentionCleanup.deleteBefore(cutoffMs)
+
+            // Earliest HR row is at cutoffMs - 1 (1970-01-01 UTC); cutoffMs itself is also
+            // 1970-01-01 UTC (well under a day in epoch millis).
+            assertEquals(java.time.LocalDate.of(1970, 1, 1), touched?.start)
+            assertEquals(java.time.LocalDate.of(1970, 1, 1), touched?.endInclusive)
 
             // Verify sleep sessions (old deleted, equal and new remain)
             val sleepRemaining = sleepDao.getSince(0)
@@ -517,5 +522,14 @@ class RetentionCleanupTest {
             assertEquals(0, heartRateDao.countInRange(0L, cutoffMs))
             assertEquals(0, hrvDao.countInRange(0L, cutoffMs))
             assertEquals(emptyList<String>(), workoutDao.getSince(0).map { it.id })
+        }
+
+    // R2-CACHE-001: nothing older than the cutoff in either heart_rate_records or
+    // hr_minute_buckets must return null, so DataCleanupWorker enqueues no recompute.
+    @Test
+    fun testDeleteBeforeReturnsNullWhenNothingToDelete() =
+        runTest {
+            val touched = retentionCleanup.deleteBefore(1_000_000L)
+            assertEquals(null, touched)
         }
 }

@@ -3,9 +3,12 @@ package app.readylytics.health.core.database.data.local
 import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
+import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.yield
+import java.time.Instant
+import java.time.ZoneOffset
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -43,31 +46,65 @@ class DataRollupManager
         private val heartRateDao: HeartRateDao,
         private val transactionRunner: TransactionRunner,
     ) {
-        /** Aggregates and deletes raw heart-rate rows older than [cutoffMs]. Returns rows deleted. */
-        suspend fun rollupExpiredHotTier(cutoffMs: Long): Int {
-            var deleted = 0
-            var cursorMs = heartRateDao.getEarliestTimestampMs() ?: return deleted
+        /**
+         * Aggregates and deletes raw heart-rate rows older than [cutoffMs]. R2-CACHE-001: returns
+         * the [ScoreInvalidation.AffectedRange] the rollup actually touched (the min/max dates of
+         * every raw sample that got aggregated into a bucket, merged across day-chunks), or `null`
+         * when no chunk aggregated any plausible sample -- a no-op rollup enqueues no recompute.
+         */
+        suspend fun rollupExpiredHotTier(cutoffMs: Long): ScoreInvalidation.AffectedRange? {
+            var touched: ScoreInvalidation.AffectedRange? = null
+            var cursorMs = heartRateDao.getEarliestTimestampMs() ?: return touched
             while (cursorMs < cutoffMs) {
                 currentCoroutineContext().ensureActive()
                 val dayStart = (cursorMs / DAY_MS) * DAY_MS
                 val dayEnd = minOf(dayStart + DAY_MS, cutoffMs)
-                deleted += rollupDayChunk(dayStart, dayEnd)
+                touched = mergeRanges(touched, rollupDayChunk(dayStart, dayEnd))
                 yield()
                 cursorMs = heartRateDao.getEarliestTimestampMs() ?: cutoffMs
             }
-            return deleted
+            return touched
         }
 
         private suspend fun rollupDayChunk(
             fromMs: Long,
             toMs: Long,
-        ): Int =
+        ): ScoreInvalidation.AffectedRange? =
             transactionRunner.runInTransaction {
                 val rawSamples = heartRateDao.getPlausibleSamplesInRangeForRollup(fromMs, toMs)
-                if (rawSamples.isNotEmpty()) {
-                    minuteBucketDao.upsertBuckets(rawSamples.aggregateIntoMinuteBuckets())
-                }
+                val chunkRange =
+                    if (rawSamples.isNotEmpty()) {
+                        minuteBucketDao.upsertBuckets(rawSamples.aggregateIntoMinuteBuckets())
+                        val minMs = rawSamples.minOf { it.timestampMs }
+                        val maxMs = rawSamples.maxOf { it.timestampMs }
+                        // Bucket timestamps carry no timezone, and this range only needs to be a safe
+                        // superset of the true scoring-zone dates (fed straight into
+                        // ScoreInvalidation.affectedRange's 84-day forward widening) -- the at-most-one-
+                        // day fuzz from ignoring the user's scoring zone here is immaterial next to that
+                        // 84-day slack.
+                        ScoreInvalidation.AffectedRange(
+                            start = Instant.ofEpochMilli(minMs).atZone(ZoneOffset.UTC).toLocalDate(),
+                            endInclusive = Instant.ofEpochMilli(maxMs).atZone(ZoneOffset.UTC).toLocalDate(),
+                        )
+                    } else {
+                        null
+                    }
                 heartRateDao.deleteInRange(fromMs, toMs)
+                chunkRange
+            }
+
+        private fun mergeRanges(
+            a: ScoreInvalidation.AffectedRange?,
+            b: ScoreInvalidation.AffectedRange?,
+        ): ScoreInvalidation.AffectedRange? =
+            when {
+                a == null -> b
+                b == null -> a
+                else ->
+                    ScoreInvalidation.AffectedRange(
+                        start = minOf(a.start, b.start),
+                        endInclusive = maxOf(a.endInclusive, b.endInclusive),
+                    )
             }
 
         private companion object {

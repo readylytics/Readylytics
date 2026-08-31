@@ -65,4 +65,10 @@ interface MinuteBucketDao {
 
     @Query("DELETE FROM hr_minute_buckets")
     suspend fun deleteAll(): Int
+
+    // R2-CACHE-001: lets RetentionCleanup report the earliest warm-tier bucket start it is about
+    // to delete (before deleting it), so callers can compute the ScoreInvalidation.AffectedRange
+    // the deletion touched.
+    @Query("SELECT MIN(bucketStartMs) FROM hr_minute_buckets WHERE bucketStartMs < :beforeMs")
+    suspend fun minBucketStartBefore(beforeMs: Long): Long?
 }
