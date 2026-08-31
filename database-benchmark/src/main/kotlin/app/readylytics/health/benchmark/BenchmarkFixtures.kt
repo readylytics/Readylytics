@@ -79,4 +79,20 @@ internal object BenchmarkFixtures {
             }
         runBlocking { database.minuteBucketDao().upsertBuckets(entities) }
     }
+
+    /**
+     * Records the allocation delta (bytes) of a single [block] pass via android.os.Debug. The
+     * androidx.benchmark 1.5.0-rc02 artifacts on this classpath no longer ship AllocationMetric,
+     * so these deltas are the Phase-0 allocation baseline for R2-PERF-001/003/004. Printed to
+     * stdout so the instrumentation output captures the number.
+     */
+    fun recordAllocationDelta(
+        label: String,
+        block: () -> Unit,
+    ) {
+        val before = android.os.Debug.getGlobalAllocSize()
+        block()
+        val delta = android.os.Debug.getGlobalAllocSize() - before
+        println("R2BENCH $label allocations=$delta bytes")
+    }
 }
