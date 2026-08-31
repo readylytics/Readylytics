@@ -36,9 +36,6 @@ interface SourceRecordDao {
     @Query("DELETE FROM health_source_records WHERE sourceRecordId = :sourceRecordId")
     suspend fun deleteBySourceRecordId(sourceRecordId: String): Int
 
-    @Query("DELETE FROM health_source_records WHERE id = :id")
-    suspend fun deleteById(id: Long): Int
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(entities: List<HealthSourceRecordEntity>)
 
@@ -50,4 +47,15 @@ interface SourceRecordDao {
 
     @Query("DELETE FROM health_source_records")
     suspend fun deleteAll(): Int
+
+    @Query(
+        "SELECT * FROM health_source_records " +
+            "WHERE recordType = :recordType AND createdAtMs >= :startMs AND createdAtMs <= :endMs " +
+            "ORDER BY createdAtMs ASC",
+    )
+    suspend fun getByRecordTypeAndRange(
+        recordType: String,
+        startMs: Long,
+        endMs: Long,
+    ): List<HealthSourceRecordEntity>
 }

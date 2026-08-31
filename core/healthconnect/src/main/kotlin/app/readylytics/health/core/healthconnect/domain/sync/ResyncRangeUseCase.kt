@@ -145,13 +145,13 @@ class ResyncRangeUseCase
 
                     val totalDays = (ChronoUnit.DAYS.between(startDate, endDate) + 1).toInt().coerceAtLeast(0)
                     val totalChunks = if (totalDays <= 0) 0 else (totalDays + chunkDays - 1) / chunkDays
-                    val recomputeStartDate =
+                    var recomputeStartDate =
                         if (checkpoint?.phase == ResyncPhase.RECOMPUTE) {
                             minOf(checkpoint.nextDate, endDate.plusDays(1))
                         } else {
                             startDate
                         }
-                    val completedDays =
+                    var completedDays =
                         ChronoUnit
                             .DAYS
                             .between(startDate, recomputeStartDate)
@@ -190,6 +190,7 @@ class ResyncRangeUseCase
                     var hrvBeforePrune = 0
                     var sleepBeforePrune = 0
                     var workoutBeforePrune = 0
+                    var earliestDeletionDate: LocalDate? = null
 
                     val stepsDevice =
                         prefs.deviceByDataType[HealthDataType.STEPS.name]?.takeIf { it.isNotBlank() }
@@ -238,63 +239,70 @@ class ResyncRangeUseCase
                             val windowEnd = chunkEndExclusive.atStartOfDay(zoneId).toInstant()
                             val chunkOverride = if (effectiveChunkDays != chunkDays) effectiveChunkDays else null
 
-                            try {
-                                retryWithBackoff {
-                                    ingestion.ingestionCoordinator.ingestWindow(
-                                        windowStart = windowStart,
-                                        windowEnd = windowEnd,
-                                        prefs = prefs,
-                                        hrStartPageToken = activeHrToken,
-                                        hrvStartPageToken = activeHrvToken,
-                                        onTokenUpdated = { hrToken, hrvToken ->
-                                            activeHrToken = hrToken
-                                            activeHrvToken = hrvToken
-                                            checkpointStore.save(
-                                                ResyncCheckpoint(
-                                                    startDate = startDate,
-                                                    endDate = endDate,
-                                                    phase = ResyncPhase.INGEST,
-                                                    nextDate = chunkStart,
-                                                    selectionHash = selectionHash,
-                                                    baselineChangeTokens = baselineChangeTokens,
-                                                    chunkDaysOverride = chunkOverride,
-                                                    hrPageToken = hrToken,
-                                                    hrvPageToken = hrvToken,
-                                                ),
-                                            )
-                                        },
-                                    )
-                                }
-                            } catch (e: HealthConnectWindowTimeoutException) {
-                                activeHrToken = null
-                                activeHrvToken = null
-                                if (effectiveChunkDays <= MIN_CHUNK_DAYS) {
-                                    logD(TELEMETRY_TAG) {
-                                        "[INGESTION] Window $windowStart..$windowEnd timed out even at the " +
-                                            "$MIN_CHUNK_DAYS-day floor; giving up."
+                            val chunkAffectedRange =
+                                try {
+                                    retryWithBackoff {
+                                        ingestion.ingestionCoordinator.ingestWindow(
+                                            windowStart = windowStart,
+                                            windowEnd = windowEnd,
+                                            prefs = prefs,
+                                            hrStartPageToken = activeHrToken,
+                                            hrvStartPageToken = activeHrvToken,
+                                            onTokenUpdated = { hrToken, hrvToken ->
+                                                activeHrToken = hrToken
+                                                activeHrvToken = hrvToken
+                                                checkpointStore.save(
+                                                    ResyncCheckpoint(
+                                                        startDate = startDate,
+                                                        endDate = endDate,
+                                                        phase = ResyncPhase.INGEST,
+                                                        nextDate = chunkStart,
+                                                        selectionHash = selectionHash,
+                                                        baselineChangeTokens = baselineChangeTokens,
+                                                        chunkDaysOverride = chunkOverride,
+                                                        hrPageToken = hrToken,
+                                                        hrvPageToken = hrvToken,
+                                                    ),
+                                                )
+                                            },
+                                            reconcileDeletions = !skipIngestAndPrune,
+                                        )
                                     }
-                                    throw e
+                                } catch (e: HealthConnectWindowTimeoutException) {
+                                    activeHrToken = null
+                                    activeHrvToken = null
+                                    if (effectiveChunkDays <= MIN_CHUNK_DAYS) {
+                                        logD(TELEMETRY_TAG) {
+                                            "[INGESTION] Window $windowStart..$windowEnd timed out even at the " +
+                                                "$MIN_CHUNK_DAYS-day floor; giving up."
+                                        }
+                                        throw e
+                                    }
+                                    val shrunkChunkDays = (effectiveChunkDays / 2).coerceAtLeast(MIN_CHUNK_DAYS)
+                                    logD(TELEMETRY_TAG) {
+                                        "[INGESTION] Window $windowStart..$windowEnd timed out; shrinking chunk " +
+                                            "$effectiveChunkDays -> $shrunkChunkDays days and retrying $chunkStart."
+                                    }
+                                    effectiveChunkDays = shrunkChunkDays
+                                    checkpointStore.save(
+                                        ResyncCheckpoint(
+                                            startDate = startDate,
+                                            endDate = endDate,
+                                            phase = ResyncPhase.INGEST,
+                                            nextDate = chunkStart,
+                                            selectionHash = selectionHash,
+                                            baselineChangeTokens = baselineChangeTokens,
+                                            chunkDaysOverride = effectiveChunkDays,
+                                            hrPageToken = null,
+                                            hrvPageToken = null,
+                                        ),
+                                    )
+                                    continue
                                 }
-                                val shrunkChunkDays = (effectiveChunkDays / 2).coerceAtLeast(MIN_CHUNK_DAYS)
-                                logD(TELEMETRY_TAG) {
-                                    "[INGESTION] Window $windowStart..$windowEnd timed out; shrinking chunk " +
-                                        "$effectiveChunkDays -> $shrunkChunkDays days and retrying $chunkStart."
-                                }
-                                effectiveChunkDays = shrunkChunkDays
-                                checkpointStore.save(
-                                    ResyncCheckpoint(
-                                        startDate = startDate,
-                                        endDate = endDate,
-                                        phase = ResyncPhase.INGEST,
-                                        nextDate = chunkStart,
-                                        selectionHash = selectionHash,
-                                        baselineChangeTokens = baselineChangeTokens,
-                                        chunkDaysOverride = effectiveChunkDays,
-                                        hrPageToken = null,
-                                        hrvPageToken = null,
-                                    ),
-                                )
-                                continue
+
+                            if (chunkAffectedRange != null) {
+                                earliestDeletionDate =
+                                    minOf(earliestDeletionDate ?: chunkAffectedRange.start, chunkAffectedRange.start)
                             }
 
                             activeHrToken = null
@@ -445,6 +453,15 @@ class ResyncRangeUseCase
                     // Clear frozen snapshots for the exact range so bounded baseline variants
                     // recompute per day and recent sync/resync use the same baseline path.
                     val recomputeStart = clock.millis()
+                    if (earliestDeletionDate != null && earliestDeletionDate.isBefore(recomputeStartDate)) {
+                        recomputeStartDate = earliestDeletionDate
+                        completedDays =
+                            ChronoUnit
+                                .DAYS
+                                .between(startDate, recomputeStartDate)
+                                .toInt()
+                                .coerceIn(0, totalDays)
+                    }
                     val stepsMap =
                         if (!skipIngestAndPrune && !recomputeStartDate.isAfter(endDate)) {
                             ingestion.stepCountFetcher.fetchRange(

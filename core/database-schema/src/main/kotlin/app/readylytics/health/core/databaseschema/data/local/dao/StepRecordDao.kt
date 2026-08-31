@@ -41,4 +41,13 @@ interface StepRecordDao {
 
     @Query("DELETE FROM step_records")
     suspend fun deleteAll(): Int
+
+    @Query("SELECT * FROM step_records WHERE startTime >= :startMs AND endTime <= :endMs ORDER BY startTime ASC")
+    suspend fun getBetween(startMs: Long, endMs: Long): List<StepRecordEntity>
+
+    @Query("DELETE FROM step_records WHERE startTime >= :startMs AND endTime <= :endMs AND id NOT IN (:validIds)")
+    suspend fun deleteNotIn(startMs: Long, endMs: Long, validIds: List<String>): Int
+
+    @Query("DELETE FROM step_records WHERE startTime >= :startMs AND endTime <= :endMs")
+    suspend fun deleteBetween(startMs: Long, endMs: Long): Int
 }

@@ -45,4 +45,22 @@ class ScoreInvalidationTest {
             )
         }
     }
+
+    @Test
+    fun `merge combines multiple affected ranges into bounding range`() {
+        val r1 = ScoreInvalidation.AffectedRange(LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 10))
+        val r2 = ScoreInvalidation.AffectedRange(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 8))
+        val r3 = ScoreInvalidation.AffectedRange(LocalDate.of(2026, 1, 7), LocalDate.of(2026, 1, 15))
+
+        val merged = ScoreInvalidation.merge(r1, null, r2, r3)
+        assertEquals(LocalDate.of(2026, 1, 1), merged?.start)
+        assertEquals(LocalDate.of(2026, 1, 15), merged?.endInclusive)
+    }
+
+    @Test
+    fun `merge returns null when all ranges are null or empty`() {
+        val merged = ScoreInvalidation.merge(null, null)
+        assertEquals(null, merged)
+        assertEquals(null, ScoreInvalidation.merge(emptyList()))
+    }
 }

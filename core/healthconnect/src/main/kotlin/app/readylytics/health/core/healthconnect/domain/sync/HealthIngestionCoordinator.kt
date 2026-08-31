@@ -2,9 +2,11 @@ package app.readylytics.health.core.healthconnect.domain.sync
 
 import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
 import app.readylytics.health.core.model.domain.repository.HealthConnectWindowTimeoutException
 import app.readylytics.health.core.model.domain.sync.*
+import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.sync.mappers.SleepDataMapper
 import app.readylytics.health.core.model.domain.sync.mappers.WorkoutMapper
 import app.readylytics.health.core.model.domain.sync.mappers.HeartRateMapper
@@ -47,8 +49,9 @@ class HealthIngestionCoordinator
             hrStartPageToken: String? = null,
             hrvStartPageToken: String? = null,
             onTokenUpdated: (suspend (hrToken: String?, hrvToken: String?) -> Unit)? = null,
-        ) {
-            try {
+            reconcileDeletions: Boolean = RECONCILE_DELETIONS,
+        ): ScoreInvalidation.AffectedRange? {
+            return try {
                 ingestWindowWithinBudget(
                     IngestWindowParams(
                         windowStart = windowStart,
@@ -59,6 +62,7 @@ class HealthIngestionCoordinator
                         hrStartPageToken = hrStartPageToken,
                         hrvStartPageToken = hrvStartPageToken,
                         onTokenUpdated = onTokenUpdated,
+                        reconcileDeletions = reconcileDeletions,
                     ),
                 )
             } catch (e: TimeoutCancellationException) {
@@ -69,10 +73,16 @@ class HealthIngestionCoordinator
             }
         }
 
-        private suspend fun ingestWindowWithinBudget(params: IngestWindowParams) {
-            withTimeout(params.windowBudgetMs) {
-                val sessionContext = fetchAndPersistBulkRecords(params.windowStart, params.windowEnd, params.prefs)
-                streamAndPersistHeartSamples(params, sessionContext)
+        private suspend fun ingestWindowWithinBudget(params: IngestWindowParams): ScoreInvalidation.AffectedRange? {
+            return withTimeout(params.windowBudgetMs) {
+                val (rawRecords, sessionContext) =
+                    fetchAndPersistBulkRecords(params.windowStart, params.windowEnd, params.prefs)
+                val heartIds = streamAndPersistHeartSamples(params, sessionContext)
+                if (params.reconcileDeletions) {
+                    reconcileDeletions(params, rawRecords, heartIds)
+                } else {
+                    null
+                }
             }
         }
 
@@ -80,7 +90,7 @@ class HealthIngestionCoordinator
             windowStart: Instant,
             windowEnd: Instant,
             prefs: UserPreferences,
-        ): IngestionSessionContext {
+        ): Pair<RawBulkRecords, IngestionSessionContext> {
             val raw = fetchBulkRecords(windowStart, windowEnd)
             val sleepInputs = raw.sleepSessions.map { SleepDataMapper.mapSleepSession(it) }
             val workoutInputs = raw.exerciseRecords.map { WorkoutMapper.mapExerciseSession(it) }
@@ -133,9 +143,12 @@ class HealthIngestionCoordinator
                 ),
             )
 
-            return IngestionSessionContext(
-                sleepInputs = sleepInputs,
-                workoutInputs = workoutInputs,
+            return Pair(
+                raw,
+                IngestionSessionContext(
+                    sleepInputs = sleepInputs,
+                    workoutInputs = workoutInputs,
+                ),
             )
         }
 
@@ -270,13 +283,14 @@ class HealthIngestionCoordinator
         private suspend fun streamAndPersistHeartSamples(
             params: IngestWindowParams,
             sessionContext: IngestionSessionContext,
-        ) {
+        ): HeartIds {
             var pagesIngested = 0
             val deviceByType = params.prefs.deviceByDataType
             fun deviceFor(type: HealthDataType): String? = deviceByType[type.name]?.takeIf { it.isNotBlank() }
 
             val hrDevice = deviceFor(HealthDataType.HEART_RATE)
             var hrSampleCount = 0
+            val hrIds = mutableSetOf<String>()
             if (params.hrvStartPageToken == null) {
                 hcRepo.readHeartRateSamplesPaged(
                     from = params.windowStart,
@@ -284,6 +298,7 @@ class HealthIngestionCoordinator
                     startPageToken = params.hrStartPageToken,
                 ) { page, nextToken ->
                     logD("HealthSync.Ingest") { "HR page size=${page.size}" }
+                    hrIds.addAll(page.map { it.id })
                     val hrInputs =
                         HeartRateMapper.mapToInputs(
                             page,
@@ -301,12 +316,14 @@ class HealthIngestionCoordinator
 
             val hrvDevice = deviceFor(HealthDataType.HRV)
             var hrvSampleCount = 0
+            val hrvIds = mutableSetOf<String>()
             hcRepo.readHrvSamplesPaged(
                 from = params.windowStart,
                 to = params.windowEnd,
                 startPageToken = params.hrvStartPageToken,
             ) { page, nextToken ->
                 logD("HealthSync.Ingest") { "HRV page size=${page.size}" }
+                hrvIds.addAll(page.map { it.id })
                 val hrvInputs =
                     HrvMapper.mapToInputs(
                         page,
@@ -323,8 +340,61 @@ class HealthIngestionCoordinator
             logD("HealthIngestionCoordinator") {
                 "Streamed samples: hr=$hrSampleCount hrv=$hrvSampleCount"
             }
+
+            return HeartIds(hr = hrIds, hrv = hrvIds)
+        }
+
+        private suspend fun reconcileDeletions(
+            params: IngestWindowParams,
+            raw: RawBulkRecords,
+            heartIds: HeartIds,
+        ): ScoreInvalidation.AffectedRange? {
+            val zoneId = params.prefs.scoringZone()
+            val startMs = params.windowStart.toEpochMilli()
+            val endMs = params.windowEnd.toEpochMilli() - 1
+
+            val typeToIds =
+                listOf(
+                    HealthDataType.SLEEP to raw.sleepSessions.mapTo(HashSet()) { it.id },
+                    HealthDataType.EXERCISE to raw.exerciseRecords.mapTo(HashSet()) { it.id },
+                    HealthDataType.HEART_RATE to heartIds.hr,
+                    HealthDataType.HRV to heartIds.hrv,
+                    HealthDataType.WEIGHT to raw.weightRecords.mapTo(HashSet()) { it.id },
+                    HealthDataType.BODY_FAT to raw.bodyFatRecords.mapTo(HashSet()) { it.id },
+                    HealthDataType.BLOOD_PRESSURE to raw.bloodPressureRecords.mapTo(HashSet()) { it.id },
+                    HealthDataType.OXYGEN_SATURATION to raw.spo2Records.mapTo(HashSet()) { it.id },
+                    HealthDataType.BODY_TEMPERATURE to raw.bodyTemperatureRecords.mapTo(HashSet()) { it.id },
+                    HealthDataType.STEPS to raw.stepsRecords.mapTo(HashSet()) { it.id },
+                )
+
+            val results =
+                typeToIds.associate { (type, ids) ->
+                    type to healthIngestionStore.reconcileWindow(type, startMs, endMs, ids, zoneId)
+                }
+
+            logD(TELEMETRY_TAG) {
+                val sleepMod = results[HealthDataType.SLEEP] != null
+                val workMod = results[HealthDataType.EXERCISE] != null
+                val hrMod = results[HealthDataType.HEART_RATE] != null || results[HealthDataType.HRV] != null
+                "[INGESTION] reconciled deletes in chunk: " +
+                    "sleep=${if (sleepMod) "yes" else "0"} " +
+                    "workout=${if (workMod) "yes" else "0"} " +
+                    "hr_sources=${if (hrMod) "yes" else "0"}"
+            }
+
+            return ScoreInvalidation.merge(results.values)
+        }
+
+        companion object {
+            const val RECONCILE_DELETIONS = true
+            private const val TELEMETRY_TAG = "ResyncTelemetry"
         }
     }
+
+private data class HeartIds(
+    val hr: Set<String>,
+    val hrv: Set<String>,
+)
 
 private data class RawBulkRecords(
     val sleepSessions: List<app.readylytics.health.core.model.domain.model.DomainSleepSessionRecord>,
@@ -354,6 +424,7 @@ private data class IngestWindowParams(
     val hrStartPageToken: String?,
     val hrvStartPageToken: String?,
     val onTokenUpdated: (suspend (hrToken: String?, hrvToken: String?) -> Unit)?,
+    val reconcileDeletions: Boolean,
 )
 
 private data class IngestionSessionContext(

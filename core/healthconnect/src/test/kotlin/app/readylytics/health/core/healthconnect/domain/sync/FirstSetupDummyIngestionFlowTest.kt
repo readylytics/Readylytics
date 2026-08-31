@@ -290,6 +290,14 @@ class FirstSetupDummyIngestionFlowTest {
             avgSpeedKmh: Float?,
             elevationGainMeters: Float?,
         ) = Unit
+
+        override suspend fun reconcileWindow(
+            type: app.readylytics.health.core.model.domain.model.HealthDataType,
+            windowStartMs: Long,
+            windowEndMs: Long,
+            hcIds: Set<String>,
+            zoneId: ZoneId,
+        ): ScoreInvalidation.AffectedRange? = null
     }
 
     private class FakeFirstSetupHealthConnectRepository : HealthConnectRepository {

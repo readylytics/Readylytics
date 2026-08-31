@@ -41,4 +41,19 @@ object ScoreInvalidation {
         val boundedEnd = if (end.isBefore(changed.start)) changed.start else end
         return AffectedRange(changed.start, boundedEnd)
     }
+
+    /**
+     * Merges multiple [AffectedRange] instances into their minimal bounding range, or returns null if
+     * all inputs are null or empty.
+     */
+    fun merge(ranges: Iterable<AffectedRange?>): AffectedRange? {
+        val nonNull = ranges.filterNotNull()
+        if (nonNull.isEmpty()) return null
+        val start = nonNull.minOf { it.start }
+        val endInclusive = nonNull.maxOf { it.endInclusive }
+        return AffectedRange(start, endInclusive)
+    }
+
+    /** Vararg overload of [merge]. */
+    fun merge(vararg ranges: AffectedRange?): AffectedRange? = merge(ranges.asIterable())
 }

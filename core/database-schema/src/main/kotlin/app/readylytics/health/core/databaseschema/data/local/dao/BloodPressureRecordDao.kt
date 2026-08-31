@@ -154,4 +154,19 @@ interface BloodPressureRecordDao {
 
     @Query("SELECT MIN(timestampMs) FROM blood_pressure_records")
     fun observeEarliestBpTime(): Flow<Long?>
+
+    @Query(
+        "SELECT * FROM blood_pressure_records " +
+            "WHERE timestampMs >= :startMs AND timestampMs <= :endMs ORDER BY timestampMs ASC",
+    )
+    suspend fun getBetween(startMs: Long, endMs: Long): List<BloodPressureRecordEntity>
+
+    @Query(
+        "DELETE FROM blood_pressure_records " +
+            "WHERE timestampMs >= :startMs AND timestampMs <= :endMs AND id NOT IN (:validIds)",
+    )
+    suspend fun deleteNotIn(startMs: Long, endMs: Long, validIds: List<String>): Int
+
+    @Query("DELETE FROM blood_pressure_records WHERE timestampMs >= :startMs AND timestampMs <= :endMs")
+    suspend fun deleteBetween(startMs: Long, endMs: Long): Int
 }
