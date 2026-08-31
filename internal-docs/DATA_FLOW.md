@@ -788,11 +788,13 @@ equals the legacy per-profile default for the user's *stored* physiology profile
 legacy default belonging to a *different* profile — is a genuine user override and is preserved verbatim.
 Without this, every onboarded user kept the old profile default (`OnboardingViewModel.saveProfile` always
 wrote `setRasCalibration(profile.banisterMultiplier)`), so the "1.0 for every profile" claim above would
-have reached zero existing users. The multiplier change is a
-historical-scope scoring input, so `SettingsDefaults.CURRENT_SCORING_VERSION` is bumped to **2**: startup
-enqueues a recompute-only resync (`WorkerScheduler.scheduleResyncWorker(recomputeOnly = true)` — gated on
-the migration succeeding) whenever `storedScoringVersion < CURRENT_SCORING_VERSION`, and
-`HealthResyncWorker.persistPostRecomputeState()` bumps the stored version only after the recompute
+have reached zero existing users. The multiplier change was a
+historical-scope scoring input, bumping `SettingsDefaults.CURRENT_SCORING_VERSION` to 2; the Phase 1 correctness
+changes (full-history multi-tier reads, universal heart-rate plausibility filtering, warm percentile-sketch
+reconstruction, bounded rollup/cleanup invalidations, and step attribution idempotency) bump
+`SettingsDefaults.CURRENT_SCORING_VERSION` to **3**: startup enqueues a recompute-only resync
+(`WorkerScheduler.scheduleResyncWorker(recomputeOnly = true)`) whenever `storedScoringVersion < CURRENT_SCORING_VERSION`,
+and `HealthResyncWorker.persistPostRecomputeState()` bumps the stored version only after the recompute
 succeeds (see §1.2.2 and the startup-gate row in §1.2).
 
 **PERF-002/WP-20 — batched TRIMP series in the walk-forward.** The ATL/CTL/strain-ratio/load-score
