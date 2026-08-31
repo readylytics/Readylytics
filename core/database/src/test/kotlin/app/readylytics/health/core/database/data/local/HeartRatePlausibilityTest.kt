@@ -24,6 +24,7 @@ import java.time.Instant
 @RunWith(RobolectricTestRunner::class)
 class HeartRatePlausibilityTest {
     private lateinit var database: HealthDatabase
+    private val startMs = Instant.parse("2026-01-11T22:00:00Z").toEpochMilli()
 
     @Before
     fun setUp() {
@@ -34,13 +35,24 @@ class HeartRatePlausibilityTest {
                 .build()
         runBlocking {
             val sourceRef = database.sourceRecordDao().getOrCreateSourceRef("plausibility-src", "HEART_RATE", 0L)
-            val startMs = Instant.parse("2026-01-11T22:00:00Z").toEpochMilli()
+            // Two outliers, deliberately on both sides of the plausible range: a HIGH one (250bpm,
+            // i==5) that a MAX-shaped query could pick up, and a LOW one (20bpm, i==2) that a
+            // MIN-shaped query could pick up. A fixture with only a high outlier cannot exercise the
+            // MIN-based queries (getMinHrTimestamp/getMinHrInRange) at all, and leaves the filtered
+            // vs. unfiltered average close enough that a loose ">200" assertion passes either way --
+            // see R2-DB-003 review finding. The remaining eight values (60,61,63,64,66,67,68,69) are
+            // the exact set every "filtered" assertion below is computed against by hand.
             val samples =
                 (0 until 10).map { i ->
                     HeartRateRecordEntity(
                         sourceRecordRef = sourceRef,
                         timestampMs = startMs + i * 60_000L,
-                        beatsPerMinute = if (i == 5) 250 else 60 + i,
+                        beatsPerMinute =
+                            when (i) {
+                                HIGH_OUTLIER_INDEX -> HIGH_OUTLIER_BPM
+                                LOW_OUTLIER_INDEX -> LOW_OUTLIER_BPM
+                                else -> 60 + i
+                            },
                         recordType = "SLEEP",
                         sessionId = SESSION_ID,
                     )
@@ -69,49 +81,54 @@ class HeartRatePlausibilityTest {
 
     @Test
     fun `implausible samples are excluded from getAvgSleepHr`() = runBlocking {
+        // Filtered set is {60,61,63,64,66,67,68,69}: sum=518, count=8, avg=64.75 -> rounds to 65.
+        // (Unfiltered avg would be 78.8 -> 79 -- both are "not > 200", which is why a loose
+        // upper-bound assertion here previously passed whether or not the predicate existed.)
         val avg = database.heartRateDao().getAvgSleepHr(SESSION_ID)
-        assertFalse("avg=$avg should not be pulled up by the 250bpm outlier", (avg ?: 0) > 200)
+        assertEquals(65, avg)
     }
 
     @Test
     fun `implausible samples are excluded from getAvgSleepHrPerSession`() = runBlocking {
         val avgs = database.heartRateDao().getAvgSleepHrPerSession(0L)
-        assertFalse(avgs.any { it > 200 })
+        assertEquals(listOf(65), avgs)
     }
 
     @Test
     fun `implausible samples are excluded from getSleepHrSampleCount`() = runBlocking {
         val count = database.heartRateDao().getSleepHrSampleCount(SESSION_ID)
-        assertEquals(9, count)
+        assertEquals(8, count)
     }
 
     @Test
     fun `implausible samples are excluded from getSleepHrSampleAtOffset`() = runBlocking {
         val last = database.heartRateDao().getSleepHrSampleAtOffset(SESSION_ID, 9)
-        assertFalse(last == 250)
+        assertFalse(last == HIGH_OUTLIER_BPM)
     }
 
     @Test
     fun `implausible samples are excluded from getMinHrTimestamp`() = runBlocking {
+        // Without the predicate, MIN(beatsPerMinute) is dragged down to the LOW outlier (20bpm at
+        // i==2); with it, the true minimum of the plausible set is 60bpm at i==0 (timestamp startMs).
         val minTimestamp = database.heartRateDao().getMinHrTimestamp(SESSION_ID)
-        val outlierTimestamp = Instant.parse("2026-01-11T22:00:00Z").toEpochMilli() + 5 * 60_000L
-        assertFalse(minTimestamp == outlierTimestamp)
+        assertEquals(startMs, minTimestamp)
     }
 
     @Test
     fun `implausible samples are excluded from getMinHrInRange`() = runBlocking {
         val min =
             database.heartRateDao().getMinHrInRange(
-                Instant.parse("2026-01-11T22:00:00Z").toEpochMilli(),
-                Instant.parse("2026-01-11T22:10:00Z").toEpochMilli(),
+                startMs,
+                startMs + 10 * 60_000L,
             )
-        assertFalse(min == 250)
+        assertEquals(60, min)
     }
 
     @Test
     fun `implausible samples are excluded from getSleepHrSamplesForSessions`() = runBlocking {
         val samples = database.heartRateDao().getSleepHrSamplesForSessions(listOf(SESSION_ID))
-        assertFalse(samples.any { it.beatsPerMinute == 250 })
+        assertFalse(samples.any { it.beatsPerMinute == HIGH_OUTLIER_BPM })
+        assertFalse(samples.any { it.beatsPerMinute == LOW_OUTLIER_BPM })
     }
 
     @Test
@@ -142,7 +159,6 @@ class HeartRatePlausibilityTest {
 
     @Test
     fun `implausible samples are excluded from getRmssdInTimeRange`() = runBlocking {
-        val startMs = Instant.parse("2026-01-11T22:00:00Z").toEpochMilli()
         val values = database.hrvDao().getRmssdInTimeRange(startMs, startMs + 9 * 60_000L)
         assertFalse(values.any { it == 999f })
         assertEquals(9, values.size)
@@ -151,5 +167,9 @@ class HeartRatePlausibilityTest {
     private companion object {
         const val SESSION_ID = "plausibility-session"
         const val HRV_SESSION_ID = "plausibility-hrv-session"
+        const val HIGH_OUTLIER_INDEX = 5
+        const val HIGH_OUTLIER_BPM = 250
+        const val LOW_OUTLIER_INDEX = 2
+        const val LOW_OUTLIER_BPM = 20
     }
 }
