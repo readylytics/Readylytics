@@ -52,7 +52,8 @@ interface HeartRateDao {
 
     @Query(
         "SELECT CAST(ROUND(AVG(beatsPerMinute)) AS INTEGER) FROM heart_rate_records " +
-            "WHERE recordType = 'SLEEP' AND sessionId = :sessionId",
+            "WHERE recordType = 'SLEEP' AND sessionId = :sessionId " +
+            "AND beatsPerMinute BETWEEN 30 AND 230",
     )
     suspend fun getAvgSleepHr(sessionId: String): Int?
 
@@ -74,6 +75,7 @@ interface HeartRateDao {
     @Query(
         "SELECT CAST(ROUND(AVG(beatsPerMinute)) AS INTEGER) FROM heart_rate_records " +
             "WHERE recordType = 'SLEEP' AND sessionId IS NOT NULL AND timestampMs >= :fromMs " +
+            "AND beatsPerMinute BETWEEN 30 AND 230 " +
             "GROUP BY sessionId",
     )
     suspend fun getAvgSleepHrPerSession(fromMs: Long): List<Int>
@@ -88,13 +90,15 @@ interface HeartRateDao {
 
     @Query(
         "SELECT COUNT(*) FROM heart_rate_records " +
-            "WHERE sessionId = :sessionId AND recordType = 'SLEEP'",
+            "WHERE sessionId = :sessionId AND recordType = 'SLEEP' " +
+            "AND beatsPerMinute BETWEEN 30 AND 230",
     )
     suspend fun getSleepHrSampleCount(sessionId: String): Int
 
     @Query(
         "SELECT beatsPerMinute FROM heart_rate_records " +
             "WHERE sessionId = :sessionId AND recordType = 'SLEEP' " +
+            "AND beatsPerMinute BETWEEN 30 AND 230 " +
             "ORDER BY beatsPerMinute ASC, timestampMs ASC, sourceRecordRef ASC LIMIT 1 OFFSET :offset",
     )
     suspend fun getSleepHrSampleAtOffset(
@@ -109,12 +113,17 @@ interface HeartRateDao {
     )
     fun _observeSleepHrTimelineForSession(sessionId: String): Flow<List<HeartRateRecordEntity>>
 
+    // OD-3 (Phase 1 plan, 2026-08-31): deliberately unfiltered — this backs the raw HR timeline
+    // chart, which shows sensor data as-is rather than hiding implausible spikes. Every
+    // scoring-facing query in this file applies the 30-230 plausibility predicate; this is the
+    // documented exception.
     fun observeSleepHrTimelineForSession(sessionId: String): Flow<List<HeartRateRecordEntity>> =
         _observeSleepHrTimelineForSession(sessionId).distinctUntilChanged()
 
     @Query(
         "SELECT MIN(beatsPerMinute) FROM heart_rate_records " +
-            "WHERE timestampMs >= :startTimeMs AND timestampMs <= :endTimeMs",
+            "WHERE timestampMs >= :startTimeMs AND timestampMs <= :endTimeMs " +
+            "AND beatsPerMinute BETWEEN 30 AND 230",
     )
     suspend fun getMinHrInRange(
         startTimeMs: Long,
@@ -124,6 +133,7 @@ interface HeartRateDao {
     @Query(
         "SELECT timestampMs FROM heart_rate_records " +
             "WHERE recordType = 'SLEEP' AND sessionId = :sessionId " +
+            "AND beatsPerMinute BETWEEN 30 AND 230 " +
             "ORDER BY beatsPerMinute ASC, timestampMs ASC, sourceRecordRef ASC LIMIT 1",
     )
     suspend fun getMinHrTimestamp(sessionId: String): Long?
@@ -272,6 +282,7 @@ interface HeartRateDao {
         "SELECT rowId, sourceRecordRef, sessionId, recordType, beatsPerMinute, timestampMs, deviceName " +
             "FROM heart_rate_records " +
             "WHERE sessionId IN (:sessionIds) AND recordType = 'SLEEP' " +
+            "AND beatsPerMinute BETWEEN 30 AND 230 " +
             "ORDER BY sessionId ASC, beatsPerMinute ASC, timestampMs ASC, sourceRecordRef ASC",
     )
     suspend fun getSleepHrSamplesForSessions(sessionIds: List<String>): List<HeartRateRecordEntity>
@@ -288,6 +299,10 @@ interface HeartRateDao {
     @Query("SELECT MIN(timestampMs) FROM heart_rate_records")
     fun observeEarliestHrTime(): Flow<Long?>
 
+    // OD-3 (Phase 1 plan, 2026-08-31): deliberately unfiltered — this backs the raw HR timeline
+    // chart, which shows sensor data as-is rather than hiding implausible spikes. Every
+    // scoring-facing query in this file applies the 30-230 plausibility predicate; this is the
+    // documented exception.
     // PERF-005/WP-23: dashboard day-summary observable -- min/max/avg/count computed in SQL, so a
     // 5,000-row ingest batch invalidating this Flow re-runs a single-row aggregate instead of
     // re-materializing and re-mapping every row in the day (up to 86k at 1 Hz). `WHERE sampleCount > 0`
