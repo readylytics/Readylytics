@@ -84,6 +84,22 @@ class ResidualFatigueComputer(
         }
     }
 
+    /**
+     * Residual fatigue decayed through [nowMs] instead of [compute]'s persisted next-day-midnight
+     * snapshot. Reuses [computeSingleDayFallback] verbatim — reconstructs from every retained
+     * canonical impulse through [nowMs], same gating (disabled / unbackfilled-gap) as [compute].
+     * Never touches the walk-forward accumulator and is not persisted, so it cannot desync
+     * `daily_summaries` or a resync's exact-reconstruction guarantees.
+     */
+    suspend fun computeLive(
+        nowMs: Long,
+        prefs: UserPreferences,
+    ): Float? {
+        val config = clampedConfig(prefs)
+        if (!config.enabled) return null
+        return computeSingleDayFallback(nowMs, config, prefs)
+    }
+
     private fun computeWalkForward(
         fatigueContext: WalkForwardFatigueContext,
         evalMs: Long,
