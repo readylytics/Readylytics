@@ -62,8 +62,9 @@ class ScoringDayDataLoader
             hotSamples: List<HeartRateRecordEntity>,
         ): List<HeartRateRecordEntity> {
             val hot = hotSamples.filter { it.timestampMs in workout.startTime..workout.endTime }
-            if (hot.isNotEmpty()) return hot
-            return fetchWorkoutSamplesFromBuckets(workout)
+            val warm = fetchWorkoutSamplesFromBuckets(workout)
+            if (warm.isEmpty()) return hot
+            return (hot + warm).sortedBy { it.timestampMs }
         }
 
         private suspend fun fetchWorkoutSamplesFromBuckets(

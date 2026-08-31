@@ -21,9 +21,11 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
- * R2-DB-001 / R2-DB-004 characterization (Phase 0). Every assertion below locks in TODAY'S
- * (incorrect) tier behavior so the WP-03 union and the WP-05 3-point reconstruction can be shown
- * to change exactly what they claim. Each test names the work package that flips it.
+ * R2-DB-001 / R2-DB-004 characterization. The R2-DB-001 tests were originally written (Phase 0)
+ * to lock in the incorrect hot-only tier behavior; they were flipped in Task 1 of the Phase-1
+ * plan once the hot/warm union landed, and now assert the correct unioned behavior plus the
+ * non-overlap invariant it depends on. The R2-DB-004 drift test still records TODAY'S (Phase 0)
+ * warm-reconstruction drift baseline, to be tightened by WP-05's 3-point reconstruction.
  */
 @RunWith(RobolectricTestRunner::class)
 class TierBoundaryCharacterizationTest {
@@ -45,38 +47,37 @@ class TierBoundaryCharacterizationTest {
         database.close()
     }
 
-    // R2-DB-001: asserts CURRENT (incorrect) behavior; flipped in WP-03.
+    // R2-DB-001: fixed in Task 1 of the Phase-1 plan — unions hot and warm.
     @Test
-    fun `straddling sleep session currently returns only its hot half`() {
+    fun `straddling sleep session returns both its hot and warm halves`() {
         val (hot, warm) = seedStraddlingSleepSessionAndRollUp()
         val repo = scoringHistoryRepository()
         val all = runBlocking { repo.getSleepHrSamplesForSession(SLEEP_SESSION_ID) }
-        assertEquals(hot.size, all.size) // NOT hot + warm — WP-03 unions both tiers
-        assertTrue(hot.size + warm.size > all.size)
+        assertEquals(hot.size + warm.size, all.size)
     }
 
-    // R2-DB-001: asserts CURRENT (incorrect) behavior; flipped in WP-03.
+    // R2-DB-001: fixed in Task 1 — the batch projection now unions every session's hot and warm samples.
     @Test
-    fun `projection classifies a partially rolled session as fully hot`() {
-        val (hot, _) = seedStraddlingSleepSessionAndRollUp()
+    fun `projection includes both hot and warm samples for a straddling session`() {
+        val (hot, warm) = seedStraddlingSleepSessionAndRollUp()
         val repo = scoringHistoryRepository()
         val projected = runBlocking { repo.getSleepHrProjectionForSessions(listOf(SLEEP_SESSION_ID)) }
-        assertEquals(hot.size, projected.size) // warm half silently dropped — WP-03
+        assertEquals(hot.size + warm.size, projected.size)
     }
 
-    // R2-DB-001: asserts CURRENT (incorrect) behavior; flipped in WP-03.
+    // R2-DB-001: fixed in Task 1 — the average is now computed over the unioned sample set.
     @Test
-    fun `average sleep hr is computed from the hot half only`() {
-        val (hot, _) = seedStraddlingSleepSessionAndRollUp()
+    fun `average sleep hr is computed from both hot and warm samples`() {
+        val (hot, warm) = seedStraddlingSleepSessionAndRollUp()
         val repo = scoringHistoryRepository()
         val avg = runBlocking { repo.getAvgSleepHrForSessions(listOf(SLEEP_SESSION_ID)) }
-        val hotOnlyAvg = hot.map { it.beatsPerMinute }.average().roundToInt()
-        assertEquals(hotOnlyAvg, avg[SLEEP_SESSION_ID]) // WP-03 weights both tiers by sampleCount
+        val expected = (hot.map { it.beatsPerMinute } + warm.map { it.beatsPerMinute }).average().roundToInt()
+        assertEquals(expected, avg[SLEEP_SESSION_ID])
     }
 
-    // R2-DB-001: asserts CURRENT (incorrect) behavior; flipped in WP-03.
+    // R2-DB-001: fixed in Task 1 — a straddling workout now returns both halves.
     @Test
-    fun `straddling workout currently returns only its hot half`() {
+    fun `straddling workout returns both its hot and warm halves`() {
         val workout =
             WorkoutRecordEntity(
                 id = WORKOUT_ID,
@@ -104,7 +105,18 @@ class TierBoundaryCharacterizationTest {
             )
         val hotSamples = runBlocking { loader.loadExerciseHrSamples(listOf(workout)) }
         val result = runBlocking { loader.loadWorkoutSamples(workout, hotSamples) }
-        assertEquals(hot.size, result.size) // NOT hot + warm — WP-03 unions both tiers
+        val warmCount = 120 - hot.size
+        assertEquals(hot.size + warmCount, result.size)
+    }
+
+    // R2-DB-001: the invariant every union above depends on — rollup never leaves a raw row
+    // at or before its own cutoff, so hot ∪ warm never double-counts a minute.
+    @Test
+    fun `rollup leaves no raw row at or before its own cutoff`() {
+        seedStraddlingSleepSessionAndRollUp()
+        val cutoffMs = Instant.parse("2026-01-11T02:00:00Z").toEpochMilli()
+        val remainingBeforeCutoff = runBlocking { database.heartRateDao().countInRange(0L, cutoffMs - 1) }
+        assertEquals(0, remainingBeforeCutoff)
     }
 
     // R2-DB-004: records the CURRENT drift baseline; WP-05 tightens the bound and publishes it.
