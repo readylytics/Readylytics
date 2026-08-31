@@ -5,12 +5,92 @@ import app.readylytics.health.core.model.domain.model.MetricStatus
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricUnavailableReason
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DashboardMetricPresentationFactoryTest : DashboardMetricPresentationFactoryTestBase() {
+    @Test
+    fun `residual fatigue card prefers the live value over the persisted snapshot`() {
+        val summary = summary(residualFatigue = 60.7f)
+        val preferences =
+            preferences(
+                residualFatigueEnabled = true,
+                residualFatigueHalfLifeHours = 24f,
+                residualFatigueGain = 1f,
+            )
+
+        val map =
+            factory.build(
+                summary = summary,
+                preferences = preferences,
+                lastSleepSession = null,
+                circadianResult = null,
+                heartRateSummary = null,
+                liveResidualFatigue = LiveResidualFatigue.Value(97.8f),
+            )
+
+        val presentation = map[CardId.RESIDUAL_FATIGUE]
+        assertNotNull(presentation)
+        assertEquals("97.8", presentation?.valueText)
+    }
+
+    // Regression: Unavailable must not fall through to the snapshot. The live gate blocks on any
+    // retained workout ending before now; the snapshot's gate only sees workouts starting before
+    // today, so a workout logged today with no backfilled TRIMP leaves the snapshot non-null and
+    // silently understated. Showing it would defeat the gate.
+    @Test
+    fun `residual fatigue card reports NO_DATA when the live value is unavailable`() {
+        val summary = summary(residualFatigue = 60.7f)
+        val preferences =
+            preferences(
+                residualFatigueEnabled = true,
+                residualFatigueHalfLifeHours = 24f,
+                residualFatigueGain = 1f,
+            )
+
+        val map =
+            factory.build(
+                summary = summary,
+                preferences = preferences,
+                lastSleepSession = null,
+                circadianResult = null,
+                heartRateSummary = null,
+                liveResidualFatigue = LiveResidualFatigue.Unavailable,
+            )
+
+        val presentation = map[CardId.RESIDUAL_FATIGUE]
+        assertNotNull(presentation)
+        assertEquals(MetricStatus.NO_DATA, presentation?.status)
+        assertNotEquals("60.7", presentation?.valueText)
+    }
+
+    @Test
+    fun `residual fatigue card falls back to the persisted snapshot when not applicable`() {
+        val summary = summary(residualFatigue = 60.7f)
+        val preferences =
+            preferences(
+                residualFatigueEnabled = true,
+                residualFatigueHalfLifeHours = 24f,
+                residualFatigueGain = 1f,
+            )
+
+        val map =
+            factory.build(
+                summary = summary,
+                preferences = preferences,
+                lastSleepSession = null,
+                circadianResult = null,
+                heartRateSummary = null,
+            )
+
+        val presentation = map[CardId.RESIDUAL_FATIGUE]
+        assertNotNull(presentation)
+        assertEquals("60.7", presentation?.valueText)
+    }
+
     @Test
     fun `build presents residual fatigue with score visual and optimal status when below 30`() {
         val summary = summary(residualFatigue = 18.5f)

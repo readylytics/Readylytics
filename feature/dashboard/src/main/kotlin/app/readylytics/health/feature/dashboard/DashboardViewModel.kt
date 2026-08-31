@@ -32,6 +32,7 @@ import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.core.model.domain.sync.RecalcProgress
 import app.readylytics.health.core.scoring.domain.airecommendation.DailyPromptFormatter
 import app.readylytics.health.core.scoring.domain.airecommendation.GetDailyPromptDataUseCase
+import app.readylytics.health.core.scoring.domain.dashboard.DerivedInsights
 import app.readylytics.health.core.scoring.domain.dashboard.InsightDeriver
 import app.readylytics.health.core.scoring.domain.insights.InsightContext
 import app.readylytics.health.core.scoring.domain.insights.InsightEngine
@@ -42,7 +43,9 @@ import app.readylytics.health.core.ui.common.BaseViewModel
 import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
+import app.readylytics.health.feature.dashboard.usecase.GetCurrentResidualFatigueUseCase
 import app.readylytics.health.feature.dashboard.usecase.GetDashboardDataUseCase
+import app.readylytics.health.feature.dashboard.usecase.LiveResidualFatigue
 import app.readylytics.health.feature.dashboard.usecase.ObserveDashboardRasIncreaseUseCase
 import app.readylytics.health.feature.dashboard.usecase.ObserveDashboardStrainIncreaseUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -82,6 +85,8 @@ class DashboardViewModel
         private val observeDashboardStrainIncreaseUseCase: ObserveDashboardStrainIncreaseUseCase,
         private val observeDashboardRasIncreaseUseCase: ObserveDashboardRasIncreaseUseCase,
         private val getDailyPromptDataUseCase: GetDailyPromptDataUseCase,
+        private val getCurrentResidualFatigueUseCase: GetCurrentResidualFatigueUseCase,
+        private val fatigueTicker: DashboardFatigueTicker,
         private val bodyTemperatureBaselineProvider: BodyTemperatureBaselineProvider,
         private val healthConnectRepository: HealthConnectRepository,
         private val clock: Clock,
@@ -136,14 +141,21 @@ class DashboardViewModel
                     selectedDateRepository.selectedDate,
                     settingsRepo.userPreferences,
                 ),
-                observeDashboardRasIncreaseUseCase(
-                    selectedDateRepository.selectedDate,
-                    settingsRepo.userPreferences,
-                ),
-            ) { basicInputs, cardState, hrSummary, todayStrainIncrease, todayRasIncrease ->
+                // Paired rather than passed as a 6th source: the typed `combine` overloads stop at
+                // five. The ticker re-runs this transform once a minute so live residual fatigue
+                // keeps decaying on a dashboard nothing else is emitting into.
+                combine(
+                    observeDashboardRasIncreaseUseCase(
+                        selectedDateRepository.selectedDate,
+                        settingsRepo.userPreferences,
+                    ),
+                    fatigueTicker.minuteBuckets(),
+                ) { rasIncrease, minuteBucket -> rasIncrease to minuteBucket },
+            ) { basicInputs, cardState, hrSummary, todayStrainIncrease, (todayRasIncrease, minuteBucket) ->
                 transformToUiState(
                     basicInputs,
                     cardState,
+                    minuteBucket,
                     hrSummary,
                     todayStrainIncrease,
                     todayRasIncrease,
@@ -165,14 +177,16 @@ class DashboardViewModel
         // Builds everything that depends on persisted/derived data. Realtime sync fields
         // (isRefreshing/recalcProgress/isComputingMetrics) are left at defaults here and
         // filled in by the realtime merge step above.
-        private fun transformToUiState(
+        private suspend fun transformToUiState(
             basicInputs: DashboardBasicInputs,
             cardState: DashboardCardState,
+            minuteBucket: Long,
             hrSummary: HeartRateDaySummary? = null,
             todayStrainIncrease: Float? = null,
             todayRasIncrease: Float? = null,
         ): DashboardUiState {
             val selectedDate = basicInputs.selectedDate
+            val liveResidualFatigue = resolveCurrentResidualFatigue(selectedDate, basicInputs, minuteBucket)
             val sessionSummary =
                 resolveDashboardSleepSessionSummary(
                     session = cardState.lastSleepSession,
@@ -190,35 +204,12 @@ class DashboardViewModel
                     todayStrainIncrease = todayStrainIncrease,
                     todayRasIncrease = todayRasIncrease,
                     bodyTempBaseline = basicInputs.bodyTempBaseline,
+                    liveResidualFatigue = liveResidualFatigue,
                 )
 
             val cards = cardsResult.getOrNull()
-            val engineFindings =
-                basicInputs.summary?.let { summary ->
-                    InsightEngine.evaluate(
-                        InsightContext(
-                            today = summary,
-                            circadianResult = basicInputs.circadianResult ?: CircadianConsistencyResult.MissingData,
-                            goalSleepMinutes = (basicInputs.userPreferences.goalSleepHours * 60).toInt(),
-                            stepGoal = basicInputs.userPreferences.stepGoal,
-                            recentDays = basicInputs.rasSummaries,
-                            nowMinutesOfDay = nowMinutesOfDayFor(selectedDate),
-                            prefs = basicInputs.userPreferences,
-                        ),
-                    )
-                } ?: emptyList()
-            val derived =
-                InsightDeriver.derive(
-                    recoveryFlags = basicInputs.summary?.recoveryFlags,
-                    engineFindings = engineFindings,
-                    dismissedTypes = basicInputs.dismissedInsightTypes,
-                )
-            val yesterday = selectedDate.minusDays(1)
-            val yesterdaySummary = basicInputs.rasSummaries.firstOrNull { it.date == yesterday }
-            val yesterdayMetrics =
-                yesterdaySummary?.let {
-                    DailyMetricsMapper.toMetrics(it, basicInputs.userPreferences)
-                }
+            val derived = deriveInsights(basicInputs, selectedDate)
+            val yesterdayMetrics = resolveYesterdayMetrics(basicInputs, selectedDate)
             return DashboardUiState(
                 summary = basicInputs.summary,
                 selectedDate = selectedDate,
@@ -248,6 +239,87 @@ class DashboardViewModel
                 yesterdayReadiness = yesterdayMetrics?.readinessRounded?.toFloat(),
             )
         }
+
+        // The combine transform above runs on every raw emission of any of its source flows
+        // (including high-frequency ones like hrSummary), upstream of the distinctUntilChanged
+        // that filters the final UiState. Without this memo, every one of those ticks would
+        // re-run computeCurrentResidualFatigue's unbounded workout-table scan even when nothing
+        // fatigue-relevant changed.
+        //
+        // minuteBucket is what makes the value actually decay: the result is a function of *now*,
+        // so a key of (date, prefs, summary) alone would pin the card to whatever it read when the
+        // dashboard opened — an idle dashboard emits no new summary, so the key would never move.
+        // Bucketing to the minute keeps the memo effective against the high-frequency flows while
+        // still letting the ticker through.
+        private var lastFatigueCacheKey: FatigueCacheKey? = null
+        private var lastFatigueValue: LiveResidualFatigue = LiveResidualFatigue.NotApplicable
+
+        private suspend fun resolveCurrentResidualFatigue(
+            selectedDate: LocalDate,
+            basicInputs: DashboardBasicInputs,
+            minuteBucket: Long,
+        ): LiveResidualFatigue {
+            val cacheKey =
+                FatigueCacheKey(selectedDate, basicInputs.userPreferences, basicInputs.summary, minuteBucket)
+            if (cacheKey == lastFatigueCacheKey) return lastFatigueValue
+            // Runs outside GetDashboardDataUseCase's try/catch but performs an unbounded workout
+            // scan, so a DB failure here would escape the combine transform and kill stateIn's
+            // sharing coroutine — where the identical failure during card building degrades to an
+            // errorMessage. Degrade to Unavailable rather than NotApplicable: a failed lookup is
+            // unknown, and falling back to the snapshot would understate fatigue.
+            val value =
+                try {
+                    getCurrentResidualFatigueUseCase(selectedDate, basicInputs.userPreferences.scoringZone())
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    app.readylytics.health.core.model.domain.util
+                        .logE(TAG, e) { "Failed to resolve live residual fatigue" }
+                    LiveResidualFatigue.Unavailable
+                }
+            lastFatigueCacheKey = cacheKey
+            lastFatigueValue = value
+            return value
+        }
+
+        private data class FatigueCacheKey(
+            val selectedDate: LocalDate,
+            val userPreferences: UserPreferences,
+            val summary: DailySummary?,
+            val minuteBucket: Long,
+        )
+
+        private fun deriveInsights(
+            basicInputs: DashboardBasicInputs,
+            selectedDate: LocalDate,
+        ): DerivedInsights {
+            val engineFindings =
+                basicInputs.summary?.let { summary ->
+                    InsightEngine.evaluate(
+                        InsightContext(
+                            today = summary,
+                            circadianResult = basicInputs.circadianResult ?: CircadianConsistencyResult.MissingData,
+                            goalSleepMinutes = (basicInputs.userPreferences.goalSleepHours * 60).toInt(),
+                            stepGoal = basicInputs.userPreferences.stepGoal,
+                            recentDays = basicInputs.rasSummaries,
+                            nowMinutesOfDay = nowMinutesOfDayFor(selectedDate),
+                            prefs = basicInputs.userPreferences,
+                        ),
+                    )
+                } ?: emptyList()
+            return InsightDeriver.derive(
+                recoveryFlags = basicInputs.summary?.recoveryFlags,
+                engineFindings = engineFindings,
+                dismissedTypes = basicInputs.dismissedInsightTypes,
+            )
+        }
+
+        private fun resolveYesterdayMetrics(
+            basicInputs: DashboardBasicInputs,
+            selectedDate: LocalDate,
+        ) = basicInputs.rasSummaries
+            .firstOrNull { it.date == selectedDate.minusDays(1) }
+            ?.let { DailyMetricsMapper.toMetrics(it, basicInputs.userPreferences) }
 
         // Time-of-day gating for insights only makes sense for the current day;
         // for past days, treat as end-of-day so it never suppresses a finding.
