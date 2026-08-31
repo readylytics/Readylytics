@@ -100,6 +100,7 @@ class DashboardMetricPresentationFactory
             todayStrainIncrease: Float? = null,
             todayRasIncrease: Float? = null,
             bodyTempBaseline: Float? = null,
+            currentResidualFatigue: Float? = null,
         ): Map<CardId, UniversalMetricPresentation> {
             val map = mutableMapOf<CardId, UniversalMetricPresentation>()
 
@@ -619,6 +620,7 @@ class DashboardMetricPresentationFactory
                     summary = summary,
                     preferences = preferences,
                     unavailableValueText = unavailableValueText,
+                    currentResidualFatigue = currentResidualFatigue,
                 )
 
             return map
@@ -628,10 +630,13 @@ class DashboardMetricPresentationFactory
             summary: DailySummary?,
             preferences: UserPreferences,
             unavailableValueText: String,
+            currentResidualFatigue: Float?,
         ): UniversalMetricPresentation {
             val title = resourceProvider.getString(DashboardR.string.card_residual_fatigue_title)
             val tooltip = resourceProvider.getString(DashboardR.string.tooltip_residual_fatigue)
-            val value = summary?.residualFatigue?.takeIf { preferences.residualFatigueEnabled }
+            val value =
+                (currentResidualFatigue ?: summary?.residualFatigue)
+                    ?.takeIf { preferences.residualFatigueEnabled }
 
             // Residual fatigue is `gain * sum(TRIMP) * decay`, and gain is user-settable over
             // 0.1..5.0. Fixed 30/70/100 cut-points would read OPTIMAL with a pinned-to-zero gauge

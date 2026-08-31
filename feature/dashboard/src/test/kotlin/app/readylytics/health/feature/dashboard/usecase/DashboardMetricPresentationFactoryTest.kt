@@ -12,6 +12,55 @@ import org.junit.Test
 
 class DashboardMetricPresentationFactoryTest : DashboardMetricPresentationFactoryTestBase() {
     @Test
+    fun `residual fatigue card prefers the live value over the persisted snapshot`() {
+        val summary = summary(residualFatigue = 60.7f)
+        val preferences =
+            preferences(
+                residualFatigueEnabled = true,
+                residualFatigueHalfLifeHours = 24f,
+                residualFatigueGain = 1f,
+            )
+
+        val map =
+            factory.build(
+                summary = summary,
+                preferences = preferences,
+                lastSleepSession = null,
+                circadianResult = null,
+                heartRateSummary = null,
+                currentResidualFatigue = 97.8f,
+            )
+
+        val presentation = map[CardId.RESIDUAL_FATIGUE]
+        assertNotNull(presentation)
+        assertEquals("97.8", presentation?.valueText)
+    }
+
+    @Test
+    fun `residual fatigue card falls back to the persisted snapshot when no live value is supplied`() {
+        val summary = summary(residualFatigue = 60.7f)
+        val preferences =
+            preferences(
+                residualFatigueEnabled = true,
+                residualFatigueHalfLifeHours = 24f,
+                residualFatigueGain = 1f,
+            )
+
+        val map =
+            factory.build(
+                summary = summary,
+                preferences = preferences,
+                lastSleepSession = null,
+                circadianResult = null,
+                heartRateSummary = null,
+            )
+
+        val presentation = map[CardId.RESIDUAL_FATIGUE]
+        assertNotNull(presentation)
+        assertEquals("60.7", presentation?.valueText)
+    }
+
+    @Test
     fun `build presents residual fatigue with score visual and optimal status when below 30`() {
         val summary = summary(residualFatigue = 18.5f)
         val preferences = preferences(residualFatigueEnabled = true, residualFatigueHalfLifeHours = 24f)
