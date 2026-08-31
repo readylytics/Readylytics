@@ -176,8 +176,7 @@ class DashboardViewModel
             todayRasIncrease: Float? = null,
         ): DashboardUiState {
             val selectedDate = basicInputs.selectedDate
-            val currentResidualFatigue =
-                getCurrentResidualFatigueUseCase(selectedDate, basicInputs.userPreferences.scoringZone())
+            val currentResidualFatigue = resolveCurrentResidualFatigue(selectedDate, basicInputs)
             val sessionSummary =
                 resolveDashboardSleepSessionSummary(
                     session = cardState.lastSleepSession,
@@ -230,6 +229,34 @@ class DashboardViewModel
                 yesterdayReadiness = yesterdayMetrics?.readinessRounded?.toFloat(),
             )
         }
+
+        // The combine transform above runs on every raw emission of any of its 5 source flows
+        // (including high-frequency ones like hrSummary), upstream of the distinctUntilChanged
+        // that filters the final UiState. Without this memo, every one of those ticks would
+        // re-run computeCurrentResidualFatigue's unbounded workout-table scan even when nothing
+        // fatigue-relevant changed. Cache on the exact inputs the use case reads: only a new
+        // selected date, changed prefs, or a changed summary (i.e. a real sync) can move the
+        // result, so re-emissions of unrelated flows are served from cache instead.
+        private var lastFatigueCacheKey: FatigueCacheKey? = null
+        private var lastFatigueValue: Float? = null
+
+        private suspend fun resolveCurrentResidualFatigue(
+            selectedDate: LocalDate,
+            basicInputs: DashboardBasicInputs,
+        ): Float? {
+            val cacheKey = FatigueCacheKey(selectedDate, basicInputs.userPreferences, basicInputs.summary)
+            if (cacheKey == lastFatigueCacheKey) return lastFatigueValue
+            val value = getCurrentResidualFatigueUseCase(selectedDate, basicInputs.userPreferences.scoringZone())
+            lastFatigueCacheKey = cacheKey
+            lastFatigueValue = value
+            return value
+        }
+
+        private data class FatigueCacheKey(
+            val selectedDate: LocalDate,
+            val userPreferences: UserPreferences,
+            val summary: DailySummary?,
+        )
 
         private fun deriveInsights(
             basicInputs: DashboardBasicInputs,
