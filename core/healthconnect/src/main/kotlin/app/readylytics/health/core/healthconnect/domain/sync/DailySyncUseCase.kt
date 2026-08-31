@@ -15,6 +15,7 @@ import app.readylytics.health.core.model.domain.repository.WalDiagnostics
 import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
 import app.readylytics.health.core.scoring.domain.scoring.RasSourceModeBootstrapUseCase
 import app.readylytics.health.core.model.domain.sync.*
+import app.readylytics.health.core.model.domain.sync.StepAttribution
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
@@ -251,7 +252,13 @@ class DailySyncUseCase
                         var dayToScore = oldestTargetDay
                         while (!dayToScore.isAfter(today)) {
                             ensureActive()
-                            val steps = stepsMap[dayToScore]
+                            val steps =
+                                StepAttribution.resolve(
+                                    dayToScore,
+                                    stepsMap,
+                                    stepsDeviceSelected = stepsDevice != null,
+                                    recomputeOnly = false,
+                                )
                             val result =
                                 recomputeSupport.recomputeDay(
                                     dayToScore,

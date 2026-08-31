@@ -11,6 +11,7 @@ import app.readylytics.health.core.model.domain.repository.HealthConnectPermissi
 import app.readylytics.health.core.model.domain.repository.HealthConnectWindowTimeoutException
 import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
 import app.readylytics.health.core.model.domain.sync.*
+import app.readylytics.health.core.model.domain.sync.StepAttribution
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logI
@@ -472,11 +473,12 @@ class ResyncRangeUseCase
                                 while (!day.isAfter(chunkEndDay)) {
                                     ensureActive()
                                     val stepsForDay =
-                                        when {
-                                            skipIngestAndPrune -> null
-                                            stepsDevice != null -> stepsMap[day] ?: 0L
-                                            else -> stepsMap[day]
-                                        }
+                                        StepAttribution.resolve(
+                                            day,
+                                            stepsMap,
+                                            stepsDeviceSelected = stepsDevice != null,
+                                            recomputeOnly = skipIngestAndPrune,
+                                        )
                                     // The nullable fields already express "not available for this
                                     // run", so no branch is needed: each computer handles a null
                                     // context individually.
