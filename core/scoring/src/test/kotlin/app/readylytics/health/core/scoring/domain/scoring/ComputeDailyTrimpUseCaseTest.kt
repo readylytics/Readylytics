@@ -32,6 +32,7 @@ class ComputeDailyTrimpUseCaseTest {
             )
         assertEquals(0f, result.totalDailyTrimpRaw, 0.0f)
         assertEquals(0, result.workoutModelTrimpUpdates.size)
+        assertEquals(0, result.canonicalWorkoutTrimps.size)
     }
 
     @Test
@@ -41,7 +42,6 @@ class ComputeDailyTrimpUseCaseTest {
                 id = "w1",
                 startTime = 1000L,
                 endTime = 2000L,
-                storedTrimp = 20f,
                 currentModelTrimp = null,
                 samples =
                     listOf(
@@ -53,7 +53,6 @@ class ComputeDailyTrimpUseCaseTest {
                 id = "w2",
                 startTime = 3000L,
                 endTime = 4000L,
-                storedTrimp = 30f,
                 currentModelTrimp = 35f, // already matches
                 samples = emptyList(),
             )
@@ -66,7 +65,6 @@ class ComputeDailyTrimpUseCaseTest {
                 samples = any(),
                 prefs = any(),
                 restingHrBaseline = 60f,
-                storedTrimp = 20f,
                 frozenHrMax = null,
             )
         } returns Result.success(25f)
@@ -79,7 +77,6 @@ class ComputeDailyTrimpUseCaseTest {
                 samples = any(),
                 prefs = any(),
                 restingHrBaseline = 60f,
-                storedTrimp = 30f,
                 frozenHrMax = null,
             )
         } returns Result.success(35f)
@@ -96,5 +93,16 @@ class ComputeDailyTrimpUseCaseTest {
         assertEquals(1, result.workoutModelTrimpUpdates.size)
         assertEquals("w1", result.workoutModelTrimpUpdates[0].workoutId)
         assertEquals(25f, result.workoutModelTrimpUpdates[0].modelTrimp, 0.001f)
+        assertCanonicalWorkoutTrimps(result)
+    }
+
+    private fun assertCanonicalWorkoutTrimps(result: ComputeDailyTrimpUseCase.DailyTrimpResult) {
+        assertEquals(2, result.canonicalWorkoutTrimps.size)
+        assertEquals("w1", result.canonicalWorkoutTrimps[0].workoutId)
+        assertEquals(2000L, result.canonicalWorkoutTrimps[0].endTimeMs)
+        assertEquals(25f, result.canonicalWorkoutTrimps[0].trimp, 0.001f)
+        assertEquals("w2", result.canonicalWorkoutTrimps[1].workoutId)
+        assertEquals(4000L, result.canonicalWorkoutTrimps[1].endTimeMs)
+        assertEquals(35f, result.canonicalWorkoutTrimps[1].trimp, 0.001f)
     }
 }

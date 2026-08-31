@@ -10,6 +10,7 @@ import kotlinx.serialization.Serializable
     tableName = "workout_records",
     indices = [
         Index(value = ["startTime"]),
+        Index(value = ["endTime", "id"]),
     ],
 )
 data class WorkoutRecordEntity(

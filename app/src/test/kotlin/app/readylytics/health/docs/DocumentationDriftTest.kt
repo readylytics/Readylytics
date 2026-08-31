@@ -55,6 +55,7 @@ class DocumentationDriftTest {
                 .firstOrNull { it.exists() }
                 ?.readText()
         }.joinToString("\n")
+    private val customizationMd = readRepoFile("docs/customization.md")
     private val dataFlowMd = readRepoFile("internal-docs/DATA_FLOW.md")
     private val buildGradleKts = readRepoFile("app/build.gradle.kts")
     private val governanceDocPaths =
@@ -386,6 +387,78 @@ class DocumentationDriftTest {
             for (phrase in requiredRoutePhrases) {
                 assertTrue(text.contains(phrase), "$surface must contain '$phrase'")
             }
+        }
+    }
+
+    /**
+     * User-facing surfaces that document the Residual Fatigue parameters: the two About pages, the
+     * public customization guide, and the in-app Advanced Settings copy.
+     */
+    private val residualFatigueSurfaces
+        get() =
+            listOf(
+                "ABOUT.md" to aboutMd,
+                "docs/about.md" to publicAboutMd,
+                "docs/customization.md" to customizationMd,
+                "strings.xml" to stringsXml,
+            )
+
+    @Test
+    fun `residual fatigue defaults and bounds match documented numbers`() {
+        assertEquals(24f, SettingsDefaults.RESIDUAL_FATIGUE_HALF_LIFE_HOURS)
+        assertEquals(6f, SettingsDefaults.MIN_RESIDUAL_FATIGUE_HALF_LIFE_HOURS)
+        assertEquals(96f, SettingsDefaults.MAX_RESIDUAL_FATIGUE_HALF_LIFE_HOURS)
+        assertEquals(1.0f, SettingsDefaults.RESIDUAL_FATIGUE_GAIN)
+        assertEquals(0.1f, SettingsDefaults.MIN_RESIDUAL_FATIGUE_GAIN)
+        assertEquals(5.0f, SettingsDefaults.MAX_RESIDUAL_FATIGUE_GAIN)
+
+        for ((surface, text) in residualFatigueSurfaces) {
+            val normalized = normalizeWhitespace(text)
+            assertTrue(normalized.contains("24 h"), "$surface must document the 24 h half-life default")
+            assertTrue(normalized.contains("6–96 h"), "$surface must document the 6–96 h half-life bounds")
+            assertTrue(normalized.contains("0.1–5.0"), "$surface must document the 0.1–5.0 gain bounds")
+            assertTrue(normalized.contains("1.0 gain") || normalized.contains("default 1.0"))
+        }
+    }
+
+    @Test
+    fun `residual fatigue shadow-only claim is present on every surface`() {
+        val surfaces = residualFatigueSurfaces + ("DATA_FLOW.md" to dataFlowMd)
+        for ((surface, text) in surfaces) {
+            val normalized = normalizeWhitespace(text)
+            assertTrue(
+                normalized.contains("does not modify Readiness") ||
+                    normalized.contains("does not affect Readiness"),
+                "$surface must state that Residual Fatigue does not modify Readiness (Phase 1 shadow mode)",
+            )
+        }
+    }
+
+    /**
+     * The profile-independent multiplier claim. It is true rather than aspirational only because the
+     * DataStore migration normalizes the legacy per-profile defaults (1.35 Active / 1.75 Sedentary) to
+     * 1.0 for users onboarded before the change — see `TrimpMigrationHelper.migrateRasCalibration` and
+     * DATA_FLOW.md "Banister multiplier normalization". Without that migration every onboarded user
+     * would still be running the old profile default and the documented claim would be false.
+     */
+    @Test
+    fun `banister multiplier is profile-independent and documented as such`() {
+        for (profile in PhysiologyProfile.values()) {
+            assertEquals(1.0f, profile.banisterMultiplier, "profile $profile must ship multiplier 1.0")
+        }
+
+        for ((surface, text) in listOf(
+            "ABOUT.md" to aboutMd,
+            "docs/about.md" to publicAboutMd,
+            "docs/customization.md" to customizationMd,
+            "DATA_FLOW.md" to dataFlowMd,
+        )) {
+            val normalized = normalizeWhitespace(text)
+            assertTrue(
+                normalized.contains("1.0 for every physiology profile") ||
+                    normalized.contains("1.0 for every profile"),
+                "$surface must document the profile-independent Banister multiplier",
+            )
         }
     }
 

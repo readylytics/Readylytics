@@ -20,6 +20,7 @@ import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.model.HrMinuteBucketRow
 import app.readylytics.health.core.model.domain.model.RecordType
 import app.readylytics.health.core.model.domain.model.TimestampedTrimp
+import app.readylytics.health.core.model.domain.repository.FatigueWorkoutInput
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
 import java.time.ZoneId
 import javax.inject.Inject
@@ -178,6 +179,24 @@ class ScoringDayDataLoader
         // from fetchWalkForwardTrimpContext L145 / computeCalibratedSummary L541
         suspend fun loadWorkoutTrimpPoints(fromMs: Long, toMs: Long): List<TimestampedTrimp> =
             workoutDao.getTrimpPoints(fromMs, toMs)
+
+        // from single-day residual-fatigue fallback
+        suspend fun loadCanonicalFatigueInputsThrough(evaluationTimeMs: Long): List<FatigueWorkoutInput> =
+            workoutDao.getCanonicalFatigueInputsThrough(evaluationTimeMs)
+
+        // from fetchWalkForwardFatigueContext
+        suspend fun loadCanonicalFatigueSeed(startBeforeMs: Long): List<FatigueWorkoutInput> =
+            workoutDao.getCanonicalFatigueSeed(startBeforeMs)
+
+        suspend fun loadUnbackfilledCountBefore(
+            retentionStartMs: Long,
+            startBeforeMs: Long,
+        ): Int = workoutDao.countUnbackfilledBefore(retentionStartMs, startBeforeMs)
+
+        suspend fun loadUnbackfilledCountThrough(
+            retentionStartMs: Long,
+            evaluationTimeMs: Long,
+        ): Int = workoutDao.countUnbackfilledThrough(retentionStartMs, evaluationTimeMs)
 
         // from fetchWalkForwardTrimpContext L146 / computeCalibratedSummary L546
         suspend fun loadEverydayTrimpPoints(fromMs: Long, toMs: Long): List<TimestampedTrimp> =

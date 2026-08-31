@@ -28,7 +28,7 @@ object SettingsDefaults {
     const val MIN_HYPERSOMNIA_ONSET_PERCENT = 100
     const val MAX_HYPERSOMNIA_ONSET_PERCENT = 125
     const val HYPERSOMNIA_ONSET_PERCENT_STEP = 5
-    const val CURRENT_SCORING_VERSION = 1
+    const val CURRENT_SCORING_VERSION = 2
     const val CORE_MERGE_GAP_MINUTES = 180
     const val MIN_CORE_MERGE_GAP_MINUTES = 30
     const val MAX_CORE_MERGE_GAP_MINUTES = 240
@@ -112,6 +112,13 @@ object SettingsDefaults {
     const val SCORING_ZONE_ID = ""
     val CIRCADIAN_THRESHOLD_OVERRIDE: String? = null // null = use profile default
     val TRIMP_MODEL = TrimpModel.BANISTER
+    const val RESIDUAL_FATIGUE_ENABLED = true
+    const val RESIDUAL_FATIGUE_HALF_LIFE_HOURS = 24f
+    const val MIN_RESIDUAL_FATIGUE_HALF_LIFE_HOURS = 6f
+    const val MAX_RESIDUAL_FATIGUE_HALF_LIFE_HOURS = 96f
+    const val RESIDUAL_FATIGUE_GAIN = 1.0f
+    const val MIN_RESIDUAL_FATIGUE_GAIN = 0.1f
+    const val MAX_RESIDUAL_FATIGUE_GAIN = 5.0f
     val STRAIN_LOAD_SOURCE_MODE = LoadSourceMode.WORKOUT_ONLY
     val RAS_SOURCE_MODE = LoadSourceMode.EVERYDAY_HEART_RATE
     val UNIT_SYSTEM = UnitSystem.METRIC
@@ -147,6 +154,7 @@ object SettingsDefaults {
             CardConfiguration(CardId.INSIGHTS, isVisible = true, position = 16),
             CardConfiguration(CardId.BODY_TEMPERATURE, isVisible = true, position = 17),
             CardConfiguration(CardId.AI_RECOMMENDATION, isVisible = true, position = 18),
+            CardConfiguration(CardId.RESIDUAL_FATIGUE, isVisible = false, position = 19),
         )
 
     val DEFAULT_VITALS_CARDS =
@@ -237,6 +245,7 @@ object SettingsDefaults {
             WorkoutChartConfiguration(WorkoutChartId.WEEKLY_TRAINING, isVisible = true, position = 1),
             WorkoutChartConfiguration(WorkoutChartId.ACTIVITY_VOLUME, isVisible = true, position = 2),
             WorkoutChartConfiguration(WorkoutChartId.TRAINING_MIX, isVisible = true, position = 3),
+            WorkoutChartConfiguration(WorkoutChartId.RESIDUAL_FATIGUE_CURVE, isVisible = false, position = 4),
         )
 
     val DEFAULT_WORKOUT_HISTORY =

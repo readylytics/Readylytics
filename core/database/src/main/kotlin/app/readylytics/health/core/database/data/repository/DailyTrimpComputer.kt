@@ -3,6 +3,7 @@ package app.readylytics.health.core.database.data.repository
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
+import app.readylytics.health.core.model.domain.repository.FatigueWorkoutInput
 import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
@@ -16,7 +17,13 @@ class DailyTrimpComputer(
     private val computeDailyTrimpUseCase: ComputeDailyTrimpUseCase,
     private val assembleEverydayLoadInputUseCase: AssembleEverydayLoadInputUseCase,
 ) {
-    suspend fun processWorkouts(context: ScoringDayContext): Pair<List<WorkoutRecordEntity>, Float> {
+    data class ProcessedWorkoutDay(
+        val workouts: List<WorkoutRecordEntity>,
+        val dailyTrimpRaw: Float,
+        val fatigueInputs: List<FatigueWorkoutInput>,
+    )
+
+    suspend fun processWorkouts(context: ScoringDayContext): ProcessedWorkoutDay {
         val workouts = dataLoader.loadWorkouts(context.dayMidnightMs, context.nextDayMidnightMs)
         val allDayExerciseHrSamples = dataLoader.loadExerciseHrSamples(workouts)
         val workoutInputs =
@@ -26,7 +33,6 @@ class DailyTrimpComputer(
                     id = workout.id,
                     startTime = workout.startTime,
                     endTime = workout.endTime,
-                    storedTrimp = workout.trimp,
                     currentModelTrimp = workout.modelTrimp,
                     samples = workoutHrSamples.map { sample ->
                         ComputeWorkoutTrimpUseCase.HeartRateSample(
@@ -44,7 +50,18 @@ class DailyTrimpComputer(
                 context.initialBaselines.frozenHrMax,
             )
         dataLoader.persistModelTrimp(workouts, dailyTrimpResult.workoutModelTrimpUpdates)
-        return workouts to dailyTrimpResult.totalDailyTrimpRaw
+        return ProcessedWorkoutDay(
+            workouts = workouts,
+            dailyTrimpRaw = dailyTrimpResult.totalDailyTrimpRaw,
+            fatigueInputs =
+                dailyTrimpResult.canonicalWorkoutTrimps.map {
+                    FatigueWorkoutInput(
+                        workoutId = it.workoutId,
+                        endTimeMs = it.endTimeMs,
+                        trimp = it.trimp,
+                    )
+                },
+        )
     }
 
     suspend fun resolveEverydayTrimp(
@@ -74,6 +91,20 @@ class DailyTrimpComputer(
             prefs = context.prefs,
         )
     }
+
+    suspend fun resolveEverydayTrimp(
+        context: ScoringDayContext,
+        processed: ProcessedWorkoutDay,
+        session: SleepSessionEntity?,
+        aggregatedSleep: SleepAggregationContext?,
+    ): EverydayHrLoadResult =
+        resolveEverydayTrimp(
+            context,
+            processed.workouts,
+            session,
+            aggregatedSleep,
+            processed.dailyTrimpRaw,
+        )
 
     fun publishTrimpToContext(
         trimpContext: WalkForwardTrimpContext?,

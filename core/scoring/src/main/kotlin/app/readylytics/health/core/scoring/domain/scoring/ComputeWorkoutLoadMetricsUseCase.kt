@@ -39,7 +39,6 @@ class ComputeWorkoutLoadMetricsUseCase
                         samples = samples,
                         prefs = prefs,
                         restingHrBaseline = restingHrBaseline,
-                        storedTrimp = workout.trimp,
                     ).getOrNull()
                     ?: workout.trimp
 

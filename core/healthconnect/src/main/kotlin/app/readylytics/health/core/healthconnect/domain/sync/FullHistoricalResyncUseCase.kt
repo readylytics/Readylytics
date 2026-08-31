@@ -3,7 +3,6 @@ package app.readylytics.health.core.healthconnect.domain.sync
 import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
-import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.core.model.domain.util.RetentionBounds
 import kotlinx.coroutines.flow.first
@@ -15,7 +14,7 @@ import javax.inject.Singleton
 internal fun resolveScoringToday(
     prefs: UserPreferences,
     now: Instant = Instant.now(),
-): LocalDate = now.atZone(prefs.scoringZone()).toLocalDate()
+): LocalDate = RetentionBounds.resolveHistoricalWindow(prefs, now).endDate
 
 /**
  * Historical resync triggered from [app.readylytics.health.workers.HealthResyncWorker], covering
@@ -41,12 +40,19 @@ class FullHistoricalResyncUseCase
             onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)? = null,
         ): Result<Unit> {
             val prefs = settingsRepo.userPreferences.first()
-            val today = resolveScoringToday(prefs)
-            val startDate = RetentionBounds.resolveResyncStartDate(prefs, today)
+            val historicalWindow = RetentionBounds.resolveHistoricalWindow(prefs)
             return if (recomputeOnly) {
-                healthSyncUseCase.recomputeRange(startDate = startDate, endDate = today, onProgress = onProgress)
+                healthSyncUseCase.recomputeRange(
+                    startDate = historicalWindow.startDate,
+                    endDate = historicalWindow.endDate,
+                    onProgress = onProgress,
+                )
             } else {
-                healthSyncUseCase.resyncRange(startDate = startDate, endDate = today, onProgress = onProgress)
+                healthSyncUseCase.resyncRange(
+                    startDate = historicalWindow.startDate,
+                    endDate = historicalWindow.endDate,
+                    onProgress = onProgress,
+                )
             }
         }
     }

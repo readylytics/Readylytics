@@ -475,4 +475,63 @@ class LocalRestoreApplicationTest : LocalRestoreManagerTestBase() {
             assertEquals("restored_weight", remainingWeights.single().id)
             zipFile.delete()
         }
+
+    @Test
+    fun applyRestore_legacyDailySummaryWithoutResidualFatigueRestoresNull() =
+        runTest {
+            val json = createValidBackupJson()
+            val summariesJson =
+                JSONArray().apply {
+                    put(
+                        JSONObject().apply {
+                            put("dateMidnightMs", 1779926400000L)
+                            put("sleepScore", 85.0)
+                            put("napCount", 1)
+                        },
+                    )
+                }
+            json.put("dailySummaries", summariesJson)
+            val zipFile = createBackupZipFile("legacy_summary_backup.zip", json)
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
+            val summaries = db.dailySummaryDao().getAllSummaries()
+            assertEquals(1, summaries.size)
+            val restored = summaries.single()
+            assertEquals(1779926400000L, restored.dateMidnightMs)
+            assertEquals(85.0f, restored.sleepScore)
+            assertEquals(1, restored.napCount)
+            assertEquals(null, restored.residualFatigue)
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_currentDailySummaryWithResidualFatiguePreservesValueAndDate() =
+        runTest {
+            val json = createValidBackupJson()
+            val summariesJson =
+                JSONArray().apply {
+                    put(
+                        JSONObject().apply {
+                            put("dateMidnightMs", 1779926400000L)
+                            put("sleepScore", 90.0)
+                            put("residualFatigue", 42.5)
+                        },
+                    )
+                }
+            json.put("dailySummaries", summariesJson)
+            val zipFile = createBackupZipFile("current_summary_backup.zip", json)
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
+            val summaries = db.dailySummaryDao().getAllSummaries()
+            assertEquals(1, summaries.size)
+            val restored = summaries.single()
+            assertEquals(1779926400000L, restored.dateMidnightMs)
+            assertEquals(90.0f, restored.sleepScore)
+            assertEquals(42.5f, restored.residualFatigue)
+            zipFile.delete()
+        }
 }

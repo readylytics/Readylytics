@@ -23,6 +23,7 @@ import app.readylytics.health.core.scoring.domain.scoring.BuildLoadSeriesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.core.scoring.domain.scoring.CompositeScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.SleepMetricsCollaborators
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
@@ -50,6 +51,8 @@ import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
+import app.readylytics.health.core.database.data.repository.ScoringDayUseCases
+import app.readylytics.health.core.database.data.repository.ScoringDataLoaders
 
 /**
  * Golden regression lock (WP-01 of the architecture/HC/scoring remediation plan): seeds ~2 years
@@ -227,15 +230,21 @@ class GoldenFixtureWalkForwardTest {
 
             val scoringRepository =
                 ScoringRepositoryImpl(
-                    dataLoader = dataLoader,
-                    bodyMetricsDataLoader = bodyMetricsDataLoader,
-                    seriesLoader = seriesLoader,
+                    loaders = ScoringDataLoaders(
+                        dataLoader,
+                        bodyMetricsDataLoader,
+                        seriesLoader,
+                    ),
                     settingsRepo = settingsRepo,
                     baselineComputer = baselineComputer,
                     scoringConfigFactory = scoringConfigFactory,
-                    computeDailyTrimpUseCase = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
-                    resolveDailyBaselinesUseCase = resolveDailyBaselinesUseCase,
-                    assembleEverydayLoadInputUseCase = AssembleEverydayLoadInputUseCase(),
+                    useCases =
+                        ScoringDayUseCases(
+                            ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
+                            ComputeResidualFatigueUseCase(),
+                            resolveDailyBaselinesUseCase,
+                            AssembleEverydayLoadInputUseCase(),
+                        ),
                     scoringHistoryRepository = scoringHistoryRepository,
                     readinessSummaryCoordinator = readinessSummaryCoordinator,
                     defaultDispatcher = UnconfinedTestDispatcher(),

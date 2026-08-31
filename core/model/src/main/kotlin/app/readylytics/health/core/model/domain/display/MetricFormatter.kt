@@ -72,4 +72,9 @@ object MetricFormatter {
     }
 
     fun formatRas(value: Float?): String = value?.roundToInt()?.toString() ?: "—"
+
+    fun formatDecimal(
+        value: Float,
+        decimals: Int = 1,
+    ): String = String.format(Locale.US, "%.${decimals}f", value)
 }

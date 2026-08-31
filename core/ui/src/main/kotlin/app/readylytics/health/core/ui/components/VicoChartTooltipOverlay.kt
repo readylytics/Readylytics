@@ -77,6 +77,9 @@ fun rememberChartMarkerVisibilityListener(
             override fun onHidden(marker: CartesianMarker) {
                 // Do not clear state automatically on finger lift, allowing the
                 // custom Compose tooltip to remain visible until explicitly dismissed.
+                // A hidden-callback parameter cannot be added here without routing it through
+                // rememberUpdatedState as well: this listener is remembered with no keys, so a
+                // directly captured lambda would be pinned to its first instance forever.
             }
 
             private fun handleTargets(targets: List<CartesianMarker.Target>) {

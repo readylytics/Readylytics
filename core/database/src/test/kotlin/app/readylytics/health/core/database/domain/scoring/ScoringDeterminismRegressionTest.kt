@@ -7,6 +7,7 @@ import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadIn
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
 import app.readylytics.health.core.scoring.domain.scoring.BuildLoadSeriesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
@@ -50,6 +51,8 @@ import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.test.assertEquals
+import app.readylytics.health.core.database.data.repository.ScoringDayUseCases
+import app.readylytics.health.core.database.data.repository.ScoringDataLoaders
 
 /**
  * Determinism regression guard for forced recalculation.
@@ -122,15 +125,20 @@ class ScoringDeterminismRegressionTest {
             )
         repo =
             ScoringRepositoryImpl(
-                dataLoader,
-                bodyMetricsDataLoader,
-                seriesLoader,
+                ScoringDataLoaders(
+                    dataLoader,
+                    bodyMetricsDataLoader,
+                    seriesLoader,
+                ),
                 settingsRepo,
                 baselineComputer,
                 scoringConfigFactory,
-                ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
-                ResolveDailyBaselinesUseCase(baselineComputer),
-                AssembleEverydayLoadInputUseCase(),
+                ScoringDayUseCases(
+                    ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
+                    ComputeResidualFatigueUseCase(),
+                    ResolveDailyBaselinesUseCase(baselineComputer),
+                    AssembleEverydayLoadInputUseCase(),
+                ),
                 scoringHistoryRepository,
                 readinessSummaryCoordinator,
                 UnconfinedTestDispatcher(),
