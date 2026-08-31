@@ -462,6 +462,27 @@ class DocumentationDriftTest {
         }
     }
 
+    @Test
+    fun `TRIMP dead zone constant matches documented numbers across About surfaces and DATA_FLOW md`() {
+        assertEquals(5f, ScoringConstants.Trimp.MIN_HR_ABOVE_RHR_BPM)
+
+        for ((surface, text) in listOf(
+            "ABOUT.md" to aboutMd,
+            "docs/about.md" to publicAboutMd,
+            "DATA_FLOW.md" to dataFlowMd,
+        )) {
+            val normalized = normalizeWhitespace(text)
+            assertTrue(
+                normalized.contains("TRIMP dead zone"),
+                "$surface must mention the TRIMP dead zone",
+            )
+            assertTrue(
+                normalized.contains("5bpm") || normalized.contains("5 bpm"),
+                "$surface must document the 5bpm TRIMP dead zone",
+            )
+        }
+    }
+
     /** Collapses whitespace runs (including line wraps) to a single space for wrap-tolerant matching. */
     private fun normalizeWhitespace(text: String): String = text.replace(Regex("\\s+"), " ")
 

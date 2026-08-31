@@ -158,6 +158,12 @@ object ScoringConstants {
 
         // iTRIMP — REF: Manzi et al. 2009
         const val ITRIMP_B = 2.1f
+
+        // R2-SCORE-001: heart rate must exceed the RHR baseline by at least this many bpm before
+        // any TRIMP accrues — a per-minute discontinuity in the everyday-HR load calculation, not a
+        // gradual ramp. OD-4 (2026-08-31): kept as-is per user decision; this task only names and
+        // documents an existing, previously-undocumented behavior. Value unchanged.
+        const val MIN_HR_ABOVE_RHR_BPM = 5f
     }
 
     object TrimpIntensityThresholds {

@@ -41,4 +41,40 @@ class MathUtilsTest {
         // Stdev (unbiased) = sqrt(27.4107) = 5.2355
         assertEquals(5.237f, list.stdev(), 0.001f)
     }
+
+    @Test
+    fun `meanOrNull returns null for empty list and correct value otherwise`() {
+        assertEquals(null, emptyList<Float>().meanOrNull())
+        assertEquals(3f, listOf(1f, 2f, 3f, 4f, 5f).meanOrNull())
+    }
+
+    @Test
+    fun `medianOrNull for Float returns null on empty and correct value for odd and even`() {
+        assertEquals(null, emptyList<Float>().medianOrNull())
+        assertEquals(2f, listOf(1f, 3f, 2f).medianOrNull())
+        assertEquals(2.5f, listOf(1f, 2f, 3f, 4f).medianOrNull())
+    }
+
+    @Test
+    fun `medianOrNull for Int returns null on empty and correct value for odd and even`() {
+        assertEquals(null, emptyList<Int>().medianOrNull())
+        assertEquals(2f, listOf(1, 3, 2).medianOrNull())
+        assertEquals(2.5f, listOf(1, 2, 3, 4).medianOrNull())
+    }
+
+    @Test
+    fun `stdevOrNull for Float returns null on fewer than 2 elements and sample stdev otherwise`() {
+        assertEquals(null, emptyList<Float>().stdevOrNull())
+        assertEquals(null, listOf(1f).stdevOrNull())
+        val list = listOf(10f, 12f, 23f, 23f, 16f, 23f, 21f, 16f)
+        assertEquals(5.237f, list.stdevOrNull()!!, 0.001f)
+    }
+
+    @Test
+    fun `stdevOrNull for Int returns null on fewer than 2 elements and sample stdev otherwise`() {
+        assertEquals(null, emptyList<Int>().stdevOrNull())
+        assertEquals(null, listOf(1).stdevOrNull())
+        val list = listOf(10, 12, 23, 23, 16, 23, 21, 16)
+        assertEquals(5.237f, list.stdevOrNull()!!, 0.001f)
+    }
 }

@@ -14,6 +14,7 @@ import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayPolicy
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.scoring.domain.util.mean
 import app.readylytics.health.core.scoring.domain.util.median
+import app.readylytics.health.core.scoring.domain.util.medianOrNull
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -43,6 +44,28 @@ class BaselineComputer
     ) {
         companion object {
             private const val TAG = "BaselineComputer"
+
+            /**
+             * Resolves the baseline RHR scalar used for TRIMP/RAS calculations.
+             * Honors [rhrBaselineOverride] then falls back to median of [rhrValues],
+             * else [ScoringConstants.DEFAULT_RHR_BPM].
+             */
+            fun resolveBaselineRhrBpm(
+                rhrValues: List<Int>,
+                rhrBaselineOverride: Float?,
+            ): Float =
+                rhrBaselineOverride
+                    ?: rhrValues.medianOrNull()
+                    ?: ScoringConstants.DEFAULT_RHR_BPM
+
+            /**
+             * Resolves the baseline RHR (rounded) for sleep-metric calculations,
+             * preferring [rhrBaselineOverride] over the personal median.
+             */
+            fun resolveBaselineRhrRounded(
+                rhrValues: List<Int>,
+                rhrBaselineOverride: Float?,
+            ): Int = (rhrBaselineOverride ?: rhrValues.medianOrNull() ?: ScoringConstants.DEFAULT_RHR_BPM).roundToInt()
         }
 
         // UI-002/WP-22: the sleep-session -> HistoricalSleepDay aggregation machinery shared by
@@ -99,25 +122,21 @@ class BaselineComputer
 
         /**
          * Resolves the baseline RHR scalar used for TRIMP/RAS calculations.
-         * Honors [rhrBaselineOverride] then falls back to median of [rhrValues],
-         * else [ScoringConstants.DEFAULT_RHR_BPM].
+         * Delegates to [Companion.resolveBaselineRhrBpm].
          */
         fun resolveBaselineRhrBpm(
             rhrValues: List<Int>,
             rhrBaselineOverride: Float?,
-        ): Float =
-            rhrBaselineOverride
-                ?: rhrValues.median().takeIf { it > 0f }
-                ?: ScoringConstants.DEFAULT_RHR_BPM
+        ): Float = Companion.resolveBaselineRhrBpm(rhrValues, rhrBaselineOverride)
 
         /**
-         * Resolves the baseline RHR (rounded) for sleep-metric calculations,
-         * preferring [rhrBaselineOverride] over the personal median.
+         * Resolves the baseline RHR (rounded) for sleep-metric calculations.
+         * Delegates to [Companion.resolveBaselineRhrRounded].
          */
         fun resolveBaselineRhrRounded(
             rhrValues: List<Int>,
             rhrBaselineOverride: Float?,
-        ): Int = (rhrBaselineOverride ?: rhrValues.median()).roundToInt()
+        ): Int = Companion.resolveBaselineRhrRounded(rhrValues, rhrBaselineOverride)
 
         /**
          * Computes RHR baseline bounded to [fromMs, toMs] (for backfill: no look-ahead).

@@ -39,8 +39,8 @@ object RasCalculator {
         if (hrr <= 0) return 0f
 
         val hrR = ((hrAvg - rhrBaseline) / hrr).coerceIn(0f, 1f)
-        if (hrAvg < (rhrBaseline + 5)) return 0f
-        if (hrR <= 0) return 0f
+        if (hrAvg < (rhrBaseline + ScoringConstants.Trimp.MIN_HR_ABOVE_RHR_BPM)) return 0f
+        if (hrR <= 0f) return 0f
 
         return when (trimpModel) {
             TrimpModel.BANISTER -> {
