@@ -45,6 +45,7 @@ import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPrese
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
 import app.readylytics.health.feature.dashboard.usecase.GetCurrentResidualFatigueUseCase
 import app.readylytics.health.feature.dashboard.usecase.GetDashboardDataUseCase
+import app.readylytics.health.feature.dashboard.usecase.LiveResidualFatigue
 import app.readylytics.health.feature.dashboard.usecase.ObserveDashboardRasIncreaseUseCase
 import app.readylytics.health.feature.dashboard.usecase.ObserveDashboardStrainIncreaseUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -85,6 +86,7 @@ class DashboardViewModel
         private val observeDashboardRasIncreaseUseCase: ObserveDashboardRasIncreaseUseCase,
         private val getDailyPromptDataUseCase: GetDailyPromptDataUseCase,
         private val getCurrentResidualFatigueUseCase: GetCurrentResidualFatigueUseCase,
+        private val fatigueTicker: DashboardFatigueTicker,
         private val bodyTemperatureBaselineProvider: BodyTemperatureBaselineProvider,
         private val healthConnectRepository: HealthConnectRepository,
         private val clock: Clock,
@@ -139,14 +141,21 @@ class DashboardViewModel
                     selectedDateRepository.selectedDate,
                     settingsRepo.userPreferences,
                 ),
-                observeDashboardRasIncreaseUseCase(
-                    selectedDateRepository.selectedDate,
-                    settingsRepo.userPreferences,
-                ),
-            ) { basicInputs, cardState, hrSummary, todayStrainIncrease, todayRasIncrease ->
+                // Paired rather than passed as a 6th source: the typed `combine` overloads stop at
+                // five. The ticker re-runs this transform once a minute so live residual fatigue
+                // keeps decaying on a dashboard nothing else is emitting into.
+                combine(
+                    observeDashboardRasIncreaseUseCase(
+                        selectedDateRepository.selectedDate,
+                        settingsRepo.userPreferences,
+                    ),
+                    fatigueTicker.minuteBuckets(),
+                ) { rasIncrease, minuteBucket -> rasIncrease to minuteBucket },
+            ) { basicInputs, cardState, hrSummary, todayStrainIncrease, (todayRasIncrease, minuteBucket) ->
                 transformToUiState(
                     basicInputs,
                     cardState,
+                    minuteBucket,
                     hrSummary,
                     todayStrainIncrease,
                     todayRasIncrease,
@@ -171,12 +180,13 @@ class DashboardViewModel
         private suspend fun transformToUiState(
             basicInputs: DashboardBasicInputs,
             cardState: DashboardCardState,
+            minuteBucket: Long,
             hrSummary: HeartRateDaySummary? = null,
             todayStrainIncrease: Float? = null,
             todayRasIncrease: Float? = null,
         ): DashboardUiState {
             val selectedDate = basicInputs.selectedDate
-            val currentResidualFatigue = resolveCurrentResidualFatigue(selectedDate, basicInputs)
+            val liveResidualFatigue = resolveCurrentResidualFatigue(selectedDate, basicInputs, minuteBucket)
             val sessionSummary =
                 resolveDashboardSleepSessionSummary(
                     session = cardState.lastSleepSession,
@@ -194,7 +204,7 @@ class DashboardViewModel
                     todayStrainIncrease = todayStrainIncrease,
                     todayRasIncrease = todayRasIncrease,
                     bodyTempBaseline = basicInputs.bodyTempBaseline,
-                    currentResidualFatigue = currentResidualFatigue,
+                    liveResidualFatigue = liveResidualFatigue,
                 )
 
             val cards = cardsResult.getOrNull()
@@ -230,23 +240,43 @@ class DashboardViewModel
             )
         }
 
-        // The combine transform above runs on every raw emission of any of its 5 source flows
+        // The combine transform above runs on every raw emission of any of its source flows
         // (including high-frequency ones like hrSummary), upstream of the distinctUntilChanged
         // that filters the final UiState. Without this memo, every one of those ticks would
         // re-run computeCurrentResidualFatigue's unbounded workout-table scan even when nothing
-        // fatigue-relevant changed. Cache on the exact inputs the use case reads: only a new
-        // selected date, changed prefs, or a changed summary (i.e. a real sync) can move the
-        // result, so re-emissions of unrelated flows are served from cache instead.
+        // fatigue-relevant changed.
+        //
+        // minuteBucket is what makes the value actually decay: the result is a function of *now*,
+        // so a key of (date, prefs, summary) alone would pin the card to whatever it read when the
+        // dashboard opened — an idle dashboard emits no new summary, so the key would never move.
+        // Bucketing to the minute keeps the memo effective against the high-frequency flows while
+        // still letting the ticker through.
         private var lastFatigueCacheKey: FatigueCacheKey? = null
-        private var lastFatigueValue: Float? = null
+        private var lastFatigueValue: LiveResidualFatigue = LiveResidualFatigue.NotApplicable
 
         private suspend fun resolveCurrentResidualFatigue(
             selectedDate: LocalDate,
             basicInputs: DashboardBasicInputs,
-        ): Float? {
-            val cacheKey = FatigueCacheKey(selectedDate, basicInputs.userPreferences, basicInputs.summary)
+            minuteBucket: Long,
+        ): LiveResidualFatigue {
+            val cacheKey =
+                FatigueCacheKey(selectedDate, basicInputs.userPreferences, basicInputs.summary, minuteBucket)
             if (cacheKey == lastFatigueCacheKey) return lastFatigueValue
-            val value = getCurrentResidualFatigueUseCase(selectedDate, basicInputs.userPreferences.scoringZone())
+            // Runs outside GetDashboardDataUseCase's try/catch but performs an unbounded workout
+            // scan, so a DB failure here would escape the combine transform and kill stateIn's
+            // sharing coroutine — where the identical failure during card building degrades to an
+            // errorMessage. Degrade to Unavailable rather than NotApplicable: a failed lookup is
+            // unknown, and falling back to the snapshot would understate fatigue.
+            val value =
+                try {
+                    getCurrentResidualFatigueUseCase(selectedDate, basicInputs.userPreferences.scoringZone())
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    app.readylytics.health.core.model.domain.util
+                        .logE(TAG, e) { "Failed to resolve live residual fatigue" }
+                    LiveResidualFatigue.Unavailable
+                }
             lastFatigueCacheKey = cacheKey
             lastFatigueValue = value
             return value
@@ -256,6 +286,7 @@ class DashboardViewModel
             val selectedDate: LocalDate,
             val userPreferences: UserPreferences,
             val summary: DailySummary?,
+            val minuteBucket: Long,
         )
 
         private fun deriveInsights(

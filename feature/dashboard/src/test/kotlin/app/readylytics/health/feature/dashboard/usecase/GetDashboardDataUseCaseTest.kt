@@ -35,6 +35,7 @@ class GetDashboardDataUseCaseTest {
                 factory =
                     DashboardMetricPresentationFactory(
                         resourceProvider,
+                        ResidualFatiguePresentationFactory(resourceProvider),
                     ),
             )
     }
@@ -295,7 +296,7 @@ class GetDashboardDataUseCaseTest {
     }
 
     @Test
-    fun `invoke forwards currentResidualFatigue to factory build`() {
+    fun `invoke forwards liveResidualFatigue to factory build`() {
         val summary =
             mockk<DailySummary>(relaxed = true) {
                 every { residualFatigue } returns 60.7f
@@ -314,7 +315,7 @@ class GetDashboardDataUseCaseTest {
                 date = LocalDate.now(),
                 lastSleepSession = null,
                 rasSummaries = emptyList(),
-                currentResidualFatigue = 97.8f,
+                liveResidualFatigue = LiveResidualFatigue.Value(97.8f),
             )
 
         val card = result.getOrNull()?.cardDataMap?.get(CardId.RESIDUAL_FATIGUE)

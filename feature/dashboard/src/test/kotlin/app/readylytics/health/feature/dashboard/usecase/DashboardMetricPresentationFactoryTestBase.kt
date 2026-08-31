@@ -26,6 +26,7 @@ abstract class DashboardMetricPresentationFactoryTestBase {
         factory =
             DashboardMetricPresentationFactory(
                 resourceProvider,
+                ResidualFatiguePresentationFactory(resourceProvider),
             )
         every { resourceProvider.getString(any()) } returns "mock_string"
         every { resourceProvider.getString(CoreUiR.string.metric_value_unavailable) } returns "—"

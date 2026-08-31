@@ -144,8 +144,14 @@ class ScoringRepositoryImpl
             return calculationMutex.withLock { computeDailySummary(targetDate, prefs, WalkForwardContexts()) }
         }
 
+        // Deliberately does not take calculationMutex, unlike its siblings: holding it would block
+        // the dashboard card for the whole duration of a full historical resync. This path is
+        // read-only and non-persisting, so the worst case is reading mid-resync state, which the
+        // next minute's recomputation corrects.
         override suspend fun computeCurrentResidualFatigue(nowMs: Long): Float? =
-            residualFatigueComputer.computeLive(nowMs, settingsRepo.userPreferences.first())
+            withContext(defaultDispatcher) {
+                residualFatigueComputer.computeLive(nowMs, settingsRepo.userPreferences.first())
+            }
 
         private suspend fun computeDailySummary(
             targetDate: LocalDate,

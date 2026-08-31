@@ -10,8 +10,12 @@ import javax.inject.Singleton
 /**
  * Live residual fatigue for the dashboard card, decayed through the current instant rather than
  * the persisted end-of-day snapshot (`DailySummary.residualFatigue`). Only meaningful for today: a
- * past day already ended, so its persisted snapshot is the correct final value. Returns null for
- * any other day so [DashboardMetricPresentationFactory] falls back to that persisted value.
+ * past day already ended, so its persisted snapshot is the correct final value — those days report
+ * [LiveResidualFatigue.NotApplicable] so the presentation falls back to it.
+ *
+ * For today, a null from the repository is *not* a fallback signal: it means the metric is disabled
+ * or a retained workout was never backfilled, so the value is unknown rather than low. That maps to
+ * [LiveResidualFatigue.Unavailable], which renders NO_DATA.
  */
 @Singleton
 class GetCurrentResidualFatigueUseCase
@@ -23,8 +27,11 @@ class GetCurrentResidualFatigueUseCase
         suspend operator fun invoke(
             selectedDate: LocalDate,
             zoneId: ZoneId,
-        ): Float? {
-            if (selectedDate != LocalDate.now(clock.withZone(zoneId))) return null
-            return scoringRepository.computeCurrentResidualFatigue(clock.millis())
+        ): LiveResidualFatigue {
+            if (selectedDate != LocalDate.now(clock.withZone(zoneId))) return LiveResidualFatigue.NotApplicable
+            return scoringRepository
+                .computeCurrentResidualFatigue(clock.millis())
+                ?.let(LiveResidualFatigue::Value)
+                ?: LiveResidualFatigue.Unavailable
         }
     }

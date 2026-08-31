@@ -6,7 +6,6 @@ import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Test
 import java.time.Clock
 import java.time.Instant
@@ -27,25 +26,37 @@ class GetCurrentResidualFatigueUseCaseTest {
 
             val result = useCase(LocalDate.of(2026, 8, 31), zoneId)
 
-            assertEquals(97.8f, result)
+            assertEquals(LiveResidualFatigue.Value(97.8f), result)
             coVerify { scoringRepository.computeCurrentResidualFatigue(fixedInstant.toEpochMilli()) }
         }
 
+    // A null on *today* is the never-backfilled / disabled gate, not an invitation to use the
+    // persisted snapshot: the value is unknown rather than low (HIGH-2).
     @Test
-    fun `returns null for a past day without querying the repository`() =
+    fun `maps a null live value for today to Unavailable, not NotApplicable`() =
+        runTest {
+            coEvery { scoringRepository.computeCurrentResidualFatigue(fixedInstant.toEpochMilli()) } returns null
+
+            val result = useCase(LocalDate.of(2026, 8, 31), zoneId)
+
+            assertEquals(LiveResidualFatigue.Unavailable, result)
+        }
+
+    @Test
+    fun `returns NotApplicable for a past day without querying the repository`() =
         runTest {
             val result = useCase(LocalDate.of(2026, 8, 30), zoneId)
 
-            assertNull(result)
+            assertEquals(LiveResidualFatigue.NotApplicable, result)
             coVerify(exactly = 0) { scoringRepository.computeCurrentResidualFatigue(any()) }
         }
 
     @Test
-    fun `returns null for a future day without querying the repository`() =
+    fun `returns NotApplicable for a future day without querying the repository`() =
         runTest {
             val result = useCase(LocalDate.of(2026, 9, 1), zoneId)
 
-            assertNull(result)
+            assertEquals(LiveResidualFatigue.NotApplicable, result)
             coVerify(exactly = 0) { scoringRepository.computeCurrentResidualFatigue(any()) }
         }
 }

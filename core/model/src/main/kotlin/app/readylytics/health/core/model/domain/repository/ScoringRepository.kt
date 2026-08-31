@@ -70,8 +70,12 @@ interface ScoringRepository {
      * ([DailySummary.residualFatigue]). Non-persisting: does not touch `daily_summaries` or the
      * walk-forward accumulator. For dashboard display of the *current* day only — a finished day's
      * persisted snapshot is already correct and should be used instead.
+     *
+     * [nowMs] is required rather than defaulted: this codebase injects `java.time.Clock` everywhere,
+     * and a `System.currentTimeMillis()` default would let a caller silently bypass the injected
+     * clock and become non-deterministic under test.
      */
-    suspend fun computeCurrentResidualFatigue(nowMs: Long = System.currentTimeMillis()): Float?
+    suspend fun computeCurrentResidualFatigue(nowMs: Long): Float?
 
     suspend fun persist(summary: DailySummary)
 

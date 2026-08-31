@@ -21,7 +21,6 @@ import app.readylytics.health.core.model.domain.model.strainRatioStatus
 import app.readylytics.health.core.model.domain.model.toMetricStatus
 import app.readylytics.health.core.model.domain.preferences.UnitSystem
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
-import app.readylytics.health.core.model.domain.scoring.ResidualFatigueConfig
 import app.readylytics.health.core.model.domain.service.HealthMetricsService
 import app.readylytics.health.core.model.domain.util.ResourceProvider
 import app.readylytics.health.core.model.domain.util.UnitConverter
@@ -36,16 +35,11 @@ import kotlin.math.roundToInt
 import app.readylytics.health.core.ui.R as CoreUiR
 import app.readylytics.health.feature.dashboard.R as DashboardR
 
-// Residual-fatigue cut-points, expressed at gain 1.0. They are multiplied by the user's configured
-// fatigue gain before use so the classification tracks the scale the metric is actually produced on.
-private const val RESIDUAL_FATIGUE_OPTIMAL_BELOW = 30f
-private const val RESIDUAL_FATIGUE_NEUTRAL_THROUGH = 70f
-private const val RESIDUAL_FATIGUE_GAUGE_MAX = 100f
-
 class DashboardMetricPresentationFactory
     @Inject
     constructor(
         private val resourceProvider: ResourceProvider,
+        private val residualFatiguePresentationFactory: ResidualFatiguePresentationFactory,
     ) {
         // Human-readable, TalkBack-friendly accessibilityDescription wiring for all 15 dashboard metric
         // cards (Sleep Score, Readiness, Weight, Body Fat, Sleep Duration, HRV, Sleep RHR, Resting HR,
@@ -100,7 +94,7 @@ class DashboardMetricPresentationFactory
             todayStrainIncrease: Float? = null,
             todayRasIncrease: Float? = null,
             bodyTempBaseline: Float? = null,
-            currentResidualFatigue: Float? = null,
+            liveResidualFatigue: LiveResidualFatigue = LiveResidualFatigue.NotApplicable,
         ): Map<CardId, UniversalMetricPresentation> {
             val map = mutableMapOf<CardId, UniversalMetricPresentation>()
 
@@ -616,83 +610,13 @@ class DashboardMetricPresentationFactory
 
             // 17. RESIDUAL FATIGUE
             map[CardId.RESIDUAL_FATIGUE] =
-                buildResidualFatiguePresentation(
+                residualFatiguePresentationFactory.build(
                     summary = summary,
                     preferences = preferences,
                     unavailableValueText = unavailableValueText,
-                    currentResidualFatigue = currentResidualFatigue,
+                    liveResidualFatigue = liveResidualFatigue,
                 )
 
             return map
-        }
-
-        private fun buildResidualFatiguePresentation(
-            summary: DailySummary?,
-            preferences: UserPreferences,
-            unavailableValueText: String,
-            currentResidualFatigue: Float?,
-        ): UniversalMetricPresentation {
-            val title = resourceProvider.getString(DashboardR.string.card_residual_fatigue_title)
-            val tooltip = resourceProvider.getString(DashboardR.string.tooltip_residual_fatigue)
-            val value =
-                (currentResidualFatigue ?: summary?.residualFatigue)
-                    ?.takeIf { preferences.residualFatigueEnabled }
-
-            // Residual fatigue is `gain * sum(TRIMP) * decay`, and gain is user-settable over
-            // 0.1..5.0. Fixed 30/70/100 cut-points would read OPTIMAL with a pinned-to-zero gauge
-            // at the low end of that range and WARNING with a saturated gauge at the high end, so
-            // the whole scale moves with the configured gain.
-            val gain =
-                ResidualFatigueConfig
-                    .clamped(
-                        enabled = preferences.residualFatigueEnabled,
-                        halfLifeHours = preferences.residualFatigueHalfLifeHours,
-                        fatigueGain = preferences.residualFatigueGain,
-                    ).fatigueGain
-            val optimalBelow = RESIDUAL_FATIGUE_OPTIMAL_BELOW * gain
-            val neutralThrough = RESIDUAL_FATIGUE_NEUTRAL_THROUGH * gain
-            val gaugeMax = RESIDUAL_FATIGUE_GAUGE_MAX * gain
-
-            val status =
-                when {
-                    value == null -> MetricStatus.NO_DATA
-                    value < optimalBelow -> MetricStatus.OPTIMAL
-                    value <= neutralThrough -> MetricStatus.NEUTRAL
-                    else -> MetricStatus.WARNING
-                }
-
-            val visual =
-                UniversalMetricVisual.Score(
-                    rawValue = value,
-                    minValue = 0f,
-                    maxValue = gaugeMax,
-                    markerFraction = value?.let { (it / gaugeMax).coerceIn(0f, 1f) },
-                    unavailableReason = if (value == null) UniversalMetricUnavailableReason.MISSING_VALUE else null,
-                )
-
-            val valueText = value?.let { MetricFormatter.formatDecimal(it, 1) } ?: unavailableValueText
-            val secondaryText =
-                resourceProvider.getString(
-                    DashboardR.string.card_residual_fatigue_secondary,
-                    preferences.residualFatigueHalfLifeHours.roundToInt(),
-                )
-            val statusText = classificationText(status)
-            val accessibility =
-                if (value != null) {
-                    resourceProvider.getString(DashboardR.string.semantics_card_residual_fatigue, valueText, statusText)
-                } else {
-                    unavailableDescription(title, UniversalMetricUnavailableReason.MISSING_VALUE)
-                }
-
-            return UniversalMetricPresentation(
-                title = title,
-                valueText = valueText,
-                unitText = "",
-                secondaryText = secondaryText,
-                status = status,
-                tooltip = tooltip,
-                accessibilityDescription = accessibility,
-                visual = visual,
-            )
         }
     }
