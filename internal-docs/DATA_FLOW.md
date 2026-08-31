@@ -454,8 +454,10 @@ Buckets rolled up after the Room v15 migration store a p5/p25/p50/p75/p95 percen
 reconstruct via piecewise-linear interpolation across those 7 anchor points; buckets rolled up
 before v15 (percentiles are `null` forever — rollup never reprocesses an already-rolled minute)
 fall back to a 3-point (min, avg, max) replay. Measured drift on a synthetic fixture day: p25
-delta ≤ 2 bpm, p75 delta ≤ 2 bpm, TRIMP delta ≤ 3 (see `WarmTierReconstructionPropertyTest` and
-the tightened `TierBoundaryCharacterizationTest` drift assertion for the passing bound).
+delta 0 bpm, p75 delta 0 bpm, TRIMP delta ≈2.6; the regression test enforces a looser ceiling
+(p25 delta ≤ 2 bpm, p75 delta ≤ 2 bpm, TRIMP delta ≤ 3) so it isn't pinned to the exact
+zero-drift result of one fixture (see `WarmTierReconstructionPropertyTest` and
+`TierBoundaryCharacterizationTest`'s drift assertion for the enforced bound).
 
 | Entity                         | Table                       | Primary key                            | Notable columns                                                                                                                                           |
 | :----------------------------- | :-------------------------- | :------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- |
