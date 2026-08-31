@@ -144,6 +144,9 @@ class ScoringRepositoryImpl
             return calculationMutex.withLock { computeDailySummary(targetDate, prefs, WalkForwardContexts()) }
         }
 
+        override suspend fun computeCurrentResidualFatigue(nowMs: Long): Float? =
+            residualFatigueComputer.computeLive(nowMs, settingsRepo.userPreferences.first())
+
         private suspend fun computeDailySummary(
             targetDate: LocalDate,
             prefs: UserPreferences,

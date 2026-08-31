@@ -65,6 +65,14 @@ interface ScoringRepository {
 
     suspend fun computeDailySummary(targetDate: LocalDate): DailySummary
 
+    /**
+     * Residual fatigue decayed through [nowMs] rather than the persisted end-of-day snapshot
+     * ([DailySummary.residualFatigue]). Non-persisting: does not touch `daily_summaries` or the
+     * walk-forward accumulator. For dashboard display of the *current* day only — a finished day's
+     * persisted snapshot is already correct and should be used instead.
+     */
+    suspend fun computeCurrentResidualFatigue(nowMs: Long = System.currentTimeMillis()): Float?
+
     suspend fun persist(summary: DailySummary)
 
     suspend fun toReadinessResult(summary: DailySummary): ReadinessResult

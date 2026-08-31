@@ -21,6 +21,7 @@ import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.model.Result
+import app.readylytics.health.core.model.domain.repository.FatigueWorkoutInput
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.model.domain.scoring.*
 import app.readylytics.health.core.scoring.domain.scoring.SleepMetricsCollaborators
@@ -39,6 +40,7 @@ import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlin.math.pow
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 
@@ -558,5 +560,31 @@ class ScoringRepositoryImplTest {
             job2.await()
 
             assertEquals(1, maxConcurrentCalls.get(), "Database writes on compute paths must not execute concurrently")
+        }
+
+    @Test
+    fun `computeCurrentResidualFatigue decays through nowMs, not next-day midnight`() =
+        runTest {
+            val zoneId = ZoneId.of("UTC")
+            val workoutEndMs = 1_700_000_000_000L
+            val nowMs = workoutEndMs + 3 * 3_600_000L
+
+            every { settingsRepo.userPreferences } returns
+                flowOf(
+                    UserPreferences(
+                        scoringZoneId = zoneId.id,
+                        residualFatigueEnabled = true,
+                        residualFatigueHalfLifeHours = 24f,
+                        residualFatigueGain = 1f,
+                    ),
+                )
+            coEvery { workoutDao.getCanonicalFatigueInputsThrough(nowMs) } returns
+                listOf(FatigueWorkoutInput(workoutId = "w1", endTimeMs = workoutEndMs, trimp = 100f))
+            coEvery { workoutDao.countUnbackfilledThrough(any(), nowMs) } returns 0
+
+            val result = repo.computeCurrentResidualFatigue(nowMs)
+
+            val expected = (100f * 2.0.pow(-3.0 / 24.0)).toFloat()
+            assertEquals(expected, requireNotNull(result), 0.01f)
         }
 }
