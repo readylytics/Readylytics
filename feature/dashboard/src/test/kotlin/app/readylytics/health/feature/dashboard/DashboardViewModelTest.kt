@@ -24,6 +24,7 @@ import app.readylytics.health.core.scoring.domain.airecommendation.TodayPromptDa
 import app.readylytics.health.core.scoring.domain.airecommendation.WorkoutPatternSummary
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
+import app.readylytics.health.feature.dashboard.usecase.GetCurrentResidualFatigueUseCase
 import app.readylytics.health.feature.dashboard.usecase.GetDashboardDataUseCase
 import app.readylytics.health.feature.dashboard.usecase.ObserveDashboardRasIncreaseUseCase
 import app.readylytics.health.feature.dashboard.usecase.ObserveDashboardStrainIncreaseUseCase
@@ -76,6 +77,7 @@ class DashboardViewModelTest {
     private lateinit var observeDashboardStrainIncreaseUseCase: ObserveDashboardStrainIncreaseUseCase
     private lateinit var observeDashboardRasIncreaseUseCase: ObserveDashboardRasIncreaseUseCase
     private lateinit var getDailyPromptDataUseCase: GetDailyPromptDataUseCase
+    private lateinit var getCurrentResidualFatigueUseCase: GetCurrentResidualFatigueUseCase
     private lateinit var bodyTemperatureBaselineProvider: BodyTemperatureBaselineProvider
     private lateinit var healthConnectRepository: HealthConnectRepository
     private lateinit var viewModel: DashboardViewModel
@@ -97,6 +99,8 @@ class DashboardViewModelTest {
         observeDashboardStrainIncreaseUseCase = mockk(relaxed = true)
         observeDashboardRasIncreaseUseCase = mockk(relaxed = true)
         getDailyPromptDataUseCase = mockk(relaxed = true)
+        getCurrentResidualFatigueUseCase = mockk(relaxed = true)
+        coEvery { getCurrentResidualFatigueUseCase(any(), any()) } returns null
         bodyTemperatureBaselineProvider = mockk(relaxed = true)
         healthConnectRepository = mockk(relaxed = true)
 
@@ -115,6 +119,7 @@ class DashboardViewModelTest {
                 observeDashboardStrainIncreaseUseCase = observeDashboardStrainIncreaseUseCase,
                 observeDashboardRasIncreaseUseCase = observeDashboardRasIncreaseUseCase,
                 getDailyPromptDataUseCase = getDailyPromptDataUseCase,
+                getCurrentResidualFatigueUseCase = getCurrentResidualFatigueUseCase,
                 bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
                 healthConnectRepository = healthConnectRepository,
                 clock = java.time.Clock.systemDefaultZone(),
@@ -185,6 +190,7 @@ class DashboardViewModelTest {
                     observeDashboardStrainIncreaseUseCase = observeDashboardStrainIncreaseUseCase,
                     observeDashboardRasIncreaseUseCase = observeDashboardRasIncreaseUseCase,
                     getDailyPromptDataUseCase = getDailyPromptDataUseCase,
+                    getCurrentResidualFatigueUseCase = getCurrentResidualFatigueUseCase,
                     bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
                     healthConnectRepository = healthConnectRepository,
                     clock = fixedClock,
@@ -226,6 +232,7 @@ class DashboardViewModelTest {
                     observeDashboardStrainIncreaseUseCase = observeDashboardStrainIncreaseUseCase,
                     observeDashboardRasIncreaseUseCase = observeDashboardRasIncreaseUseCase,
                     getDailyPromptDataUseCase = getDailyPromptDataUseCase,
+                    getCurrentResidualFatigueUseCase = getCurrentResidualFatigueUseCase,
                     bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
                     healthConnectRepository = healthConnectRepository,
                     clock = fixedClock,
@@ -265,6 +272,7 @@ class DashboardViewModelTest {
                     observeDashboardStrainIncreaseUseCase = observeDashboardStrainIncreaseUseCase,
                     observeDashboardRasIncreaseUseCase = observeDashboardRasIncreaseUseCase,
                     getDailyPromptDataUseCase = getDailyPromptDataUseCase,
+                    getCurrentResidualFatigueUseCase = getCurrentResidualFatigueUseCase,
                     bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
                     healthConnectRepository = healthConnectRepository,
                     clock = fixedClock,
@@ -414,6 +422,7 @@ class DashboardViewModelTest {
                     observeDashboardStrainIncreaseUseCase = observeDashboardStrainIncreaseUseCase,
                     observeDashboardRasIncreaseUseCase = observeDashboardRasIncreaseUseCase,
                     getDailyPromptDataUseCase = getDailyPromptDataUseCase,
+                    getCurrentResidualFatigueUseCase = getCurrentResidualFatigueUseCase,
                     bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
                     healthConnectRepository = healthConnectRepository,
                     clock = java.time.Clock.systemDefaultZone(),
@@ -432,6 +441,40 @@ class DashboardViewModelTest {
                     circadianResult = CircadianConsistencyResult.MissingData,
                     heartRateSummary = null,
                     todayStrainIncrease = 0.23f,
+                )
+            }
+        }
+
+    @Test
+    fun `dashboard queries current residual fatigue and forwards it to dashboard data use case`() =
+        runTest(testDispatcher) {
+            val summary = DailySummary(date = LocalDate.of(2026, 7, 29))
+            coEvery { getCurrentResidualFatigueUseCase(any(), any()) } returns 0.35f
+            val selectedDate =
+                configureDashboardFlows(
+                    isSyncing = MutableStateFlow(false),
+                    recalcProgress = MutableStateFlow(null),
+                    summary = summary,
+                )
+
+            viewModel.uiState.first { it.summary == summary }
+
+            coVerify(exactly = 1) {
+                getCurrentResidualFatigueUseCase(selectedDate, ZoneId.of("UTC"))
+            }
+            verify {
+                getDashboardDataUseCase.invoke(
+                    summary = summary,
+                    prefs = any(),
+                    date = selectedDate,
+                    lastSleepSession = any(),
+                    rasSummaries = any(),
+                    circadianResult = any(),
+                    heartRateSummary = any(),
+                    todayStrainIncrease = any(),
+                    todayRasIncrease = any(),
+                    bodyTempBaseline = any(),
+                    currentResidualFatigue = 0.35f,
                 )
             }
         }
@@ -554,6 +597,7 @@ class DashboardViewModelTest {
                 observeDashboardStrainIncreaseUseCase = observeDashboardStrainIncreaseUseCase,
                 observeDashboardRasIncreaseUseCase = observeDashboardRasIncreaseUseCase,
                 getDailyPromptDataUseCase = getDailyPromptDataUseCase,
+                getCurrentResidualFatigueUseCase = getCurrentResidualFatigueUseCase,
                 bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
                 healthConnectRepository = healthConnectRepository,
                 clock = java.time.Clock.systemDefaultZone(),
