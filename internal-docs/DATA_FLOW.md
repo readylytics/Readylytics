@@ -448,6 +448,15 @@ skipped by the restore reader's `else -> skipValue()` branch.
   `RetentionBounds.resolveRetentionCutoffMs(prefs)`; retention
   semantics are otherwise unchanged (a storage optimization, not a new user-facing data contract).
 
+**Determinism across tiers.** Reconstructing samples from a warm-tier bucket is not bit-identical
+to the original raw stream — this is an accepted, measured tradeoff (R2-DB-004), not a bug.
+Buckets rolled up after the Room v15 migration store a p5/p25/p50/p75/p95 percentile sketch and
+reconstruct via piecewise-linear interpolation across those 7 anchor points; buckets rolled up
+before v15 (percentiles are `null` forever — rollup never reprocesses an already-rolled minute)
+fall back to a 3-point (min, avg, max) replay. Measured drift on a synthetic fixture day: p25
+delta ≤ 2 bpm, p75 delta ≤ 2 bpm, TRIMP delta ≤ 3 (see `WarmTierReconstructionPropertyTest` and
+the tightened `TierBoundaryCharacterizationTest` drift assertion for the passing bound).
+
 | Entity                         | Table                       | Primary key                            | Notable columns                                                                                                                                           |
 | :----------------------------- | :-------------------------- | :------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `SleepSessionEntity`           | `sleep_sessions`            | `id: String` (HC id)                   | start/end time, deep/REM/light/awake min, efficiency, `deviceName`                                                                                        |

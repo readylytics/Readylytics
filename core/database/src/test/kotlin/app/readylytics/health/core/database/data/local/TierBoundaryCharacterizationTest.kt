@@ -24,8 +24,12 @@ import kotlin.math.roundToInt
  * R2-DB-001 / R2-DB-004 characterization. The R2-DB-001 tests were originally written (Phase 0)
  * to lock in the incorrect hot-only tier behavior; they were flipped in Task 1 of the Phase-1
  * plan once the hot/warm union landed, and now assert the correct unioned behavior plus the
- * non-overlap invariant it depends on. The R2-DB-004 drift test still records TODAY'S (Phase 0)
- * warm-reconstruction drift baseline, to be tightened by WP-05's 3-point reconstruction.
+ * non-overlap invariant it depends on. The R2-DB-004 drift test recorded the Phase-0 flat-mean
+ * warm-reconstruction drift baseline (p25Delta<=10, p75Delta<=10, trimpDelta<=20f); Task 4 of the
+ * Phase-1 plan replaced flat-mean replay with percentile-sketch interpolation (falling back to a
+ * 3-point min/avg/max replay for pre-v15 buckets) and tightened this test's threshold to the
+ * newly measured, much smaller bound -- see `WarmTierReconstructor` and
+ * `internal-docs/DATA_FLOW.md`'s "Determinism across tiers" note.
  */
 @RunWith(RobolectricTestRunner::class)
 class TierBoundaryCharacterizationTest {
@@ -140,11 +144,15 @@ class TierBoundaryCharacterizationTest {
         val p75Delta = abs(rawP75 - warmP75)
         val trimpDelta = abs(rawTrimp - warmTrimp)
         assertTrue(
-            "R2-DB-004 Phase-0 drift baseline recorded: p25 $rawP25->$warmP25 (Δ=$p25Delta), " +
-                "p50 $rawP50->$warmP50, p75 $rawP75->$warmP75 (Δ=$p75Delta), " +
+            "R2-DB-004 drift bound (Task 4, percentile-sketch reconstruction): p25 $rawP25->$warmP25 " +
+                "(Δ=$p25Delta), p50 $rawP50->$warmP50, p75 $rawP75->$warmP75 (Δ=$p75Delta), " +
                 "TRIMP ${"%.3f".format(rawTrimp)}->${"%.3f".format(warmTrimp)} (Δ=${"%.3f".format(trimpDelta)}). " +
-                "WP-05 replaces the flat-mean replay with min/avg/max and publishes the bound.",
-            p25Delta <= 10 && p75Delta <= 10 && trimpDelta <= 20f,
+                "Measured on this fixture: p25Delta=0, p75Delta=0, trimpDelta≈2.608 (down from the Phase-0 " +
+                "flat-mean baseline of p25Delta<=10, p75Delta<=10, trimpDelta<=20); threshold tightened to " +
+                "the measured bound plus a small margin.",
+            p25Delta <= P25_P75_DRIFT_BOUND_BPM &&
+                p75Delta <= P25_P75_DRIFT_BOUND_BPM &&
+                trimpDelta <= TRIMP_DRIFT_BOUND,
         )
     }
 
@@ -270,5 +278,12 @@ class TierBoundaryCharacterizationTest {
     private companion object {
         const val SLEEP_SESSION_ID = "sleep-1"
         const val WORKOUT_ID = "w1"
+
+        // R2-DB-004 (Task 4): tightened from the Phase-0 flat-mean baseline (p25<=10, p75<=10,
+        // trimp<=20f) once percentile-sketch reconstruction landed. Measured on this fixture:
+        // p25Delta=0, p75Delta=0, trimpDelta≈2.608 -- bounds below are the measured value plus a
+        // small margin, not the loose Phase-0 placeholder.
+        const val P25_P75_DRIFT_BOUND_BPM = 2
+        const val TRIMP_DRIFT_BOUND = 3f
     }
 }
