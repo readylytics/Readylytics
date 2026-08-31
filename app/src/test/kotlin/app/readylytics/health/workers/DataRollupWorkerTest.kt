@@ -15,6 +15,9 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
 
 @RunWith(RobolectricTestRunner::class)
 class DataRollupWorkerTest {
@@ -54,5 +57,6 @@ class DataRollupWorkerTest {
             context = ApplicationProvider.getApplicationContext(),
             params = workerParams,
             rollupManager = rollupManagerLazy,
+            clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
         )
 }

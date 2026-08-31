@@ -20,6 +20,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
+import java.time.Clock
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
@@ -43,13 +44,13 @@ class ResyncRangeUseCase
     @Inject
     constructor(
         private val settingsRepo: SettingsRepository,
+        private val clock: Clock = Clock.systemDefaultZone(),
         private val sessionLinkReconciler: SessionLinkReconciler,
         private val changeSynchronizer: HealthChangeSynchronizer,
         private val selectedSourcePruner: SelectedSourcePruner,
         private val checkpointStore: ResyncCheckpointStore,
         private val healthIngestionStore: HealthIngestionStore,
-        private val ingestionCoordinator: HealthIngestionCoordinator,
-        private val stepCountFetcher: StepCountFetcher,
+        private val ingestion: ResyncIngestionDependencies,
         private val recomputeSupport: DailyRecomputeSupport,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) {
@@ -203,7 +204,7 @@ class ResyncRangeUseCase
                         val workoutBeforeResync =
                             healthIngestionStore.countWorkoutsInRange(reconcileStartMs, reconcileEndMs)
 
-                        val ingestStart = System.currentTimeMillis()
+                        val ingestStart = clock.millis()
                         var chunkStart = checkpoint?.nextDate?.coerceAtLeast(startDate) ?: startDate
                         var chunksCompleted =
                             (ChronoUnit.DAYS.between(startDate, chunkStart) / chunkDays)
@@ -225,7 +226,7 @@ class ResyncRangeUseCase
 
                             try {
                                 retryWithBackoff {
-                                    ingestionCoordinator.ingestWindow(
+                                    ingestion.ingestionCoordinator.ingestWindow(
                                         windowStart = windowStart,
                                         windowEnd = windowEnd,
                                         prefs = prefs,
@@ -288,7 +289,7 @@ class ResyncRangeUseCase
                             onProgress?.invoke(ResyncPhase.INGEST, chunksCompleted, totalChunks)
                             chunkStart = chunkEndExclusive
                         }
-                        val ingestEnd = System.currentTimeMillis()
+                        val ingestEnd = clock.millis()
                         hrBeforePrune =
                             healthIngestionStore.countHeartRateInRange(reconcileStartMs, reconcileEndMs)
                         hrvBeforePrune =
@@ -329,7 +330,7 @@ class ResyncRangeUseCase
                             HealthDataType.entries.associateWith { type ->
                                 prefs.deviceByDataType[type.name]
                             }
-                        val pruneStart = System.currentTimeMillis()
+                        val pruneStart = clock.millis()
                         selectedSourcePruner.prune(
                             start = startDate,
                             endInclusive = endDate,
@@ -346,7 +347,7 @@ class ResyncRangeUseCase
                                 baselineChangeTokens = baselineChangeTokens,
                             ),
                         )
-                        val pruneEnd = System.currentTimeMillis()
+                        val pruneEnd = clock.millis()
                         val hrAfterPrune =
                             healthIngestionStore.countHeartRateInRange(reconcileStartMs, reconcileEndMs)
                         val hrvAfterPrune =
@@ -372,7 +373,7 @@ class ResyncRangeUseCase
                     // --- Reconcile phase: chunk-independent session linkage ---
                     if (runReconciliation) {
                         onProgress?.invoke(ResyncPhase.RECONCILE, 0, 0)
-                        val reconcileStart = System.currentTimeMillis()
+                        val reconcileStart = clock.millis()
                         val zoneThresholds =
                             app.readylytics.health.core.model.domain.heartrate.ZoneThresholds.create(
                                 prefs.zone1MinBpm,
@@ -393,7 +394,7 @@ class ResyncRangeUseCase
                                 baselineChangeTokens = baselineChangeTokens,
                             ),
                         )
-                        val reconcileEnd = System.currentTimeMillis()
+                        val reconcileEnd = clock.millis()
                         logD(TELEMETRY_TAG) {
                             "[RECONCILIATION] Completed in ${reconcileEnd - reconcileStart}ms."
                         }
@@ -402,10 +403,10 @@ class ResyncRangeUseCase
                     // --- Recompute phase: walk-forward over the full range ---
                     // Clear frozen snapshots for the exact range so bounded baseline variants
                     // recompute per day and recent sync/resync use the same baseline path.
-                    val recomputeStart = System.currentTimeMillis()
+                    val recomputeStart = clock.millis()
                     val stepsMap =
                         if (!skipIngestAndPrune && !recomputeStartDate.isAfter(endDate)) {
-                            stepCountFetcher.fetchRange(
+                            ingestion.stepCountFetcher.fetchRange(
                                 startDate = recomputeStartDate,
                                 endDate = endDate,
                                 chunkDays = chunkDays,
@@ -527,7 +528,7 @@ class ResyncRangeUseCase
                         )
                         chunkStartDay = chunkEndDay.plusDays(1)
                     }
-                    val recomputeEnd = System.currentTimeMillis()
+                    val recomputeEnd = clock.millis()
                     logD(TELEMETRY_TAG) {
                         "[RECOMPUTE] Completed in ${recomputeEnd - recomputeStart}ms. Days recomputed: $recomputedDays"
                     }
@@ -538,7 +539,7 @@ class ResyncRangeUseCase
                         // or update lastSyncTimestamp (the foreground sync's catch-up window math
                         // assumes that timestamp means "data was actually re-ingested up to here").
                         changeSynchronizer.commitTokens(baselineChangeTokens)
-                        settingsRepo.updateLastSyncTimestamp(System.currentTimeMillis())
+                        settingsRepo.updateLastSyncTimestamp(clock.millis())
                     }
                     checkpointStore.clear()
                     logI("ResyncRangeUseCase") {

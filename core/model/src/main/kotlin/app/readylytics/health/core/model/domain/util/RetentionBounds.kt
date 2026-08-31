@@ -44,9 +44,8 @@ object RetentionBounds {
      * A fixed 90-day window, independent of the user's retention setting: retention governs the
      * warm→cold deletion bound, rollup governs the hot→warm aggregate bound.
      */
-    fun resolveHotTierCutoffMs(
-        now: Instant = Instant.now(),
-    ): Long = now.minus(HOT_TIER_WINDOW_DAYS, ChronoUnit.DAYS).toEpochMilli()
+    fun resolveHotTierCutoffMs(now: Instant): Long =
+        now.minus(HOT_TIER_WINDOW_DAYS, ChronoUnit.DAYS).toEpochMilli()
 
     /**
      * Inclusive start date for a full historical resync: `today - retentionDays` when retention is
@@ -65,7 +64,7 @@ object RetentionBounds {
     /** Resolves the complete historical window from one instant in the stored scoring zone. */
     fun resolveHistoricalWindow(
         prefs: UserPreferences,
-        now: Instant = Instant.now(),
+        now: Instant,
     ): HistoricalWindow {
         val zoneId = prefs.scoringZone()
         val endDate = now.atZone(zoneId).toLocalDate()
@@ -84,7 +83,7 @@ object RetentionBounds {
      */
     fun resolveRetentionCutoffMs(
         prefs: UserPreferences,
-        now: Instant = Instant.now(),
+        now: Instant,
     ): Long? {
         if (!prefs.retentionDaysEnabled) return null
         return resolveHistoricalWindow(prefs, now).startTimeMs

@@ -16,7 +16,9 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.time.Clock
 import java.time.Instant
+import java.time.ZoneId
 import kotlin.test.assertEquals
 
 /**
@@ -110,6 +112,7 @@ class HealthConnectRepositoryImplDiscoverDevicesTest {
                 ioDispatcher = ioDispatcher,
                 stepRecordReader = stepRecordReader,
                 intervalTotalsReader = intervalTotalsReader,
+                clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
             )
     }
 

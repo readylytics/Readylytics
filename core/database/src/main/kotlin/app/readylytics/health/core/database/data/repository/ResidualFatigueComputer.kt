@@ -5,6 +5,7 @@ import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueCon
 import app.readylytics.health.core.model.domain.scoring.ResidualFatigueConfig
 import app.readylytics.health.core.model.domain.util.RetentionBounds
 import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -61,7 +62,7 @@ class ResidualFatigueComputer(
      * recompute-only resync and the self-heal, so counting them could never clear.
      */
     private fun retentionStartMs(prefs: UserPreferences): Long =
-        RetentionBounds.resolveHistoricalWindow(prefs).startTimeMs
+        RetentionBounds.resolveHistoricalWindow(prefs, Instant.now()).startTimeMs // outside WP-01 guard scope
 
     /**
      * Computes the day's residual-fatigue snapshot at next-day midnight. The walk-forward path

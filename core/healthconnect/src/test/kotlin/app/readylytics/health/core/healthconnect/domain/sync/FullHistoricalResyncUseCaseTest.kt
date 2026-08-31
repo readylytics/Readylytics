@@ -13,6 +13,7 @@ import io.mockk.slot
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
+import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -21,7 +22,12 @@ import kotlin.test.assertEquals
 class FullHistoricalResyncUseCaseTest {
     private val settingsRepo = mockk<SettingsRepository>()
     private val healthSyncUseCase = mockk<HealthSyncUseCase>()
-    private val useCase = FullHistoricalResyncUseCase(settingsRepo, healthSyncUseCase)
+    private val useCase =
+        FullHistoricalResyncUseCase(
+            settingsRepo,
+            healthSyncUseCase,
+            clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
+        )
 
     private val today = LocalDate.now(ZoneId.systemDefault())
 

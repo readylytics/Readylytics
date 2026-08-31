@@ -21,6 +21,9 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
 import kotlin.test.assertEquals
 
 @RunWith(RobolectricTestRunner::class)
@@ -98,5 +101,6 @@ class DataCleanupWorkerTest {
             retentionCleanup = retentionCleanupLazy,
             settingsRepo = settingsRepo,
             databaseReadinessGate = databaseReadinessGate,
+            clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
         )
 }

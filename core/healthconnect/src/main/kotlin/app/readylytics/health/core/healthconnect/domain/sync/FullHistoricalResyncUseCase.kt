@@ -6,6 +6,7 @@ import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.core.model.domain.util.RetentionBounds
 import kotlinx.coroutines.flow.first
+import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import javax.inject.Inject
@@ -13,7 +14,7 @@ import javax.inject.Singleton
 
 internal fun resolveScoringToday(
     prefs: UserPreferences,
-    now: Instant = Instant.now(),
+    now: Instant,
 ): LocalDate = RetentionBounds.resolveHistoricalWindow(prefs, now).endDate
 
 /**
@@ -34,13 +35,14 @@ class FullHistoricalResyncUseCase
     constructor(
         private val settingsRepo: SettingsRepository,
         private val healthSyncUseCase: HealthSyncUseCase,
+        private val clock: Clock,
     ) {
         suspend fun execute(
             recomputeOnly: Boolean = false,
             onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)? = null,
         ): Result<Unit> {
             val prefs = settingsRepo.userPreferences.first()
-            val historicalWindow = RetentionBounds.resolveHistoricalWindow(prefs)
+            val historicalWindow = RetentionBounds.resolveHistoricalWindow(prefs, clock.instant())
             return if (recomputeOnly) {
                 healthSyncUseCase.recomputeRange(
                     startDate = historicalWindow.startDate,

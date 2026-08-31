@@ -15,6 +15,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
+import java.time.Clock
 
 @HiltWorker
 class DataCleanupWorker
@@ -25,6 +26,7 @@ class DataCleanupWorker
         private val retentionCleanup: Lazy<RetentionCleanup>,
         private val settingsRepo: SettingsRepository,
         private val databaseReadinessGate: DatabaseReadinessInspector,
+        private val clock: Clock,
     ) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result {
             if (databaseReadinessGate.inspect() != DatabaseReadiness.Ready) {
@@ -34,7 +36,8 @@ class DataCleanupWorker
             return try {
                 val prefs = settingsRepo.userPreferences.first()
                 // Null cutoff means retention is disabled ("unlimited") — keep everything.
-                val cutoffMs = RetentionBounds.resolveRetentionCutoffMs(prefs) ?: return Result.success()
+                val cutoffMs =
+                    RetentionBounds.resolveRetentionCutoffMs(prefs, clock.instant()) ?: return Result.success()
 
                 cleanup.deleteBefore(cutoffMs)
 

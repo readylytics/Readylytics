@@ -10,6 +10,7 @@ import androidx.health.connect.client.records.*
 import androidx.health.connect.client.request.ChangesTokenRequest
 import androidx.health.connect.client.response.ChangesResponse
 import app.readylytics.health.core.databaseschema.data.local.dao.*
+import app.readylytics.health.core.database.data.local.HealthRecordDaos
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity
@@ -25,6 +26,7 @@ import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -47,6 +49,8 @@ class HealthChangeSynchronizerImplTest {
     private val bodyTemperatureRecordDao = mockk<BodyTemperatureRecordDao>(relaxed = true)
     private val stepRecordDao = mockk<StepRecordDao>(relaxed = true)
     private val sourceRecordDao = mockk<SourceRecordDao>(relaxed = true)
+    private val workoutRoutePointDao = mockk<WorkoutRoutePointDao>(relaxed = true)
+    private val minuteBucketDao = mockk<MinuteBucketDao>(relaxed = true)
 
     private val client = mockk<HealthConnectClient>(relaxed = true)
 
@@ -76,18 +80,24 @@ class HealthChangeSynchronizerImplTest {
                 tokenStore = tokenStore,
                 settingsRepo = settingsRepo,
                 transactionRunner = transactionRunner,
-                sleepSessionDao = sleepSessionDao,
-                sleepStageDao = sleepStageDao,
-                heartRateDao = heartRateDao,
-                hrvDao = hrvDao,
-                workoutDao = workoutDao,
-                weightRecordDao = weightRecordDao,
-                bodyFatRecordDao = bodyFatRecordDao,
-                bloodPressureRecordDao = bloodPressureRecordDao,
-                oxygenSaturationRecordDao = oxygenSaturationRecordDao,
-                bodyTemperatureRecordDao = bodyTemperatureRecordDao,
-                stepRecordDao = stepRecordDao,
-                sourceRecordDao = sourceRecordDao,
+                daos =
+                    HealthRecordDaos(
+                        sleepSessionDao = sleepSessionDao,
+                        sleepStageDao = sleepStageDao,
+                        heartRateDao = heartRateDao,
+                        hrvDao = hrvDao,
+                        workoutDao = workoutDao,
+                        weightRecordDao = weightRecordDao,
+                        bodyFatRecordDao = bodyFatRecordDao,
+                        bloodPressureRecordDao = bloodPressureRecordDao,
+                        oxygenSaturationRecordDao = oxygenSaturationRecordDao,
+                        bodyTemperatureRecordDao = bodyTemperatureRecordDao,
+                        stepRecordDao = stepRecordDao,
+                        sourceRecordDao = sourceRecordDao,
+                        workoutRoutePointDao = workoutRoutePointDao,
+                        minuteBucketDao = minuteBucketDao,
+                    ),
+                clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
             )
     }
 

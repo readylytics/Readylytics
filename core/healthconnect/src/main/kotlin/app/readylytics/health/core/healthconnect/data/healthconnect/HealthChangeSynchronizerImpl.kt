@@ -14,7 +14,7 @@ import androidx.health.connect.client.request.ChangesTokenRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.time.TimeRangeFilter
-import app.readylytics.health.core.databaseschema.data.local.dao.*
+import app.readylytics.health.core.database.data.local.HealthRecordDaos
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
@@ -41,6 +41,7 @@ import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
+import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -54,19 +55,9 @@ class HealthChangeSynchronizerImpl
         @param:ApplicationContext private val context: Context,
         private val tokenStore: HealthChangeTokenStore,
         private val settingsRepo: SettingsRepository,
+        private val clock: Clock = Clock.systemDefaultZone(),
         private val transactionRunner: TransactionRunner,
-        private val sleepSessionDao: SleepSessionDao,
-        private val sleepStageDao: SleepStageDao,
-        private val heartRateDao: HeartRateDao,
-        private val hrvDao: HrvDao,
-        private val workoutDao: WorkoutDao,
-        private val weightRecordDao: WeightRecordDao,
-        private val bodyFatRecordDao: BodyFatRecordDao,
-        private val bloodPressureRecordDao: BloodPressureRecordDao,
-        private val oxygenSaturationRecordDao: OxygenSaturationRecordDao,
-        private val bodyTemperatureRecordDao: BodyTemperatureRecordDao,
-        private val stepRecordDao: StepRecordDao,
-        private val sourceRecordDao: SourceRecordDao,
+        private val daos: HealthRecordDaos,
     ) : HealthChangeSynchronizer {
         private val client by lazy { HealthConnectClient.getOrCreate(context) }
 
@@ -199,7 +190,7 @@ class HealthChangeSynchronizerImpl
 
         override suspend fun commitTokens(tokens: Map<HealthDataType, String>) {
             if (tokens.isNotEmpty()) {
-                tokenStore.putAll(tokens, System.currentTimeMillis())
+                tokenStore.putAll(tokens, clock.millis())
             }
         }
 
@@ -272,12 +263,12 @@ class HealthChangeSynchronizerImpl
                         val domainRecord = record.toDomain()
                         val sleepInput = SleepDataMapper.mapSleepSession(domainRecord)
                         val sleepEntity = sleepInput.toEntity()
-                        sleepSessionDao.upsertAll(listOf(sleepEntity))
+                        daos.sleepSessionDao.upsertAll(listOf(sleepEntity))
 
                         val stageInputs = SleepDataMapper.mapSleepSessionStages(domainRecord)
                         val allStages = stageInputs.map { it.toEntity() }
-                        sleepStageDao.deleteForSessions(listOf(sleepEntity.id))
-                        sleepStageDao.upsertAll(allStages)
+                        daos.sleepStageDao.deleteForSessions(listOf(sleepEntity.id))
+                        daos.sleepStageDao.upsertAll(allStages)
                     }
                 }
                 HealthDataType.HEART_RATE -> {
@@ -288,39 +279,39 @@ class HealthChangeSynchronizerImpl
                         // until the next reconcile pass corrects it (HC-004).
                         val startMs = record.startTime.toEpochMilli()
                         val endMs = record.endTime.toEpochMilli()
-                        val sleepSpans = sleepSessionDao.getOverlapping(startMs, endMs).map { it.toInput() }
-                        val workoutSpans = workoutDao.getOverlapping(startMs, endMs).map { it.toInput() }
+                        val sleepSpans = daos.sleepSessionDao.getOverlapping(startMs, endMs).map { it.toInput() }
+                        val workoutSpans = daos.workoutDao.getOverlapping(startMs, endMs).map { it.toInput() }
                         val hrInputs = HeartRateMapper.mapToInputs(listOf(domainHr), sleepSpans, workoutSpans)
                         val entities =
                             hrInputs.map { input ->
                                 input.toEntity(
-                                    sourceRecordDao.getOrCreateSourceRef(
+                                    daos.sourceRecordDao.getOrCreateSourceRef(
                                         sourceRecordId = input.id.substringBefore('_'),
                                         recordType = "HEART_RATE",
                                         createdAtMs = input.timestampMs,
                                     ),
                                 )
                             }
-                        heartRateDao.upsertAll(entities)
+                        daos.heartRateDao.upsertAll(entities)
                     }
                 }
                 HealthDataType.HRV -> {
                     if (record is HeartRateVariabilityRmssdRecord) {
                         val domainHrv = record.toDomain()
                         val sampleMs = record.time.toEpochMilli()
-                        val sleepSpans = sleepSessionDao.getOverlapping(sampleMs, sampleMs).map { it.toInput() }
+                        val sleepSpans = daos.sleepSessionDao.getOverlapping(sampleMs, sampleMs).map { it.toInput() }
                         val hrvInputs = HrvMapper.mapToInputs(listOf(domainHrv), sleepSpans)
                         val entities =
                             hrvInputs.map { input ->
                                 input.toEntity(
-                                    sourceRecordDao.getOrCreateSourceRef(
+                                    daos.sourceRecordDao.getOrCreateSourceRef(
                                         sourceRecordId = input.id.substringBefore('_'),
                                         recordType = "HRV",
                                         createdAtMs = input.timestampMs,
                                     ),
                                 )
                             }
-                        hrvDao.upsertAll(entities)
+                        daos.hrvDao.upsertAll(entities)
                     }
                 }
                 HealthDataType.EXERCISE -> {
@@ -352,7 +343,7 @@ class HealthChangeSynchronizerImpl
                         // boundary-straddling samples tagged to another session don't leak into this
                         // workout's TRIMP/zones/avgHr.
                         val hrSamples =
-                            heartRateDao.getByTypeAndTimeRange(
+                            daos.heartRateDao.getByTypeAndTimeRange(
                                 RecordType.EXERCISE.name,
                                 record.startTime.toEpochMilli(),
                                 record.endTime.toEpochMilli(),
@@ -370,7 +361,7 @@ class HealthChangeSynchronizerImpl
                             thresholds
                         )
                         val workoutInput = WorkoutMapper.mapExerciseSession(domainExercise)
-                        val existing = workoutDao.getById(workoutInput.id)
+                        val existing = daos.workoutDao.getById(workoutInput.id)
                         val freshEntity = workoutInput.toEntity()
                         val entity =
                             freshEntity.copy(
@@ -395,42 +386,42 @@ class HealthChangeSynchronizerImpl
                                         freshEntity.routeState
                                     },
                             )
-                        workoutDao.upsertAll(listOf(entity))
+                        daos.workoutDao.upsertAll(listOf(entity))
                     }
                 }
                 HealthDataType.WEIGHT -> {
                     if (record is HealthConnectWeightRecord) {
                         val domainWeight = record.toDomain()
                         val entity = WeightDataMapper.toEntities(listOf(domainWeight))
-                        weightRecordDao.upsertAll(entity)
+                        daos.weightRecordDao.upsertAll(entity)
                     }
                 }
                 HealthDataType.BODY_FAT -> {
                     if (record is HealthConnectBodyFatRecord) {
                         val domainBodyFat = record.toDomain()
                         val entity = BodyFatDataMapper.toEntities(listOf(domainBodyFat))
-                        bodyFatRecordDao.upsertAll(entity)
+                        daos.bodyFatRecordDao.upsertAll(entity)
                     }
                 }
                 HealthDataType.BLOOD_PRESSURE -> {
                     if (record is HealthConnectBloodPressureRecord) {
                         val domainBloodPressure = record.toDomain()
                         val entity = BloodPressureDataMapper.toEntities(listOf(domainBloodPressure))
-                        bloodPressureRecordDao.upsertAll(entity)
+                        daos.bloodPressureRecordDao.upsertAll(entity)
                     }
                 }
                 HealthDataType.OXYGEN_SATURATION -> {
                     if (record is OxygenSaturationRecord) {
                         val domainOxygen = record.toDomain()
                         val entity = OxygenSaturationDataMapper.toEntities(listOf(domainOxygen))
-                        oxygenSaturationRecordDao.upsertAll(entity)
+                        daos.oxygenSaturationRecordDao.upsertAll(entity)
                     }
                 }
                 HealthDataType.BODY_TEMPERATURE -> {
                     if (record is BodyTemperatureRecord) {
                         val domainBodyTemperature = record.toDomain()
                         val entity = BodyTemperatureDataMapper.toEntities(listOf(domainBodyTemperature))
-                        bodyTemperatureRecordDao.upsertAll(entity)
+                        daos.bodyTemperatureRecordDao.upsertAll(entity)
                     }
                 }
                 HealthDataType.STEPS -> {
@@ -438,7 +429,7 @@ class HealthChangeSynchronizerImpl
                         // Steps have no dedicated table for scoring (daily totals come from
                         // StepCountFetcher's aggregate reads) -- this row exists purely so a later
                         // DeletionChange for this record can resolve its own date range (HC-005).
-                        stepRecordDao.upsertAll(
+                        daos.stepRecordDao.upsertAll(
                             listOf(
                                 StepRecordEntity(
                                     id = record.metadata.id,
@@ -562,58 +553,58 @@ class HealthChangeSynchronizerImpl
         ): Set<LocalDate> =
             when (dataType) {
                 HealthDataType.SLEEP -> {
-                    sleepSessionDao.getById(id)?.let {
+                    daos.sleepSessionDao.getById(id)?.let {
                         getDatesBetween(Instant.ofEpochMilli(it.startTime), Instant.ofEpochMilli(it.endTime), zoneId)
                     } ?: emptySet()
                 }
                 HealthDataType.HEART_RATE -> {
-                    sourceRecordDao.getSourceRef(id)?.let { ref ->
-                        heartRateDao
+                    daos.sourceRecordDao.getSourceRef(id)?.let { ref ->
+                        daos.heartRateDao
                             .getBySourceRecordRef(ref)
                             .mapTo(mutableSetOf()) { getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId).single() }
                     } ?: emptySet()
                 }
                 HealthDataType.HRV -> {
-                    sourceRecordDao.getSourceRef(id)?.let { ref ->
-                        hrvDao
+                    daos.sourceRecordDao.getSourceRef(id)?.let { ref ->
+                        daos.hrvDao
                             .getBySourceRecordRef(ref)
                             .mapTo(mutableSetOf()) { getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId).single() }
                     } ?: emptySet()
                 }
                 HealthDataType.EXERCISE -> {
-                    workoutDao.getById(id)?.let {
+                    daos.workoutDao.getById(id)?.let {
                         getDatesBetween(Instant.ofEpochMilli(it.startTime), Instant.ofEpochMilli(it.endTime), zoneId)
                     } ?: emptySet()
                 }
                 HealthDataType.WEIGHT -> {
-                    weightRecordDao
+                    daos.weightRecordDao
                         .getBySourceRecordId(id)
                         .mapTo(mutableSetOf()) { getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId).single() }
                 }
                 HealthDataType.BODY_FAT -> {
-                    bodyFatRecordDao
+                    daos.bodyFatRecordDao
                         .getBySourceRecordId(id)
                         .mapTo(mutableSetOf()) { getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId).single() }
                 }
                 HealthDataType.BLOOD_PRESSURE -> {
-                    bloodPressureRecordDao
+                    daos.bloodPressureRecordDao
                         .getBySourceRecordId(id)
                         .mapTo(mutableSetOf()) { getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId).single() }
                 }
                 HealthDataType.OXYGEN_SATURATION -> {
-                    oxygenSaturationRecordDao
+                    daos.oxygenSaturationRecordDao
                         .getBySourceRecordId(id)
                         .mapTo(mutableSetOf()) { getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId).single() }
                 }
                 HealthDataType.BODY_TEMPERATURE -> {
-                    bodyTemperatureRecordDao
+                    daos.bodyTemperatureRecordDao
                         .getBySourceRecordId(id)
                         .mapTo(mutableSetOf()) { getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId).single() }
                 }
                 HealthDataType.STEPS -> {
                     // Resolve from the raw row upsertRecord's STEPS branch persisted, before
                     // deleteRecordLocal removes it (HC-005) -- must be called before the delete.
-                    stepRecordDao.getById(id)?.let {
+                    daos.stepRecordDao.getById(id)?.let {
                         getDatesBetween(Instant.ofEpochMilli(it.startTime), Instant.ofEpochMilli(it.endTime), zoneId)
                     } ?: emptySet()
                 }
@@ -624,22 +615,22 @@ class HealthChangeSynchronizerImpl
             id: String,
         ) {
             when (dataType) {
-                HealthDataType.SLEEP -> sleepSessionDao.deleteById(id)
+                HealthDataType.SLEEP -> daos.sleepSessionDao.deleteById(id)
                 HealthDataType.HEART_RATE -> {
-                    sourceRecordDao.getSourceRef(id)?.let { heartRateDao.deleteBySourceRecordRef(it) }
-                    sourceRecordDao.deleteBySourceRecordId(id)
+                    daos.sourceRecordDao.getSourceRef(id)?.let { daos.heartRateDao.deleteBySourceRecordRef(it) }
+                    daos.sourceRecordDao.deleteBySourceRecordId(id)
                 }
                 HealthDataType.HRV -> {
-                    sourceRecordDao.getSourceRef(id)?.let { hrvDao.deleteBySourceRecordRef(it) }
-                    sourceRecordDao.deleteBySourceRecordId(id)
+                    daos.sourceRecordDao.getSourceRef(id)?.let { daos.hrvDao.deleteBySourceRecordRef(it) }
+                    daos.sourceRecordDao.deleteBySourceRecordId(id)
                 }
-                HealthDataType.EXERCISE -> workoutDao.deleteById(id)
-                HealthDataType.WEIGHT -> weightRecordDao.deleteBySourceRecordId(id)
-                HealthDataType.BODY_FAT -> bodyFatRecordDao.deleteBySourceRecordId(id)
-                HealthDataType.BLOOD_PRESSURE -> bloodPressureRecordDao.deleteBySourceRecordId(id)
-                HealthDataType.OXYGEN_SATURATION -> oxygenSaturationRecordDao.deleteBySourceRecordId(id)
-                HealthDataType.BODY_TEMPERATURE -> bodyTemperatureRecordDao.deleteBySourceRecordId(id)
-                HealthDataType.STEPS -> stepRecordDao.deleteById(id)
+                HealthDataType.EXERCISE -> daos.workoutDao.deleteById(id)
+                HealthDataType.WEIGHT -> daos.weightRecordDao.deleteBySourceRecordId(id)
+                HealthDataType.BODY_FAT -> daos.bodyFatRecordDao.deleteBySourceRecordId(id)
+                HealthDataType.BLOOD_PRESSURE -> daos.bloodPressureRecordDao.deleteBySourceRecordId(id)
+                HealthDataType.OXYGEN_SATURATION -> daos.oxygenSaturationRecordDao.deleteBySourceRecordId(id)
+                HealthDataType.BODY_TEMPERATURE -> daos.bodyTemperatureRecordDao.deleteBySourceRecordId(id)
+                HealthDataType.STEPS -> daos.stepRecordDao.deleteById(id)
             }
         }
     }

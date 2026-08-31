@@ -11,6 +11,7 @@ import dagger.Lazy
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
+import java.time.Clock
 
 /**
  * Periodic hot→warm rollup: folds raw heart-rate samples older than the fixed 90-day hot tier into
@@ -24,10 +25,11 @@ class DataRollupWorker
         @Assisted context: Context,
         @Assisted params: WorkerParameters,
         private val rollupManager: Lazy<DataRollupManager>,
+        private val clock: Clock,
     ) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result =
             try {
-                rollupManager.get().rollupExpiredHotTier(RetentionBounds.resolveHotTierCutoffMs())
+                rollupManager.get().rollupExpiredHotTier(RetentionBounds.resolveHotTierCutoffMs(clock.instant()))
                 Result.success()
             } catch (e: CancellationException) {
                 throw e

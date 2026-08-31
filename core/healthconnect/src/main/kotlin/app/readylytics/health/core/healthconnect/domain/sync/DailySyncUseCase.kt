@@ -150,7 +150,7 @@ class DailySyncUseCase
                     // samples of the earliest in-range night are captured.
                     val ingestStart = oldestTargetDay.minusDays(1).atStartOfDay(zoneId).toInstant()
 
-                    val ingestStartedAt = System.currentTimeMillis()
+                    val ingestStartedAt = clock.millis()
                     // B′: split the recent-window ingest into today's segment and the overnight
                     // back-day reach-back so each gets its own read budget and the user-facing day
                     // completes (and scores) before the denser back-day. Both segments stay inside
@@ -186,11 +186,11 @@ class DailySyncUseCase
                         }
                     }
                     logD("HealthSync.Phase") {
-                        "INGEST completed in ${System.currentTimeMillis() - ingestStartedAt}ms"
+                        "INGEST completed in ${clock.millis() - ingestStartedAt}ms"
                     }
 
                     onProgress?.invoke(ResyncPhase.RECONCILE, 0, 0)
-                    val reconcileStartedAt = System.currentTimeMillis()
+                    val reconcileStartedAt = clock.millis()
                     sessionLinkReconciler.reconcile(
                         startMs = ingestStart.toEpochMilli(),
                         endMs = windowEnd.toEpochMilli() - 1,
@@ -204,7 +204,7 @@ class DailySyncUseCase
                             ),
                     )
                     logD("HealthSync.Phase") {
-                        "RECONCILE completed in ${System.currentTimeMillis() - reconcileStartedAt}ms"
+                        "RECONCILE completed in ${clock.millis() - reconcileStartedAt}ms"
                     }
 
                     val stepsDevice =
@@ -244,7 +244,7 @@ class DailySyncUseCase
                     // existing log-and-continue + SYNC_PARTIAL_FAILURE semantics are unchanged.
                     // Cancellation does roll the window back, which is fine: the next sync redoes
                     // the same idempotent range.
-                    val recomputeStartedAt = System.currentTimeMillis()
+                    val recomputeStartedAt = clock.millis()
                     recomputeSupport.inRecomputeTransaction {
                         healthIngestionStore.clearFrozenBaselines(oldestTargetDay, today.plusDays(1), zoneId)
 
@@ -277,7 +277,7 @@ class DailySyncUseCase
                         }
                     }
                     logD("HealthSync.Phase") {
-                        "RECOMPUTE completed in ${System.currentTimeMillis() - recomputeStartedAt}ms"
+                        "RECOMPUTE completed in ${clock.millis() - recomputeStartedAt}ms"
                     }
 
                     logI("DailySyncUseCase") {
@@ -293,7 +293,7 @@ class DailySyncUseCase
                     if (!requiresHistoricalResync) {
                         changeSynchronizer.commitTokens(outcome.nextTokens)
                     }
-                    settingsRepo.updateLastSyncTimestamp(System.currentTimeMillis())
+                    settingsRepo.updateLastSyncTimestamp(clock.millis())
                     if (requiresHistoricalResync) {
                         Result.failure(
                             "Requires historical resync",

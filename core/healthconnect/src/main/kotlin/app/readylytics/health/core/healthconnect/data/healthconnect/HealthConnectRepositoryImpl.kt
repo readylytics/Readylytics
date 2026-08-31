@@ -39,6 +39,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
+import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -54,6 +55,7 @@ class HealthConnectRepositoryImpl
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
         private val stepRecordReader: StepRecordReader,
         private val intervalTotalsReader: IntervalTotalsReader,
+        private val clock: Clock,
     ) : HealthConnectRepository {
         override val criticalPermissions: Set<String> =
             setOf(
@@ -509,8 +511,8 @@ class HealthConnectRepositoryImpl
                     app.readylytics.health.core.model.domain.util.logD(
                         "HealthConnectRepository",
                     ) { "Discovering devices in $windowDays day window..." }
-                    val from = Instant.now().minusSeconds(windowDays.toLong() * TimeUnit.DAYS.toSeconds(1))
-                    val to = Instant.now()
+                    val from = clock.instant().minusSeconds(windowDays.toLong() * TimeUnit.DAYS.toSeconds(1))
+                    val to = clock.instant()
 
                     val devices = mutableSetOf<String>()
 

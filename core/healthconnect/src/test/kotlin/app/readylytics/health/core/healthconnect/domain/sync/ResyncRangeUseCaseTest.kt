@@ -26,6 +26,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -72,13 +73,17 @@ class ResyncRangeUseCaseTest {
         useCase =
             ResyncRangeUseCase(
                 settingsRepo = settingsRepo,
+                clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
                 sessionLinkReconciler = sessionLinkReconciler,
                 changeSynchronizer = changeSynchronizer,
                 selectedSourcePruner = selectedSourcePruner,
                 checkpointStore = checkpointStore,
                 healthIngestionStore = healthIngestionStore,
-                ingestionCoordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore),
-                stepCountFetcher = StepCountFetcher(hcRepo),
+                ingestion =
+                    ResyncIngestionDependencies(
+                        ingestionCoordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore),
+                        stepCountFetcher = StepCountFetcher(hcRepo),
+                    ),
                 recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner),
                 ioDispatcher = Dispatchers.Unconfined,
             )

@@ -4,6 +4,9 @@ import android.content.Context
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import org.junit.Test
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
 import kotlin.test.assertTrue
 
 /**
@@ -21,6 +24,7 @@ class HealthConnectPermissionSetsTest {
             ioDispatcher = ioDispatcher,
             stepRecordReader = StepRecordReader(context = context, ioDispatcher = ioDispatcher),
             intervalTotalsReader = IntervalTotalsReader(context = context, ioDispatcher = ioDispatcher),
+            clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
         )
 
     private val permissionPrefix = "android.permission.health."
