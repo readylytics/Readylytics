@@ -54,6 +54,9 @@ class FullHistoricalResyncUseCase
             val endDate =
                 rangeOverride?.takeIf { recomputeOnly }?.endInclusive?.coerceAtMost(historicalWindow.endDate)
                     ?: historicalWindow.endDate
+            if (startDate.isAfter(endDate)) {
+                return Result.success(Unit)
+            }
             return if (recomputeOnly) {
                 healthSyncUseCase.recomputeRange(startDate = startDate, endDate = endDate, onProgress = onProgress)
             } else {

@@ -169,4 +169,22 @@ class FullHistoricalResyncUseCaseTest {
             assert(result is Result.Failure)
             coVerify { healthSyncUseCase.resyncRange(any(), any(), any(), any()) }
         }
+
+    @Test
+    fun `recomputeOnly with an inverted clamped range returns success without recomputing`() =
+        runTest {
+            every { settingsRepo.userPreferences } returns
+                flowOf(UserPreferences(retentionDaysEnabled = true, retentionDays = 30))
+
+            val result =
+                useCase.execute(
+                    recomputeOnly = true,
+                    rangeOverride = ScoreInvalidation.AffectedRange(today.minusDays(60), today.minusDays(45)),
+                )
+
+            assertEquals(Result.success(Unit), result)
+            coVerify(exactly = 0) { healthSyncUseCase.recomputeRange(any(), any(), any()) }
+            coVerify(exactly = 0) { healthSyncUseCase.resyncRange(any(), any(), any(), any()) }
+        }
 }
+

@@ -2,6 +2,7 @@ package app.readylytics.health.core.scoring.domain.util
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import kotlin.test.assertFailsWith
 
 class MathUtilsTest {
     @Test
@@ -77,4 +78,33 @@ class MathUtilsTest {
         val list = listOf(10, 12, 23, 23, 16, 23, 21, 16)
         assertEquals(5.237f, list.stdevOrNull()!!, 0.001f)
     }
+
+    @Test
+    fun `percentile returns correct interpolated values`() {
+        val list = listOf(10, 20, 30, 40, 50)
+        assertEquals(10, list.percentile(0.0))
+        assertEquals(20, list.percentile(0.25))
+        assertEquals(30, list.percentile(0.5))
+        assertEquals(40, list.percentile(0.75))
+        assertEquals(50, list.percentile(1.0))
+    }
+
+    @Test
+    fun `percentile throws on empty list`() {
+        assertFailsWith<IllegalArgumentException> {
+            emptyList<Int>().percentile(0.5)
+        }
+    }
+
+    @Test
+    fun `percentile throws on out of bounds p`() {
+        val list = listOf(10, 20, 30)
+        assertFailsWith<IllegalArgumentException> {
+            list.percentile(-0.01)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            list.percentile(1.01)
+        }
+    }
 }
+

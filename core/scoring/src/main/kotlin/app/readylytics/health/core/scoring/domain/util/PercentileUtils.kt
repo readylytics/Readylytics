@@ -11,6 +11,7 @@ import kotlin.math.roundToInt
  */
 fun List<Int>.percentile(p: Double): Int {
     require(isNotEmpty()) { "percentile() requires a non-empty list" }
+    require(p in 0.0..1.0) { "Percentile p must be in [0.0, 1.0], but was $p" }
     // No separate size==1 / lower==upper short-circuits: when index is a whole number,
     // fraction is exactly 0.0, so the general formula already collapses to this[lower].
     val index = p * (size - 1)
