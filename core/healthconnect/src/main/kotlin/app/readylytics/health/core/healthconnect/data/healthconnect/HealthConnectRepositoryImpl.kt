@@ -57,6 +57,7 @@ class HealthConnectRepositoryImpl
         private val stepRecordReader: StepRecordReader,
         private val intervalTotalsReader: IntervalTotalsReader,
         private val clock: Clock,
+        private val client: HealthConnectClient,
     ) : HealthConnectRepository {
         override val criticalPermissions: Set<String> =
             setOf(
@@ -99,10 +100,6 @@ class HealthConnectRepositoryImpl
 
         override val backgroundReadPermission: String =
             HealthPermission.PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND
-
-        private val client: HealthConnectClient by lazy {
-            HealthConnectClient.getOrCreate(context)
-        }
 
         override fun isAvailable(): Boolean =
             HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE

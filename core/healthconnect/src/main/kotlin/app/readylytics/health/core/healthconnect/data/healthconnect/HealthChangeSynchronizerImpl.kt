@@ -1,6 +1,5 @@
 package app.readylytics.health.core.healthconnect.data.healthconnect
 
-import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.changes.Change
 import androidx.health.connect.client.changes.DeletionChange
@@ -24,7 +23,6 @@ import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.core.model.domain.sync.mappers.*
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
 import java.time.Clock
 import java.time.LocalDate
@@ -36,7 +34,7 @@ import javax.inject.Singleton
 class HealthChangeSynchronizerImpl
     @Inject
     constructor(
-        @param:ApplicationContext private val context: Context,
+        private val client: HealthConnectClient,
         private val tokenStore: HealthChangeTokenStore,
         private val settingsRepo: SettingsRepository,
         private val clock: Clock = Clock.systemDefaultZone(),
@@ -44,8 +42,6 @@ class HealthChangeSynchronizerImpl
         private val healthIngestionStore: HealthIngestionStore,
         private val changeIngestionStore: HealthChangeIngestionStore,
     ) : HealthChangeSynchronizer {
-        private val client by lazy { HealthConnectClient.getOrCreate(context) }
-
         override suspend fun applyPendingChanges(): HealthChangeSyncOutcome {
             val prefs = settingsRepo.userPreferences.first()
             val zoneId = prefs.scoringZone()

@@ -1,6 +1,5 @@
 package app.readylytics.health.core.healthconnect.data.healthconnect
 
-import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.changes.DeletionChange
 import androidx.health.connect.client.changes.UpsertionChange
@@ -33,7 +32,6 @@ import java.time.ZoneId
 import java.util.TimeZone
 
 class HealthChangeSynchronizerRecordSyncTest {
-    private val context = mockk<Context>(relaxed = true)
     private val tokenStore = mockk<HealthChangeTokenStore>(relaxed = true)
     private val settingsRepo = mockk<SettingsRepository>(relaxed = true)
     private val transactionRunner = mockk<TransactionRunner>(relaxed = true)
@@ -46,9 +44,6 @@ class HealthChangeSynchronizerRecordSyncTest {
 
     @Before
     fun setup() {
-        mockkObject(HealthConnectClient)
-        every { HealthConnectClient.getOrCreate(any()) } returns client
-
         coEvery { transactionRunner.runInTransaction<Any>(any()) } coAnswers {
             val block = firstArg<suspend () -> Any>()
             block()
@@ -68,7 +63,7 @@ class HealthChangeSynchronizerRecordSyncTest {
 
         synchronizer =
             HealthChangeSynchronizerImpl(
-                context = context,
+                client = client,
                 tokenStore = tokenStore,
                 settingsRepo = settingsRepo,
                 transactionRunner = transactionRunner,
