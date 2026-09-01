@@ -8,7 +8,7 @@ import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
-import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionChecker
 import app.readylytics.health.core.model.domain.repository.HeartRateRepository
 import app.readylytics.health.core.model.domain.repository.InsightDismissalRepository
 import app.readylytics.health.core.model.domain.repository.SleepSessionData
@@ -64,7 +64,7 @@ abstract class DashboardViewModelTestBase {
     protected lateinit var getCurrentResidualFatigueUseCase: GetCurrentResidualFatigueUseCase
     protected lateinit var fatigueTicker: DashboardFatigueTicker
     protected lateinit var bodyTemperatureBaselineProvider: BodyTemperatureBaselineProvider
-    protected lateinit var healthConnectRepository: HealthConnectRepository
+    protected lateinit var permissionChecker: HealthConnectPermissionChecker
     protected lateinit var viewModel: DashboardViewModel
 
     @Before
@@ -91,7 +91,7 @@ abstract class DashboardViewModelTestBase {
         fatigueTicker = mockk()
         every { fatigueTicker.minuteBuckets() } returns flowOf(0L)
         bodyTemperatureBaselineProvider = mockk(relaxed = true)
-        healthConnectRepository = mockk(relaxed = true)
+        permissionChecker = mockk(relaxed = true)
 
         viewModel = buildViewModel()
     }
@@ -120,7 +120,7 @@ abstract class DashboardViewModelTestBase {
             getCurrentResidualFatigueUseCase = getCurrentResidualFatigueUseCase,
             fatigueTicker = fatigueTicker,
             bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
-            healthConnectRepository = healthConnectRepository,
+            permissionChecker = permissionChecker,
             clock = java.time.Clock.systemDefaultZone(),
             defaultDispatcher = testDispatcher,
         )
@@ -147,7 +147,7 @@ abstract class DashboardViewModelTestBase {
         every { observeDashboardStrainIncreaseUseCase.invoke(any(), any()) } returns flowOf(0.23f)
         every { observeDashboardRasIncreaseUseCase.invoke(any(), any()) } returns flowOf(null)
         every { bodyTemperatureBaselineProvider.observeBaseline(any()) } returns flowOf(null)
-        coEvery { healthConnectRepository.hasBodyTemperaturePermission() } returns true
+        coEvery { permissionChecker.hasBodyTemperaturePermission() } returns true
         every {
             getDashboardDataUseCase.invoke(
                 summary = any(),

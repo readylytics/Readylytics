@@ -13,7 +13,7 @@ import app.readylytics.health.core.model.domain.preferences.UnitSystem
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.repository.DailyMetricsRepository
 import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
-import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionChecker
 import app.readylytics.health.core.model.domain.service.BodyTemperatureBaselineProvider
 import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.core.model.domain.vitals.VitalsChartConfiguration
@@ -118,8 +118,8 @@ abstract class VitalsViewModelTestBase {
             coEvery { updateVitalsChartConfigurations(any()) } returns Unit
         }
 
-    protected val healthConnectRepository =
-        mockk<HealthConnectRepository> {
+    protected val permissionChecker =
+        mockk<HealthConnectPermissionChecker> {
             coEvery { hasBodyTemperaturePermission() } returns true
             coEvery { hasOxygenSaturationPermission() } returns true
         }
@@ -134,7 +134,7 @@ abstract class VitalsViewModelTestBase {
             savedStateHandle = SavedStateHandle(),
             bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
             vitalsLayoutRepository = vitalsLayoutRepository,
-            healthConnectRepository = healthConnectRepository,
+            permissionChecker = permissionChecker,
             ioDispatcher = testDispatcher,
         )
 

@@ -11,7 +11,7 @@ import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
-import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionChecker
 import app.readylytics.health.core.model.domain.repository.HeartRateRepository
 import app.readylytics.health.core.model.domain.repository.InsightDismissalRepository
 import app.readylytics.health.core.model.domain.repository.SleepSessionData
@@ -163,7 +163,7 @@ fun createDashboardCardStateFlow(
     cardManagementDelegate: CardManagementDelegate,
     cardConfigRepository: CardConfigurationRepository,
     dailySummaryRepository: DailySummaryRepository,
-    healthConnectRepository: HealthConnectRepository,
+    permissionChecker: HealthConnectPermissionChecker,
     settingsRepository: UserPreferencesReader,
 ): Flow<DashboardCardState> {
     val scoringZoneFlow =
@@ -176,12 +176,12 @@ fun createDashboardCardStateFlow(
     // the 6 optional permission checks into a list before joining the main combine.
     val permissionGrants: Flow<List<Boolean>> =
         combine(
-            flow { emit(healthConnectRepository.hasBodyTemperaturePermission()) },
-            flow { emit(healthConnectRepository.hasStepsPermission()) },
-            flow { emit(healthConnectRepository.hasWeightPermission()) },
-            flow { emit(healthConnectRepository.hasBodyFatPermission()) },
-            flow { emit(healthConnectRepository.hasBloodPressurePermission()) },
-            flow { emit(healthConnectRepository.hasOxygenSaturationPermission()) },
+            flow { emit(permissionChecker.hasBodyTemperaturePermission()) },
+            flow { emit(permissionChecker.hasStepsPermission()) },
+            flow { emit(permissionChecker.hasWeightPermission()) },
+            flow { emit(permissionChecker.hasBodyFatPermission()) },
+            flow { emit(permissionChecker.hasBloodPressurePermission()) },
+            flow { emit(permissionChecker.hasOxygenSaturationPermission()) },
         ) { results -> results.toList() }
 
     return combine(

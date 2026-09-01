@@ -7,7 +7,7 @@ import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.dashboard.CardManagementDelegate
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
-import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionChecker
 import app.readylytics.health.core.model.domain.repository.HeartRateRepository
 import app.readylytics.health.core.model.domain.repository.InsightDismissalRepository
 import app.readylytics.health.core.model.domain.service.BodyTemperatureBaselineProvider
@@ -100,8 +100,8 @@ class DashboardFlowIntermediateTest {
                             ),
                         )
                 }
-            val healthConnectRepository =
-                mockk<HealthConnectRepository> {
+            val permissionChecker =
+                mockk<HealthConnectPermissionChecker> {
                     coEvery { hasBodyTemperaturePermission() } returns false
                     coEvery { hasStepsPermission() } returns false
                     coEvery { hasWeightPermission() } returns false
@@ -125,7 +125,7 @@ class DashboardFlowIntermediateTest {
                     cardManagementDelegate = cardManagementDelegate,
                     cardConfigRepository = cardConfigRepository,
                     dailySummaryRepository = dailySummaryRepository,
-                    healthConnectRepository = healthConnectRepository,
+                    permissionChecker = permissionChecker,
                     settingsRepository = settingsRepository,
                 ).first()
 
@@ -141,8 +141,8 @@ class DashboardFlowIntermediateTest {
                     every { dashboardCardConfigurations() } returns
                         flowOf(listOf(CardConfiguration(CardId.BODY_TEMPERATURE, isVisible = true, position = 17)))
                 }
-            val healthConnectRepository =
-                mockk<HealthConnectRepository> {
+            val permissionChecker =
+                mockk<HealthConnectPermissionChecker> {
                     coEvery { hasBodyTemperaturePermission() } returns true
                     coEvery { hasStepsPermission() } returns false
                     coEvery { hasWeightPermission() } returns false
@@ -166,7 +166,7 @@ class DashboardFlowIntermediateTest {
                     cardManagementDelegate = cardManagementDelegate,
                     cardConfigRepository = cardConfigRepository,
                     dailySummaryRepository = dailySummaryRepository,
-                    healthConnectRepository = healthConnectRepository,
+                    permissionChecker = permissionChecker,
                     settingsRepository = settingsRepository,
                 ).first()
 
@@ -186,8 +186,8 @@ class DashboardFlowIntermediateTest {
                     every { dashboardCardConfigurations() } returns
                         flowOf(listOf(CardConfiguration(CardId.SLEEP_SCORE, isVisible = true, position = 0)))
                 }
-            val healthConnectRepository =
-                mockk<HealthConnectRepository> {
+            val permissionChecker =
+                mockk<HealthConnectPermissionChecker> {
                     coEvery { hasBodyTemperaturePermission() } returns false
                     coEvery { hasStepsPermission() } returns false
                     coEvery { hasWeightPermission() } returns false
@@ -218,7 +218,7 @@ class DashboardFlowIntermediateTest {
                     cardManagementDelegate = cardManagementDelegate,
                     cardConfigRepository = cardConfigRepository,
                     dailySummaryRepository = dailySummaryRepository,
-                    healthConnectRepository = healthConnectRepository,
+                    permissionChecker = permissionChecker,
                     settingsRepository = settingsRepository,
                 ).first()
 
@@ -309,8 +309,8 @@ class DashboardFlowIntermediateTest {
                 mockk<CardConfigurationRepository> {
                     every { dashboardCardConfigurations() } returns flowOf(emptyList())
                 }
-            val healthConnectRepository =
-                mockk<HealthConnectRepository>(relaxed = true)
+            val permissionChecker =
+                mockk<HealthConnectPermissionChecker>(relaxed = true)
             val cardManagementDelegate = mockCardManagementDelegate()
             val dailySummaryRepository = mockk<DailySummaryRepository>()
             val selectedDate = LocalDate.of(2026, 6, 10)
@@ -331,7 +331,7 @@ class DashboardFlowIntermediateTest {
                 cardManagementDelegate = cardManagementDelegate,
                 cardConfigRepository = cardConfigRepository,
                 dailySummaryRepository = dailySummaryRepository,
-                healthConnectRepository = healthConnectRepository,
+                permissionChecker = permissionChecker,
                 settingsRepository = settingsRepo,
             ).first()
 

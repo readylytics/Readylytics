@@ -97,7 +97,7 @@ class DashboardViewModelTest : DashboardViewModelTestBase() {
                     getCurrentResidualFatigueUseCase = getCurrentResidualFatigueUseCase,
                     fatigueTicker = fatigueTicker,
                     bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
-                    healthConnectRepository = healthConnectRepository,
+                    permissionChecker = permissionChecker,
                     clock = fixedClock,
                     defaultDispatcher = testDispatcher,
                 )
@@ -140,7 +140,7 @@ class DashboardViewModelTest : DashboardViewModelTestBase() {
                     getCurrentResidualFatigueUseCase = getCurrentResidualFatigueUseCase,
                     fatigueTicker = fatigueTicker,
                     bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
-                    healthConnectRepository = healthConnectRepository,
+                    permissionChecker = permissionChecker,
                     clock = fixedClock,
                     defaultDispatcher = testDispatcher,
                 )
@@ -181,7 +181,7 @@ class DashboardViewModelTest : DashboardViewModelTestBase() {
                     getCurrentResidualFatigueUseCase = getCurrentResidualFatigueUseCase,
                     fatigueTicker = fatigueTicker,
                     bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
-                    healthConnectRepository = healthConnectRepository,
+                    permissionChecker = permissionChecker,
                     clock = fixedClock,
                     defaultDispatcher = testDispatcher,
                 )
@@ -293,7 +293,7 @@ class DashboardViewModelTest : DashboardViewModelTestBase() {
                 observeDashboardRasIncreaseUseCase.invoke(any(), any())
             } returns flowOf(null)
             every { bodyTemperatureBaselineProvider.observeBaseline(any()) } returns flowOf(null)
-            coEvery { healthConnectRepository.hasBodyTemperaturePermission() } returns true
+            coEvery { permissionChecker.hasBodyTemperaturePermission() } returns true
             every {
                 getDashboardDataUseCase.invoke(
                     summary = summary,
@@ -332,7 +332,7 @@ class DashboardViewModelTest : DashboardViewModelTestBase() {
                     getCurrentResidualFatigueUseCase = getCurrentResidualFatigueUseCase,
                     fatigueTicker = fatigueTicker,
                     bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
-                    healthConnectRepository = healthConnectRepository,
+                    permissionChecker = permissionChecker,
                     clock = java.time.Clock.systemDefaultZone(),
                     defaultDispatcher = testDispatcher,
                 )

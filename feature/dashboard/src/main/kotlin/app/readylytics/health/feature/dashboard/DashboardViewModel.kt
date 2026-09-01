@@ -23,7 +23,7 @@ import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
-import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionChecker
 import app.readylytics.health.core.model.domain.repository.HeartRateRepository
 import app.readylytics.health.core.model.domain.repository.InsightDismissalRepository
 import app.readylytics.health.core.model.domain.repository.SleepSessionData
@@ -88,7 +88,7 @@ class DashboardViewModel
         private val getCurrentResidualFatigueUseCase: GetCurrentResidualFatigueUseCase,
         private val fatigueTicker: DashboardFatigueTicker,
         private val bodyTemperatureBaselineProvider: BodyTemperatureBaselineProvider,
-        private val healthConnectRepository: HealthConnectRepository,
+        private val permissionChecker: HealthConnectPermissionChecker,
         private val clock: Clock,
         @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : BaseViewModel() {
@@ -104,12 +104,12 @@ class DashboardViewModel
                 defaultConfigurations = SettingsDefaults.DEFAULT_DASHBOARD_CARDS,
                 persist = cardConfigRepository::updateDashboardCardConfigurations,
                 scope = viewModelScope,
-                hasBodyTemperaturePermission = { healthConnectRepository.hasBodyTemperaturePermission() },
-                hasStepsPermission = { healthConnectRepository.hasStepsPermission() },
-                hasWeightPermission = { healthConnectRepository.hasWeightPermission() },
-                hasBodyFatPermission = { healthConnectRepository.hasBodyFatPermission() },
-                hasBloodPressurePermission = { healthConnectRepository.hasBloodPressurePermission() },
-                hasOxygenSaturationPermission = { healthConnectRepository.hasOxygenSaturationPermission() },
+                hasBodyTemperaturePermission = { permissionChecker.hasBodyTemperaturePermission() },
+                hasStepsPermission = { permissionChecker.hasStepsPermission() },
+                hasWeightPermission = { permissionChecker.hasWeightPermission() },
+                hasBodyFatPermission = { permissionChecker.hasBodyFatPermission() },
+                hasBloodPressurePermission = { permissionChecker.hasBloodPressurePermission() },
+                hasOxygenSaturationPermission = { permissionChecker.hasOxygenSaturationPermission() },
             )
 
         val isManagingCards: StateFlow<Boolean> = cardManagementDelegate.isManagingCards
@@ -134,7 +134,7 @@ class DashboardViewModel
                     cardManagementDelegate,
                     cardConfigRepository,
                     dailySummaryRepository,
-                    healthConnectRepository,
+                    permissionChecker,
                     settingsRepo,
                 ),
                 createDashboardHrFlow(

@@ -3,7 +3,7 @@ package app.readylytics.health.feature.vitals.overview
 import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
 import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.dashboard.CardManagementDelegate
-import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionChecker
 import app.readylytics.health.core.model.domain.vitals.VitalsLayoutRepository
 import io.mockk.coEvery
 import io.mockk.every
@@ -36,8 +36,8 @@ class VitalsFlowIntermediateTest {
                             initialPendingConfigs = vitalsCardConfigs,
                         ),
                     vitalsLayoutRepository = mockVitalsLayoutRepository(),
-                    healthConnectRepository =
-                        mockk<HealthConnectRepository> {
+                    permissionChecker =
+                        mockk<HealthConnectPermissionChecker> {
                             coEvery { hasBodyTemperaturePermission() } returns false
                             coEvery { hasOxygenSaturationPermission() } returns true
                         },
@@ -59,8 +59,8 @@ class VitalsFlowIntermediateTest {
                             initialPendingConfigs = vitalsCardConfigs,
                         ),
                     vitalsLayoutRepository = mockVitalsLayoutRepository(),
-                    healthConnectRepository =
-                        mockk<HealthConnectRepository> {
+                    permissionChecker =
+                        mockk<HealthConnectPermissionChecker> {
                             coEvery { hasBodyTemperaturePermission() } returns true
                             coEvery { hasOxygenSaturationPermission() } returns false
                         },
@@ -82,8 +82,8 @@ class VitalsFlowIntermediateTest {
                             initialPendingConfigs = vitalsCardConfigs,
                         ),
                     vitalsLayoutRepository = mockVitalsLayoutRepository(),
-                    healthConnectRepository =
-                        mockk<HealthConnectRepository> {
+                    permissionChecker =
+                        mockk<HealthConnectPermissionChecker> {
                             coEvery { hasBodyTemperaturePermission() } returns false
                             coEvery { hasOxygenSaturationPermission() } returns false
                         },
@@ -106,8 +106,8 @@ class VitalsFlowIntermediateTest {
                             initialPendingConfigs = vitalsCardConfigs,
                         ),
                     vitalsLayoutRepository = mockVitalsLayoutRepository(),
-                    healthConnectRepository =
-                        mockk<HealthConnectRepository> {
+                    permissionChecker =
+                        mockk<HealthConnectPermissionChecker> {
                             coEvery { hasBodyTemperaturePermission() } returns false
                             coEvery { hasOxygenSaturationPermission() } returns false
                         },
