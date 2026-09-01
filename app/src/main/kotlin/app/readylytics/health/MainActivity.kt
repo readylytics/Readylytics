@@ -78,6 +78,7 @@ class MainActivity : ComponentActivity() {
 
         lifecycleScope.launch(Dispatchers.IO) {
             runCatching { sqlCipherKeyManager.validateKeyDecryption() }
+            DiagnosticLogFileExport.pruneDiagnosticCache(cacheDir)
             isKeyValidationComplete = true
         }
 
