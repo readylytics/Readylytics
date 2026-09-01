@@ -1,7 +1,8 @@
-package app.readylytics.health.data.device
+package app.readylytics.health.core.database.data.local
 
 import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao
+import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketMaintenanceDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import io.mockk.coEvery
@@ -23,6 +24,7 @@ class HealthDeviceRepositoryTest {
     private lateinit var heartRateDao: HeartRateDao
     private lateinit var hrvDao: HrvDao
     private lateinit var workoutDao: WorkoutDao
+    private lateinit var minuteBucketDao: MinuteBucketMaintenanceDao
     private lateinit var repository: HealthDeviceRepository
 
     /**
@@ -37,6 +39,7 @@ class HealthDeviceRepositoryTest {
         heartRateDao = mockk()
         hrvDao = mockk()
         workoutDao = mockk()
+        minuteBucketDao = mockk()
         fakeElapsedRealtimeMs = 0L
         repository =
             HealthDeviceRepository(
@@ -44,16 +47,18 @@ class HealthDeviceRepositoryTest {
                 heartRateDao,
                 hrvDao,
                 workoutDao,
+                minuteBucketDao,
             ).apply { elapsedRealtimeMs = { fakeElapsedRealtimeMs } }
     }
 
     @Test
     fun `getAvailableDevices fetches and caches devices`() =
         runTest {
-            val expected = listOf("Device1", "Device2").sorted()
+            val expected = listOf("Device1", "Device2", "Device3").sorted()
 
             coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Device1")
             coEvery { heartRateDao.getDistinctDeviceNames() } returns listOf("Device2")
+            coEvery { minuteBucketDao.getDistinctDeviceNames() } returns listOf("Device3")
             coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
 
@@ -64,6 +69,7 @@ class HealthDeviceRepositoryTest {
             // Verify all DAOs were called
             coVerify(exactly = 1) { sleepSessionDao.getDistinctDeviceNames() }
             coVerify(exactly = 1) { heartRateDao.getDistinctDeviceNames() }
+            coVerify(exactly = 1) { minuteBucketDao.getDistinctDeviceNames() }
             coVerify(exactly = 1) { hrvDao.getDistinctDeviceNames() }
             coVerify(exactly = 1) { workoutDao.getDistinctDeviceNames() }
         }
@@ -73,6 +79,7 @@ class HealthDeviceRepositoryTest {
         runTest {
             coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Device1")
             coEvery { heartRateDao.getDistinctDeviceNames() } returns listOf("Device2")
+            coEvery { minuteBucketDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
 
@@ -86,6 +93,7 @@ class HealthDeviceRepositoryTest {
             // Reset mocks to throw if called (verify they're NOT called)
             coEvery { sleepSessionDao.getDistinctDeviceNames() } throws AssertionError("Should not be called")
             coEvery { heartRateDao.getDistinctDeviceNames() } throws AssertionError("Should not be called")
+            coEvery { minuteBucketDao.getDistinctDeviceNames() } throws AssertionError("Should not be called")
             coEvery { hrvDao.getDistinctDeviceNames() } throws AssertionError("Should not be called")
             coEvery { workoutDao.getDistinctDeviceNames() } throws AssertionError("Should not be called")
 
@@ -99,6 +107,7 @@ class HealthDeviceRepositoryTest {
         runTest {
             coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Device1")
             coEvery { heartRateDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { minuteBucketDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
 
@@ -112,6 +121,7 @@ class HealthDeviceRepositoryTest {
             // Reset mocks with different data
             coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Device3")
             coEvery { heartRateDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { minuteBucketDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
 
@@ -125,13 +135,14 @@ class HealthDeviceRepositoryTest {
         runTest {
             coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Device1", "")
             coEvery { heartRateDao.getDistinctDeviceNames() } returns listOf("  ", "Device2")
+            coEvery { minuteBucketDao.getDistinctDeviceNames() } returns listOf("", "Device3")
             coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
 
             val result = repository.getAvailableDevices()
 
             // Blank strings should be filtered out
-            assertEquals(listOf("Device1", "Device2"), result)
+            assertEquals(listOf("Device1", "Device2", "Device3"), result)
         }
 
     @Test
@@ -139,13 +150,14 @@ class HealthDeviceRepositoryTest {
         runTest {
             coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Device1", "Device2")
             coEvery { heartRateDao.getDistinctDeviceNames() } returns listOf("Device2", "Device3")
+            coEvery { minuteBucketDao.getDistinctDeviceNames() } returns listOf("Device3", "Device4")
             coEvery { hrvDao.getDistinctDeviceNames() } returns listOf("Device1")
             coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
 
             val result = repository.getAvailableDevices()
 
             // All duplicates should be removed and sorted
-            assertEquals(listOf("Device1", "Device2", "Device3"), result)
+            assertEquals(listOf("Device1", "Device2", "Device3", "Device4"), result)
         }
 
     @Test
@@ -153,13 +165,14 @@ class HealthDeviceRepositoryTest {
         runTest {
             coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Zebra")
             coEvery { heartRateDao.getDistinctDeviceNames() } returns listOf("Apple")
+            coEvery { minuteBucketDao.getDistinctDeviceNames() } returns listOf("Banana")
             coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { workoutDao.getDistinctDeviceNames() } returns listOf("Mango")
 
             val result = repository.getAvailableDevices()
 
             // Results should be alphabetically sorted
-            assertEquals(listOf("Apple", "Mango", "Zebra"), result)
+            assertEquals(listOf("Apple", "Banana", "Mango", "Zebra"), result)
         }
 
     @Test
@@ -167,6 +180,7 @@ class HealthDeviceRepositoryTest {
         runTest {
             coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Device1")
             coEvery { heartRateDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { minuteBucketDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
 
@@ -198,6 +212,7 @@ class HealthDeviceRepositoryTest {
         runTest {
             coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Device1")
             coEvery { heartRateDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { minuteBucketDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
 
@@ -222,6 +237,7 @@ class HealthDeviceRepositoryTest {
         runTest {
             coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Device1")
             coEvery { heartRateDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { minuteBucketDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
 
@@ -234,6 +250,7 @@ class HealthDeviceRepositoryTest {
             // Reset mocks with different data
             coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Device3")
             coEvery { heartRateDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { minuteBucketDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
 

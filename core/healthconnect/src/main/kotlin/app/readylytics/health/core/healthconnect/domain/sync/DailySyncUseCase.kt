@@ -15,6 +15,7 @@ import app.readylytics.health.core.model.domain.repository.WalDiagnostics
 import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
 import app.readylytics.health.core.scoring.domain.scoring.RasSourceModeBootstrapUseCase
 import app.readylytics.health.core.model.domain.sync.*
+import app.readylytics.health.core.model.domain.sync.StepAttribution
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
@@ -150,7 +151,7 @@ class DailySyncUseCase
                     // samples of the earliest in-range night are captured.
                     val ingestStart = oldestTargetDay.minusDays(1).atStartOfDay(zoneId).toInstant()
 
-                    val ingestStartedAt = System.currentTimeMillis()
+                    val ingestStartedAt = clock.millis()
                     // B′: split the recent-window ingest into today's segment and the overnight
                     // back-day reach-back so each gets its own read budget and the user-facing day
                     // completes (and scores) before the denser back-day. Both segments stay inside
@@ -186,11 +187,11 @@ class DailySyncUseCase
                         }
                     }
                     logD("HealthSync.Phase") {
-                        "INGEST completed in ${System.currentTimeMillis() - ingestStartedAt}ms"
+                        "INGEST completed in ${clock.millis() - ingestStartedAt}ms"
                     }
 
                     onProgress?.invoke(ResyncPhase.RECONCILE, 0, 0)
-                    val reconcileStartedAt = System.currentTimeMillis()
+                    val reconcileStartedAt = clock.millis()
                     sessionLinkReconciler.reconcile(
                         startMs = ingestStart.toEpochMilli(),
                         endMs = windowEnd.toEpochMilli() - 1,
@@ -204,7 +205,7 @@ class DailySyncUseCase
                             ),
                     )
                     logD("HealthSync.Phase") {
-                        "RECONCILE completed in ${System.currentTimeMillis() - reconcileStartedAt}ms"
+                        "RECONCILE completed in ${clock.millis() - reconcileStartedAt}ms"
                     }
 
                     val stepsDevice =
@@ -235,49 +236,55 @@ class DailySyncUseCase
                     var successCount = 0
                     var failureCount = 0
 
-                    // F7: one transaction for the frozen-baseline clear plus the whole walk-forward,
-                    // so a routine sync produces a single daily_summaries/workout_records
-                    // invalidation round instead of one per synced day. Everything that touches
-                    // Health Connect (ingestWindow, reconcile, fetchWindow) has already completed
-                    // above -- keep it that way. A per-day Result.Failure does not abort the
-                    // transaction: recomputeDay catches and returns rather than rethrowing, so the
-                    // existing log-and-continue + SYNC_PARTIAL_FAILURE semantics are unchanged.
-                    // Cancellation does roll the window back, which is fine: the next sync redoes
-                    // the same idempotent range.
-                    val recomputeStartedAt = System.currentTimeMillis()
+                    // R2-CACHE-002: Chunk daily walk-forward recompute per day. Baseline clear executes
+                    // in its own transaction first, and each day's recompute is committed in its own
+                    // inRecomputeTransaction block so cancellation or interruption commits already-calculated
+                    // days cooperatively without rolling back the entire multi-day window.
+                    val recomputeStartedAt = clock.millis()
+                    // 1. Initial transaction: clear frozen baselines for the full window
                     recomputeSupport.inRecomputeTransaction {
                         healthIngestionStore.clearFrozenBaselines(oldestTargetDay, today.plusDays(1), zoneId)
+                    }
 
-                        var dayToScore = oldestTargetDay
-                        while (!dayToScore.isAfter(today)) {
-                            ensureActive()
-                            val steps = stepsMap[dayToScore]
-                            val result =
+                    // 2. Per-day transactions: commit each day's recompute individually
+                    var dayToScore = oldestTargetDay
+                    while (!dayToScore.isAfter(today)) {
+                        ensureActive()
+                        val currentDay = dayToScore
+                        val steps =
+                            StepAttribution.resolve(
+                                currentDay,
+                                stepsMap,
+                                stepsDeviceSelected = stepsDevice != null,
+                                recomputeOnly = false,
+                            )
+                        val result =
+                            recomputeSupport.inRecomputeTransaction {
                                 recomputeSupport.recomputeDay(
-                                    dayToScore,
+                                    currentDay,
                                     steps,
                                     prefs,
                                     WalkForwardContexts(trimpContext, baselineContext, fatigueContext),
                                 )
-
-                            when (result) {
-                                is Result.Success -> {
-                                    successCount++
-                                    logD("DailySyncUseCase") { "Day $dayToScore: SUCCESS" }
-                                }
-                                is Result.Failure -> {
-                                    failureCount++
-                                    logI("DailySyncUseCase") { "Day $dayToScore: FAILED - ${result.reason}" }
-                                }
                             }
-                            processedDays++
-                            onProgress?.invoke(ResyncPhase.RECOMPUTE, processedDays, totalDays)
-                            dayToScore = dayToScore.plusDays(1)
-                            yield()
+
+                        when (result) {
+                            is Result.Success -> {
+                                successCount++
+                                logD("DailySyncUseCase") { "Day $currentDay: SUCCESS" }
+                            }
+                            is Result.Failure -> {
+                                failureCount++
+                                logI("DailySyncUseCase") { "Day $currentDay: FAILED - ${result.reason}" }
+                            }
                         }
+                        processedDays++
+                        onProgress?.invoke(ResyncPhase.RECOMPUTE, processedDays, totalDays)
+                        dayToScore = dayToScore.plusDays(1)
+                        yield()
                     }
                     logD("HealthSync.Phase") {
-                        "RECOMPUTE completed in ${System.currentTimeMillis() - recomputeStartedAt}ms"
+                        "RECOMPUTE completed in ${clock.millis() - recomputeStartedAt}ms"
                     }
 
                     logI("DailySyncUseCase") {
@@ -290,16 +297,14 @@ class DailySyncUseCase
                             "SYNC_PARTIAL_FAILURE",
                         )
                     }
-                    if (!requiresHistoricalResync) {
-                        changeSynchronizer.commitTokens(outcome.nextTokens)
-                    }
-                    settingsRepo.updateLastSyncTimestamp(System.currentTimeMillis())
                     if (requiresHistoricalResync) {
                         Result.failure(
                             "Requires historical resync",
                             "REQUIRES_HISTORICAL_RESYNC",
                         )
                     } else {
+                        changeSynchronizer.commitTokens(outcome.nextTokens)
+                        settingsRepo.updateLastSyncTimestamp(clock.millis())
                         Result.success(Unit)
                     }
                 } catch (e: CancellationException) {

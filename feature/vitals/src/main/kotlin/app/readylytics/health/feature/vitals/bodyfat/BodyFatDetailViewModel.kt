@@ -3,7 +3,6 @@ package app.readylytics.health.feature.vitals.bodyfat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.data.preferences.UnitSystem
-import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.core.model.domain.date.SelectedDateStore
 import app.readylytics.health.core.model.domain.display.MetricFormatter
@@ -13,7 +12,9 @@ import app.readylytics.health.core.model.domain.model.ZoneBand
 import app.readylytics.health.core.model.domain.model.bodyFatZoneBands
 import app.readylytics.health.core.model.domain.model.toMetricStatus
 import app.readylytics.health.core.model.domain.preferences.Gender
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.BodyFatRepository
 import app.readylytics.health.core.model.domain.repository.WeightRepository
 import app.readylytics.health.core.model.domain.util.UnitConverter
@@ -40,7 +41,6 @@ import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
-import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import app.readylytics.health.core.ui.R as CoreUiR
@@ -117,7 +117,7 @@ class BodyFatDetailViewModel
             val page = params.page
             val userPrefs = params.prefs
 
-            val zoneId = ZoneId.systemDefault()
+            val zoneId = userPrefs.scoringZone()
             val rangeStart =
                 selectedDate.minusDays((range.days - 1).toLong()).atStartOfDay(zoneId).toInstant()
             val rangeEnd = selectedDate.plusDays(1).atStartOfDay(zoneId).toInstant()

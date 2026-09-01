@@ -73,14 +73,25 @@ interface HrvDao {
         limit: Int,
     ): List<Float>
 
+    // R2-DB-003: 1.0-200.0 mirrors androidx.health.connect.client's own
+    // HeartRateVariabilityRmssdRecord validation range (ValidationUtils.requireInRange(rmssd, 1.0,
+    // 200.0)), so this predicate cannot reject any RMSSD sample Health Connect itself would accept
+    // from *our* writes -- it only guards the read path, where a row can enter this table without
+    // passing back through that constructor (e.g. data written by another app against an older/laxer
+    // client, or a migrated/corrupted row). Same rationale as HeartRateDao's 30-230 predicate: a
+    // scoring-facing aggregate/session query should not let an implausible sample skew a nadir or
+    // average. The raw display path (HeartRateRepositoryImpl/observeSleepHrvSince) is intentionally
+    // left unfiltered for the same OD-3 reason as the HR timeline, but currently has no callers.
     @Query(
         "SELECT rmssdMs FROM hrv_records WHERE recordType = 'SLEEP' AND sessionId = :sessionId " +
+            "AND rmssdMs BETWEEN 1.0 AND 200.0 " +
             "ORDER BY timestampMs ASC, sourceRecordRef ASC",
     )
     suspend fun getSleepRmssdForSession(sessionId: String): List<Float>
 
     @Query(
         "SELECT sessionId, rmssdMs FROM hrv_records WHERE recordType = 'SLEEP' AND sessionId IN (:sessionIds) " +
+            "AND rmssdMs BETWEEN 1.0 AND 200.0 " +
             "ORDER BY sessionId ASC, timestampMs ASC, sourceRecordRef ASC",
     )
     suspend fun getSleepRmssdForSessionsMap(
@@ -102,6 +113,7 @@ interface HrvDao {
 
     @Query(
         "SELECT rmssdMs FROM hrv_records WHERE timestampMs >= :fromMs AND timestampMs <= :toMs " +
+            "AND rmssdMs BETWEEN 1.0 AND 200.0 " +
             "ORDER BY timestampMs ASC, sourceRecordRef ASC",
     )
     suspend fun getRmssdInTimeRange(

@@ -62,25 +62,33 @@ class ScoringDayDataLoader
             hotSamples: List<HeartRateRecordEntity>,
         ): List<HeartRateRecordEntity> {
             val hot = hotSamples.filter { it.timestampMs in workout.startTime..workout.endTime }
-            if (hot.isNotEmpty()) return hot
-            return fetchWorkoutSamplesFromBuckets(workout)
+            val warm = fetchWorkoutSamplesFromBuckets(workout)
+            if (warm.isEmpty()) return hot
+            return (hot + warm).sortedBy { it.timestampMs }
         }
 
         private suspend fun fetchWorkoutSamplesFromBuckets(
             workout: WorkoutRecordEntity,
-        ): List<HeartRateRecordEntity> =
-            minuteBucketDao
-                .getBucketsForSession("EXERCISE", workout.id)
-                .reconstructTimestampedSamples()
-                .map { (timestampMs, bpm) ->
-                    HeartRateRecordEntity(
-                        sourceRecordRef = 0L,
-                        timestampMs = timestampMs,
-                        beatsPerMinute = bpm,
-                        recordType = RecordType.EXERCISE.name,
-                        sessionId = workout.id,
+        ): List<HeartRateRecordEntity> {
+            val samples =
+                minuteBucketDao
+                    .getBucketsForSession("EXERCISE", workout.id)
+                    .reconstructTimestampedSamples()
+            if (samples.isEmpty) return emptyList()
+            return buildList(samples.size) {
+                samples.forEachIndexed { _, timestampMs, bpm ->
+                    add(
+                        HeartRateRecordEntity(
+                            sourceRecordRef = 0L,
+                            timestampMs = timestampMs,
+                            beatsPerMinute = bpm,
+                            recordType = RecordType.EXERCISE.name,
+                            sessionId = workout.id,
+                        ),
                     )
                 }
+            }
+        }
 
         // from processWorkouts L325-328
         suspend fun persistModelTrimp(

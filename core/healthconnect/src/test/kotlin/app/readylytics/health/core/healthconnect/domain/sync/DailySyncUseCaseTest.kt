@@ -273,21 +273,21 @@ class DailySyncUseCaseTest {
     @Test
     fun `sync fetches and upserts all heart-related record types`() =
         runTest {
-            // HR/HRV are streamed page-by-page (HC-001); drive one non-empty page through each
-            // callback to ensure the per-page mapping/persist logic is triggered.
-            coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any()) } coAnswers {
-                thirdArg<suspend (List<DomainHeartRateRecord>) -> Unit>().invoke(listOf(mockk(relaxed = true)))
+            coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } coAnswers {
+                val callback = it.invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
+                callback(listOf(mockk(relaxed = true)), null)
             }
-            coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any()) } coAnswers {
-                thirdArg<suspend (List<DomainHrvRecord>) -> Unit>().invoke(listOf(mockk(relaxed = true)))
+            coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } coAnswers {
+                val callback = it.invocation.args[3] as suspend (List<DomainHrvRecord>, String?) -> Unit
+                callback(listOf(mockk(relaxed = true)), null)
             }
             coEvery { hcRepo.readSteps(any(), any()) } returns 0L
 
             useCase.run(windowDays = 8, onProgress = null)
 
             coVerify {
-                hcRepo.readHeartRateSamplesPaged(any(), any(), any())
-                hcRepo.readHrvSamplesPaged(any(), any(), any())
+                hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any())
+                hcRepo.readHrvSamplesPaged(any(), any(), any(), any())
                 hcRepo.readSteps(any(), any())
                 healthIngestionStore.persist(any())
                 healthIngestionStore.persistHeartRateSamples(any())
@@ -300,8 +300,8 @@ class DailySyncUseCaseTest {
         runTest {
             val hrvFromSlot = slot<Instant>()
             val hrFromSlot = slot<Instant>()
-            coJustRun { hcRepo.readHrvSamplesPaged(capture(hrvFromSlot), any(), any()) }
-            coJustRun { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any()) }
+            coJustRun { hcRepo.readHrvSamplesPaged(capture(hrvFromSlot), any(), any(), any()) }
+            coJustRun { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any(), any()) }
 
             useCase.run(windowDays = 1, onProgress = null)
 
@@ -424,7 +424,7 @@ class DailySyncUseCaseTest {
                     requiresFullResync = false,
                     nextTokens = mapOf(HealthDataType.SLEEP to "next-sleep-token"),
                 )
-            coJustRun { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any()) }
+            coJustRun { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any(), any()) }
             coJustRun {
                 scoringRepository.computeAndPersistDailySummary(
                     capture(scoredDays),
@@ -461,7 +461,7 @@ class DailySyncUseCaseTest {
                     requiresFullResync = false,
                     nextTokens = nextTokens,
                 )
-            coJustRun { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any()) }
+            coJustRun { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any(), any()) }
             coJustRun {
                 scoringRepository.computeAndPersistDailySummary(
                     capture(scoredDays),
@@ -578,38 +578,65 @@ class DailySyncUseCaseTest {
         }
 
     @Test
-    fun `sync recomputes the whole window inside exactly one transaction`() =
+    fun `sync executes baseline clear and each day in its own transaction`() =
         runTest {
-            // F7: Room invalidates per table per transaction. One transaction for the whole
-            // walk-forward means every observed daily_summaries/workout_records query in the UI
-            // re-runs once per sync instead of once per synced day.
+            // R2-CACHE-002: Baseline clear runs in its own transaction (tx #1), then each day
+            // recomputes in its own transaction (tx #2..tx #9 for windowDays = 8).
             useCase.run(windowDays = 8, onProgress = null)
 
-            assertEquals(1, transactionRunner.transactionCount)
+            assertEquals(9, transactionRunner.transactionCount)
             assertEquals(1, transactionRunner.maxDepth)
         }
 
     @Test
-    fun `sync clears frozen baselines and scores every day inside the transaction`() =
+    fun `sync clears frozen baselines and scores each day inside its own transaction`() =
         runTest {
-            // The frozen-baseline clear is a daily_summaries write too; leaving it outside would
-            // cost a second invalidation round per sync.
-            val insideTransaction = mutableListOf<String>()
+            val transactions = mutableListOf<String>()
             coEvery { healthIngestionStore.clearFrozenBaselines(any(), any(), any()) } answers {
-                insideTransaction += "clear:${transactionRunner.openDepth}"
+                transactions += "clear:tx#${transactionRunner.transactionCount}:depth${transactionRunner.openDepth}"
             }
             coEvery {
                 scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any())
             } answers {
-                insideTransaction += "score:${transactionRunner.openDepth}"
+                transactions += "score:tx#${transactionRunner.transactionCount}:depth${transactionRunner.openDepth}"
             }
 
             useCase.run(windowDays = 3, onProgress = null)
 
             assertEquals(
-                listOf("clear:1", "score:1", "score:1", "score:1"),
-                insideTransaction,
+                listOf(
+                    "clear:tx#1:depth1",
+                    "score:tx#2:depth1",
+                    "score:tx#3:depth1",
+                    "score:tx#4:depth1",
+                ),
+                transactions,
             )
+            assertEquals(4, transactionRunner.transactionCount)
+            assertEquals(1, transactionRunner.maxDepth)
+        }
+
+    @Test
+    fun `recompute cancellation mid-sync retains already completed day transactions`() =
+        runTest {
+            val zoneId = ZoneId.systemDefault()
+            val today = LocalDate.now(fixedClock.withZone(zoneId))
+            val day0 = today.minusDays(2)
+            val day1 = today.minusDays(1)
+
+            coEvery {
+                scoringRepository.computeAndPersistDailySummary(day0, any(), any(), any())
+            } returns Unit
+            coEvery {
+                scoringRepository.computeAndPersistDailySummary(day1, any(), any(), any())
+            } throws CancellationException("sync cancelled mid-walkforward")
+
+            assertFailsWith<CancellationException> {
+                useCase.run(windowDays = 3, onProgress = null)
+            }
+
+            // Baseline clear was tx #1, day 0 was tx #2, day 1 failed in tx #3
+            assertEquals(3, transactionRunner.transactionCount)
         }
 
     @Test
@@ -642,10 +669,10 @@ class DailySyncUseCaseTest {
             val onProgress: (ResyncPhase, Int, Int) -> Unit = { phase, current, total ->
                 progressEvents += Triple(phase, current, total)
             }
-            coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any()) } coAnswers {
-                val callback = thirdArg<suspend (List<DomainHeartRateRecord>) -> Unit>()
-                callback(listOf(mockk(relaxed = true), mockk(relaxed = true)))
-                callback(listOf(mockk(relaxed = true)))
+            coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } coAnswers {
+                val callback = it.invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
+                callback(listOf(mockk(relaxed = true), mockk(relaxed = true)), "page-2")
+                callback(listOf(mockk(relaxed = true)), null)
             }
 
             useCase.run(windowDays = 1, onProgress = onProgress)
@@ -679,5 +706,55 @@ class DailySyncUseCaseTest {
             useCase.run(windowDays = 2, onProgress = null)
 
             assertEquals(0, depthDuringHcRead)
+        }
+
+    @Test
+    fun `a sync that requires a historical resync does not advance lastSyncTimestamp`() =
+        runTest {
+            val zoneId = ZoneId.systemDefault()
+            val today = LocalDate.now(fixedClock.withZone(zoneId))
+            val oldestAffectedDay = today.minusDays(8)
+
+            coEvery { changeSynchronizer.applyPendingChanges() } returns
+                HealthChangeSyncOutcome(
+                    affectedDates = setOf(oldestAffectedDay),
+                    requiresFullResync = false,
+                    nextTokens = mapOf(HealthDataType.SLEEP to "next-sleep-token"),
+                )
+
+            val result = useCase.run(windowDays = 1, onProgress = null)
+
+            assertEquals(
+                "REQUIRES_HISTORICAL_RESYNC",
+                (result as app.readylytics.health.core.model.domain.model.Result.Failure).code,
+            )
+            coVerify(exactly = 0) { settingsRepo.updateLastSyncTimestamp(any()) }
+        }
+
+    @Test
+    fun `a sync with change synchronizer requesting full resync does not advance lastSyncTimestamp`() =
+        runTest {
+            coEvery { changeSynchronizer.applyPendingChanges() } returns
+                HealthChangeSyncOutcome(
+                    affectedDates = emptySet(),
+                    requiresFullResync = true,
+                )
+
+            val result = useCase.run(windowDays = 1, onProgress = null)
+
+            assertEquals(
+                "REQUIRES_HISTORICAL_RESYNC",
+                (result as app.readylytics.health.core.model.domain.model.Result.Failure).code,
+            )
+            coVerify(exactly = 0) { settingsRepo.updateLastSyncTimestamp(any()) }
+        }
+
+    @Test
+    fun `sync updates lastSyncTimestamp on success`() =
+        runTest {
+            val result = useCase.run(windowDays = 1, onProgress = null)
+
+            assertTrue(result is app.readylytics.health.core.model.domain.model.Result.Success)
+            coVerify(exactly = 1) { settingsRepo.updateLastSyncTimestamp(fixedClock.millis()) }
         }
 }

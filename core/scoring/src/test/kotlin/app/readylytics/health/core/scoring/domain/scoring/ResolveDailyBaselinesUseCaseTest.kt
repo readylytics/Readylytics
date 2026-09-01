@@ -134,6 +134,7 @@ class ResolveDailyBaselinesUseCaseTest {
                     fromMs = 1000L,
                     toMs = 2000L,
                     percentile = prefs.restingHrPercentile,
+                    zoneId = policy.scoringZoneId,
                     sleepDayPolicy = policy,
                     prefetchedSessions = null,
                 )
@@ -161,6 +162,7 @@ class ResolveDailyBaselinesUseCaseTest {
                     fromMs = 1000L,
                     toMs = 2000L,
                     percentile = prefs.restingHrPercentile,
+                    zoneId = policy.scoringZoneId,
                     sleepDayPolicy = policy,
                     prefetchedSessions = null,
                 )

@@ -34,16 +34,11 @@ class WorkoutDetailViewModelLayoutManagementTest {
     private fun viewModel(stored: Flow<List<WorkoutDetailItemConfiguration>> = storedLayout): WorkoutDetailViewModel {
         every { layoutRepository.layoutFor(any()) } returns stored
         return WorkoutDetailViewModel(
-            workoutRepository = mockk(relaxed = true),
-            hcRepo = mockk(relaxed = true),
-            heartRateRepository = mockk(relaxed = true),
-            dailySummaryRepository = mockk(relaxed = true),
+            workoutDetailLoader = mockk(relaxed = true),
             settingsRepo = mockk(relaxed = true),
-            getWorkoutDisplayMetricsUseCase = mockk(relaxed = true),
             syncWorkoutRouteUseCase = mockk(relaxed = true),
             workoutDetailLayoutRepository = layoutRepository,
             savedStateHandle = SavedStateHandle(),
-            defaultDispatcher = dispatcher,
         )
     }
 

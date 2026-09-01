@@ -1,7 +1,6 @@
 package app.readylytics.health.feature.vitals.overview
 
 import androidx.compose.runtime.Immutable
-import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.model.BodyTemperatureAssessment
 import app.readylytics.health.core.model.domain.model.BucketZoneBands
 import app.readylytics.health.core.model.domain.model.DailyMetrics
@@ -17,6 +16,7 @@ import app.readylytics.health.core.model.domain.model.assessSpo2
 import app.readylytics.health.core.model.domain.model.hrvZoneBandsForBaseline
 import app.readylytics.health.core.model.domain.model.rhrZoneBandsForBaseline
 import app.readylytics.health.core.model.domain.preferences.UnitSystem
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.util.UnitConverter
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.PeriodAverageSummary

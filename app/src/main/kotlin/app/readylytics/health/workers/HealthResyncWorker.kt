@@ -12,12 +12,13 @@ import androidx.work.workDataOf
 import app.readylytics.health.core.healthconnect.domain.sync.ForegroundSyncController
 import app.readylytics.health.core.healthconnect.domain.sync.FullHistoricalResyncUseCase
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
-import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspector
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.core.model.domain.sync.ResyncPhase
+import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.util.logE
 import dagger.Lazy
 import dagger.assisted.Assisted
@@ -25,6 +26,7 @@ import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.first
+import java.time.LocalDate
 
 /**
  * Durable, long-running worker performing either a full historical Health Connect resync (Settings
@@ -60,10 +62,21 @@ class HealthResyncWorker
 
             syncController.onBackgroundRecalcStarted()
             val recomputeOnly = inputData.getBoolean(KEY_RECOMPUTE_ONLY, false)
+            val rangeOverride =
+                inputData.getLong(KEY_RECOMPUTE_START_EPOCH_DAY, -1L).takeIf { it >= 0 }?.let { startEpochDay ->
+                    val endEpochDay = inputData.getLong(KEY_RECOMPUTE_END_EPOCH_DAY, startEpochDay)
+                    ScoreInvalidation.AffectedRange(
+                        start = LocalDate.ofEpochDay(startEpochDay),
+                        endInclusive = LocalDate.ofEpochDay(endEpochDay),
+                    )
+                }
             var success = false
             return try {
                 val result =
-                    resyncUseCase.execute(recomputeOnly = recomputeOnly) { phase, current, total ->
+                    resyncUseCase.execute(
+                        recomputeOnly = recomputeOnly,
+                        rangeOverride = rangeOverride,
+                    ) { phase, current, total ->
                         setProgressAsync(workDataOf(KEY_CURRENT to current, KEY_TOTAL to total))
                         syncController.onBackgroundRecalcProgress(phase, current, total)
                         runCatching {
@@ -155,5 +168,13 @@ class HealthResyncWorker
 
             /** Input data key: true routes this run through the SCORE-007 recompute-only path. */
             const val KEY_RECOMPUTE_ONLY = "recompute_only"
+
+            /**
+             * R2-CACHE-001: optional input data keys carrying a bounded recompute-only date-range
+             * override (epoch days). Absent (or [KEY_RECOMPUTE_START_EPOCH_DAY] negative) means "no
+             * override" -- a recompute-only pass covers the full retention window, as before.
+             */
+            const val KEY_RECOMPUTE_START_EPOCH_DAY = "recompute_start_epoch_day"
+            const val KEY_RECOMPUTE_END_EPOCH_DAY = "recompute_end_epoch_day"
         }
     }

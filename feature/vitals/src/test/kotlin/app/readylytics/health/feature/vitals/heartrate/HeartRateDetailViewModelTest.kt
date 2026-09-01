@@ -7,9 +7,12 @@ import app.readylytics.health.core.model.domain.model.MetricStatus
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.repository.HeartRateRecordData
 import app.readylytics.health.core.model.domain.repository.HeartRateRepository
+import app.readylytics.health.core.model.domain.repository.HeartRateResolution
+import app.readylytics.health.core.model.domain.repository.HeartRateSeries
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
@@ -31,6 +34,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
+import java.time.ZoneId
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HeartRateDetailViewModelTest {
@@ -50,7 +54,8 @@ class HeartRateDetailViewModelTest {
 
         heartRateRepository =
             mockk {
-                every { observeByTimeRange(any(), any()) } returns MutableStateFlow(emptyList())
+                every { observeTimelineWithResolution(any(), any()) } returns
+                    MutableStateFlow(HeartRateSeries(points = emptyList(), resolution = HeartRateResolution.RAW))
             }
         settingsRepo =
             mockk {
@@ -105,15 +110,19 @@ class HeartRateDetailViewModelTest {
     @Test
     fun `populated day exposes neutral average status`() =
         runTest {
-            every { heartRateRepository.observeByTimeRange(any(), any()) } returns
+            every { heartRateRepository.observeTimelineWithResolution(any(), any()) } returns
                 MutableStateFlow(
-                    listOf(
-                        HeartRateRecordData(
-                            id = "1",
-                            timestampMs = 0L,
-                            beatsPerMinute = 100,
-                            recordType = "instant",
-                        ),
+                    HeartRateSeries(
+                        points =
+                            listOf(
+                                HeartRateRecordData(
+                                    id = "1",
+                                    timestampMs = 0L,
+                                    beatsPerMinute = 100,
+                                    recordType = "instant",
+                                ),
+                            ),
+                        resolution = HeartRateResolution.RAW,
                     ),
                 )
 
@@ -136,8 +145,8 @@ class HeartRateDetailViewModelTest {
                         recordType = "instant",
                     ),
                 )
-            every { heartRateRepository.observeByTimeRange(any(), any()) } returns
-                MutableStateFlow(singleSample)
+            every { heartRateRepository.observeTimelineWithResolution(any(), any()) } returns
+                MutableStateFlow(HeartRateSeries(points = singleSample, resolution = HeartRateResolution.RAW))
 
             viewModel = createViewModel()
 
@@ -166,8 +175,8 @@ class HeartRateDetailViewModelTest {
                         recordType = "instant",
                     ),
                 )
-            every { heartRateRepository.observeByTimeRange(any(), any()) } returns
-                MutableStateFlow(samples)
+            every { heartRateRepository.observeTimelineWithResolution(any(), any()) } returns
+                MutableStateFlow(HeartRateSeries(points = samples, resolution = HeartRateResolution.RAW))
 
             viewModel = createViewModel()
 
@@ -211,8 +220,8 @@ class HeartRateDetailViewModelTest {
                         recordType = "instant",
                     ),
                 )
-            every { heartRateRepository.observeByTimeRange(any(), any()) } returns
-                MutableStateFlow(samples)
+            every { heartRateRepository.observeTimelineWithResolution(any(), any()) } returns
+                MutableStateFlow(HeartRateSeries(points = samples, resolution = HeartRateResolution.RAW))
 
             viewModel = createViewModel()
 
@@ -255,8 +264,8 @@ class HeartRateDetailViewModelTest {
                         recordType = "instant",
                     ),
                 )
-            every { heartRateRepository.observeByTimeRange(any(), any()) } returns
-                MutableStateFlow(samples)
+            every { heartRateRepository.observeTimelineWithResolution(any(), any()) } returns
+                MutableStateFlow(HeartRateSeries(points = samples, resolution = HeartRateResolution.RAW))
 
             viewModel = createViewModel()
 
@@ -273,9 +282,9 @@ class HeartRateDetailViewModelTest {
     @Test
     fun `sustained invalidations continue updating state before the source becomes quiet`() =
         runTest {
-            val updates = MutableSharedFlow<List<HeartRateRecordData>>(replay = 1)
-            updates.tryEmit(emptyList())
-            every { heartRateRepository.observeByTimeRange(any(), any()) } returns updates
+            val updates = MutableSharedFlow<HeartRateSeries>(replay = 1)
+            updates.tryEmit(HeartRateSeries(points = emptyList(), resolution = HeartRateResolution.RAW))
+            every { heartRateRepository.observeTimelineWithResolution(any(), any()) } returns updates
             viewModel = createViewModel()
 
             val collected = mutableListOf<HeartRateDetailUiState>()
@@ -284,13 +293,17 @@ class HeartRateDetailViewModelTest {
 
             repeat(15) { index ->
                 updates.emit(
-                    listOf(
-                        HeartRateRecordData(
-                            id = "update$index",
-                            timestampMs = index * 1_000L,
-                            beatsPerMinute = 100,
-                            recordType = "instant",
-                        ),
+                    HeartRateSeries(
+                        points =
+                            listOf(
+                                HeartRateRecordData(
+                                    id = "update$index",
+                                    timestampMs = index * 1_000L,
+                                    beatsPerMinute = 100,
+                                    recordType = "instant",
+                                ),
+                            ),
+                        resolution = HeartRateResolution.RAW,
                     ),
                 )
                 advanceTimeBy(100)
@@ -308,9 +321,9 @@ class HeartRateDetailViewModelTest {
             // PERF-005/WP-23: simulates a resync's 5,000-row ingest batches invalidating
             // observeByTimeRange in quick succession -- the 500 ms sampling cadence must render
             // only the latest value in the period instead of one downstream state per batch.
-            val burst = MutableSharedFlow<List<HeartRateRecordData>>(replay = 1)
-            burst.tryEmit(emptyList())
-            every { heartRateRepository.observeByTimeRange(any(), any()) } returns burst
+            val burst = MutableSharedFlow<HeartRateSeries>(replay = 1)
+            burst.tryEmit(HeartRateSeries(points = emptyList(), resolution = HeartRateResolution.RAW))
+            every { heartRateRepository.observeTimelineWithResolution(any(), any()) } returns burst
 
             viewModel = createViewModel()
 
@@ -321,13 +334,17 @@ class HeartRateDetailViewModelTest {
 
             repeat(4) { i ->
                 burst.emit(
-                    listOf(
-                        HeartRateRecordData(
-                            id = "batch$i",
-                            timestampMs = i * 1_000L,
-                            beatsPerMinute = 100,
-                            recordType = "instant",
-                        ),
+                    HeartRateSeries(
+                        points =
+                            listOf(
+                                HeartRateRecordData(
+                                    id = "batch$i",
+                                    timestampMs = i * 1_000L,
+                                    beatsPerMinute = 100,
+                                    recordType = "instant",
+                                ),
+                            ),
+                        resolution = HeartRateResolution.RAW,
                     ),
                 )
                 advanceTimeBy(100) // all four updates stay within one 500 ms sampling period
@@ -355,5 +372,57 @@ class HeartRateDetailViewModelTest {
             viewModel = createViewModel()
             val state = viewModel.uiState.value
             assertEquals(LocalDate.now(), state.selectedDate)
+        }
+
+    @Test
+    fun `uiState reflects RECONSTRUCTED resolution when the day's samples come from the warm tier`() =
+        runTest {
+            every { heartRateRepository.observeTimelineWithResolution(any(), any()) } returns
+                MutableStateFlow(
+                    HeartRateSeries(
+                        points =
+                            listOf(
+                                HeartRateRecordData(
+                                    id = "warm:1000",
+                                    timestampMs = 1000L,
+                                    beatsPerMinute = 65,
+                                    recordType = "RECONSTRUCTED",
+                                    sessionId = null,
+                                    deviceName = null,
+                                ),
+                            ),
+                        resolution = HeartRateResolution.RECONSTRUCTED,
+                    ),
+                )
+
+            viewModel = createViewModel()
+
+            val state = viewModel.uiState.first { !it.isLoading }
+
+            assertEquals(HeartRateResolution.RECONSTRUCTED, state.resolution)
+        }
+
+    @Test
+    fun `uiState queries timeline using scoringZone instead of device zone`() =
+        runTest {
+            val scoringZone = ZoneId.of("Pacific/Honolulu")
+            every { settingsRepo.userPreferences } returns
+                MutableStateFlow(UserPreferences(scoringZoneId = scoringZone.id))
+
+            val date = LocalDate.of(2026, 6, 10)
+            selectedDateFlow.value = date
+
+            viewModel = createViewModel()
+            viewModel.uiState.first { !it.isLoading }
+
+            val expectedStartMs = date.atStartOfDay(scoringZone).toInstant().toEpochMilli()
+            val expectedEndMs =
+                date
+                    .plusDays(1)
+                    .atStartOfDay(scoringZone)
+                    .toInstant()
+                    .toEpochMilli()
+
+            verify { heartRateRepository.observeTimelineWithResolution(expectedStartMs, expectedEndMs) }
         }
 }

@@ -1,25 +1,23 @@
 package app.readylytics.health.core.healthconnect.data.healthconnect
 
-import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.changes.DeletionChange
 import androidx.health.connect.client.changes.UpsertionChange
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.records.metadata.DataOrigin
 import androidx.health.connect.client.records.metadata.Metadata
-import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.response.ChangesResponse
-import app.readylytics.health.core.databaseschema.data.local.dao.*
-import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
-import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity
-import app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity
-import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.model.DomainHeartRateSample
 import app.readylytics.health.core.model.domain.model.HealthDataType
-import app.readylytics.health.core.model.domain.model.RouteState
+import app.readylytics.health.core.model.domain.model.RecordType
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
+import app.readylytics.health.core.model.domain.sync.HealthChangeIngestionStore
 import app.readylytics.health.core.model.domain.sync.HealthChangeTokenStore
+import app.readylytics.health.core.model.domain.sync.HealthIngestionBatch
+import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
+import app.readylytics.health.core.model.domain.sync.SessionSpans
 import io.mockk.*
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -27,28 +25,18 @@ import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.TimeZone
 
 class HealthChangeSynchronizerRecordSyncTest {
-    private val context = mockk<Context>(relaxed = true)
     private val tokenStore = mockk<HealthChangeTokenStore>(relaxed = true)
     private val settingsRepo = mockk<SettingsRepository>(relaxed = true)
     private val transactionRunner = mockk<TransactionRunner>(relaxed = true)
-    private val sleepSessionDao = mockk<SleepSessionDao>(relaxed = true)
-    private val sleepStageDao = mockk<SleepStageDao>(relaxed = true)
-    private val heartRateDao = mockk<HeartRateDao>(relaxed = true)
-    private val hrvDao = mockk<HrvDao>(relaxed = true)
-    private val workoutDao = mockk<WorkoutDao>(relaxed = true)
-    private val weightRecordDao = mockk<WeightRecordDao>(relaxed = true)
-    private val bodyFatRecordDao = mockk<BodyFatRecordDao>(relaxed = true)
-    private val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
-    private val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
-    private val bodyTemperatureRecordDao = mockk<BodyTemperatureRecordDao>(relaxed = true)
-    private val stepRecordDao = mockk<StepRecordDao>(relaxed = true)
-    private val sourceRecordDao = mockk<SourceRecordDao>(relaxed = true)
+    private val healthIngestionStore = mockk<HealthIngestionStore>(relaxed = true)
+    private val changeIngestionStore = mockk<HealthChangeIngestionStore>(relaxed = true)
 
     private val client = mockk<HealthConnectClient>(relaxed = true)
 
@@ -56,9 +44,6 @@ class HealthChangeSynchronizerRecordSyncTest {
 
     @Before
     fun setup() {
-        mockkObject(HealthConnectClient)
-        every { HealthConnectClient.getOrCreate(any()) } returns client
-
         coEvery { transactionRunner.runInTransaction<Any>(any()) } coAnswers {
             val block = firstArg<suspend () -> Any>()
             block()
@@ -72,24 +57,19 @@ class HealthChangeSynchronizerRecordSyncTest {
 
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
 
+        coEvery { changeIngestionStore.sessionSpansOverlapping(any(), any()) } returns
+            SessionSpans(emptyList(), emptyList())
+        coEvery { changeIngestionStore.heartRateSamplesForMetrics(any(), any(), any()) } returns emptyList()
+
         synchronizer =
             HealthChangeSynchronizerImpl(
-                context = context,
+                client = client,
                 tokenStore = tokenStore,
                 settingsRepo = settingsRepo,
                 transactionRunner = transactionRunner,
-                sleepSessionDao = sleepSessionDao,
-                sleepStageDao = sleepStageDao,
-                heartRateDao = heartRateDao,
-                hrvDao = hrvDao,
-                workoutDao = workoutDao,
-                weightRecordDao = weightRecordDao,
-                bodyFatRecordDao = bodyFatRecordDao,
-                bloodPressureRecordDao = bloodPressureRecordDao,
-                oxygenSaturationRecordDao = oxygenSaturationRecordDao,
-                bodyTemperatureRecordDao = bodyTemperatureRecordDao,
-                stepRecordDao = stepRecordDao,
-                sourceRecordDao = sourceRecordDao,
+                healthIngestionStore = healthIngestionStore,
+                changeIngestionStore = changeIngestionStore,
+                clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
             )
     }
 
@@ -97,6 +77,43 @@ class HealthChangeSynchronizerRecordSyncTest {
     fun teardown() {
         unmockkAll()
     }
+
+    @Test
+    fun `a single heart rate record resolves its source ref exactly once`() =
+        runTest {
+            // WP-16 / R2-HC-003 acceptance test: a single upserted HEART_RATE record carrying 200
+            // samples must persist through exactly one persistHeartRateSamples call with all 200
+            // mapped inputs, not one call per sample (which is what an N+1 source-ref resolution
+            // pattern in the old DAO-direct code would have produced).
+            seedTokens()
+            val recordId = "hr-multi-sample"
+            val recordStart = Instant.parse("2026-06-20T09:00:00Z")
+            val samples =
+                (0 until 200).map { i ->
+                    mockk<HeartRateRecord.Sample> {
+                        every { time } returns recordStart.plusSeconds(i.toLong())
+                        every { beatsPerMinute } returns 60L
+                    }
+                }
+            val record =
+                mockk<HeartRateRecord>(relaxed = true) {
+                    every { metadata.id } returns recordId
+                    every { metadata.device } returns null
+                    every { metadata.dataOrigin.packageName } returns "pkg"
+                    every { startTime } returns recordStart
+                    every { endTime } returns recordStart.plusSeconds(200)
+                    every { this@mockk.samples } returns samples
+                }
+            val change =
+                mockk<UpsertionChange>(relaxed = true) {
+                    every { this@mockk.record } returns record
+                }
+            routeOneChange(dataType = HealthDataType.HEART_RATE, change = change)
+
+            synchronizer.applyPendingChanges()
+
+            coVerify(exactly = 1) { healthIngestionStore.persistHeartRateSamples(match { it.size == 200 }) }
+        }
 
     @Test
     fun `applyPendingChanges deletes all heart rate rows for one source record id`() =
@@ -108,33 +125,18 @@ class HealthChangeSynchronizerRecordSyncTest {
                     every { this@mockk.recordId } returns recordId
                 }
             routeOneChange(dataType = HealthDataType.HEART_RATE, change = change)
-            coEvery { sourceRecordDao.getSourceRef(recordId) } returns 1L
-            coEvery { heartRateDao.getBySourceRecordRef(1L) } returns
-                listOf(
-                    HeartRateRecordEntity(
-                        sourceRecordRef = 1L,
-                        timestampMs = 1000L,
-                        beatsPerMinute = 60,
-                        recordType = "SLEEP",
-                    ),
-                    HeartRateRecordEntity(
-                        sourceRecordRef = 1L,
-                        timestampMs = 2000L,
-                        beatsPerMinute = 61,
-                        recordType = "SLEEP",
-                    ),
-                )
-            coEvery { heartRateDao.deleteBySourceRecordRef(1L) } returns 2
-            coEvery { sourceRecordDao.deleteBySourceRecordId(recordId) } returns 1
+            val expectedDates = setOf(epochDay(1000L), epochDay(2000L))
+            coEvery {
+                changeIngestionStore.affectedDatesForRecord(HealthDataType.HEART_RATE, recordId, any())
+            } returns expectedDates
 
             val outcome = synchronizer.applyPendingChanges()
 
-            assertEquals(setOf(epochDay(1000L), epochDay(2000L)), outcome.affectedDates)
+            assertEquals(expectedDates, outcome.affectedDates)
             coVerifyOrder {
-                heartRateDao.getBySourceRecordRef(1L)
-                heartRateDao.deleteBySourceRecordRef(1L)
+                changeIngestionStore.affectedDatesForRecord(HealthDataType.HEART_RATE, recordId, any())
+                changeIngestionStore.deleteRecord(HealthDataType.HEART_RATE, recordId)
             }
-            coVerify(exactly = 0) { heartRateDao.deleteByRef(any()) }
         }
 
     @Test
@@ -147,23 +149,18 @@ class HealthChangeSynchronizerRecordSyncTest {
                     every { this@mockk.recordId } returns recordId
                 }
             routeOneChange(dataType = HealthDataType.HRV, change = change)
-            coEvery { sourceRecordDao.getSourceRef(recordId) } returns 1L
-            coEvery { hrvDao.getBySourceRecordRef(1L) } returns
-                listOf(
-                    HrvRecordEntity(sourceRecordRef = 1L, timestampMs = 3000L, rmssdMs = 40f, recordType = "SLEEP"),
-                    HrvRecordEntity(sourceRecordRef = 1L, timestampMs = 4000L, rmssdMs = 41f, recordType = "SLEEP"),
-                )
-            coEvery { hrvDao.deleteBySourceRecordRef(1L) } returns 2
-            coEvery { sourceRecordDao.deleteBySourceRecordId(recordId) } returns 1
+            val expectedDates = setOf(epochDay(3000L), epochDay(4000L))
+            coEvery {
+                changeIngestionStore.affectedDatesForRecord(HealthDataType.HRV, recordId, any())
+            } returns expectedDates
 
             val outcome = synchronizer.applyPendingChanges()
 
-            assertEquals(setOf(epochDay(3000L), epochDay(4000L)), outcome.affectedDates)
+            assertEquals(expectedDates, outcome.affectedDates)
             coVerifyOrder {
-                hrvDao.getBySourceRecordRef(1L)
-                hrvDao.deleteBySourceRecordRef(1L)
+                changeIngestionStore.affectedDatesForRecord(HealthDataType.HRV, recordId, any())
+                changeIngestionStore.deleteRecord(HealthDataType.HRV, recordId)
             }
-            coVerify(exactly = 0) { hrvDao.deleteByRef(any()) }
         }
 
     @Test
@@ -171,13 +168,7 @@ class HealthChangeSynchronizerRecordSyncTest {
         runTest {
             seedTokens()
             val recordId = "hr-record"
-            val oldEntity =
-                HeartRateRecordEntity(
-                    sourceRecordRef = 1L,
-                    timestampMs = 1000L,
-                    beatsPerMinute = 55,
-                    recordType = "SLEEP",
-                )
+            val oldTimestampMs = 1000L
             val sampleTime = Instant.parse("2026-06-20T09:00:00Z")
             val record =
                 mockk<HeartRateRecord>(relaxed = true) {
@@ -199,26 +190,21 @@ class HealthChangeSynchronizerRecordSyncTest {
                     every { this@mockk.record } returns record
                 }
             routeOneChange(dataType = HealthDataType.HEART_RATE, change = change)
-            coEvery { sourceRecordDao.getSourceRef(recordId) } returns 1L
-            coEvery { sourceRecordDao.getOrCreateSourceRef(recordId, "HEART_RATE", any()) } returns 1L
-            coEvery { heartRateDao.getBySourceRecordRef(1L) } returns listOf(oldEntity)
-            coEvery { heartRateDao.deleteBySourceRecordRef(1L) } returns 1
-            coEvery { sourceRecordDao.deleteBySourceRecordId(recordId) } returns 1
+            coEvery {
+                changeIngestionStore.affectedDatesForRecord(HealthDataType.HEART_RATE, recordId, any())
+            } returns setOf(epochDay(oldTimestampMs))
 
             val outcome = synchronizer.applyPendingChanges()
 
             assertEquals(
-                setOf(epochDay(oldEntity.timestampMs), sampleTime.atZone(ZoneId.systemDefault()).toLocalDate()),
+                setOf(epochDay(oldTimestampMs), sampleTime.atZone(ZoneId.systemDefault()).toLocalDate()),
                 outcome.affectedDates,
             )
             coVerifyOrder {
-                heartRateDao.getBySourceRecordRef(1L)
-                heartRateDao.deleteBySourceRecordRef(1L)
-                heartRateDao.upsertAll(
-                    match {
-                        it.map(HeartRateRecordEntity::sourceRecordRef) == listOf(1L) &&
-                            it.map(HeartRateRecordEntity::timestampMs) == listOf(sampleTime.toEpochMilli())
-                    },
+                changeIngestionStore.affectedDatesForRecord(HealthDataType.HEART_RATE, recordId, any())
+                changeIngestionStore.deleteRecord(HealthDataType.HEART_RATE, recordId)
+                healthIngestionStore.persistHeartRateSamples(
+                    match { it.size == 1 && it[0].timestampMs == sampleTime.toEpochMilli() },
                 )
             }
         }
@@ -228,7 +214,7 @@ class HealthChangeSynchronizerRecordSyncTest {
         runTest {
             seedTokens()
             val recordId = "weight-record"
-            val oldEntity = WeightRecordEntity("${recordId}_1000", 1000L, 70f)
+            val oldTimestampMs = 1000L
             val newTime = Instant.parse("2026-06-21T09:00:00Z")
             val record =
                 mockk<WeightRecord>(relaxed = true) {
@@ -243,22 +229,21 @@ class HealthChangeSynchronizerRecordSyncTest {
                     every { this@mockk.record } returns record
                 }
             routeOneChange(dataType = HealthDataType.WEIGHT, change = change)
-            coEvery { weightRecordDao.getBySourceRecordId(recordId) } returns listOf(oldEntity)
-            coEvery { weightRecordDao.deleteBySourceRecordId(recordId) } returns 1
+            coEvery {
+                changeIngestionStore.affectedDatesForRecord(HealthDataType.WEIGHT, recordId, any())
+            } returns setOf(epochDay(oldTimestampMs))
 
             val outcome = synchronizer.applyPendingChanges()
 
             assertEquals(
-                setOf(epochDay(oldEntity.timestampMs), newTime.atZone(ZoneId.systemDefault()).toLocalDate()),
+                setOf(epochDay(oldTimestampMs), newTime.atZone(ZoneId.systemDefault()).toLocalDate()),
                 outcome.affectedDates,
             )
             coVerifyOrder {
-                weightRecordDao.getBySourceRecordId(recordId)
-                weightRecordDao.deleteBySourceRecordId(recordId)
-                weightRecordDao.upsertAll(
-                    match {
-                        it.map(WeightRecordEntity::id) == listOf("${recordId}_${newTime.toEpochMilli()}")
-                    },
+                changeIngestionStore.affectedDatesForRecord(HealthDataType.WEIGHT, recordId, any())
+                changeIngestionStore.deleteRecord(HealthDataType.WEIGHT, recordId)
+                healthIngestionStore.persist(
+                    match { batch -> batch.weights.map { it.id } == listOf("${recordId}_${newTime.toEpochMilli()}") },
                 )
             }
         }
@@ -287,8 +272,9 @@ class HealthChangeSynchronizerRecordSyncTest {
                         every { this@mockk.record } returns record
                     }
                 routeOneChange(dataType = HealthDataType.WEIGHT, change = change)
-                coEvery { weightRecordDao.getBySourceRecordId(recordId) } returns emptyList()
-                coEvery { weightRecordDao.deleteBySourceRecordId(recordId) } returns 0
+                coEvery {
+                    changeIngestionStore.affectedDatesForRecord(HealthDataType.WEIGHT, recordId, any())
+                } returns emptySet()
 
                 val outcome = synchronizer.applyPendingChanges()
 
@@ -299,38 +285,63 @@ class HealthChangeSynchronizerRecordSyncTest {
         }
 
     @Test
-    fun `applyPendingChanges preserves existing modelTrimp and routeState for exercise upsertion`() =
+    fun `applyPendingChanges forwards freshly computed workout metrics for exercise upsertion`() =
         runTest {
+            // modelTrimp/route-field preservation across re-upserts now lives inside
+            // RoomHealthIngestionStore.persist() (see WorkoutModelTrimpIngestionDeterminismTest in
+            // core:database) -- this class's only remaining job is to compute the fresh
+            // duration/zone/TRIMP/avgHr metrics from already-stored HR and forward them. Stubbing
+            // real, non-empty HR samples (rather than emptyList()) is load-bearing here: with no
+            // samples, WorkoutMapper.mapExerciseSession's own durationMinutes computation alone
+            // would satisfy a durationMinutes-only assertion even if the entire
+            // metrics-driven .copy(...) block were deleted.
             seedTokens()
 
             val startTime = Instant.parse("2026-06-01T10:00:00Z")
             val endTime = Instant.parse("2026-06-01T11:00:00Z")
             val exerciseRecordId = "exercise-session-123"
-
             val exerciseRecord = createMockExerciseRecord(exerciseRecordId, startTime, endTime)
-            val existingEntity = createExistingWorkoutEntity(exerciseRecordId, startTime, endTime)
 
-            coEvery { workoutDao.getById(exerciseRecordId) } returns existingEntity
-            coEvery { heartRateDao.getByTypeAndTimeRange(any(), any(), any()) } returns emptyList()
+            // 140 bpm (zone3) for the first half hour, 160 bpm (zone4) for the second half hour,
+            // against the default zone thresholds (95/114/133/152/171 from UserPreferences()):
+            // zoneMinutes = [0, 0, 30, 30, 0], avgHr = 150, trimp = 30*3 + 30*4 = 210.
+            val hrSamples = listOf(
+                DomainHeartRateSample(time = Instant.parse("2026-06-01T10:00:00Z"), beatsPerMinute = 140),
+                DomainHeartRateSample(time = Instant.parse("2026-06-01T10:30:00Z"), beatsPerMinute = 160),
+            )
+            coEvery {
+                changeIngestionStore.heartRateSamplesForMetrics(
+                    RecordType.EXERCISE.name,
+                    startTime.toEpochMilli(),
+                    endTime.toEpochMilli(),
+                )
+            } returns hrSamples
 
-            val capturedWorkouts = mutableListOf<List<WorkoutRecordEntity>>()
-            coEvery { workoutDao.upsertAll(capture(capturedWorkouts)) } returns Unit
+            val capturedBatches = mutableListOf<HealthIngestionBatch>()
+            coEvery { healthIngestionStore.persist(capture(capturedBatches)) } returns Unit
 
             routeOneChange(HealthDataType.EXERCISE, UpsertionChange(exerciseRecord))
 
             synchronizer.applyPendingChanges()
 
-            val saved = capturedWorkouts.flatten().firstOrNull { it.id == exerciseRecordId }
-            assertNotNull("Saved workout entity should not be null", saved)
-            assertEquals("modelTrimp must be preserved", 52.5f, saved?.modelTrimp)
-            assertEquals(
-                "routeState must be preserved when fresh record has no route",
-                RouteState.IMPORTED,
-                saved?.routeState,
-            )
-            assertEquals("totalDistanceMeters must be preserved", 10000.0f, saved?.totalDistanceMeters)
-            assertEquals("avgSpeedKmh must be preserved", 10.0f, saved?.avgSpeedKmh)
-            assertEquals("elevationGainMeters must be preserved", 50.0f, saved?.elevationGainMeters)
+            coVerify {
+                changeIngestionStore.heartRateSamplesForMetrics(
+                    RecordType.EXERCISE.name,
+                    startTime.toEpochMilli(),
+                    endTime.toEpochMilli(),
+                )
+            }
+            val saved = capturedBatches.flatMap { it.workouts }.firstOrNull { it.id == exerciseRecordId }
+            assertNotNull("Saved workout input should not be null", saved)
+            assertEquals(exerciseRecordId, saved?.id)
+            assertEquals(60, saved?.durationMinutes)
+            assertEquals(150f, saved?.avgHr)
+            assertEquals(210f, saved?.trimp)
+            assertEquals(0f, saved?.zone1Minutes)
+            assertEquals(0f, saved?.zone2Minutes)
+            assertEquals(30f, saved?.zone3Minutes)
+            assertEquals(30f, saved?.zone4Minutes)
+            assertEquals(0f, saved?.zone5Minutes)
         }
 
     private fun createMockExerciseRecord(
@@ -357,32 +368,6 @@ class HealthChangeSynchronizerRecordSyncTest {
             every { exerciseRouteResult } returns ExerciseRouteResult.NoData()
         }
     }
-
-    private fun createExistingWorkoutEntity(
-        id: String,
-        startTime: Instant,
-        endTime: Instant,
-    ): WorkoutRecordEntity =
-        WorkoutRecordEntity(
-            id = id,
-            startTime = startTime.toEpochMilli(),
-            endTime = endTime.toEpochMilli(),
-            exerciseType = "RUNNING",
-            durationMinutes = 60,
-            zone1Minutes = 10f,
-            zone2Minutes = 20f,
-            zone3Minutes = 20f,
-            zone4Minutes = 10f,
-            zone5Minutes = 0f,
-            trimp = 45.0f,
-            modelTrimp = 52.5f,
-            avgHr = 150f,
-            deviceName = "Pixel Watch",
-            routeState = RouteState.IMPORTED,
-            totalDistanceMeters = 10000.0f,
-            avgSpeedKmh = 10.0f,
-            elevationGainMeters = 50.0f,
-        )
 
     private fun seedTokens() {
         coEvery { tokenStore.get(HealthDataType.SLEEP) } returns "sleep-token"

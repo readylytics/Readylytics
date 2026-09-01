@@ -7,6 +7,9 @@ import app.readylytics.health.core.model.domain.date.SelectedDateStore
 import app.readylytics.health.core.model.domain.display.MetricFormatter
 import app.readylytics.health.core.model.domain.model.BloodPressureStatus
 import app.readylytics.health.core.model.domain.model.MetricStatus
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.BloodPressureRepository
 import app.readylytics.health.core.model.domain.service.HealthMetricsService
 import app.readylytics.health.core.ui.common.BloodPressureHistoryItem
@@ -30,7 +33,6 @@ import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
-import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
@@ -60,6 +62,7 @@ class BloodPressureDetailViewModel
     constructor(
         private val bloodPressureRepository: BloodPressureRepository,
         private val selectedDateRepository: SelectedDateStore,
+        private val settingsRepository: UserPreferencesReader,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val selectedRangeFlow = MutableStateFlow(TimeRange.SEVEN_DAYS)
@@ -70,6 +73,7 @@ class BloodPressureDetailViewModel
             val range: TimeRange,
             val date: LocalDate,
             val page: Int,
+            val prefs: UserPreferences,
         )
 
         val uiState: StateFlow<BloodPressureDetailUiState> =
@@ -77,7 +81,8 @@ class BloodPressureDetailViewModel
                 selectedRangeFlow,
                 selectedDateRepository.selectedDate,
                 currentPageFlow,
-            ) { range, selectedDate, page -> BpParams(range, selectedDate, page) }
+                settingsRepository.userPreferences,
+            ) { range, selectedDate, page, prefs -> BpParams(range, selectedDate, page, prefs) }
                 .scan(null as BpParams?) { prev, current ->
                     if (prev != null && (prev.range != current.range || prev.date != current.date)) {
                         currentPageFlow.value = 1
@@ -98,7 +103,7 @@ class BloodPressureDetailViewModel
             val range = params.range
             val selectedDate = params.date
             val page = params.page
-            val zoneId = ZoneId.systemDefault()
+            val zoneId = params.prefs.scoringZone()
             val rangeStart =
                 selectedDate.minusDays((range.days - 1).toLong()).atStartOfDay(zoneId).toInstant()
             val rangeEnd = selectedDate.plusDays(1).atStartOfDay(zoneId).toInstant()

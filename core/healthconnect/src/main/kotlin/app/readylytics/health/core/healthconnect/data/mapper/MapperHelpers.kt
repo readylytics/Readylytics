@@ -30,11 +30,10 @@ object MapperHelpers {
         time.toEpochMilli()
 
     /**
-     * Safely extracts a device name field, providing empty string as default.
-     * Use when device name must never be null.
+     * Safely extracts a device name field, normalizing empty or blank strings to null.
      */
-    fun extractDeviceName(deviceName: String?): String =
-        deviceName?.takeIf { it.isNotBlank() } ?: ""
+    fun extractDeviceName(deviceName: String?): String? =
+        deviceName?.takeIf { it.isNotBlank() }
 
     /**
      * Generic list mapper wrapper that applies a mapper function to each element.

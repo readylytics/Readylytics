@@ -164,6 +164,7 @@ class BaselineComputerBackfillEquivalenceTest {
                 baselineComputer.computeBackfillBaselines(
                     summaries.map { DailySummaryMapper.toDomain(it, zone) },
                     percentile,
+                    zoneId = zone,
                 )
 
             for (summary in summaries) {
@@ -180,6 +181,7 @@ class BaselineComputerBackfillEquivalenceTest {
                     baselineComputer.computeHrvWindowsBetween(
                         fromMs = dayMidnightMs,
                         toMs = nextDayMidnightMs,
+                        zoneId = zone,
                         excludeSessionIds = ownSession?.id?.let(::setOf).orEmpty(),
                     )
                 val actual =
@@ -217,6 +219,7 @@ class BaselineComputerBackfillEquivalenceTest {
                 baselineComputer.computeBackfillBaselines(
                     summaries.map { DailySummaryMapper.toDomain(it, zone) },
                     percentile,
+                    zoneId = zone,
                 )
 
             assertEquals(3, batched.size)

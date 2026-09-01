@@ -8,6 +8,7 @@ import app.readylytics.health.core.model.domain.display.MetricFormatter
 import app.readylytics.health.core.model.domain.heartrate.HrZoneClassifier
 import app.readylytics.health.core.model.domain.model.HeartRateStatusClassifier
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.HeartRateRepository
 import app.readylytics.health.core.ui.model.HrSample
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,7 +26,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Clock
 import java.time.LocalDate
-import java.time.ZoneId
 import javax.inject.Inject
 
 @HiltViewModel
@@ -45,7 +45,7 @@ class HeartRateDetailViewModel
                 settingsRepository.userPreferences,
             ) { date, prefs -> date to prefs }
                 .flatMapLatest { (date, prefs) ->
-                    val zoneId = ZoneId.systemDefault()
+                    val zoneId = prefs.scoringZone()
                     val startMs = date.atStartOfDay(zoneId).toInstant().toEpochMilli()
                     val endMs =
                         date
@@ -57,8 +57,8 @@ class HeartRateDetailViewModel
                     // PERF-005/WP-23: a resync's 5,000-row ingest batches invalidate this Flow
                     // repeatedly; sampling renders the latest value every 500 ms during sustained
                     // invalidations instead of re-mapping/re-classifying every ingest batch.
-                    heartRateRepository.observeByTimeRange(startMs, endMs).sample(500).map { entities ->
-                        if (entities.isEmpty()) {
+                    heartRateRepository.observeTimelineWithResolution(startMs, endMs).sample(500).map { series ->
+                        if (series.points.isEmpty()) {
                             return@map HeartRateDetailUiState(
                                 selectedDate = date,
                                 today = LocalDate.now(clock),
@@ -69,11 +69,12 @@ class HeartRateDetailViewModel
                                 zone3MaxBpm = prefs.zone3MaxBpm,
                                 zone4MaxBpm = prefs.zone4MaxBpm,
                                 averageStatus = HeartRateStatusClassifier.classify(null),
+                                resolution = series.resolution,
                             )
                         }
 
                         val samples =
-                            entities.map { entity ->
+                            series.points.map { entity ->
                                 HrSample(
                                     timeMs = entity.timestampMs,
                                     bpm = entity.beatsPerMinute,
@@ -101,6 +102,7 @@ class HeartRateDetailViewModel
                             zone2MaxBpm = prefs.zone2MaxBpm,
                             zone3MaxBpm = prefs.zone3MaxBpm,
                             zone4MaxBpm = prefs.zone4MaxBpm,
+                            resolution = series.resolution,
                         )
                     }
                 }

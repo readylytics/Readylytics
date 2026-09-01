@@ -13,6 +13,7 @@ import io.mockk.slot
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
+import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -21,9 +22,15 @@ import kotlin.test.assertEquals
 class FullHistoricalResyncUseCaseTest {
     private val settingsRepo = mockk<SettingsRepository>()
     private val healthSyncUseCase = mockk<HealthSyncUseCase>()
-    private val useCase = FullHistoricalResyncUseCase(settingsRepo, healthSyncUseCase)
+    private val clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC"))
+    private val useCase =
+        FullHistoricalResyncUseCase(
+            settingsRepo,
+            healthSyncUseCase,
+            clock = clock,
+        )
 
-    private val today = LocalDate.now(ZoneId.systemDefault())
+    private val today = LocalDate.ofInstant(clock.instant(), ZoneId.of("UTC"))
 
     @Test
     fun `resolveScoringToday uses stored scoring timezone`() {
@@ -90,6 +97,67 @@ class FullHistoricalResyncUseCaseTest {
         }
 
     @Test
+    fun `recomputeOnly with a range override narrows the recompute to that range`() =
+        runTest {
+            every { settingsRepo.userPreferences } returns
+                flowOf(UserPreferences(retentionDaysEnabled = true, retentionDays = 365))
+            val startSlot = slot<LocalDate>()
+            val endSlot = slot<LocalDate>()
+            coEvery {
+                healthSyncUseCase.recomputeRange(capture(startSlot), capture(endSlot), any())
+            } returns Result.success(Unit)
+
+            useCase.execute(
+                recomputeOnly = true,
+                rangeOverride = ScoreInvalidation.AffectedRange(today.minusDays(10), today.minusDays(5)),
+            )
+
+            assertEquals(today.minusDays(10), startSlot.captured)
+            assertEquals(today.minusDays(5), endSlot.captured)
+        }
+
+    @Test
+    fun `recomputeOnly range override is clamped to the retention window`() =
+        runTest {
+            every { settingsRepo.userPreferences } returns
+                flowOf(UserPreferences(retentionDaysEnabled = true, retentionDays = 30))
+            val startSlot = slot<LocalDate>()
+            val endSlot = slot<LocalDate>()
+            coEvery {
+                healthSyncUseCase.recomputeRange(capture(startSlot), capture(endSlot), any())
+            } returns Result.success(Unit)
+
+            // Override reaches further back than the 30-day retention window and past today.
+            useCase.execute(
+                recomputeOnly = true,
+                rangeOverride = ScoreInvalidation.AffectedRange(today.minusDays(365), today.plusDays(10)),
+            )
+
+            assertEquals(today.minusDays(30), startSlot.captured)
+            assertEquals(today, endSlot.captured)
+        }
+
+    @Test
+    fun `a range override is ignored for a full (non-recomputeOnly) resync`() =
+        runTest {
+            every { settingsRepo.userPreferences } returns
+                flowOf(UserPreferences(retentionDaysEnabled = true, retentionDays = 365))
+            val startSlot = slot<LocalDate>()
+            val endSlot = slot<LocalDate>()
+            coEvery {
+                healthSyncUseCase.resyncRange(capture(startSlot), capture(endSlot), any(), any())
+            } returns Result.success(Unit)
+
+            useCase.execute(
+                recomputeOnly = false,
+                rangeOverride = ScoreInvalidation.AffectedRange(today.minusDays(10), today.minusDays(5)),
+            )
+
+            assertEquals(today.minusDays(365), startSlot.captured)
+            assertEquals(today, endSlot.captured)
+        }
+
+    @Test
     fun `delegates failure from the underlying resync`() =
         runTest {
             every { settingsRepo.userPreferences } returns
@@ -102,4 +170,22 @@ class FullHistoricalResyncUseCaseTest {
             assert(result is Result.Failure)
             coVerify { healthSyncUseCase.resyncRange(any(), any(), any(), any()) }
         }
+
+    @Test
+    fun `recomputeOnly with an inverted clamped range returns success without recomputing`() =
+        runTest {
+            every { settingsRepo.userPreferences } returns
+                flowOf(UserPreferences(retentionDaysEnabled = true, retentionDays = 30))
+
+            val result =
+                useCase.execute(
+                    recomputeOnly = true,
+                    rangeOverride = ScoreInvalidation.AffectedRange(today.minusDays(60), today.minusDays(45)),
+                )
+
+            assertEquals(Result.success(Unit), result)
+            coVerify(exactly = 0) { healthSyncUseCase.recomputeRange(any(), any(), any()) }
+            coVerify(exactly = 0) { healthSyncUseCase.resyncRange(any(), any(), any(), any()) }
+        }
 }
+

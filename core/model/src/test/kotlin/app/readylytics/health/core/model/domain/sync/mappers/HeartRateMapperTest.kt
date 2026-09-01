@@ -111,4 +111,82 @@ class HeartRateMapperTest {
         assertEquals("RESTING", result[0].recordType)
         assertNull(result[0].sessionId)
     }
+
+    @Test
+    fun `mapToInputs classifies sample inside workout as EXERCISE`() {
+        val workoutStartMs = Instant.parse("2026-05-10T10:00:00Z").toEpochMilli()
+        val workoutEndMs = Instant.parse("2026-05-10T11:00:00Z").toEpochMilli()
+        val workoutSession =
+            app.readylytics.health.core.model.domain.sync.WorkoutInput(
+                id = "workout_1",
+                startTime = workoutStartMs,
+                endTime = workoutEndMs,
+                exerciseType = "RUNNING",
+                durationMinutes = 60,
+                zone1Minutes = 0f,
+                zone2Minutes = 0f,
+                zone3Minutes = 0f,
+                zone4Minutes = 0f,
+                zone5Minutes = 0f,
+                trimp = 80.0f,
+                avgHr = 150f,
+                deviceName = "Watch",
+            )
+
+        val ts = Instant.parse("2026-05-10T10:30:00Z")
+        val sample = DomainHeartRateSample(time = ts, beatsPerMinute = 155)
+        val record =
+            DomainHeartRateRecord(
+                id = "rec_w",
+                deviceName = "Watch",
+                samples = listOf(sample),
+            )
+
+        val result = HeartRateMapper.mapToInputs(listOf(record), emptyList(), listOf(workoutSession))
+
+        assertEquals(1, result.size)
+        assertEquals("EXERCISE", result[0].recordType)
+        assertEquals("workout_1", result[0].sessionId)
+    }
+
+    @Test
+    fun `mapToInputs prioritizes SLEEP over WORKOUT when timestamps overlap`() {
+        // Sleep session: 22:00 to 06:00
+        // Overlapping workout: 05:00 to 06:00
+        val workoutStartMs = Instant.parse("2026-05-10T05:00:00Z").toEpochMilli()
+        val workoutEndMs = Instant.parse("2026-05-10T06:00:00Z").toEpochMilli()
+        val workoutSession =
+            app.readylytics.health.core.model.domain.sync.WorkoutInput(
+                id = "workout_overlap",
+                startTime = workoutStartMs,
+                endTime = workoutEndMs,
+                exerciseType = "RUNNING",
+                durationMinutes = 60,
+                zone1Minutes = 0f,
+                zone2Minutes = 0f,
+                zone3Minutes = 0f,
+                zone4Minutes = 0f,
+                zone5Minutes = 0f,
+                trimp = 50.0f,
+                avgHr = 130f,
+                deviceName = "Watch",
+            )
+
+        val ts = Instant.parse("2026-05-10T05:30:00Z")
+        val sample = DomainHeartRateSample(time = ts, beatsPerMinute = 80)
+        val record =
+            DomainHeartRateRecord(
+                id = "rec_overlap",
+                deviceName = "Watch",
+                samples = listOf(sample),
+            )
+
+        val result = HeartRateMapper.mapToInputs(listOf(record), listOf(sleepSession), listOf(workoutSession))
+
+        assertEquals(1, result.size)
+        assertEquals("SLEEP", result[0].recordType)
+        assertEquals("sleep_1", result[0].sessionId)
+    }
 }
+
+

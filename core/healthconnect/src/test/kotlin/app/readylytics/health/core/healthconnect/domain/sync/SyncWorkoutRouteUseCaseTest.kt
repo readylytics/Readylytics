@@ -4,7 +4,8 @@ import app.readylytics.health.core.model.domain.model.DomainExerciseSessionRecor
 import app.readylytics.health.core.model.domain.model.DomainRouteLocation
 import app.readylytics.health.core.model.domain.model.RouteState
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
-import app.readylytics.health.core.model.domain.sync.*
+import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
+import app.readylytics.health.core.model.domain.sync.SyncWorkoutRouteUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -24,6 +25,60 @@ class SyncWorkoutRouteUseCaseTest {
             hcRepo = hcRepo,
             healthIngestionStore = healthIngestionStore,
         )
+
+    @Test
+    fun `syncIfPermitted returns success without persisting when permission not granted`() =
+        runTest {
+            coEvery { hcRepo.hasExerciseRoutesPermission() } returns false
+
+            val result = useCase.syncIfPermitted("workout-no-perm")
+
+            assertTrue(result.isSuccess)
+            coVerify(exactly = 0) { hcRepo.readExerciseSession(any()) }
+            coVerify(exactly = 0) {
+                healthIngestionStore.persistSingleWorkoutRoute(
+                    workoutId = any(),
+                    routePoints = any(),
+                    routeState = any(),
+                    totalDistanceMeters = any(),
+                    avgSpeedKmh = any(),
+                    elevationGainMeters = any(),
+                )
+            }
+        }
+
+    @Test
+    fun `syncIfPermitted syncs when permission is granted`() =
+        runTest {
+            val start = Instant.parse("2026-08-15T10:00:00Z")
+            val end = Instant.parse("2026-08-15T10:30:00Z")
+            val session =
+                DomainExerciseSessionRecord(
+                    id = "workout-perm",
+                    startTime = start,
+                    endTime = end,
+                    exerciseType = "56",
+                    deviceName = "Pixel Watch",
+                    routePoints = emptyList(),
+                    routeState = RouteState.PERMISSION_REQUIRED,
+                )
+            coEvery { hcRepo.hasExerciseRoutesPermission() } returns true
+            coEvery { hcRepo.readExerciseSession("workout-perm") } returns session
+
+            val result = useCase.syncIfPermitted("workout-perm")
+
+            assertTrue(result.isSuccess)
+            coVerify(exactly = 1) {
+                healthIngestionStore.persistSingleWorkoutRoute(
+                    workoutId = "workout-perm",
+                    routePoints = any(),
+                    routeState = any(),
+                    totalDistanceMeters = any(),
+                    avgSpeedKmh = any(),
+                    elevationGainMeters = any(),
+                )
+            }
+        }
 
     @Test
     fun `invoke fails when exercise session is not found`() =

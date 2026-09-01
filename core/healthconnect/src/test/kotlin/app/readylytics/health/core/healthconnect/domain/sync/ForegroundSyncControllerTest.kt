@@ -204,7 +204,7 @@ class ForegroundSyncControllerTest {
     @Test
     fun `evaluateAndSync should sync when sync preference is BY_TIME and interval met`() =
         runTest {
-            val lastSyncMs = System.currentTimeMillis() - 4 * 3600_000L // 4 hours ago
+            val lastSyncMs = fixedClock.millis() - 4 * 3600_000L // 4 hours ago
             val prefs =
                 UserPreferences(
                     syncPreference = SyncPreference.BY_TIME,
@@ -224,7 +224,7 @@ class ForegroundSyncControllerTest {
     @Test
     fun `evaluateAndSync should not sync when sync preference is BY_TIME and interval not met`() =
         runTest {
-            val lastSyncMs = System.currentTimeMillis() - 1 * 3600_000L // 1 hour ago
+            val lastSyncMs = fixedClock.millis() - 1 * 3600_000L // 1 hour ago
             val prefs =
                 UserPreferences(
                     syncPreference = SyncPreference.BY_TIME,

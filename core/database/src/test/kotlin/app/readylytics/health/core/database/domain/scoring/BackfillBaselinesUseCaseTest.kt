@@ -94,7 +94,12 @@ class BackfillBaselinesUseCaseTest {
         rhr: Float = 60f,
         rhrHistory: List<Int> = emptyList(),
     ) {
-        coEvery { computer.computeBackfillBaselines(any(), any(), any()) } answers {
+        coEvery { computer.computeBackfillBaselines(any(), any(), any(), any()) } answers {
+            firstArg<List<DailySummary>>().associate {
+                it.date to BaselineComputer.BackfillBaseline(mu, sigma, rhr, rhrHistory)
+            }
+        }
+        coEvery { computer.computeBackfillBaselines(any(), any(), any(), null) } answers {
             firstArg<List<DailySummary>>().associate {
                 it.date to BaselineComputer.BackfillBaseline(mu, sigma, rhr, rhrHistory)
             }
@@ -308,7 +313,7 @@ class BackfillBaselinesUseCaseTest {
     fun `computeHistoricalBaselines skips row absent from the batched result`() =
         runTest {
             // A day with no batched entry (e.g. no usable data) must be skipped.
-            coEvery { baselineComputer.computeBackfillBaselines(any(), any(), any()) } returns emptyMap()
+            coEvery { baselineComputer.computeBackfillBaselines(any(), any(), any(), any()) } returns emptyMap()
 
             val result = computeUseCase.computeHistoricalBaselines(listOf(makeSummary(daysAgo = 8)), UserPreferences())
 
@@ -385,7 +390,7 @@ class BackfillBaselinesUseCaseTest {
                     hrvMuMssd = 3.8f,
                 )
 
-            val result = freezeBaselineComputer.computeHrvWindows(dayMidnight, excludeSessionId = null)
+            val result = freezeBaselineComputer.computeHrvWindows(dayMidnight, testZone, excludeSessionId = null)
 
             assertNull(result, "computeHrvWindows must return null for a frozen row")
         }
@@ -423,7 +428,7 @@ class BackfillBaselinesUseCaseTest {
                 )
             val computer = BaselineComputer(scoringHistoryRepository, scoringCalculator)
 
-            val result = computer.computeHrvWindows(dayMidnight, excludeSessionId = null)
+            val result = computer.computeHrvWindows(dayMidnight, testZone, excludeSessionId = null)
 
             assertNotNull(result, "computeHrvWindows must not return null for an unfrozen row")
         }
@@ -444,6 +449,7 @@ class BackfillBaselinesUseCaseTest {
                     dayMidnight,
                     rhrBaselineOverride = null,
                     percentile = 5,
+                    zoneId = testZone,
                 )
 
             assertNull(result, "computeAdaptiveBaselineRhrBpm must return null for a frozen row")
@@ -473,7 +479,13 @@ class BackfillBaselinesUseCaseTest {
                 )
             val computer = BaselineComputer(scoringHistoryRepository, scoringCalculator)
 
-            val result = computer.computeAdaptiveBaselineRhrBpm(dayMidnight, rhrBaselineOverride = null, percentile = 5)
+            val result =
+                computer.computeAdaptiveBaselineRhrBpm(
+                    dayMidnight,
+                    rhrBaselineOverride = null,
+                    percentile = 5,
+                    zoneId = testZone,
+                )
 
             assertNotNull(result)
             assertEquals(ScoringConstants.DEFAULT_RHR_BPM, result)
@@ -490,6 +502,7 @@ class BackfillBaselinesUseCaseTest {
                     dayMidnight,
                     rhrBaselineOverride = override,
                     percentile = 5,
+                    zoneId = testZone,
                 )
 
             assertEquals(override, result)
@@ -508,7 +521,7 @@ class BackfillBaselinesUseCaseTest {
                 )
 
             repeat(3) { i ->
-                val result = freezeBaselineComputer.computeHrvWindows(dayMidnight, excludeSessionId = null)
+                val result = freezeBaselineComputer.computeHrvWindows(dayMidnight, testZone, excludeSessionId = null)
                 assertNull(result, "Call $i: frozen baseline must consistently return null")
             }
         }
@@ -530,6 +543,7 @@ class BackfillBaselinesUseCaseTest {
                         dayMidnight,
                         rhrBaselineOverride = null,
                         percentile = 5,
+                        zoneId = testZone,
                     )
                 assertNull(result, "Call $i: frozen baseline must consistently return null")
             }
@@ -546,12 +560,13 @@ class BackfillBaselinesUseCaseTest {
                 )
 
             val hrvResult: BaselineComputer.HrvWindows? =
-                freezeBaselineComputer.computeHrvWindows(dayMidnight, excludeSessionId = null)
+                freezeBaselineComputer.computeHrvWindows(dayMidnight, testZone, excludeSessionId = null)
             val rhrResult: Float? =
                 freezeBaselineComputer.computeAdaptiveBaselineRhrBpm(
                     dayMidnight,
                     rhrBaselineOverride = null,
                     percentile = 5,
+                    zoneId = testZone,
                 )
 
             assertNull(hrvResult)
@@ -649,7 +664,7 @@ class BackfillBaselinesUseCaseTest {
             val count = buildBackfill(dao, defaultSettingsRepo(), compute).execute()
 
             assertEquals(0, count, "Already-frozen rows must not be recomputed")
-            coVerify(exactly = 0) { bc.computeBackfillBaselines(any(), any(), any()) }
+            coVerify(exactly = 0) { bc.computeBackfillBaselines(any(), any(), any(), any()) }
             coVerify(exactly = 0) {
                 dao.updateBaselines(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
             }
@@ -692,7 +707,7 @@ class BackfillBaselinesUseCaseTest {
 
             val (bc, ls, compute) = buildComputeUseCase()
             val passedSummaries = slot<List<DailySummary>>()
-            coEvery { bc.computeBackfillBaselines(capture(passedSummaries), any(), any()) } answers {
+            coEvery { bc.computeBackfillBaselines(capture(passedSummaries), any(), any(), any()) } answers {
                 passedSummaries.captured.associate {
                     it.date to BaselineComputer.BackfillBaseline(listOf(50f), listOf(50f), 60f, emptyList())
                 }

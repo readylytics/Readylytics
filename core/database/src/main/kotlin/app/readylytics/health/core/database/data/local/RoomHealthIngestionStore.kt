@@ -1,6 +1,7 @@
 package app.readylytics.health.core.database.data.local
 
 import app.readylytics.health.core.databaseschema.data.local.dao.DailySummaryDao
+import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.model.RouteState
 import app.readylytics.health.core.model.domain.model.WorkoutRoutePoint
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
@@ -12,12 +13,14 @@ import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
 import app.readylytics.health.core.model.domain.sync.HeartRateInput
 import app.readylytics.health.core.model.domain.sync.HrvInput
 import app.readylytics.health.core.model.domain.sync.OxygenSaturationInput
+import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.sync.SleepSessionInput
 import app.readylytics.health.core.model.domain.sync.SleepStageInput
 import app.readylytics.health.core.model.domain.sync.StepRecordInput
 import app.readylytics.health.core.model.domain.sync.WeightInput
 import app.readylytics.health.core.model.domain.sync.WorkoutInput
 import app.readylytics.health.core.model.domain.util.logD
+import java.time.Instant
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -190,12 +193,204 @@ class RoomHealthIngestionStore
                 }
             }
         }
+
+        override suspend fun reconcileWindow(
+            type: HealthDataType,
+            windowStartMs: Long,
+            windowEndMs: Long,
+            hcIds: Set<String>,
+            zoneId: ZoneId,
+        ): ScoreInvalidation.AffectedRange? =
+            transactionRunner.runInTransaction {
+                HealthRecordDeletionReconciler.reconcile(
+                    daos = daos,
+                    type = type,
+                    windowStartMs = windowStartMs,
+                    windowEndMs = windowEndMs,
+                    hcIds = hcIds,
+                    zoneId = zoneId,
+                )
+            }
     }
+
+internal data class ReconcileContext(
+    val startMs: Long,
+    val endMs: Long,
+    val hcIds: Set<String>,
+    val zoneId: ZoneId,
+)
+
+internal object HealthRecordDeletionReconciler {
+    suspend fun reconcile(
+        daos: HealthRecordDaos,
+        type: HealthDataType,
+        windowStartMs: Long,
+        windowEndMs: Long,
+        hcIds: Set<String>,
+        zoneId: ZoneId,
+    ): ScoreInvalidation.AffectedRange? {
+        val context = ReconcileContext(windowStartMs, windowEndMs, hcIds, zoneId)
+        return when (type) {
+            HealthDataType.SLEEP -> reconcileSleep(daos, context)
+            HealthDataType.EXERCISE -> reconcileExercise(daos, context)
+            HealthDataType.HEART_RATE -> reconcileHeartSource(daos, "HEART_RATE", context)
+            HealthDataType.HRV -> reconcileHeartSource(daos, "HRV", context)
+            HealthDataType.STEPS -> reconcileSteps(daos, context)
+            else -> reconcileVitals(daos, type, context)
+        }
+    }
+
+    private suspend fun reconcileVitals(
+        daos: HealthRecordDaos,
+        type: HealthDataType,
+        ctx: ReconcileContext,
+    ): ScoreInvalidation.AffectedRange? =
+        when (type) {
+            HealthDataType.WEIGHT ->
+                reconcileCompositeMetric(
+                    ctx = ctx,
+                    fetch = { start, end -> daos.weightRecordDao.getByTimeRange(start, end) },
+                    getId = { it.id },
+                    getTimestamp = { it.timestampMs },
+                    deleteById = { daos.weightRecordDao.deleteById(it) },
+                )
+            HealthDataType.BODY_FAT ->
+                reconcileCompositeMetric(
+                    ctx = ctx,
+                    fetch = { start, end -> daos.bodyFatRecordDao.getByTimeRange(start, end) },
+                    getId = { it.id },
+                    getTimestamp = { it.timestampMs },
+                    deleteById = { daos.bodyFatRecordDao.deleteById(it) },
+                )
+            HealthDataType.BLOOD_PRESSURE ->
+                reconcileCompositeMetric(
+                    ctx = ctx,
+                    fetch = { start, end -> daos.bloodPressureRecordDao.getBetween(start, end) },
+                    getId = { it.id },
+                    getTimestamp = { it.timestampMs },
+                    deleteById = { daos.bloodPressureRecordDao.deleteById(it) },
+                )
+            HealthDataType.OXYGEN_SATURATION ->
+                reconcileCompositeMetric(
+                    ctx = ctx,
+                    fetch = { start, end -> daos.oxygenSaturationRecordDao.getByTimeRange(start, end) },
+                    getId = { it.id },
+                    getTimestamp = { it.timestampMs },
+                    deleteById = { daos.oxygenSaturationRecordDao.deleteById(it) },
+                )
+            HealthDataType.BODY_TEMPERATURE ->
+                reconcileCompositeMetric(
+                    ctx = ctx,
+                    fetch = { start, end -> daos.bodyTemperatureRecordDao.getByTimeRange(start, end) },
+                    getId = { it.id },
+                    getTimestamp = { it.timestampMs },
+                    deleteById = { daos.bodyTemperatureRecordDao.deleteById(it) },
+                )
+            else -> null
+        }
+
+    private suspend fun reconcileSleep(
+        daos: HealthRecordDaos,
+        ctx: ReconcileContext,
+    ): ScoreInvalidation.AffectedRange? {
+        val localSessions = daos.sleepSessionDao.getBetween(ctx.startMs, ctx.endMs)
+        val toDelete = localSessions.filter { it.id !in ctx.hcIds }
+        if (toDelete.isEmpty()) return null
+
+        val idsToDelete = toDelete.map { it.id }
+        daos.sleepStageDao.deleteForSessions(idsToDelete)
+        if (ctx.hcIds.isEmpty()) {
+            daos.sleepSessionDao.deleteBetween(ctx.startMs, ctx.endMs)
+        } else {
+            daos.sleepSessionDao.deleteSessionsNotIn(ctx.startMs, ctx.endMs, ctx.hcIds.toList())
+        }
+        return toAffectedRange(toDelete.minOf { it.startTime }, toDelete.maxOf { it.endTime }, ctx.zoneId)
+    }
+
+    private suspend fun reconcileExercise(
+        daos: HealthRecordDaos,
+        ctx: ReconcileContext,
+    ): ScoreInvalidation.AffectedRange? {
+        val localWorkouts = daos.workoutDao.getBetween(ctx.startMs, ctx.endMs)
+        val toDelete = localWorkouts.filter { it.id !in ctx.hcIds }
+        if (toDelete.isEmpty()) return null
+
+        val idsToDelete = toDelete.map { it.id }
+        daos.workoutRoutePointDao.deleteForWorkouts(idsToDelete)
+        if (ctx.hcIds.isEmpty()) {
+            daos.workoutDao.deleteBetween(ctx.startMs, ctx.endMs)
+        } else {
+            daos.workoutDao.deleteWorkoutsNotIn(ctx.startMs, ctx.endMs, ctx.hcIds.toList())
+        }
+        return toAffectedRange(toDelete.minOf { it.startTime }, toDelete.maxOf { it.endTime }, ctx.zoneId)
+    }
+
+    private suspend fun reconcileHeartSource(
+        daos: HealthRecordDaos,
+        recordType: String,
+        ctx: ReconcileContext,
+    ): ScoreInvalidation.AffectedRange? {
+        val localSources = daos.sourceRecordDao.getByRecordTypeAndRange(recordType, ctx.startMs, ctx.endMs)
+        val toDelete = localSources.filter { it.sourceRecordId !in ctx.hcIds }
+        if (toDelete.isEmpty()) return null
+
+        toDelete.forEach {
+            if (recordType == "HEART_RATE") {
+                daos.heartRateDao.deleteBySourceRecordRef(it.id)
+            } else if (recordType == "HRV") {
+                daos.hrvDao.deleteBySourceRecordRef(it.id)
+            }
+            daos.sourceRecordDao.deleteBySourceRecordId(it.sourceRecordId)
+        }
+        return toAffectedRange(toDelete.minOf { it.createdAtMs }, toDelete.maxOf { it.createdAtMs }, ctx.zoneId)
+    }
+
+    private suspend fun <T> reconcileCompositeMetric(
+        ctx: ReconcileContext,
+        fetch: suspend (Long, Long) -> List<T>,
+        getId: (T) -> String,
+        getTimestamp: (T) -> Long,
+        deleteById: suspend (String) -> Int,
+    ): ScoreInvalidation.AffectedRange? {
+        val local = fetch(ctx.startMs, ctx.endMs)
+        val toDelete = local.filter { getId(it) !in ctx.hcIds && getId(it).substringBefore('_') !in ctx.hcIds }
+        if (toDelete.isEmpty()) return null
+
+        toDelete.forEach { deleteById(getId(it)) }
+        return toAffectedRange(toDelete.minOf { getTimestamp(it) }, toDelete.maxOf { getTimestamp(it) }, ctx.zoneId)
+    }
+
+    private suspend fun reconcileSteps(
+        daos: HealthRecordDaos,
+        ctx: ReconcileContext,
+    ): ScoreInvalidation.AffectedRange? {
+        val local = daos.stepRecordDao.getBetween(ctx.startMs, ctx.endMs)
+        val toDelete = local.filter { it.id !in ctx.hcIds }
+        if (toDelete.isEmpty()) return null
+
+        if (ctx.hcIds.isEmpty()) {
+            daos.stepRecordDao.deleteBetween(ctx.startMs, ctx.endMs)
+        } else {
+            daos.stepRecordDao.deleteNotIn(ctx.startMs, ctx.endMs, ctx.hcIds.toList())
+        }
+        return toAffectedRange(toDelete.minOf { it.startTime }, toDelete.maxOf { it.endTime }, ctx.zoneId)
+    }
+
+    private fun toAffectedRange(
+        minMs: Long,
+        maxMs: Long,
+        zoneId: ZoneId,
+    ): ScoreInvalidation.AffectedRange =
+        ScoreInvalidation.AffectedRange(
+            start = Instant.ofEpochMilli(minMs).atZone(zoneId).toLocalDate(),
+            endInclusive = Instant.ofEpochMilli(maxMs).atZone(zoneId).toLocalDate(),
+        )
+}
 
 private const val PERSIST_TAG = "HealthSync.Persist"
 
 internal suspend fun <T> List<T>.forEachPersistenceBatch(
-    batchSize: Int = 5_000,
+    batchSize: Int = 500,
     action: suspend (List<T>) -> Unit,
 ) {
     require(batchSize > 0) { "batchSize must be positive" }

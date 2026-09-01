@@ -170,25 +170,36 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
     override suspend fun readHeartRateSamplesPaged(
         from: Instant,
         to: Instant,
-        onPage: suspend (List<DomainHeartRateRecord>) -> Unit,
+        startPageToken: String?,
+        onPage: suspend (List<DomainHeartRateRecord>, String?) -> Unit,
     ) {
         translateCritical(FakeOp.HeartRate)
         val total = totalInRange(hrCount, from, to)
         hrPagesServed = pagesFor(total)
-        stubList(total) { index -> placeholderHeartRate(index) }
-            .chunked(pageSize)
-            .forEach { onPage(it) }
+        val chunks = stubList(total) { index -> placeholderHeartRate(index) }.chunked(pageSize)
+        if (chunks.isEmpty()) return
+        val startIndex = startPageToken?.removePrefix("page-")?.toIntOrNull() ?: 0
+        for (i in startIndex until chunks.size) {
+            val nextToken = if (i < chunks.size - 1) "page-${i + 1}" else null
+            onPage(chunks[i], nextToken)
+        }
     }
 
     override suspend fun readHrvSamplesPaged(
         from: Instant,
         to: Instant,
-        onPage: suspend (List<DomainHrvRecord>) -> Unit,
+        startPageToken: String?,
+        onPage: suspend (List<DomainHrvRecord>, String?) -> Unit,
     ) {
         translateCritical(FakeOp.Hrv)
-        stubList(totalInRange(hrvCount, from, to)) { index -> placeholderHrv(index) }
-            .chunked(pageSize)
-            .forEach { onPage(it) }
+        val total = totalInRange(hrvCount, from, to)
+        val chunks = stubList(total) { index -> placeholderHrv(index) }.chunked(pageSize)
+        if (chunks.isEmpty()) return
+        val startIndex = startPageToken?.removePrefix("page-")?.toIntOrNull() ?: 0
+        for (i in startIndex until chunks.size) {
+            val nextToken = if (i < chunks.size - 1) "page-${i + 1}" else null
+            onPage(chunks[i], nextToken)
+        }
     }
 
     override suspend fun readExerciseSessions(

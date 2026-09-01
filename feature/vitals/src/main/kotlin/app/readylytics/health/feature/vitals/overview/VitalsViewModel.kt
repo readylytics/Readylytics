@@ -5,7 +5,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
-import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
 import app.readylytics.health.core.model.domain.dashboard.CardId
@@ -17,11 +16,12 @@ import app.readylytics.health.core.model.domain.layout.LayoutManagementDelegate
 import app.readylytics.health.core.model.domain.model.DailyMetrics
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.preferences.UnitSystem
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.DailyMetricsRepository
 import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
-import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionChecker
 import app.readylytics.health.core.model.domain.service.BodyTemperatureBaselineProvider
 import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.core.model.domain.vitals.VitalsChartConfiguration
@@ -118,7 +118,7 @@ class VitalsViewModel
         private val savedStateHandle: SavedStateHandle,
         private val bodyTemperatureBaselineProvider: BodyTemperatureBaselineProvider,
         private val vitalsLayoutRepository: VitalsLayoutRepository,
-        private val healthConnectRepository: HealthConnectRepository,
+        private val permissionChecker: HealthConnectPermissionChecker,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val vitalsCardManagementDelegate =
@@ -126,8 +126,8 @@ class VitalsViewModel
                 defaultConfigurations = SettingsDefaults.DEFAULT_VITALS_CARDS,
                 persist = vitalsLayoutRepository::updateVitalsCardConfigurations,
                 scope = viewModelScope,
-                hasBodyTemperaturePermission = { healthConnectRepository.hasBodyTemperaturePermission() },
-                hasOxygenSaturationPermission = { healthConnectRepository.hasOxygenSaturationPermission() },
+                hasBodyTemperaturePermission = { permissionChecker.hasBodyTemperaturePermission() },
+                hasOxygenSaturationPermission = { permissionChecker.hasOxygenSaturationPermission() },
             )
 
         private val vitalsChartManagementDelegate =
@@ -143,7 +143,7 @@ class VitalsViewModel
             createVitalsCardStateFlow(
                 cardManagementDelegate = vitalsCardManagementDelegate,
                 vitalsLayoutRepository = vitalsLayoutRepository,
-                healthConnectRepository = healthConnectRepository,
+                permissionChecker = permissionChecker,
             ).distinctUntilChanged()
 
         private val vitalsChartStateFlow =

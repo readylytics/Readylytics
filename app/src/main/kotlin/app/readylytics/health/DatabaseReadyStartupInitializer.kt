@@ -19,6 +19,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
+import java.time.Instant
 import java.util.concurrent.atomic.AtomicBoolean
 
 internal class DatabaseReadyStartupInitializer(
@@ -96,7 +97,7 @@ internal class DatabaseReadyStartupInitializer(
         val needsVersionRecompute = storedScoringVersion < SettingsDefaults.CURRENT_SCORING_VERSION
         val retentionStartMs =
             RetentionBounds
-                .resolveHistoricalWindow(prefs)
+                .resolveHistoricalWindow(prefs, Instant.now()) // outside WP-01 guard scope; explicit now
                 .startTimeMs
         val needsBackfillRecompute =
             workoutTrimpBackfillStatus.get().hasUnbackfilledWorkouts(retentionStartMs)

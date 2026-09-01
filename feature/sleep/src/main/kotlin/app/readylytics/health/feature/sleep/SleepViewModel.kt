@@ -35,7 +35,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Clock
 import java.time.LocalDate
-import java.time.ZoneId
 import javax.inject.Inject
 import kotlin.math.roundToInt
 
@@ -78,17 +77,16 @@ class SleepViewModel
                 sleepScoringPrefsFlow,
             ) { date, range, prefs -> Triple(date, range, prefs) }
                 .flatMapLatest { (date, range, prefs) ->
-                    val deviceZoneId = ZoneId.systemDefault()
                     val scoringZoneId = prefs.scoringZoneId
                     val selectedMidnightMs =
                         date
-                            .atStartOfDay(deviceZoneId)
+                            .atStartOfDay(scoringZoneId)
                             .toInstant()
                             .toEpochMilli()
                     val nextDayMidnightMs =
                         date
                             .plusDays(1)
-                            .atStartOfDay(deviceZoneId)
+                            .atStartOfDay(scoringZoneId)
                             .toInstant()
                             .toEpochMilli()
 
@@ -102,11 +100,11 @@ class SleepViewModel
                             .toEpochMilli()
 
                     val summaryFlow =
-                        if (date == LocalDate.now(clock.withZone(deviceZoneId))) {
+                        if (date == LocalDate.now(clock.withZone(scoringZoneId))) {
                             val todayMs =
                                 LocalDate
-                                    .now(clock.withZone(deviceZoneId))
-                                    .atStartOfDay(deviceZoneId)
+                                    .now(clock.withZone(scoringZoneId))
+                                    .atStartOfDay(scoringZoneId)
                                     .toInstant()
                                     .toEpochMilli()
                             repositories.dailySummary
@@ -126,7 +124,7 @@ class SleepViewModel
                     val yesterdayMidnightMs =
                         date
                             .minusDays(1)
-                            .atStartOfDay(deviceZoneId)
+                            .atStartOfDay(scoringZoneId)
                             .toInstant()
                             .toEpochMilli()
                     val yesterdaySummaryFlow =

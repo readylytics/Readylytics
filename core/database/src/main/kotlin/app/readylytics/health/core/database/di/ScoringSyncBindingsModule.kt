@@ -1,5 +1,6 @@
 package app.readylytics.health.core.database.di
 
+import app.readylytics.health.core.database.data.local.RoomHealthChangeIngestionStore
 import app.readylytics.health.core.database.data.local.RoomHealthIngestionStore
 import app.readylytics.health.core.database.data.local.SelectedSourcePrunerImpl
 import app.readylytics.health.core.database.data.local.SessionLinkReconcilerImpl
@@ -11,6 +12,7 @@ import app.readylytics.health.core.model.domain.date.SelectedDateStore
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.model.domain.repository.ScoringRepository
 import app.readylytics.health.core.model.domain.repository.WorkoutTrimpBackfillStatus
+import app.readylytics.health.core.model.domain.sync.HealthChangeIngestionStore
 import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
 import app.readylytics.health.core.model.domain.sync.SelectedSourcePruner
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
@@ -38,6 +40,12 @@ abstract class ScoringSyncBindingsModule {
     @Binds
     @Singleton
     abstract fun bindHealthIngestionStore(impl: RoomHealthIngestionStore): HealthIngestionStore
+
+    @Binds
+    @Singleton
+    abstract fun bindHealthChangeIngestionStore(
+        impl: RoomHealthChangeIngestionStore,
+    ): HealthChangeIngestionStore
 
     @Binds
     @Singleton

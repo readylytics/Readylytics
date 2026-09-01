@@ -291,4 +291,155 @@ class CleanArchTest {
             violations.isEmpty(),
         )
     }
+
+    @Test
+    fun `no DAO type is injected outside core-database`() {
+        val allowedFileNames =
+            setOf(
+                // R2-ARCH-002 follow-up: RestoreBatchLoader/BackupRecordDecoders inject the whole
+                // HealthDatabase and pull DAOs off it directly throughout backup/restore. Fixing this
+                // means refactoring the backup subsystem's data-access pattern, which is out of scope
+                // for this architecture plan -- tracked separately, not part of R2-ARCH-002/DI-001.
+                "RestoreBatchLoader.kt",
+                "BackupRecordDecoders.kt",
+            )
+        val violations =
+            Konsist
+                .scopeFromProject()
+                .files
+                .filter { file ->
+                    (file.path.contains("/src/main/") || file.path.contains("\\src\\main\\")) &&
+                        !file.hasPackage("app.readylytics.health.core.database..") &&
+                        !file.hasPackage("app.readylytics.health.core.databaseschema..") &&
+                        file.nameWithExtension !in allowedFileNames
+                }.flatMap { file ->
+                    file.imports
+                        .filter { it.name.contains(".data.local.dao.") }
+                        .map { "${file.name}: ${it.name}" }
+                }
+
+        org.junit.Assert.assertTrue(
+            "DAO types must only be injected inside core:database. Violations:\n${violations.joinToString("\n")}",
+            violations.isEmpty(),
+        )
+    }
+
+    @Test
+    fun `UserPreferences is imported through the domain alias outside the data preferences package`() {
+        val exemptFiles =
+            setOf(
+                "UserPreferencesMapper.kt",
+                "UserPreferencesMapperExtensions.kt",
+                "UserPreferencesSerializer.kt",
+                "UserPreferencesSerializerExtensions.kt",
+                "BackupPreferencesBuilder.kt",
+                "RestorePreferencesExtensions.kt",
+            )
+        val violations =
+            Konsist
+                .scopeFromProject()
+                .files
+                .filter { file ->
+                    (file.path.contains("/src/main/") || file.path.contains("\\src\\main\\")) &&
+                        !file.hasPackage("app.readylytics.health.core.model.data.preferences..") &&
+                        file.nameWithExtension !in exemptFiles
+                }.flatMap { file ->
+                    file.imports
+                        .filter { it.name == "app.readylytics.health.core.model.data.preferences.UserPreferences" }
+                        .map { file.name }
+                }
+
+        org.junit.Assert.assertTrue(
+            "UserPreferences must be imported via the domain alias outside data/preferences. Violations:\n" +
+                violations.joinToString("\n"),
+            violations.isEmpty(),
+        )
+    }
+
+    @Test
+    fun `feature packages do not read Health Connect sample data directly`() {
+        val bannedMembers =
+            setOf(
+                "readHeartRateSamples",
+                "readHeartRateSamplesPaged",
+                "readAllPagesStreaming",
+                "readSleepSessions",
+                "readExerciseSessions",
+                "readHrvSamples",
+            )
+        val violations =
+            Konsist
+                .scopeFromProject()
+                .files
+                .filter { file ->
+                    file.hasPackage("app.readylytics.health.feature..") &&
+                        (file.path.contains("/src/main/") || file.path.contains("\\src\\main\\"))
+                }.flatMap { file ->
+                    bannedMembers
+                        .filter { member -> Regex("""\.$member\s*\(""").containsMatchIn(file.text) }
+                        .map { member -> "${file.name}: $member(...)" }
+                }
+
+        org.junit.Assert.assertTrue(
+            "feature:* modules must read heart-rate/sleep/exercise/HRV data from Room, never Health " +
+                "Connect directly. Violations:\n${violations.joinToString("\n")}",
+            violations.isEmpty(),
+        )
+    }
+
+    @Test
+    fun `no ZoneId systemDefault in scoring database or feature ViewModels`() {
+        val allowedFiles =
+            setOf(
+                "TimezoneProviderImpl.kt",
+            )
+        val violations =
+            Konsist
+                .scopeFromProject()
+                .files
+                .filter { file ->
+                    (file.path.contains("/src/main/") || file.path.contains("\\src\\main\\")) &&
+                        (
+                            file.hasPackage("app.readylytics.health.core.scoring..") ||
+                                file.hasPackage("app.readylytics.health.core.database..") ||
+                                (
+                                    file.hasPackage("app.readylytics.health.feature..") &&
+                                        file.name.endsWith("ViewModel.kt")
+                                )
+                        ) &&
+                        file.nameWithExtension !in allowedFiles
+                }.flatMap { file ->
+                    val matches = Regex("""ZoneId\.systemDefault\(\)""").findAll(file.text)
+                    matches.map { "${file.name}: used ZoneId.systemDefault()" }.toList()
+                }
+
+        org.junit.Assert.assertTrue(
+            "Date keys and scoring must use the stored scoring zone. Forbidden ZoneId.systemDefault() occurrences:\n" +
+                violations.joinToString("\n"),
+            violations.isEmpty(),
+        )
+    }
+
+    @Test
+    fun `feature packages do not import HealthConnectRepository`() {
+        val violations =
+            Konsist
+                .scopeFromProject()
+                .files
+                .filter { file ->
+                    file.hasPackage("app.readylytics.health.feature..") &&
+                        (file.path.contains("/src/main/") || file.path.contains("\\src\\main\\"))
+                }.flatMap { file ->
+                    file.imports
+                        .filter {
+                            it.name == "app.readylytics.health.core.model.domain.repository.HealthConnectRepository"
+                        }.map { "${file.name}: ${it.name}" }
+                }
+
+        org.junit.Assert.assertTrue(
+            "feature:* modules must use HealthConnectPermissionChecker, not HealthConnectRepository. " +
+                "Violations:\n${violations.joinToString("\n")}",
+            violations.isEmpty(),
+        )
+    }
 }

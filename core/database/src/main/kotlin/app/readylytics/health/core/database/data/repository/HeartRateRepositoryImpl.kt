@@ -1,14 +1,19 @@
 package app.readylytics.health.core.database.data.repository
 
+import app.readylytics.health.core.database.data.local.reconstructTimestampedSamples
 import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao
+import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity
 import app.readylytics.health.core.model.domain.model.HrRangeAggregate
 import app.readylytics.health.core.model.domain.repository.HeartRateRecordData
 import app.readylytics.health.core.model.domain.repository.HeartRateRepository
+import app.readylytics.health.core.model.domain.repository.HeartRateResolution
+import app.readylytics.health.core.model.domain.repository.HeartRateSeries
 import app.readylytics.health.core.model.domain.repository.HrvRecordData
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -19,6 +24,7 @@ class HeartRateRepositoryImpl
     constructor(
         private val heartRateDao: HeartRateDao,
         private val hrvDao: HrvDao,
+        private val minuteBucketDao: MinuteBucketDao,
     ) : HeartRateRepository {
         override suspend fun getMinHrInRange(
             startTimeMs: Long,
@@ -51,6 +57,55 @@ class HeartRateRepositoryImpl
             endMs: Long,
         ): Flow<HrRangeAggregate?> = heartRateDao.observeAggregateByTimeRange(startMs, endMs)
 
+        override suspend fun getRecoveryWindowSamples(startTimeMs: Long, endTimeMs: Long): HeartRateSeries {
+            val hot = heartRateDao.getByTimeRange(startTimeMs, endTimeMs).map { mapToDomain(it) }
+            val warmBuckets = minuteBucketDao.getBucketsInTimeRange(startTimeMs, endTimeMs)
+            if (warmBuckets.isEmpty()) return HeartRateSeries(hot, HeartRateResolution.RAW)
+
+            // Not further filtered to the exact [startTimeMs, endTimeMs] window: getBucketsInTimeRange
+            // already scopes to overlapping buckets, and (matching ScoringHistoryRepositoryImpl's
+            // established warm-tier pattern) a bucket that overlaps the window contributes all of its
+            // reconstructed points, since a minute bucket is the smallest warm-tier granularity available.
+            val samples = warmBuckets.reconstructTimestampedSamples()
+            val warm = buildList(samples.size) {
+                samples.forEachIndexed { _, timestampMs, bpm ->
+                    add(warmSampleToDomain(timestampMs, bpm))
+                }
+            }
+            return HeartRateSeries(
+                points = (hot + warm).sortedBy { it.timestampMs },
+                resolution = HeartRateResolution.RECONSTRUCTED,
+            )
+        }
+
+        // WP-17: warm tier is re-read once per hot-tier emission rather than observed itself --
+        // bucket rollup only ever affects historical (>90-day) windows that don't emit live during
+        // an active viewing session, so a suspend read here is sufficient and avoids a second
+        // long-lived Flow subscription per chart. See task-7-brief.md for the combine() tradeoff.
+        override fun observeTimelineWithResolution(startMs: Long, endMs: Long): Flow<HeartRateSeries> =
+            heartRateDao
+                .observeByTimeRange(startMs, endMs)
+                .map { entities -> entities.map { mapToDomain(it) } }
+                .map { hot ->
+                    // Mirrors getRecoveryWindowSamples: DataRollupManager's hot->warm cutoff
+                    // (RetentionBounds.resolveHotTierCutoffMs) is a continuous instant, not
+                    // day-aligned, so the day currently sitting at the 90-day boundary routinely
+                    // has samples split across both tiers. Hot being non-empty must never
+                    // short-circuit the warm-tier read -- always merge whenever warm is non-empty.
+                    val warmBuckets = minuteBucketDao.getBucketsInTimeRange(startMs, endMs)
+                    if (warmBuckets.isEmpty()) return@map HeartRateSeries(hot, HeartRateResolution.RAW)
+                    val samples = warmBuckets.reconstructTimestampedSamples()
+                    val warm = buildList(samples.size) {
+                        samples.forEachIndexed { _, timestampMs, bpm ->
+                            add(warmSampleToDomain(timestampMs, bpm))
+                        }
+                    }
+                    HeartRateSeries(
+                        points = (hot + warm).sortedBy { it.timestampMs },
+                        resolution = HeartRateResolution.RECONSTRUCTED,
+                    )
+                }.distinctUntilChanged()
+
         private fun mapToDomain(entity: HeartRateRecordEntity): HeartRateRecordData =
             HeartRateRecordData(
                 id = "${entity.sourceRecordRef}:${entity.timestampMs}",
@@ -71,3 +126,16 @@ class HeartRateRepositoryImpl
                 deviceName = entity.deviceName,
             )
     }
+
+// Top-level (not a class member) so it's shared by getRecoveryWindowSamples and
+// observeTimelineWithResolution without pushing HeartRateRepositoryImpl's member-function count
+// over detekt's TooManyFunctions threshold.
+private fun warmSampleToDomain(timestampMs: Long, bpm: Int): HeartRateRecordData =
+    HeartRateRecordData(
+        id = "warm:$timestampMs",
+        timestampMs = timestampMs,
+        beatsPerMinute = bpm,
+        recordType = "RECONSTRUCTED",
+        sessionId = null,
+        deviceName = null,
+    )

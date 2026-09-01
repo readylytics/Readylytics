@@ -6,10 +6,13 @@ import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRec
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import app.readylytics.health.core.model.domain.repository.TransactionRunner
+import java.time.LocalDate
 
 @RunWith(RobolectricTestRunner::class)
 class DataRollupManagerTest {
@@ -61,9 +64,11 @@ class DataRollupManagerTest {
                 ),
             )
 
-            val deleted = rollupManager.rollupExpiredHotTier(cutoffMs = 120_000L)
+            val touched = rollupManager.rollupExpiredHotTier(cutoffMs = 120_000L)
 
-            assertEquals(5, deleted)
+            // All 5 rolled-up samples (ts 0..90_000ms) fall on the same 1970-01-01 UTC day.
+            assertEquals(LocalDate.of(1970, 1, 1), touched?.start)
+            assertEquals(LocalDate.of(1970, 1, 1), touched?.endInclusive)
             assertEquals(0, heartRateDao.countInRange(0L, 119_999L))
             assertEquals(1, heartRateDao.countInRange(120_000L, 180_000L))
 
@@ -71,6 +76,180 @@ class DataRollupManagerTest {
             assertEquals(2, buckets.size)
             // Weighted avg across both minutes: ((70*3) + (110*2)) / 5 = 86.0.
             assertEquals(86.0, (buckets[0].avgBpm * 3 + buckets[1].avgBpm * 2) / 5.0, 0.01)
+        }
+
+    // R2-DB-004 (review follow-up): confirms the seam between rollupExpiredHotTier and the new
+    // percentile columns end-to-end, using MinuteBucketDao.getBucketsForSession -- unlike
+    // getMinuteBuckets, that returns the full entity, including p5Bpm..p95Bpm. Same 12-sample
+    // 50..61 fixture as MinuteBucketAggregatorTest, so the expected values are the same
+    // hand-verified percentile math (see that test's header comment for the worked arithmetic).
+    @Test
+    fun rollupExpiredHotTierWritesPercentileSketchIntoBuckets() =
+        runBlocking {
+            val heartRateDao = database.heartRateDao()
+            val sourceRecordDao = database.sourceRecordDao()
+            val minuteBucketDao = database.minuteBucketDao()
+
+            val ref = sourceRecordDao.getOrCreateSourceRef("uuid-hr-percentile", "HEART_RATE", 0L)
+            heartRateDao.upsertAll(
+                (0 until 12).map { i -> hr(ref, i * 5_000L, 50 + i, "SLEEP", "s-percentile") },
+            )
+
+            rollupManager.rollupExpiredHotTier(cutoffMs = 60_000L)
+
+            val buckets = minuteBucketDao.getBucketsForSession("SLEEP", "s-percentile")
+            assertEquals(1, buckets.size)
+            val bucket = buckets.single()
+            assertEquals(50, bucket.minBpm)
+            assertEquals(61, bucket.maxBpm)
+            assertEquals(12, bucket.sampleCount)
+            assertEquals(55.5, bucket.avgBpm, 0.01)
+            assertEquals(51, bucket.p5Bpm)
+            assertEquals(53, bucket.p25Bpm)
+            assertEquals(56, bucket.p50Bpm)
+            assertEquals(58, bucket.p75Bpm)
+            assertEquals(60, bucket.p95Bpm)
+        }
+
+    // R2-DB-004 (review follow-up): the read/aggregate/delete pass is now chunked by UTC day
+    // instead of processing everything before the cutoff in one transaction (unbounded-memory
+    // risk on a large historical backlog). This proves day-chunking is transparent to callers:
+    // raw samples spread across three distinct UTC days still roll up into exactly the buckets a
+    // single unchunked pass would have produced, and every raw row before the cutoff is deleted.
+    @Test
+    fun rollupExpiredHotTierProducesIdenticalBucketsAcrossDayChunkBoundaries() =
+        runBlocking {
+            val heartRateDao = database.heartRateDao()
+            val sourceRecordDao = database.sourceRecordDao()
+            val minuteBucketDao = database.minuteBucketDao()
+            val dayMs = 24L * 60 * 60 * 1000
+
+            val ref = sourceRecordDao.getOrCreateSourceRef("uuid-hr-days", "HEART_RATE", 0L)
+            // One sample in each of three separate UTC days, all in the same minute-of-day so
+            // they'd collide into one bucket if day-chunking ever leaked across a day boundary.
+            heartRateDao.upsertAll(
+                listOf(
+                    hr(ref, 0L, 60, "RESTING", null),
+                    hr(ref, dayMs, 65, "RESTING", null),
+                    hr(ref, 2 * dayMs, 70, "RESTING", null),
+                ),
+            )
+
+            val touched = rollupManager.rollupExpiredHotTier(cutoffMs = 3 * dayMs)
+
+            // Merged across three day-chunks: earliest sample's day .. latest sample's day.
+            assertEquals(LocalDate.of(1970, 1, 1), touched?.start)
+            assertEquals(LocalDate.of(1970, 1, 3), touched?.endInclusive)
+            assertEquals(0, heartRateDao.count())
+            val buckets = minuteBucketDao.getBucketsForSession("RESTING", "")
+            assertEquals(3, buckets.size)
+            assertEquals(setOf(60, 65, 70), buckets.map { it.minBpm }.toSet())
+        }
+
+    // R2-CACHE-001: an empty hot tier (nothing before the cutoff) must return null so
+    // DataRollupWorker enqueues no recompute.
+    @Test
+    fun rollupExpiredHotTierReturnsNullWhenThereIsNothingToRollUp() =
+        runBlocking {
+            val touched = rollupManager.rollupExpiredHotTier(cutoffMs = 120_000L)
+            assertNull(touched)
+        }
+
+    // R2-PERF-002: verifies that rolling up multiple days opens a separate transaction per day chunk
+    // to prevent single unbounded transactions over large historical backlogs.
+    @Test
+    fun `rolling up multiple days opens a separate transaction per day chunk`() =
+        runBlocking {
+            val heartRateDao = database.heartRateDao()
+            val sourceRecordDao = database.sourceRecordDao()
+            val dayMs = 24L * 60 * 60 * 1000
+
+            val ref = sourceRecordDao.getOrCreateSourceRef("uuid-tx-test", "HEART_RATE", 0L)
+            heartRateDao.upsertAll(
+                listOf(
+                    hr(ref, 10_000L, 60, "RESTING", null),
+                    hr(ref, dayMs + 10_000L, 65, "RESTING", null),
+                    hr(ref, 2 * dayMs + 10_000L, 70, "RESTING", null),
+                ),
+            )
+
+            var transactionCount = 0
+            val countingRunner =
+                object : TransactionRunner {
+                    override suspend fun <T> runInTransaction(block: suspend () -> T): T {
+                        transactionCount++
+                        return RoomTransactionRunner(database).runInTransaction(block)
+                    }
+                }
+
+            val manager =
+                DataRollupManager(
+                    minuteBucketDao = database.minuteBucketDao(),
+                    heartRateDao = database.heartRateDao(),
+                    transactionRunner = countingRunner,
+                )
+
+            val touched = manager.rollupExpiredHotTier(cutoffMs = 3 * dayMs)
+
+            assertEquals(LocalDate.of(1970, 1, 1), touched?.start)
+            assertEquals(LocalDate.of(1970, 1, 3), touched?.endInclusive)
+            assertEquals(3, transactionCount)
+            assertEquals(0, heartRateDao.count())
+        }
+
+    // R2-PERF-002: mid-pass crash test verifying earlier day-chunks remain committed and retry resumes idempotently.
+    @Test
+    fun `mid-pass interruption leaves committed days intact and resumes idempotently`() =
+        runBlocking {
+            val heartRateDao = database.heartRateDao()
+            val sourceRecordDao = database.sourceRecordDao()
+            val minuteBucketDao = database.minuteBucketDao()
+            val dayMs = 24L * 60 * 60 * 1000
+
+            val ref = sourceRecordDao.getOrCreateSourceRef("uuid-crash-test", "HEART_RATE", 0L)
+            heartRateDao.upsertAll(
+                listOf(
+                    hr(ref, 10_000L, 60, "RESTING", null),
+                    hr(ref, dayMs + 10_000L, 65, "RESTING", null),
+                    hr(ref, 2 * dayMs + 10_000L, 70, "RESTING", null),
+                ),
+            )
+
+            var attempts = 0
+            val failingRunner =
+                object : TransactionRunner {
+                    override suspend fun <T> runInTransaction(block: suspend () -> T): T {
+                        attempts++
+                        if (attempts == 2) {
+                            error("Simulated crash during day 2")
+                        }
+                        return RoomTransactionRunner(database).runInTransaction(block)
+                    }
+                }
+
+            val crashingManager =
+                DataRollupManager(
+                    minuteBucketDao = database.minuteBucketDao(),
+                    heartRateDao = database.heartRateDao(),
+                    transactionRunner = failingRunner,
+                )
+
+            try {
+                crashingManager.rollupExpiredHotTier(cutoffMs = 3 * dayMs)
+            } catch (_: IllegalStateException) {
+                // Expected crash
+            }
+
+            // Day 1 committed; Day 2 & 3 still present in hot tier
+            assertEquals(2, heartRateDao.count())
+            assertEquals(1, minuteBucketDao.getBucketsForSession("RESTING", "").size)
+
+            // Resume with normal manager
+            val resumedTouched = rollupManager.rollupExpiredHotTier(cutoffMs = 3 * dayMs)
+            assertEquals(LocalDate.of(1970, 1, 2), resumedTouched?.start)
+            assertEquals(LocalDate.of(1970, 1, 3), resumedTouched?.endInclusive)
+            assertEquals(0, heartRateDao.count())
+            assertEquals(3, minuteBucketDao.getBucketsForSession("RESTING", "").size)
         }
 
     private fun hr(

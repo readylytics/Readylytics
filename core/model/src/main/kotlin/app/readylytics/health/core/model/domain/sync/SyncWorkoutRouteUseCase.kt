@@ -46,4 +46,13 @@ class SyncWorkoutRouteUseCase
             )
             return Result.success(Unit)
         }
+
+        /**
+         * Checks route permission first. If not granted, returns success (no-op).
+         * Called from feature modules that must not inject [HealthConnectRepository].
+         */
+        suspend fun syncIfPermitted(workoutId: String): Result<Unit> {
+            if (!hcRepo.hasExerciseRoutesPermission()) return Result.success(Unit)
+            return invoke(workoutId)
+        }
     }
