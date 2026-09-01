@@ -291,4 +291,36 @@ class CleanArchTest {
             violations.isEmpty(),
         )
     }
+
+    @Test
+    fun `no DAO type is injected outside core-database`() {
+        val allowedFileNames =
+            setOf(
+                // R2-ARCH-002 follow-up: RestoreBatchLoader/BackupRecordDecoders inject the whole
+                // HealthDatabase and pull DAOs off it directly throughout backup/restore. Fixing this
+                // means refactoring the backup subsystem's data-access pattern, which is out of scope
+                // for this architecture plan -- tracked separately, not part of R2-ARCH-002/DI-001.
+                "RestoreBatchLoader.kt",
+                "BackupRecordDecoders.kt",
+            )
+        val violations =
+            Konsist
+                .scopeFromProject()
+                .files
+                .filter { file ->
+                    (file.path.contains("/src/main/") || file.path.contains("\\src\\main\\")) &&
+                        !file.hasPackage("app.readylytics.health.core.database..") &&
+                        !file.hasPackage("app.readylytics.health.core.databaseschema..") &&
+                        file.nameWithExtension !in allowedFileNames
+                }.flatMap { file ->
+                    file.imports
+                        .filter { it.name.contains(".data.local.dao.") }
+                        .map { "${file.name}: ${it.name}" }
+                }
+
+        org.junit.Assert.assertTrue(
+            "DAO types must only be injected inside core:database. Violations:\n${violations.joinToString("\n")}",
+            violations.isEmpty(),
+        )
+    }
 }

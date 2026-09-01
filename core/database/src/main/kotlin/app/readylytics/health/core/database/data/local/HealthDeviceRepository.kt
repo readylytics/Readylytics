@@ -1,4 +1,4 @@
-package app.readylytics.health.data.device
+package app.readylytics.health.core.database.data.local
 
 import android.os.SystemClock
 import androidx.annotation.VisibleForTesting

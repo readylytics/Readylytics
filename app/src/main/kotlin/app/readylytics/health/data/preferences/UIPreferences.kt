@@ -1,12 +1,12 @@
 package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
+import app.readylytics.health.core.database.data.local.HealthDeviceRepository
 import app.readylytics.health.core.model.data.preferences.AppTheme
 import app.readylytics.health.core.model.data.preferences.FallbackThemeColor
 import app.readylytics.health.core.model.data.preferences.UnitSystem
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.model.HealthDataType
-import app.readylytics.health.data.device.HealthDeviceRepository
 import java.time.DayOfWeek
 import javax.inject.Inject
 

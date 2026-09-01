@@ -6,8 +6,8 @@ import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.dataStoreFile
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.readylytics.health.core.database.data.local.HealthDeviceRepository
 import app.readylytics.health.core.model.domain.model.HealthDataType
-import app.readylytics.health.data.device.HealthDeviceRepository
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
