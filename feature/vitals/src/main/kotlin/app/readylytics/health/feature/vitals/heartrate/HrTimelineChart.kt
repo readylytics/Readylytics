@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
@@ -150,48 +151,51 @@ private fun HrTimelineChartCanvasArea(
     var scaleX by state.interaction.scaleX
     var offsetX by state.interaction.offsetX
 
-    BoxWithConstraints(modifier = modifier) {
-        val density = LocalDensity.current
-        val leftLabelWidthPx = with(density) { HR_TIMELINE_LEFT_LABEL_WIDTH.toPx() }
-        val plotW = with(density) { maxWidth.toPx() } - leftLabelWidthPx
+    Column(modifier = modifier) {
+        HrResolutionLabel(state.resolution)
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val density = LocalDensity.current
+            val leftLabelWidthPx = with(density) { HR_TIMELINE_LEFT_LABEL_WIDTH.toPx() }
+            val plotW = with(density) { maxWidth.toPx() } - leftLabelWidthPx
 
-        fun zoomedX(timestampMs: Long): Float =
-            hrTimelineZoomedX(timestampMs, state.scale, leftLabelWidthPx, plotW, scaleX, offsetX)
+            fun zoomedX(timestampMs: Long): Float =
+                hrTimelineZoomedX(timestampMs, state.scale, leftLabelWidthPx, plotW, scaleX, offsetX)
 
-        val bottomLabelHeightPx = with(density) { HR_TIMELINE_BOTTOM_LABEL_HEIGHT.toPx() }
-        val canvasHeightPx = with(density) { HR_TIMELINE_CHART_HEIGHT.toPx() }
+            val bottomLabelHeightPx = with(density) { HR_TIMELINE_BOTTOM_LABEL_HEIGHT.toPx() }
+            val canvasHeightPx = with(density) { HR_TIMELINE_CHART_HEIGHT.toPx() }
 
-        val tooltipState =
-            remember(
-                state.interaction.selectedSample.value,
-                scaleX,
-                offsetX,
-                plotW,
-                state.scale,
-                state.data.yMin,
-                state.data.yMax,
-                state.zoneId,
-            ) {
-                computeHrTimelineTooltip(
-                    selectedSample = state.interaction.selectedSample.value,
-                    yMin = state.data.yMin,
-                    yMax = state.data.yMax,
-                    zoomedX = ::zoomedX,
-                    plotBottom = canvasHeightPx - bottomLabelHeightPx,
-                    zoneId = state.zoneId,
-                )
-            }
+            val tooltipState =
+                remember(
+                    state.interaction.selectedSample.value,
+                    scaleX,
+                    offsetX,
+                    plotW,
+                    state.scale,
+                    state.data.yMin,
+                    state.data.yMax,
+                    state.zoneId,
+                ) {
+                    computeHrTimelineTooltip(
+                        selectedSample = state.interaction.selectedSample.value,
+                        yMin = state.data.yMin,
+                        yMax = state.data.yMax,
+                        zoomedX = ::zoomedX,
+                        plotBottom = canvasHeightPx - bottomLabelHeightPx,
+                        zoneId = state.zoneId,
+                    )
+                }
 
-        val accessibility =
-            rememberHrTimelineAccessibility(state.data.samples, state.interaction.selectedSample, state.zoneId)
+            val accessibility =
+                rememberHrTimelineAccessibility(state.data.samples, state.interaction.selectedSample, state.zoneId)
 
-        HrTimelineChartVisuals(
-            state = state,
-            leftLabelWidthPx = leftLabelWidthPx,
-            plotW = plotW,
-            tooltipState = tooltipState,
-            accessibility = accessibility,
-        )
+            HrTimelineChartVisuals(
+                state = state,
+                leftLabelWidthPx = leftLabelWidthPx,
+                plotW = plotW,
+                tooltipState = tooltipState,
+                accessibility = accessibility,
+            )
+        }
     }
 }
 
@@ -217,8 +221,6 @@ private fun HrTimelineChartVisuals(
     var scaleX by state.interaction.scaleX
     var offsetX by state.interaction.offsetX
     var selectedSample by state.interaction.selectedSample
-
-    HrResolutionLabel(state.resolution)
 
     Canvas(
         modifier =

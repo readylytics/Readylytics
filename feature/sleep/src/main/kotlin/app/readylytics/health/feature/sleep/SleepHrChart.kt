@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
@@ -114,54 +115,57 @@ private fun SleepHrChartCanvasArea(
     var scaleX by state.interaction.scaleX
     var offsetX by state.interaction.offsetX
 
-    BoxWithConstraints(modifier = modifier) {
-        val density = LocalDensity.current
-        val leftLabelWidthPx = with(density) { SLEEP_HR_LEFT_LABEL_WIDTH.toPx() }
-        val plotW = with(density) { maxWidth.toPx() } - leftLabelWidthPx
+    Column(modifier = modifier) {
+        SleepHrResolutionLabel(state.resolution)
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val density = LocalDensity.current
+            val leftLabelWidthPx = with(density) { SLEEP_HR_LEFT_LABEL_WIDTH.toPx() }
+            val plotW = with(density) { maxWidth.toPx() } - leftLabelWidthPx
 
-        fun zoomedX(timestampMs: Long): Float =
-            sleepHrZoomedX(timestampMs, state.scale, leftLabelWidthPx, plotW, scaleX, offsetX)
+            fun zoomedX(timestampMs: Long): Float =
+                sleepHrZoomedX(timestampMs, state.scale, leftLabelWidthPx, plotW, scaleX, offsetX)
 
-        val bpmTemplate = stringResource(R.string.sleep_hr_tooltip_value)
-        val bottomLabelHeightPx = with(density) { SLEEP_HR_BOTTOM_LABEL_HEIGHT.toPx() }
-        val canvasHeightPx = with(density) { SLEEP_HR_CHART_HEIGHT.toPx() }
+            val bpmTemplate = stringResource(R.string.sleep_hr_tooltip_value)
+            val bottomLabelHeightPx = with(density) { SLEEP_HR_BOTTOM_LABEL_HEIGHT.toPx() }
+            val canvasHeightPx = with(density) { SLEEP_HR_CHART_HEIGHT.toPx() }
 
-        val tooltipState =
-            remember(
-                state.interaction.selectedSample.value,
-                scaleX,
-                offsetX,
-                plotW,
-                state.scale,
-                state.data.yMin,
-                state.data.yMax,
-                bpmTemplate,
-            ) {
-                computeSleepHrTooltip(
-                    selectedSample = state.interaction.selectedSample.value,
-                    yMin = state.data.yMin,
-                    yMax = state.data.yMax,
-                    zoomedX = ::zoomedX,
-                    plotBottom = canvasHeightPx - bottomLabelHeightPx,
-                    timeFormatter = state.style.timeFormatter,
-                    bpmTemplate = bpmTemplate,
+            val tooltipState =
+                remember(
+                    state.interaction.selectedSample.value,
+                    scaleX,
+                    offsetX,
+                    plotW,
+                    state.scale,
+                    state.data.yMin,
+                    state.data.yMax,
+                    bpmTemplate,
+                ) {
+                    computeSleepHrTooltip(
+                        selectedSample = state.interaction.selectedSample.value,
+                        yMin = state.data.yMin,
+                        yMax = state.data.yMax,
+                        zoomedX = ::zoomedX,
+                        plotBottom = canvasHeightPx - bottomLabelHeightPx,
+                        timeFormatter = state.style.timeFormatter,
+                        bpmTemplate = bpmTemplate,
+                    )
+                }
+
+            val accessibility =
+                rememberSleepHrAccessibility(
+                    state.data.sortedSamples,
+                    state.interaction.selectedSample,
+                    state.style.timeFormatter,
                 )
-            }
 
-        val accessibility =
-            rememberSleepHrAccessibility(
-                state.data.sortedSamples,
-                state.interaction.selectedSample,
-                state.style.timeFormatter,
+            SleepHrChartVisuals(
+                state = state,
+                leftLabelWidthPx = leftLabelWidthPx,
+                plotW = plotW,
+                tooltipState = tooltipState,
+                accessibility = accessibility,
             )
-
-        SleepHrChartVisuals(
-            state = state,
-            leftLabelWidthPx = leftLabelWidthPx,
-            plotW = plotW,
-            tooltipState = tooltipState,
-            accessibility = accessibility,
-        )
+        }
     }
 }
 
@@ -187,8 +191,6 @@ private fun SleepHrChartVisuals(
     var scaleX by state.interaction.scaleX
     var offsetX by state.interaction.offsetX
     var selectedSample by state.interaction.selectedSample
-
-    SleepHrResolutionLabel(state.resolution)
 
     Canvas(
         modifier =
