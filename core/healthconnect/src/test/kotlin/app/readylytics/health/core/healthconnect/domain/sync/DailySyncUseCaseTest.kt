@@ -578,38 +578,65 @@ class DailySyncUseCaseTest {
         }
 
     @Test
-    fun `sync recomputes the whole window inside exactly one transaction`() =
+    fun `sync executes baseline clear and each day in its own transaction`() =
         runTest {
-            // F7: Room invalidates per table per transaction. One transaction for the whole
-            // walk-forward means every observed daily_summaries/workout_records query in the UI
-            // re-runs once per sync instead of once per synced day.
+            // R2-CACHE-002: Baseline clear runs in its own transaction (tx #1), then each day
+            // recomputes in its own transaction (tx #2..tx #9 for windowDays = 8).
             useCase.run(windowDays = 8, onProgress = null)
 
-            assertEquals(1, transactionRunner.transactionCount)
+            assertEquals(9, transactionRunner.transactionCount)
             assertEquals(1, transactionRunner.maxDepth)
         }
 
     @Test
-    fun `sync clears frozen baselines and scores every day inside the transaction`() =
+    fun `sync clears frozen baselines and scores each day inside its own transaction`() =
         runTest {
-            // The frozen-baseline clear is a daily_summaries write too; leaving it outside would
-            // cost a second invalidation round per sync.
-            val insideTransaction = mutableListOf<String>()
+            val transactions = mutableListOf<String>()
             coEvery { healthIngestionStore.clearFrozenBaselines(any(), any(), any()) } answers {
-                insideTransaction += "clear:${transactionRunner.openDepth}"
+                transactions += "clear:tx#${transactionRunner.transactionCount}:depth${transactionRunner.openDepth}"
             }
             coEvery {
                 scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any())
             } answers {
-                insideTransaction += "score:${transactionRunner.openDepth}"
+                transactions += "score:tx#${transactionRunner.transactionCount}:depth${transactionRunner.openDepth}"
             }
 
             useCase.run(windowDays = 3, onProgress = null)
 
             assertEquals(
-                listOf("clear:1", "score:1", "score:1", "score:1"),
-                insideTransaction,
+                listOf(
+                    "clear:tx#1:depth1",
+                    "score:tx#2:depth1",
+                    "score:tx#3:depth1",
+                    "score:tx#4:depth1",
+                ),
+                transactions,
             )
+            assertEquals(4, transactionRunner.transactionCount)
+            assertEquals(1, transactionRunner.maxDepth)
+        }
+
+    @Test
+    fun `recompute cancellation mid-sync retains already completed day transactions`() =
+        runTest {
+            val zoneId = ZoneId.systemDefault()
+            val today = LocalDate.now(fixedClock.withZone(zoneId))
+            val day0 = today.minusDays(2)
+            val day1 = today.minusDays(1)
+
+            coEvery {
+                scoringRepository.computeAndPersistDailySummary(day0, any(), any(), any())
+            } returns Unit
+            coEvery {
+                scoringRepository.computeAndPersistDailySummary(day1, any(), any(), any())
+            } throws CancellationException("sync cancelled mid-walkforward")
+
+            assertFailsWith<CancellationException> {
+                useCase.run(windowDays = 3, onProgress = null)
+            }
+
+            // Baseline clear was tx #1, day 0 was tx #2, day 1 failed in tx #3
+            assertEquals(3, transactionRunner.transactionCount)
         }
 
     @Test
