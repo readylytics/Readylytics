@@ -355,4 +355,35 @@ class CleanArchTest {
             violations.isEmpty(),
         )
     }
+
+    @Test
+    fun `feature packages do not read Health Connect sample data directly`() {
+        val bannedMembers =
+            setOf(
+                "readHeartRateSamples",
+                "readHeartRateSamplesPaged",
+                "readAllPagesStreaming",
+                "readSleepSessions",
+                "readExerciseSessions",
+                "readHrvSamples",
+            )
+        val violations =
+            Konsist
+                .scopeFromProject()
+                .files
+                .filter { file ->
+                    file.hasPackage("app.readylytics.health.feature..") &&
+                        (file.path.contains("/src/main/") || file.path.contains("\\src\\main\\"))
+                }.flatMap { file ->
+                    bannedMembers
+                        .filter { member -> Regex("""\.$member\s*\(""").containsMatchIn(file.text) }
+                        .map { member -> "${file.name}: $member(...)" }
+                }
+
+        org.junit.Assert.assertTrue(
+            "feature:* modules must read heart-rate/sleep/exercise/HRV data from Room, never Health " +
+                "Connect directly. Violations:\n${violations.joinToString("\n")}",
+            violations.isEmpty(),
+        )
+    }
 }
