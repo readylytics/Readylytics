@@ -22,14 +22,15 @@ import kotlin.test.assertEquals
 class FullHistoricalResyncUseCaseTest {
     private val settingsRepo = mockk<SettingsRepository>()
     private val healthSyncUseCase = mockk<HealthSyncUseCase>()
+    private val clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC"))
     private val useCase =
         FullHistoricalResyncUseCase(
             settingsRepo,
             healthSyncUseCase,
-            clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
+            clock = clock,
         )
 
-    private val today = LocalDate.now(ZoneId.systemDefault())
+    private val today = LocalDate.ofInstant(clock.instant(), ZoneId.of("UTC"))
 
     @Test
     fun `resolveScoringToday uses stored scoring timezone`() {

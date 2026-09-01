@@ -390,7 +390,7 @@ internal object HealthRecordDeletionReconciler {
 private const val PERSIST_TAG = "HealthSync.Persist"
 
 internal suspend fun <T> List<T>.forEachPersistenceBatch(
-    batchSize: Int = 5_000,
+    batchSize: Int = 500,
     action: suspend (List<T>) -> Unit,
 ) {
     require(batchSize > 0) { "batchSize must be positive" }

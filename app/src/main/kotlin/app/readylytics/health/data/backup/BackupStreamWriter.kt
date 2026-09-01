@@ -147,14 +147,24 @@ class BackupStreamWriter
             var mbAfterTs = Long.MIN_VALUE
             var mbAfterRecordType = ""
             var mbAfterSessionId = ""
+            var mbAfterDeviceName = ""
             writeTable<HrMinuteBucketEntity>(
                 writer,
                 "hrMinuteBuckets",
-                page = { minuteBucketDao.pageAfter(mbAfterTs, mbAfterRecordType, mbAfterSessionId, 500) },
+                page = {
+                    minuteBucketDao.pageAfter(
+                        mbAfterTs,
+                        mbAfterRecordType,
+                        mbAfterSessionId,
+                        mbAfterDeviceName,
+                        500,
+                    )
+                },
                 advance = {
                     mbAfterTs = it.bucketStartMs
                     mbAfterRecordType = it.recordType
                     mbAfterSessionId = it.sessionId
+                    mbAfterDeviceName = it.deviceName
                 },
             )
             writer.write(",\n")

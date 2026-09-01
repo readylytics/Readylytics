@@ -15,6 +15,7 @@ import app.readylytics.health.core.databaseschema.data.local.entity.BloodPressur
 import app.readylytics.health.core.databaseschema.data.local.entity.BodyFatRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HealthSourceRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HrMinuteBucketEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.StepRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity
@@ -336,6 +337,60 @@ class KeysetPaginationTest {
 
             assertEquals(3, (page1 + page2).map { it.id }.distinct().size)
         }
+
+    @Test
+    fun `minuteBucket pageAfter returns all rows across pages with 4-part PK`() =
+        runTest {
+            val mbDao = db.minuteBucketDao()
+            val buckets =
+                listOf(
+                    minuteBucket(startMs = 60_000L, deviceName = "Device A"),
+                    minuteBucket(startMs = 60_000L, deviceName = "Device B"),
+                    minuteBucket(startMs = 120_000L, deviceName = "Device A"),
+                )
+            mbDao.upsertBuckets(buckets)
+
+            val page1 = mbDao.pageAfter(Long.MIN_VALUE, "", "", "", 2)
+            assertEquals(2, page1.size)
+            assertEquals("Device A", page1[0].deviceName)
+            assertEquals("Device B", page1[1].deviceName)
+
+            val page2 =
+                mbDao.pageAfter(
+                    page1.last().bucketStartMs,
+                    page1.last().recordType,
+                    page1.last().sessionId,
+                    page1.last().deviceName,
+                    2,
+                )
+            assertEquals(1, page2.size)
+            assertEquals(120_000L, page2[0].bucketStartMs)
+
+            val page3 =
+                mbDao.pageAfter(
+                    page2.last().bucketStartMs,
+                    page2.last().recordType,
+                    page2.last().sessionId,
+                    page2.last().deviceName,
+                    2,
+                )
+            assertEquals(0, page3.size)
+        }
+
+    private fun minuteBucket(
+        startMs: Long,
+        deviceName: String,
+    ) = HrMinuteBucketEntity(
+        bucketStartMs = startMs,
+        bucketEndMs = startMs + 60_000L,
+        minBpm = 60,
+        maxBpm = 80,
+        avgBpm = 70.0,
+        sampleCount = 60,
+        recordType = "RESTING",
+        sessionId = "session-1",
+        deviceName = deviceName,
+    )
 
     private fun hrEntity(
         ref: Long,

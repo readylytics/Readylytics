@@ -51,15 +51,18 @@ interface MinuteBucketDao {
         "SELECT * FROM hr_minute_buckets WHERE (" +
             "  bucketStartMs > :afterTs OR " +
             "  (bucketStartMs = :afterTs AND recordType > :afterRecordType) OR " +
-            "  (bucketStartMs = :afterTs AND recordType = :afterRecordType AND sessionId > :afterSessionId)" +
+            "  (bucketStartMs = :afterTs AND recordType = :afterRecordType AND sessionId > :afterSessionId) OR " +
+            "  (bucketStartMs = :afterTs AND recordType = :afterRecordType AND sessionId = :afterSessionId AND " +
+            "   deviceName > :afterDeviceName)" +
             ") " +
-            "ORDER BY bucketStartMs ASC, recordType ASC, sessionId ASC " +
+            "ORDER BY bucketStartMs ASC, recordType ASC, sessionId ASC, deviceName ASC " +
             "LIMIT :limit",
     )
     suspend fun pageAfter(
         afterTs: Long,
         afterRecordType: String,
         afterSessionId: String,
+        afterDeviceName: String,
         limit: Int,
     ): List<HrMinuteBucketEntity>
 

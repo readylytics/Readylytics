@@ -31,11 +31,11 @@ class PersistenceBatchingTest {
         runTest {
             val batchSizes = mutableListOf<Int>()
 
-            (1..12_001).toList().forEachPersistenceBatch { batch ->
+            (1..1201).toList().forEachPersistenceBatch { batch ->
                 batchSizes += batch.size
             }
 
-            assertEquals(listOf(5_000, 5_000, 2_001), batchSizes)
+            assertEquals(listOf(500, 500, 201), batchSizes)
         }
 
     @Test
@@ -71,7 +71,7 @@ class PersistenceBatchingTest {
                 HealthIngestionBatch(
                     sleepSessions = emptyList(),
                     sleepStages = emptyList(),
-                    heartRateSamples = (1..5_001).map(::heartRateInput),
+                    heartRateSamples = (1..1_001).map(::heartRateInput),
                     hrvSamples = emptyList(),
                     workouts = emptyList(),
                     weights = emptyList(),
@@ -83,9 +83,9 @@ class PersistenceBatchingTest {
                 ),
             )
 
-            assertEquals(3, transactionRunner.transactionCount)
+            assertEquals(4, transactionRunner.transactionCount)
             assertEquals(
-                listOf("sleep:0", "heartRate:5000", "heartRate:1"),
+                listOf("sleep:0", "heartRate:500", "heartRate:500", "heartRate:1"),
                 events.filter { it.startsWith("sleep:") || it.startsWith("heartRate:") },
             )
         }
@@ -93,10 +93,9 @@ class PersistenceBatchingTest {
     @Test
     fun `persist splits heart rate samples above multiple batch boundaries via the bulk entrypoint`() =
         runTest {
-            // M5/US-001: persist() pre-chunks at 5000 before calling persistHeartRateSamples, which
-            // now ALSO batches at 5000 internally. With input spanning three outer chunks
-            // (5000, 5000, 2001), nested batching must still upsert every row in the expected batch
-            // shape -- not degenerate into a batch-of-1 pathology per input row.
+            // persist() delegates to persistHeartRateSamples, which batches at 500 internally.
+            // With input spanning three chunks (500, 500, 201), batching must upsert every row
+            // in the expected batch shape.
             val events = mutableListOf<String>()
             val transactionRunner = RecordingTransactionRunner(events)
             val store = buildStore(events, transactionRunner)
@@ -105,7 +104,7 @@ class PersistenceBatchingTest {
                 HealthIngestionBatch(
                     sleepSessions = emptyList(),
                     sleepStages = emptyList(),
-                    heartRateSamples = (1..12_001).map(::heartRateInput),
+                    heartRateSamples = (1..1201).map(::heartRateInput),
                     hrvSamples = emptyList(),
                     workouts = emptyList(),
                     weights = emptyList(),
@@ -117,10 +116,10 @@ class PersistenceBatchingTest {
                 ),
             )
 
-            // 1 metadata transaction + 3 heart-rate batches (5000, 5000, 2001).
+            // 1 metadata transaction + 3 heart-rate batches (500, 500, 201).
             assertEquals(4, transactionRunner.transactionCount)
             assertEquals(
-                listOf("heartRate:5000", "heartRate:5000", "heartRate:2001"),
+                listOf("heartRate:500", "heartRate:500", "heartRate:201"),
                 events.filter { it.startsWith("heartRate:") },
             )
         }
@@ -132,11 +131,11 @@ class PersistenceBatchingTest {
             val transactionRunner = RecordingTransactionRunner(events)
             val store = buildStore(events, transactionRunner)
 
-            store.persistHeartRateSamples((1..12_001).map(::heartRateInput))
+            store.persistHeartRateSamples((1..1201).map(::heartRateInput))
 
             assertEquals(3, transactionRunner.transactionCount)
             assertEquals(
-                listOf("heartRate:5000", "heartRate:5000", "heartRate:2001"),
+                listOf("heartRate:500", "heartRate:500", "heartRate:201"),
                 events.filter { it.startsWith("heartRate:") },
             )
         }
@@ -148,10 +147,10 @@ class PersistenceBatchingTest {
             val transactionRunner = RecordingTransactionRunner(events)
             val store = buildStore(events, transactionRunner)
 
-            store.persistHeartRateSamples((1..5_000).map(::heartRateInput))
+            store.persistHeartRateSamples((1..500).map(::heartRateInput))
 
             assertEquals(1, transactionRunner.transactionCount)
-            assertEquals(listOf("heartRate:5000"), events.filter { it.startsWith("heartRate:") })
+            assertEquals(listOf("heartRate:500"), events.filter { it.startsWith("heartRate:") })
         }
 
     @Test
@@ -161,10 +160,10 @@ class PersistenceBatchingTest {
             val transactionRunner = RecordingTransactionRunner(events)
             val store = buildStore(events, transactionRunner)
 
-            store.persistHrvSamples((1..7_500).map(::hrvInput))
+            store.persistHrvSamples((1..1200).map(::hrvInput))
 
-            assertEquals(2, transactionRunner.transactionCount)
-            assertEquals(listOf("hrv:5000", "hrv:2500"), events.filter { it.startsWith("hrv:") })
+            assertEquals(3, transactionRunner.transactionCount)
+            assertEquals(listOf("hrv:500", "hrv:500", "hrv:200"), events.filter { it.startsWith("hrv:") })
         }
 
     @Test
@@ -174,10 +173,10 @@ class PersistenceBatchingTest {
             val transactionRunner = RecordingTransactionRunner(events)
             val store = buildStore(events, transactionRunner)
 
-            store.persistHrvSamples((1..4_999).map(::hrvInput))
+            store.persistHrvSamples((1..499).map(::hrvInput))
 
             assertEquals(1, transactionRunner.transactionCount)
-            assertEquals(listOf("hrv:4999"), events.filter { it.startsWith("hrv:") })
+            assertEquals(listOf("hrv:499"), events.filter { it.startsWith("hrv:") })
         }
 
     @Test
@@ -187,14 +186,14 @@ class PersistenceBatchingTest {
 
             val job =
                 launch {
-                    (1..10_000).toList().forEachPersistenceBatch { batch ->
+                    (1..1000).toList().forEachPersistenceBatch { batch ->
                         batchSizes += batch.size
                         cancel()
                     }
                 }
             job.join()
 
-            assertEquals(listOf(5_000), batchSizes)
+            assertEquals(listOf(500), batchSizes)
         }
 
     @Test
