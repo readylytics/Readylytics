@@ -97,14 +97,65 @@ class MathUtilsTest {
     }
 
     @Test
-    fun `percentile throws on out of bounds p`() {
-        val list = listOf(10, 20, 30)
+    fun `weightedPercentile matches unweighted percentile for equal weights`() {
+        val values = intArrayOf(10, 20, 30, 40, 50)
+        val weights = intArrayOf(1, 1, 1, 1, 1)
+        assertEquals(10, weightedPercentile(values, weights, 0.0))
+        assertEquals(20, weightedPercentile(values, weights, 0.25))
+        assertEquals(30, weightedPercentile(values, weights, 0.5))
+        assertEquals(40, weightedPercentile(values, weights, 0.75))
+        assertEquals(50, weightedPercentile(values, weights, 1.0))
+    }
+
+    @Test
+    fun `weightedPercentile matches expanded list for arbitrary weights`() {
+        val values = intArrayOf(50, 60, 70, 80)
+        val weights = intArrayOf(10, 20, 15, 5) // total weight = 50
+        val expanded = ArrayList<Int>()
+        for (i in values.indices) {
+            repeat(weights[i]) { expanded.add(values[i]) }
+        }
+
+        listOf(0.0, 0.05, 0.10, 0.25, 0.50, 0.75, 0.90, 0.95, 1.0).forEach { p ->
+            val expectedIndex = ((p * (expanded.size - 1)).let { kotlin.math.round(it) }).toInt()
+            val expectedValue = expanded[expectedIndex]
+            val actualValue = weightedPercentile(values, weights, p)
+            assertEquals("Mismatch for p=$p", expectedValue, actualValue)
+        }
+    }
+
+    @Test
+    fun `weightedPercentile throws on empty array`() {
         assertFailsWith<IllegalArgumentException> {
-            list.percentile(-0.01)
+            weightedPercentile(intArrayOf(), intArrayOf(), 0.5)
+        }
+    }
+
+    @Test
+    fun `weightedPercentile throws on mismatched array sizes`() {
+        assertFailsWith<IllegalArgumentException> {
+            weightedPercentile(intArrayOf(10, 20), intArrayOf(1), 0.5)
+        }
+    }
+
+    @Test
+    fun `weightedPercentile throws on out of bounds p`() {
+        assertFailsWith<IllegalArgumentException> {
+            weightedPercentile(intArrayOf(10, 20), intArrayOf(1, 1), -0.1)
         }
         assertFailsWith<IllegalArgumentException> {
-            list.percentile(1.01)
+            weightedPercentile(intArrayOf(10, 20), intArrayOf(1, 1), 1.1)
         }
+    }
+
+    @Test
+    fun `weightedPercentile handles single element`() {
+        assertEquals(42, weightedPercentile(intArrayOf(42), intArrayOf(100), 0.5))
+    }
+
+    @Test
+    fun `weightedPercentile handles zero total weight`() {
+        assertEquals(42, weightedPercentile(intArrayOf(42, 50), intArrayOf(0, 0), 0.5))
     }
 }
 

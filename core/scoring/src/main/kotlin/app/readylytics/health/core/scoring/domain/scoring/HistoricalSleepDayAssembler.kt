@@ -1,15 +1,12 @@
 package app.readylytics.health.core.scoring.domain.scoring
 
-import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
-import app.readylytics.health.core.scoring.domain.scoring.HistoricalSleepDayAssembler
-import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
-
 import app.readylytics.health.core.model.domain.model.SleepSession
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayAggregator
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayPolicy
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDaySegment
 import app.readylytics.health.core.scoring.domain.util.mean
+import app.readylytics.health.core.scoring.domain.util.weightedPercentile
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -189,8 +186,9 @@ internal class HistoricalSleepDayAssembler(
         percentile: Int,
     ): Int? {
         if (hrSamples.isEmpty()) return null
-        val index = ((percentile / 100.0) * (hrSamples.size - 1)).roundToInt().coerceIn(0, hrSamples.size - 1)
-        return hrSamples[index]
+        val values = hrSamples.toIntArray()
+        val weights = IntArray(values.size) { 1 }
+        return weightedPercentile(values, weights, percentile / 100.0)
     }
 
     private fun toSleepDaySegment(session: SleepSession): SleepDaySegment {

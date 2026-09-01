@@ -1,20 +1,16 @@
 package app.readylytics.health.core.scoring.domain.scoring
 
-import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
-import app.readylytics.health.core.scoring.domain.scoring.HistoricalSleepDayAssembler
-import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
-import app.readylytics.health.core.scoring.domain.scoring.components.Phase
-
-import app.readylytics.health.core.model.domain.scoring.ScoringConstants
-
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.model.SleepSession
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
-import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayPolicy
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.model.domain.util.logD
+import app.readylytics.health.core.scoring.domain.scoring.components.Phase
+import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayPolicy
 import app.readylytics.health.core.scoring.domain.util.mean
 import app.readylytics.health.core.scoring.domain.util.median
 import app.readylytics.health.core.scoring.domain.util.medianOrNull
+import app.readylytics.health.core.scoring.domain.util.weightedPercentile
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -90,8 +86,9 @@ class BaselineComputer
             return sessions.mapNotNull { session ->
                 val samples = samplesBySession[session.id] ?: return@mapNotNull null
                 if (samples.isEmpty()) return@mapNotNull null
-                val index = ((percentile / 100.0) * (samples.size - 1)).roundToInt().coerceIn(0, samples.size - 1)
-                samples[index].beatsPerMinute
+                val values = samples.map { it.beatsPerMinute }.toIntArray()
+                val weights = IntArray(values.size) { 1 }
+                weightedPercentile(values, weights, percentile / 100.0)
             }
         }
 
