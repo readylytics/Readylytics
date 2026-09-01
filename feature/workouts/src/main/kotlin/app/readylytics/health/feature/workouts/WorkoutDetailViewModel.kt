@@ -228,19 +228,14 @@ class WorkoutDetailViewModel
                     val toleranceSeconds = prefs.hrrToleranceSeconds.toLong()
                     val recoveryWindowEnd = end.plus(3, ChronoUnit.MINUTES).plusSeconds(toleranceSeconds)
 
-                    val hcSamples =
-                        hcRepo
-                            .readHeartRateSamples(start, recoveryWindowEnd)
-                            .asSequence()
-                            .flatMap { record ->
-                                record.samples.map { HeartRatePoint(it.time, it.beatsPerMinute) }
-                            }.toList()
-                    val dbSamples =
-                        heartRateRepository
-                            .getByTimeRange(start.toEpochMilli(), recoveryWindowEnd.toEpochMilli())
-                            .map { HeartRatePoint(Instant.ofEpochMilli(it.timestampMs), it.beatsPerMinute) }
+                    val recoveryWindow =
+                        heartRateRepository.getRecoveryWindowSamples(
+                            start.toEpochMilli(),
+                            recoveryWindowEnd.toEpochMilli(),
+                        )
                     val allSamples =
-                        (hcSamples + dbSamples)
+                        recoveryWindow.points
+                            .map { HeartRatePoint(Instant.ofEpochMilli(it.timestampMs), it.beatsPerMinute) }
                             .distinctBy { it.timestamp }
                             .sortedBy { it.timestamp }
 
@@ -277,7 +272,7 @@ class WorkoutDetailViewModel
                             toleranceSeconds,
                         )
 
-                    val workoutSamples = dbSamples.filter { it.timestamp <= workoutEndInstant }
+                    val workoutSamples = allSamples.filter { it.timestamp <= workoutEndInstant }
                     val displayMetrics =
                         getWorkoutDisplayMetricsUseCase.execute(
                             workout = workout,

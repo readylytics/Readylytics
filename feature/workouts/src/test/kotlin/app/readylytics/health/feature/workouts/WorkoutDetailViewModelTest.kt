@@ -12,6 +12,8 @@ import app.readylytics.health.core.model.domain.repository.DailySummaryRepositor
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
 import app.readylytics.health.core.model.domain.repository.HeartRateRecordData
 import app.readylytics.health.core.model.domain.repository.HeartRateRepository
+import app.readylytics.health.core.model.domain.repository.HeartRateResolution
+import app.readylytics.health.core.model.domain.repository.HeartRateSeries
 import app.readylytics.health.core.model.domain.repository.WorkoutData
 import app.readylytics.health.core.model.domain.repository.WorkoutRepository
 import app.readylytics.health.core.model.domain.scoring.WorkoutIntensityLevel
@@ -155,8 +157,8 @@ class WorkoutDetailViewModelTest {
     ) {
         coEvery { workoutRepository.getById(workoutId) } returns workout
         coEvery { workoutRepository.getRoutePoints(workoutId) } returns routePoints
-        coEvery { healthConnectRepository.readHeartRateSamples(any(), any()) } returns emptyList()
-        coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns hrSamples
+        coEvery { heartRateRepository.getRecoveryWindowSamples(any(), any()) } returns
+            HeartRateSeries(points = hrSamples, resolution = HeartRateResolution.RAW)
         coEvery { dailySummaryRepository.getByDate(any()) } returns null
         coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
         coEvery {
@@ -332,8 +334,8 @@ class WorkoutDetailViewModelTest {
                     avgHr = 134f,
                 )
             coEvery { workoutRepository.getById("run-1") } returns workout
-            coEvery { healthConnectRepository.readHeartRateSamples(any(), any()) } returns emptyList()
-            coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { heartRateRepository.getRecoveryWindowSamples(any(), any()) } returns
+                HeartRateSeries(points = emptyList(), resolution = HeartRateResolution.RAW)
             coEvery { dailySummaryRepository.getByDate(any()) } returns null
             coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
             coEvery {
@@ -355,11 +357,52 @@ class WorkoutDetailViewModelTest {
             advanceUntilIdle()
 
             coVerify {
-                heartRateRepository.getByTimeRange(
+                heartRateRepository.getRecoveryWindowSamples(
                     workout.startTime,
                     workout.endTime + 210_000L,
                 )
             }
+        }
+
+    @Test
+    fun `loadWorkout never returns Health Connect samples once the Room read covers the recovery window`() =
+        runTest {
+            val workout = buildWorkout(id = "run-1", durationMinutes = 30, trimp = 90f, avgHr = 150f, startMs = 0L)
+            coEvery { workoutRepository.getById("run-1") } returns workout
+            coEvery { dailySummaryRepository.getByDate(any()) } returns null
+            coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
+            // Room already excludes the non-selected device at ingest/pruning time -- only device A appears.
+            coEvery { heartRateRepository.getRecoveryWindowSamples(any(), any()) } returns
+                HeartRateSeries(
+                    points =
+                        listOf(
+                            HeartRateRecordData(
+                                id = "a1",
+                                timestampMs = 60_000L,
+                                beatsPerMinute = 120,
+                                recordType = "EXERCISE",
+                                sessionId = "run-1",
+                                deviceName = "Device A",
+                            ),
+                        ),
+                    resolution = HeartRateResolution.RAW,
+                )
+            coEvery {
+                getWorkoutDisplayMetricsUseCase.execute(workout = workout, samples = any())
+            } returns
+                WorkoutDisplayMetrics(
+                    preciseTrimp = 90f,
+                    computedTrimp = 90,
+                    trimpDisplay = "90",
+                    gainedStrain = 0f,
+                    gainedStrainDisplay = "0",
+                    classification = null,
+                )
+
+            viewModel.loadWorkout("run-1")
+            advanceUntilIdle()
+
+            coVerify(exactly = 0) { healthConnectRepository.readHeartRateSamples(any(), any()) }
         }
 
     @Test
@@ -400,8 +443,8 @@ class WorkoutDetailViewModelTest {
                     ),
                 )
             coEvery { workoutRepository.getById("run-1") } returns workout
-            coEvery { healthConnectRepository.readHeartRateSamples(any(), any()) } returns emptyList()
-            coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns dbSamples
+            coEvery { heartRateRepository.getRecoveryWindowSamples(any(), any()) } returns
+                HeartRateSeries(points = dbSamples, resolution = HeartRateResolution.RAW)
             coEvery { dailySummaryRepository.getByDate(any()) } returns null
             coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
             coEvery {
@@ -686,8 +729,8 @@ class WorkoutDetailViewModelTest {
 
             coEvery { workoutRepository.getById("run-perm") } returns workout
             coEvery { workoutRepository.getRoutePoints("run-perm") } returns emptyList()
-            coEvery { healthConnectRepository.readHeartRateSamples(any(), any()) } returns emptyList()
-            coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { heartRateRepository.getRecoveryWindowSamples(any(), any()) } returns
+                HeartRateSeries(points = emptyList(), resolution = HeartRateResolution.RAW)
             coEvery { dailySummaryRepository.getByDate(any()) } returns null
             coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
             coEvery {
@@ -743,8 +786,8 @@ class WorkoutDetailViewModelTest {
 
             coEvery { workoutRepository.getById("run-no-route") } returns workout
             coEvery { workoutRepository.getRoutePoints("run-no-route") } returns emptyList()
-            coEvery { healthConnectRepository.readHeartRateSamples(any(), any()) } returns emptyList()
-            coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { heartRateRepository.getRecoveryWindowSamples(any(), any()) } returns
+                HeartRateSeries(points = emptyList(), resolution = HeartRateResolution.RAW)
             coEvery { dailySummaryRepository.getByDate(any()) } returns null
             coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
             coEvery {
@@ -800,8 +843,8 @@ class WorkoutDetailViewModelTest {
 
             coEvery { workoutRepository.getById("run-perm-test") } returns workout
             coEvery { workoutRepository.getRoutePoints("run-perm-test") } returns emptyList()
-            coEvery { healthConnectRepository.readHeartRateSamples(any(), any()) } returns emptyList()
-            coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { heartRateRepository.getRecoveryWindowSamples(any(), any()) } returns
+                HeartRateSeries(points = emptyList(), resolution = HeartRateResolution.RAW)
             coEvery { dailySummaryRepository.getByDate(any()) } returns null
             coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
             coEvery {
@@ -904,8 +947,8 @@ class WorkoutDetailViewModelTest {
             coEvery { healthConnectRepository.hasExerciseRoutesPermission() } returns true
             coEvery { workoutRepository.getById("run-auto-sync") } returns workout
             coEvery { workoutRepository.getRoutePoints("run-auto-sync") } returns emptyList()
-            coEvery { healthConnectRepository.readHeartRateSamples(any(), any()) } returns emptyList()
-            coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { heartRateRepository.getRecoveryWindowSamples(any(), any()) } returns
+                HeartRateSeries(points = emptyList(), resolution = HeartRateResolution.RAW)
             coEvery { dailySummaryRepository.getByDate(any()) } returns null
             coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
             coEvery {
