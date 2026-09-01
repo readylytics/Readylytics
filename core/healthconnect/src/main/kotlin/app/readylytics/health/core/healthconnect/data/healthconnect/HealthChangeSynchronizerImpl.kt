@@ -239,30 +239,29 @@ class HealthChangeSynchronizerImpl
          */
         private suspend fun pageSessionSpans(dataType: HealthDataType, changes: List<Change>): SessionSpans {
             val spanConsumingTypes = setOf(HealthDataType.HEART_RATE, HealthDataType.HRV)
-            val upserts =
+            // Health Connect's per-type change token guarantees a HEART_RATE/HRV page never
+            // contains another record type, but this filters defensively via mapNotNull instead
+            // of erroring on a type mismatch -- one unexpected record must skip cleanly, never
+            // abort applyPendingChanges() for every data type (see the surrounding try/catch that
+            // re-throws non-token-expiry exceptions).
+            val ranges =
                 if (dataType in spanConsumingTypes) {
-                    changes.filterIsInstance<UpsertionChange>()
+                    changes.filterIsInstance<UpsertionChange>().mapNotNull { recordTimeRangeMs(it.record) }
                 } else {
                     emptyList()
                 }
-            if (upserts.isEmpty()) return SessionSpans(emptyList(), emptyList())
-            val starts = upserts.map { recordStartMs(it.record) }
-            val ends = upserts.map { recordEndMs(it.record) }
-            return changeIngestionStore.sessionSpansOverlapping(starts.min(), ends.max())
+            if (ranges.isEmpty()) return SessionSpans(emptyList(), emptyList())
+            return changeIngestionStore.sessionSpansOverlapping(
+                ranges.minOf { it.first },
+                ranges.maxOf { it.second },
+            )
         }
 
-        private fun recordStartMs(record: Record): Long =
+        private fun recordTimeRangeMs(record: Record): Pair<Long, Long>? =
             when (record) {
-                is HealthConnectHeartRateRecord -> record.startTime.toEpochMilli()
-                is HeartRateVariabilityRmssdRecord -> record.time.toEpochMilli()
-                else -> error("pageSessionSpans called for unsupported record type")
-            }
-
-        private fun recordEndMs(record: Record): Long =
-            when (record) {
-                is HealthConnectHeartRateRecord -> record.endTime.toEpochMilli()
-                is HeartRateVariabilityRmssdRecord -> record.time.toEpochMilli()
-                else -> error("pageSessionSpans called for unsupported record type")
+                is HealthConnectHeartRateRecord -> record.startTime.toEpochMilli() to record.endTime.toEpochMilli()
+                is HeartRateVariabilityRmssdRecord -> record.time.toEpochMilli().let { it to it }
+                else -> null
             }
 
         private suspend fun upsertRecord(

@@ -6,13 +6,18 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.sync.HealthIngestionBatch
 import app.readylytics.health.core.model.domain.sync.HeartRateInput
+import app.readylytics.health.core.model.domain.sync.HrvInput
 import app.readylytics.health.core.model.domain.sync.SleepSessionInput
+import app.readylytics.health.core.model.domain.sync.StepRecordInput
+import app.readylytics.health.core.model.domain.sync.WeightInput
 import app.readylytics.health.core.model.domain.sync.WorkoutInput
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.test.assertEquals
 
@@ -136,6 +141,124 @@ class RoomHealthChangeIngestionStoreTest {
         assertEquals(1, samples.size)
         assertEquals(140, samples.single().beatsPerMinute)
     }
+
+    @Test
+    fun `affectedDatesForRecord returns dates for every heart rate sample sharing the source record id`() =
+        runTest {
+            seedStore.persistHeartRateSamples(
+                listOf(
+                    HeartRateInput(
+                        id = "hc-hr-4_1000", timestampMs = 1_000L, beatsPerMinute = 60,
+                        recordType = "RESTING", sessionId = null, deviceName = null,
+                    ),
+                    HeartRateInput(
+                        id = "hc-hr-4_90000000", timestampMs = 90_000_000L, beatsPerMinute = 61,
+                        recordType = "RESTING", sessionId = null, deviceName = null,
+                    ),
+                ),
+            )
+
+            val dates = changeStore.affectedDatesForRecord(HealthDataType.HEART_RATE, "hc-hr-4", ZoneId.of("UTC"))
+
+            assertEquals(2, dates.size)
+        }
+
+    @Test
+    fun `affectedDatesForRecord returns dates for every hrv sample sharing the source record id`() =
+        runTest {
+            seedStore.persistHrvSamples(
+                listOf(
+                    HrvInput(
+                        id = "hc-hrv-1_1000", timestampMs = 1_000L, rmssdMs = 40f,
+                        recordType = "RESTING", sessionId = null, deviceName = null,
+                    ),
+                    HrvInput(
+                        id = "hc-hrv-1_90000000", timestampMs = 90_000_000L, rmssdMs = 41f,
+                        recordType = "RESTING", sessionId = null, deviceName = null,
+                    ),
+                ),
+            )
+
+            val dates = changeStore.affectedDatesForRecord(HealthDataType.HRV, "hc-hrv-1", ZoneId.of("UTC"))
+
+            assertEquals(2, dates.size)
+        }
+
+    @Test
+    fun `affectedDatesForRecord returns the workout's date range for EXERCISE`() =
+        runTest {
+            val workout = WorkoutInput(
+                id = "hc-workout-1",
+                startTime = Instant.parse("2026-03-10T23:00:00Z").toEpochMilli(),
+                endTime = Instant.parse("2026-03-11T01:00:00Z").toEpochMilli(),
+                exerciseType = "running", durationMinutes = 120,
+                zone1Minutes = 0f, zone2Minutes = 0f, zone3Minutes = 0f, zone4Minutes = 0f, zone5Minutes = 0f,
+                trimp = 0f, avgHr = 0f, deviceName = null,
+            )
+            seedStore.persist(batch(workouts = listOf(workout)))
+
+            val dates = changeStore.affectedDatesForRecord(HealthDataType.EXERCISE, "hc-workout-1", ZoneId.of("UTC"))
+
+            assertEquals(setOf(LocalDate.of(2026, 3, 10), LocalDate.of(2026, 3, 11)), dates)
+        }
+
+    @Test
+    fun `affectedDatesForRecord returns the sample's date for a vitals type (WEIGHT)`() =
+        runTest {
+            val weightTime = Instant.parse("2026-05-01T12:00:00Z")
+            seedStore.persist(
+                batch(
+                    weights = listOf(
+                        WeightInput(
+                            id = "hc-weight-1_${weightTime.toEpochMilli()}",
+                            timestampMs = weightTime.toEpochMilli(),
+                            weightKg = 70f, deviceName = null,
+                        ),
+                    ),
+                ),
+            )
+
+            val dates = changeStore.affectedDatesForRecord(HealthDataType.WEIGHT, "hc-weight-1", ZoneId.of("UTC"))
+
+            assertEquals(setOf(LocalDate.of(2026, 5, 1)), dates)
+        }
+
+    @Test
+    fun `affectedDatesForRecord returns both dates for a steps record crossing midnight`() =
+        runTest {
+            // HC-005: a steps record spanning a day boundary must resolve both dates -- this is
+            // the cross-midnight case the old synchronizer-level test used to cover before this
+            // date-derivation logic moved into RoomHealthChangeIngestionStore.
+            val recordId = "hc-steps-1"
+            seedStore.persist(
+                batch(
+                    stepRecords = listOf(
+                        StepRecordInput(
+                            id = recordId,
+                            startTime = Instant.parse("2026-03-10T22:00:00Z").toEpochMilli(),
+                            endTime = Instant.parse("2026-03-11T00:00:00Z").toEpochMilli(),
+                            count = 200L, deviceName = null,
+                        ),
+                    ),
+                ),
+            )
+
+            val dates = changeStore.affectedDatesForRecord(HealthDataType.STEPS, recordId, ZoneId.of("UTC"))
+
+            assertEquals(setOf(LocalDate.of(2026, 3, 10), LocalDate.of(2026, 3, 11)), dates)
+        }
+
+    private fun batch(
+        sleepSessions: List<SleepSessionInput> = emptyList(),
+        workouts: List<WorkoutInput> = emptyList(),
+        weights: List<WeightInput> = emptyList(),
+        stepRecords: List<StepRecordInput> = emptyList(),
+    ) = HealthIngestionBatch(
+        sleepSessions = sleepSessions, sleepStages = emptyList(), heartRateSamples = emptyList(),
+        hrvSamples = emptyList(), workouts = workouts, weights = weights, bodyFatSamples = emptyList(),
+        bloodPressureSamples = emptyList(), oxygenSaturationSamples = emptyList(),
+        bodyTemperatureSamples = emptyList(), stepRecords = stepRecords,
+    )
 
     private companion object {
         const val START_MS = 1_700_000_000_000L

@@ -9,7 +9,9 @@ import androidx.health.connect.client.records.metadata.DataOrigin
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.response.ChangesResponse
 import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.model.DomainHeartRateSample
 import app.readylytics.health.core.model.domain.model.HealthDataType
+import app.readylytics.health.core.model.domain.model.RecordType
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.sync.HealthChangeIngestionStore
@@ -293,7 +295,11 @@ class HealthChangeSynchronizerRecordSyncTest {
             // modelTrimp/route-field preservation across re-upserts now lives inside
             // RoomHealthIngestionStore.persist() (see WorkoutModelTrimpIngestionDeterminismTest in
             // core:database) -- this class's only remaining job is to compute the fresh
-            // duration/zone/TRIMP/avgHr metrics from already-stored HR and forward them.
+            // duration/zone/TRIMP/avgHr metrics from already-stored HR and forward them. Stubbing
+            // real, non-empty HR samples (rather than emptyList()) is load-bearing here: with no
+            // samples, WorkoutMapper.mapExerciseSession's own durationMinutes computation alone
+            // would satisfy a durationMinutes-only assertion even if the entire
+            // metrics-driven .copy(...) block were deleted.
             seedTokens()
 
             val startTime = Instant.parse("2026-06-01T10:00:00Z")
@@ -301,9 +307,20 @@ class HealthChangeSynchronizerRecordSyncTest {
             val exerciseRecordId = "exercise-session-123"
             val exerciseRecord = createMockExerciseRecord(exerciseRecordId, startTime, endTime)
 
+            // 140 bpm (zone3) for the first half hour, 160 bpm (zone4) for the second half hour,
+            // against the default zone thresholds (95/114/133/152/171 from UserPreferences()):
+            // zoneMinutes = [0, 0, 30, 30, 0], avgHr = 150, trimp = 30*3 + 30*4 = 210.
+            val hrSamples = listOf(
+                DomainHeartRateSample(time = Instant.parse("2026-06-01T10:00:00Z"), beatsPerMinute = 140),
+                DomainHeartRateSample(time = Instant.parse("2026-06-01T10:30:00Z"), beatsPerMinute = 160),
+            )
             coEvery {
-                changeIngestionStore.heartRateSamplesForMetrics(any(), any(), any())
-            } returns emptyList()
+                changeIngestionStore.heartRateSamplesForMetrics(
+                    RecordType.EXERCISE.name,
+                    startTime.toEpochMilli(),
+                    endTime.toEpochMilli(),
+                )
+            } returns hrSamples
 
             val capturedBatches = mutableListOf<HealthIngestionBatch>()
             coEvery { healthIngestionStore.persist(capture(capturedBatches)) } returns Unit
@@ -312,10 +329,24 @@ class HealthChangeSynchronizerRecordSyncTest {
 
             synchronizer.applyPendingChanges()
 
+            coVerify {
+                changeIngestionStore.heartRateSamplesForMetrics(
+                    RecordType.EXERCISE.name,
+                    startTime.toEpochMilli(),
+                    endTime.toEpochMilli(),
+                )
+            }
             val saved = capturedBatches.flatMap { it.workouts }.firstOrNull { it.id == exerciseRecordId }
             assertNotNull("Saved workout input should not be null", saved)
             assertEquals(exerciseRecordId, saved?.id)
             assertEquals(60, saved?.durationMinutes)
+            assertEquals(150f, saved?.avgHr)
+            assertEquals(210f, saved?.trimp)
+            assertEquals(0f, saved?.zone1Minutes)
+            assertEquals(0f, saved?.zone2Minutes)
+            assertEquals(30f, saved?.zone3Minutes)
+            assertEquals(30f, saved?.zone4Minutes)
+            assertEquals(0f, saved?.zone5Minutes)
         }
 
     private fun createMockExerciseRecord(
