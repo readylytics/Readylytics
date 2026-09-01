@@ -19,10 +19,10 @@ import app.readylytics.health.core.database.data.repository.ScoringSeriesLoader
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepStageEntity
-import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.heartrate.ZoneThresholds
 import app.readylytics.health.core.model.domain.model.RecordType
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.core.model.domain.security.EncryptionManager
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase

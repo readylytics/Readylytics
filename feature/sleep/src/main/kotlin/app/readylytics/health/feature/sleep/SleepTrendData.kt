@@ -1,7 +1,7 @@
 package app.readylytics.health.feature.sleep
 
-import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.data.preferences.scoringZone
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.SleepSessionData
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayPolicy
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDaySegment

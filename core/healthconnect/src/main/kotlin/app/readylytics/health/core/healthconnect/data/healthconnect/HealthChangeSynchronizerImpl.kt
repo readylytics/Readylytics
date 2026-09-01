@@ -11,7 +11,7 @@ import androidx.health.connect.client.records.HeartRateRecord as HealthConnectHe
 import androidx.health.connect.client.records.WeightRecord as HealthConnectWeightRecord
 import androidx.health.connect.client.request.ChangesTokenRequest
 import androidx.health.connect.client.permission.HealthPermission
-import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.heartrate.ZoneThresholds
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.data.preferences.scoringZone

@@ -5,7 +5,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
-import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
 import app.readylytics.health.core.model.domain.dashboard.CardId
@@ -17,6 +16,7 @@ import app.readylytics.health.core.model.domain.layout.LayoutManagementDelegate
 import app.readylytics.health.core.model.domain.model.DailyMetrics
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.preferences.UnitSystem
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.DailyMetricsRepository

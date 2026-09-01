@@ -323,4 +323,36 @@ class CleanArchTest {
             violations.isEmpty(),
         )
     }
+
+    @Test
+    fun `UserPreferences is imported through the domain alias outside the data preferences package`() {
+        val exemptFiles =
+            setOf(
+                "UserPreferencesMapper.kt",
+                "UserPreferencesMapperExtensions.kt",
+                "UserPreferencesSerializer.kt",
+                "UserPreferencesSerializerExtensions.kt",
+                "BackupPreferencesBuilder.kt",
+                "RestorePreferencesExtensions.kt",
+            )
+        val violations =
+            Konsist
+                .scopeFromProject()
+                .files
+                .filter { file ->
+                    (file.path.contains("/src/main/") || file.path.contains("\\src\\main\\")) &&
+                        !file.hasPackage("app.readylytics.health.core.model.data.preferences..") &&
+                        file.nameWithExtension !in exemptFiles
+                }.flatMap { file ->
+                    file.imports
+                        .filter { it.name == "app.readylytics.health.core.model.data.preferences.UserPreferences" }
+                        .map { file.name }
+                }
+
+        org.junit.Assert.assertTrue(
+            "UserPreferences must be imported via the domain alias outside data/preferences. Violations:\n" +
+                violations.joinToString("\n"),
+            violations.isEmpty(),
+        )
+    }
 }

@@ -2,7 +2,6 @@ package app.readylytics.health.feature.dashboard
 
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.viewModelScope
-import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.di.DefaultDispatcher
 import app.readylytics.health.core.model.domain.cache.DailyMetricCache
 import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
@@ -20,6 +19,7 @@ import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.model.SleepSessionSummary
 import app.readylytics.health.core.model.domain.model.getOrNull
 import app.readylytics.health.core.model.domain.preferences.SettingsDefaults
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
