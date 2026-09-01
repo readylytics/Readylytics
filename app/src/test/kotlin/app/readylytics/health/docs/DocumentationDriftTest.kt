@@ -483,6 +483,36 @@ class DocumentationDriftTest {
         }
     }
 
+    @Test
+    fun `iTRIMP fixed exponent matches documented numbers across About surfaces and DATA_FLOW md`() {
+        assertEquals(2.1f, ScoringConstants.Trimp.ITRIMP_B)
+
+        for ((surface, text) in listOf(
+            "ABOUT.md" to aboutMd,
+            "docs/about.md" to publicAboutMd,
+            "DATA_FLOW.md" to dataFlowMd,
+        )) {
+            val normalized = normalizeWhitespace(text)
+            assertTrue(
+                normalized.contains("Manzi-inspired"),
+                "$surface must describe iTRIMP as a Manzi-inspired fixed-exponent variant",
+            )
+            assertTrue(
+                normalized.contains("2.1"),
+                "$surface must document the iTRIMP fixed exponent 2.1",
+            )
+        }
+    }
+
+    @Test
+    fun `warm-tier primitive reconstruction and zone determinism are documented in DATA_FLOW md`() {
+        assertTrue(dataFlowMd.contains("reconstructSampleValues"))
+        assertTrue(dataFlowMd.contains("TimestampedSamples"))
+        assertTrue(dataFlowMd.contains("prefs.scoringZone()"))
+        assertTrue(dataFlowMd.contains("ZoneId.systemDefault()"))
+        assertTrue(dataFlowMd.contains("R2-CACHE-002"))
+    }
+
     /** Collapses whitespace runs (including line wraps) to a single space for wrap-tolerant matching. */
     private fun normalizeWhitespace(text: String): String = text.replace(Regex("\\s+"), " ")
 

@@ -199,6 +199,15 @@ Flow for `refreshHistorical()`:
 `prefs.scoringZone()`; its `startDate` and exact scoring-zone-midnight `startTimeMs` are the shared
 recompute/seed, startup-backfill, and cleanup boundary.
 
+**Zone determinism (R2-SCORE-002/003).** Every date key / midnight lookup — scoring
+(`BaselineComputer`, `HistoricalSleepDayAssembler`, `ScoringDayDataLoader`), retention/cleanup, and
+the feature-ViewModel summary/query date keys — resolves via the stored `prefs.scoringZone()`,
+never `ZoneId.systemDefault()`, so scores and day buckets are a pure function of the data plus the
+stored zone (identical on recompute, travel, or device-zone change). A Konsist architecture rule in
+`app/src/test/kotlin/app/readylytics/health/CleanArchTest.kt` bans `ZoneId.systemDefault()` from
+`core:scoring`, `core:database`, and every `feature:*` ViewModel (only display-only string
+formatting may use the device zone).
+
 ```
 ViewModel.onEvent(...)                       (feature/settings/.../*ViewModel.kt)
   → displaySettings.updateXxx(...)           (persist the new preference)
@@ -466,6 +475,14 @@ delta 0 bpm, p75 delta 0 bpm, TRIMP delta ≈2.6; the regression test enforces a
 (p25 delta ≤ 2 bpm, p75 delta ≤ 2 bpm, TRIMP delta ≤ 3) so it isn't pinned to the exact
 zero-drift result of one fixture (see `WarmTierReconstructionPropertyTest` and
 `TierBoundaryCharacterizationTest`'s drift assertion for the enforced bound).
+
+**Warm-tier reconstruction returns primitive arrays (R2-PERF-001).** `WarmTierReconstructor`
+exposes the reconstructed stream as primitive arrays instead of boxed `List<Int>`: 
+`reconstructSampleValues()` returns an `IntArray`, and `reconstructTimestampedSamples()` returns a
+`TimestampedSamples(timestampsMs: LongArray, bpmValues: IntArray)` with `size` and an
+`forEachIndexed` accessor, so hot/warm merge loops (everyday-HR load, workout exercise samples,
+sleep-session streams) iterate the arrays without per-element allocation. Element ordering and the
+per-bucket (min/avg/max or percentile) replay values are unchanged.
 
 | Entity                         | Table                       | Primary key                            | Notable columns                                                                                                                                           |
 | :----------------------------- | :-------------------------- | :------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -738,7 +755,7 @@ result.
 
 - **BANISTER** _(default)_ — classic exponential HR-reserve TRIMP (Banister / Morton), sex-specific weighting.
 - **CHENG** — LT-TRIMP, piecewise around the lactate-threshold zone (requires a zone-3 / LT bound).
-- **I_TRIMP** — individualized exponential TRIMP (Manzi et al.).
+- **I_TRIMP** — individualized exponential TRIMP (Manzi et al.). Manzi-inspired fixed-exponent variant: `duration × hrR × exp(b × hrR)` with a single fixed exponent `b` (`ScoringConstants.Trimp.ITRIMP_B`, default 2.1, user-adjustable). Unlike the classic Manzi model it applies no sex-specific weighting factor and no RAS calibration multiplier.
 - **TRIMP dead zone** — `ScoringConstants.Trimp.MIN_HR_ABOVE_RHR_BPM` (5 bpm): heart rate must exceed RHR baseline by at least this amount before minute-level TRIMP accrues.
 
 **SCORE-001 — one persisted TRIMP series feeds workout-only ATL/CTL, not two.**

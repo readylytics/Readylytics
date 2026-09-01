@@ -156,7 +156,11 @@ object ScoringConstants {
         // sexFactor reuses BANISTER_MALE_A / BANISTER_FEMALE_A (0.64/0.86)
         const val CHENG_BETA = 0.09f
 
-        // iTRIMP — REF: Manzi et al. 2009
+        // iTRIMP — REF: Manzi et al. 2009. A Manzi-inspired fixed-exponent variant: the
+        // implementation (RasCalculator.calculateDailyTrimp) computes TRIMP = duration × hrR ×
+        // exp(b × hrR) with a single fixed exponent b (this constant, default 2.1). It does not
+        // apply the classic Manzi sex-specific 0.64/0.86 weighting factor and accrues no RAS
+        // calibration multiplier. No formula change; this only documents the existing shape.
         const val ITRIMP_B = 2.1f
 
         // R2-SCORE-001: heart rate must exceed the RHR baseline by at least this many bpm before

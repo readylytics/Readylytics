@@ -376,6 +376,8 @@ _Implemented in: `Phase.kt`, `PhaseCalculator.kt`_
 
   _Implemented in: `RasCalculator.kt`, `ComputeWorkoutTrimpUseCase.kt`, `RasScoringStrategy.kt`, `HrMaxProvider.kt`_
 
+- **iTRIMP (individualized training impulse).** When selected as your training-load model, iTRIMP is a Manzi-inspired fixed-exponent variant: each minute of exercise accrues TRIMP as `duration × hrR × exp(b × hrR)`, where `hrR` is your fractional heart-rate reserve and `b` is a single fixed exponent — default **2.1** (adjustable 1.0–4.5 in Advanced Settings). The fixed exponent makes high-intensity minutes scale more steeply than the default Banister model. No sex-specific weighting factor is applied in this variant.
+
 - **ATL / CTL** — short-term and long-term rolling averages of TRIMP. Borrowed from Banister's training-load model and used by most cycling and running apps.
 - **Z-score** — a standardized number telling you how many standard deviations above or below your average a metric is. Z=0 is your average; Z=+2 is very high; Z=−2 is very low.
 
