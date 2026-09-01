@@ -228,7 +228,7 @@ class LocalRestoreManager
             healthDatabase.workoutDao().deleteAll()
             healthDatabase.dailySummaryDao().deleteAll()
             healthDatabase.sourceRecordDao().deleteAll()
-            healthDatabase.minuteBucketDao().deleteAll()
+            healthDatabase.minuteBucketMaintenanceDao().deleteAll()
 
             val handlers =
                 mapOf<String, suspend (JsonReader) -> Unit>(

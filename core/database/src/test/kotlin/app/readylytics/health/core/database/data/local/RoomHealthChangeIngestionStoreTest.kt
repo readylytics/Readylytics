@@ -51,7 +51,7 @@ class RoomHealthChangeIngestionStoreTest {
                 bodyTemperatureRecordDao = database.bodyTemperatureRecordDao(),
                 stepRecordDao = database.stepRecordDao(),
                 sourceRecordDao = database.sourceRecordDao(),
-                minuteBucketDao = database.minuteBucketDao(),
+                minuteBucketMaintenanceDao = database.minuteBucketMaintenanceDao(),
             )
         seedStore =
             RoomHealthIngestionStore(

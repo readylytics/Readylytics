@@ -37,7 +37,7 @@ class SelectedSourcePrunerImpl
                                 daos.sleepSessionDao.deleteRecordsNotMatchingDevice(fromMs, toMs, deviceName)
                             HealthDataType.HEART_RATE -> {
                                 daos.heartRateDao.deleteRecordsNotMatchingDevice(fromMs, toMs, deviceName)
-                                daos.minuteBucketDao.deleteBucketsNotMatchingDevice(fromMs, toMs, deviceName)
+                                daos.minuteBucketMaintenanceDao.deleteBucketsNotMatchingDevice(fromMs, toMs, deviceName)
                             }
                             HealthDataType.HRV ->
                                 daos.hrvDao.deleteRecordsNotMatchingDevice(fromMs, toMs, deviceName)

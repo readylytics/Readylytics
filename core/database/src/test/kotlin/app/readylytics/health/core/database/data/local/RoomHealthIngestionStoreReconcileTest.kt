@@ -49,7 +49,7 @@ class RoomHealthIngestionStoreReconcileTest {
             bodyTemperatureRecordDao = mockk(relaxed = true),
             stepRecordDao = mockk(relaxed = true),
             sourceRecordDao = sourceRecordDao,
-            minuteBucketDao = mockk(relaxed = true),
+            minuteBucketMaintenanceDao = mockk(relaxed = true),
         )
 
     private val store =

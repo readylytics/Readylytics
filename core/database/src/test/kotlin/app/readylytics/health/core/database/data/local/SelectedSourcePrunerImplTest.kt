@@ -9,6 +9,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.BodyTemperature
 import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao
 import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
+import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketMaintenanceDao
 import app.readylytics.health.core.databaseschema.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
@@ -35,6 +36,7 @@ class SelectedSourcePrunerImplTest {
     private lateinit var sleepDao: SleepSessionDao
     private lateinit var heartRateDao: HeartRateDao
     private lateinit var minuteBucketDao: MinuteBucketDao
+    private lateinit var minuteBucketMaintenanceDao: MinuteBucketMaintenanceDao
     private lateinit var hrvDao: HrvDao
     private lateinit var workoutDao: WorkoutDao
     private lateinit var weightDao: WeightRecordDao
@@ -56,6 +58,7 @@ class SelectedSourcePrunerImplTest {
         sleepDao = database.sleepSessionDao()
         heartRateDao = database.heartRateDao()
         minuteBucketDao = database.minuteBucketDao()
+        minuteBucketMaintenanceDao = database.minuteBucketMaintenanceDao()
         hrvDao = database.hrvDao()
         workoutDao = database.workoutDao()
         weightDao = database.weightRecordDao()
@@ -84,7 +87,7 @@ class SelectedSourcePrunerImplTest {
                         bodyTemperatureRecordDao = bodyTemperatureDao,
                         stepRecordDao = database.stepRecordDao(),
                         sourceRecordDao = database.sourceRecordDao(),
-                        minuteBucketDao = database.minuteBucketDao(),
+                        minuteBucketMaintenanceDao = minuteBucketMaintenanceDao,
                     ),
             )
     }

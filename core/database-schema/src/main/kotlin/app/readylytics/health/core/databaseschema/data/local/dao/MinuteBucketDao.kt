@@ -7,12 +7,10 @@ import androidx.room.Query
 import app.readylytics.health.core.databaseschema.data.local.entity.HrMinuteBucketEntity
 import app.readylytics.health.core.model.domain.model.HrMinuteBucketRow
 
-// R2-UI-002: TooManyFunctions crossed 10->11 with getBucketsInTimeRange below. Room requires every
-// query to be an abstract member of the @Dao interface (no top-level/extension-function escape
-// hatch the way a plain Kotlin class allows), and splitting this DAO into two @Dao interfaces to
-// stay under the threshold is a cross-cutting change (HealthDatabase wiring, every existing
-// consumer/test of MinuteBucketDao) out of scope for this task. No structural fix is viable here.
-@Suppress("TooManyFunctions")
+// R2-UI-002: retention/pruning/backup-bookkeeping queries live in the sibling
+// MinuteBucketMaintenanceDao (same table, same package) -- split out so this interface stays the
+// "core" warm-tier read/write surface scoring and UI reconstruction actually depend on, and so
+// neither interface trips detekt's TooManyFunctions threshold.
 @Dao
 interface MinuteBucketDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -45,51 +43,6 @@ interface MinuteBucketDao {
         recordType: String,
         sessionId: String,
     ): List<HrMinuteBucketEntity>
-
-    @Query("DELETE FROM hr_minute_buckets WHERE bucketEndMs < :beforeMs")
-    suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
-
-    @Query("SELECT COUNT(*) FROM hr_minute_buckets")
-    suspend fun count(): Int
-
-
-    @Query(
-        "SELECT * FROM hr_minute_buckets WHERE (" +
-            "  bucketStartMs > :afterTs OR " +
-            "  (bucketStartMs = :afterTs AND recordType > :afterRecordType) OR " +
-            "  (bucketStartMs = :afterTs AND recordType = :afterRecordType AND sessionId > :afterSessionId) OR " +
-            "  (bucketStartMs = :afterTs AND recordType = :afterRecordType AND sessionId = :afterSessionId AND " +
-            "   deviceName > :afterDeviceName)" +
-            ") " +
-            "ORDER BY bucketStartMs ASC, recordType ASC, sessionId ASC, deviceName ASC " +
-            "LIMIT :limit",
-    )
-    suspend fun pageAfter(
-        afterTs: Long,
-        afterRecordType: String,
-        afterSessionId: String,
-        afterDeviceName: String,
-        limit: Int,
-    ): List<HrMinuteBucketEntity>
-
-    @Query("DELETE FROM hr_minute_buckets")
-    suspend fun deleteAll(): Int
-
-    // R2-CACHE-001: lets RetentionCleanup report the earliest warm-tier bucket start it is about
-    // to delete (before deleting it), so callers can compute the ScoreInvalidation.AffectedRange
-    // the deletion touched.
-    @Query("SELECT MIN(bucketStartMs) FROM hr_minute_buckets WHERE bucketStartMs < :beforeMs")
-    suspend fun minBucketStartBefore(beforeMs: Long): Long?
-
-    @Query(
-        "DELETE FROM hr_minute_buckets " +
-            "WHERE bucketStartMs >= :fromMs AND bucketEndMs <= :toMs " +
-            "AND (deviceName != :deviceName OR deviceName = '')",
-    )
-    suspend fun deleteBucketsNotMatchingDevice(fromMs: Long, toMs: Long, deviceName: String): Int
-
-    @Query("SELECT DISTINCT deviceName FROM hr_minute_buckets WHERE deviceName != ''")
-    suspend fun getDistinctDeviceNames(): List<String>
 
     // R2-UI-002: warm-tier equivalent of HeartRateDao.getByTimeRange -- unlike getBucketsForSession
     // (recordType + sessionId keyed), this is a plain overlap query across every bucket type, for

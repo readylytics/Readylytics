@@ -2,7 +2,7 @@ package app.readylytics.health.core.database.data.local
 
 import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao
-import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
+import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketMaintenanceDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import io.mockk.coEvery
@@ -24,7 +24,7 @@ class HealthDeviceRepositoryTest {
     private lateinit var heartRateDao: HeartRateDao
     private lateinit var hrvDao: HrvDao
     private lateinit var workoutDao: WorkoutDao
-    private lateinit var minuteBucketDao: MinuteBucketDao
+    private lateinit var minuteBucketDao: MinuteBucketMaintenanceDao
     private lateinit var repository: HealthDeviceRepository
 
     /**

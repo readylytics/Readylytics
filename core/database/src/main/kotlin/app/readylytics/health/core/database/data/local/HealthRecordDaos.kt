@@ -5,7 +5,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.BodyFatRecordDa
 import app.readylytics.health.core.databaseschema.data.local.dao.BodyTemperatureRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao
-import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
+import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketMaintenanceDao
 import app.readylytics.health.core.databaseschema.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepStageDao
@@ -20,7 +20,9 @@ import javax.inject.Inject
  * Canonical shared bundle of all per-record DAOs, consumed by [RoomHealthIngestionStore],
  * [RetentionCleanup], and [SelectedSourcePrunerImpl]. Deliberately excludes [DailySummaryDao]
  * (a rollup used only by RoomHealthIngestionStore.clearFrozenBaselines) and includes
- * [MinuteBucketDao] so RetentionCleanup needs no separate constructor param.
+ * [MinuteBucketMaintenanceDao] (not the scoring/UI-facing `MinuteBucketDao`) so RetentionCleanup
+ * and SelectedSourcePrunerImpl need no separate constructor param -- both only ever call
+ * retention/pruning methods, never the core warm-tier reads.
  */
 data class HealthRecordDaos
     @Inject
@@ -38,5 +40,5 @@ data class HealthRecordDaos
         val bodyTemperatureRecordDao: BodyTemperatureRecordDao,
         val stepRecordDao: StepRecordDao,
         val sourceRecordDao: SourceRecordDao,
-        val minuteBucketDao: MinuteBucketDao,
+        val minuteBucketMaintenanceDao: MinuteBucketMaintenanceDao,
     )

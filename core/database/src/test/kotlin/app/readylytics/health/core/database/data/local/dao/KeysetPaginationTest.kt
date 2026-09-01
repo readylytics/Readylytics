@@ -342,6 +342,7 @@ class KeysetPaginationTest {
     fun `minuteBucket pageAfter returns all rows across pages with 4-part PK`() =
         runTest {
             val mbDao = db.minuteBucketDao()
+            val mbMaintenanceDao = db.minuteBucketMaintenanceDao()
             val buckets =
                 listOf(
                     minuteBucket(startMs = 60_000L, deviceName = "Device A"),
@@ -350,13 +351,13 @@ class KeysetPaginationTest {
                 )
             mbDao.upsertBuckets(buckets)
 
-            val page1 = mbDao.pageAfter(Long.MIN_VALUE, "", "", "", 2)
+            val page1 = mbMaintenanceDao.pageAfter(Long.MIN_VALUE, "", "", "", 2)
             assertEquals(2, page1.size)
             assertEquals("Device A", page1[0].deviceName)
             assertEquals("Device B", page1[1].deviceName)
 
             val page2 =
-                mbDao.pageAfter(
+                mbMaintenanceDao.pageAfter(
                     page1.last().bucketStartMs,
                     page1.last().recordType,
                     page1.last().sessionId,
@@ -367,7 +368,7 @@ class KeysetPaginationTest {
             assertEquals(120_000L, page2[0].bucketStartMs)
 
             val page3 =
-                mbDao.pageAfter(
+                mbMaintenanceDao.pageAfter(
                     page2.last().bucketStartMs,
                     page2.last().recordType,
                     page2.last().sessionId,

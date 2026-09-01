@@ -12,6 +12,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao
 import app.readylytics.health.core.databaseschema.data.local.dao.InsightDismissalDao
 import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
+import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketMaintenanceDao
 import app.readylytics.health.core.databaseschema.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepStageDao
@@ -96,6 +97,8 @@ abstract class HealthDatabase : RoomDatabase() {
     abstract fun stepRecordDao(): StepRecordDao
 
     abstract fun minuteBucketDao(): MinuteBucketDao
+
+    abstract fun minuteBucketMaintenanceDao(): MinuteBucketMaintenanceDao
 
     abstract fun workoutRoutePointDao(): WorkoutRoutePointDao
 

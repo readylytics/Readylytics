@@ -30,7 +30,7 @@ class RetentionCleanup
         // 84-day forward slack, so they are not separately tracked here.
         suspend fun deleteBefore(cutoffMs: Long): ScoreInvalidation.AffectedRange? {
             val earliestHrMs = daos.heartRateDao.minTimestampBefore(cutoffMs)
-            val earliestBucketMs = daos.minuteBucketDao.minBucketStartBefore(cutoffMs)
+            val earliestBucketMs = daos.minuteBucketMaintenanceDao.minBucketStartBefore(cutoffMs)
             val earliestMs = listOfNotNull(earliestHrMs, earliestBucketMs).minOrNull()
 
             deleteInBatches { limit -> daos.heartRateDao.deleteBeforeTimestampBatch(cutoffMs, limit) }
@@ -38,7 +38,7 @@ class RetentionCleanup
 
             transactionRunner.runInTransaction {
                 daos.sleepSessionDao.deleteBeforeTimestamp(cutoffMs)
-                daos.minuteBucketDao.deleteBeforeTimestamp(cutoffMs)
+                daos.minuteBucketMaintenanceDao.deleteBeforeTimestamp(cutoffMs)
                 daos.workoutDao.deleteBeforeTimestamp(cutoffMs)
                 dailySummaryDao.deleteBeforeTimestamp(cutoffMs)
                 daos.weightRecordDao.deleteBeforeTimestamp(cutoffMs)

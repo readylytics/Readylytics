@@ -77,7 +77,7 @@ class BackupStreamWriter
                         "bodyTemperatureRecords" to async { healthDatabase.bodyTemperatureRecordDao().count() },
                         "stepRecords" to async { healthDatabase.stepRecordDao().count() },
                         "healthSourceRecords" to async { healthDatabase.sourceRecordDao().count() },
-                        "hrMinuteBuckets" to async { healthDatabase.minuteBucketDao().count() },
+                        "hrMinuteBuckets" to async { healthDatabase.minuteBucketMaintenanceDao().count() },
                     )
                 counts.associate { (key, deferred) -> key to deferred.await() }
             }
@@ -116,7 +116,7 @@ class BackupStreamWriter
         private suspend fun writeHeartRateTables(writer: BufferedWriter) {
             val heartRateDao = healthDatabase.heartRateDao()
             val hrvDao = healthDatabase.hrvDao()
-            val minuteBucketDao = healthDatabase.minuteBucketDao()
+            val minuteBucketMaintenanceDao = healthDatabase.minuteBucketMaintenanceDao()
 
             var hrAfterTs = Long.MIN_VALUE
             var hrAfterRef = Long.MIN_VALUE
@@ -152,7 +152,7 @@ class BackupStreamWriter
                 writer,
                 "hrMinuteBuckets",
                 page = {
-                    minuteBucketDao.pageAfter(
+                    minuteBucketMaintenanceDao.pageAfter(
                         mbAfterTs,
                         mbAfterRecordType,
                         mbAfterSessionId,
