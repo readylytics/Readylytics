@@ -4,7 +4,6 @@ import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.model.RouteState
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
-import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
 import app.readylytics.health.core.model.domain.repository.HeartRateRecordData
 import app.readylytics.health.core.model.domain.repository.HeartRateRepository
 import app.readylytics.health.core.model.domain.repository.HeartRateResolution
@@ -39,7 +38,6 @@ class WorkoutDetailLoaderTest {
     private lateinit var loader: WorkoutDetailLoader
 
     private val workoutRepository = mockk<WorkoutRepository>()
-    private val healthConnectRepository = mockk<HealthConnectRepository>(relaxed = true)
     private val heartRateRepository = mockk<HeartRateRepository>(relaxed = true)
     private val dailySummaryRepository = mockk<DailySummaryRepository>(relaxed = true)
     private val getWorkoutDisplayMetricsUseCase = mockk<GetWorkoutDisplayMetricsUseCase>()
@@ -51,7 +49,6 @@ class WorkoutDetailLoaderTest {
         loader =
             WorkoutDetailLoader(
                 workoutRepository = workoutRepository,
-                hcRepo = healthConnectRepository,
                 heartRateRepository = heartRateRepository,
                 dailySummaryRepository = dailySummaryRepository,
                 syncWorkoutRouteUseCase = syncWorkoutRouteUseCase,

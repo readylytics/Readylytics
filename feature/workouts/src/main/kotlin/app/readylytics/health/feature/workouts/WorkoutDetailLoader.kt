@@ -10,7 +10,6 @@ import app.readylytics.health.core.model.domain.preferences.UnitSystem
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
-import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
 import app.readylytics.health.core.model.domain.repository.HeartRateRepository
 import app.readylytics.health.core.model.domain.repository.WorkoutData
 import app.readylytics.health.core.model.domain.repository.WorkoutRepository
@@ -99,7 +98,6 @@ class WorkoutDetailLoader
     @Inject
     constructor(
         private val workoutRepository: WorkoutRepository,
-        private val hcRepo: HealthConnectRepository,
         private val heartRateRepository: HeartRateRepository,
         private val dailySummaryRepository: DailySummaryRepository,
         private val syncWorkoutRouteUseCase: SyncWorkoutRouteUseCase,
@@ -112,8 +110,8 @@ class WorkoutDetailLoader
         ): WorkoutDetailData? {
             var workout = workoutRepository.getById(workoutId) ?: return null
 
-            if (workout.routeState == RouteState.PERMISSION_REQUIRED && hcRepo.hasExerciseRoutesPermission()) {
-                syncWorkoutRouteUseCase(workoutId)
+            if (workout.routeState == RouteState.PERMISSION_REQUIRED) {
+                syncWorkoutRouteUseCase.syncIfPermitted(workoutId)
                 workout = workoutRepository.getById(workoutId) ?: workout
             }
 

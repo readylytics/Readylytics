@@ -4,7 +4,6 @@ import app.readylytics.health.core.model.domain.model.RouteState
 import app.readylytics.health.core.model.domain.model.WorkoutRoutePoint
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
-import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
 import app.readylytics.health.core.model.domain.repository.HeartRateRepository
 import app.readylytics.health.core.model.domain.repository.HeartRateResolution
 import app.readylytics.health.core.model.domain.repository.HeartRateSeries
@@ -35,7 +34,6 @@ class WorkoutDetailLoaderRouteTest {
     private lateinit var loader: WorkoutDetailLoader
 
     private val workoutRepository = mockk<WorkoutRepository>()
-    private val healthConnectRepository = mockk<HealthConnectRepository>(relaxed = true)
     private val heartRateRepository = mockk<HeartRateRepository>(relaxed = true)
     private val dailySummaryRepository = mockk<DailySummaryRepository>(relaxed = true)
     private val getWorkoutDisplayMetricsUseCase = mockk<GetWorkoutDisplayMetricsUseCase>()
@@ -47,7 +45,6 @@ class WorkoutDetailLoaderRouteTest {
         loader =
             WorkoutDetailLoader(
                 workoutRepository = workoutRepository,
-                hcRepo = healthConnectRepository,
                 heartRateRepository = heartRateRepository,
                 dailySummaryRepository = dailySummaryRepository,
                 syncWorkoutRouteUseCase = syncWorkoutRouteUseCase,
@@ -429,7 +426,6 @@ class WorkoutDetailLoaderRouteTest {
                     routeState = RouteState.PERMISSION_REQUIRED,
                 )
 
-            coEvery { healthConnectRepository.hasExerciseRoutesPermission() } returns true
             setupDefaultMocks(
                 workoutId = "run-auto-sync",
                 workout = workout,
@@ -437,7 +433,7 @@ class WorkoutDetailLoaderRouteTest {
 
             loader.load("run-auto-sync", UserPreferences())
 
-            coVerify(exactly = 1) { syncWorkoutRouteUseCase.invoke("run-auto-sync") }
+            coVerify(exactly = 1) { syncWorkoutRouteUseCase.syncIfPermitted("run-auto-sync") }
         }
 
     @Test
