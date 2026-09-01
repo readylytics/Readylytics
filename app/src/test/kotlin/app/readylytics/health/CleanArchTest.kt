@@ -419,4 +419,27 @@ class CleanArchTest {
             violations.isEmpty(),
         )
     }
+
+    @Test
+    fun `feature packages do not import HealthConnectRepository`() {
+        val violations =
+            Konsist
+                .scopeFromProject()
+                .files
+                .filter { file ->
+                    file.hasPackage("app.readylytics.health.feature..") &&
+                        (file.path.contains("/src/main/") || file.path.contains("\\src\\main\\"))
+                }.flatMap { file ->
+                    file.imports
+                        .filter {
+                            it.name == "app.readylytics.health.core.model.domain.repository.HealthConnectRepository"
+                        }.map { "${file.name}: ${it.name}" }
+                }
+
+        org.junit.Assert.assertTrue(
+            "feature:* modules must use HealthConnectPermissionChecker, not HealthConnectRepository. " +
+                "Violations:\n${violations.joinToString("\n")}",
+            violations.isEmpty(),
+        )
+    }
 }
