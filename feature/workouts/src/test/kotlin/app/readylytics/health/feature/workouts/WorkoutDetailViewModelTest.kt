@@ -1034,4 +1034,41 @@ class WorkoutDetailViewModelTest {
                 assertTrue("x-value $x should have <= 4 decimal places", decimals <= 4)
             }
         }
+
+    @Test
+    fun `loadWorkout queries daily summary using scoringZone instead of device zone`() =
+        runTest {
+            val scoringZone = ZoneId.of("Pacific/Honolulu")
+            every { settingsRepository.userPreferences } returns
+                MutableStateFlow(UserPreferences(scoringZoneId = scoringZone.id))
+
+            // 2026-06-10T02:00:00Z is 2026-06-09T16:00:00-10:00 in Honolulu (date is June 9, not June 10)
+            val startMs = Instant.parse("2026-06-10T02:00:00Z").toEpochMilli()
+            val workout =
+                buildWorkout(
+                    id = "run-tz-test",
+                    durationMinutes = 30,
+                    startMs = startMs,
+                )
+
+            setupDefaultMocks(
+                workoutId = "run-tz-test",
+                workout = workout,
+            )
+
+            viewModel.loadWorkout("run-tz-test")
+            advanceUntilIdle()
+
+            val expectedWorkoutDate = LocalDate.of(2026, 6, 9)
+            val expectedMidnightMs = expectedWorkoutDate.atStartOfDay(scoringZone).toInstant().toEpochMilli()
+            val expectedThirtyDaysAgoMs =
+                expectedWorkoutDate
+                    .minusDays(30)
+                    .atStartOfDay(scoringZone)
+                    .toInstant()
+                    .toEpochMilli()
+
+            coVerify { dailySummaryRepository.getByDate(expectedMidnightMs) }
+            coVerify { dailySummaryRepository.getSince(expectedThirtyDaysAgoMs) }
+        }
 }

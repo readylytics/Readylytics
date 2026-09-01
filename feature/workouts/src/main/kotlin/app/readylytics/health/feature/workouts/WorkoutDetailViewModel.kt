@@ -12,6 +12,7 @@ import app.readylytics.health.core.model.domain.model.LoadSourceSelector
 import app.readylytics.health.core.model.domain.model.RouteState
 import app.readylytics.health.core.model.domain.preferences.UnitSystem
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
 import app.readylytics.health.core.model.domain.repository.HeartRateRepository
@@ -47,7 +48,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.Instant
-import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
@@ -245,14 +245,15 @@ class WorkoutDetailViewModel
                     val workoutEndInstant = Instant.ofEpochMilli(workout.endTime)
                     val endHr = allSamples.lastOrNull { it.timestamp <= workoutEndInstant }?.bpm
 
-                    val workoutDate = start.atZone(ZoneId.systemDefault()).toLocalDate()
-                    val midnight = workoutDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                    val scoringZone = prefs.scoringZone()
+                    val workoutDate = start.atZone(scoringZone).toLocalDate()
+                    val midnight = workoutDate.atStartOfDay(scoringZone).toInstant().toEpochMilli()
                     val summary = dailySummaryRepository.getByDate(midnight)
 
                     val thirtyDaysAgo =
                         workoutDate
                             .minusDays(30)
-                            .atStartOfDay(ZoneId.systemDefault())
+                            .atStartOfDay(scoringZone)
                             .toInstant()
                             .toEpochMilli()
                     val thirtyDaySummaries = dailySummaryRepository.getSince(thirtyDaysAgo)

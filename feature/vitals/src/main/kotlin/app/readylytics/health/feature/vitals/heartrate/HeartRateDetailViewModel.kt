@@ -8,6 +8,7 @@ import app.readylytics.health.core.model.domain.display.MetricFormatter
 import app.readylytics.health.core.model.domain.heartrate.HrZoneClassifier
 import app.readylytics.health.core.model.domain.model.HeartRateStatusClassifier
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.HeartRateRepository
 import app.readylytics.health.core.ui.model.HrSample
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,7 +26,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Clock
 import java.time.LocalDate
-import java.time.ZoneId
 import javax.inject.Inject
 
 @HiltViewModel
@@ -45,7 +45,7 @@ class HeartRateDetailViewModel
                 settingsRepository.userPreferences,
             ) { date, prefs -> date to prefs }
                 .flatMapLatest { (date, prefs) ->
-                    val zoneId = ZoneId.systemDefault()
+                    val zoneId = prefs.scoringZone()
                     val startMs = date.atStartOfDay(zoneId).toInstant().toEpochMilli()
                     val endMs =
                         date

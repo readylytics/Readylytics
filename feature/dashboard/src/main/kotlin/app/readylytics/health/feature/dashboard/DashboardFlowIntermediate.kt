@@ -24,11 +24,11 @@ import app.readylytics.health.core.ui.model.HeartRateDaySummary
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
-import java.time.ZoneId
 
 /**
  * Basic inputs for dashboard (date-dependent data).
@@ -164,8 +164,12 @@ fun createDashboardCardStateFlow(
     cardConfigRepository: CardConfigurationRepository,
     dailySummaryRepository: DailySummaryRepository,
     healthConnectRepository: HealthConnectRepository,
+    settingsRepository: UserPreferencesReader,
 ): Flow<DashboardCardState> {
-    val zoneId = ZoneId.systemDefault()
+    val scoringZoneFlow =
+        settingsRepository.userPreferences
+            .map { it.scoringZone() }
+            .distinctUntilChanged()
 
     // Combine optional HC permission checks into a single flow of grant flags.
     // The individual combine overloads top out at 5 flows, so we pre-combine
@@ -184,18 +188,19 @@ fun createDashboardCardStateFlow(
         cardManagementDelegate.isManagingCards,
         cardManagementDelegate.pendingConfigs,
         cardConfigRepository.dashboardCardConfigurations(),
-        selectedDate.flatMapLatest { date ->
-            // Get the most recent sleep session ending on the selected date
-            dailySummaryRepository.observeFirstSessionEndingInRange(
-                fromMs = date.atStartOfDay(zoneId).toInstant().toEpochMilli(),
-                toMs =
-                    date
-                        .plusDays(1)
-                        .atStartOfDay(zoneId)
-                        .toInstant()
-                        .toEpochMilli(),
-            )
-        },
+        combine(selectedDate, scoringZoneFlow) { date, zoneId -> date to zoneId }
+            .flatMapLatest { (date, zoneId) ->
+                // Get the most recent sleep session ending on the selected date
+                dailySummaryRepository.observeFirstSessionEndingInRange(
+                    fromMs = date.atStartOfDay(zoneId).toInstant().toEpochMilli(),
+                    toMs =
+                        date
+                            .plusDays(1)
+                            .atStartOfDay(zoneId)
+                            .toInstant()
+                            .toEpochMilli(),
+                )
+            },
         // One-shot checks, not re-polled -- relies on DashboardViewModel.uiState's
         // WhileSubscribed(5_000) sharing policy naturally restarting this flow after a
         // permission-grant round trip (navigating to the Health Connect permission screen and
@@ -249,28 +254,34 @@ fun createDashboardRealtimeStateFlow(foregroundSyncController: ForegroundSyncGat
 fun createDashboardHrFlow(
     selectedDate: Flow<LocalDate>,
     heartRateRepository: HeartRateRepository,
-): Flow<HeartRateDaySummary?> =
-    selectedDate.flatMapLatest { date ->
-        val zoneId = ZoneId.systemDefault()
-        val startMs = date.atStartOfDay(zoneId).toInstant().toEpochMilli()
-        val endMs =
-            date
-                .plusDays(1)
-                .atStartOfDay(zoneId)
-                .toInstant()
-                .toEpochMilli()
-        // PERF-005/WP-23: SQL-aggregated min/max/avg instead of observing every raw row -- a
-        // 5,000-row ingest batch invalidating this Flow re-runs a cheap single-row aggregate
-        // instead of re-materializing and re-mapping the whole day.
-        heartRateRepository.observeAggregateByTimeRange(startMs, endMs).map { aggregate ->
-            aggregate?.let {
-                HeartRateDaySummary(
-                    minBpm = it.minBpm,
-                    maxBpm = it.maxBpm,
-                    // toInt() truncates toward zero, matching the previous sumBpm/entities.size
-                    // integer division exactly (both truncate the same sum/count quotient).
-                    avgBpm = it.avgBpm.toInt(),
-                )
+    settingsRepository: UserPreferencesReader,
+): Flow<HeartRateDaySummary?> {
+    val scoringZoneFlow =
+        settingsRepository.userPreferences
+            .map { it.scoringZone() }
+            .distinctUntilChanged()
+    return combine(selectedDate, scoringZoneFlow) { date, zoneId -> date to zoneId }
+        .flatMapLatest { (date, zoneId) ->
+            val startMs = date.atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val endMs =
+                date
+                    .plusDays(1)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            // PERF-005/WP-23: SQL-aggregated min/max/avg instead of observing every raw row -- a
+            // 5,000-row ingest batch invalidating this Flow re-runs a cheap single-row aggregate
+            // instead of re-materializing and re-mapping the whole day.
+            heartRateRepository.observeAggregateByTimeRange(startMs, endMs).map { aggregate ->
+                aggregate?.let {
+                    HeartRateDaySummary(
+                        minBpm = it.minBpm,
+                        maxBpm = it.maxBpm,
+                        // toInt() truncates toward zero, matching the previous sumBpm/entities.size
+                        // integer division exactly (both truncate the same sum/count quotient).
+                        avgBpm = it.avgBpm.toInt(),
+                    )
+                }
             }
         }
-    }
+}

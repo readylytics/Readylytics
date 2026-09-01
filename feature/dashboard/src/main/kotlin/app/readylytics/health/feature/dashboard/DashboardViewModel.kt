@@ -135,8 +135,13 @@ class DashboardViewModel
                     cardConfigRepository,
                     dailySummaryRepository,
                     healthConnectRepository,
+                    settingsRepo,
                 ),
-                createDashboardHrFlow(selectedDateRepository.selectedDate, heartRateRepository),
+                createDashboardHrFlow(
+                    selectedDateRepository.selectedDate,
+                    heartRateRepository,
+                    settingsRepo,
+                ),
                 observeDashboardStrainIncreaseUseCase(
                     selectedDateRepository.selectedDate,
                     settingsRepo.userPreferences,

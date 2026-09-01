@@ -20,12 +20,13 @@ enum class TimeRange(
     TWELVE_MONTHS(360, "360D", TrendGranularity.EIGHT_WEEK),
     ;
 
-    fun fromMs(baseDate: LocalDate): Long {
-        val zoneId = ZoneId.systemDefault()
-        return baseDate
-            .atStartOfDay(zoneId)
+    fun fromMs(
+        baseDate: LocalDate,
+        zoneId: ZoneId = ZoneId.systemDefault(),
+    ): Long =
+        baseDate
             .minusDays(days.toLong() - 1)
+            .atStartOfDay(zoneId)
             .toInstant()
             .toEpochMilli()
-    }
 }

@@ -12,6 +12,7 @@ import app.readylytics.health.core.model.domain.repository.HeartRateSeries
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
@@ -33,6 +34,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
+import java.time.ZoneId
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HeartRateDetailViewModelTest {
@@ -398,5 +400,29 @@ class HeartRateDetailViewModelTest {
             val state = viewModel.uiState.first { !it.isLoading }
 
             assertEquals(HeartRateResolution.RECONSTRUCTED, state.resolution)
+        }
+
+    @Test
+    fun `uiState queries timeline using scoringZone instead of device zone`() =
+        runTest {
+            val scoringZone = ZoneId.of("Pacific/Honolulu")
+            every { settingsRepo.userPreferences } returns
+                MutableStateFlow(UserPreferences(scoringZoneId = scoringZone.id))
+
+            val date = LocalDate.of(2026, 6, 10)
+            selectedDateFlow.value = date
+
+            viewModel = createViewModel()
+            viewModel.uiState.first { !it.isLoading }
+
+            val expectedStartMs = date.atStartOfDay(scoringZone).toInstant().toEpochMilli()
+            val expectedEndMs =
+                date
+                    .plusDays(1)
+                    .atStartOfDay(scoringZone)
+                    .toInstant()
+                    .toEpochMilli()
+
+            verify { heartRateRepository.observeTimelineWithResolution(expectedStartMs, expectedEndMs) }
         }
 }
