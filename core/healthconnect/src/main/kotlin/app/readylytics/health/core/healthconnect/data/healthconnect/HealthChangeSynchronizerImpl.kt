@@ -11,21 +11,7 @@ import androidx.health.connect.client.records.BodyFatRecord as HealthConnectBody
 import androidx.health.connect.client.records.HeartRateRecord as HealthConnectHeartRateRecord
 import androidx.health.connect.client.records.WeightRecord as HealthConnectWeightRecord
 import androidx.health.connect.client.request.ChangesTokenRequest
-import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.permission.HealthPermission
-import androidx.health.connect.client.time.TimeRangeFilter
-import app.readylytics.health.core.database.data.local.HealthRecordDaos
-import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
-import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity
-import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
-import app.readylytics.health.core.databaseschema.data.local.entity.StepRecordEntity
-import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
-import app.readylytics.health.core.healthconnect.data.mapper.BloodPressureDataMapper
-import app.readylytics.health.core.healthconnect.data.mapper.BodyFatDataMapper
-import app.readylytics.health.core.healthconnect.data.mapper.BodyTemperatureDataMapper
-import app.readylytics.health.core.healthconnect.data.mapper.OxygenSaturationDataMapper
-import app.readylytics.health.core.healthconnect.data.mapper.WeightDataMapper
-import app.readylytics.health.core.databaseschema.data.local.entity.SleepStageEntity
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.heartrate.ZoneThresholds
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
@@ -36,13 +22,11 @@ import app.readylytics.health.core.healthconnect.domain.sync.HealthChangeSyncOut
 import app.readylytics.health.core.healthconnect.domain.sync.HealthChangeSynchronizer
 import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.core.model.domain.sync.mappers.*
-import app.readylytics.health.core.model.domain.util.SessionTotalsResolver
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
 import java.time.Clock
-import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
@@ -57,7 +41,8 @@ class HealthChangeSynchronizerImpl
         private val settingsRepo: SettingsRepository,
         private val clock: Clock = Clock.systemDefaultZone(),
         private val transactionRunner: TransactionRunner,
-        private val daos: HealthRecordDaos,
+        private val healthIngestionStore: HealthIngestionStore,
+        private val changeIngestionStore: HealthChangeIngestionStore,
     ) : HealthChangeSynchronizer {
         private val client by lazy { HealthConnectClient.getOrCreate(context) }
 
@@ -223,6 +208,7 @@ class HealthChangeSynchronizerImpl
             zoneId: ZoneId,
             prefs: UserPreferences,
         ) {
+            val spans = pageSessionSpans(dataType, changes)
             for (change in changes) {
                 when (change) {
                     is UpsertionChange -> {
@@ -230,512 +216,185 @@ class HealthChangeSynchronizerImpl
                         val deviceLabel = DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin)
                         val id = record.metadata.id
 
+                        affectedDates.addAll(changeIngestionStore.affectedDatesForRecord(dataType, id, zoneId))
+                        changeIngestionStore.deleteRecord(dataType, id)
+
                         if (selectedDevice == null || deviceLabel == selectedDevice) {
-                            val deletedDates = getAffectedDatesForDeletedRecord(dataType, id, zoneId)
-                            affectedDates.addAll(deletedDates)
-                            deleteRecordLocal(dataType, id)
                             affectedDates.addAll(getDatesForRecord(record, zoneId))
-                            upsertRecord(dataType, record, prefs)
-                        } else {
-                            val deletedDates = getAffectedDatesForDeletedRecord(dataType, id, zoneId)
-                            affectedDates.addAll(deletedDates)
-                            deleteRecordLocal(dataType, id)
+                            upsertRecord(dataType, record, prefs, spans)
                         }
                     }
                     is DeletionChange -> {
                         val id = change.recordId
-                        val deletedDates = getAffectedDatesForDeletedRecord(dataType, id, zoneId)
-                        affectedDates.addAll(deletedDates)
-                        deleteRecordLocal(dataType, id)
+                        affectedDates.addAll(changeIngestionStore.affectedDatesForRecord(dataType, id, zoneId))
+                        changeIngestionStore.deleteRecord(dataType, id)
                     }
                 }
             }
         }
+
+        /**
+         * R2-HC-003: one `sessionSpansOverlapping` call for the whole page's time range, instead of
+         * one per HEART_RATE/HRV record. Only fetched for the two data types that consume spans.
+         */
+        private suspend fun pageSessionSpans(dataType: HealthDataType, changes: List<Change>): SessionSpans {
+            val spanConsumingTypes = setOf(HealthDataType.HEART_RATE, HealthDataType.HRV)
+            val upserts =
+                if (dataType in spanConsumingTypes) {
+                    changes.filterIsInstance<UpsertionChange>()
+                } else {
+                    emptyList()
+                }
+            if (upserts.isEmpty()) return SessionSpans(emptyList(), emptyList())
+            val starts = upserts.map { recordStartMs(it.record) }
+            val ends = upserts.map { recordEndMs(it.record) }
+            return changeIngestionStore.sessionSpansOverlapping(starts.min(), ends.max())
+        }
+
+        private fun recordStartMs(record: Record): Long =
+            when (record) {
+                is HealthConnectHeartRateRecord -> record.startTime.toEpochMilli()
+                is HeartRateVariabilityRmssdRecord -> record.time.toEpochMilli()
+                else -> error("pageSessionSpans called for unsupported record type")
+            }
+
+        private fun recordEndMs(record: Record): Long =
+            when (record) {
+                is HealthConnectHeartRateRecord -> record.endTime.toEpochMilli()
+                is HeartRateVariabilityRmssdRecord -> record.time.toEpochMilli()
+                else -> error("pageSessionSpans called for unsupported record type")
+            }
 
         private suspend fun upsertRecord(
             dataType: HealthDataType,
             record: Record,
             prefs: UserPreferences,
+            spans: SessionSpans,
         ) {
             when (dataType) {
-                HealthDataType.SLEEP -> {
-                    if (record is SleepSessionRecord) {
-                        val domainRecord = record.toDomain()
-                        val sleepInput = SleepDataMapper.mapSleepSession(domainRecord)
-                        val sleepEntity = sleepInput.toEntity()
-                        daos.sleepSessionDao.upsertAll(listOf(sleepEntity))
-
-                        val stageInputs = SleepDataMapper.mapSleepSessionStages(domainRecord)
-                        val allStages = stageInputs.map { it.toEntity() }
-                        daos.sleepStageDao.deleteForSessions(listOf(sleepEntity.id))
-                        daos.sleepStageDao.upsertAll(allStages)
-                    }
-                }
-                HealthDataType.HEART_RATE -> {
-                    if (record is HealthConnectHeartRateRecord) {
-                        val domainHr = record.toDomain()
-                        // Resolve real session spans overlapping this record's own time range so the
-                        // sample is tagged SLEEP/EXERCISE immediately instead of RESTING/sessionId=null
-                        // until the next reconcile pass corrects it (HC-004).
-                        val startMs = record.startTime.toEpochMilli()
-                        val endMs = record.endTime.toEpochMilli()
-                        val sleepSpans = daos.sleepSessionDao.getOverlapping(startMs, endMs).map { it.toInput() }
-                        val workoutSpans = daos.workoutDao.getOverlapping(startMs, endMs).map { it.toInput() }
-                        val hrInputs = HeartRateMapper.mapToInputs(listOf(domainHr), sleepSpans, workoutSpans)
-                        val entities =
-                            hrInputs.map { input ->
-                                input.toEntity(
-                                    daos.sourceRecordDao.getOrCreateSourceRef(
-                                        sourceRecordId = input.id.substringBefore('_'),
-                                        recordType = "HEART_RATE",
-                                        createdAtMs = input.timestampMs,
-                                    ),
-                                )
-                            }
-                        daos.heartRateDao.upsertAll(entities)
-                    }
-                }
-                HealthDataType.HRV -> {
-                    if (record is HeartRateVariabilityRmssdRecord) {
-                        val domainHrv = record.toDomain()
-                        val sampleMs = record.time.toEpochMilli()
-                        val sleepSpans = daos.sleepSessionDao.getOverlapping(sampleMs, sampleMs).map { it.toInput() }
-                        val hrvInputs = HrvMapper.mapToInputs(listOf(domainHrv), sleepSpans)
-                        val entities =
-                            hrvInputs.map { input ->
-                                input.toEntity(
-                                    daos.sourceRecordDao.getOrCreateSourceRef(
-                                        sourceRecordId = input.id.substringBefore('_'),
-                                        recordType = "HRV",
-                                        createdAtMs = input.timestampMs,
-                                    ),
-                                )
-                            }
-                        daos.hrvDao.upsertAll(entities)
-                    }
-                }
-                HealthDataType.EXERCISE -> {
-                    if (record is ExerciseSessionRecord) {
-                        val distanceTotal =
-                            sessionTotalFor<DistanceRecord>(record) { it.toIntervalTotal() }
-                        val elevationTotal =
-                            sessionTotalFor<ElevationGainedRecord>(record) { it.toIntervalTotal() }
-                        val domainExercise =
-                            record.toDomain(
-                                routeResult = record.exerciseRouteResult,
-                                totalDistanceMeters = distanceTotal,
-                                elevationGainMeters = elevationTotal,
-                            )
-                        val thresholds =
-                            ZoneThresholds.create(
-                                prefs.zone1MinBpm,
-                                prefs.zone1MaxBpm,
-                                prefs.zone2MaxBpm,
-                                prefs.zone3MaxBpm,
-                                prefs.zone4MaxBpm,
-                            )
-                        // Compute metrics from already-stored HR rows overlapping this session so a
-                        // workout upsert has non-zero TRIMP/zones/avgHr immediately (HC-004); a sample
-                        // arriving in the very same changes batch is still corrected by the next
-                        // reconcile pass. EXERCISE-only filter matches
-                        // SessionLinkReconcilerImpl.recomputeWorkouts, which reads via
-                        // getByTypeAndTimeRange(RecordType.EXERCISE.name, ...) so sleep-overlapping or
-                        // boundary-straddling samples tagged to another session don't leak into this
-                        // workout's TRIMP/zones/avgHr.
-                        val hrSamples =
-                            daos.heartRateDao.getByTypeAndTimeRange(
-                                RecordType.EXERCISE.name,
-                                record.startTime.toEpochMilli(),
-                                record.endTime.toEpochMilli(),
-                            )
-                        val hrSamplesMapped = hrSamples.map { sample ->
-                            DomainHeartRateSample(
-                                time = Instant.ofEpochMilli(sample.timestampMs),
-                                beatsPerMinute = sample.beatsPerMinute
-                            )
-                        }
-                        val metrics = ZoneThresholds.computeMetrics(
-                            record.startTime.toEpochMilli(),
-                            record.endTime.toEpochMilli(),
-                            hrSamplesMapped,
-                            thresholds
-                        )
-                        val workoutInput = WorkoutMapper.mapExerciseSession(domainExercise)
-                        val existing = daos.workoutDao.getById(workoutInput.id)
-                        val freshEntity = workoutInput.toEntity()
-                        val entity =
-                            freshEntity.copy(
-                                durationMinutes = metrics.durationMinutes,
-                                zone1Minutes = metrics.zoneMinutes[0],
-                                zone2Minutes = metrics.zoneMinutes[1],
-                                zone3Minutes = metrics.zoneMinutes[2],
-                                zone4Minutes = metrics.zoneMinutes[3],
-                                zone5Minutes = metrics.zoneMinutes[4],
-                                trimp = metrics.trimp,
-                                avgHr = metrics.avgHr,
-                                modelTrimp = existing?.modelTrimp,
-                                totalDistanceMeters = freshEntity.totalDistanceMeters ?: existing?.totalDistanceMeters,
-                                avgSpeedKmh = freshEntity.avgSpeedKmh ?: existing?.avgSpeedKmh,
-                                elevationGainMeters = freshEntity.elevationGainMeters ?: existing?.elevationGainMeters,
-                                routeState =
-                                    if (workoutInput.routePoints.isEmpty() &&
-                                        existing?.routeState == RouteState.IMPORTED
-                                    ) {
-                                        existing.routeState
-                                    } else {
-                                        freshEntity.routeState
-                                    },
-                            )
-                        daos.workoutDao.upsertAll(listOf(entity))
-                    }
-                }
-                HealthDataType.WEIGHT -> {
-                    if (record is HealthConnectWeightRecord) {
-                        val domainWeight = record.toDomain()
-                        val entity = WeightDataMapper.toEntities(listOf(domainWeight))
-                        daos.weightRecordDao.upsertAll(entity)
-                    }
-                }
-                HealthDataType.BODY_FAT -> {
-                    if (record is HealthConnectBodyFatRecord) {
-                        val domainBodyFat = record.toDomain()
-                        val entity = BodyFatDataMapper.toEntities(listOf(domainBodyFat))
-                        daos.bodyFatRecordDao.upsertAll(entity)
-                    }
-                }
-                HealthDataType.BLOOD_PRESSURE -> {
-                    if (record is HealthConnectBloodPressureRecord) {
-                        val domainBloodPressure = record.toDomain()
-                        val entity = BloodPressureDataMapper.toEntities(listOf(domainBloodPressure))
-                        daos.bloodPressureRecordDao.upsertAll(entity)
-                    }
-                }
-                HealthDataType.OXYGEN_SATURATION -> {
-                    if (record is OxygenSaturationRecord) {
-                        val domainOxygen = record.toDomain()
-                        val entity = OxygenSaturationDataMapper.toEntities(listOf(domainOxygen))
-                        daos.oxygenSaturationRecordDao.upsertAll(entity)
-                    }
-                }
-                HealthDataType.BODY_TEMPERATURE -> {
-                    if (record is BodyTemperatureRecord) {
-                        val domainBodyTemperature = record.toDomain()
-                        val entity = BodyTemperatureDataMapper.toEntities(listOf(domainBodyTemperature))
-                        daos.bodyTemperatureRecordDao.upsertAll(entity)
-                    }
-                }
-                HealthDataType.STEPS -> {
-                    if (record is StepsRecord) {
-                        // Steps have no dedicated table for scoring (daily totals come from
-                        // StepCountFetcher's aggregate reads) -- this row exists purely so a later
-                        // DeletionChange for this record can resolve its own date range (HC-005).
-                        daos.stepRecordDao.upsertAll(
-                            listOf(
-                                StepRecordEntity(
-                                    id = record.metadata.id,
-                                    startTime = record.startTime.toEpochMilli(),
-                                    endTime = record.endTime.toEpochMilli(),
-                                    count = record.count,
-                                    deviceName = DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin),
-                                ),
-                            ),
-                        )
-                    }
-                }
+                HealthDataType.SLEEP -> upsertSleep(record)
+                HealthDataType.HEART_RATE -> upsertHeartRate(record, spans)
+                HealthDataType.HRV -> upsertHrv(record, spans)
+                HealthDataType.EXERCISE -> upsertExercise(record, prefs)
+                HealthDataType.WEIGHT -> upsertWeight(record)
+                HealthDataType.BODY_FAT -> upsertBodyFat(record)
+                HealthDataType.BLOOD_PRESSURE -> upsertBloodPressure(record)
+                HealthDataType.OXYGEN_SATURATION -> upsertOxygenSaturation(record)
+                HealthDataType.BODY_TEMPERATURE -> upsertBodyTemperature(record)
+                HealthDataType.STEPS -> upsertSteps(record)
             }
         }
 
-        private fun recordClassesFor(dataType: HealthDataType): Set<kotlin.reflect.KClass<out Record>> =
-            when (dataType) {
-                HealthDataType.EXERCISE -> setOf(ExerciseSessionRecord::class)
-                HealthDataType.STEPS -> setOf(StepsRecord::class)
-                HealthDataType.BODY_FAT -> setOf(HealthConnectBodyFatRecord::class)
-                HealthDataType.WEIGHT -> setOf(HealthConnectWeightRecord::class)
-                HealthDataType.SLEEP -> setOf(SleepSessionRecord::class)
-                HealthDataType.BLOOD_PRESSURE -> setOf(HealthConnectBloodPressureRecord::class)
-                HealthDataType.HEART_RATE -> setOf(HealthConnectHeartRateRecord::class)
-                HealthDataType.HRV -> setOf(HeartRateVariabilityRmssdRecord::class)
-                HealthDataType.OXYGEN_SATURATION -> setOf(OxygenSaturationRecord::class)
-                HealthDataType.BODY_TEMPERATURE -> setOf(BodyTemperatureRecord::class)
-            }
-
-        private fun isTokenExpiredException(e: Exception): Boolean {
-            val msg = e.message?.lowercase() ?: ""
-            return msg.contains("expired") || msg.contains("invalid token") || msg.contains("token not found")
+        private suspend fun upsertSleep(record: Record) {
+            if (record !is SleepSessionRecord) return
+            val domainRecord = record.toDomain()
+            val sleepInput = SleepDataMapper.mapSleepSession(domainRecord)
+            val stageInputs = SleepDataMapper.mapSleepSessionStages(domainRecord)
+            healthIngestionStore.persist(
+                emptyBatch(sleepSessions = listOf(sleepInput), sleepStages = stageInputs),
+            )
         }
 
-        private fun getDatesBetween(
-            start: Instant,
-            end: Instant,
-            zoneId: ZoneId,
-        ): Set<LocalDate> {
-            val startDate = start.atZone(zoneId).toLocalDate()
-            val endDate = end.atZone(zoneId).toLocalDate()
-            val dates = mutableSetOf<LocalDate>()
-            var current = startDate
-            while (!current.isAfter(endDate)) {
-                dates.add(current)
-                current = current.plusDays(1)
-            }
-            return dates
+        private suspend fun upsertHeartRate(record: Record, spans: SessionSpans) {
+            if (record !is HealthConnectHeartRateRecord) return
+            val domainHr = record.toDomain()
+            // Real session spans overlapping this record's own time range so the sample is tagged
+            // SLEEP/EXERCISE immediately instead of RESTING/sessionId=null until the next reconcile
+            // pass corrects it (HC-004).
+            val hrInputs = HeartRateMapper.mapToInputs(listOf(domainHr), spans.sleepSessions, spans.workouts)
+            healthIngestionStore.persistHeartRateSamples(hrInputs)
         }
 
-        private fun getDateFor(
-            time: Instant,
-            zoneId: ZoneId,
-        ): Set<LocalDate> = setOf(time.atZone(zoneId).toLocalDate())
+        private suspend fun upsertHrv(record: Record, spans: SessionSpans) {
+            if (record !is HeartRateVariabilityRmssdRecord) return
+            val domainHrv = record.toDomain()
+            val hrvInputs = HrvMapper.mapToInputs(listOf(domainHrv), spans.sleepSessions)
+            healthIngestionStore.persistHrvSamples(hrvInputs)
+        }
 
-        private fun getDatesForRecord(
-            record: Record,
-            zoneId: ZoneId,
-        ): Set<LocalDate> =
-            when (record) {
-                is SleepSessionRecord -> getDatesBetween(record.startTime, record.endTime, zoneId)
-                is ExerciseSessionRecord -> getDatesBetween(record.startTime, record.endTime, zoneId)
-                is StepsRecord -> getDatesBetween(record.startTime, record.endTime, zoneId)
-                is HealthConnectHeartRateRecord -> getDatesBetween(record.startTime, record.endTime, zoneId)
-                is HeartRateVariabilityRmssdRecord -> getDateFor(record.time, zoneId)
-                is HealthConnectWeightRecord -> getDateFor(record.time, zoneId)
-                is HealthConnectBodyFatRecord -> getDateFor(record.time, zoneId)
-                is HealthConnectBloodPressureRecord -> getDateFor(record.time, zoneId)
-                is OxygenSaturationRecord -> getDateFor(record.time, zoneId)
-                is BodyTemperatureRecord -> getDateFor(record.time, zoneId)
-                else -> emptySet()
-            }
+        private suspend fun upsertExercise(record: Record, prefs: UserPreferences) {
+            if (record !is ExerciseSessionRecord) return
+            val distanceTotal = sessionTotalFor<DistanceRecord>(client, record) { it.toIntervalTotal() }
+            val elevationTotal = sessionTotalFor<ElevationGainedRecord>(client, record) { it.toIntervalTotal() }
+            val domainExercise = record.toDomain(
+                routeResult = record.exerciseRouteResult,
+                totalDistanceMeters = distanceTotal,
+                elevationGainMeters = elevationTotal,
+            )
+            val thresholds = ZoneThresholds.create(
+                prefs.zone1MinBpm, prefs.zone1MaxBpm, prefs.zone2MaxBpm,
+                prefs.zone3MaxBpm, prefs.zone4MaxBpm,
+            )
+            // Provisional metrics from already-stored HR overlapping this session so a workout
+            // upsert has non-zero TRIMP/zones/avgHr immediately (HC-004); a sample arriving in the
+            // same changes batch is corrected by the next reconcile pass. EXERCISE-only filter
+            // matches SessionLinkReconcilerImpl.recomputeWorkouts.
+            val hrSamples = changeIngestionStore.heartRateSamplesForMetrics(
+                RecordType.EXERCISE.name,
+                record.startTime.toEpochMilli(),
+                record.endTime.toEpochMilli(),
+            )
+            val metrics = ZoneThresholds.computeMetrics(
+                record.startTime.toEpochMilli(), record.endTime.toEpochMilli(), hrSamples, thresholds,
+            )
+            val workoutInput = WorkoutMapper.mapExerciseSession(domainExercise).copy(
+                durationMinutes = metrics.durationMinutes,
+                zone1Minutes = metrics.zoneMinutes[0],
+                zone2Minutes = metrics.zoneMinutes[1],
+                zone3Minutes = metrics.zoneMinutes[2],
+                zone4Minutes = metrics.zoneMinutes[3],
+                zone5Minutes = metrics.zoneMinutes[4],
+                trimp = metrics.trimp,
+                avgHr = metrics.avgHr,
+            )
+            // modelTrimp/route-field preservation across re-upserts is handled inside
+            // RoomHealthIngestionStore.persist() already (mirrors bulk-path behavior).
+            healthIngestionStore.persist(emptyBatch(workouts = listOf(workoutInput)))
+        }
 
-        /**
-         * Same-package attribution of one optional interval record type (distance, elevation) to a
-         * delta-synced exercise session -- the per-session equivalent of the bulk
-         * `readIntervalTotals` + `SessionTotalsResolver` pass in [HealthConnectRepositoryImpl].
-         * Returns null when the optional permission is missing: enrichment, never a sync failure.
-         */
-        private suspend inline fun <
-            reified T : androidx.health.connect.client.records.Record,
-            > sessionTotalFor(
-            session: ExerciseSessionRecord,
-            map: (T) -> DomainIntervalTotal,
-        ): Double? =
-            try {
-                val totals = mutableListOf<DomainIntervalTotal>()
-                var pageToken: String? = null
-                do {
-                    val response =
-                        client.readRecords(
-                            ReadRecordsRequest(
-                                recordType = T::class,
-                                timeRangeFilter = TimeRangeFilter.between(session.startTime, session.endTime),
-                                pageToken = pageToken,
-                            ),
-                        )
-                    totals += response.records.map(map)
-                    pageToken = response.pageToken
-                } while (pageToken != null)
-                SessionTotalsResolver.totalFor(
-                    sessionStart = session.startTime,
-                    sessionEnd = session.endTime,
-                    sessionOrigin = session.metadata.dataOrigin.packageName,
-                    totals = totals,
-                )
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                if (e.asHealthConnectSecurityCause() == null) throw e
-                logD("HealthChangeSynchronizer") {
-                    "${T::class.simpleName} permission not granted; session stored without ${T::class.simpleName} total"
-                }
-                null
-            }
+        private suspend fun upsertWeight(record: Record) {
+            if (record !is HealthConnectWeightRecord) return
+            healthIngestionStore.persist(emptyBatch(weights = listOf(record.toDomain().toWeightInput())))
+        }
 
-        private suspend fun getAffectedDatesForDeletedRecord(
-            dataType: HealthDataType,
-            id: String,
-            zoneId: ZoneId,
-        ): Set<LocalDate> =
-            when (dataType) {
-                HealthDataType.SLEEP -> {
-                    daos.sleepSessionDao.getById(id)?.let {
-                        getDatesBetween(Instant.ofEpochMilli(it.startTime), Instant.ofEpochMilli(it.endTime), zoneId)
-                    } ?: emptySet()
-                }
-                HealthDataType.HEART_RATE -> {
-                    daos.sourceRecordDao.getSourceRef(id)?.let { ref ->
-                        daos.heartRateDao
-                            .getBySourceRecordRef(ref)
-                            .mapTo(mutableSetOf()) { getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId).single() }
-                    } ?: emptySet()
-                }
-                HealthDataType.HRV -> {
-                    daos.sourceRecordDao.getSourceRef(id)?.let { ref ->
-                        daos.hrvDao
-                            .getBySourceRecordRef(ref)
-                            .mapTo(mutableSetOf()) { getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId).single() }
-                    } ?: emptySet()
-                }
-                HealthDataType.EXERCISE -> {
-                    daos.workoutDao.getById(id)?.let {
-                        getDatesBetween(Instant.ofEpochMilli(it.startTime), Instant.ofEpochMilli(it.endTime), zoneId)
-                    } ?: emptySet()
-                }
-                HealthDataType.WEIGHT -> {
-                    daos.weightRecordDao
-                        .getBySourceRecordId(id)
-                        .mapTo(mutableSetOf()) { getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId).single() }
-                }
-                HealthDataType.BODY_FAT -> {
-                    daos.bodyFatRecordDao
-                        .getBySourceRecordId(id)
-                        .mapTo(mutableSetOf()) { getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId).single() }
-                }
-                HealthDataType.BLOOD_PRESSURE -> {
-                    daos.bloodPressureRecordDao
-                        .getBySourceRecordId(id)
-                        .mapTo(mutableSetOf()) { getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId).single() }
-                }
-                HealthDataType.OXYGEN_SATURATION -> {
-                    daos.oxygenSaturationRecordDao
-                        .getBySourceRecordId(id)
-                        .mapTo(mutableSetOf()) { getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId).single() }
-                }
-                HealthDataType.BODY_TEMPERATURE -> {
-                    daos.bodyTemperatureRecordDao
-                        .getBySourceRecordId(id)
-                        .mapTo(mutableSetOf()) { getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId).single() }
-                }
-                HealthDataType.STEPS -> {
-                    // Resolve from the raw row upsertRecord's STEPS branch persisted, before
-                    // deleteRecordLocal removes it (HC-005) -- must be called before the delete.
-                    daos.stepRecordDao.getById(id)?.let {
-                        getDatesBetween(Instant.ofEpochMilli(it.startTime), Instant.ofEpochMilli(it.endTime), zoneId)
-                    } ?: emptySet()
-                }
-            }
+        private suspend fun upsertBodyFat(record: Record) {
+            if (record !is HealthConnectBodyFatRecord) return
+            healthIngestionStore.persist(emptyBatch(bodyFatSamples = listOf(record.toDomain().toBodyFatInput())))
+        }
 
-        private suspend fun deleteRecordLocal(
-            dataType: HealthDataType,
-            id: String,
-        ) {
-            when (dataType) {
-                HealthDataType.SLEEP -> daos.sleepSessionDao.deleteById(id)
-                HealthDataType.HEART_RATE -> {
-                    daos.sourceRecordDao.getSourceRef(id)?.let { daos.heartRateDao.deleteBySourceRecordRef(it) }
-                    daos.sourceRecordDao.deleteBySourceRecordId(id)
-                }
-                HealthDataType.HRV -> {
-                    daos.sourceRecordDao.getSourceRef(id)?.let { daos.hrvDao.deleteBySourceRecordRef(it) }
-                    daos.sourceRecordDao.deleteBySourceRecordId(id)
-                }
-                HealthDataType.EXERCISE -> daos.workoutDao.deleteById(id)
-                HealthDataType.WEIGHT -> daos.weightRecordDao.deleteBySourceRecordId(id)
-                HealthDataType.BODY_FAT -> daos.bodyFatRecordDao.deleteBySourceRecordId(id)
-                HealthDataType.BLOOD_PRESSURE -> daos.bloodPressureRecordDao.deleteBySourceRecordId(id)
-                HealthDataType.OXYGEN_SATURATION -> daos.oxygenSaturationRecordDao.deleteBySourceRecordId(id)
-                HealthDataType.BODY_TEMPERATURE -> daos.bodyTemperatureRecordDao.deleteBySourceRecordId(id)
-                HealthDataType.STEPS -> daos.stepRecordDao.deleteById(id)
-            }
+        private suspend fun upsertBloodPressure(record: Record) {
+            if (record !is HealthConnectBloodPressureRecord) return
+            healthIngestionStore.persist(
+                emptyBatch(bloodPressureSamples = listOf(record.toDomain().toBloodPressureInput())),
+            )
+        }
+
+        private suspend fun upsertOxygenSaturation(record: Record) {
+            if (record !is OxygenSaturationRecord) return
+            healthIngestionStore.persist(
+                emptyBatch(oxygenSaturationSamples = listOf(record.toDomain().toOxygenSaturationInput())),
+            )
+        }
+
+        private suspend fun upsertBodyTemperature(record: Record) {
+            if (record !is BodyTemperatureRecord) return
+            healthIngestionStore.persist(
+                emptyBatch(bodyTemperatureSamples = listOf(record.toDomain().toBodyTemperatureInput())),
+            )
+        }
+
+        private suspend fun upsertSteps(record: Record) {
+            if (record !is StepsRecord) return
+            // Steps have no dedicated scoring table (daily totals come from StepCountFetcher's
+            // aggregate reads) -- this row exists purely so a later DeletionChange for this record
+            // can resolve its own date range (HC-005).
+            val stepInput = StepRecordInput(
+                id = record.metadata.id,
+                startTime = record.startTime.toEpochMilli(),
+                endTime = record.endTime.toEpochMilli(),
+                count = record.count,
+                deviceName = DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin),
+            )
+            healthIngestionStore.persist(emptyBatch(stepRecords = listOf(stepInput)))
         }
     }
-
-private fun SleepSessionInput.toEntity() =
-    SleepSessionEntity(
-        id = id,
-        startTime = startTime,
-        endTime = endTime,
-        durationMinutes = durationMinutes,
-        efficiency = efficiency,
-        deepSleepMinutes = deepSleepMinutes,
-        remSleepMinutes = remSleepMinutes,
-        lightSleepMinutes = lightSleepMinutes,
-        awakeMinutes = awakeMinutes,
-        sleepScore = sleepScore,
-        startZoneOffsetSeconds = startZoneOffsetSeconds,
-        endZoneOffsetSeconds = endZoneOffsetSeconds,
-        deviceName = deviceName,
-    )
-
-private fun SleepSessionEntity.toInput() =
-    SleepSessionInput(
-        id = id,
-        startTime = startTime,
-        endTime = endTime,
-        durationMinutes = durationMinutes,
-        efficiency = efficiency,
-        deepSleepMinutes = deepSleepMinutes,
-        remSleepMinutes = remSleepMinutes,
-        lightSleepMinutes = lightSleepMinutes,
-        awakeMinutes = awakeMinutes,
-        sleepScore = sleepScore,
-        startZoneOffsetSeconds = startZoneOffsetSeconds,
-        endZoneOffsetSeconds = endZoneOffsetSeconds,
-        deviceName = deviceName,
-    )
-
-private fun SleepStageInput.toEntity() =
-    SleepStageEntity(
-        sessionId = sessionId,
-        stageType = stageType,
-        startTime = startTime,
-        endTime = endTime,
-        durationMinutes = durationMinutes,
-    )
-
-private fun HeartRateInput.toEntity(sourceRecordRef: Long) =
-    HeartRateRecordEntity(
-        sourceRecordRef = sourceRecordRef,
-        timestampMs = timestampMs,
-        beatsPerMinute = beatsPerMinute,
-        recordType = recordType,
-        sessionId = sessionId,
-        deviceName = deviceName,
-    )
-
-private fun HrvInput.toEntity(sourceRecordRef: Long) =
-    HrvRecordEntity(
-        sourceRecordRef = sourceRecordRef,
-        timestampMs = timestampMs,
-        rmssdMs = rmssdMs,
-        recordType = recordType,
-        sessionId = sessionId,
-        deviceName = deviceName,
-    )
-
-private fun WorkoutInput.toEntity() =
-    WorkoutRecordEntity(
-        id = id,
-        startTime = startTime,
-        endTime = endTime,
-        exerciseType = exerciseType,
-        durationMinutes = durationMinutes,
-        zone1Minutes = zone1Minutes,
-        zone2Minutes = zone2Minutes,
-        zone3Minutes = zone3Minutes,
-        zone4Minutes = zone4Minutes,
-        zone5Minutes = zone5Minutes,
-        trimp = trimp,
-        avgHr = avgHr,
-        deviceName = deviceName,
-        totalDistanceMeters = totalDistanceMeters,
-        avgSpeedKmh = avgSpeedKmh,
-        elevationGainMeters = elevationGainMeters,
-        routeState = routeState,
-    )
-
-private fun WorkoutRecordEntity.toInput() =
-    WorkoutInput(
-        id = id,
-        startTime = startTime,
-        endTime = endTime,
-        exerciseType = exerciseType,
-        durationMinutes = durationMinutes,
-        zone1Minutes = zone1Minutes,
-        zone2Minutes = zone2Minutes,
-        zone3Minutes = zone3Minutes,
-        zone4Minutes = zone4Minutes,
-        zone5Minutes = zone5Minutes,
-        trimp = trimp,
-        avgHr = avgHr,
-        deviceName = deviceName,
-        totalDistanceMeters = totalDistanceMeters,
-        avgSpeedKmh = avgSpeedKmh,
-        elevationGainMeters = elevationGainMeters,
-        routeState = routeState,
-    )

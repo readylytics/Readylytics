@@ -9,16 +9,14 @@ import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.request.ChangesTokenRequest
 import androidx.health.connect.client.response.ChangesResponse
-import app.readylytics.health.core.databaseschema.data.local.dao.*
-import app.readylytics.health.core.database.data.local.HealthRecordDaos
-import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
-import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity
-import app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
+import app.readylytics.health.core.model.domain.sync.HealthChangeIngestionStore
 import app.readylytics.health.core.model.domain.sync.HealthChangeTokenStore
+import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
+import app.readylytics.health.core.model.domain.sync.SessionSpans
 import io.mockk.*
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -37,20 +35,8 @@ class HealthChangeSynchronizerImplTest {
     private val tokenStore = mockk<HealthChangeTokenStore>(relaxed = true)
     private val settingsRepo = mockk<SettingsRepository>(relaxed = true)
     private val transactionRunner = mockk<TransactionRunner>(relaxed = true)
-    private val sleepSessionDao = mockk<SleepSessionDao>(relaxed = true)
-    private val sleepStageDao = mockk<SleepStageDao>(relaxed = true)
-    private val heartRateDao = mockk<HeartRateDao>(relaxed = true)
-    private val hrvDao = mockk<HrvDao>(relaxed = true)
-    private val workoutDao = mockk<WorkoutDao>(relaxed = true)
-    private val weightRecordDao = mockk<WeightRecordDao>(relaxed = true)
-    private val bodyFatRecordDao = mockk<BodyFatRecordDao>(relaxed = true)
-    private val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
-    private val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
-    private val bodyTemperatureRecordDao = mockk<BodyTemperatureRecordDao>(relaxed = true)
-    private val stepRecordDao = mockk<StepRecordDao>(relaxed = true)
-    private val sourceRecordDao = mockk<SourceRecordDao>(relaxed = true)
-    private val workoutRoutePointDao = mockk<WorkoutRoutePointDao>(relaxed = true)
-    private val minuteBucketDao = mockk<MinuteBucketDao>(relaxed = true)
+    private val healthIngestionStore = mockk<HealthIngestionStore>(relaxed = true)
+    private val changeIngestionStore = mockk<HealthChangeIngestionStore>(relaxed = true)
 
     private val client = mockk<HealthConnectClient>(relaxed = true)
 
@@ -74,29 +60,20 @@ class HealthChangeSynchronizerImplTest {
 
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
 
+        // Baseline plumbing stubs so tests that don't care about session spans / provisional
+        // workout metrics don't need to restub these on every case.
+        coEvery { changeIngestionStore.sessionSpansOverlapping(any(), any()) } returns
+            SessionSpans(emptyList(), emptyList())
+        coEvery { changeIngestionStore.heartRateSamplesForMetrics(any(), any(), any()) } returns emptyList()
+
         synchronizer =
             HealthChangeSynchronizerImpl(
                 context = context,
                 tokenStore = tokenStore,
                 settingsRepo = settingsRepo,
                 transactionRunner = transactionRunner,
-                daos =
-                    HealthRecordDaos(
-                        sleepSessionDao = sleepSessionDao,
-                        sleepStageDao = sleepStageDao,
-                        heartRateDao = heartRateDao,
-                        hrvDao = hrvDao,
-                        workoutDao = workoutDao,
-                        weightRecordDao = weightRecordDao,
-                        bodyFatRecordDao = bodyFatRecordDao,
-                        bloodPressureRecordDao = bloodPressureRecordDao,
-                        oxygenSaturationRecordDao = oxygenSaturationRecordDao,
-                        bodyTemperatureRecordDao = bodyTemperatureRecordDao,
-                        stepRecordDao = stepRecordDao,
-                        sourceRecordDao = sourceRecordDao,
-                        workoutRoutePointDao = workoutRoutePointDao,
-                        minuteBucketDao = minuteBucketDao,
-                    ),
+                healthIngestionStore = healthIngestionStore,
+                changeIngestionStore = changeIngestionStore,
                 clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
             )
     }
@@ -200,28 +177,25 @@ class HealthChangeSynchronizerImplTest {
 
             coEvery { client.getChanges(any()) } returns response
 
-            // Mock looking up the deleted record to determine affected date
-            val mockSleepEntity =
-                mockk<app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity>(relaxed = true) {
-                    every { startTime } returns Instant.parse("2026-06-19T00:00:00Z").toEpochMilli()
-                    every { endTime } returns Instant.parse("2026-06-19T08:00:00Z").toEpochMilli()
-                }
-            coEvery { sleepSessionDao.getById(recordId) } returns mockSleepEntity
-            coEvery { sleepSessionDao.deleteById(recordId) } returns 1
+            // Mock resolving the deleted record's affected date via the port, replacing the old
+            // sleepSessionDao.getById(...)-based lookup.
+            coEvery {
+                changeIngestionStore.affectedDatesForRecord(HealthDataType.SLEEP, recordId, any())
+            } returns setOf(LocalDate.parse("2026-06-19"))
 
             val outcome = synchronizer.applyPendingChanges()
 
             assertFalse(outcome.requiresFullResync)
             assertTrue(outcome.affectedDates.contains(LocalDate.parse("2026-06-19")))
             coVerify {
-                sleepSessionDao.deleteById(recordId)
+                changeIngestionStore.deleteRecord(HealthDataType.SLEEP, recordId)
             }
         }
 
     @Test
     fun `applyPendingChanges handles UpsertionChange for selected device`() =
         runTest {
-            coEvery { tokenStore.get(any()) } returns "token"
+            seedTokens()
 
             val mockRecord =
                 mockk<SleepSessionRecord>(relaxed = true) {
@@ -240,22 +214,14 @@ class HealthChangeSynchronizerImplTest {
                     every { record } returns mockRecord
                 }
 
-            val response =
-                mockk<ChangesResponse>(relaxed = true) {
-                    every { changesTokenExpired } returns false
-                    every { changes } returns listOf(upsertionChange)
-                    every { nextChangesToken } returns "next_token"
-                    every { hasMore } returns false
-                }
-
-            coEvery { client.getChanges(any()) } returns response
+            routeOneChange(dataType = HealthDataType.SLEEP, change = upsertionChange)
 
             val outcome = synchronizer.applyPendingChanges()
 
             assertFalse(outcome.requiresFullResync)
             assertTrue(outcome.affectedDates.contains(LocalDate.parse("2026-06-19")))
             coVerify {
-                sleepSessionDao.upsertAll(any())
+                healthIngestionStore.persist(match { it.sleepSessions.size == 1 })
             }
         }
 
@@ -268,7 +234,7 @@ class HealthChangeSynchronizerImplTest {
                     UserPreferences(deviceByDataType = mapOf(HealthDataType.SLEEP.name to "WatchA")),
                 )
 
-            coEvery { tokenStore.get(any()) } returns "token"
+            seedTokens()
 
             val mockRecord =
                 mockk<SleepSessionRecord>(relaxed = true) {
@@ -288,32 +254,21 @@ class HealthChangeSynchronizerImplTest {
                     every { record } returns mockRecord
                 }
 
-            val response =
-                mockk<ChangesResponse>(relaxed = true) {
-                    every { changesTokenExpired } returns false
-                    every { changes } returns listOf(upsertionChange)
-                    every { nextChangesToken } returns "next_token"
-                    every { hasMore } returns false
-                }
+            routeOneChange(dataType = HealthDataType.SLEEP, change = upsertionChange)
 
-            coEvery { client.getChanges(any()) } returns response
-
-            val mockSleepEntity =
-                mockk<app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity>(relaxed = true) {
-                    every { startTime } returns Instant.parse("2026-06-19T00:00:00Z").toEpochMilli()
-                    every { endTime } returns Instant.parse("2026-06-19T08:00:00Z").toEpochMilli()
-                }
-            coEvery { sleepSessionDao.getById("id123") } returns mockSleepEntity
+            coEvery {
+                changeIngestionStore.affectedDatesForRecord(HealthDataType.SLEEP, "id123", any())
+            } returns setOf(LocalDate.parse("2026-06-19"))
 
             val outcome = synchronizer.applyPendingChanges()
 
             assertFalse(outcome.requiresFullResync)
             assertTrue(outcome.affectedDates.contains(LocalDate.parse("2026-06-19")))
             coVerify {
-                sleepSessionDao.deleteById("id123")
+                changeIngestionStore.deleteRecord(HealthDataType.SLEEP, "id123")
             }
             coVerify(exactly = 0) {
-                sleepSessionDao.upsertAll(any())
+                healthIngestionStore.persist(any())
             }
         }
 
@@ -353,18 +308,20 @@ class HealthChangeSynchronizerImplTest {
                     every { this@mockk.record } returns record
                 }
             routeOneChange(dataType = HealthDataType.STEPS, change = change)
-            coEvery { stepRecordDao.getById(recordId) } returns null
+            coEvery {
+                changeIngestionStore.affectedDatesForRecord(HealthDataType.STEPS, recordId, any())
+            } returns emptySet()
 
             synchronizer.applyPendingChanges()
 
             coVerify {
-                stepRecordDao.upsertAll(
-                    match { records ->
-                        records.size == 1 &&
-                            records[0].id == recordId &&
-                            records[0].startTime == startTime.toEpochMilli() &&
-                            records[0].endTime == endTime.toEpochMilli() &&
-                            records[0].count == 500L
+                healthIngestionStore.persist(
+                    match { batch ->
+                        batch.stepRecords.size == 1 &&
+                            batch.stepRecords[0].id == recordId &&
+                            batch.stepRecords[0].startTime == startTime.toEpochMilli() &&
+                            batch.stepRecords[0].endTime == endTime.toEpochMilli() &&
+                            batch.stepRecords[0].count == 500L
                     },
                 )
             }
@@ -373,22 +330,19 @@ class HealthChangeSynchronizerImplTest {
     @Test
     fun `applyPendingChanges resolves a deleted steps record's dates from the stored raw row`() =
         runTest {
-            // HC-005: a steps DeletionChange must resolve affected dates from the row
-            // upsertRecord's STEPS branch previously persisted, not emptySet().
+            // HC-005: a steps DeletionChange must resolve affected dates via the port, not
+            // emptySet(). The actual date-derivation from the stored raw row now lives in
+            // RoomHealthChangeIngestionStore -- this test only verifies the synchronizer wires
+            // that lookup and the subsequent delete through in the right order.
             val originalZone = TimeZone.getDefault()
             TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
             try {
                 seedTokens()
                 val recordId = "deleted-steps"
-                val storedRow =
-                    app.readylytics.health.core.databaseschema.data.local.entity.StepRecordEntity(
-                        id = recordId,
-                        startTime = Instant.parse("2026-03-10T22:00:00Z").toEpochMilli(),
-                        endTime = Instant.parse("2026-03-11T00:00:00Z").toEpochMilli(),
-                        count = 200L,
-                        deviceName = "Watch",
-                    )
-                coEvery { stepRecordDao.getById(recordId) } returns storedRow
+                val expectedDates = setOf(LocalDate.of(2026, 3, 10), LocalDate.of(2026, 3, 11))
+                coEvery {
+                    changeIngestionStore.affectedDatesForRecord(HealthDataType.STEPS, recordId, any())
+                } returns expectedDates
                 val deletionChange =
                     mockk<DeletionChange>(relaxed = true) {
                         every { this@mockk.recordId } returns recordId
@@ -397,13 +351,10 @@ class HealthChangeSynchronizerImplTest {
 
                 val outcome = synchronizer.applyPendingChanges()
 
-                assertEquals(
-                    setOf(LocalDate.of(2026, 3, 10), LocalDate.of(2026, 3, 11)),
-                    outcome.affectedDates,
-                )
+                assertEquals(expectedDates, outcome.affectedDates)
                 coVerifyOrder {
-                    stepRecordDao.getById(recordId)
-                    stepRecordDao.deleteById(recordId)
+                    changeIngestionStore.affectedDatesForRecord(HealthDataType.STEPS, recordId, any())
+                    changeIngestionStore.deleteRecord(HealthDataType.STEPS, recordId)
                 }
             } finally {
                 TimeZone.setDefault(originalZone)
