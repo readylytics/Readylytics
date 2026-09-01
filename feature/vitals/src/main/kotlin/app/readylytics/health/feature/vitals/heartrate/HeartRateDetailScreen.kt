@@ -166,6 +166,7 @@ fun HeartRateDetailScreen(
                         zone2MaxBpm = uiState.zone2MaxBpm,
                         zone3MaxBpm = uiState.zone3MaxBpm,
                         zone4MaxBpm = uiState.zone4MaxBpm,
+                        resolution = uiState.resolution,
                         modifier =
                             Modifier
                                 .fillMaxWidth()

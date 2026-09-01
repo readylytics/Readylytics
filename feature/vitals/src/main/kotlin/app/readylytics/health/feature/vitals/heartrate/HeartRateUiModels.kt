@@ -1,6 +1,7 @@
 package app.readylytics.health.feature.vitals.heartrate
 
 import app.readylytics.health.core.model.domain.model.MetricStatus
+import app.readylytics.health.core.model.domain.repository.HeartRateResolution
 import app.readylytics.health.core.ui.model.HrSample
 import java.time.LocalDate
 
@@ -25,4 +26,5 @@ data class HeartRateDetailUiState(
     val zone2MaxBpm: Int = 133,
     val zone3MaxBpm: Int = 152,
     val zone4MaxBpm: Int = 171,
+    val resolution: HeartRateResolution = HeartRateResolution.RAW,
 )

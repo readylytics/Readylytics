@@ -1,6 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources><string name="dashboard_no_data">No data for this day</string>
     <string name="heart_rate_title">Heart Rate</string>
+    <string name="heart_rate_resolution_reconstructed">Reconstructed from summarized data</string>
     <string name="back">Back</string>
 
 

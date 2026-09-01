@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,6 +47,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.readylytics.health.core.model.domain.repository.HeartRateRecordData
+import app.readylytics.health.core.model.domain.repository.HeartRateResolution
 import app.readylytics.health.core.model.domain.repository.SleepSessionData
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
@@ -91,6 +93,7 @@ fun SleepHrChart(
     session: SleepSessionData?,
     samples: List<HeartRateRecordData>,
     modifier: Modifier = Modifier,
+    resolution: HeartRateResolution = HeartRateResolution.RAW,
 ) {
     if (session == null || samples.isEmpty()) {
         CalibrationBar(
@@ -252,6 +255,14 @@ fun SleepHrChart(
                 val timeStr = timeFormatter.format(Instant.ofEpochMilli(sample.timestampMs))
                 stringResource(R.string.chart_accessibility_selected_sleep_hr, sample.beatsPerMinute, timeStr)
             } ?: stringResource(CoreUiR.string.chart_accessibility_no_selection)
+
+        if (resolution == HeartRateResolution.RECONSTRUCTED) {
+            Text(
+                text = stringResource(CoreUiR.string.heart_rate_resolution_reconstructed),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
 
         Canvas(
             modifier =
