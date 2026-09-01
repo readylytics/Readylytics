@@ -386,4 +386,37 @@ class CleanArchTest {
             violations.isEmpty(),
         )
     }
+
+    @Test
+    fun `no ZoneId systemDefault in scoring database or feature ViewModels`() {
+        val allowedFiles =
+            setOf(
+                "TimezoneProviderImpl.kt",
+            )
+        val violations =
+            Konsist
+                .scopeFromProject()
+                .files
+                .filter { file ->
+                    (file.path.contains("/src/main/") || file.path.contains("\\src\\main\\")) &&
+                        (
+                            file.hasPackage("app.readylytics.health.core.scoring..") ||
+                                file.hasPackage("app.readylytics.health.core.database..") ||
+                                (
+                                    file.hasPackage("app.readylytics.health.feature..") &&
+                                        file.name.endsWith("ViewModel.kt")
+                                )
+                        ) &&
+                        file.nameWithExtension !in allowedFiles
+                }.flatMap { file ->
+                    val matches = Regex("""ZoneId\.systemDefault\(\)""").findAll(file.text)
+                    matches.map { "${file.name}: used ZoneId.systemDefault()" }.toList()
+                }
+
+        org.junit.Assert.assertTrue(
+            "Date keys and scoring must use the stored scoring zone. Forbidden ZoneId.systemDefault() occurrences:\n" +
+                violations.joinToString("\n"),
+            violations.isEmpty(),
+        )
+    }
 }
