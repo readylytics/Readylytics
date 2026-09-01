@@ -244,6 +244,7 @@ class ReadinessSummaryCoordinator
                 fromMs = context.targetDate.atStartOfDay(context.zoneId).toInstant().toEpochMilli(),
                 toMs = context.nextDayMidnightMs,
                 hrvBaselineOverride = context.prefs.hrvBaselineOverride,
+                zoneId = context.zoneId,
                 sleepDayPolicy = context.sleepDayPolicy,
                 prefetchedSessions = context.baselineContext?.sessions,
             )

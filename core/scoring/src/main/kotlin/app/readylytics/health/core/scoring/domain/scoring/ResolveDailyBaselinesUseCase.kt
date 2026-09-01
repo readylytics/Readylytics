@@ -53,9 +53,10 @@ class ResolveDailyBaselinesUseCase
                         fromMs = dayMidnightMs,
                         toMs = nextDayMidnightMs,
                         percentile = prefs.restingHrPercentile,
+                        zoneId = sleepDayPolicy.scoringZoneId,
                         sleepDayPolicy = sleepDayPolicy,
                         prefetchedSessions = prefetchedSessions,
-                    )
+                    )?.takeIf { it > 0f }
                     ?: ScoringConstants.DEFAULT_RHR_BPM
 
             check(hrMax > 0f) { "HR Max is missing or invalid" }

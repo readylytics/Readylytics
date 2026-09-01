@@ -130,8 +130,21 @@ class ScoringRepositoryImplTest {
         coEvery { scoringHistoryRepository.getDailySummaryByDate(any(), any()) } returns null
         coEvery { sleepSessionDao.getOverlapping(any(), any()) } returns emptyList()
         coEvery { sleepSessionDao.countSince(any()) } returns 10
-        coEvery { baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any(), any()) } returns 60f
-        coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), any(), any()) } returns
+        coEvery {
+            baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any(), any(), any(), null)
+        } returns 60f
+        coEvery {
+            baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any(), any(), any(), any())
+        } returns 60f
+        coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), any(), any(), any(), null) } returns
+            BaselineComputer.HrvWindows(
+                muHistory = emptyList(),
+                sigmaHistory = emptyList(),
+                historicalSessions = emptyList(),
+                validHistoricalSessionIds = emptyList(),
+                validHistoricalDayCount = 6,
+            )
+        coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), any(), any(), any(), any()) } returns
             BaselineComputer.HrvWindows(
                 muHistory = emptyList(),
                 sigmaHistory = emptyList(),
@@ -159,12 +172,12 @@ class ScoringRepositoryImplTest {
 
             // Mock RHR baseline for today
             coEvery {
-                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(todayMs, tomorrowMs, any(), any())
+                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(todayMs, tomorrowMs, any(), any(), any(), null)
             } returns 55f
 
             // Mock RHR baseline for yesterday
             coEvery {
-                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(yesterdayMs, todayMs, any(), any())
+                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(yesterdayMs, todayMs, any(), any(), any(), null)
             } returns 60f
 
             // Mock sleep sessions so the sleep metrics flow is exercised
@@ -260,7 +273,7 @@ class ScoringRepositoryImplTest {
             coEvery { sleepSessionDao.getOverlapping(any(), any()) } returns listOf(mockSession)
             coEvery { sleepSessionDao.countSince(any()) } returns 7
 
-            coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any()) } returns 45
+            coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any(), any()) } returns 45
             coEvery {
                 computeSleepMetricsUseCase(any())
             } returns
@@ -285,7 +298,7 @@ class ScoringRepositoryImplTest {
             coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns null
             coEvery { sleepSessionDao.countSince(any()) } returns 7
 
-            coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any()) } returns 45
+            coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any(), any()) } returns 45
             coEvery {
                 computeSleepMetricsUseCase(any())
             } returns
@@ -326,7 +339,7 @@ class ScoringRepositoryImplTest {
                 )
             coEvery { sleepPercentileRhrCalculator.collect(any(), any(), any(), any()) } returns nullWakeHrResult
 
-            coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any()) } returns 45
+            coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any(), any()) } returns 45
             coEvery {
                 computeSleepMetricsUseCase(any())
             } returns
@@ -477,7 +490,7 @@ class ScoringRepositoryImplTest {
                     BodyTemperatureRecordEntity(id = "2", timestampMs = 2L, celsius = 36.8f),
                 )
 
-            coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any()) } returns 45
+            coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any(), any()) } returns 45
             coEvery {
                 computeSleepMetricsUseCase(any())
             } returns

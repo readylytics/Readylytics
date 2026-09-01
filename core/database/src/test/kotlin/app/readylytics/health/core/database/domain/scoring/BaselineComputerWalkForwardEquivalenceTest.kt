@@ -173,12 +173,18 @@ class BaselineComputerWalkForwardEquivalenceTest {
                 val nextDayMidnightMs = dayStartMs(dayOffset + 1)
 
                 val expected =
-                    baselineComputer.computeAdaptiveBaselineRhrBpmBetween(dayMidnightMs, nextDayMidnightMs, percentile)
+                    baselineComputer.computeAdaptiveBaselineRhrBpmBetween(
+                        dayMidnightMs,
+                        nextDayMidnightMs,
+                        percentile,
+                        zoneId = zone,
+                    )
                 val actual =
                     baselineComputer.computeAdaptiveBaselineRhrBpmBetween(
                         fromMs = dayMidnightMs,
                         toMs = nextDayMidnightMs,
                         percentile = percentile,
+                        zoneId = zone,
                         prefetchedSessions = prefetched,
                     )
 
@@ -197,12 +203,19 @@ class BaselineComputerWalkForwardEquivalenceTest {
                 val dayMidnightMs = dayStartMs(dayOffset)
                 val nextDayMidnightMs = dayStartMs(dayOffset + 1)
 
-                val expected = baselineComputer.computeHrvBaselineBetween(dayMidnightMs, nextDayMidnightMs, null)
+                val expected =
+                    baselineComputer.computeHrvBaselineBetween(
+                        dayMidnightMs,
+                        nextDayMidnightMs,
+                        null,
+                        zoneId = zone,
+                    )
                 val actual =
                     baselineComputer.computeHrvBaselineBetween(
                         fromMs = dayMidnightMs,
                         toMs = nextDayMidnightMs,
                         hrvBaselineOverride = null,
+                        zoneId = zone,
                         prefetchedSessions = prefetched,
                     )
 
@@ -221,11 +234,17 @@ class BaselineComputerWalkForwardEquivalenceTest {
                 val dayMidnightMs = dayStartMs(dayOffset)
                 val nextDayMidnightMs = dayStartMs(dayOffset + 1)
 
-                val expected = baselineComputer.computeHrvWindowsBetween(dayMidnightMs, nextDayMidnightMs)
+                val expected =
+                    baselineComputer.computeHrvWindowsBetween(
+                        dayMidnightMs,
+                        nextDayMidnightMs,
+                        zoneId = zone,
+                    )
                 val actual =
                     baselineComputer.computeHrvWindowsBetween(
                         fromMs = dayMidnightMs,
                         toMs = nextDayMidnightMs,
+                        zoneId = zone,
                         prefetchedSessions = prefetched,
                     )
 

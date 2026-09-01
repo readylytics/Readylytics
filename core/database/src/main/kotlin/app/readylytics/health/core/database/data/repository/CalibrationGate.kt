@@ -17,6 +17,7 @@ class CalibrationGate(
                 .computeHrvWindowsBetween(
                     fromMs = context.dayMidnightMs,
                     toMs = context.nextDayMidnightMs,
+                    zoneId = context.zoneId,
                     sleepDayPolicy = context.sleepDayPolicy,
                     prefetchedSessions = prefetchedSessions,
                 )?.validHistoricalDayCount

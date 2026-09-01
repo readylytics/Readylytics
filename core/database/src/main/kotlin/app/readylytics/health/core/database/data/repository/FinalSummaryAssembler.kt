@@ -76,6 +76,7 @@ class FinalSummaryAssembler(
                     fromMs = inputs.context.dayMidnightMs,
                     toMs = inputs.context.nextDayMidnightMs,
                     hrvBaselineOverride = inputs.context.prefs.hrvBaselineOverride,
+                    zoneId = inputs.context.zoneId,
                     sleepDayPolicy = inputs.context.sleepDayPolicy,
                     prefetchedSessions = inputs.baselineContext?.sessions,
                 )

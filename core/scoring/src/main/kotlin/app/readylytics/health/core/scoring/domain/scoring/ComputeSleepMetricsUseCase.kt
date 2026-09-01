@@ -557,15 +557,17 @@ class ComputeSleepMetricsUseCase
             } else {
                 val rhrValues =
                     collaborators.baselineComputer.rhrHistoryBetween(
-                        dayMidnight.toEpochMilli(),
-                        dayEndMs,
-                        prefs.restingHrPercentile,
+                        fromMs = dayMidnight.toEpochMilli(),
+                        toMs = dayEndMs,
+                        percentile = prefs.restingHrPercentile,
+                        zoneId = sleepDayPolicy.scoringZoneId,
                         sleepDayPolicy = sleepDayPolicy,
                     )
                 val hrvWindows =
                     collaborators.baselineComputer.computeHrvWindowsBetween(
                         fromMs = dayMidnight.toEpochMilli(),
                         toMs = dayEndMs,
+                        zoneId = sleepDayPolicy.scoringZoneId,
                         excludeSessionIds = currentSessionIds,
                         sleepDayPolicy = sleepDayPolicy,
                     ) ?: BaselineComputer.HrvWindows(
