@@ -7,7 +7,10 @@ import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRec
 import app.readylytics.health.core.databaseschema.data.local.entity.HrMinuteBucketEntity
 import app.readylytics.health.core.model.domain.repository.HeartRateResolution
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -86,6 +89,38 @@ class HeartRateRepositoryImplTest {
                 )
 
             val series = repository.getRecoveryWindowSamples(1_000L, 5_000L)
+
+            assertEquals(HeartRateResolution.RECONSTRUCTED, series.resolution)
+            assertEquals(4, series.points.size)
+            assertEquals(series.points.map { it.timestampMs }, series.points.map { it.timestampMs }.sorted())
+        }
+
+    @Test
+    fun `observeTimelineWithResolution merges both tiers and sorts by timestamp when both are non-empty`() =
+        runTest {
+            // Regression for R2-UI-002 review finding: DataRollupManager's hot-to-warm rollup cutoff
+            // (RetentionBounds.resolveHotTierCutoffMs) is a continuous instant, not day-aligned, so a
+            // single calendar day routinely straddles both tiers. Hot being non-empty must not short-
+            // circuit the warm-tier read -- both tiers have to be merged whenever warm is non-empty.
+            every { heartRateDao.observeByTimeRange(1_000L, 5_000L) } returns
+                flowOf(
+                    listOf(
+                        heartRateEntityFixture(timestampMs = 4_000L, beatsPerMinute = 80),
+                    ),
+                )
+            coEvery { minuteBucketDao.getBucketsInTimeRange(1_000L, 5_000L) } returns
+                listOf(
+                    minuteBucketFixture(
+                        bucketStartMs = 1_000L,
+                        bucketEndMs = 60_999L,
+                        avgBpm = 65.0,
+                        minBpm = 60,
+                        maxBpm = 70,
+                        sampleCount = 3,
+                    ),
+                )
+
+            val series = repository.observeTimelineWithResolution(1_000L, 5_000L).first()
 
             assertEquals(HeartRateResolution.RECONSTRUCTED, series.resolution)
             assertEquals(4, series.points.size)

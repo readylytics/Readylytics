@@ -85,14 +85,21 @@ class HeartRateRepositoryImpl
                 .observeByTimeRange(startMs, endMs)
                 .map { entities -> entities.map { mapToDomain(it) } }
                 .map { hot ->
-                    if (hot.isNotEmpty()) return@map HeartRateSeries(hot, HeartRateResolution.RAW)
+                    // Mirrors getRecoveryWindowSamples: DataRollupManager's hot->warm cutoff
+                    // (RetentionBounds.resolveHotTierCutoffMs) is a continuous instant, not
+                    // day-aligned, so the day currently sitting at the 90-day boundary routinely
+                    // has samples split across both tiers. Hot being non-empty must never
+                    // short-circuit the warm-tier read -- always merge whenever warm is non-empty.
                     val warmBuckets = minuteBucketDao.getBucketsInTimeRange(startMs, endMs)
-                    if (warmBuckets.isEmpty()) return@map HeartRateSeries(emptyList(), HeartRateResolution.RAW)
+                    if (warmBuckets.isEmpty()) return@map HeartRateSeries(hot, HeartRateResolution.RAW)
                     val warm =
                         warmBuckets.reconstructTimestampedSamples().map { (timestampMs, bpm) ->
                             warmSampleToDomain(timestampMs, bpm)
                         }
-                    HeartRateSeries(warm, HeartRateResolution.RECONSTRUCTED)
+                    HeartRateSeries(
+                        points = (hot + warm).sortedBy { it.timestampMs },
+                        resolution = HeartRateResolution.RECONSTRUCTED,
+                    )
                 }.distinctUntilChanged()
 
         private fun mapToDomain(entity: HeartRateRecordEntity): HeartRateRecordData =
