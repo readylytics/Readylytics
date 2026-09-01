@@ -7,6 +7,12 @@ import androidx.room.Query
 import app.readylytics.health.core.databaseschema.data.local.entity.HrMinuteBucketEntity
 import app.readylytics.health.core.model.domain.model.HrMinuteBucketRow
 
+// R2-UI-002: TooManyFunctions crossed 10->11 with getBucketsInTimeRange below. Room requires every
+// query to be an abstract member of the @Dao interface (no top-level/extension-function escape
+// hatch the way a plain Kotlin class allows), and splitting this DAO into two @Dao interfaces to
+// stay under the threshold is a cross-cutting change (HealthDatabase wiring, every existing
+// consumer/test of MinuteBucketDao) out of scope for this task. No structural fix is viable here.
+@Suppress("TooManyFunctions")
 @Dao
 interface MinuteBucketDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -84,4 +90,14 @@ interface MinuteBucketDao {
 
     @Query("SELECT DISTINCT deviceName FROM hr_minute_buckets WHERE deviceName != ''")
     suspend fun getDistinctDeviceNames(): List<String>
+
+    // R2-UI-002: warm-tier equivalent of HeartRateDao.getByTimeRange -- unlike getBucketsForSession
+    // (recordType + sessionId keyed), this is a plain overlap query across every bucket type, for
+    // callers (HeartRateRepository) that need whatever warm-tier data exists in a time window
+    // regardless of which session/record type it came from.
+    @Query(
+        "SELECT * FROM hr_minute_buckets WHERE bucketStartMs <= :endMs AND bucketEndMs >= :startMs " +
+            "ORDER BY bucketStartMs ASC",
+    )
+    suspend fun getBucketsInTimeRange(startMs: Long, endMs: Long): List<HrMinuteBucketEntity>
 }
