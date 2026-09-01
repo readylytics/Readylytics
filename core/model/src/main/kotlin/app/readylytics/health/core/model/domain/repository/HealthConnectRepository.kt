@@ -51,7 +51,7 @@ sealed interface PermissionStatus {
     ) : PermissionStatus
 }
 
-interface HealthConnectRepository {
+interface HealthConnectRepository : HealthConnectPermissionChecker {
     val criticalPermissions: Set<String>
     val requiredPermissions: Set<String>
     val optionalPermissions: Set<String>
@@ -164,30 +164,6 @@ interface HealthConnectRepository {
         to: Instant,
     ): List<DomainBodyTemperatureRecord>
 
-    /** Whether the optional `READ_BODY_TEMPERATURE` permission is currently granted. */
-    suspend fun hasBodyTemperaturePermission(): Boolean
-
-    /** Whether the optional `READ_STEPS` permission is currently granted. */
-    suspend fun hasStepsPermission(): Boolean
-
-    /** Whether the optional `READ_WEIGHT` permission is currently granted. */
-    suspend fun hasWeightPermission(): Boolean
-
-    /** Whether the optional `READ_DISTANCE` permission is currently granted. */
-    suspend fun hasDistancePermission(): Boolean
-
-    /** Whether the optional `READ_BODY_FAT` permission is currently granted. */
-    suspend fun hasBodyFatPermission(): Boolean
-
-    /** Whether the optional `READ_BLOOD_PRESSURE` permission is currently granted. */
-    suspend fun hasBloodPressurePermission(): Boolean
-
-    /** Whether the optional `READ_OXYGEN_SATURATION` permission is currently granted. */
-    suspend fun hasOxygenSaturationPermission(): Boolean
-
     /** Reads a single exercise session by ID with its route data. */
     suspend fun readExerciseSession(id: String): DomainExerciseSessionRecord?
-
-    /** Whether the optional `READ_EXERCISE_ROUTES` permission is currently granted. */
-    suspend fun hasExerciseRoutesPermission(): Boolean
 }

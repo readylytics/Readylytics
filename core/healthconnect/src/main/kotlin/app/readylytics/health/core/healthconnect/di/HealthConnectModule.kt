@@ -3,6 +3,7 @@ package app.readylytics.health.core.healthconnect.di
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import app.readylytics.health.core.healthconnect.data.healthconnect.HealthConnectRepositoryImpl
+import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionChecker
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
 import dagger.Binds
 import dagger.Module
@@ -18,6 +19,12 @@ abstract class HealthConnectModule {
     @Binds
     @Singleton
     abstract fun bindHealthConnectRepository(impl: HealthConnectRepositoryImpl): HealthConnectRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindHealthConnectPermissionChecker(
+        impl: HealthConnectRepositoryImpl,
+    ): HealthConnectPermissionChecker
 
     @Binds
     @Singleton
