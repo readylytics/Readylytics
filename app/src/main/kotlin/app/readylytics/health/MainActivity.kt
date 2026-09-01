@@ -26,6 +26,7 @@ import app.readylytics.health.core.model.data.preferences.AppTheme
 import app.readylytics.health.core.model.domain.backup.RestoreResult
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.util.logE
+import app.readylytics.health.crashreport.CachePrune
 import app.readylytics.health.crashreport.DiagnosticLogFileExport
 import app.readylytics.health.crashreport.buildLogFileShareIntent
 import app.readylytics.health.data.backup.LocalRestoreManager
@@ -78,7 +79,7 @@ class MainActivity : ComponentActivity() {
 
         lifecycleScope.launch(Dispatchers.IO) {
             runCatching { sqlCipherKeyManager.validateKeyDecryption() }
-            DiagnosticLogFileExport.pruneDiagnosticCache(cacheDir)
+            CachePrune.pruneCacheDirectories(this@MainActivity)
             isKeyValidationComplete = true
         }
 

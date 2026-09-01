@@ -26,6 +26,8 @@ Your supported local records, calculated summaries, and preferences can be backe
 
 **Not included:** Raw sleep-stage rows, raw step records, weight, body fat, blood pressure, and oxygen-saturation records are not exported by the current local backup format. A backup does not modify or replace the original data managed by Health Connect.
 
+**Cache and diagnostics are never backed up.** The app's internal cache — including the diagnostic-log, crash-report, and logcat-capture export directories — is excluded from both Android auto-backup and device-to-device transfer (`data_extraction_rules.xml` / `full_backup_content.xml`). These plaintext exports are transient on-device diagnostics; they are pruned on startup and never included in a Readylytics backup.
+
 ### Create a backup
 
 1. **Set a backup directory** — Choose a folder where the app can store backups (e.g., Documents/Readylytics Backups).
