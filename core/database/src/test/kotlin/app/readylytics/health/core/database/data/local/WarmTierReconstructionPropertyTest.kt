@@ -91,6 +91,11 @@ class WarmTierReconstructionPropertyTest {
 
     /** Mean absolute error between two equal-length sample sets, compared order statistic by order statistic. */
     private fun meanAbsoluteError(
+        reconstructed: IntArray,
+        raw: List<Int>,
+    ): Double = meanAbsoluteError(reconstructed.toList(), raw)
+
+    private fun meanAbsoluteError(
         reconstructed: List<Int>,
         raw: List<Int>,
     ): Double = reconstructed.sorted().zip(raw.sorted()).map { (r, a) -> abs(r - a) }.average()

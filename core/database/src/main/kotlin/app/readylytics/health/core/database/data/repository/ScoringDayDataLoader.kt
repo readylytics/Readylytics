@@ -69,19 +69,26 @@ class ScoringDayDataLoader
 
         private suspend fun fetchWorkoutSamplesFromBuckets(
             workout: WorkoutRecordEntity,
-        ): List<HeartRateRecordEntity> =
-            minuteBucketDao
-                .getBucketsForSession("EXERCISE", workout.id)
-                .reconstructTimestampedSamples()
-                .map { (timestampMs, bpm) ->
-                    HeartRateRecordEntity(
-                        sourceRecordRef = 0L,
-                        timestampMs = timestampMs,
-                        beatsPerMinute = bpm,
-                        recordType = RecordType.EXERCISE.name,
-                        sessionId = workout.id,
+        ): List<HeartRateRecordEntity> {
+            val samples =
+                minuteBucketDao
+                    .getBucketsForSession("EXERCISE", workout.id)
+                    .reconstructTimestampedSamples()
+            if (samples.isEmpty) return emptyList()
+            return buildList(samples.size) {
+                samples.forEachIndexed { _, timestampMs, bpm ->
+                    add(
+                        HeartRateRecordEntity(
+                            sourceRecordRef = 0L,
+                            timestampMs = timestampMs,
+                            beatsPerMinute = bpm,
+                            recordType = RecordType.EXERCISE.name,
+                            sessionId = workout.id,
+                        ),
                     )
                 }
+            }
+        }
 
         // from processWorkouts L325-328
         suspend fun persistModelTrimp(

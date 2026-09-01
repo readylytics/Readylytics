@@ -29,34 +29,63 @@ import kotlin.math.roundToInt
  * misplace every interpolated point between p5 and p95.
  */
 
-internal fun List<HrMinuteBucketEntity>.reconstructSampleValues(): List<Int> =
-    flatMap { it.reconstructBucketValues() }
+internal fun List<HrMinuteBucketEntity>.reconstructSampleValues(): IntArray {
+    val totalCount = sumOf { it.sampleCount }
+    val target = IntArray(totalCount)
+    var offset = 0
+    for (i in indices) {
+        offset += this[i].fillBucketValues(target, offset)
+    }
+    return target
+}
 
-internal fun List<HrMinuteBucketEntity>.reconstructTimestampedSamples(): List<Pair<Long, Int>> =
-    flatMap { bucket ->
-        val values = bucket.reconstructBucketValues()
-        val stepMs = if (values.size > 1) 60_000L / values.size else 0L
-        values.mapIndexed { i, bpm ->
+internal fun List<HrMinuteBucketEntity>.reconstructTimestampedSamples(): TimestampedSamples {
+    val totalCount = sumOf { it.sampleCount }
+    val timestampsMs = LongArray(totalCount)
+    val bpmValues = IntArray(totalCount)
+    var offset = 0
+    for (bucketIndex in indices) {
+        val bucket = this[bucketIndex]
+        val count = bucket.sampleCount
+        if (count == 0) continue
+
+        bucket.fillBucketValues(bpmValues, offset)
+
+        val stepMs = if (count > 1) 60_000L / count else 0L
+        val startMs = bucket.bucketStartMs
+        for (i in 0 until count) {
             val offsetMs = (i * stepMs).coerceAtMost(59_999L)
-            bucket.bucketStartMs + offsetMs to bpm
+            timestampsMs[offset + i] = startMs + offsetMs
         }
+        offset += count
     }
+    return TimestampedSamples(timestampsMs, bpmValues)
+}
 
-private fun HrMinuteBucketEntity.reconstructBucketValues(): List<Int> =
+private fun HrMinuteBucketEntity.fillBucketValues(target: IntArray, offset: Int): Int =
     when {
-        p50Bpm != null -> reconstructFromPercentiles()
-        sampleCount >= MIN_SAMPLES_FOR_THREE_POINT -> reconstructThreePoint()
-        else -> List(sampleCount) { round(avgBpm).toInt() }
+        p50Bpm != null -> fillFromPercentiles(target, offset)
+        sampleCount >= MIN_SAMPLES_FOR_THREE_POINT -> fillThreePoint(target, offset)
+        else -> fillFlatMean(target, offset)
     }
 
-private fun HrMinuteBucketEntity.reconstructThreePoint(): List<Int> =
-    buildList(sampleCount) {
-        add(minBpm)
-        repeat(sampleCount - 2) { add(round(avgBpm).toInt()) }
-        add(maxBpm)
-    }
+private fun HrMinuteBucketEntity.fillFlatMean(target: IntArray, offset: Int): Int {
+    val mean = round(avgBpm).toInt()
+    target.fill(mean, offset, offset + sampleCount)
+    return sampleCount
+}
 
-private fun HrMinuteBucketEntity.reconstructFromPercentiles(): List<Int> {
+private fun HrMinuteBucketEntity.fillThreePoint(target: IntArray, offset: Int): Int {
+    target[offset] = minBpm
+    val mean = round(avgBpm).toInt()
+    if (sampleCount > 2) {
+        target.fill(mean, offset + 1, offset + sampleCount - 1)
+    }
+    target[offset + sampleCount - 1] = maxBpm
+    return sampleCount
+}
+
+private fun HrMinuteBucketEntity.fillFromPercentiles(target: IntArray, offset: Int): Int {
     val anchors =
         listOf(
             0.00 to minBpm,
@@ -67,10 +96,11 @@ private fun HrMinuteBucketEntity.reconstructFromPercentiles(): List<Int> {
             0.95 to requireNotNull(p95Bpm),
             1.00 to maxBpm,
         )
-    return (0 until sampleCount).map { i ->
+    for (i in 0 until sampleCount) {
         val quantile = (i + 0.5) / sampleCount
-        interpolateAnchors(anchors, quantile)
+        target[offset + i] = interpolateAnchors(anchors, quantile)
     }
+    return sampleCount
 }
 
 /**

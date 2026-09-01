@@ -66,10 +66,12 @@ class HeartRateRepositoryImpl
             // already scopes to overlapping buckets, and (matching ScoringHistoryRepositoryImpl's
             // established warm-tier pattern) a bucket that overlaps the window contributes all of its
             // reconstructed points, since a minute bucket is the smallest warm-tier granularity available.
-            val warm =
-                warmBuckets
-                    .reconstructTimestampedSamples()
-                    .map { (timestampMs, bpm) -> warmSampleToDomain(timestampMs, bpm) }
+            val samples = warmBuckets.reconstructTimestampedSamples()
+            val warm = buildList(samples.size) {
+                samples.forEachIndexed { _, timestampMs, bpm ->
+                    add(warmSampleToDomain(timestampMs, bpm))
+                }
+            }
             return HeartRateSeries(
                 points = (hot + warm).sortedBy { it.timestampMs },
                 resolution = HeartRateResolution.RECONSTRUCTED,
@@ -92,10 +94,12 @@ class HeartRateRepositoryImpl
                     // short-circuit the warm-tier read -- always merge whenever warm is non-empty.
                     val warmBuckets = minuteBucketDao.getBucketsInTimeRange(startMs, endMs)
                     if (warmBuckets.isEmpty()) return@map HeartRateSeries(hot, HeartRateResolution.RAW)
-                    val warm =
-                        warmBuckets.reconstructTimestampedSamples().map { (timestampMs, bpm) ->
-                            warmSampleToDomain(timestampMs, bpm)
+                    val samples = warmBuckets.reconstructTimestampedSamples()
+                    val warm = buildList(samples.size) {
+                        samples.forEachIndexed { _, timestampMs, bpm ->
+                            add(warmSampleToDomain(timestampMs, bpm))
                         }
+                    }
                     HeartRateSeries(
                         points = (hot + warm).sortedBy { it.timestampMs },
                         resolution = HeartRateResolution.RECONSTRUCTED,

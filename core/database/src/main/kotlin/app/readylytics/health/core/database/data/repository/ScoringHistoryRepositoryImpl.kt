@@ -68,7 +68,7 @@ class ScoringHistoryRepositoryImpl
             val hot = heartRateDao.getSleepHrSamplesForSession(sessionId)
             val warmBuckets = minuteBucketDao.getBucketsForSession("SLEEP", sessionId)
             if (warmBuckets.isEmpty()) return hot
-            return (hot + warmBuckets.reconstructSampleValues()).sorted()
+            return (hot + warmBuckets.reconstructSampleValues().toList()).sorted()
         }
 
         override suspend fun getSleepRmssdForSessionsMap(sessionIds: List<String>): Map<String, List<Float>> =
