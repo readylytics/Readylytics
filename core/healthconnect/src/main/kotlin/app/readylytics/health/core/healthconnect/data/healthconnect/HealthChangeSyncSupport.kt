@@ -1,5 +1,7 @@
 package app.readylytics.health.core.healthconnect.data.healthconnect
 
+import android.health.connect.HealthConnectException
+import android.os.RemoteException
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.records.BloodPressureRecord as HealthConnectBloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord as HealthConnectBodyFatRecord
@@ -28,6 +30,7 @@ import app.readylytics.health.core.model.domain.sync.WeightInput
 import app.readylytics.health.core.model.domain.sync.WorkoutInput
 import app.readylytics.health.core.model.domain.util.SessionTotalsResolver
 import app.readylytics.health.core.model.domain.util.logD
+import app.readylytics.health.core.model.domain.util.logW
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -52,9 +55,48 @@ internal fun recordClassesFor(dataType: HealthDataType): Set<kotlin.reflect.KCla
     }
 
 internal fun isTokenExpiredException(e: Exception): Boolean {
-    val msg = e.message?.lowercase() ?: ""
-    return msg.contains("expired") || msg.contains("invalid token") || msg.contains("token not found")
+    val signal = expiredTokenSignal(e)
+    if (signal == ExpiredTokenSignal.REMOTE_FALLBACK) {
+        logW("HealthChangeSyncSupport") {
+            "Inferring expired Health Connect change token from RemoteException"
+        }
+    }
+    return signal != ExpiredTokenSignal.NONE
 }
+
+private enum class ExpiredTokenSignal { NONE, HEALTH_CONNECT, REMOTE_FALLBACK }
+
+private fun expiredTokenSignal(throwable: Throwable?): ExpiredTokenSignal {
+    // The Health Connect client maps ErrorCode.CHANGES_TOKEN_OUTDATED to a RemoteException, and the
+    // platform-integrated layer can wrap it in HealthConnectException with ERROR_REMOTE. Detect the
+    // expired-token signal by concrete type rather than by scanning message text (which was brittle
+    // and locale-dependent). A bare RemoteException is the imprecise fallback (it can also mean a
+    // genuine service failure), so warn when only that path fires; a full resync is safe and
+    // idempotent either way.
+    var result: ExpiredTokenSignal? = null
+    var current: Throwable? = throwable
+    var depth = 0
+    while (result == null && current != null && depth < MAX_CAUSE_DEPTH) {
+        when {
+            current is HealthConnectException -> {
+                result =
+                    if (current.errorCode == HealthConnectException.ERROR_REMOTE) {
+                        ExpiredTokenSignal.HEALTH_CONNECT
+                    } else {
+                        ExpiredTokenSignal.NONE
+                    }
+            }
+            current is RemoteException -> result = ExpiredTokenSignal.REMOTE_FALLBACK
+            else -> {
+                current = current.cause
+                depth++
+            }
+        }
+    }
+    return result ?: ExpiredTokenSignal.NONE
+}
+
+private const val MAX_CAUSE_DEPTH = 10
 
 internal fun getDatesBetween(
     start: Instant,
