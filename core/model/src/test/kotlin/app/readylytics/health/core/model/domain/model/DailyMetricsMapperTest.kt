@@ -2,6 +2,7 @@ package app.readylytics.health.core.model.domain.model
 
 
 import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import org.junit.Test
 import java.time.LocalDate
 import kotlin.math.exp
@@ -51,6 +52,22 @@ class DailyMetricsMapperTest {
         val summary = DailySummary(date = date, readinessWorkoutOnly = 81.5f)
         val metrics = DailyMetricsMapper.toMetrics(summary, prefs)
         assertEquals(82, metrics.readinessRounded)
+    }
+
+    @Test
+    fun `training readiness is rounded to integer`() {
+        // Default strainLoadSourceMode is WORKOUT_ONLY.
+        val summary = DailySummary(date = date, trainingReadinessWorkoutOnly = 81.5f)
+        val metrics = DailyMetricsMapper.toMetrics(summary, prefs)
+        assertEquals(82, metrics.trainingReadinessRounded)
+    }
+
+    @Test
+    fun `metrics select source matched training readiness and round once`() {
+        val summary = DailySummary(date = date, trainingReadinessEverydayHr = 74.4f)
+        val everydayPrefs = UserPreferences(strainLoadSourceMode = LoadSourceMode.EVERYDAY_HEART_RATE)
+        val metrics = DailyMetricsMapper.toMetrics(summary, everydayPrefs)
+        assertEquals(74, metrics.trainingReadinessRounded)
     }
 
     @Test

@@ -28,6 +28,7 @@ enum class CardId {
     BODY_TEMPERATURE,
     INSIGHTS,
     RESIDUAL_FATIGUE,
+    TRAINING_READINESS,
 }
 
 @Serializable

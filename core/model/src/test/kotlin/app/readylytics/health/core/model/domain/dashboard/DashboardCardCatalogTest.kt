@@ -29,6 +29,7 @@ class DashboardCardCatalogTest {
             CardId.OXYGEN_SATURATION to DashboardCardDisplayMode.VALUE,
             CardId.BODY_TEMPERATURE to DashboardCardDisplayMode.VALUE,
             CardId.RESIDUAL_FATIGUE to DashboardCardDisplayMode.GAUGE,
+            CardId.TRAINING_READINESS to DashboardCardDisplayMode.GAUGE,
         )
 
     @Test
@@ -179,6 +180,20 @@ class DashboardCardCatalogTest {
         assertEquals(
             listOf(DashboardCardDisplayMode.GAUGE, DashboardCardDisplayMode.BAR, DashboardCardDisplayMode.VALUE),
             spec?.supportedModes,
+        )
+    }
+
+    @Test
+    fun `training readiness dashboard card is default hidden and supports readiness display modes`() {
+        val allModes =
+            listOf(DashboardCardDisplayMode.GAUGE, DashboardCardDisplayMode.BAR, DashboardCardDisplayMode.VALUE)
+
+        assertEquals(
+            ModeSpec(DashboardCardDisplayMode.GAUGE, allModes),
+            DashboardCardCatalog.spec(CardId.TRAINING_READINESS),
+        )
+        assertFalse(
+            SettingsDefaults.DEFAULT_DASHBOARD_CARDS.single { it.cardId == CardId.TRAINING_READINESS }.isVisible,
         )
     }
 }

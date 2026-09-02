@@ -381,6 +381,18 @@ fun buildCardDataMap(
         )
     }
 
+    cardMap[CardId.TRAINING_READINESS] = { configuration ->
+        ConfigurableMetricCard(
+            cardId = CardId.TRAINING_READINESS,
+            presentation = uiState.cardDataMap[CardId.TRAINING_READINESS],
+            configuration = configuration,
+            isEditing = isEditing,
+            isLoading = isLoading,
+            onClick = onNavigateToWorkouts,
+            onCardDisplayModeChanged = onCardDisplayModeChanged,
+        )
+    }
+
     return cardMap
 }
 
