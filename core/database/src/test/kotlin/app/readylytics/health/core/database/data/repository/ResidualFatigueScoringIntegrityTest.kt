@@ -1,5 +1,4 @@
 package app.readylytics.health.core.database.data.repository
-import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -21,6 +20,7 @@ import app.readylytics.health.core.model.data.preferences.appliedTrainingReadine
 import app.readylytics.health.core.model.domain.heartrate.ZoneThresholds
 import app.readylytics.health.core.model.domain.model.RecordType
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
@@ -33,6 +33,7 @@ import app.readylytics.health.core.scoring.domain.scoring.CompositeScoringCalcul
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
@@ -61,7 +62,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
-import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(AndroidJUnit4::class)
@@ -75,10 +75,7 @@ class ResidualFatigueScoringIntegrityTest {
 
     @Before
     fun setUp() {
-        db = Room.inMemoryDatabaseBuilder(
-            ApplicationProvider.getApplicationContext(),
-            HealthDatabase::class.java,
-        ).allowMainThreadQueries().build()
+        db = newInMemoryDatabase()
     }
 
     @After
@@ -86,10 +83,17 @@ class ResidualFatigueScoringIntegrityTest {
         db.close()
     }
 
+    private fun newInMemoryDatabase(): HealthDatabase =
+        Room.inMemoryDatabaseBuilder(
+            ApplicationProvider.getApplicationContext(),
+            HealthDatabase::class.java,
+        ).allowMainThreadQueries().build()
+
     @Test
     fun `all reconstruction paths produce identical residualFatigue across evaluation range`() =
         runTest {
-            ResidualFatigueScenarioSeeder(zoneId, historyStartDate).seedDeterministicScenario(db)
+            ResidualFatigueScenarioSeeder(zoneId, historyStartDate)
+                .seedDeterministicScenario(db, seedEverydayAndHrv = true)
             val basePrefs = basePreferences()
 
             val fullOutputs = executeWalkForward(db, historyStartDate, evalEndDate, basePrefs)
@@ -169,7 +173,8 @@ class ResidualFatigueScoringIntegrityTest {
     @Test
     fun `parameter and profile invalidation recomputes affected values and preserves explicit settings`() =
         runTest {
-            ResidualFatigueScenarioSeeder(zoneId, historyStartDate).seedDeterministicScenario(db)
+            ResidualFatigueScenarioSeeder(zoneId, historyStartDate)
+                .seedDeterministicScenario(db, seedEverydayAndHrv = true)
             val basePrefs = basePreferences()
             // Backfill canonical modelTrimp across the whole history first: a partial walk over
             // never-backfilled rows deliberately yields null (unknown), not a low value (HIGH-2).
@@ -211,9 +216,7 @@ class ResidualFatigueScoringIntegrityTest {
                 itrimpBSummaries.mapNotNull { it.residualFatigue },
             )
 
-            val hrPrefs = basePrefs.copy(maxHeartRate = 175)
-            val hrSummaries = executeWalkForward(db, evalStartDate, evalEndDate, hrPrefs)
-            assertNotEquals(baselineFatigues, hrSummaries.mapNotNull { it.residualFatigue })
+            assertMaxHeartRateAffectsFreshBaseline(basePrefs)
 
             val customPrefs = basePrefs.copy(
                 physiologyProfile = PhysiologyProfile.ATHLETE,
@@ -225,10 +228,42 @@ class ResidualFatigueScoringIntegrityTest {
             assertEquals(1.8f, profileChangedPrefs.residualFatigueGain)
         }
 
+    /**
+     * maxHeartRate only feeds the frozen per-day hrMax baseline snapshot
+     * ([app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase]): once a
+     * day's baseline is frozen it is immutable and ignores later maxHeartRate changes by design,
+     * so re-walking an already-frozen database can never show divergence. Exercise this on two
+     * never-before-computed databases instead, so each calibrates maxHeartRate into its frozen
+     * snapshot for the first time.
+     */
+    private suspend fun assertMaxHeartRateAffectsFreshBaseline(basePrefs: UserPreferences) {
+        val hrPrefs = basePrefs.copy(maxHeartRate = 175)
+        val freshBaselineDb = newInMemoryDatabase()
+        val freshHrDb = newInMemoryDatabase()
+        try {
+            ResidualFatigueScenarioSeeder(zoneId, historyStartDate)
+                .seedDeterministicScenario(freshBaselineDb, seedEverydayAndHrv = true)
+            ResidualFatigueScenarioSeeder(zoneId, historyStartDate)
+                .seedDeterministicScenario(freshHrDb, seedEverydayAndHrv = true)
+
+            val freshBaselineFatigues =
+                executeWalkForward(freshBaselineDb, historyStartDate, evalEndDate, basePrefs)
+                    .mapNotNull { it.residualFatigue }
+            val freshHrFatigues =
+                executeWalkForward(freshHrDb, historyStartDate, evalEndDate, hrPrefs)
+                    .mapNotNull { it.residualFatigue }
+            assertNotEquals(freshBaselineFatigues, freshHrFatigues)
+        } finally {
+            freshBaselineDb.close()
+            freshHrDb.close()
+        }
+    }
+
     @Test
     fun `residualFatigue is identical across all LoadSourceMode combinations`() =
         runTest {
-            ResidualFatigueScenarioSeeder(zoneId, historyStartDate).seedDeterministicScenario(db)
+            ResidualFatigueScenarioSeeder(zoneId, historyStartDate)
+                .seedDeterministicScenario(db, seedEverydayAndHrv = true)
             val basePrefs = basePreferences()
             // Backfill canonical modelTrimp across the whole history first: a partial walk over
             // never-backfilled rows deliberately yields null (unknown), not a low value (HIGH-2).
@@ -256,7 +291,8 @@ class ResidualFatigueScoringIntegrityTest {
     @Test
     fun `normal daily scoring leaves legacy readiness unchanged and persists both training variants`() =
         runTest {
-            ResidualFatigueScenarioSeeder(zoneId, historyStartDate).seedDeterministicScenario(db)
+            ResidualFatigueScenarioSeeder(zoneId, historyStartDate)
+                .seedDeterministicScenario(db, seedEverydayAndHrv = true)
             val basePrefs = basePreferences()
             // Backfill canonical modelTrimp across the whole history first: a partial walk over
             // never-backfilled rows deliberately yields null (unknown), not a low value (HIGH-2).
@@ -327,7 +363,8 @@ class ResidualFatigueScoringIntegrityTest {
     @Test
     fun `partial walk on never-backfilled history persists null instead of a silently low value`() =
         runTest {
-            ResidualFatigueScenarioSeeder(zoneId, historyStartDate).seedDeterministicScenario(db)
+            ResidualFatigueScenarioSeeder(zoneId, historyStartDate)
+                .seedDeterministicScenario(db, seedEverydayAndHrv = true)
             val basePrefs = basePreferences()
 
             // No prior full walk backfills modelTrimp for workout-older-32d (2026-04-15), which
@@ -352,64 +389,8 @@ class ResidualFatigueScoringIntegrityTest {
     @Test
     fun `everyday source changes only corresponding load branch while fatigue stays identical`() =
         runTest {
-            ResidualFatigueScenarioSeeder(zoneId, historyStartDate).seedDeterministicScenario(db)
-            
-            // Seed HRV for sleep sessions to ensure sRest and trainingReadiness are not null
-            var d = historyStartDate
-            val hrvs = mutableListOf<app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity>()
-            val sourceRecords = mutableListOf<app.readylytics.health.core.databaseschema.data.local.entity.HealthSourceRecordEntity>()
-            var i = 0
-            while (!d.isAfter(java.time.LocalDate.of(2026, 6, 6))) {
-                val sleepStart = d.atTime(23, 0).atZone(zoneId).toInstant().toEpochMilli()
-                val sleepId = "sleep-$d"
-                val hrvRef = 80000L + i
-                sourceRecords.add(
-                    app.readylytics.health.core.databaseschema.data.local.entity.HealthSourceRecordEntity(
-                        id = hrvRef,
-                        sourceRecordId = "source-hrv-$hrvRef",
-                        recordType = "HeartRateVariabilityRmssdRecord",
-                        createdAtMs = sleepStart,
-                    )
-                )
-                hrvs.add(
-                    app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity(
-                        sourceRecordRef = hrvRef,
-                        timestampMs = sleepStart + 4 * 3_600_000L,
-                        rmssdMs = 65f,
-                        recordType = "HeartRateVariabilityRmssdRecord",
-                        sessionId = sleepId,
-                    )
-                )
-                d = d.plusDays(1)
-                i++
-            }
-            db.sourceRecordDao().insertAll(sourceRecords)
-            db.hrvDao().upsertAll(hrvs)
-
-            // Seed an everyday heart rate to ensure everydayHr branch diverges from workoutOnly
-            val everydayHrTime = historyStartDate.plusDays(40).atTime(12, 0).atZone(zoneId).toInstant().toEpochMilli()
-            val everydayRef = 99999L
-            val everydayHrs = (0..10).map { j ->
-                val time = everydayHrTime + j * 300_000L
-                app.readylytics.health.core.databaseschema.data.local.entity.HealthSourceRecordEntity(
-                    id = everydayRef + j,
-                    sourceRecordId = "source-${everydayRef + j}",
-                    recordType = "HeartRateRecord",
-                    createdAtMs = time,
-                )
-            }
-            val everydayHrRecords = (0..10).map { j ->
-                val time = everydayHrTime + j * 300_000L
-                app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity(
-                    sourceRecordRef = everydayRef + j,
-                    timestampMs = time,
-                    beatsPerMinute = 160,
-                    recordType = app.readylytics.health.core.model.domain.model.RecordType.RESTING.name,
-                    sessionId = null,
-                )
-            }
-            db.sourceRecordDao().insertAll(everydayHrs)
-            db.heartRateDao().upsertAll(everydayHrRecords)
+            ResidualFatigueScenarioSeeder(zoneId, historyStartDate)
+                .seedDeterministicScenario(db, seedEverydayAndHrv = true)
 
             val basePrefs = basePreferences()
             executeWalkForward(db, historyStartDate, evalEndDate, basePrefs)
@@ -445,12 +426,18 @@ class ResidualFatigueScoringIntegrityTest {
                 validWorkout.trainingReadinessEverydayHr,
                 validEveryday.trainingReadinessEverydayHr,
             )
+
+            assertNotEquals(
+                validWorkout.trainingReadinessWorkoutOnly,
+                validWorkout.trainingReadinessEverydayHr,
+            )
         }
 
     @Test
     fun `full walk backfills the seed and every day reconstructs a non-null residualFatigue`() =
         runTest {
-            ResidualFatigueScenarioSeeder(zoneId, historyStartDate).seedDeterministicScenario(db)
+            ResidualFatigueScenarioSeeder(zoneId, historyStartDate)
+                .seedDeterministicScenario(db, seedEverydayAndHrv = true)
             val basePrefs = basePreferences()
 
             val fullSummaries = executeWalkForward(db, historyStartDate, evalEndDate, basePrefs)
