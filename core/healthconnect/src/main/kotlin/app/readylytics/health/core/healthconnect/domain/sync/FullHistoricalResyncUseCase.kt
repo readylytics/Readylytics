@@ -1,8 +1,10 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
+import app.readylytics.health.core.database.domain.scoring.TrainingReadinessProjectionRecomputeUseCase
 import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
 import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.core.model.domain.util.RetentionBounds
 import kotlinx.coroutines.flow.first
@@ -35,6 +37,7 @@ class FullHistoricalResyncUseCase
     constructor(
         private val settingsRepo: SettingsRepository,
         private val healthSyncUseCase: HealthSyncUseCase,
+        private val trainingReadinessProjectionRecomputeUseCase: TrainingReadinessProjectionRecomputeUseCase,
         private val clock: Clock,
     ) {
         suspend fun execute(
@@ -66,5 +69,27 @@ class FullHistoricalResyncUseCase
                     onProgress = onProgress,
                 )
             }
+        }
+
+        /**
+         * Task 4: durable, parameter-only Training Readiness recompute triggered by the Settings
+         * explicit "Recalculate" action (task 5) after S/w change -- never by a normal sync/resync
+         * pass. Retention-bounded like [execute], but delegates exclusively to
+         * [TrainingReadinessProjectionRecomputeUseCase]: no Health Connect I/O, no raw ingestion, no
+         * TRIMP/residual-fatigue reconstruction -- [healthSyncUseCase] is never called here.
+         */
+        suspend fun executeTrainingReadinessProjection(
+            config: TrainingReadinessConfig,
+            onProgress: ((current: Int, total: Int) -> Unit)? = null,
+        ): Result<Unit> {
+            val prefs = settingsRepo.userPreferences.first()
+            val historicalWindow = RetentionBounds.resolveHistoricalWindow(prefs, clock.instant())
+            return trainingReadinessProjectionRecomputeUseCase.execute(
+                startDate = historicalWindow.startDate,
+                endDate = historicalWindow.endDate,
+                zoneId = historicalWindow.zoneId,
+                config = config,
+                onProgress = onProgress,
+            )
         }
     }

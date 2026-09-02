@@ -11,6 +11,7 @@ import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import app.readylytics.health.core.model.data.preferences.BackupSchedule
+import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import dagger.Lazy
 import java.time.LocalDate
@@ -92,6 +93,36 @@ class WorkerSchedulerImpl
 
         override fun cancelResyncWorker() {
             workManager.get().cancelUniqueWork(RESYNC_WORK_NAME)
+        }
+
+        /**
+         * Task 4: enqueues the durable, parameter-only Training Readiness projection recompute
+         * (settings explicit "Recalculate" action, task 5) into the same unique [RESYNC_WORK_NAME]
+         * chain, always [ExistingWorkPolicy.APPEND_OR_REPLACE] -- a projection request never needs
+         * [ExistingWorkPolicy.KEEP] since, unlike a full resync, it carries no Health Connect
+         * ingestion to protect from being superseded.
+         */
+        override fun scheduleTrainingReadinessRecompute(config: TrainingReadinessConfig) {
+            val data =
+                Data
+                    .Builder()
+                    .putString(HealthResyncWorker.KEY_RECOMPUTE_MODE, HealthResyncWorker.MODE_TRAINING_READINESS)
+                    .putFloat(HealthResyncWorker.KEY_TRAINING_READINESS_SCALE, config.residualFatigueScale)
+                    .putFloat(HealthResyncWorker.KEY_TRAINING_READINESS_WEIGHT, config.loadBalanceWeight)
+                    .build()
+
+            val request =
+                OneTimeWorkRequestBuilder<HealthResyncWorker>()
+                    .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+                    .setInputData(data)
+                    .build()
+
+            workManager.get().enqueueUniqueWork(
+                RESYNC_WORK_NAME,
+                ExistingWorkPolicy.APPEND_OR_REPLACE,
+                request,
+            )
         }
 
         override fun scheduleBackupWorker(schedule: BackupSchedule) {

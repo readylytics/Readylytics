@@ -296,6 +296,129 @@ class HealthResyncWorkerTest {
         }
 
     @Test
+    fun `worker records requested parameters rather than later edits`() =
+        runBlocking {
+            every { workerParams.inputData } returns
+                androidx.work.Data
+                    .Builder()
+                    .putString(HealthResyncWorker.KEY_RECOMPUTE_MODE, HealthResyncWorker.MODE_TRAINING_READINESS)
+                    .putFloat(HealthResyncWorker.KEY_TRAINING_READINESS_SCALE, 100f)
+                    .putFloat(HealthResyncWorker.KEY_TRAINING_READINESS_WEIGHT, .9f)
+                    .build()
+            coEvery { useCase.executeTrainingReadinessProjection(any(), any()) } returns
+                app.readylytics.health.core.model.domain.model.Result
+                    .Success(Unit)
+            val capturedAppliedConfigSlot =
+                slot<app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig>()
+            coEvery { settingsRepository.updateTrainingReadinessConfig(capture(capturedAppliedConfigSlot)) } returns
+                Unit
+
+            val result = createWorker().doWork()
+
+            assertEquals(
+                androidx.work.ListenableWorker.Result
+                    .success(),
+                result,
+            )
+            assertEquals(
+                app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
+                    .fromStored(100f, .9f),
+                capturedAppliedConfigSlot.captured,
+            )
+        }
+
+    @Test
+    fun `training readiness mode reports RECOMPUTE phase progress and never persists post-recompute state`() =
+        runBlocking {
+            every { workerParams.inputData } returns
+                androidx.work.Data
+                    .Builder()
+                    .putString(HealthResyncWorker.KEY_RECOMPUTE_MODE, HealthResyncWorker.MODE_TRAINING_READINESS)
+                    .putFloat(HealthResyncWorker.KEY_TRAINING_READINESS_SCALE, 40f)
+                    .putFloat(HealthResyncWorker.KEY_TRAINING_READINESS_WEIGHT, .7f)
+                    .build()
+            coEvery { useCase.executeTrainingReadinessProjection(any(), any()) } answers {
+                val progressCallback = secondArg<(Int, Int) -> Unit>()
+                progressCallback(1, 5)
+                app.readylytics.health.core.model.domain.model.Result
+                    .Success(Unit)
+            }
+            coEvery { settingsRepository.updateTrainingReadinessConfig(any()) } returns Unit
+
+            createWorker().doWork()
+
+            verify(exactly = 1) {
+                foregroundSyncController.onBackgroundRecalcProgress(ResyncPhase.RECOMPUTE, 1, 5)
+            }
+            coVerify(exactly = 0) { settingsRepository.updateScoringVersion(any()) }
+            coVerify(exactly = 0) { settingsRepository.updateSleepScoreRecalcBaseline(any(), any(), any()) }
+        }
+
+    @Test
+    fun `training readiness mode retries and does not update applied config when the use case fails`() =
+        runBlocking {
+            every { workerParams.inputData } returns
+                androidx.work.Data
+                    .Builder()
+                    .putString(HealthResyncWorker.KEY_RECOMPUTE_MODE, HealthResyncWorker.MODE_TRAINING_READINESS)
+                    .build()
+            coEvery { useCase.executeTrainingReadinessProjection(any(), any()) } returns
+                app.readylytics.health.core.model.domain.model.Result
+                    .Failure("error", "PROJECTION_ERROR")
+
+            val result = createWorker().doWork()
+
+            assertEquals(
+                androidx.work.ListenableWorker.Result
+                    .retry(),
+                result,
+            )
+            coVerify(exactly = 0) { settingsRepository.updateTrainingReadinessConfig(any()) }
+        }
+
+    @Test
+    fun `training readiness mode retries when persisting the applied config fails`() =
+        runBlocking {
+            every { workerParams.inputData } returns
+                androidx.work.Data
+                    .Builder()
+                    .putString(HealthResyncWorker.KEY_RECOMPUTE_MODE, HealthResyncWorker.MODE_TRAINING_READINESS)
+                    .build()
+            coEvery { useCase.executeTrainingReadinessProjection(any(), any()) } returns
+                app.readylytics.health.core.model.domain.model.Result
+                    .Success(Unit)
+            coEvery { settingsRepository.updateTrainingReadinessConfig(any()) } throws
+                RuntimeException("datastore io failure")
+
+            val result = createWorker().doWork()
+
+            assertEquals(
+                androidx.work.ListenableWorker.Result
+                    .retry(),
+                result,
+            )
+        }
+
+    @Test
+    fun `a malformed recompute mode falls back to the normal recompute-only path`() =
+        runBlocking {
+            every { workerParams.inputData } returns
+                androidx.work.Data
+                    .Builder()
+                    .putString(HealthResyncWorker.KEY_RECOMPUTE_MODE, "not_a_real_mode")
+                    .putBoolean(HealthResyncWorker.KEY_RECOMPUTE_ONLY, true)
+                    .build()
+            coEvery { useCase.execute(any(), any(), any()) } returns
+                app.readylytics.health.core.model.domain.model.Result
+                    .Success(Unit)
+
+            createWorker().doWork()
+
+            coVerify(exactly = 1) { useCase.execute(true, any(), any()) }
+            coVerify(exactly = 0) { useCase.executeTrainingReadinessProjection(any(), any()) }
+        }
+
+    @Test
     fun `persistence failure does not fail the worker`() =
         runBlocking {
             coEvery { useCase.execute(any(), any(), any()) } returns

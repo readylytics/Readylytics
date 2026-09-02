@@ -200,6 +200,10 @@ class SettingsReopenAfterSetupFlowTest {
                 override suspend fun refreshAffectedWindow() = Unit
 
                 override suspend fun refreshHistorical() = Unit
+
+                override suspend fun refreshTrainingReadiness(
+                    config: app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig,
+                ) = Unit
             }
 
         fun seedProfile(

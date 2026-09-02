@@ -90,6 +90,18 @@ class ScoringHistoryRepositoryImpl
         override suspend fun getAllDailySummaries(zoneId: ZoneId): List<DailySummary> =
             dailySummaryDao.getAllSummaries().map { DailySummaryMapper.toDomain(it, zoneId) }
 
+        override suspend fun getDailySummariesSince(
+            fromMs: Long,
+            zoneId: ZoneId,
+        ): List<DailySummary> = dailySummaryDao.getSince(fromMs).map { DailySummaryMapper.toDomain(it, zoneId) }
+
+        override suspend fun upsertDailySummaries(
+            summaries: List<DailySummary>,
+            zoneId: ZoneId,
+        ) {
+            dailySummaryDao.upsertAll(summaries.map { DailySummaryMapper.toEntity(it, zoneId) })
+        }
+
         override suspend fun getHeartRateRecordsByTimeRange(
             startMs: Long,
             endMs: Long,

@@ -39,6 +39,28 @@ interface ScoringHistoryRepository {
 
     suspend fun getAllDailySummaries(zoneId: ZoneId): List<DailySummary>
 
+    /**
+     * Task 4: one bulk read of every already-persisted [DailySummary] on/after [fromMs] --
+     * retention-bounded, ascending by day. Backs the durable, parameter-only Training Readiness
+     * projection recompute (`TrainingReadinessProjectionRecomputeUseCase`), which must not read
+     * per-day or touch any other DAO.
+     */
+    suspend fun getDailySummariesSince(
+        fromMs: Long,
+        zoneId: ZoneId,
+    ): List<DailySummary>
+
+    /**
+     * Task 4: batched write-back for [getDailySummariesSince] rows after an in-memory,
+     * parameter-only transform (e.g. Training Readiness projection). Callers are responsible for
+     * wrapping this in one [TransactionRunner.runInTransaction] so the whole batch commits or rolls
+     * back atomically.
+     */
+    suspend fun upsertDailySummaries(
+        summaries: List<DailySummary>,
+        zoneId: ZoneId,
+    )
+
     suspend fun getHeartRateRecordsByTimeRange(
         startMs: Long,
         endMs: Long,

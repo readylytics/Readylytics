@@ -189,5 +189,11 @@ class FirstSetupFlowHarness(
         override suspend fun refreshHistorical() {
             historicalRefreshCalls += 1
         }
+
+        override suspend fun refreshTrainingReadiness(
+            config: app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig,
+        ) {
+            error("Unexpected call: refreshTrainingReadiness")
+        }
     }
 }
