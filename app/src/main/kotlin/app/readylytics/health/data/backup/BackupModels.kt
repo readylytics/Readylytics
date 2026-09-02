@@ -187,4 +187,8 @@ data class UserPreferencesBackup(
     val lastRecalcSleepScoreWeightProfile: String? = null,
     val lastRecalcGoalSleepHours: Float? = null,
     val lastRecalcHypersomniaOnsetPercent: Int? = null,
+    val trainingReadinessResidualFatigueScale: Float? = null,
+    val trainingReadinessLoadBalanceWeight: Float? = null,
+    val lastAppliedTrainingReadinessResidualFatigueScale: Float? = null,
+    val lastAppliedTrainingReadinessLoadBalanceWeight: Float? = null,
 )

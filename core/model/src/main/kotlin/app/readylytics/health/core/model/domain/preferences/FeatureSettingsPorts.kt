@@ -9,6 +9,7 @@ import app.readylytics.health.core.model.data.preferences.UnitSystem
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
+import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -90,10 +91,12 @@ interface DisplaySettings {
     suspend fun updateBanisterMultiplier(value: Float)
     suspend fun updateChengBeta(value: Float)
     suspend fun updateItrimB(value: Float)
-    suspend fun updateResidualFatigueEnabled(enabled: Boolean)
     suspend fun updateResidualFatigueHalfLifeHours(hours: Float)
     suspend fun updateResidualFatigueGain(value: Float)
     suspend fun resetResidualFatigueToDefaults()
+    suspend fun updateTrainingReadinessParameters(scale: Float, weight: Float)
+    suspend fun resetTrainingReadinessToDefaults()
+    suspend fun updateAppliedTrainingReadinessParameters(config: TrainingReadinessConfig)
     suspend fun updateBulkDisplayModeNoticeDismissed(dismissed: Boolean)
     suspend fun updateLastGlobalDisplayMode(mode: DashboardCardDisplayMode?)
 }

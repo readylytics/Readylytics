@@ -11,6 +11,7 @@ import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspector
 import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
 import dagger.Lazy
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -63,9 +64,9 @@ class HealthResyncWorkerScoringVersionTest {
     @Test
     fun `a stale scoringVersion after a successful resync bumps to CURRENT_SCORING_VERSION exactly once`() =
         runTest {
-            // Arrange: prefs.scoringVersion = 2 (stale relative to the new CURRENT_SCORING_VERSION = 3)
+            // Arrange: prefs.scoringVersion = 3 (stale relative to CURRENT_SCORING_VERSION = 4)
             coEvery { settingsRepository.userPreferences } returns
-                MutableStateFlow(UserPreferences(scoringVersion = 2))
+                MutableStateFlow(UserPreferences(scoringVersion = 3))
             coEvery { useCase.execute(any(), any(), any()) } returns Result.Success(Unit)
 
             // Act
@@ -77,8 +78,8 @@ class HealthResyncWorkerScoringVersionTest {
                     .success(),
                 result,
             )
-            assertEquals(3, SettingsDefaults.CURRENT_SCORING_VERSION)
-            coVerify(exactly = 1) { settingsRepository.updateScoringVersion(3) }
+            assertEquals(4, SettingsDefaults.CURRENT_SCORING_VERSION)
+            coVerify(exactly = 1) { settingsRepository.updateScoringVersion(4) }
         }
 
     @Test
@@ -119,6 +120,50 @@ class HealthResyncWorkerScoringVersionTest {
                 result,
             )
             coVerify(exactly = 0) { settingsRepository.updateScoringVersion(any()) }
+        }
+
+    @Test
+    fun `successful recompute initializes absent applied training readiness pair from scoring defaults`() =
+        runTest {
+            coEvery { settingsRepository.userPreferences } returns
+                MutableStateFlow(
+                    UserPreferences(
+                        trainingReadinessResidualFatigueScale = 150f,
+                        trainingReadinessLoadBalanceWeight = 0.82f,
+                    ),
+                )
+            coEvery { useCase.execute(any(), any(), any()) } returns Result.Success(Unit)
+
+            createWorker().doWork()
+
+            coVerify(exactly = 1) {
+                settingsRepository.updateTrainingReadinessConfig(
+                    TrainingReadinessConfig.fromStored(
+                        SettingsDefaults.TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE,
+                        SettingsDefaults.TRAINING_READINESS_LOAD_BALANCE_WEIGHT,
+                    ),
+                )
+            }
+        }
+
+    @Test
+    fun `successful recompute never overwrites existing applied pair with pending editable values`() =
+        runTest {
+            val applied = TrainingReadinessConfig.fromStored(scale = 125f, weight = 0.85f)
+            coEvery { settingsRepository.userPreferences } returns
+                MutableStateFlow(
+                    UserPreferences(
+                        trainingReadinessResidualFatigueScale = 150f,
+                        trainingReadinessLoadBalanceWeight = 0.82f,
+                        lastAppliedTrainingReadinessResidualFatigueScale = applied.residualFatigueScale,
+                        lastAppliedTrainingReadinessLoadBalanceWeight = applied.loadBalanceWeight,
+                    ),
+                )
+            coEvery { useCase.execute(any(), any(), any()) } returns Result.Success(Unit)
+
+            createWorker().doWork()
+
+            coVerify(exactly = 0) { settingsRepository.updateTrainingReadinessConfig(any()) }
         }
 
     private fun createWorker() =

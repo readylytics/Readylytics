@@ -1,6 +1,7 @@
 package app.readylytics.health.core.model.workers
 
 import app.readylytics.health.core.model.data.preferences.BackupSchedule
+import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
 import java.time.LocalDate
 
 interface WorkerScheduler {
@@ -34,6 +35,15 @@ interface WorkerScheduler {
         endDate: LocalDate? = null,
     )
     fun cancelResyncWorker()
+
+    /**
+     * Task 4: enqueues the durable, parameter-only Training Readiness projection recompute under
+     * the same unique [RESYNC_WORK_NAME] chain as [scheduleResyncWorker], always appended as a
+     * durable successor so it never silently drops a rapid repeated request. [config] is the exact
+     * requested S/w pair -- only a successful run advances the applied preferences the normal
+     * sync/resync paths read.
+     */
+    fun scheduleTrainingReadinessRecompute(config: TrainingReadinessConfig)
     fun scheduleBackupWorker(schedule: BackupSchedule)
     fun scheduleBirthdayWorker()
     fun schedulePeriodicSync(intervalMinutes: Long)

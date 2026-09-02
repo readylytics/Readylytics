@@ -3,8 +3,10 @@ package app.readylytics.health.feature.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.data.preferences.FallbackThemeColor
+import app.readylytics.health.core.model.data.preferences.appliedTrainingReadinessConfig
 import app.readylytics.health.core.model.domain.preferences.DisplaySettings
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
 import app.readylytics.health.core.model.domain.sync.HealthDataRefresh
 import app.readylytics.health.core.model.domain.validation.SettingsValidators
@@ -34,6 +36,11 @@ class UISettingsViewModel
         val uiState: StateFlow<UIState> by lazy {
             settingsRepo.userPreferences
                 .map { prefs ->
+                    val appliedTrainingReadiness = prefs.appliedTrainingReadinessConfig()
+                    val scaleChanged =
+                        prefs.trainingReadinessResidualFatigueScale != appliedTrainingReadiness.residualFatigueScale
+                    val weightChanged =
+                        prefs.trainingReadinessLoadBalanceWeight != appliedTrainingReadiness.loadBalanceWeight
                     UIState(
                         appTheme = prefs.appTheme,
                         dynamicColorEnabled = prefs.dynamicColorEnabled,
@@ -47,7 +54,6 @@ class UISettingsViewModel
                         banisterMultiplier = prefs.banisterMultiplier,
                         chengBeta = prefs.chengBeta,
                         itrimB = prefs.itrimB,
-                        residualFatigueEnabled = prefs.residualFatigueEnabled,
                         residualFatigueHalfLifeHours = prefs.residualFatigueHalfLifeHours,
                         residualFatigueGain = prefs.residualFatigueGain,
                         unitSystem = prefs.unitSystem,
@@ -56,6 +62,11 @@ class UISettingsViewModel
                         customSecondaryColor = prefs.customSecondaryColor,
                         customTertiaryColor = prefs.customTertiaryColor,
                         customPrimaryColor = prefs.customPrimaryColor,
+                        trainingReadinessResidualFatigueScale = prefs.trainingReadinessResidualFatigueScale,
+                        trainingReadinessLoadBalanceWeight = prefs.trainingReadinessLoadBalanceWeight,
+                        appliedTrainingReadinessResidualFatigueScale = appliedTrainingReadiness.residualFatigueScale,
+                        appliedTrainingReadinessLoadBalanceWeight = appliedTrainingReadiness.loadBalanceWeight,
+                        hasPendingTrainingReadinessRecalc = scaleChanged || weightChanged,
                     )
                 }.stateIn(
                     scope = viewModelScope,
@@ -143,11 +154,6 @@ class UISettingsViewModel
                         }
                     }
                 }
-                is SettingsEvent.ResidualFatigueEnabledChanged ->
-                    viewModelScope.launch {
-                        displaySettings.updateResidualFatigueEnabled(event.enabled)
-                        healthDataRefresh.refreshHistorical()
-                    }
                 is SettingsEvent.ResidualFatigueHalfLifeChanged -> {
                     val validation = SettingsValidators.FATIGUE_HALF_LIFE_RULE.validate(event.hours)
                     if (validation is ValidationResult.Valid) {
@@ -170,6 +176,41 @@ class UISettingsViewModel
                     viewModelScope.launch {
                         displaySettings.resetResidualFatigueToDefaults()
                         healthDataRefresh.refreshHistorical()
+                    }
+                is SettingsEvent.TrainingReadinessScaleChanged -> {
+                    val validation =
+                        SettingsValidators.TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE_RULE.validate(event.scale)
+                    if (validation is ValidationResult.Valid) {
+                        viewModelScope.launch {
+                            displaySettings.updateTrainingReadinessParameters(
+                                scale = event.scale,
+                                weight = uiState.value.trainingReadinessLoadBalanceWeight,
+                            )
+                        }
+                    }
+                }
+                is SettingsEvent.TrainingReadinessLoadBalanceWeightChanged -> {
+                    val validation =
+                        SettingsValidators.TRAINING_READINESS_LOAD_BALANCE_WEIGHT_RULE.validate(event.weight)
+                    if (validation is ValidationResult.Valid) {
+                        viewModelScope.launch {
+                            displaySettings.updateTrainingReadinessParameters(
+                                scale = uiState.value.trainingReadinessResidualFatigueScale,
+                                weight = event.weight,
+                            )
+                        }
+                    }
+                }
+                SettingsEvent.ResetTrainingReadinessToDefaults ->
+                    viewModelScope.launch { displaySettings.resetTrainingReadinessToDefaults() }
+                SettingsEvent.RecalculateTrainingReadiness ->
+                    viewModelScope.launch {
+                        healthDataRefresh.refreshTrainingReadiness(
+                            TrainingReadinessConfig(
+                                residualFatigueScale = uiState.value.trainingReadinessResidualFatigueScale,
+                                loadBalanceWeight = uiState.value.trainingReadinessLoadBalanceWeight,
+                            ),
+                        )
                     }
                 SettingsEvent.WorkoutDetailLayoutsResetConfirmed ->
                     viewModelScope.launch { workoutDetailLayoutRepository.resetAll() }

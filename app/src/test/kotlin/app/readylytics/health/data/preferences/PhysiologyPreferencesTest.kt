@@ -169,18 +169,6 @@ class PhysiologyPreferencesTest {
         }
 
     @Test
-    fun `updateResidualFatigueEnabled persists the toggle`() =
-        runTest {
-            physiologyPreferences.updateResidualFatigueEnabled(false)
-            var proto = dataStore.data.first()
-            assertEquals(false, proto.residualFatigueEnabled)
-
-            physiologyPreferences.updateResidualFatigueEnabled(true)
-            proto = dataStore.data.first()
-            assertEquals(true, proto.residualFatigueEnabled)
-        }
-
-    @Test
     fun `updateResidualFatigueHalfLifeHours persists in-range values and clamps out-of-range`() =
         runTest {
             physiologyPreferences.updateResidualFatigueHalfLifeHours(48f)
@@ -213,16 +201,14 @@ class PhysiologyPreferencesTest {
         }
 
     @Test
-    fun `resetResidualFatigueToDefaults restores enabled, half-life, and gain to defaults`() =
+    fun `resetResidualFatigueToDefaults restores half-life and gain to defaults`() =
         runTest {
-            physiologyPreferences.updateResidualFatigueEnabled(false)
             physiologyPreferences.updateResidualFatigueHalfLifeHours(48f)
             physiologyPreferences.updateResidualFatigueGain(2.5f)
 
             physiologyPreferences.resetResidualFatigueToDefaults()
 
             val proto = dataStore.data.first()
-            assertEquals(true, proto.residualFatigueEnabled)
             assertEquals(24f, proto.residualFatigueHalfLifeHours, 0f)
             assertEquals(1.0f, proto.residualFatigueGain, 0f)
         }

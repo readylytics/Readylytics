@@ -3,6 +3,7 @@ package app.readylytics.health.core.database.data.repository
 import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -23,4 +24,5 @@ data class ScoringDayUseCases
         val computeResidualFatigue: ComputeResidualFatigueUseCase,
         val resolveDailyBaselines: ResolveDailyBaselinesUseCase,
         val assembleEverydayLoadInput: AssembleEverydayLoadInputUseCase,
+        val computeTrainingReadiness: ComputeTrainingReadinessUseCase,
     )

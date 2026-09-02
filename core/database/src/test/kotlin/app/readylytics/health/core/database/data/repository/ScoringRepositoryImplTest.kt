@@ -1,4 +1,5 @@
 package app.readylytics.health.core.database.data.repository
+import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
 import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
@@ -115,6 +116,7 @@ class ScoringRepositoryImplTest {
                 ComputeResidualFatigueUseCase(),
                 ResolveDailyBaselinesUseCase(baselineComputer),
                 AssembleEverydayLoadInputUseCase(),
+                        ComputeTrainingReadinessUseCase(scoringCalculator),
             ),
             scoringHistoryRepository,
             readinessSummaryCoordinator,
@@ -586,7 +588,6 @@ class ScoringRepositoryImplTest {
                 flowOf(
                     UserPreferences(
                         scoringZoneId = zoneId.id,
-                        residualFatigueEnabled = true,
                         residualFatigueHalfLifeHours = 24f,
                         residualFatigueGain = 1f,
                     ),

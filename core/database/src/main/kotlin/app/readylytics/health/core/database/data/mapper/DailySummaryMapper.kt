@@ -144,6 +144,11 @@ object DailySummaryMapper {
             supplementalSleepDurationMinutes = entity.supplementalSleepDurationMinutes,
             napCount = entity.napCount,
             residualFatigue = entity.residualFatigue,
+            acuteLoadRecovery = entity.acuteLoadRecovery,
+            trainingLoadReadinessWorkoutOnly = entity.trainingLoadReadinessWorkoutOnly,
+            trainingLoadReadinessEverydayHr = entity.trainingLoadReadinessEverydayHr,
+            trainingReadinessWorkoutOnly = entity.trainingReadinessWorkoutOnly,
+            trainingReadinessEverydayHr = entity.trainingReadinessEverydayHr,
         )
 
     private fun DailySummaryEntity.withBodyMetrics(domain: DailySummary): DailySummaryEntity =
@@ -194,5 +199,10 @@ object DailySummaryMapper {
             supplementalSleepDurationMinutes = domain.supplementalSleepDurationMinutes,
             napCount = domain.napCount,
             residualFatigue = domain.residualFatigue,
+            acuteLoadRecovery = domain.acuteLoadRecovery,
+            trainingLoadReadinessWorkoutOnly = domain.trainingLoadReadinessWorkoutOnly,
+            trainingLoadReadinessEverydayHr = domain.trainingLoadReadinessEverydayHr,
+            trainingReadinessWorkoutOnly = domain.trainingReadinessWorkoutOnly,
+            trainingReadinessEverydayHr = domain.trainingReadinessEverydayHr,
         )
 }

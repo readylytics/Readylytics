@@ -4,6 +4,7 @@ import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.model.MetricStatus
+import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.util.ResourceProvider
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricUnavailableReason
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
@@ -51,6 +52,11 @@ abstract class DashboardMetricPresentationFactoryTestBase {
         bodyFatPercent: Float? = null,
         strainRatio: Float? = null,
         residualFatigue: Float? = null,
+        readinessWorkoutOnly: Float? = null,
+        readinessEverydayHr: Float? = null,
+        trainingReadinessWorkoutOnly: Float? = null,
+        trainingReadinessEverydayHr: Float? = null,
+        everydayLoadConfidence: String? = null,
     ) = DailySummary(
         date = date,
         weightKg = weightKg,
@@ -58,22 +64,27 @@ abstract class DashboardMetricPresentationFactoryTestBase {
         strainRatioWorkoutOnly = strainRatio,
         strainRatioEverydayHr = strainRatio,
         residualFatigue = residualFatigue,
+        readinessWorkoutOnly = readinessWorkoutOnly,
+        readinessEverydayHr = readinessEverydayHr,
+        trainingReadinessWorkoutOnly = trainingReadinessWorkoutOnly,
+        trainingReadinessEverydayHr = trainingReadinessEverydayHr,
+        everydayLoadConfidence = everydayLoadConfidence,
     )
 
     protected fun preferences(
         heightCm: Float = 180f,
         gender: Gender = Gender.MALE,
         physiologyProfile: PhysiologyProfile = PhysiologyProfile.ACTIVE,
-        residualFatigueEnabled: Boolean = true,
         residualFatigueHalfLifeHours: Float = 24f,
         residualFatigueGain: Float = 1f,
+        strainLoadSourceMode: LoadSourceMode = LoadSourceMode.WORKOUT_ONLY,
     ) = UserPreferences(
         heightCm = heightCm,
         gender = gender,
         physiologyProfile = physiologyProfile,
-        residualFatigueEnabled = residualFatigueEnabled,
         residualFatigueHalfLifeHours = residualFatigueHalfLifeHours,
         residualFatigueGain = residualFatigueGain,
+        strainLoadSourceMode = strainLoadSourceMode,
     )
 
     protected val date = LocalDate.now()
@@ -82,6 +93,7 @@ abstract class DashboardMetricPresentationFactoryTestBase {
         mapOf(
             CoreUiR.string.tooltip_sleep_score to "tooltip sleep score",
             CoreUiR.string.tooltip_readiness to "tooltip readiness",
+            CoreUiR.string.tooltip_training_readiness to "tooltip training readiness",
             CoreUiR.string.card_tooltip_weight_no_data to "tooltip weight no data",
             CoreUiR.string.card_tooltip_weight_latest to "tooltip weight latest",
             CoreUiR.string.card_tooltip_body_fat_no_data to "tooltip body fat no data",

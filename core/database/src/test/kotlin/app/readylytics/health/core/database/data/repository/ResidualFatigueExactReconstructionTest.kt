@@ -26,7 +26,7 @@ class ResidualFatigueExactReconstructionTest {
     private val computer = ResidualFatigueComputer(dataLoader, useCase)
     private val zoneId = ZoneId.of("UTC")
     private val evaluationDay = LocalDate.of(2026, 1, 1)
-    private val config = ResidualFatigueConfig(enabled = true, halfLifeHours = 96f, fatigueGain = 1f)
+    private val config = ResidualFatigueConfig(halfLifeHours = 96f, fatigueGain = 1f)
     private val prefs =
         UserPreferences(
             scoringZoneId = zoneId.id,

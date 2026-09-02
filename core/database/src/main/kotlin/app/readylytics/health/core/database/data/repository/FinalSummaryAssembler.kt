@@ -5,6 +5,8 @@ import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
+import app.readylytics.health.core.model.data.preferences.appliedTrainingReadinessConfig
+import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
 import app.readylytics.health.core.scoring.domain.scoring.EverydayHrLoadResult
 
@@ -20,6 +22,7 @@ class FinalSummaryAssembler(
     private val bodyMetricsDataLoader: BodyMetricsDataLoader,
     private val readinessSummaryCoordinator: ReadinessSummaryCoordinator,
     private val residualFatigueComputer: ResidualFatigueComputer,
+    private val computeTrainingReadiness: ComputeTrainingReadinessUseCase,
 ) {
     data class Inputs(
         val context: ScoringDayContext,
@@ -60,8 +63,38 @@ class FinalSummaryAssembler(
                 avgBodyTemp = bodyMetricsDataLoader.loadAvgBodyTemp(inputs.session),
             )
         val summary = resolveScoredSummary(base, inputs, isCalibrated)
-        return summary.copy(
-            residualFatigue = residualFatigueComputer.compute(inputs.context, inputs.fatigueContext),
+        val withFatigue = summary.copy(
+            residualFatigue = residualFatigueComputer.compute(inputs.context, inputs.fatigueContext)
+        )
+        val projectionForWorkout = computeTrainingReadiness.compute(
+            restoration = withFatigue.sRest,
+            sleepScore = withFatigue.sleepScore,
+            loadScore = withFatigue.loadScoreWorkoutOnly,
+            legacyReadiness = withFatigue.readinessWorkoutOnly,
+            residualFatigue = withFatigue.residualFatigue,
+            recoveryFlags = withFatigue.recoveryFlags,
+            config = 
+                inputs.context.prefs.appliedTrainingReadinessConfig()
+        )
+        val projectionForEveryday = computeTrainingReadiness.compute(
+            restoration = withFatigue.sRest,
+            sleepScore = withFatigue.sleepScore,
+            loadScore = withFatigue.loadScoreEverydayHr,
+            legacyReadiness = withFatigue.readinessEverydayHr,
+            residualFatigue = withFatigue.residualFatigue,
+            recoveryFlags = withFatigue.recoveryFlags,
+            config = 
+                inputs.context.prefs.appliedTrainingReadinessConfig()
+        )
+        require(projectionForWorkout.acuteLoadRecovery == projectionForEveryday.acuteLoadRecovery) {
+            "Acute load recovery must match between load variants"
+        }
+        return withFatigue.copy(
+            acuteLoadRecovery = projectionForWorkout.acuteLoadRecovery,
+            trainingLoadReadinessWorkoutOnly = projectionForWorkout.trainingLoadReadiness,
+            trainingReadinessWorkoutOnly = projectionForWorkout.trainingReadiness,
+            trainingLoadReadinessEverydayHr = projectionForEveryday.trainingLoadReadiness,
+            trainingReadinessEverydayHr = projectionForEveryday.trainingReadiness,
         )
     }
 

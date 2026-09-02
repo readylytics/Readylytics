@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import app.readylytics.health.core.model.data.preferences.LegacyBanisterMultipliers
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
+import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
 import app.readylytics.health.core.scoring.domain.scoring.RasCalculator
 import java.time.Clock
@@ -225,10 +226,6 @@ internal class PhysiologyPreferences
             dataStore.updateData { it.toBuilder().setItrimpB(value.toValidItrimB()).build() }
         }
 
-        suspend fun updateResidualFatigueEnabled(enabled: Boolean) {
-            dataStore.updateData { it.toBuilder().setResidualFatigueEnabled(enabled).build() }
-        }
-
         suspend fun updateResidualFatigueHalfLifeHours(hours: Float) {
             dataStore.updateData {
                 it.toBuilder().setResidualFatigueHalfLifeHours(hours.toValidFatigueHalfLife()).build()
@@ -245,9 +242,38 @@ internal class PhysiologyPreferences
             dataStore.updateData {
                 it
                     .toBuilder()
-                    .setResidualFatigueEnabled(SettingsDefaults.RESIDUAL_FATIGUE_ENABLED)
                     .setResidualFatigueHalfLifeHours(SettingsDefaults.RESIDUAL_FATIGUE_HALF_LIFE_HOURS)
                     .setResidualFatigueGain(SettingsDefaults.RESIDUAL_FATIGUE_GAIN)
+                    .build()
+            }
+        }
+
+        suspend fun updateTrainingReadinessParameters(
+            scale: Float,
+            weight: Float,
+        ) {
+            val normalized = TrainingReadinessConfig.fromStored(scale, weight)
+            dataStore.updateData {
+                it
+                    .toBuilder()
+                    .setTrainingReadinessResidualFatigueScale(normalized.residualFatigueScale)
+                    .setTrainingReadinessLoadBalanceWeight(normalized.loadBalanceWeight)
+                    .build()
+            }
+        }
+
+        suspend fun resetTrainingReadinessToDefaults() =
+            updateTrainingReadinessParameters(
+                SettingsDefaults.TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE,
+                SettingsDefaults.TRAINING_READINESS_LOAD_BALANCE_WEIGHT,
+            )
+
+        suspend fun updateAppliedTrainingReadinessParameters(config: TrainingReadinessConfig) {
+            dataStore.updateData {
+                it
+                    .toBuilder()
+                    .setLastAppliedTrainingReadinessResidualFatigueScale(config.residualFatigueScale)
+                    .setLastAppliedTrainingReadinessLoadBalanceWeight(config.loadBalanceWeight)
                     .build()
             }
         }

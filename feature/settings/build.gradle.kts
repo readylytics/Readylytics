@@ -15,4 +15,8 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.material.color.utilities)
     implementation(libs.play.services.oss.licenses)
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test)
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    testImplementation(libs.androidx.compose.ui.test.manifest)
 }

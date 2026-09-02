@@ -1,4 +1,5 @@
 package app.readylytics.health.core.database.data.repository
+import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
 import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
 import app.readylytics.health.core.databaseschema.data.local.dao.BloodPressureRecordDao
@@ -81,7 +82,7 @@ abstract class ResidualFatigueWalkForwardTestBase {
     protected val day0: LocalDate = LocalDate.of(2026, 1, 1)
     protected val day1: LocalDate = day0.plusDays(1)
     protected val day2: LocalDate = day0.plusDays(2)
-    protected val config = ResidualFatigueConfig(enabled = true, halfLifeHours = 24f, fatigueGain = 1.0f)
+    protected val config = ResidualFatigueConfig(halfLifeHours = 24f, fatigueGain = 1.0f)
     protected val useCase = ComputeResidualFatigueUseCase()
 
     protected lateinit var repo: ScoringRepositoryImpl
@@ -140,6 +141,7 @@ abstract class ResidualFatigueWalkForwardTestBase {
                 ComputeResidualFatigueUseCase(),
                 ResolveDailyBaselinesUseCase(baselineComputer),
                 AssembleEverydayLoadInputUseCase(),
+                        ComputeTrainingReadinessUseCase(scoringCalculator),
             ),
             scoringHistoryRepository,
             readinessSummaryCoordinator,

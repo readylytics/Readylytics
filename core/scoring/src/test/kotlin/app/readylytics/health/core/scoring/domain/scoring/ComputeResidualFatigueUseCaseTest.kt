@@ -106,13 +106,6 @@ class ComputeResidualFatigueUseCaseTest {
     }
 
     @Test
-    fun `disabled config returns zero`() {
-        val w = workout(endTimeMs = 0L, trimp = 100f)
-        val result = useCase.compute(1000L, listOf(w), defaultConfig.copy(enabled = false))
-        assertEquals(0f, result, 0.001f)
-    }
-
-    @Test
     fun `custom gain scales output proportionally`() {
         val w = workout(endTimeMs = 1000L, trimp = 100f)
         val gain2 = useCase.compute(1000L, listOf(w), defaultConfig.copy(fatigueGain = 2.0f))
@@ -216,7 +209,6 @@ class ComputeResidualFatigueUseCaseTest {
 
     @Test
     fun `config defaults match the shipped settings defaults`() {
-        assertEquals(SettingsDefaults.RESIDUAL_FATIGUE_ENABLED, defaultConfig.enabled)
         assertEquals(SettingsDefaults.RESIDUAL_FATIGUE_HALF_LIFE_HOURS, defaultConfig.halfLifeHours, 0f)
         assertEquals(SettingsDefaults.RESIDUAL_FATIGUE_GAIN, defaultConfig.fatigueGain, 0f)
     }
@@ -224,27 +216,25 @@ class ComputeResidualFatigueUseCaseTest {
     @Test
     fun `clamped coerces out-of-range stored preferences into the validated bounds`() {
         val tooLow =
-            ResidualFatigueConfig.clamped(enabled = true, halfLifeHours = 0f, fatigueGain = 0.01f)
+            ResidualFatigueConfig.clamped(halfLifeHours = 0f, fatigueGain = 0.01f)
         assertEquals(SettingsDefaults.MIN_RESIDUAL_FATIGUE_HALF_LIFE_HOURS, tooLow.halfLifeHours, 0f)
         assertEquals(SettingsDefaults.MIN_RESIDUAL_FATIGUE_GAIN, tooLow.fatigueGain, 0f)
 
         val tooHigh =
-            ResidualFatigueConfig.clamped(enabled = true, halfLifeHours = 500f, fatigueGain = 10f)
+            ResidualFatigueConfig.clamped(halfLifeHours = 500f, fatigueGain = 10f)
         assertEquals(SettingsDefaults.MAX_RESIDUAL_FATIGUE_HALF_LIFE_HOURS, tooHigh.halfLifeHours, 0f)
         assertEquals(SettingsDefaults.MAX_RESIDUAL_FATIGUE_GAIN, tooHigh.fatigueGain, 0f)
 
         val inRange =
-            ResidualFatigueConfig.clamped(enabled = false, halfLifeHours = 36f, fatigueGain = 2.5f)
+            ResidualFatigueConfig.clamped(halfLifeHours = 36f, fatigueGain = 2.5f)
         assertEquals(36f, inRange.halfLifeHours, 0f)
         assertEquals(2.5f, inRange.fatigueGain, 0f)
-        assertFalse(inRange.enabled)
     }
 
     @Test
     fun `clamped falls back to the defaults for non-finite stored preferences`() {
         val config =
             ResidualFatigueConfig.clamped(
-                enabled = true,
                 halfLifeHours = Float.NaN,
                 fatigueGain = Float.POSITIVE_INFINITY,
             )

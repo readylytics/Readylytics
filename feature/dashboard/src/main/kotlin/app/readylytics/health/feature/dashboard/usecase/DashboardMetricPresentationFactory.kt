@@ -196,6 +196,40 @@ class DashboardMetricPresentationFactory
                     visual = readinessVisual,
                 )
 
+            // 2b. TRAINING READINESS (opt-in, default-hidden; same score family as Readiness but
+            // blends in acute residual-fatigue recovery — see ComputeTrainingReadinessUseCase).
+            val trainingReadinessScore =
+                summary?.let {
+                    LoadSourceSelector
+                        .selectTrainingReadiness(it, preferences.strainLoadSourceMode)
+                        ?.coerceIn(0f, 100f)
+                }
+            val trainingReadinessVisual = UniversalMetricScalePreparer.score(trainingReadinessScore, 0f, 100f)
+            val trainingReadinessStatus = trainingReadinessScore.scoreStatus()
+            val trainingReadinessTitle = resourceProvider.getString(CoreUiR.string.card_title_training_readiness)
+            val trainingReadinessValueText = m?.trainingReadinessRounded?.toString() ?: unavailableValueText
+            val trainingReadinessDescription =
+                trainingReadinessVisual.unavailableReason?.let { reason ->
+                    unavailableDescription(trainingReadinessTitle, reason)
+                } ?: resourceProvider.getString(
+                    DashboardR.string.semantics_score_format,
+                    trainingReadinessTitle,
+                    trainingReadinessValueText,
+                    scoreMaximumText,
+                    classificationText(trainingReadinessStatus),
+                )
+            map[CardId.TRAINING_READINESS] =
+                UniversalMetricPresentation(
+                    title = trainingReadinessTitle,
+                    valueText = trainingReadinessValueText,
+                    unitText = "",
+                    secondaryText = null,
+                    status = trainingReadinessStatus,
+                    tooltip = resourceProvider.getString(CoreUiR.string.tooltip_training_readiness),
+                    accessibilityDescription = trainingReadinessDescription,
+                    visual = trainingReadinessVisual,
+                )
+
             // 3. WEIGHT
             val heightM = (preferences.heightCm ?: 0f) / 100f
             val isHeightValid = heightM > 0f

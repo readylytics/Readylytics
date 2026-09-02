@@ -8,6 +8,7 @@ import app.readylytics.health.core.model.domain.preferences.DeviceSettings
 import app.readylytics.health.core.model.domain.preferences.DisplaySettings
 import app.readylytics.health.core.model.domain.preferences.SyncSettings
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
 import app.readylytics.health.core.model.domain.sync.HealthDataRefresh
 import app.readylytics.health.core.model.domain.sync.HistoricalResyncController
 import app.readylytics.health.core.model.domain.sync.HistoricalResyncState
@@ -47,11 +48,12 @@ class SettingsViewModelTest {
     private lateinit var deviceSettings: DeviceSettings
     private lateinit var healthDataRefresh: HealthDataRefresh
     private lateinit var circadianThresholdPreferences: CircadianThresholdPreferences
+    private lateinit var preferences: MutableStateFlow<UserPreferences>
 
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
-        val preferences = MutableStateFlow(UserPreferences())
+        preferences = MutableStateFlow(UserPreferences())
         settingsReader =
             mockk {
                 every { userPreferences } returns preferences
@@ -282,33 +284,6 @@ class SettingsViewModelTest {
         }
 
     @Test
-    fun `residual fatigue enabled event persists and triggers a recompute`() =
-        runTest {
-            val viewModel =
-                UISettingsViewModel(
-                    settingsReader,
-                    displaySettings,
-                    healthDataRefresh,
-                    workoutDetailLayoutRepository = mockk<WorkoutDetailLayoutRepository>(relaxed = true),
-                )
-            viewModel.sharingStarted = SharingStarted.Eagerly
-            viewModel.uiState
-
-            viewModel.onEvent(SettingsEvent.ResidualFatigueEnabledChanged(false))
-            advanceUntilIdle()
-
-            coVerifyOrder {
-                displaySettings.updateResidualFatigueEnabled(false)
-                healthDataRefresh.refreshHistorical()
-            }
-            coVerify(exactly = 1) { healthDataRefresh.refreshHistorical() }
-            coVerify(exactly = 0) { healthDataRefresh.refreshAffectedWindow() }
-
-            viewModel.viewModelScope.cancel()
-            advanceUntilIdle()
-        }
-
-    @Test
     fun `residual fatigue half life persists and triggers historical recompute, rejects invalid`() =
         runTest {
             val viewModel =
@@ -431,6 +406,147 @@ class SettingsViewModelTest {
             }
             coVerify(exactly = 1) { healthDataRefresh.refreshHistorical() }
             coVerify(exactly = 0) { healthDataRefresh.refreshAffectedWindow() }
+
+            viewModel.viewModelScope.cancel()
+            advanceUntilIdle()
+        }
+
+    private fun createViewModel(): UISettingsViewModel =
+        UISettingsViewModel(
+            settingsReader,
+            displaySettings,
+            healthDataRefresh,
+            workoutDetailLayoutRepository = mockk<WorkoutDetailLayoutRepository>(relaxed = true),
+        )
+
+    @Test
+    fun `editing scale persists but does not enqueue recomputation`() =
+        runTest {
+            val viewModel = createViewModel()
+            viewModel.sharingStarted = SharingStarted.Eagerly
+            viewModel.uiState
+
+            viewModel.onEvent(SettingsEvent.TrainingReadinessScaleChanged(125f))
+            advanceUntilIdle()
+
+            coVerify {
+                displaySettings.updateTrainingReadinessParameters(
+                    125f,
+                    SettingsDefaults.TRAINING_READINESS_LOAD_BALANCE_WEIGHT,
+                )
+            }
+            coVerify(exactly = 0) { healthDataRefresh.refreshTrainingReadiness(any()) }
+
+            viewModel.viewModelScope.cancel()
+            advanceUntilIdle()
+        }
+
+    @Test
+    fun `editing load balance weight persists but does not enqueue recomputation`() =
+        runTest {
+            val viewModel = createViewModel()
+            viewModel.sharingStarted = SharingStarted.Eagerly
+            viewModel.uiState
+
+            viewModel.onEvent(SettingsEvent.TrainingReadinessLoadBalanceWeightChanged(.85f))
+            advanceUntilIdle()
+
+            coVerify {
+                displaySettings.updateTrainingReadinessParameters(
+                    SettingsDefaults.TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE,
+                    .85f,
+                )
+            }
+            coVerify(exactly = 0) { healthDataRefresh.refreshTrainingReadiness(any()) }
+
+            viewModel.viewModelScope.cancel()
+            advanceUntilIdle()
+        }
+
+    @Test
+    fun `training readiness edits outside the valid range are rejected`() =
+        runTest {
+            val viewModel = createViewModel()
+            viewModel.sharingStarted = SharingStarted.Eagerly
+            viewModel.uiState
+
+            viewModel.onEvent(SettingsEvent.TrainingReadinessScaleChanged(200f))
+            advanceUntilIdle()
+            coVerify(exactly = 0) { displaySettings.updateTrainingReadinessParameters(200f, any()) }
+
+            viewModel.onEvent(SettingsEvent.TrainingReadinessLoadBalanceWeightChanged(1.5f))
+            advanceUntilIdle()
+            coVerify(exactly = 0) { displaySettings.updateTrainingReadinessParameters(any(), 1.5f) }
+
+            viewModel.viewModelScope.cancel()
+            advanceUntilIdle()
+        }
+
+    @Test
+    fun `apply button enables only when editable differs from applied`() =
+        runTest {
+            preferences.value =
+                UserPreferences(
+                    trainingReadinessResidualFatigueScale = 125f,
+                    lastAppliedTrainingReadinessResidualFatigueScale =
+                        SettingsDefaults.TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE,
+                    lastAppliedTrainingReadinessLoadBalanceWeight =
+                        SettingsDefaults.TRAINING_READINESS_LOAD_BALANCE_WEIGHT,
+                )
+            val viewModel = createViewModel()
+            viewModel.sharingStarted = SharingStarted.Lazily
+
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                viewModel.uiState.collect { }
+            }
+            advanceUntilIdle()
+
+            assertTrue(viewModel.uiState.value.hasPendingTrainingReadinessRecalc)
+
+            preferences.value =
+                UserPreferences(
+                    lastAppliedTrainingReadinessResidualFatigueScale =
+                        SettingsDefaults.TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE,
+                    lastAppliedTrainingReadinessLoadBalanceWeight =
+                        SettingsDefaults.TRAINING_READINESS_LOAD_BALANCE_WEIGHT,
+                )
+            advanceUntilIdle()
+            assertFalse(viewModel.uiState.value.hasPendingTrainingReadinessRecalc)
+        }
+
+    @Test
+    fun `apply event sends both current values as one immutable config`() =
+        runTest {
+            preferences.value =
+                UserPreferences(
+                    trainingReadinessResidualFatigueScale = 125f,
+                    trainingReadinessLoadBalanceWeight = .85f,
+                )
+            val viewModel = createViewModel()
+            viewModel.sharingStarted = SharingStarted.Eagerly
+            viewModel.uiState
+
+            viewModel.onEvent(SettingsEvent.RecalculateTrainingReadiness)
+            advanceUntilIdle()
+
+            coVerify { healthDataRefresh.refreshTrainingReadiness(TrainingReadinessConfig(125f, .85f)) }
+
+            viewModel.viewModelScope.cancel()
+            advanceUntilIdle()
+        }
+
+    @Test
+    fun `ResetTrainingReadinessToDefaults event resets without triggering recomputation`() =
+        runTest {
+            val viewModel = createViewModel()
+            viewModel.sharingStarted = SharingStarted.Eagerly
+            viewModel.uiState
+
+            viewModel.onEvent(SettingsEvent.ResetTrainingReadinessToDefaults)
+            advanceUntilIdle()
+
+            coVerify { displaySettings.resetTrainingReadinessToDefaults() }
+            coVerify(exactly = 0) { healthDataRefresh.refreshTrainingReadiness(any()) }
 
             viewModel.viewModelScope.cancel()
             advanceUntilIdle()

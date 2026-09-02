@@ -1,5 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="about_header_scores"># About your scores</string>
+    <string name="about_scores_intro">This app turns the data your phone and wearables already collect — sleep, heart rate, and exercise — into four daily numbers that try to answer one question: **how is your body doing today, and what should you do with that information?**</string>
+    <string name="about_scores_honesty">We try to be honest about what these numbers can and can\'t tell you. They are decision aids, not diagnoses. If something feels off in your body, trust your body over the score.</string>
+    <string name="about_measurement_header">## A note on measurement</string>
+    <string name="about_measurement_text">Wearables estimate sleep stages, HRV, and nocturnal physiology indirectly using probabilistic algorithms. These estimates may contain significant measurement error compared to clinical systems like polysomnography or ECG. The scores shown here are health tracking and recovery estimates, not clinical measurements.</string>
+    <string name="about_scores_at_glance_header">## The four scores at a glance</string>
+    <string name="about_scores_outro">You\'ll see the scores on your dashboard once enough data has been collected. Training Readiness is hidden by default until you enable its card. Until then, we\'ll show you what we have and explain what\'s missing.</string>
+    <string name="about_score_table_score">Score</string>
+    <string name="about_score_table_answer">What it answers</string>
+    <string name="about_score_table_range">Range</string>
+    <string name="about_score_sleep">**Sleep Score**</string>
+    <string name="about_score_sleep_answer">How restorative was last night\'s sleep?</string>
+    <string name="about_score_circadian">**Circadian Consistency**</string>
+    <string name="about_score_circadian_answer">How regular is your sleep schedule?</string>
+    <string name="about_score_readiness">**Readiness**</string>
+    <string name="about_score_readiness_answer">How prepared are you based on sleep, recovery, and load?</string>
+    <string name="about_score_training_readiness">**Training Readiness**</string>
+    <string name="about_score_training_readiness_answer">How prepared are you after residual workout fatigue?</string>
+    <string name="about_score_range">0–100</string>
     <string name="about_header_sleep_score">## Sleep Score</string>
     <string name="about_sleep_score_intro">A 100-point summary of last night\'s sleep, made of four
         parts (under the default Balanced profile):</string>
@@ -112,13 +131,25 @@
     <string name="about_readiness_no_penalty">**What we don\'t do.** We don\'t penalize you for
         resting. A week of light activity will *not* drop Readiness; the score is designed for load
         *spikes*, not undertraining.</string>
+    <string name="about_header_training_readiness">## Training Readiness</string>
+    <string name="about_training_readiness_intro">Training Readiness is an optional, default-hidden Dashboard score. It keeps legacy Readiness unchanged while adding Residual Fatigue to the load branch. Residual Fatigue is a raw, unbounded, non-normalized, provisional, workout-only derived input: it feeds Training Readiness when available but does not modify legacy Readiness or Load Score.</string>
+    <string name="about_training_readiness_formula_acute">**AcuteLoadRecovery = clamp(100 * exp(-ResidualFatigue / S), 0, 100)**</string>
+    <string name="about_training_readiness_formula_load">**TrainingLoadReadiness = clamp(w * LoadScore + (1 - w) * AcuteLoadRecovery, 0, 100)**</string>
+    <string name="about_training_readiness_formula_final">**TrainingReadiness = existingReadinessCalculator(Restoration, Sleep, TrainingLoadReadiness, recoveryFlags)**</string>
+    <string name="about_training_readiness_scale" formatted="false">**S default = 100; range 75..175; UI step 5.** Increasing S raises Acute Load Recovery for the same Residual Fatigue, so fatigue has less downward influence.</string>
+    <string name="about_training_readiness_weight" formatted="false">**w default = 0.90; range 0.80..1.00; UI step 0.01 / 1%.** Increasing w gives Load Score more influence and Acute Load Recovery less influence.</string>
+    <string name="about_training_readiness_equivalence">At w = 1, Training Readiness equals the stored Readiness exactly, and Training Load Readiness preserves the source-matched Load Score.</string>
+    <string name="about_training_readiness_fallback">When Residual Fatigue is unavailable, Acute Load Recovery is unavailable, Training Load Readiness equals Load Score, and Training Readiness equals Readiness.</string>
+    <string name="about_training_readiness_source">Training Readiness uses the active Strain / Training Load source for its Load Score branch. Residual Fatigue remains workout-only and never includes everyday heart-rate load.</string>
+    <string name="about_training_readiness_apply">Edits to S and w remain pending until you choose **Recalculate Training Readiness**. The durable projection-only recalculation reads stored daily summaries; only success advances the applied values, so current scores stay on the last-applied settings during a run or failure.</string>
+    <string name="about_training_readiness_advisor">The AI Advisor still uses Readiness, not Training Readiness. Training Readiness is excluded from Advisor/AI, Workouts card layouts, trends, insights, details/history, widgets, and standalone exports in this release.</string>
     <string name="about_header_load_sources">## Load Sources</string>
     <string name="about_load_sources_intro">Two independent settings control which heart-rate data
         feeds your strain/training-load metrics versus your Readylytics Activity Score (RAS).</string>
     <string name="about_load_sources_strain_bullet">**Strain / Training Load source** (default:
         **Workout only**) — controls TRIMP, acute/chronic load (ATL/CTL), Strain Ratio, Load Score,
-        and **Readiness**. Readiness always uses this source; the RAS source never affects
-        Readiness.</string>
+        **Readiness**, and the Load Score branch of **Training Readiness**. Readiness always uses this
+        source; the RAS source never affects Readiness or Training Readiness.</string>
     <string name="about_load_sources_ras_bullet">**RAS source** (default: **Everyday heart-rate
         load**) — controls your daily and 7-day total RAS only, independent of the Strain / 
         Training Load source above.</string>

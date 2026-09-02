@@ -37,6 +37,9 @@ class FakeSettingsRepository(
         goalSleepHours: Float,
         hypersomniaOnsetPercent: Int,
     ) = Unit
+    override suspend fun updateTrainingReadinessConfig(
+        config: app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
+    ) = Unit
 }
 
 /**

@@ -2,6 +2,7 @@ package app.readylytics.health.data.backup
 
 import android.net.Uri
 import app.readylytics.health.core.model.data.preferences.BackupSchedule
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.domain.audit.AuditEvent
 import app.readylytics.health.core.model.domain.backup.RestoreResult
 import app.readylytics.health.core.model.domain.backup.RestoreStage
@@ -368,6 +369,66 @@ class LocalRestoreApplicationTest : LocalRestoreManagerTestBase() {
             )
             assertEquals(9.5f, builder.lastRecalcGoalSleepHours)
             assertEquals(115, builder.lastRecalcHypersomniaOnsetPercent)
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_preservesEditableAndAppliedTrainingReadinessParameters() =
+        runTest {
+            val json = createValidBackupJson()
+            json
+                .getJSONObject("preferences")
+                .put("trainingReadinessResidualFatigueScale", 130.0)
+                .put("trainingReadinessLoadBalanceWeight", 0.88)
+                .put("lastAppliedTrainingReadinessResidualFatigueScale", 125.0)
+                .put("lastAppliedTrainingReadinessLoadBalanceWeight", 0.85)
+            val zipFile = createBackupZipFile("training_readiness_preferences_backup.zip", json)
+
+            val builderSlot = io.mockk.slot<UserPreferencesProto.Builder.() -> Unit>()
+            coEvery { settingsRepo.batchUpdate(capture(builderSlot)) } returns Unit
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
+            val builder = UserPreferencesProto.newBuilder()
+            builderSlot.captured(builder)
+            assertEquals(130f, builder.trainingReadinessResidualFatigueScale)
+            assertEquals(0.88f, builder.trainingReadinessLoadBalanceWeight)
+            assertEquals(125f, builder.lastAppliedTrainingReadinessResidualFatigueScale)
+            assertEquals(0.85f, builder.lastAppliedTrainingReadinessLoadBalanceWeight)
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_legacyBackupResetsTrainingReadinessParametersToDefaults() =
+        runTest {
+            val zipFile =
+                createBackupZipFile("legacy_training_readiness_preferences_backup.zip", createValidBackupJson())
+
+            val builderSlot = io.mockk.slot<UserPreferencesProto.Builder.() -> Unit>()
+            coEvery { settingsRepo.batchUpdate(capture(builderSlot)) } returns Unit
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
+            val builder =
+                UserPreferencesProto
+                    .newBuilder()
+                    .setTrainingReadinessResidualFatigueScale(150f)
+                    .setTrainingReadinessLoadBalanceWeight(0.82f)
+                    .setLastAppliedTrainingReadinessResidualFatigueScale(145f)
+                    .setLastAppliedTrainingReadinessLoadBalanceWeight(0.84f)
+            builderSlot.captured(builder)
+            assertEquals(
+                SettingsDefaults.TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE,
+                builder.trainingReadinessResidualFatigueScale,
+            )
+            assertEquals(
+                SettingsDefaults.TRAINING_READINESS_LOAD_BALANCE_WEIGHT,
+                builder.trainingReadinessLoadBalanceWeight,
+            )
+            assertTrue(!builder.hasLastAppliedTrainingReadinessResidualFatigueScale())
+            assertTrue(!builder.hasLastAppliedTrainingReadinessLoadBalanceWeight())
             zipFile.delete()
         }
 

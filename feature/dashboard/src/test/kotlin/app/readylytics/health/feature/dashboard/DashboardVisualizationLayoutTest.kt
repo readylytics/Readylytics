@@ -732,6 +732,7 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
             CardId.CIRCADIAN_CONSISTENCY,
             CardId.HEART_RATE,
             CardId.RESIDUAL_FATIGUE,
+            CardId.TRAINING_READINESS,
         ).forEach { cardId ->
             assertFalse("$cardId must keep plain secondary text", cardId.usesDeltaPill())
         }

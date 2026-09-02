@@ -13,8 +13,8 @@ import javax.inject.Singleton
  * past day already ended, so its persisted snapshot is the correct final value — those days report
  * [LiveResidualFatigue.NotApplicable] so the presentation falls back to it.
  *
- * For today, a null from the repository is *not* a fallback signal: it means the metric is disabled
- * or a retained workout was never backfilled, so the value is unknown rather than low. That maps to
+ * For today, a null from the repository is *not* a fallback signal: it means a retained workout was
+ * never backfilled, so the value is unknown rather than low. That maps to
  * [LiveResidualFatigue.Unavailable], which renders NO_DATA.
  */
 @Singleton

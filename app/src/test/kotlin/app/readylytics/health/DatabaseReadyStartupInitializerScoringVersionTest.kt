@@ -289,6 +289,10 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
 
         override fun cancelResyncWorker() { /* no-op */ }
 
+        override fun scheduleTrainingReadinessRecompute(
+            config: app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig,
+        ) { /* no-op */ }
+
         override fun scheduleBackupWorker(schedule: BackupSchedule) { /* no-op */ }
 
         override fun scheduleBirthdayWorker() { /* no-op */ }

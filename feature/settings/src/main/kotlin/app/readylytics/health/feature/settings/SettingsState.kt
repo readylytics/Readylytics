@@ -106,7 +106,6 @@ data class UIState(
     val banisterMultiplier: Float = PhysiologyProfile.ACTIVE.banisterMultiplier,
     val chengBeta: Float = PhysiologyProfile.ACTIVE.defaultChengBeta,
     val itrimB: Float = PhysiologyProfile.ACTIVE.defaultItrimB,
-    val residualFatigueEnabled: Boolean = SettingsDefaults.RESIDUAL_FATIGUE_ENABLED,
     val residualFatigueHalfLifeHours: Float = SettingsDefaults.RESIDUAL_FATIGUE_HALF_LIFE_HOURS,
     val residualFatigueGain: Float = SettingsDefaults.RESIDUAL_FATIGUE_GAIN,
     val unitSystem: UnitSystem = SettingsDefaults.UNIT_SYSTEM,
@@ -115,6 +114,15 @@ data class UIState(
     val customSecondaryColor: Long = SettingsDefaults.CUSTOM_SECONDARY_COLOR,
     val customTertiaryColor: Long = SettingsDefaults.CUSTOM_TERTIARY_COLOR,
     val customPrimaryColor: Long = SettingsDefaults.CUSTOM_PRIMARY_COLOR,
+    val trainingReadinessResidualFatigueScale: Float =
+        SettingsDefaults.TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE,
+    val trainingReadinessLoadBalanceWeight: Float =
+        SettingsDefaults.TRAINING_READINESS_LOAD_BALANCE_WEIGHT,
+    val appliedTrainingReadinessResidualFatigueScale: Float =
+        SettingsDefaults.TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE,
+    val appliedTrainingReadinessLoadBalanceWeight: Float =
+        SettingsDefaults.TRAINING_READINESS_LOAD_BALANCE_WEIGHT,
+    val hasPendingTrainingReadinessRecalc: Boolean = false,
 )
 
 data class SyncSettingsState(

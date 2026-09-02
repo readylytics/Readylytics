@@ -93,6 +93,15 @@ fun AdvancedSettingsSection(
             controlsEnabled = controlsEnabled,
             onUIEvent = onUIEvent,
         )
+
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
+
+        TrainingReadinessSubsection(
+            uiState = uiState,
+            controlsEnabled = controlsEnabled,
+            isResyncing = isResyncing,
+            onUIEvent = onUIEvent,
+        )
     }
 }
 

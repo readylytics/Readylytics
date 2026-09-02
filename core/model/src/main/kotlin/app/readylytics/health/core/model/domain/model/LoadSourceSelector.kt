@@ -67,6 +67,21 @@ object LoadSourceSelector {
             LoadSourceMode.EVERYDAY_HEART_RATE -> summary.readinessEverydayHr
         }
 
+    /**
+     * Final Training Readiness score (post readiness-calculator blend of [selectLoadScore] with
+     * acute residual-fatigue recovery) — distinct from [DailySummary.trainingLoadReadinessWorkoutOnly]
+     * / [DailySummary.trainingLoadReadinessEverydayHr], which is the intermediate blended-load
+     * value consumed internally by [selectLoadScore]'s downstream readiness calculation.
+     */
+    fun selectTrainingReadiness(
+        summary: DailySummary,
+        mode: LoadSourceMode,
+    ): Float? =
+        when (mode) {
+            LoadSourceMode.WORKOUT_ONLY -> summary.trainingReadinessWorkoutOnly
+            LoadSourceMode.EVERYDAY_HEART_RATE -> summary.trainingReadinessEverydayHr
+        }
+
     fun selectDailyRas(
         summary: DailySummary,
         mode: LoadSourceMode,

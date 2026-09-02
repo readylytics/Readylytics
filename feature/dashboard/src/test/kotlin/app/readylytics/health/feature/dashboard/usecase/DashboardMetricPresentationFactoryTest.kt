@@ -2,14 +2,18 @@ package app.readylytics.health.feature.dashboard.usecase
 
 import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.model.MetricStatus
+import app.readylytics.health.core.model.domain.scoring.LoadCoverageConfidence
+import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricUnavailableReason
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
+import io.mockk.every
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import app.readylytics.health.core.ui.R as CoreUiR
 
 class DashboardMetricPresentationFactoryTest : DashboardMetricPresentationFactoryTestBase() {
     @Test
@@ -17,7 +21,6 @@ class DashboardMetricPresentationFactoryTest : DashboardMetricPresentationFactor
         val summary = summary(residualFatigue = 60.7f)
         val preferences =
             preferences(
-                residualFatigueEnabled = true,
                 residualFatigueHalfLifeHours = 24f,
                 residualFatigueGain = 1f,
             )
@@ -46,7 +49,6 @@ class DashboardMetricPresentationFactoryTest : DashboardMetricPresentationFactor
         val summary = summary(residualFatigue = 60.7f)
         val preferences =
             preferences(
-                residualFatigueEnabled = true,
                 residualFatigueHalfLifeHours = 24f,
                 residualFatigueGain = 1f,
             )
@@ -72,7 +74,6 @@ class DashboardMetricPresentationFactoryTest : DashboardMetricPresentationFactor
         val summary = summary(residualFatigue = 60.7f)
         val preferences =
             preferences(
-                residualFatigueEnabled = true,
                 residualFatigueHalfLifeHours = 24f,
                 residualFatigueGain = 1f,
             )
@@ -94,7 +95,7 @@ class DashboardMetricPresentationFactoryTest : DashboardMetricPresentationFactor
     @Test
     fun `build presents residual fatigue with score visual and optimal status when below 30`() {
         val summary = summary(residualFatigue = 18.5f)
-        val preferences = preferences(residualFatigueEnabled = true, residualFatigueHalfLifeHours = 24f)
+        val preferences = preferences(residualFatigueHalfLifeHours = 24f)
         val map =
             factory.build(
                 summary = summary,
@@ -126,7 +127,6 @@ class DashboardMetricPresentationFactoryTest : DashboardMetricPresentationFactor
         val summary = summary(residualFatigue = 120f)
         val preferences =
             preferences(
-                residualFatigueEnabled = true,
                 residualFatigueHalfLifeHours = 24f,
                 residualFatigueGain = 5f,
             )
@@ -154,7 +154,6 @@ class DashboardMetricPresentationFactoryTest : DashboardMetricPresentationFactor
         val summary = summary(residualFatigue = 9f)
         val preferences =
             preferences(
-                residualFatigueEnabled = true,
                 residualFatigueHalfLifeHours = 24f,
                 residualFatigueGain = 0.1f,
             )
@@ -178,7 +177,7 @@ class DashboardMetricPresentationFactoryTest : DashboardMetricPresentationFactor
     @Test
     fun `build presents neutral status when residual fatigue is between 30 and 70`() {
         val summary = summary(residualFatigue = 50.0f)
-        val preferences = preferences(residualFatigueEnabled = true, residualFatigueHalfLifeHours = 36f)
+        val preferences = preferences(residualFatigueHalfLifeHours = 36f)
         val map =
             factory.build(
                 summary = summary,
@@ -198,7 +197,7 @@ class DashboardMetricPresentationFactoryTest : DashboardMetricPresentationFactor
     @Test
     fun `build presents warning status when residual fatigue is above 70`() {
         val summary = summary(residualFatigue = 85.0f)
-        val preferences = preferences(residualFatigueEnabled = true, residualFatigueHalfLifeHours = 48f)
+        val preferences = preferences(residualFatigueHalfLifeHours = 48f)
         val map =
             factory.build(
                 summary = summary,
@@ -216,32 +215,12 @@ class DashboardMetricPresentationFactoryTest : DashboardMetricPresentationFactor
     }
 
     @Test
-    fun `build presents missing value when residual fatigue is disabled or null`() {
-        val summary = summary(residualFatigue = 50.0f)
-        val preferencesDisabled = preferences(residualFatigueEnabled = false)
-        val mapDisabled =
-            factory.build(
-                summary = summary,
-                preferences = preferencesDisabled,
-                lastSleepSession = null,
-                circadianResult = null,
-                heartRateSummary = null,
-            )
-
-        val presentationDisabled = mapDisabled[CardId.RESIDUAL_FATIGUE]
-        assertNotNull(presentationDisabled)
-        assertEquals(MetricStatus.NO_DATA, presentationDisabled?.status)
-        assertEquals("—", presentationDisabled?.valueText)
-        val scoreDisabled = presentationDisabled?.visual as UniversalMetricVisual.Score
-        assertNull(scoreDisabled.rawValue)
-        assertEquals(UniversalMetricUnavailableReason.MISSING_VALUE, scoreDisabled.unavailableReason)
-
+    fun `build presents missing value when residual fatigue is null`() {
         val summaryNull = summary(residualFatigue = null)
-        val preferencesEnabled = preferences(residualFatigueEnabled = true)
         val mapNull =
             factory.build(
                 summary = summaryNull,
-                preferences = preferencesEnabled,
+                preferences = preferences(),
                 lastSleepSession = null,
                 circadianResult = null,
                 heartRateSummary = null,
@@ -257,7 +236,7 @@ class DashboardMetricPresentationFactoryTest : DashboardMetricPresentationFactor
     fun `build presents residual fatigue with real tooltip resource`() {
         stubTooltips()
         val summary = summary(residualFatigue = 25.0f)
-        val preferences = preferences(residualFatigueEnabled = true)
+        val preferences = preferences()
         val map =
             factory.build(
                 summary = summary,
@@ -270,5 +249,119 @@ class DashboardMetricPresentationFactoryTest : DashboardMetricPresentationFactor
         val presentation = map[CardId.RESIDUAL_FATIGUE]
         assertNotNull(presentation)
         assertEquals("tooltip residual fatigue", presentation?.tooltip)
+    }
+
+    @Test
+    fun `training readiness card is distinct from readiness and reports its own title and tooltip`() {
+        stubTooltips()
+        every { resourceProvider.getString(CoreUiR.string.card_title_training_readiness) } returns
+            "Training Readiness"
+        val summary = summary(trainingReadinessWorkoutOnly = 74f)
+
+        val map =
+            factory.build(
+                summary = summary,
+                preferences = preferences(),
+                lastSleepSession = null,
+                circadianResult = null,
+                heartRateSummary = null,
+            )
+
+        val presentation = map[CardId.TRAINING_READINESS]
+        assertNotNull(presentation)
+        assertEquals("Training Readiness", presentation?.title)
+        assertEquals("tooltip training readiness", presentation?.tooltip)
+        assertEquals("74", presentation?.valueText)
+    }
+
+    @Test
+    fun `training readiness presentation clamps the display projection without changing the source score`() {
+        val summary = summary(trainingReadinessWorkoutOnly = 101.4f)
+
+        val presentation =
+            factory
+                .build(
+                    summary = summary,
+                    preferences = preferences(),
+                    lastSleepSession = null,
+                    circadianResult = null,
+                    heartRateSummary = null,
+                ).getValue(CardId.TRAINING_READINESS)
+
+        val visual = presentation.visual as UniversalMetricVisual.Score
+        assertEquals("100", presentation.valueText)
+        assertEquals(100f, visual.rawValue)
+        assertEquals(MetricStatus.OPTIMAL, presentation.status)
+        assertEquals(101.4f, summary.trainingReadinessWorkoutOnly)
+    }
+
+    @Test
+    fun `training readiness card preserves no-data semantics when the score is missing`() {
+        val summary = summary(trainingReadinessWorkoutOnly = null)
+
+        val map =
+            factory.build(
+                summary = summary,
+                preferences = preferences(),
+                lastSleepSession = null,
+                circadianResult = null,
+                heartRateSummary = null,
+            )
+
+        val presentation = map[CardId.TRAINING_READINESS]
+        assertNotNull(presentation)
+        val visual = presentation?.visual as UniversalMetricVisual.Score
+        assertEquals(UniversalMetricUnavailableReason.MISSING_VALUE, visual.unavailableReason)
+        assertEquals(map[CardId.READINESS]?.status, presentation.status)
+    }
+
+    // Regression: adding the opt-in Training Readiness card must not alter the existing
+    // Readiness presentation the two are computed independently side by side.
+    @Test
+    fun `adding the training readiness card changes no existing readiness presentation`() {
+        val prefs = preferences()
+        val before =
+            factory.build(
+                summary = summary(readinessWorkoutOnly = 70f),
+                preferences = prefs,
+                lastSleepSession = null,
+                circadianResult = null,
+                heartRateSummary = null,
+            )[CardId.READINESS]
+        val after =
+            factory.build(
+                summary = summary(readinessWorkoutOnly = 70f, trainingReadinessWorkoutOnly = 74f),
+                preferences = prefs,
+                lastSleepSession = null,
+                circadianResult = null,
+                heartRateSummary = null,
+            )[CardId.READINESS]
+
+        assertEquals(before, after)
+    }
+
+    // Training Readiness has zero divergent low-confidence handling of its own: it must reach
+    // the identical MetricStatus as Readiness for the same raw score under a low-confidence
+    // Everyday-HR fixture, proving no new fatigue-specific status branch was introduced.
+    @Test
+    fun `training readiness low confidence everyday hr fixture matches readiness status treatment`() {
+        val summary =
+            summary(
+                readinessEverydayHr = 55f,
+                trainingReadinessEverydayHr = 55f,
+                everydayLoadConfidence = LoadCoverageConfidence.LOW.name,
+            )
+        val prefs = preferences(strainLoadSourceMode = LoadSourceMode.EVERYDAY_HEART_RATE)
+
+        val map =
+            factory.build(
+                summary = summary,
+                preferences = prefs,
+                lastSleepSession = null,
+                circadianResult = null,
+                heartRateSummary = null,
+            )
+
+        assertEquals(map[CardId.READINESS]?.status, map[CardId.TRAINING_READINESS]?.status)
     }
 }

@@ -3,6 +3,7 @@ package app.readylytics.health.core.model.data.preferences
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
+import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -112,9 +113,14 @@ data class UserPreferences(
     val lastRecalcGoalSleepHours: Float? = null,
     val lastRecalcHypersomniaOnsetPercent: Int? = null,
     val trimpNormalizationMigrated: Boolean = false,
-    val residualFatigueEnabled: Boolean = SettingsDefaults.RESIDUAL_FATIGUE_ENABLED,
     val residualFatigueHalfLifeHours: Float = SettingsDefaults.RESIDUAL_FATIGUE_HALF_LIFE_HOURS,
     val residualFatigueGain: Float = SettingsDefaults.RESIDUAL_FATIGUE_GAIN,
+    val trainingReadinessResidualFatigueScale: Float =
+        SettingsDefaults.TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE,
+    val trainingReadinessLoadBalanceWeight: Float =
+        SettingsDefaults.TRAINING_READINESS_LOAD_BALANCE_WEIGHT,
+    val lastAppliedTrainingReadinessResidualFatigueScale: Float? = null,
+    val lastAppliedTrainingReadinessLoadBalanceWeight: Float? = null,
 )
 
 /**
@@ -129,3 +135,17 @@ fun UserPreferences.scoringZone(): ZoneId =
         .takeIf { it.isNotBlank() }
         ?.let { runCatching { ZoneId.of(it) }.getOrNull() }
         ?: ZoneId.systemDefault()
+
+/** Returns the last successfully applied configuration, or the default until one exists. */
+fun UserPreferences.appliedTrainingReadinessConfig(): TrainingReadinessConfig {
+    val scale = lastAppliedTrainingReadinessResidualFatigueScale
+    val weight = lastAppliedTrainingReadinessLoadBalanceWeight
+    return if (scale == null || weight == null) {
+        TrainingReadinessConfig.fromStored(
+            SettingsDefaults.TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE,
+            SettingsDefaults.TRAINING_READINESS_LOAD_BALANCE_WEIGHT,
+        )
+    } else {
+        TrainingReadinessConfig.fromStored(scale, weight)
+    }
+}

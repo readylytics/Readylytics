@@ -303,7 +303,6 @@ class GetDashboardDataUseCaseTest {
             }
         val prefs =
             UserPreferences(
-                residualFatigueEnabled = true,
                 residualFatigueHalfLifeHours = 24f,
                 residualFatigueGain = 1f,
             )

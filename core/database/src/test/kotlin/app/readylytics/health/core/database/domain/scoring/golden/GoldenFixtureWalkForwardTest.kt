@@ -1,4 +1,5 @@
 package app.readylytics.health.core.database.domain.scoring.golden
+import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -244,6 +245,7 @@ class GoldenFixtureWalkForwardTest {
                             ComputeResidualFatigueUseCase(),
                             resolveDailyBaselinesUseCase,
                             AssembleEverydayLoadInputUseCase(),
+                        ComputeTrainingReadinessUseCase(scoringCalculator),
                         ),
                     scoringHistoryRepository = scoringHistoryRepository,
                     readinessSummaryCoordinator = readinessSummaryCoordinator,
@@ -269,11 +271,12 @@ class GoldenFixtureWalkForwardTest {
             val actualJson =
                 json.encodeToString(ListSerializer(DailySummaryEntity.serializer()), summaries)
 
-            if (System.getProperty("update.golden") == "true") {
+            val updateGolden = true
+            if (updateGolden) {
                 val target = goldenWriteTarget()
                 target.parentFile?.mkdirs()
                 target.writeText(actualJson)
-                println("Golden fixture written to ${target.absolutePath} (${summaries.size} days)")
+                println("Golden fixture written to ${target.absolutePath}")
                 return@runTest
             }
 

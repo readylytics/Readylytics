@@ -75,6 +75,18 @@ object SettingsValidators {
             SettingsDefaults.MAX_RESIDUAL_FATIGUE_GAIN,
             "Gain: 0.1–5.0",
         )
+    val TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE_RULE =
+        FloatRangeRule(
+            SettingsDefaults.MIN_TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE,
+            SettingsDefaults.MAX_TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE,
+            "Training readiness scale: 75–175",
+        )
+    val TRAINING_READINESS_LOAD_BALANCE_WEIGHT_RULE =
+        FloatRangeRule(
+            SettingsDefaults.MIN_TRAINING_READINESS_LOAD_BALANCE_WEIGHT,
+            SettingsDefaults.MAX_TRAINING_READINESS_LOAD_BALANCE_WEIGHT,
+            "Training readiness load balance: 0.8–1.0",
+        )
 
     // Domain validators for measured/calculated values
     val HRV_BOUNDS_VALIDATOR = HrvBoundsValidator()
