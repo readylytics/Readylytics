@@ -192,11 +192,23 @@ class FullHistoricalResyncUseCaseTest {
             coVerify(exactly = 0) { healthSyncUseCase.resyncRange(any(), any(), any(), any()) }
         }
 
+    /**
+     * [HealthSyncUseCase.withSyncLock] just runs the passed suspend block and returns its result --
+     * stub it that way so `executeTrainingReadinessProjection` tests exercise the real delegation
+     * instead of hanging on an unstubbed mock.
+     */
+    private fun stubWithSyncLockToRunBlock() {
+        coEvery { healthSyncUseCase.withSyncLock<Result<Unit>>(any()) } coAnswers {
+            firstArg<suspend () -> Result<Unit>>().invoke()
+        }
+    }
+
     @Test
     fun `executeTrainingReadinessProjection clamps the retained range through RetentionBounds`() =
         runTest {
             every { settingsRepo.userPreferences } returns
                 flowOf(UserPreferences(retentionDaysEnabled = true, retentionDays = 200))
+            stubWithSyncLockToRunBlock()
             val startSlot = slot<LocalDate>()
             val endSlot = slot<LocalDate>()
             coEvery {
@@ -220,6 +232,7 @@ class FullHistoricalResyncUseCaseTest {
         runTest {
             every { settingsRepo.userPreferences } returns
                 flowOf(UserPreferences(retentionDaysEnabled = true, retentionDays = 200))
+            stubWithSyncLockToRunBlock()
             coEvery {
                 trainingReadinessProjectionRecomputeUseCase.execute(any(), any(), any(), any(), any())
             } returns Result.success(Unit)
@@ -236,6 +249,7 @@ class FullHistoricalResyncUseCaseTest {
         runTest {
             every { settingsRepo.userPreferences } returns
                 flowOf(UserPreferences(retentionDaysEnabled = true, retentionDays = 200))
+            stubWithSyncLockToRunBlock()
             val configSlot = slot<TrainingReadinessConfig>()
             coEvery {
                 trainingReadinessProjectionRecomputeUseCase.execute(
@@ -258,6 +272,7 @@ class FullHistoricalResyncUseCaseTest {
         runTest {
             every { settingsRepo.userPreferences } returns
                 flowOf(UserPreferences(retentionDaysEnabled = true, retentionDays = 200))
+            stubWithSyncLockToRunBlock()
             coEvery {
                 trainingReadinessProjectionRecomputeUseCase.execute(any(), any(), any(), any(), any())
             } returns Result.failure("boom", "PROJECTION_ERROR")
@@ -265,6 +280,38 @@ class FullHistoricalResyncUseCaseTest {
             val result = useCase.executeTrainingReadinessProjection(TrainingReadinessConfig.fromStored(40f, 0.7f))
 
             assert(result is Result.Failure)
+        }
+
+    @Test
+    fun `executeTrainingReadinessProjection serializes the projection through withSyncLock`() =
+        runTest {
+            every { settingsRepo.userPreferences } returns
+                flowOf(UserPreferences(retentionDaysEnabled = true, retentionDays = 200))
+            var lockHeldDuringProjection = false
+            coEvery { healthSyncUseCase.withSyncLock<Result<Unit>>(any()) } coAnswers {
+                lockHeldDuringProjection = true
+                try {
+                    firstArg<suspend () -> Result<Unit>>().invoke()
+                } finally {
+                    lockHeldDuringProjection = false
+                }
+            }
+            coEvery {
+                trainingReadinessProjectionRecomputeUseCase.execute(any(), any(), any(), any(), any())
+            } coAnswers {
+                // Assert from inside the delegate call that it actually runs while the lock is held,
+                // not merely that both were invoked in some order.
+                assertEquals(true, lockHeldDuringProjection)
+                Result.success(Unit)
+            }
+
+            val result = useCase.executeTrainingReadinessProjection(TrainingReadinessConfig.fromStored(40f, 0.7f))
+
+            assertEquals(Result.success(Unit), result)
+            coVerify(exactly = 1) { healthSyncUseCase.withSyncLock<Result<Unit>>(any()) }
+            coVerify(exactly = 1) {
+                trainingReadinessProjectionRecomputeUseCase.execute(any(), any(), any(), any(), any())
+            }
         }
 }
 
