@@ -35,7 +35,6 @@
         RHR estimate. Default: 5%%.</string>
 <string name="advanced_rhr_baseline_label">RHR Baseline (bpm)</string>
 <string name="advanced_residual_fatigue_title">Residual Fatigue</string>
-<string name="advanced_residual_fatigue_enabled_label">Enabled</string>
 <string name="advanced_residual_fatigue_info_tooltip">Tracks training fatigue that accumulates from workouts and decays exponentially. Shadow mode: it does not affect Readiness or any other score. Configured half-life (24 h default) and gain (1.0 gain default) are provisional product guardrails, not scientifically validated ranges.</string>
 <string name="advanced_residual_fatigue_half_life_label">Fatigue half-life</string>
 <string name="advanced_residual_fatigue_half_life_hours">%1$.0f h</string>

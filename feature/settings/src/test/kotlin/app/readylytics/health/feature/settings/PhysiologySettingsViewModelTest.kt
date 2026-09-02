@@ -96,7 +96,6 @@ class PhysiologySettingsViewModelTest {
                 app.readylytics.health.core.model.data.preferences.PhysiologyProfile.ATHLETE,
             )
         }
-        coVerify(timeout = 1000, exactly = 0) { displaySettings.updateResidualFatigueEnabled(any()) }
         coVerify(timeout = 1000, exactly = 0) { displaySettings.updateResidualFatigueHalfLifeHours(any()) }
         coVerify(timeout = 1000, exactly = 0) { displaySettings.updateResidualFatigueGain(any()) }
         coVerify(timeout = 1000, exactly = 0) { displaySettings.resetResidualFatigueToDefaults() }

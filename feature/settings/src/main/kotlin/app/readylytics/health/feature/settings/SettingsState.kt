@@ -106,7 +106,6 @@ data class UIState(
     val banisterMultiplier: Float = PhysiologyProfile.ACTIVE.banisterMultiplier,
     val chengBeta: Float = PhysiologyProfile.ACTIVE.defaultChengBeta,
     val itrimB: Float = PhysiologyProfile.ACTIVE.defaultItrimB,
-    val residualFatigueEnabled: Boolean = SettingsDefaults.RESIDUAL_FATIGUE_ENABLED,
     val residualFatigueHalfLifeHours: Float = SettingsDefaults.RESIDUAL_FATIGUE_HALF_LIFE_HOURS,
     val residualFatigueGain: Float = SettingsDefaults.RESIDUAL_FATIGUE_GAIN,
     val unitSystem: UnitSystem = SettingsDefaults.UNIT_SYSTEM,

@@ -39,7 +39,7 @@ class ResidualFatiguePresentationFactory
         ): UniversalMetricPresentation {
             val title = resourceProvider.getString(DashboardR.string.card_residual_fatigue_title)
             val tooltip = resourceProvider.getString(DashboardR.string.tooltip_residual_fatigue)
-            val value = resolveValue(summary, preferences, liveResidualFatigue)
+            val value = resolveValue(summary, liveResidualFatigue)
 
             // Residual fatigue is `gain * sum(TRIMP) * decay`, and gain is user-settable over
             // 0.1..5.0. Fixed 30/70/100 cut-points would read OPTIMAL with a pinned-to-zero gauge
@@ -48,7 +48,6 @@ class ResidualFatiguePresentationFactory
             val gain =
                 ResidualFatigueConfig
                     .clamped(
-                        enabled = preferences.residualFatigueEnabled,
                         halfLifeHours = preferences.residualFatigueHalfLifeHours,
                         fatigueGain = preferences.residualFatigueGain,
                     ).fatigueGain
@@ -98,14 +97,13 @@ class ResidualFatiguePresentationFactory
          */
         private fun resolveValue(
             summary: DailySummary?,
-            preferences: UserPreferences,
             liveResidualFatigue: LiveResidualFatigue,
         ): Float? =
             when (liveResidualFatigue) {
                 is LiveResidualFatigue.Value -> liveResidualFatigue.fatigue
                 LiveResidualFatigue.Unavailable -> null
                 LiveResidualFatigue.NotApplicable -> summary?.residualFatigue
-            }?.takeIf { preferences.residualFatigueEnabled }
+            }
 
         private fun accessibilityDescription(
             title: String,

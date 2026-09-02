@@ -47,7 +47,6 @@ class UISettingsViewModel
                         banisterMultiplier = prefs.banisterMultiplier,
                         chengBeta = prefs.chengBeta,
                         itrimB = prefs.itrimB,
-                        residualFatigueEnabled = prefs.residualFatigueEnabled,
                         residualFatigueHalfLifeHours = prefs.residualFatigueHalfLifeHours,
                         residualFatigueGain = prefs.residualFatigueGain,
                         unitSystem = prefs.unitSystem,
@@ -143,11 +142,6 @@ class UISettingsViewModel
                         }
                     }
                 }
-                is SettingsEvent.ResidualFatigueEnabledChanged ->
-                    viewModelScope.launch {
-                        displaySettings.updateResidualFatigueEnabled(event.enabled)
-                        healthDataRefresh.refreshHistorical()
-                    }
                 is SettingsEvent.ResidualFatigueHalfLifeChanged -> {
                     val validation = SettingsValidators.FATIGUE_HALF_LIFE_RULE.validate(event.hours)
                     if (validation is ValidationResult.Valid) {

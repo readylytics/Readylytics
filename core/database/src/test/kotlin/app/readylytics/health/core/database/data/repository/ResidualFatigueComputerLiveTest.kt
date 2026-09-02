@@ -20,7 +20,6 @@ class ResidualFatigueComputerLiveTest {
     private val prefs =
         UserPreferences(
             scoringZoneId = zoneId.id,
-            residualFatigueEnabled = true,
             residualFatigueHalfLifeHours = 24f,
             residualFatigueGain = 1f,
         )
@@ -44,16 +43,6 @@ class ResidualFatigueComputerLiveTest {
 
             val expected = (100f * 2.0.pow(-3.0 / 24.0)).toFloat()
             assertEquals(expected, requireNotNull(result), 0.01f)
-        }
-
-    @Test
-    fun `computeLive returns null when residual fatigue is disabled`() =
-        runTest {
-            val disabledPrefs = prefs.copy(residualFatigueEnabled = false)
-
-            val result = computer.computeLive(System.currentTimeMillis(), disabledPrefs)
-
-            assertNull(result)
         }
 
     @Test

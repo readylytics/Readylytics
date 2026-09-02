@@ -112,7 +112,6 @@ object SettingsDefaults {
     const val SCORING_ZONE_ID = ""
     val CIRCADIAN_THRESHOLD_OVERRIDE: String? = null // null = use profile default
     val TRIMP_MODEL = TrimpModel.BANISTER
-    const val RESIDUAL_FATIGUE_ENABLED = true
     const val RESIDUAL_FATIGUE_HALF_LIFE_HOURS = 24f
     const val MIN_RESIDUAL_FATIGUE_HALF_LIFE_HOURS = 6f
     const val MAX_RESIDUAL_FATIGUE_HALF_LIFE_HOURS = 96f

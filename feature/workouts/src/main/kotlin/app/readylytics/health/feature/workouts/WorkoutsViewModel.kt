@@ -349,7 +349,6 @@ class WorkoutsViewModel
         ): List<FatigueCurvePoint> {
             val config =
                 ResidualFatigueConfig.clamped(
-                    enabled = prefs.residualFatigueEnabled,
                     halfLifeHours = prefs.residualFatigueHalfLifeHours,
                     fatigueGain = prefs.residualFatigueGain,
                 )

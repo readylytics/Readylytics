@@ -224,20 +224,6 @@ class GenerateResidualFatigueCurveUseCaseTest {
     }
 
     @Test
-    fun `execute when disabled returns all zeroes`() {
-        val date = LocalDate.of(2026, 8, 29)
-        val zone = ZoneId.of("UTC")
-        val config = ResidualFatigueConfig(enabled = false, halfLifeHours = 24f, fatigueGain = 1f)
-        val dayStartMs = date.atStartOfDay(zone).toInstant().toEpochMilli()
-        val workouts = listOf(FatigueWorkoutInput("w1", dayStartMs + 3600 * 1000L + 7 * 60 * 1000L, 50f))
-
-        val curve = useCase.execute(date, date, zone, config, workouts)
-        assertEquals(97, curve.size)
-        curve.forEach { assertEquals(0f, it.fatigueValue, 0.0001f) }
-        assertEquals(0f, useCase.evaluateAt(dayStartMs + 3600 * 1000L, config, workouts), 0.0001f)
-    }
-
-    @Test
     fun `execute ignores workouts with non-positive trimp`() {
         val date = LocalDate.of(2026, 8, 29)
         val zone = ZoneId.of("UTC")

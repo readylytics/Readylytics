@@ -10,7 +10,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 /**
- * Residual-fatigue snapshot computation for the daily scoring pipeline (shadow mode). Mirrors
+ * Residual-fatigue snapshot computation for the daily scoring pipeline. Mirrors
  * [RasTotalsComputer]/[DailyTrimpComputer]: the repository orchestrates, this class owns the
  * fatigue math. The walk-forward path advances the shared accumulator; the single-day fallback
  * reconstructs the same state from all retained canonical workout impulses.
@@ -51,7 +51,6 @@ class ResidualFatigueComputer(
         // Coerce rather than require: a stored pref outside the validated range should degrade the
         // day to the nearest valid parameter, never fail the whole recompute.
         ResidualFatigueConfig.clamped(
-            enabled = prefs.residualFatigueEnabled,
             halfLifeHours = prefs.residualFatigueHalfLifeHours,
             fatigueGain = prefs.residualFatigueGain,
         )
@@ -68,16 +67,13 @@ class ResidualFatigueComputer(
      * Computes the day's residual-fatigue snapshot at next-day midnight. The walk-forward path
      * (non-null [fatigueContext]) advances the shared accumulator; the single-day fallback (null
      * context) reconstructs from every retained canonical impulse through the evaluation. Returns
-     * null when disabled (shadow metric: never feeds Readiness) or when the seed dropped a
-     * never-backfilled retained workout (unknown, not low — HIGH-2).
+     * null when the seed dropped a never-backfilled retained workout (unknown, not low — HIGH-2).
      */
     suspend fun compute(
         context: ScoringDayContext,
         fatigueContext: WalkForwardFatigueContext?,
     ): Float? {
         val config = clampedConfig(context.prefs)
-        if (!config.enabled) return null
-
         val evalMs = context.nextDayMidnightMs
         return when (fatigueContext) {
             null -> computeSingleDayFallback(evalMs, config, context.prefs)
@@ -88,7 +84,7 @@ class ResidualFatigueComputer(
     /**
      * Residual fatigue decayed through [nowMs] instead of [compute]'s persisted next-day-midnight
      * snapshot. Reuses [computeSingleDayFallback] verbatim — reconstructs from every retained
-     * canonical impulse through [nowMs], same gating (disabled / unbackfilled-gap) as [compute].
+     * canonical impulse through [nowMs], with the same unbackfilled-gap gate as [compute].
      * Never touches the walk-forward accumulator and is not persisted, so it cannot desync
      * `daily_summaries` or a resync's exact-reconstruction guarantees.
      */
@@ -97,7 +93,6 @@ class ResidualFatigueComputer(
         prefs: UserPreferences,
     ): Float? {
         val config = clampedConfig(prefs)
-        if (!config.enabled) return null
         return computeSingleDayFallback(nowMs, config, prefs)
     }
 

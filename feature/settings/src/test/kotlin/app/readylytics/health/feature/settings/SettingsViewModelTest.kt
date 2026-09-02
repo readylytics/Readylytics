@@ -282,33 +282,6 @@ class SettingsViewModelTest {
         }
 
     @Test
-    fun `residual fatigue enabled event persists and triggers a recompute`() =
-        runTest {
-            val viewModel =
-                UISettingsViewModel(
-                    settingsReader,
-                    displaySettings,
-                    healthDataRefresh,
-                    workoutDetailLayoutRepository = mockk<WorkoutDetailLayoutRepository>(relaxed = true),
-                )
-            viewModel.sharingStarted = SharingStarted.Eagerly
-            viewModel.uiState
-
-            viewModel.onEvent(SettingsEvent.ResidualFatigueEnabledChanged(false))
-            advanceUntilIdle()
-
-            coVerifyOrder {
-                displaySettings.updateResidualFatigueEnabled(false)
-                healthDataRefresh.refreshHistorical()
-            }
-            coVerify(exactly = 1) { healthDataRefresh.refreshHistorical() }
-            coVerify(exactly = 0) { healthDataRefresh.refreshAffectedWindow() }
-
-            viewModel.viewModelScope.cancel()
-            advanceUntilIdle()
-        }
-
-    @Test
     fun `residual fatigue half life persists and triggers historical recompute, rejects invalid`() =
         runTest {
             val viewModel =

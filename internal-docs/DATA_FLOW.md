@@ -369,7 +369,7 @@ for keyset pagination, efficient range queries, and retention cleanup; keyset `p
 Version 13 (`Migration12To13`) adds the nullable `residualFatigue` REAL column to `daily_summaries`
 (`core/database/.../data/local/migration/Migration12To13.kt`); existing rows are `NULL` until the scoring
 pipeline populates the value. The Residual Fatigue pipeline (per-workout impulse → exponential decay,
-walk-forward accumulator, single-day fallback, shadow mode) is documented in §2.8.
+walk-forward accumulator, single-day fallback, always-on calculation) is documented in §2.8.
 Version 14 (`Migration13To14`) adds `index_workout_records_endTime_id` on
 `workout_records(endTime, id)`. It preserves all workout and daily-summary rows and supports the stable
 canonical residual-fatigue impulse order used by exact retained-history reconstruction.
@@ -383,6 +383,10 @@ recording in the same minute; carries `deviceName` through `MinuteBucketAggregat
 `HealthDeviceRepository.getAvailableDevices()`; and normalizes empty-string device names (`""` → `NULL`)
 across the 5 vitals tables (`weight_records`, `body_fat_records`, `blood_pressure_records`,
 `oxygen_saturation_records`, `body_temperature_records`).
+Version 17 (`Migration16To17`) adds nullable Training Readiness projection columns to
+`daily_summaries`: `acuteLoadRecovery`, source-specific `trainingLoadReadiness`, and source-specific
+`trainingReadiness`; existing rows remain null until the deterministic scoring projection is populated.
+The current Room schema version = 17.
 
 **Workout distance and elevation come from separate records, not the session.** An
 `ExerciseSessionRecord` carries no distance — the recording app writes `DistanceRecord` and
@@ -1042,13 +1046,13 @@ To guard scoring calculations against unintended architectural or algorithmic re
 | `GoldenFixtureWalkForwardTest` | `core/database/src/test/kotlin/app/readylytics/health/core/database/domain/scoring/golden/GoldenFixtureWalkForwardTest.kt` | Multi-year walk-forward regression test locking end-to-end multi-day scoring state against `core/database/src/test/resources/golden/scoring_walk_forward_golden.json`. |
 | `ScoringEquivalenceGoldenTest` | `core/database/src/test/kotlin/app/readylytics/health/core/database/domain/scoring/golden/ScoringEquivalenceGoldenTest.kt` | Verifies mathematical equivalence between hot-tier (raw 1s samples) and warm-tier (1-minute bucket rollups) TRIMP and sleep percentile RHR calculation paths. |
 
-### 2.8 Residual Fatigue (shadow mode)
+### 2.8 Residual Fatigue
 
 Residual Fatigue models the decay of recent training load as an exponentially decaying sum of per-workout
-TRIMP impulses. **Phase 1 is strictly shadow mode:** the value is computed and persisted on every
-`DailySummary` but never read by any user-visible score. It **does not modify Readiness**, Load Score, or any
-other user-facing score — `computeReadinessScore()` is untouched, Readiness stays
-`0.40 · Restoration + 0.30 · Sleep + 0.30 · Load`, and no formula consumes `residualFatigue`.
+TRIMP impulses. The model is always on: there is no enable preference or disabled calculation path. The
+value is computed and persisted on every eligible `DailySummary` for use by the Training Readiness
+projection. It does not modify Readiness (the legacy projection) or Load Score; those remain separate
+projections.
 
 **Pipeline & formula location.** Each workout contributes an impulse of `fatigueGain · trimp` keyed by its
 `endTime`, decaying with half-life `halfLifeHours`. An impulse always uses the selected-model canonical
@@ -1063,8 +1067,9 @@ summation, `advanceAccumulator()` the incremental decay+add step used by the wal
 (`core/database/.../data/repository/`) owns the per-day snapshot: it resolves the config from the
 preferences snapshot and evaluates at **next-day midnight in the stored scoring zone**
 (`ScoringDayContext.nextDayMidnightMs`), and `FinalSummaryAssembler` stamps the result onto the assembled
-`DailySummary` (`DailySummary.residualFatigue`, persisted `NULL` when disabled). Zero-TRIMP and future
-workouts contribute nothing; rest days add no impulse, fatigue simply decays.
+`DailySummary` (`DailySummary.residualFatigue`; `NULL` means canonical input is incomplete or unavailable,
+not that the model is disabled). Zero-TRIMP and future workouts contribute nothing; rest days add no
+impulse, fatigue simply decays.
 Equal/reversed-timestamp backup rows with no usable HR canonicalize to zero before publication, even when
 their stored Edwards `trimp` is nonzero and `modelTrimp` was `NULL`; zero is persisted for convergence and
 never enters the positive-only fatigue accumulator.
@@ -1139,16 +1144,16 @@ canonical impulse with `endTime <= evaluationTime` and sums it with
 `ComputeResidualFatigueUseCase.compute()`. Thus full, partial, resumed, and single-day walks reconstruct the
 same exact retained-history value. `advanceAccumulator` remains the single source of truth for the incremental
 step, keeping it mathematically identical to the summation path (exponential decay + superposition). Both
-paths stay shadow-only and independent of workout-only versus everyday-HR load-source mode.
+paths are always active and independent of workout-only versus everyday-HR load-source mode.
 
-**Settings (proto fields 91–93).** `residual_fatigue_enabled` / `residual_fatigue_half_life_hours` /
-`residual_fatigue_gain` on `user_preferences` — defaults `true` / 24 h / 1.0 via
-`SettingsDefaults.RESIDUAL_FATIGUE_*`, guardrails 6–96 h / 0.1–5.0 enforced in
+**Settings (proto fields 91–93).** Proto field 91/name `residual_fatigue_enabled` is permanently reserved;
+legacy wire-format values are ignored and cannot gate calculation. The active settings are
+`residual_fatigue_half_life_hours` (field 92) and `residual_fatigue_gain` (field 93), with defaults 24 h /
+1.0 via `SettingsDefaults.RESIDUAL_FATIGUE_*` and guardrails 6–96 h / 0.1–5.0 enforced in
 `PhysiologyPreferences.toValidFatigueHalfLife`/`toValidFatigueGain`,
 `SettingsValidators.FATIGUE_HALF_LIFE_RULE`/`FATIGUE_GAIN_RULE`, and at the domain boundary by
 `ResidualFatigueConfig.clamped`. In `AdvancedResidualFatigueSection` (`feature/settings`), the section header
-features an info-icon tooltip (`residual_fatigue_header_tooltip`) with an explanatory dialog, and a compact
-`SettingsSwitchRow` toggle (`residual_fatigue_enabled_label`). The two sliders use
+features an info-icon tooltip (`advanced_residual_fatigue_info_tooltip`) with an explanatory dialog. The two sliders use
 `RESIDUAL_FATIGUE_HALF_LIFE_SLIDER_STEPS = 89` and `RESIDUAL_FATIGUE_GAIN_SLIDER_STEPS = 48`: M3
 `Slider.steps` counts the stops *between* the endpoints, so those give exactly 1-hour and 0.1 increments
 and put the documented 24 h / 1.00 defaults on a stop. Resolved per-day from the preferences
@@ -1156,13 +1161,13 @@ snapshot inside `ResidualFatigueComputer.compute`. Changing fatigue settings inv
 checkpoints and triggers a historical recompute via `HealthDataRefresh.refreshHistorical()`.
 
 **Visualizations & Presentation Pipeline (optional, default-hidden).**
-While the calculation remains shadow-only (it does not modify Readiness, Load Score, or any recommendation), users can optionally visualize Residual Fatigue across two surfaces:
+The calculation is always on; users can optionally visualize Residual Fatigue across two default-hidden surfaces:
 1. **Dashboard Metric Card (`CardId.RESIDUAL_FATIGUE`):**
    - Registered in `CardId` and default-hidden in `SettingsDefaults.DEFAULT_DASHBOARD_CARDS` (`isVisible = false`, `defaultDisplayMode = GAUGE`).
    - `GetCurrentResidualFatigueUseCase` returns a tri-state `LiveResidualFatigue`, which `DashboardMetricPresentationFactory` maps as follows. `NotApplicable` (selected day already ended) -> the persisted end-of-day snapshot `DailySummary.residualFatigue`. `Value` (current day) -> live fatigue from `ScoringRepository.computeCurrentResidualFatigue` -> `ResidualFatigueComputer.computeLive(nowMs, prefs)`, which evaluates exponential decay through the current instant rather than tonight's midnight, on the same basis as the Workouts tab decay chart's "now" dot and without mutating `daily_summaries` or the walk-forward accumulator. `Unavailable` (current day, but `computeLive` gated or the lookup threw) -> **NO_DATA**.
    - The tri-state is load-bearing, not stylistic: `Unavailable` must never fall back to the snapshot. The two never-backfilled gates differ — `computeLive` uses `loadUnbackfilledCountThrough(retentionStart, nowMs)` (`endTime <= nowMs`), the snapshot uses `loadUnbackfilledCountBefore(retentionStart, dayStart)` (`startTime < dayStart`). A workout *ending today* with a null `modelTrimp` therefore trips the live gate but not the snapshot's, and `getCanonicalFatigueInputsThrough` filters `modelTrimp IS NOT NULL`, so it contributes zero to the snapshot. Falling back would display a silently understated value in exactly the case the HIGH-2 "unknown, not low" gate exists to catch.
    - Refresh cadence: `DashboardFatigueTicker` emits a minute bucket into `DashboardViewModel`'s `combine` (paired with the RAS-increase flow, since the typed `combine` overloads stop at five sources). The bucket is also part of `FatigueCacheKey`, so the value re-decays once a minute while the dashboard is subscribed, and the memo still absorbs the high-frequency data flows in between. `SharingStarted.WhileSubscribed` stops the ticker shortly after the UI goes away and restarts it with a fresh bucket on resubscribe. The lookup is wrapped so a DB failure degrades to `Unavailable` instead of escaping the transform and killing `stateIn`'s sharing coroutine.
-   - Formatted into a `UniversalMetricPresentation`: value formatted to 1 decimal place, unit empty/dimensionless, and secondary text `card_residual_fatigue_secondary` ("Half-life: Xh"). The gauge scale and the status cut-points are **multiplied by the configured `residualFatigueGain`**, because the metric is `gain * sum(TRIMP) * decay` and gain is user-settable over 0.1–5.0: gauge min=0 / max=`100 * gain`, status classification (`< 30 * gain` Optimal, `<= 70 * gain` Neutral, above that Warning, null/disabled NO_DATA). Fixed cut-points would read Optimal with a pinned-to-zero gauge at gain 0.1 and Warning with a saturated gauge at gain 5.0.
+   - Formatted into a `UniversalMetricPresentation`: value formatted to 1 decimal place, unit empty/dimensionless, and secondary text `card_residual_fatigue_secondary` ("Half-life: Xh"). The gauge scale and the status cut-points are **multiplied by the configured `residualFatigueGain`**, because the metric is `gain * sum(TRIMP) * decay` and gain is user-settable over 0.1–5.0: gauge min=0 / max=`100 * gain`, status classification (`< 30 * gain` Optimal, `<= 70 * gain` Neutral, above that Warning, unavailable input NO_DATA). Fixed cut-points would read Optimal with a pinned-to-zero gauge at gain 0.1 and Warning with a saturated gauge at gain 5.0.
    - Renders via `UniversalMetricCard` across Gauge, Bar, and Value display modes. Tapping the card navigates to the Workouts tab (`onNavigateToWorkouts`).
 2. **Workouts Residual Fatigue Curve Chart (`WorkoutChartId.RESIDUAL_FATIGUE_CURVE`):**
    - Registered in `WorkoutChartId` and default-hidden in `SettingsDefaults.DEFAULT_WORKOUT_CHARTS` (`isVisible = false`).
@@ -1174,7 +1179,7 @@ While the calculation remains shadow-only (it does not modify Readiness, Load Sc
        ▼ loads historical canonical fatigue seed (35 days before range start)
      WorkoutRepository.getCanonicalFatigueSeed(startDate.atStartOfDay()) -> WorkoutDao.getCanonicalFatigueSeed
        │
-       ▼ passed with active workouts & preferences (halfLifeHours, gain, enabled)
+       ▼ passed with active workouts & preferences (halfLifeHours, gain)
       GenerateResidualFatigueCurveUseCase (core/scoring/.../domain/scoring/)
         │  Samples the timeline in 15-minute steps taken through ZonedDateTime, not through raw
         │  millis: a DST day is 92 or 100 points, never 96, so timeMinutesFromStart stays aligned
@@ -1413,7 +1418,7 @@ defaults when unset).
 | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/RestorationScoreAssembler.kt` | Processing — restoration assembly | restoration score (sRest) assembly and contributor subscores |
 | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/ComputeResidualFatigueUseCase.kt` | Processing — residual fatigue (pure) | `compute()` summation + `advanceAccumulator()` decay/add step (§2.8) |
 | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/GenerateResidualFatigueCurveUseCase.kt` | Processing — residual fatigue curve (pure) | generates multi-day timeline samples at zoned 15m steps + workout impulses, truncated at `nowMs` (§2.8) |
-| `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/scoring/ResidualFatigueConfig.kt` | Domain — fatigue parameters | enabled / halfLifeHours / fatigueGain (shadow mode, §2.8) |
+| `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/scoring/ResidualFatigueConfig.kt` | Domain — fatigue parameters | always-on halfLifeHours / fatigueGain (§2.8) |
 | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/repository/WalkForwardFatigueContext.kt` | Processing — walk-forward accumulator | prefetched impulse series + running accumulated fatigue (WP-27) |
 | `core/database/src/main/kotlin/app/readylytics/health/core/database/data/repository/ResidualFatigueComputer.kt` | Processing — fatigue snapshot | per-day snapshot at next-day midnight (`compute`); live non-persisting decay through `nowMs` (`computeLive`); exact retained-history seed (§2.8) |
 | `feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard/usecase/GetCurrentResidualFatigueUseCase.kt` | Domain — today-only gate | live residual fatigue gate for today (`clock.withZone(scoringZoneId)`); `NotApplicable` for past/future days, `Unavailable` when gated (§2.8) |

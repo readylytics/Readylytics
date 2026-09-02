@@ -214,4 +214,28 @@ internal fun UserPreferencesProto.Builder.applyScoringSettings(backup: UserPrefe
             ) { "Ignoring unrecognised lastRecalcSleepScoreWeightProfile '$raw' in backup settings" }
         }
     }
+    TrainingReadinessRestore.apply(this, backup)
+}
+
+private object TrainingReadinessRestore {
+    fun apply(
+        builder: UserPreferencesProto.Builder,
+        backup: UserPreferencesBackup,
+    ) {
+        builder.trainingReadinessResidualFatigueScale =
+            backup.trainingReadinessResidualFatigueScale
+                ?: SettingsDefaults.TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE
+        builder.trainingReadinessLoadBalanceWeight =
+            backup.trainingReadinessLoadBalanceWeight
+                ?: SettingsDefaults.TRAINING_READINESS_LOAD_BALANCE_WEIGHT
+        val appliedScale = backup.lastAppliedTrainingReadinessResidualFatigueScale
+        val appliedWeight = backup.lastAppliedTrainingReadinessLoadBalanceWeight
+        if (appliedScale != null && appliedWeight != null) {
+            builder.lastAppliedTrainingReadinessResidualFatigueScale = appliedScale
+            builder.lastAppliedTrainingReadinessLoadBalanceWeight = appliedWeight
+        } else {
+            builder.clearLastAppliedTrainingReadinessResidualFatigueScale()
+            builder.clearLastAppliedTrainingReadinessLoadBalanceWeight()
+        }
+    }
 }

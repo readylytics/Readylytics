@@ -260,69 +260,59 @@ class ResidualFatigueScoringIntegrityTest {
             // never-backfilled rows deliberately yields null (unknown), not a low value (HIGH-2).
             executeWalkForward(db, historyStartDate, evalEndDate, basePrefs)
 
-            val disabledPrefs = basePrefs.copy(residualFatigueEnabled = false)
             val defPrefs = basePrefs.copy(
-                residualFatigueEnabled = true,
                 residualFatigueHalfLifeHours = 24f,
                 residualFatigueGain = 1.0f,
             )
             val minPrefs = basePrefs.copy(
-                residualFatigueEnabled = true,
                 residualFatigueHalfLifeHours = SettingsDefaults.MIN_RESIDUAL_FATIGUE_HALF_LIFE_HOURS,
                 // Minimum *configurable* gain, not an illegal one: ResidualFatigueConfig.clamped
                 // would coerce anything below this, making the case indistinguishable from MIN.
                 residualFatigueGain = SettingsDefaults.MIN_RESIDUAL_FATIGUE_GAIN,
             )
             val maxPrefs = basePrefs.copy(
-                residualFatigueEnabled = true,
                 residualFatigueHalfLifeHours = SettingsDefaults.MAX_RESIDUAL_FATIGUE_HALF_LIFE_HOURS,
                 residualFatigueGain = SettingsDefaults.MAX_RESIDUAL_FATIGUE_GAIN,
             )
 
-            val disabledSummaries = executeWalkForward(db, evalStartDate, evalEndDate, disabledPrefs)
             val defaultSummaries = executeWalkForward(db, evalStartDate, evalEndDate, defPrefs)
             val minSummaries = executeWalkForward(db, evalStartDate, evalEndDate, minPrefs)
             val maxSummaries = executeWalkForward(db, evalStartDate, evalEndDate, maxPrefs)
 
-            assertEquals(disabledSummaries.size, defaultSummaries.size)
+            assertEquals(defaultSummaries.size, minSummaries.size)
+            assertEquals(defaultSummaries.size, maxSummaries.size)
 
-            for (i in disabledSummaries.indices) {
-                val dis = disabledSummaries[i]
+            for (i in defaultSummaries.indices) {
                 val def = defaultSummaries[i]
                 val min = minSummaries[i]
                 val max = maxSummaries[i]
 
-                assertEquals(dis.loadScoreWorkoutOnly, def.loadScoreWorkoutOnly)
-                assertEquals(dis.loadScoreWorkoutOnly, min.loadScoreWorkoutOnly)
-                assertEquals(dis.loadScoreWorkoutOnly, max.loadScoreWorkoutOnly)
+                assertEquals(def.loadScoreWorkoutOnly, min.loadScoreWorkoutOnly)
+                assertEquals(def.loadScoreWorkoutOnly, max.loadScoreWorkoutOnly)
 
-                assertEquals(dis.loadScoreEverydayHr, def.loadScoreEverydayHr)
-                assertEquals(dis.loadScoreEverydayHr, min.loadScoreEverydayHr)
-                assertEquals(dis.loadScoreEverydayHr, max.loadScoreEverydayHr)
+                assertEquals(def.loadScoreEverydayHr, min.loadScoreEverydayHr)
+                assertEquals(def.loadScoreEverydayHr, max.loadScoreEverydayHr)
 
-                assertEquals(dis.readinessWorkoutOnly, def.readinessWorkoutOnly)
-                assertEquals(dis.readinessWorkoutOnly, min.readinessWorkoutOnly)
-                assertEquals(dis.readinessWorkoutOnly, max.readinessWorkoutOnly)
+                assertEquals(def.readinessWorkoutOnly, min.readinessWorkoutOnly)
+                assertEquals(def.readinessWorkoutOnly, max.readinessWorkoutOnly)
 
-                assertEquals(dis.readinessEverydayHr, def.readinessEverydayHr)
-                assertEquals(dis.readinessEverydayHr, min.readinessEverydayHr)
-                assertEquals(dis.readinessEverydayHr, max.readinessEverydayHr)
+                assertEquals(def.readinessEverydayHr, min.readinessEverydayHr)
+                assertEquals(def.readinessEverydayHr, max.readinessEverydayHr)
 
-                assertEquals(dis.sleepScore, def.sleepScore)
-                assertEquals(dis.sleepDurationMinutes, def.sleepDurationMinutes)
-                assertEquals(dis.restingHeartRate, def.restingHeartRate)
-                assertEquals(dis.recoveryFlags, def.recoveryFlags)
-                assertEquals(dis.contributorsEmbedded, def.contributorsEmbedded)
-                assertEquals(dis.diagnosticsEmbedded, def.diagnosticsEmbedded)
+                assertEquals(def.sleepScore, min.sleepScore)
+                assertEquals(def.sleepDurationMinutes, min.sleepDurationMinutes)
+                assertEquals(def.restingHeartRate, min.restingHeartRate)
+                assertEquals(def.recoveryFlags, min.recoveryFlags)
+                assertEquals(def.contributorsEmbedded, min.contributorsEmbedded)
+                assertEquals(def.diagnosticsEmbedded, min.diagnosticsEmbedded)
 
-                assertEquals(dis.atlWorkoutOnly, def.atlWorkoutOnly)
-                assertEquals(dis.ctlWorkoutOnly, def.ctlWorkoutOnly)
-                assertEquals(dis.strainRatioWorkoutOnly, def.strainRatioWorkoutOnly)
+                assertEquals(def.atlWorkoutOnly, min.atlWorkoutOnly)
+                assertEquals(def.ctlWorkoutOnly, min.ctlWorkoutOnly)
+                assertEquals(def.strainRatioWorkoutOnly, min.strainRatioWorkoutOnly)
 
-                assertNull(dis.residualFatigue, "Disabled fatigue must produce null")
-                assertNotNull(def.residualFatigue, "Enabled default fatigue must produce non-null")
-                assertNotNull(min.residualFatigue, "Enabled min fatigue must produce non-null")
-                assertNotNull(max.residualFatigue, "Enabled max fatigue must produce non-null")
+                assertNotNull(def.residualFatigue, "Default fatigue must produce non-null")
+                assertNotNull(min.residualFatigue, "Minimum-config fatigue must produce non-null")
+                assertNotNull(max.residualFatigue, "Maximum-config fatigue must produce non-null")
             }
         }
 
@@ -368,7 +358,6 @@ class ResidualFatigueScoringIntegrityTest {
             installDate = historyStartDate.minusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli(),
             maxHeartRate = 190,
             autoCalculateMaxHr = false,
-            residualFatigueEnabled = true,
             residualFatigueHalfLifeHours = 24f,
             residualFatigueGain = 1.0f,
         )

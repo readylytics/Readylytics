@@ -64,14 +64,12 @@ abstract class DashboardMetricPresentationFactoryTestBase {
         heightCm: Float = 180f,
         gender: Gender = Gender.MALE,
         physiologyProfile: PhysiologyProfile = PhysiologyProfile.ACTIVE,
-        residualFatigueEnabled: Boolean = true,
         residualFatigueHalfLifeHours: Float = 24f,
         residualFatigueGain: Float = 1f,
     ) = UserPreferences(
         heightCm = heightCm,
         gender = gender,
         physiologyProfile = physiologyProfile,
-        residualFatigueEnabled = residualFatigueEnabled,
         residualFatigueHalfLifeHours = residualFatigueHalfLifeHours,
         residualFatigueGain = residualFatigueGain,
     )

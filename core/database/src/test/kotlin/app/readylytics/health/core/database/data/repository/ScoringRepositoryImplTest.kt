@@ -586,7 +586,6 @@ class ScoringRepositoryImplTest {
                 flowOf(
                     UserPreferences(
                         scoringZoneId = zoneId.id,
-                        residualFatigueEnabled = true,
                         residualFatigueHalfLifeHours = 24f,
                         residualFatigueGain = 1f,
                     ),

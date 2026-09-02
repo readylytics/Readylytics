@@ -63,7 +63,7 @@ class GenerateResidualFatigueCurveUseCase
                 }
             }
 
-            if (!config.enabled || config.halfLifeHours <= 0f) {
+            if (config.halfLifeHours <= 0f) {
                 return sampleTimes.map { t -> curvePoint(t, rangeStartMs, 0f) }
             }
 
@@ -115,7 +115,7 @@ class GenerateResidualFatigueCurveUseCase
             config: ResidualFatigueConfig,
             retainedWorkouts: List<FatigueWorkoutInput>,
         ): Float {
-            if (!config.enabled || config.halfLifeHours <= 0f) return 0f
+            if (config.halfLifeHours <= 0f) return 0f
             val halfLifeMs = config.halfLifeHours.toDouble() * MILLIS_PER_HOUR
             val gain = config.fatigueGain.toDouble()
             var sum = 0.0

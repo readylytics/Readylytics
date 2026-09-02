@@ -6,8 +6,11 @@ import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.dataStoreFile
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.data.preferences.appliedTrainingReadinessConfig
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
+import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -38,7 +41,7 @@ class SettingsRepositoryTest {
         repository =
             SettingsRepository(
                 dataStore = dataStore,
-                physiology = mockk<PhysiologyPreferences>(relaxed = true),
+                physiology = PhysiologyPreferences(dataStore),
                 thresholds = mockk<ThresholdPreferences>(relaxed = true),
                 sleep = SleepPreferences(dataStore),
                 ui = mockk<UIPreferences>(relaxed = true),
@@ -354,19 +357,17 @@ class SettingsRepositoryTest {
     }
 
     @Test
-    fun `default residual fatigue settings are exposed`() =
+    fun `default residual fatigue parameters are exposed`() =
         runTest {
             val prefs = repository.userPreferences.first()
-            assertEquals(true, prefs.residualFatigueEnabled)
             assertEquals(24f, prefs.residualFatigueHalfLifeHours, 0f)
             assertEquals(1.0f, prefs.residualFatigueGain, 0f)
         }
 
     @Test
-    fun `legacy proto without residual fatigue fields resolves defaults`() {
+    fun `legacy proto without residual fatigue parameters resolves defaults`() {
         val prefs = UserPreferencesProto.getDefaultInstance().toDomainModel()
 
-        assertEquals(true, prefs.residualFatigueEnabled)
         assertEquals(24f, prefs.residualFatigueHalfLifeHours, 0f)
         assertEquals(1.0f, prefs.residualFatigueGain, 0f)
     }
@@ -376,14 +377,12 @@ class SettingsRepositoryTest {
         runTest {
             dataStore.updateData {
                 UserPreferences(
-                    residualFatigueEnabled = false,
                     residualFatigueHalfLifeHours = 48f,
                     residualFatigueGain = 2.5f,
                 ).toProto()
             }
 
             val prefs = repository.userPreferences.first()
-            assertEquals(false, prefs.residualFatigueEnabled)
             assertEquals(48f, prefs.residualFatigueHalfLifeHours, 0f)
             assertEquals(2.5f, prefs.residualFatigueGain, 0f)
         }
@@ -401,4 +400,93 @@ class SettingsRepositoryTest {
         assertEquals(96f, prefs.residualFatigueHalfLifeHours, 0f)
         assertEquals(5.0f, prefs.residualFatigueGain, 0f)
     }
+
+    @Test
+    fun `old residual fatigue enabled false does not gate training readiness defaults`() {
+        val legacyDisabled = UserPreferencesProto.parseFrom(byteArrayOf(0xD8.toByte(), 0x05, 0x00))
+
+        val config = legacyDisabled.toDomainModel().appliedTrainingReadinessConfig()
+
+        assertEquals(SettingsDefaults.TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE, config.residualFatigueScale)
+        assertEquals(SettingsDefaults.TRAINING_READINESS_LOAD_BALANCE_WEIGHT, config.loadBalanceWeight)
+    }
+
+    @Test
+    fun `training readiness editable and applied parameters survive datastore round trip`() =
+        runTest {
+            val applied = TrainingReadinessConfig.fromStored(scale = 125f, weight = 0.85f)
+
+            repository.updateTrainingReadinessParameters(scale = 130f, weight = 0.88f)
+            repository.updateAppliedTrainingReadinessParameters(applied)
+
+            val restored =
+                repository.userPreferences.first {
+                    it.trainingReadinessResidualFatigueScale == 130f &&
+                        it.trainingReadinessLoadBalanceWeight == 0.88f
+                }
+            assertEquals(130f, restored.trainingReadinessResidualFatigueScale)
+            assertEquals(0.88f, restored.trainingReadinessLoadBalanceWeight)
+            assertEquals(applied, restored.appliedTrainingReadinessConfig())
+        }
+
+    @Test
+    fun `training readiness read boundary repairs corrupt values and rejects partial applied pair`() =
+        runTest {
+            dataStore.updateData {
+                it
+                    .toBuilder()
+                    .setTrainingReadinessResidualFatigueScale(Float.NaN)
+                    .setTrainingReadinessLoadBalanceWeight(Float.POSITIVE_INFINITY)
+                    .setLastAppliedTrainingReadinessResidualFatigueScale(125f)
+                    .build()
+            }
+
+            val restored =
+                repository.userPreferences.first {
+                    it.trainingReadinessResidualFatigueScale ==
+                        SettingsDefaults.TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE &&
+                        it.trainingReadinessLoadBalanceWeight ==
+                        SettingsDefaults.TRAINING_READINESS_LOAD_BALANCE_WEIGHT &&
+                        it.lastAppliedTrainingReadinessResidualFatigueScale == null &&
+                        it.lastAppliedTrainingReadinessLoadBalanceWeight == null
+                }
+            assertEquals(
+                SettingsDefaults.TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE,
+                restored.trainingReadinessResidualFatigueScale,
+            )
+            assertEquals(
+                SettingsDefaults.TRAINING_READINESS_LOAD_BALANCE_WEIGHT,
+                restored.trainingReadinessLoadBalanceWeight,
+            )
+            assertEquals(null, restored.lastAppliedTrainingReadinessResidualFatigueScale)
+            assertEquals(null, restored.lastAppliedTrainingReadinessLoadBalanceWeight)
+        }
+
+    @Test
+    fun `reset training readiness affects editable parameters but retains applied snapshot`() =
+        runTest {
+            val applied = TrainingReadinessConfig.fromStored(scale = 125f, weight = 0.85f)
+            repository.updateAppliedTrainingReadinessParameters(applied)
+            repository.updateTrainingReadinessParameters(scale = 130f, weight = 0.88f)
+
+            repository.resetTrainingReadinessToDefaults()
+
+            val restored =
+                repository.userPreferences.first {
+                    it.trainingReadinessResidualFatigueScale ==
+                        SettingsDefaults.TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE &&
+                        it.trainingReadinessLoadBalanceWeight ==
+                        SettingsDefaults.TRAINING_READINESS_LOAD_BALANCE_WEIGHT &&
+                        it.appliedTrainingReadinessConfig() == applied
+                }
+            assertEquals(
+                SettingsDefaults.TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE,
+                restored.trainingReadinessResidualFatigueScale,
+            )
+            assertEquals(
+                SettingsDefaults.TRAINING_READINESS_LOAD_BALANCE_WEIGHT,
+                restored.trainingReadinessLoadBalanceWeight,
+            )
+            assertEquals(applied, restored.appliedTrainingReadinessConfig())
+        }
 }

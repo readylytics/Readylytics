@@ -9,6 +9,7 @@ import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.preferences.DisplaySettings
 import app.readylytics.health.core.model.domain.preferences.PhysiologySettings
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
 import app.readylytics.health.core.model.domain.sync.HealthDataRefresh
 import app.readylytics.health.core.model.domain.user.UserProfileActions
@@ -151,9 +152,6 @@ class SettingsReopenAfterSetupFlowTest {
 
                 override suspend fun updateItrimB(value: Float) = error("Unexpected call: updateItrimB")
 
-                override suspend fun updateResidualFatigueEnabled(enabled: Boolean) =
-                    error("Unexpected call: updateResidualFatigueEnabled")
-
                 override suspend fun updateResidualFatigueHalfLifeHours(hours: Float) =
                     error("Unexpected call: updateResidualFatigueHalfLifeHours")
 
@@ -162,6 +160,17 @@ class SettingsReopenAfterSetupFlowTest {
 
                 override suspend fun resetResidualFatigueToDefaults() =
                     error("Unexpected call: resetResidualFatigueToDefaults")
+
+                override suspend fun updateTrainingReadinessParameters(
+                    scale: Float,
+                    weight: Float,
+                ) = error("Unexpected call: updateTrainingReadinessParameters")
+
+                override suspend fun resetTrainingReadinessToDefaults() =
+                    error("Unexpected call: resetTrainingReadinessToDefaults")
+
+                override suspend fun updateAppliedTrainingReadinessParameters(config: TrainingReadinessConfig) =
+                    error("Unexpected call: updateAppliedTrainingReadinessParameters")
 
                 override suspend fun updateBulkDisplayModeNoticeDismissed(dismissed: Boolean) =
                     error("Unexpected call: updateBulkDisplayModeNoticeDismissed")
