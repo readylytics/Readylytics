@@ -35,7 +35,7 @@
         RHR estimate. Default: 5%%.</string>
 <string name="advanced_rhr_baseline_label">RHR Baseline (bpm)</string>
 <string name="advanced_residual_fatigue_title">Residual Fatigue</string>
-<string name="advanced_residual_fatigue_info_tooltip">Tracks training fatigue that accumulates from workouts and decays exponentially. Feeds Training Readiness when data is available. Configured half-life (24 h default) and gain (1.0 gain default) are provisional product guardrails, not scientifically validated ranges.</string>
+<string name="advanced_residual_fatigue_info_tooltip">Residual Fatigue is a raw, unbounded, non-normalized, provisional, workout-only derived input. It feeds Training Readiness when available but does not modify legacy Readiness or Load Score. It accumulates from workouts and decays exponentially. Configured half-life (24 h default, range 6–96 h) and gain (default 1.0, range 0.1–5.0) are provisional product guardrails, not scientifically validated ranges.</string>
 <string name="advanced_residual_fatigue_half_life_label">Fatigue half-life</string>
 <string name="advanced_residual_fatigue_half_life_hours">%1$.0f h</string>
 <string name="advanced_residual_fatigue_half_life_desc">Time required for workout fatigue to decay by half. Range (6–96 h) and default (24 h) are provisional product guardrails, not scientifically validated clinical ranges.</string>
@@ -47,10 +47,10 @@
 <string name="advanced_training_readiness_title">Training Readiness</string>
 <string name="advanced_training_readiness_scale_label">Residual fatigue scale</string>
 <string name="advanced_training_readiness_scale_value">%1$.0f</string>
-<string name="advanced_training_readiness_scale_desc">Controls how strongly residual workout fatigue affects Training Readiness.</string>
+<string name="advanced_training_readiness_scale_desc">Increasing the scale raises Acute Load Recovery for the same Residual Fatigue, so fatigue has less downward influence. Default 100, range 75–175, step 5.</string>
 <string name="advanced_training_readiness_weight_label">Load balance weight</string>
 <string name="advanced_training_readiness_weight_value">%1$d%%</string>
-<string name="advanced_training_readiness_weight_desc">Controls how much Training Readiness relies on Load Score versus acute workout recovery.</string>
+<string name="advanced_training_readiness_weight_desc" formatted="false">Increasing the weight gives Load Score more influence and Acute Load Recovery less influence. Default 90%, range 80–100%, step 1%.</string>
 <string name="advanced_training_readiness_reset_button">Reset to defaults</string>
 <string name="advanced_training_readiness_apply_button">Recalculate Training Readiness</string>
 <string name="advanced_trimp_banister">Banister</string>

@@ -30,6 +30,8 @@ class DocumentationDriftTest {
     private val aboutStringsXml = readRepoFile("feature/about/src/main/res/values/strings.xml")
     private val aboutContributorsSource =
         readRepoFile("feature/about/src/main/kotlin/app/readylytics/health/feature/about/ContributorsSection.kt")
+    private val aboutAppInfoSource =
+        readRepoFile("feature/about/src/main/kotlin/app/readylytics/health/feature/about/AppInfoSection.kt")
     private val aboutScreenSource =
         readRepoFile("feature/about/src/main/kotlin/app/readylytics/health/feature/about/AboutScreen.kt")
     private val aboutStageLessResource =
@@ -57,6 +59,8 @@ class DocumentationDriftTest {
         }.joinToString("\n")
     private val customizationMd = readRepoFile("docs/customization.md")
     private val dataFlowMd = readRepoFile("internal-docs/DATA_FLOW.md")
+    private val settingsStringsXml = readRepoFile("feature/settings/src/main/res/values/strings.xml")
+    private val coreUiStringsXml = readRepoFile("core/ui/src/main/res/values/strings.xml")
     private val buildGradleKts = readRepoFile("app/build.gradle.kts")
     private val governanceDocPaths =
         listOf(
@@ -137,6 +141,70 @@ class DocumentationDriftTest {
         assertTrue(stringsXml.contains("caps it at 50"))
         assertTrue(aboutMd.contains("Strong recovery signals do not cap Readiness"))
         assertTrue(stringsXml.contains("Strong recovery signals do not cap Readiness"))
+    }
+
+    @Test
+    fun `training readiness formulas parameters and fallback match every About surface`() {
+        assertEquals(100f, SettingsDefaults.TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE)
+        assertEquals(75f, SettingsDefaults.MIN_TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE)
+        assertEquals(175f, SettingsDefaults.MAX_TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE)
+        assertEquals(5f, SettingsDefaults.TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE_STEP)
+        assertEquals(0.90f, SettingsDefaults.TRAINING_READINESS_LOAD_BALANCE_WEIGHT)
+        assertEquals(0.80f, SettingsDefaults.MIN_TRAINING_READINESS_LOAD_BALANCE_WEIGHT)
+        assertEquals(1f, SettingsDefaults.MAX_TRAINING_READINESS_LOAD_BALANCE_WEIGHT)
+        assertEquals(0.01f, SettingsDefaults.TRAINING_READINESS_LOAD_BALANCE_WEIGHT_STEP)
+
+        val requiredCopy =
+            listOf(
+                "AcuteLoadRecovery = clamp(100 * exp(-ResidualFatigue / S), 0, 100)",
+                "TrainingLoadReadiness = clamp(w * LoadScore + (1 - w) * AcuteLoadRecovery, 0, 100)",
+                "TrainingReadiness = existingReadinessCalculator(Restoration, Sleep, " +
+                    "TrainingLoadReadiness, recoveryFlags)",
+                "S default = 100; range 75..175; UI step 5",
+                "w default = 0.90; range 0.80..1.00; UI step 0.01 / 1%",
+                "At w = 1, Training Readiness equals the stored Readiness exactly",
+                "When Residual Fatigue is unavailable, Acute Load Recovery is unavailable, " +
+                    "Training Load Readiness equals Load Score, and Training Readiness equals Readiness",
+                "The AI Advisor still uses Readiness, not Training Readiness",
+            )
+        for ((surface, text) in listOf(
+            "ABOUT.md" to aboutMd,
+            "docs/about.md" to publicAboutMd,
+            "in-app About strings" to aboutStringsXml,
+        )) {
+            val normalized = normalizeWhitespace(text)
+            for (copy in requiredCopy) {
+                assertTrue(normalized.contains(copy), "$surface must contain '$copy'")
+            }
+            assertTrue(
+                normalized.contains("Increasing S raises Acute Load Recovery"),
+                "$surface must document the S parameter direction",
+            )
+            assertTrue(
+                normalized.contains("Increasing w gives Load Score more influence"),
+                "$surface must document the w parameter direction",
+            )
+            assertTrue(
+                normalized.contains("uses the active Strain / Training Load source"),
+                "$surface must document Training Readiness source selection",
+            )
+        }
+    }
+
+    @Test
+    fun `training readiness About resources are rendered in the score table and detail section`() {
+        assertTrue(
+            aboutAppInfoSource.contains("stringResource(R.string.about_score_training_readiness)"),
+            "AppInfoSection must render the Training Readiness score-table resource",
+        )
+        assertTrue(
+            aboutContributorsSource.contains("stringResource(R.string.about_header_training_readiness)"),
+            "ContributorsSection must render the Training Readiness detail section",
+        )
+        assertTrue(
+            aboutContributorsSource.contains("stringResource(R.string.about_training_readiness_formula_acute)"),
+            "ContributorsSection must render the Training Readiness formulas",
+        )
     }
 
     @Test
@@ -421,34 +489,52 @@ class DocumentationDriftTest {
         }
     }
 
-    /**
-     * Since Task 3, Residual Fatigue always feeds the Training Readiness projection, so the
-     * long-form docs qualify the claim as "does not modify Readiness (the legacy projection)" --
-     * still true and checked here. The in-app Settings tooltip (`strings.xml`) is deliberately
-     * excluded: Task 5 rewrote it to say Residual Fatigue feeds Training Readiness, since a bare
-     * "does not affect Readiness" reads as misleading directly beside the new Training Readiness
-     * controls on the same screen.
-     */
     @Test
-    fun `residual fatigue shadow-only claim is present on every long-form doc surface`() {
-        val surfaces = residualFatigueSurfaces.filterNot { it.first == "strings.xml" } + ("DATA_FLOW.md" to dataFlowMd)
+    fun `residual fatigue surfaces document its workout-only Training Readiness role`() {
+        val surfaces =
+            listOf(
+                "ABOUT.md" to aboutMd,
+                "docs/about.md" to publicAboutMd,
+                "docs/customization.md" to customizationMd,
+                "feature/settings strings.xml" to settingsStringsXml,
+                "DATA_FLOW.md" to dataFlowMd,
+            )
         for ((surface, text) in surfaces) {
             val normalized = normalizeWhitespace(text)
             assertTrue(
-                normalized.contains("does not modify Readiness") ||
-                    normalized.contains("does not affect Readiness"),
-                "$surface must state that Residual Fatigue does not modify Readiness (the legacy projection)",
+                normalized.contains("workout-only"),
+                "$surface must state that Residual Fatigue is workout-only",
+            )
+            assertTrue(
+                normalized.contains("feeds Training Readiness when available"),
+                "$surface must state that Residual Fatigue feeds Training Readiness when available",
+            )
+            assertTrue(
+                normalized.contains("does not modify legacy Readiness"),
+                "$surface must state that Residual Fatigue does not modify legacy Readiness",
             )
         }
     }
 
     @Test
-    fun `residual fatigue settings tooltip documents the Training Readiness feed`() {
-        val normalized = normalizeWhitespace(stringsXml)
-        assertTrue(
-            normalized.contains("Feeds Training Readiness"),
-            "feature/settings strings.xml must state that Residual Fatigue feeds Training Readiness",
-        )
+    fun `no public score copy calls residual fatigue shadow mode`() {
+        for ((surface, text) in listOf(
+            "ABOUT.md" to aboutMd,
+            "docs/about.md" to publicAboutMd,
+            "docs/customization.md" to customizationMd,
+            "in-app About strings" to aboutStringsXml,
+            "Settings strings" to settingsStringsXml,
+            "core UI strings" to coreUiStringsXml,
+        )) {
+            assertFalse(
+                text.contains("shadow mode", ignoreCase = true),
+                "$surface must not call the metric shadow mode",
+            )
+            assertFalse(
+                text.contains("shadow-only", ignoreCase = true),
+                "$surface must not call the metric shadow-only",
+            )
+        }
     }
 
     /**

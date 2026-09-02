@@ -11,41 +11,28 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.feature.about.R
 
 @Composable
 fun AppInfoSection() {
     Column {
-        SectionHeader("# About your scores")
-        BodyText(
-            "This app turns the data your phone and wearables already collect — sleep, heart rate, and " +
-                "exercise — into three daily numbers that try to answer one question: " +
-                "**how is your body doing today, and what should you do with that information?**",
-        )
-        BodyText(
-            "We try to be honest about what these numbers can and can't tell you. They are decision aids, " +
-                "not diagnoses. If something feels off in your body, trust your body over the score.",
-        )
+        SectionHeader(stringResource(R.string.about_header_scores))
+        BodyText(stringResource(R.string.about_scores_intro))
+        BodyText(stringResource(R.string.about_scores_honesty))
 
         HighlightBox {
-            SubHeader("## A note on measurement")
-            BodyText(
-                "Wearables estimate sleep stages, HRV, and nocturnal physiology indirectly using probabilistic " +
-                    "algorithms. These estimates may contain significant measurement error compared to " +
-                    "clinical systems like polysomnography or ECG. The scores shown here are health tracking " +
-                    "and recovery estimates, not clinical measurements.",
-            )
+            SubHeader(stringResource(R.string.about_measurement_header))
+            BodyText(stringResource(R.string.about_measurement_text))
         }
 
         SectionDivider()
 
-        SubHeader("## The three scores at a glance")
+        SubHeader(stringResource(R.string.about_scores_at_glance_header))
         ScoreTable()
-        BodyText(
-            "You'll see all three on your dashboard once enough data has been collected. " +
-                "Until then, we'll show you what we have and explain what's missing.",
-        )
+        BodyText(stringResource(R.string.about_scores_outro))
     }
 }
 
@@ -62,39 +49,65 @@ private fun ScoreTable() {
         color = MaterialTheme.colorScheme.surfaceVariant,
         shape = MaterialTheme.shapes.large,
     ) {
-        Column(
-            modifier = Modifier.padding(MaterialTheme.spacing.small),
-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall),
-        ) {
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    "Score",
-                    Modifier.weight(1.5f),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    "What it answers",
-                    Modifier.weight(3f),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    "Range",
-                    Modifier.weight(1f),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall),
-                color = MaterialTheme.colorScheme.outlineVariant,
-            )
+        ScoreTableContent()
+    }
+}
 
-            ScoreTableRow("**Sleep Score**", "How restorative was last night's sleep?", "0-100")
-            ScoreTableRow("**Circadian Consistency**", "How regular is your sleep schedule?", "0-100")
-            ScoreTableRow("**Readiness**", "How prepared are you for today's training load?", "0-100")
-        }
+@Composable
+private fun ScoreTableContent() {
+    Column(
+        modifier = Modifier.padding(MaterialTheme.spacing.small),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall),
+    ) {
+        ScoreTableHeader()
+        HorizontalDivider(
+            modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall),
+            color = MaterialTheme.colorScheme.outlineVariant,
+        )
+        ScoreTableRow(
+            stringResource(R.string.about_score_sleep),
+            stringResource(R.string.about_score_sleep_answer),
+            stringResource(R.string.about_score_range),
+        )
+        ScoreTableRow(
+            stringResource(R.string.about_score_circadian),
+            stringResource(R.string.about_score_circadian_answer),
+            stringResource(R.string.about_score_range),
+        )
+        ScoreTableRow(
+            stringResource(R.string.about_score_readiness),
+            stringResource(R.string.about_score_readiness_answer),
+            stringResource(R.string.about_score_range),
+        )
+        ScoreTableRow(
+            stringResource(R.string.about_score_training_readiness),
+            stringResource(R.string.about_score_training_readiness_answer),
+            stringResource(R.string.about_score_range),
+        )
+    }
+}
+
+@Composable
+private fun ScoreTableHeader() {
+    Row(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            stringResource(R.string.about_score_table_score),
+            Modifier.weight(1.5f),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            stringResource(R.string.about_score_table_answer),
+            Modifier.weight(3f),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            stringResource(R.string.about_score_table_range),
+            Modifier.weight(1f),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+        )
     }
 }
 

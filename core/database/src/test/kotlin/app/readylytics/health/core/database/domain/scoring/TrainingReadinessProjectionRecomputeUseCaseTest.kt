@@ -8,6 +8,7 @@ import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadine
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.confirmVerified
 import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.CancellationException
@@ -32,14 +33,18 @@ class TrainingReadinessProjectionRecomputeUseCaseTest {
     private val scoringHistoryRepository = mockk<ScoringHistoryRepository>()
     private val scoringCalculator = mockk<ScoringCalculator>(relaxed = true)
     private val computeTrainingReadiness = ComputeTrainingReadinessUseCase(scoringCalculator)
-    private val passthroughTransactionRunner =
+    private var transactionRuns = 0
+    private val trackingTransactionRunner =
         object : TransactionRunner {
-            override suspend fun <R> runInTransaction(block: suspend () -> R): R = block()
+            override suspend fun <R> runInTransaction(block: suspend () -> R): R {
+                transactionRuns++
+                return block()
+            }
         }
     private val useCase =
         TrainingReadinessProjectionRecomputeUseCase(
             scoringHistoryRepository,
-            passthroughTransactionRunner,
+            trackingTransactionRunner,
             computeTrainingReadiness,
         )
 
@@ -65,21 +70,30 @@ class TrainingReadinessProjectionRecomputeUseCaseTest {
     ) = TrainingReadinessConfig.fromStored(scale, weight)
 
     @Test
-    fun `projection recompute reads summaries once and writes only projected values`() =
+    fun `projection recompute uses one retained read and one transactional batch without raw-data calls`() =
         runTest {
-            val rows = listOf(summary(LocalDate.of(2026, 1, 1), fatigue = 20f, load = 60f, legacyReadiness = 70f))
+            val rows =
+                (1..3).map { day ->
+                    summary(
+                        LocalDate.of(2026, 1, day),
+                        fatigue = day * 5f,
+                        load = 60f,
+                        legacyReadiness = 70f,
+                    )
+                }
             coEvery { scoringHistoryRepository.getDailySummariesSince(any(), any()) } returns rows
             val savedSlot = slot<List<DailySummary>>()
             coEvery { scoringHistoryRepository.upsertDailySummaries(capture(savedSlot), any()) } returns Unit
 
-            val result =
-                useCase.execute(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 1), zoneId, config())
+            val result = useCase.execute(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 3), zoneId, config())
 
             assertTrue(result.isSuccess)
             coVerify(exactly = 1) { scoringHistoryRepository.getDailySummariesSince(any(), any()) }
             coVerify(exactly = 1) { scoringHistoryRepository.upsertDailySummaries(any(), any()) }
-            assertEquals(1, savedSlot.captured.size)
-            assertNotNull(savedSlot.captured.single().trainingReadinessWorkoutOnly)
+            assertEquals(1, transactionRuns, "one transaction means one Room invalidation, not one per day")
+            assertEquals(3, savedSlot.captured.size)
+            savedSlot.captured.forEach { assertNotNull(it.trainingReadinessWorkoutOnly) }
+            confirmVerified(scoringHistoryRepository)
         }
 
     @Test
