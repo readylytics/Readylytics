@@ -35,7 +35,7 @@
         RHR estimate. Default: 5%%.</string>
 <string name="advanced_rhr_baseline_label">RHR Baseline (bpm)</string>
 <string name="advanced_residual_fatigue_title">Residual Fatigue</string>
-<string name="advanced_residual_fatigue_info_tooltip">Tracks training fatigue that accumulates from workouts and decays exponentially. Shadow mode: it does not affect Readiness or any other score. Configured half-life (24 h default) and gain (1.0 gain default) are provisional product guardrails, not scientifically validated ranges.</string>
+<string name="advanced_residual_fatigue_info_tooltip">Tracks training fatigue that accumulates from workouts and decays exponentially. Feeds Training Readiness when data is available. Configured half-life (24 h default) and gain (1.0 gain default) are provisional product guardrails, not scientifically validated ranges.</string>
 <string name="advanced_residual_fatigue_half_life_label">Fatigue half-life</string>
 <string name="advanced_residual_fatigue_half_life_hours">%1$.0f h</string>
 <string name="advanced_residual_fatigue_half_life_desc">Time required for workout fatigue to decay by half. Range (6–96 h) and default (24 h) are provisional product guardrails, not scientifically validated clinical ranges.</string>
@@ -44,6 +44,15 @@
 <string name="advanced_residual_fatigue_gain_desc">Scaling factor applied to workout impulses. Range (0.1–5.0) and default (1.00) are provisional product guardrails, not scientifically validated clinical ranges.</string>
 <string name="advanced_residual_fatigue_reset_button">Reset fatigue to defaults</string>
 <string name="advanced_training_load_label">Training Load Model</string>
+<string name="advanced_training_readiness_title">Training Readiness</string>
+<string name="advanced_training_readiness_scale_label">Residual fatigue scale</string>
+<string name="advanced_training_readiness_scale_value">%1$.0f</string>
+<string name="advanced_training_readiness_scale_desc">Controls how strongly residual workout fatigue affects Training Readiness.</string>
+<string name="advanced_training_readiness_weight_label">Load balance weight</string>
+<string name="advanced_training_readiness_weight_value">%1$d%%</string>
+<string name="advanced_training_readiness_weight_desc">Controls how much Training Readiness relies on Load Score versus acute workout recovery.</string>
+<string name="advanced_training_readiness_reset_button">Reset to defaults</string>
+<string name="advanced_training_readiness_apply_button">Recalculate Training Readiness</string>
 <string name="advanced_trimp_banister">Banister</string>
 <string name="advanced_trimp_cheng">Cheng LT-TRIMP</string>
 <string name="advanced_trimp_itrimp">iTRIMP</string>

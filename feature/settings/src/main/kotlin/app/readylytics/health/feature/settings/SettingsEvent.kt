@@ -263,6 +263,18 @@ sealed interface SettingsEvent {
 
     data object ResetFatigueToDefaults : SettingsEvent
 
+    data class TrainingReadinessScaleChanged(
+        val scale: Float,
+    ) : SettingsEvent
+
+    data class TrainingReadinessLoadBalanceWeightChanged(
+        val weight: Float,
+    ) : SettingsEvent
+
+    data object ResetTrainingReadinessToDefaults : SettingsEvent
+
+    data object RecalculateTrainingReadiness : SettingsEvent
+
     data class UnitSystemChanged(
         val unitSystem: app.readylytics.health.core.model.data.preferences.UnitSystem,
     ) : SettingsEvent

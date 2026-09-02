@@ -421,17 +421,34 @@ class DocumentationDriftTest {
         }
     }
 
+    /**
+     * Since Task 3, Residual Fatigue always feeds the Training Readiness projection, so the
+     * long-form docs qualify the claim as "does not modify Readiness (the legacy projection)" --
+     * still true and checked here. The in-app Settings tooltip (`strings.xml`) is deliberately
+     * excluded: Task 5 rewrote it to say Residual Fatigue feeds Training Readiness, since a bare
+     * "does not affect Readiness" reads as misleading directly beside the new Training Readiness
+     * controls on the same screen.
+     */
     @Test
-    fun `residual fatigue shadow-only claim is present on every surface`() {
-        val surfaces = residualFatigueSurfaces + ("DATA_FLOW.md" to dataFlowMd)
+    fun `residual fatigue shadow-only claim is present on every long-form doc surface`() {
+        val surfaces = residualFatigueSurfaces.filterNot { it.first == "strings.xml" } + ("DATA_FLOW.md" to dataFlowMd)
         for ((surface, text) in surfaces) {
             val normalized = normalizeWhitespace(text)
             assertTrue(
                 normalized.contains("does not modify Readiness") ||
                     normalized.contains("does not affect Readiness"),
-                "$surface must state that Residual Fatigue does not modify Readiness (Phase 1 shadow mode)",
+                "$surface must state that Residual Fatigue does not modify Readiness (the legacy projection)",
             )
         }
+    }
+
+    @Test
+    fun `residual fatigue settings tooltip documents the Training Readiness feed`() {
+        val normalized = normalizeWhitespace(stringsXml)
+        assertTrue(
+            normalized.contains("Feeds Training Readiness"),
+            "feature/settings strings.xml must state that Residual Fatigue feeds Training Readiness",
+        )
     }
 
     /**
