@@ -315,4 +315,14 @@ class SettingsRepository
                 proto.toBuilder().apply(block).build()
             }
         }
+
+        override suspend fun updateTrainingReadinessConfig(config: TrainingReadinessConfig) {
+            dataStore.updateData { proto ->
+                proto
+                    .toBuilder()
+                    .setLastAppliedTrainingReadinessResidualFatigueScale(config.residualFatigueScale)
+                    .setLastAppliedTrainingReadinessLoadBalanceWeight(config.loadBalanceWeight)
+                    .build()
+            }
+        }
     }

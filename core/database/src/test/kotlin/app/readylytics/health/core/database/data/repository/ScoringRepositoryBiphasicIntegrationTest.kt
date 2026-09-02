@@ -1,4 +1,5 @@
 package app.readylytics.health.core.database.data.repository
+import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
 import app.readylytics.health.core.databaseschema.data.local.dao.BloodPressureRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.BodyFatRecordDao
@@ -110,6 +111,7 @@ class ScoringRepositoryBiphasicIntegrationTest {
                 ComputeResidualFatigueUseCase(),
                 ResolveDailyBaselinesUseCase(baselineComputer),
                 AssembleEverydayLoadInputUseCase(),
+                        ComputeTrainingReadinessUseCase(scoringCalculator),
             ),
             scoringHistoryRepository,
             readinessSummaryCoordinator,

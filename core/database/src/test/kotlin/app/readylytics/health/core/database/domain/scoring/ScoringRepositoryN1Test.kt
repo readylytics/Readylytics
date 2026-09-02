@@ -1,4 +1,5 @@
 package app.readylytics.health.core.database.domain.scoring
+import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
 import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
@@ -265,6 +266,7 @@ class ScoringRepositoryN1Test {
                         ComputeResidualFatigueUseCase(),
                         resolveDailyBaselinesUseCase,
                         AssembleEverydayLoadInputUseCase(),
+                        ComputeTrainingReadinessUseCase(scoringCalculator),
                     ),
                 scoringHistoryRepository = scoringHistoryRepository,
                 readinessSummaryCoordinator = readinessSummaryCoordinator,

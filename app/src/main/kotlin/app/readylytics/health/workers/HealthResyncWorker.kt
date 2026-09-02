@@ -12,6 +12,7 @@ import androidx.work.workDataOf
 import app.readylytics.health.core.healthconnect.domain.sync.ForegroundSyncController
 import app.readylytics.health.core.healthconnect.domain.sync.FullHistoricalResyncUseCase
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
+import app.readylytics.health.core.model.data.preferences.appliedTrainingReadinessConfig
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspector
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
@@ -131,6 +132,11 @@ class HealthResyncWorker
                     goalSleepHours = prefs.goalSleepHours,
                     hypersomniaOnsetPercent = prefs.hypersomniaOnsetPercent,
                 )
+                if (prefs.lastAppliedTrainingReadinessResidualFatigueScale == null ||
+                    prefs.lastAppliedTrainingReadinessLoadBalanceWeight == null
+                ) {
+                    settings.updateTrainingReadinessConfig(prefs.appliedTrainingReadinessConfig())
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

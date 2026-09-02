@@ -1,4 +1,5 @@
 package app.readylytics.health.core.database.domain.scoring
+import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
 import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
@@ -410,6 +411,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
                         ComputeResidualFatigueUseCase(),
                         resolveDailyBaselinesUseCase,
                         AssembleEverydayLoadInputUseCase(),
+                        ComputeTrainingReadinessUseCase(scoringCalculator),
                     ),
                 scoringHistoryRepository = scoringHistoryRepository,
                 readinessSummaryCoordinator = readinessSummaryCoordinator,
@@ -425,6 +427,24 @@ class ScoringSyncScopeOutputsDeterminismTest {
         assertNotNull(
             summary.readinessWorkoutOnly,
             "readinessWorkoutOnly should be populated by the determinism fixture",
+        )
+        assertNotNull(summary.residualFatigue, "residualFatigue should be populated by the determinism fixture")
+        assertNotNull(summary.acuteLoadRecovery, "acuteLoadRecovery should be populated by the determinism fixture")
+        assertNotNull(
+            summary.trainingLoadReadinessWorkoutOnly,
+            "trainingLoadReadinessWorkoutOnly should be populated by the determinism fixture",
+        )
+        assertNotNull(
+            summary.trainingLoadReadinessEverydayHr,
+            "trainingLoadReadinessEverydayHr should be populated by the determinism fixture",
+        )
+        assertNotNull(
+            summary.trainingReadinessWorkoutOnly,
+            "trainingReadinessWorkoutOnly should be populated by the determinism fixture",
+        )
+        assertNotNull(
+            summary.trainingReadinessEverydayHr,
+            "trainingReadinessEverydayHr should be populated by the determinism fixture",
         )
         assertNotNull(summary.rhrBpm, "rhrBpm should be populated by the determinism fixture")
         assertNotNull(summary.rhrSigma, "rhrSigma should be populated by the determinism fixture")
@@ -442,7 +462,24 @@ class ScoringSyncScopeOutputsDeterminismTest {
         val fields: List<Pair<String, (DailySummary) -> Any?>> =
             listOf(
                 "sleepScore" to { it.sleepScore },
+                "trimpWorkoutOnly" to { it.trimpWorkoutOnly },
+                "trimpEverydayHr" to { it.trimpEverydayHr },
+                "atlWorkoutOnly" to { it.atlWorkoutOnly },
+                "atlEverydayHr" to { it.atlEverydayHr },
+                "ctlWorkoutOnly" to { it.ctlWorkoutOnly },
+                "ctlEverydayHr" to { it.ctlEverydayHr },
+                "strainRatioWorkoutOnly" to { it.strainRatioWorkoutOnly },
+                "strainRatioEverydayHr" to { it.strainRatioEverydayHr },
+                "loadScoreWorkoutOnly" to { it.loadScoreWorkoutOnly },
+                "loadScoreEverydayHr" to { it.loadScoreEverydayHr },
                 "readinessWorkoutOnly" to { it.readinessWorkoutOnly },
+                "readinessEverydayHr" to { it.readinessEverydayHr },
+                "residualFatigue" to { it.residualFatigue },
+                "acuteLoadRecovery" to { it.acuteLoadRecovery },
+                "trainingLoadReadinessWorkoutOnly" to { it.trainingLoadReadinessWorkoutOnly },
+                "trainingLoadReadinessEverydayHr" to { it.trainingLoadReadinessEverydayHr },
+                "trainingReadinessWorkoutOnly" to { it.trainingReadinessWorkoutOnly },
+                "trainingReadinessEverydayHr" to { it.trainingReadinessEverydayHr },
                 "rhrBpm" to { it.rhrBpm },
                 "rhrSigma" to { it.rhrSigma },
                 "hrvMuMssd" to { it.hrvMuMssd },

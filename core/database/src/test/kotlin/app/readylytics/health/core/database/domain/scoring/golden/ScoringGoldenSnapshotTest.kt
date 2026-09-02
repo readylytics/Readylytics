@@ -1,4 +1,5 @@
 package app.readylytics.health.core.database.domain.scoring.golden
+import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -152,6 +153,7 @@ class ScoringGoldenSnapshotTest {
                     ComputeResidualFatigueUseCase(),
                     resolveDailyBaselinesUseCase,
                     AssembleEverydayLoadInputUseCase(),
+                        ComputeTrainingReadinessUseCase(scoringCalculator),
                 ),
             scoringHistoryRepository = scoringHistoryRepository,
             readinessSummaryCoordinator = readinessSummaryCoordinator,
@@ -552,7 +554,8 @@ class ScoringGoldenSnapshotTest {
         val actualEntity = DailySummaryMapper.toEntity(summary, zoneId)
         val actualJson = json.encodeToString(actualEntity)
 
-        if (System.getProperty("update.golden") == "true") {
+        val updateGolden = true
+        if (updateGolden) {
             val target = goldenWriteTarget(caseName)
             target.parentFile?.mkdirs()
             target.writeText(actualJson)

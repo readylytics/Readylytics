@@ -1,4 +1,5 @@
 package app.readylytics.health.core.database.data.repository
+import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -16,6 +17,7 @@ import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecor
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.data.preferences.appliedTrainingReadinessConfig
 import app.readylytics.health.core.model.domain.heartrate.ZoneThresholds
 import app.readylytics.health.core.model.domain.model.RecordType
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
@@ -87,7 +89,7 @@ class ResidualFatigueScoringIntegrityTest {
     @Test
     fun `all reconstruction paths produce identical residualFatigue across evaluation range`() =
         runTest {
-            seedDeterministicScenario(db)
+            ResidualFatigueScenarioSeeder(zoneId, historyStartDate).seedDeterministicScenario(db)
             val basePrefs = basePreferences()
 
             val fullOutputs = executeWalkForward(db, historyStartDate, evalEndDate, basePrefs)
@@ -167,7 +169,7 @@ class ResidualFatigueScoringIntegrityTest {
     @Test
     fun `parameter and profile invalidation recomputes affected values and preserves explicit settings`() =
         runTest {
-            seedDeterministicScenario(db)
+            ResidualFatigueScenarioSeeder(zoneId, historyStartDate).seedDeterministicScenario(db)
             val basePrefs = basePreferences()
             // Backfill canonical modelTrimp across the whole history first: a partial walk over
             // never-backfilled rows deliberately yields null (unknown), not a low value (HIGH-2).
@@ -226,7 +228,7 @@ class ResidualFatigueScoringIntegrityTest {
     @Test
     fun `residualFatigue is identical across all LoadSourceMode combinations`() =
         runTest {
-            seedDeterministicScenario(db)
+            ResidualFatigueScenarioSeeder(zoneId, historyStartDate).seedDeterministicScenario(db)
             val basePrefs = basePreferences()
             // Backfill canonical modelTrimp across the whole history first: a partial walk over
             // never-backfilled rows deliberately yields null (unknown), not a low value (HIGH-2).
@@ -252,9 +254,9 @@ class ResidualFatigueScoringIntegrityTest {
         }
 
     @Test
-    fun `Phase 1 remains shadow-only without modifying readiness load or recommendation outputs`() =
+    fun `normal daily scoring leaves legacy readiness unchanged and persists both training variants`() =
         runTest {
-            seedDeterministicScenario(db)
+            ResidualFatigueScenarioSeeder(zoneId, historyStartDate).seedDeterministicScenario(db)
             val basePrefs = basePreferences()
             // Backfill canonical modelTrimp across the whole history first: a partial walk over
             // never-backfilled rows deliberately yields null (unknown), not a low value (HIGH-2).
@@ -299,6 +301,12 @@ class ResidualFatigueScoringIntegrityTest {
                 assertEquals(def.readinessEverydayHr, min.readinessEverydayHr)
                 assertEquals(def.readinessEverydayHr, max.readinessEverydayHr)
 
+                assertNotNull(def.acuteLoadRecovery)
+                if (def.loadScoreWorkoutOnly != null) assertNotNull(def.trainingLoadReadinessWorkoutOnly)
+                if (def.loadScoreEverydayHr != null) assertNotNull(def.trainingLoadReadinessEverydayHr)
+                if (def.readinessWorkoutOnly != null) assertNotNull(def.trainingReadinessWorkoutOnly)
+                if (def.readinessEverydayHr != null) assertNotNull(def.trainingReadinessEverydayHr)
+
                 assertEquals(def.sleepScore, min.sleepScore)
                 assertEquals(def.sleepDurationMinutes, min.sleepDurationMinutes)
                 assertEquals(def.restingHeartRate, min.restingHeartRate)
@@ -319,7 +327,7 @@ class ResidualFatigueScoringIntegrityTest {
     @Test
     fun `partial walk on never-backfilled history persists null instead of a silently low value`() =
         runTest {
-            seedDeterministicScenario(db)
+            ResidualFatigueScenarioSeeder(zoneId, historyStartDate).seedDeterministicScenario(db)
             val basePrefs = basePreferences()
 
             // No prior full walk backfills modelTrimp for workout-older-32d (2026-04-15), which
@@ -333,13 +341,116 @@ class ResidualFatigueScoringIntegrityTest {
                     "Partial walk over never-backfilled history must persist null (unknown), " +
                         "not a low value that silently omits historical impulses",
                 )
+                assertNull(summary.acuteLoadRecovery)
+                assertEquals(summary.loadScoreWorkoutOnly, summary.trainingLoadReadinessWorkoutOnly)
+                assertEquals(summary.loadScoreEverydayHr, summary.trainingLoadReadinessEverydayHr)
+                assertEquals(summary.readinessWorkoutOnly, summary.trainingReadinessWorkoutOnly)
+                assertEquals(summary.readinessEverydayHr, summary.trainingReadinessEverydayHr)
             }
+        }
+
+    @Test
+    fun `everyday source changes only corresponding load branch while fatigue stays identical`() =
+        runTest {
+            ResidualFatigueScenarioSeeder(zoneId, historyStartDate).seedDeterministicScenario(db)
+            
+            // Seed HRV for sleep sessions to ensure sRest and trainingReadiness are not null
+            var d = historyStartDate
+            val hrvs = mutableListOf<app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity>()
+            val sourceRecords = mutableListOf<app.readylytics.health.core.databaseschema.data.local.entity.HealthSourceRecordEntity>()
+            var i = 0
+            while (!d.isAfter(java.time.LocalDate.of(2026, 6, 6))) {
+                val sleepStart = d.atTime(23, 0).atZone(zoneId).toInstant().toEpochMilli()
+                val sleepId = "sleep-$d"
+                val hrvRef = 80000L + i
+                sourceRecords.add(
+                    app.readylytics.health.core.databaseschema.data.local.entity.HealthSourceRecordEntity(
+                        id = hrvRef,
+                        sourceRecordId = "source-hrv-$hrvRef",
+                        recordType = "HeartRateVariabilityRmssdRecord",
+                        createdAtMs = sleepStart,
+                    )
+                )
+                hrvs.add(
+                    app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity(
+                        sourceRecordRef = hrvRef,
+                        timestampMs = sleepStart + 4 * 3_600_000L,
+                        rmssdMs = 65f,
+                        recordType = "HeartRateVariabilityRmssdRecord",
+                        sessionId = sleepId,
+                    )
+                )
+                d = d.plusDays(1)
+                i++
+            }
+            db.sourceRecordDao().insertAll(sourceRecords)
+            db.hrvDao().upsertAll(hrvs)
+
+            // Seed an everyday heart rate to ensure everydayHr branch diverges from workoutOnly
+            val everydayHrTime = historyStartDate.plusDays(40).atTime(12, 0).atZone(zoneId).toInstant().toEpochMilli()
+            val everydayRef = 99999L
+            val everydayHrs = (0..10).map { j ->
+                val time = everydayHrTime + j * 300_000L
+                app.readylytics.health.core.databaseschema.data.local.entity.HealthSourceRecordEntity(
+                    id = everydayRef + j,
+                    sourceRecordId = "source-${everydayRef + j}",
+                    recordType = "HeartRateRecord",
+                    createdAtMs = time,
+                )
+            }
+            val everydayHrRecords = (0..10).map { j ->
+                val time = everydayHrTime + j * 300_000L
+                app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity(
+                    sourceRecordRef = everydayRef + j,
+                    timestampMs = time,
+                    beatsPerMinute = 160,
+                    recordType = app.readylytics.health.core.model.domain.model.RecordType.RESTING.name,
+                    sessionId = null,
+                )
+            }
+            db.sourceRecordDao().insertAll(everydayHrs)
+            db.heartRateDao().upsertAll(everydayHrRecords)
+
+            val basePrefs = basePreferences()
+            executeWalkForward(db, historyStartDate, evalEndDate, basePrefs)
+
+            val workoutSummaries =
+                executeWalkForward(
+                    db,
+                    evalStartDate,
+                    evalEndDate,
+                    basePrefs.copy(strainLoadSourceMode = LoadSourceMode.WORKOUT_ONLY),
+                )
+            val everydaySummaries =
+                executeWalkForward(
+                    db,
+                    evalStartDate,
+                    evalEndDate,
+                    basePrefs.copy(strainLoadSourceMode = LoadSourceMode.EVERYDAY_HEART_RATE),
+                )
+
+            val workoutSelected = workoutSummaries.last()
+            val everydaySelected = everydaySummaries.last()
+
+            assertEquals(workoutSelected.residualFatigue, everydaySelected.residualFatigue)
+
+            val validWorkout = workoutSummaries.last()
+            val validEveryday = everydaySummaries.last()
+
+            assertEquals(
+                validWorkout.trainingReadinessWorkoutOnly,
+                validEveryday.trainingReadinessWorkoutOnly,
+            )
+            assertEquals(
+                validWorkout.trainingReadinessEverydayHr,
+                validEveryday.trainingReadinessEverydayHr,
+            )
         }
 
     @Test
     fun `full walk backfills the seed and every day reconstructs a non-null residualFatigue`() =
         runTest {
-            seedDeterministicScenario(db)
+            ResidualFatigueScenarioSeeder(zoneId, historyStartDate).seedDeterministicScenario(db)
             val basePrefs = basePreferences()
 
             val fullSummaries = executeWalkForward(db, historyStartDate, evalEndDate, basePrefs)
@@ -454,6 +565,7 @@ class ResidualFatigueScoringIntegrityTest {
                 ComputeResidualFatigueUseCase(),
                 ResolveDailyBaselinesUseCase(baselineComputer),
                 AssembleEverydayLoadInputUseCase(),
+                        ComputeTrainingReadinessUseCase(scoringCalculator),
             ),
             scoringHistoryRepository = scoringHistoryRepository,
             readinessSummaryCoordinator = coordinator,
@@ -504,222 +616,6 @@ class ResidualFatigueScoringIntegrityTest {
         )
     }
 
-    private data class ScenarioRecords(
-        val workouts: MutableList<WorkoutRecordEntity> = mutableListOf(),
-        val sourceRecords: MutableList<HealthSourceRecordEntity> = mutableListOf(),
-        val heartRates: MutableList<HeartRateRecordEntity> = mutableListOf(),
-        val sleepSessions: MutableList<SleepSessionEntity> = mutableListOf(),
-    )
-
-    private suspend fun seedDeterministicScenario(database: HealthDatabase) {
-        val records = ScenarioRecords()
-
-        seedEarlyWorkouts(records)
-        seedLateWorkouts(records)
-        seedScenarioSleepSessions(records)
-
-        database.sourceRecordDao().insertAll(records.sourceRecords)
-        database.workoutDao().upsertAll(records.workouts)
-        database.heartRateDao().upsertAll(records.heartRates)
-        database.sleepSessionDao().upsertAll(records.sleepSessions)
-
-        val reconciler = SessionLinkReconcilerImpl(
-            sleepSessionDao = database.sleepSessionDao(),
-            workoutDao = database.workoutDao(),
-            heartRateDao = database.heartRateDao(),
-            hrvDao = database.hrvDao(),
-            transactionRunner = RoomTransactionRunner(database),
-        )
-        val zoneThresholds = ZoneThresholds.create(90, 110, 130, 150, 170)
-        reconciler.reconcile(
-            epoch(historyStartDate, 0, 0),
-            epoch(LocalDate.of(2026, 6, 7), 0, 0),
-            zoneThresholds,
-        )
-    }
-
-    private fun seedEarlyWorkouts(records: ScenarioRecords) {
-        // 1. >32d prior workout
-        addScenarioWorkout(
-            records, "workout-older-32d",
-            epoch(LocalDate.of(2026, 4, 15), 10, 0),
-            epoch(LocalDate.of(2026, 4, 15), 11, 0),
-            45f, 155f,
-        )
-        // 2. Rest interval between 2026-04-16 and 2026-05-19
-        // 3. Ordinary workout
-        addScenarioWorkout(
-            records, "workout-ordinary",
-            epoch(LocalDate.of(2026, 5, 20), 14, 0),
-            epoch(LocalDate.of(2026, 5, 20), 15, 0),
-            35f, 150f,
-        )
-        // 4. Crossing midnight workout
-        addScenarioWorkout(
-            records, "workout-midnight",
-            epoch(LocalDate.of(2026, 5, 22), 23, 30),
-            epoch(LocalDate.of(2026, 5, 23), 0, 30),
-            40f, 160f,
-        )
-        // 5. Consecutive workout days
-        addScenarioWorkout(
-            records, "workout-consecutive-1",
-            epoch(LocalDate.of(2026, 5, 24), 10, 0),
-            epoch(LocalDate.of(2026, 5, 24), 11, 0),
-            30f, 145f,
-        )
-        addScenarioWorkout(
-            records, "workout-consecutive-2",
-            epoch(LocalDate.of(2026, 5, 25), 10, 0),
-            epoch(LocalDate.of(2026, 5, 25), 11, 0),
-            35f, 150f,
-        )
-        addScenarioWorkout(
-            records, "workout-consecutive-3",
-            epoch(LocalDate.of(2026, 5, 26), 10, 0),
-            epoch(LocalDate.of(2026, 5, 26), 11, 0),
-            40f, 155f,
-        )
-    }
-
-    private fun seedLateWorkouts(records: ScenarioRecords) {
-        // 6. Early and late workouts
-        addScenarioWorkout(
-            records, "workout-early",
-            epoch(LocalDate.of(2026, 5, 27), 6, 30),
-            epoch(LocalDate.of(2026, 5, 27), 7, 30),
-            25f, 140f,
-        )
-        addScenarioWorkout(
-            records, "workout-late",
-            epoch(LocalDate.of(2026, 5, 27), 20, 0),
-            epoch(LocalDate.of(2026, 5, 27), 21, 0),
-            30f, 150f,
-        )
-        // 7. Tied timestamp workouts
-        addScenarioWorkout(
-            records, "workout-tied-a",
-            epoch(LocalDate.of(2026, 5, 29), 9, 30),
-            epoch(LocalDate.of(2026, 5, 29), 10, 30),
-            20f, 140f,
-        )
-        addScenarioWorkout(
-            records, "workout-tied-b",
-            epoch(LocalDate.of(2026, 5, 29), 8, 30),
-            epoch(LocalDate.of(2026, 5, 29), 10, 30),
-            50f, 165f,
-        )
-        // 8. Zero-TRIMP workout
-        addScenarioWorkout(
-            records, "workout-zero-trimp",
-            epoch(LocalDate.of(2026, 5, 30), 14, 0),
-            epoch(LocalDate.of(2026, 5, 30), 14, 30),
-            0f, 80f,
-        )
-        // 9. Future workout
-        addScenarioWorkout(
-            records, "workout-future",
-            epoch(LocalDate.of(2026, 6, 5), 10, 0),
-            epoch(LocalDate.of(2026, 6, 5), 11, 0),
-            45f, 155f,
-        )
-    }
-
-    private fun addScenarioWorkout(
-        records: ScenarioRecords,
-        id: String,
-        startEpochMs: Long,
-        endEpochMs: Long,
-        trimp: Float,
-        avgHr: Float,
-    ) {
-        val durationMinutes = ((endEpochMs - startEpochMs) / 60_000L).toInt()
-        records.workouts.add(
-            WorkoutRecordEntity(
-                id = id,
-                startTime = startEpochMs,
-                endTime = endEpochMs,
-                exerciseType = "RUNNING",
-                durationMinutes = durationMinutes,
-                zone1Minutes = (durationMinutes * 0.2f),
-                zone2Minutes = (durationMinutes * 0.3f),
-                zone3Minutes = (durationMinutes * 0.3f),
-                zone4Minutes = (durationMinutes * 0.2f),
-                zone5Minutes = 0f,
-                trimp = trimp,
-                avgHr = avgHr,
-                modelTrimp = null,
-            ),
-        )
-        var t = startEpochMs
-        var ref = 1000L + records.workouts.size * 100L
-        while (t < endEpochMs) {
-            val currentRef = ++ref
-            records.sourceRecords.add(
-                HealthSourceRecordEntity(
-                    id = currentRef,
-                    sourceRecordId = "source-$currentRef",
-                    recordType = "HeartRateRecord",
-                    createdAtMs = t,
-                ),
-            )
-            records.heartRates.add(
-                HeartRateRecordEntity(
-                    sourceRecordRef = currentRef,
-                    timestampMs = t,
-                    beatsPerMinute = avgHr.toInt(),
-                    recordType = RecordType.EXERCISE.name,
-                    sessionId = id,
-                ),
-            )
-            t += 60_000L
-        }
-    }
-
-    private fun seedScenarioSleepSessions(records: ScenarioRecords) {
-        var d = historyStartDate
-        while (!d.isAfter(LocalDate.of(2026, 6, 6))) {
-            val sleepStart = epoch(d, 23, 0)
-            val sleepEnd = epoch(d.plusDays(1), 7, 0)
-            val sleepId = "sleep-$d"
-            records.sleepSessions.add(
-                SleepSessionEntity(
-                    id = sleepId,
-                    startTime = sleepStart,
-                    endTime = sleepEnd,
-                    durationMinutes = 480,
-                    efficiency = 0.92f,
-                    deepSleepMinutes = 90,
-                    remSleepMinutes = 110,
-                    lightSleepMinutes = 240,
-                    awakeMinutes = 40,
-                ),
-            )
-            val sleepRef = 50000L + records.sleepSessions.size
-            records.sourceRecords.add(
-                HealthSourceRecordEntity(
-                    id = sleepRef,
-                    sourceRecordId = "source-$sleepRef",
-                    recordType = "HeartRateRecord",
-                    createdAtMs = sleepStart,
-                ),
-            )
-            records.heartRates.add(
-                HeartRateRecordEntity(
-                    sourceRecordRef = sleepRef,
-                    timestampMs = sleepStart + 4 * 3_600_000L,
-                    beatsPerMinute = 56,
-                    recordType = RecordType.SLEEP.name,
-                    sessionId = sleepId,
-                ),
-            )
-            d = d.plusDays(1)
-        }
-    }
-
-    private fun epoch(date: LocalDate, hour: Int, minute: Int): Long =
-        date.atTime(hour, minute).atZone(zoneId).toInstant().toEpochMilli()
-
     private class MutableTestSettingsRepository(initial: UserPreferences) : SettingsRepository {
         private val state = MutableStateFlow(initial)
         override val userPreferences: Flow<UserPreferences> = state
@@ -736,6 +632,9 @@ class ResidualFatigueScoringIntegrityTest {
             weightProfile: SleepScoreWeightProfile,
             goalSleepHours: Float,
             hypersomniaOnsetPercent: Int,
+        ) = Unit
+        override suspend fun updateTrainingReadinessConfig(
+            config: app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
         ) = Unit
     }
 

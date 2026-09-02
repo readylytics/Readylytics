@@ -24,4 +24,8 @@ interface SettingsRepository {
         goalSleepHours: Float,
         hypersomniaOnsetPercent: Int,
     )
+    
+    suspend fun updateTrainingReadinessConfig(
+        config: app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
+    )
 }

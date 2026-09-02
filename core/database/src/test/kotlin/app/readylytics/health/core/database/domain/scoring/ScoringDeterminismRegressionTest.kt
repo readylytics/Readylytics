@@ -1,4 +1,6 @@
 package app.readylytics.health.core.database.domain.scoring
+import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
@@ -138,6 +140,7 @@ class ScoringDeterminismRegressionTest {
                     ComputeResidualFatigueUseCase(),
                     ResolveDailyBaselinesUseCase(baselineComputer),
                     AssembleEverydayLoadInputUseCase(),
+                        ComputeTrainingReadinessUseCase(scoringCalculator),
                 ),
                 scoringHistoryRepository,
                 readinessSummaryCoordinator,
@@ -197,25 +200,51 @@ class ScoringDeterminismRegressionTest {
             // US-03: derived outputs now live in the freshly-recomputed variant columns. The legacy
             // columns are frozen passthroughs of the stored snapshot and are intentionally NOT
             // recomputed, so reproducibility is asserted on the active variant columns instead.
-            assertEquals(run1.rasWorkoutOnly, run2.rasWorkoutOnly, "rasWorkoutOnly must be reproducible")
-            assertEquals(run1.totalRasWorkoutOnly, run2.totalRasWorkoutOnly, "totalRasWorkoutOnly must be reproducible")
-            assertEquals(
-                run1.loadScoreWorkoutOnly,
-                run2.loadScoreWorkoutOnly,
-                "loadScoreWorkoutOnly must be reproducible",
-            )
-            assertEquals(
-                run1.strainRatioWorkoutOnly,
-                run2.strainRatioWorkoutOnly,
-                "strainRatioWorkoutOnly must be reproducible",
-            )
-            assertEquals(run1.sleepScore, run2.sleepScore, "sleepScore must be reproducible")
-            assertEquals(
-                run1.readinessWorkoutOnly,
-                run2.readinessWorkoutOnly,
-                "readinessWorkoutOnly must be reproducible",
-            )
+            assertRecomputedDerivedOutputs(run1, run2)
         }
+
+    private fun assertRecomputedDerivedOutputs(run1: DailySummary, run2: DailySummary) {
+        assertEquals(run1.rasWorkoutOnly, run2.rasWorkoutOnly, "rasWorkoutOnly must be reproducible")
+        assertEquals(run1.totalRasWorkoutOnly, run2.totalRasWorkoutOnly, "totalRasWorkoutOnly must be reproducible")
+        assertEquals(
+            run1.loadScoreWorkoutOnly,
+            run2.loadScoreWorkoutOnly,
+            "loadScoreWorkoutOnly must be reproducible",
+        )
+        assertEquals(
+            run1.strainRatioWorkoutOnly,
+            run2.strainRatioWorkoutOnly,
+            "strainRatioWorkoutOnly must be reproducible",
+        )
+        assertEquals(run1.sleepScore, run2.sleepScore, "sleepScore must be reproducible")
+        assertEquals(
+            run1.readinessWorkoutOnly,
+            run2.readinessWorkoutOnly,
+            "readinessWorkoutOnly must be reproducible",
+        )
+        assertEquals(run1.residualFatigue, run2.residualFatigue, "residualFatigue must be reproducible")
+        assertEquals(run1.acuteLoadRecovery, run2.acuteLoadRecovery, "acuteLoadRecovery must be reproducible")
+        assertEquals(
+            run1.trainingLoadReadinessWorkoutOnly,
+            run2.trainingLoadReadinessWorkoutOnly,
+            "trainingLoadReadinessWorkoutOnly must be reproducible",
+        )
+        assertEquals(
+            run1.trainingLoadReadinessEverydayHr,
+            run2.trainingLoadReadinessEverydayHr,
+            "trainingLoadReadinessEverydayHr must be reproducible",
+        )
+        assertEquals(
+            run1.trainingReadinessWorkoutOnly,
+            run2.trainingReadinessWorkoutOnly,
+            "trainingReadinessWorkoutOnly must be reproducible",
+        )
+        assertEquals(
+            run1.trainingReadinessEverydayHr,
+            run2.trainingReadinessEverydayHr,
+            "trainingReadinessEverydayHr must be reproducible",
+        )
+    }
 
     @Test
     fun frozenHrvMuIsPreservedNotClobberedAcrossRecomputes() =

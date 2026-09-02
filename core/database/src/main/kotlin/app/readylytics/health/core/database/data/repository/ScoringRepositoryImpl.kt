@@ -70,6 +70,7 @@ class ScoringRepositoryImpl
                 bodyMetricsDataLoader,
                 readinessSummaryCoordinator,
                 residualFatigueComputer,
+                useCases.computeTrainingReadiness,
             )
 
         override suspend fun computeAndPersistDailySummary(
