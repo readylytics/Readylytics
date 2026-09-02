@@ -275,6 +275,27 @@ class DashboardMetricPresentationFactoryTest : DashboardMetricPresentationFactor
     }
 
     @Test
+    fun `training readiness presentation clamps the display projection without changing the source score`() {
+        val summary = summary(trainingReadinessWorkoutOnly = 101.4f)
+
+        val presentation =
+            factory
+                .build(
+                    summary = summary,
+                    preferences = preferences(),
+                    lastSleepSession = null,
+                    circadianResult = null,
+                    heartRateSummary = null,
+                ).getValue(CardId.TRAINING_READINESS)
+
+        val visual = presentation.visual as UniversalMetricVisual.Score
+        assertEquals("100", presentation.valueText)
+        assertEquals(100f, visual.rawValue)
+        assertEquals(MetricStatus.OPTIMAL, presentation.status)
+        assertEquals(101.4f, summary.trainingReadinessWorkoutOnly)
+    }
+
+    @Test
     fun `training readiness card preserves no-data semantics when the score is missing`() {
         val summary = summary(trainingReadinessWorkoutOnly = null)
 

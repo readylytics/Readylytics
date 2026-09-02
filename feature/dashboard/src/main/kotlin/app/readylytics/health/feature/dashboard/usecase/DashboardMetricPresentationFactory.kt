@@ -200,7 +200,9 @@ class DashboardMetricPresentationFactory
             // blends in acute residual-fatigue recovery — see ComputeTrainingReadinessUseCase).
             val trainingReadinessScore =
                 summary?.let {
-                    LoadSourceSelector.selectTrainingReadiness(it, preferences.strainLoadSourceMode)
+                    LoadSourceSelector
+                        .selectTrainingReadiness(it, preferences.strainLoadSourceMode)
+                        ?.coerceIn(0f, 100f)
                 }
             val trainingReadinessVisual = UniversalMetricScalePreparer.score(trainingReadinessScore, 0f, 100f)
             val trainingReadinessStatus = trainingReadinessScore.scoreStatus()

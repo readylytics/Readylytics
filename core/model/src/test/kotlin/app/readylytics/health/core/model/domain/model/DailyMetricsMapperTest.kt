@@ -71,6 +71,20 @@ class DailyMetricsMapperTest {
     }
 
     @Test
+    fun `training readiness display projection clamps without changing the stored source score`() {
+        val aboveRange = DailySummary(date = date, trainingReadinessWorkoutOnly = 101.4f)
+        val belowRange = DailySummary(date = date, trainingReadinessWorkoutOnly = -1.4f)
+
+        val aboveRangeMetrics = DailyMetricsMapper.toMetrics(aboveRange, prefs)
+        val belowRangeMetrics = DailyMetricsMapper.toMetrics(belowRange, prefs)
+
+        assertEquals(100, aboveRangeMetrics.trainingReadinessRounded)
+        assertEquals(0, belowRangeMetrics.trainingReadinessRounded)
+        assertEquals(101.4f, aboveRange.trainingReadinessWorkoutOnly)
+        assertEquals(-1.4f, belowRange.trainingReadinessWorkoutOnly)
+    }
+
+    @Test
     fun `strain ratio display uses canonical two decimal formatting`() {
         // Default strainLoadSourceMode is WORKOUT_ONLY.
         val summary = DailySummary(date = date, strainRatioWorkoutOnly = 0.365f)

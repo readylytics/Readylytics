@@ -130,7 +130,10 @@ object DailyMetricsMapper {
     ): LoadScoreMetrics {
         val readiness = LoadSourceSelector.selectReadiness(summary, prefs.strainLoadSourceMode)?.roundToInt()
         val trainingReadiness =
-            LoadSourceSelector.selectTrainingReadiness(summary, prefs.strainLoadSourceMode)?.roundToInt()
+            LoadSourceSelector
+                .selectTrainingReadiness(summary, prefs.strainLoadSourceMode)
+                ?.coerceIn(0f, 100f)
+                ?.roundToInt()
         val load = LoadSourceSelector.selectLoadScore(summary, prefs.strainLoadSourceMode)?.roundToInt()
         val trimp = LoadSourceSelector.selectTrimp(summary, prefs.strainLoadSourceMode)?.roundToInt()
         val rasTotal = LoadSourceSelector.selectTotalRas(summary, prefs.rasSourceMode)?.roundToInt()
