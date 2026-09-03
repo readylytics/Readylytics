@@ -10,22 +10,10 @@ import app.readylytics.health.feature.settings.nav.SettingsCategoryListItem
 import app.readylytics.health.feature.settings.nav.SettingsCategoryScaffold
 import app.readylytics.health.feature.settings.search.SettingsItemIds
 
-/**
- * [controlsEnabled] is unused in this screen's body: none of [DataSourceSettingsSection],
- * [SyncSettingsSection], or [DataManagementSection] expose an external disable-during-resync
- * hook (matching their pre-split behavior — see `SettingsSectionWrappers.kt`/
- * `SettingsSectionComposables.kt`). The parameter is kept to match this category screen's
- * plan-specified signature, which the nav-graph wiring (a later task) is expected to call
- * uniformly alongside sibling category screens that DO use it. No structural fix removes the
- * parameter without risking a signature mismatch at that future call site — flagging the
- * suppression below for explicit human sign-off per project policy.
- */
-@Suppress("UnusedParameter")
 @Composable
 internal fun DataSourcesSyncCategoryScreen(
     states: SettingsStates,
     intents: SettingsIntents,
-    controlsEnabled: Boolean,
     highlightItemId: String?,
 ) {
     SettingsCategoryScaffold(
