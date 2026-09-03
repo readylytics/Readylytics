@@ -5,7 +5,11 @@ import org.junit.Test
 
 class SettingsTransitionsTest {
     @Test
-    fun `settings predictive pop transitions are defined and non-null`() {
+    fun `settings transitions are defined and non-null`() {
+        assertNotNull(settingsEnterTransition)
+        assertNotNull(settingsExitTransition)
+        assertNotNull(settingsPopEnterTransition)
+        assertNotNull(settingsPopExitTransition)
         assertNotNull(settingsPredictivePopEnterTransition)
         assertNotNull(settingsPredictivePopExitTransition)
     }
