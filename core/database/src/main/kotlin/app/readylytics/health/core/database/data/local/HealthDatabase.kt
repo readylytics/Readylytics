@@ -18,6 +18,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepStageDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SourceRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.StepRecordDao
+import app.readylytics.health.core.databaseschema.data.local.dao.Vo2MaxRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutRoutePointDao
@@ -35,6 +36,7 @@ import app.readylytics.health.core.databaseschema.data.local.entity.OxygenSatura
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepStageEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.StepRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.Vo2MaxRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRoutePointEntity
@@ -58,6 +60,7 @@ import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRoute
         StepRecordEntity::class,
         HrMinuteBucketEntity::class,
         WorkoutRoutePointEntity::class,
+        Vo2MaxRecordEntity::class,
     ],
     version = HealthDatabase.DATABASE_VERSION,
 )
@@ -102,7 +105,9 @@ abstract class HealthDatabase : RoomDatabase() {
 
     abstract fun workoutRoutePointDao(): WorkoutRoutePointDao
 
+    abstract fun vo2MaxRecordDao(): Vo2MaxRecordDao
+
     companion object {
-        const val DATABASE_VERSION = 17
+        const val DATABASE_VERSION = 18
     }
 }

@@ -149,6 +149,8 @@ object DailySummaryMapper {
             trainingLoadReadinessEverydayHr = entity.trainingLoadReadinessEverydayHr,
             trainingReadinessWorkoutOnly = entity.trainingReadinessWorkoutOnly,
             trainingReadinessEverydayHr = entity.trainingReadinessEverydayHr,
+            vo2Max = entity.vo2Max,
+            vo2MaxSource = entity.vo2MaxSource,
         )
 
     private fun DailySummaryEntity.withBodyMetrics(domain: DailySummary): DailySummaryEntity =
@@ -204,5 +206,7 @@ object DailySummaryMapper {
             trainingLoadReadinessEverydayHr = domain.trainingLoadReadinessEverydayHr,
             trainingReadinessWorkoutOnly = domain.trainingReadinessWorkoutOnly,
             trainingReadinessEverydayHr = domain.trainingReadinessEverydayHr,
+            vo2Max = domain.vo2Max,
+            vo2MaxSource = domain.vo2MaxSource,
         )
 }

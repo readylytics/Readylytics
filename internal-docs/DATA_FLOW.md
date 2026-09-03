@@ -385,7 +385,10 @@ across the 5 vitals tables (`weight_records`, `body_fat_records`, `blood_pressur
 Version 17 (`Migration16To17`) adds nullable Training Readiness projection columns to
 `daily_summaries`: `acuteLoadRecovery`, source-specific `trainingLoadReadiness`, and source-specific
 `trainingReadiness`; existing rows remain null until the deterministic scoring projection is populated.
-The current Room schema version = 17.
+Version 18 (`Migration17To18`) adds the `vo2_max_records` table and index (`index_vo2_max_records_timestampMs`)
+for VO2 max ingestion from Health Connect, and adds nullable `vo2Max` and `vo2MaxSource` columns to
+`daily_summaries`; existing rows remain null until populated.
+The current Room schema version = 18.
 
 **Workout distance and elevation come from separate records, not the session.** An
 `ExerciseSessionRecord` carries no distance — the recording app writes `DistanceRecord` and
@@ -503,7 +506,8 @@ per-bucket (min/avg/max or percentile) replay values are unchanged.
 | `BloodPressureRecordEntity`    | `blood_pressure_records`    | `id: String` (composite)               | systolic/diastolic, `timestampMs`, `deviceName`                                                                                                           |
 | `OxygenSaturationRecordEntity` | `oxygen_saturation_records` | `id: String` (composite)               | %, `timestampMs`, `deviceName`                                                                                                                            |
 | `BodyTemperatureRecordEntity`  | `body_temperature_records`  | `id: String` (composite)               | `celsius`, `timestampMs`, `deviceName`                                                                                                                     |
-| `DailySummaryEntity`           | `daily_summaries`           | `dateMidnightMs: Long`                 | computed scores (sleep/load/readiness), frozen baselines (`hrv_mu_mssd`, `hrv_sigma_mssd`, `rhr_bpm`, `rhr_sigma`, `hr_max`, …), weight/BP/SpO2/body-temp snapshots (`avgSleepingBodyTemp` — nightly average, never a scoring input) |
+| `DailySummaryEntity`           | `daily_summaries`           | `dateMidnightMs: Long`                 | computed scores (sleep/load/readiness), frozen baselines (`hrv_mu_mssd`, `hrv_sigma_mssd`, `rhr_bpm`, `rhr_sigma`, `hr_max`, …), weight/BP/SpO2/body-temp snapshots (`avgSleepingBodyTemp` — nightly average, never a scoring input), VO2 max snapshot (`vo2Max`, `vo2MaxSource`) |
+| `Vo2MaxRecordEntity`           | `vo2_max_records`           | `id: String` (HC id)                   | `timestampMs`, `vo2Max` (mL/kg/min), `measurementMethod` (nullable), `deviceName`                                                                         |
 | `InsightDismissalEntity`       | `insight_dismissals`        | `(dateMidnightMs: Long, type: String)` | `type: String` (LATE_NADIR, SICK_INDICATOR, STRONG_RECOVERY_SIGNAL, LOAD_SPIKE_RECOVERY_STRAIN, …) — represents dismissed dashboard insights                                                       |
 | `AuditEventEntity`             | `audit_events`              | `id: Long` (auto)                      | `type`, `occurredAtEpochMs`, optional coarse `detail` for local backup/restore/key-lifecycle events                                                       |
 

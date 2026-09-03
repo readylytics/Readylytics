@@ -155,4 +155,35 @@ class DailySummaryMapperTest {
         assertEquals("REST_DAY_NO_IMPACT", entity.recoveryFlags)
         assertEquals(flags, roundTrip.readinessResult.recoveryFlags)
     }
+
+    @Test
+    fun dailySummaryMapperPreservesVo2MaxFields() {
+        val zoneId = ZoneId.of("Europe/Berlin")
+        val summary =
+            DailySummary(
+                date = LocalDate.of(2026, 3, 29),
+                vo2Max = 48.5f,
+                vo2MaxSource = "HEALTH_CONNECT",
+            )
+
+        val restored = DailySummaryMapper.toDomain(DailySummaryMapper.toEntity(summary, zoneId), zoneId)
+
+        assertEquals(summary, restored)
+        assertEquals(48.5f, restored.vo2Max)
+        assertEquals("HEALTH_CONNECT", restored.vo2MaxSource)
+    }
+
+    @Test
+    fun dailySummaryMapperDefaultsVo2MaxFieldsToNull() {
+        val zoneId = ZoneId.of("Europe/Berlin")
+        val summary = DailySummary(date = LocalDate.of(2026, 3, 29))
+
+        val entity = DailySummaryMapper.toEntity(summary, zoneId)
+        val restored = DailySummaryMapper.toDomain(entity, zoneId)
+
+        assertTrue(entity.vo2Max == null)
+        assertTrue(entity.vo2MaxSource == null)
+        assertTrue(restored.vo2Max == null)
+        assertTrue(restored.vo2MaxSource == null)
+    }
 }
