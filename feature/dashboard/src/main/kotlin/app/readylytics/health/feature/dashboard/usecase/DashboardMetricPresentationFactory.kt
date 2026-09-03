@@ -40,6 +40,7 @@ class DashboardMetricPresentationFactory
     constructor(
         private val resourceProvider: ResourceProvider,
         private val residualFatiguePresentationFactory: ResidualFatiguePresentationFactory,
+        private val cardioFactory: DashboardCardioMetricPresentationFactory,
     ) {
         // Human-readable, TalkBack-friendly accessibilityDescription wiring for all 15 dashboard metric
         // cards (Sleep Score, Readiness, Weight, Body Fat, Sleep Duration, HRV, Sleep RHR, Resting HR,
@@ -650,6 +651,14 @@ class DashboardMetricPresentationFactory
                     unavailableValueText = unavailableValueText,
                     liveResidualFatigue = liveResidualFatigue,
                 )
+
+            map.putAll(
+                cardioFactory.build(
+                    summary = summary,
+                    preferences = preferences,
+                    unavailableValueText = unavailableValueText,
+                ),
+            )
 
             return map
         }

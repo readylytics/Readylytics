@@ -30,6 +30,7 @@ enum class CardId {
     RESIDUAL_FATIGUE,
     TRAINING_READINESS,
     CARDIO_FITNESS,
+    TSB,
 }
 
 @Serializable

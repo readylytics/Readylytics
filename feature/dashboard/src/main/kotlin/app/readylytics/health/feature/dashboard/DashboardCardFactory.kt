@@ -393,6 +393,30 @@ fun buildCardDataMap(
         )
     }
 
+    cardMap[CardId.CARDIO_FITNESS] = { configuration ->
+        ConfigurableMetricCard(
+            cardId = CardId.CARDIO_FITNESS,
+            presentation = uiState.cardDataMap[CardId.CARDIO_FITNESS],
+            configuration = configuration,
+            isEditing = isEditing,
+            isLoading = isLoading,
+            onClick = onNavigateToVitals,
+            onCardDisplayModeChanged = onCardDisplayModeChanged,
+        )
+    }
+
+    cardMap[CardId.TSB] = { configuration ->
+        ConfigurableMetricCard(
+            cardId = CardId.TSB,
+            presentation = uiState.cardDataMap[CardId.TSB],
+            configuration = configuration,
+            isEditing = isEditing,
+            isLoading = isLoading,
+            onClick = onNavigateToWorkouts,
+            onCardDisplayModeChanged = onCardDisplayModeChanged,
+        )
+    }
+
     return cardMap
 }
 
