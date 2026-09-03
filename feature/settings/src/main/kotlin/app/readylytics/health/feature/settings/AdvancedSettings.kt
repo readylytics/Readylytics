@@ -256,7 +256,7 @@ private fun RecoveryToleranceSubsection(
 }
 
 @Composable
-private fun RasScalingSubsection(
+fun RasScalingSubsection(
     rasScalingFactor: Float,
     controlsEnabled: Boolean,
     onPhysiologyEvent: (SettingsEvent) -> Unit,
