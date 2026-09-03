@@ -2,6 +2,10 @@ package app.readylytics.health.feature.settings
 
 import android.content.Context
 import android.content.Intent
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -234,6 +238,22 @@ private fun SettingsScreenContent(
         navController = navController,
         startDestination = SettingsDestination.Home,
         modifier = modifier.fillMaxSize(),
+        enterTransition = {
+            fadeIn(animationSpec = tween(300)) +
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300))
+        },
+        exitTransition = {
+            fadeOut(animationSpec = tween(300)) +
+                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300))
+        },
+        popEnterTransition = {
+            fadeIn(animationSpec = tween(300)) +
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300))
+        },
+        popExitTransition = {
+            fadeOut(animationSpec = tween(300)) +
+                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300))
+        },
     ) {
         composable<SettingsDestination.Home> {
             SettingsHomeScreen(
