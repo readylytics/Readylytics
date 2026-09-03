@@ -136,6 +136,6 @@ internal fun MacrobenchmarkScope.panAndZoomChart(tag: String) {
 }
 
 internal fun MacrobenchmarkScope.waitForSettingsContent(packageName: String) {
-    val dataAndBackup = appString(packageName, "settings_section_data_backup")
-    waitForObject(By.text(dataAndBackup), "Settings content did not render")
+    val firstCategory = appString(packageName, "settings_category_physiology_profile_title")
+    waitForObject(By.text(firstCategory), "Settings content did not render")
 }

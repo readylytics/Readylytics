@@ -99,10 +99,6 @@ object SettingsDefaults {
     const val STEP_GOAL = 10000
     const val RETENTION_DAYS_ENABLED = true
     const val RETENTION_DAYS = 360 // 12 months (30 days per month)
-    const val COLLAPSE_HEALTH_CONNECT = true
-    const val COLLAPSE_BASELINES_THRESHOLDS = true
-    const val COLLAPSE_DISPLAY = true
-    const val COLLAPSE_ADVANCED = true
     const val ABOUT_DISMISSED = false
     val PHYSIOLOGY_PROFILE = PhysiologyProfile.ACTIVE
     const val INSTALL_DATE = 0L // Set to System.currentTimeMillis() on first app run

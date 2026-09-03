@@ -93,6 +93,8 @@ fun MainNavHost(
                     tween(300),
                 )
         },
+        predictivePopEnterTransition = { _: Int -> predictivePopEnter() },
+        predictivePopExitTransition = { _: Int -> predictivePopExit() },
     ) {
         dashboardDestinations(navController)
         vitalsAndSleepDestinations(navController)

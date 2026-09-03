@@ -96,10 +96,6 @@ internal fun UserPreferencesProto.Builder.applyPaletteAndUiFields(
     domain: UserPreferences,
 ): UserPreferencesProto.Builder =
     apply {
-        setCollapseHealthConnect(domain.collapseHealthConnect)
-        setCollapseBaselinesThresholds(domain.collapseBaselinesThresholds)
-        setCollapseDisplay(domain.collapseDisplay)
-        setCollapseAdvanced(domain.collapseAdvanced)
         setAboutDismissed(domain.aboutDismissed)
         setPhysiologyProfile(PhysiologyProfileProto.valueOf("PROFILE_${domain.physiologyProfile.name}"))
         setInstallDate(domain.installDate)
