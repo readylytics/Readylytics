@@ -17,7 +17,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.feature.settings.R
@@ -32,16 +35,22 @@ fun SettingsHomeScreen(
     onCategorySelected: (SettingsCategoryId) -> Unit,
     onSearchResultSelected: (ResolvedSearchItem) -> Unit,
 ) {
+    val resources = LocalContext.current.resources
     val resolvedItems =
-        allSettingsSearchItems.map {
-            ResolvedSearchItem(
-                id = it.id,
-                categoryId = it.categoryId,
-                label = stringResource(it.labelRes),
-                keywords = it.keywords,
-            )
+        remember(resources) {
+            allSettingsSearchItems.map {
+                ResolvedSearchItem(
+                    id = it.id,
+                    categoryId = it.categoryId,
+                    label = resources.getString(it.labelRes),
+                    keywords = it.keywords,
+                )
+            }
         }
-    val results = matchSettingsItems(resolvedItems, searchQuery)
+    val results =
+        remember(resolvedItems, searchQuery) {
+            matchSettingsItems(resolvedItems, searchQuery)
+        }
 
     Column(modifier = Modifier.fillMaxSize()) {
         SettingsSearchBar(searchQuery = searchQuery, onSearchQueryChanged = onSearchQueryChanged)
@@ -103,6 +112,7 @@ private fun SearchResultsList(
     results: List<ResolvedSearchItem>,
     onSearchResultSelected: (ResolvedSearchItem) -> Unit,
 ) {
+    val focusManager = LocalFocusManager.current
     if (results.isEmpty()) {
         Text(
             text = stringResource(R.string.settings_search_no_results),
@@ -117,7 +127,13 @@ private fun SearchResultsList(
             ListItem(
                 headlineContent = { Text(result.label) },
                 supportingContent = { Text(stringResource(result.categoryId.titleRes)) },
-                modifier = Modifier.fillMaxWidth().clickableSettingsRow { onSearchResultSelected(result) },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clickableSettingsRow {
+                            focusManager.clearFocus()
+                            onSearchResultSelected(result)
+                        },
             )
         }
     }
