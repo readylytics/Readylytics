@@ -14,6 +14,8 @@ import app.readylytics.health.core.database.data.repository.ScoringSeriesLoader
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.core.database.data.repository.SleepSessionRepositoryImpl
+import app.readylytics.health.core.scoring.domain.cardio.UthVo2MaxCalculator
+import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxSourceResolver
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
 import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
@@ -145,6 +147,7 @@ class WalkForwardTransactionEquivalenceTest {
                 BodyMetricsDataLoader(
                     db.weightRecordDao(), db.bodyFatRecordDao(), db.bloodPressureRecordDao(),
                     db.oxygenSaturationRecordDao(), db.bodyTemperatureRecordDao(),
+                    db.vo2MaxRecordDao(),
                 )
             val seriesLoader = ScoringSeriesLoader(db.workoutDao(), db.dailySummaryDao())
             val sleepSessionRepository = SleepSessionRepositoryImpl(db.sleepSessionDao(), db.sleepStageDao())
@@ -200,6 +203,8 @@ class WalkForwardTransactionEquivalenceTest {
                             resolveDailyBaselinesUseCase,
                             AssembleEverydayLoadInputUseCase(),
                         ComputeTrainingReadinessUseCase(scoringCalculator),
+                            UthVo2MaxCalculator(),
+                            Vo2MaxSourceResolver(),
                         ),
                     scoringHistoryRepository = scoringHistoryRepository,
                     readinessSummaryCoordinator = readinessSummaryCoordinator,

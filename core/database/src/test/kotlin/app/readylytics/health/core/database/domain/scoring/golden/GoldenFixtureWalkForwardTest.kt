@@ -17,6 +17,8 @@ import app.readylytics.health.core.database.data.repository.ScoringHistoryReposi
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.core.database.data.repository.SleepSessionRepositoryImpl
 import app.readylytics.health.core.model.domain.heartrate.ZoneThresholds
+import app.readylytics.health.core.scoring.domain.cardio.UthVo2MaxCalculator
+import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxSourceResolver
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
 import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
@@ -212,6 +214,7 @@ class GoldenFixtureWalkForwardTest {
                 BodyMetricsDataLoader(
                     db.weightRecordDao(), db.bodyFatRecordDao(), db.bloodPressureRecordDao(),
                     db.oxygenSaturationRecordDao(), db.bodyTemperatureRecordDao(),
+                    db.vo2MaxRecordDao(),
                 )
             val seriesLoader = ScoringSeriesLoader(db.workoutDao(), db.dailySummaryDao())
             val buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator)
@@ -246,6 +249,8 @@ class GoldenFixtureWalkForwardTest {
                             resolveDailyBaselinesUseCase,
                             AssembleEverydayLoadInputUseCase(),
                         ComputeTrainingReadinessUseCase(scoringCalculator),
+                            UthVo2MaxCalculator(),
+                            Vo2MaxSourceResolver(),
                         ),
                     scoringHistoryRepository = scoringHistoryRepository,
                     readinessSummaryCoordinator = readinessSummaryCoordinator,

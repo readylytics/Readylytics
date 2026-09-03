@@ -6,9 +6,13 @@ import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineCo
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.core.model.data.preferences.appliedTrainingReadinessConfig
+import app.readylytics.health.core.scoring.domain.cardio.UthVo2MaxCalculator
+import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxResolution
+import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxSourceResolver
 import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
 import app.readylytics.health.core.scoring.domain.scoring.EverydayHrLoadResult
+import app.readylytics.health.core.scoring.domain.scoring.TrainingReadinessProjection
 
 /**
  * Assembles the final per-day [DailySummary] from the raw scoring inputs, mirroring
@@ -23,6 +27,8 @@ class FinalSummaryAssembler(
     private val readinessSummaryCoordinator: ReadinessSummaryCoordinator,
     private val residualFatigueComputer: ResidualFatigueComputer,
     private val computeTrainingReadiness: ComputeTrainingReadinessUseCase,
+    private val uthVo2MaxCalculator: UthVo2MaxCalculator,
+    private val vo2MaxSourceResolver: Vo2MaxSourceResolver,
 ) {
     data class Inputs(
         val context: ScoringDayContext,
@@ -66,6 +72,24 @@ class FinalSummaryAssembler(
         val withFatigue = summary.copy(
             residualFatigue = residualFatigueComputer.compute(inputs.context, inputs.fatigueContext)
         )
+        val (projectionForWorkout, projectionForEveryday) = resolveReadinessProjections(withFatigue, inputs)
+        val vo2MaxResolution = resolveVo2Max(inputs, isCalibrated)
+        return withFatigue.copy(
+            acuteLoadRecovery = projectionForWorkout.acuteLoadRecovery,
+            trainingLoadReadinessWorkoutOnly = projectionForWorkout.trainingLoadReadiness,
+            trainingReadinessWorkoutOnly = projectionForWorkout.trainingReadiness,
+            trainingLoadReadinessEverydayHr = projectionForEveryday.trainingLoadReadiness,
+            trainingReadinessEverydayHr = projectionForEveryday.trainingReadiness,
+            vo2Max = vo2MaxResolution.vo2Max,
+            vo2MaxSource = vo2MaxResolution.source,
+        )
+    }
+
+    private fun resolveReadinessProjections(
+        withFatigue: DailySummary,
+        inputs: Inputs,
+    ): Pair<TrainingReadinessProjection, TrainingReadinessProjection> {
+        val config = inputs.context.prefs.appliedTrainingReadinessConfig()
         val projectionForWorkout = computeTrainingReadiness.compute(
             restoration = withFatigue.sRest,
             sleepScore = withFatigue.sleepScore,
@@ -73,8 +97,7 @@ class FinalSummaryAssembler(
             legacyReadiness = withFatigue.readinessWorkoutOnly,
             residualFatigue = withFatigue.residualFatigue,
             recoveryFlags = withFatigue.recoveryFlags,
-            config = 
-                inputs.context.prefs.appliedTrainingReadinessConfig()
+            config = config,
         )
         val projectionForEveryday = computeTrainingReadiness.compute(
             restoration = withFatigue.sRest,
@@ -83,18 +106,26 @@ class FinalSummaryAssembler(
             legacyReadiness = withFatigue.readinessEverydayHr,
             residualFatigue = withFatigue.residualFatigue,
             recoveryFlags = withFatigue.recoveryFlags,
-            config = 
-                inputs.context.prefs.appliedTrainingReadinessConfig()
+            config = config,
         )
         require(projectionForWorkout.acuteLoadRecovery == projectionForEveryday.acuteLoadRecovery) {
             "Acute load recovery must match between load variants"
         }
-        return withFatigue.copy(
-            acuteLoadRecovery = projectionForWorkout.acuteLoadRecovery,
-            trainingLoadReadinessWorkoutOnly = projectionForWorkout.trainingLoadReadiness,
-            trainingReadinessWorkoutOnly = projectionForWorkout.trainingReadiness,
-            trainingLoadReadinessEverydayHr = projectionForEveryday.trainingLoadReadiness,
-            trainingReadinessEverydayHr = projectionForEveryday.trainingReadiness,
+        return projectionForWorkout to projectionForEveryday
+    }
+
+    private suspend fun resolveVo2Max(inputs: Inputs, isCalibrated: Boolean): Vo2MaxResolution {
+        val uthEstimate =
+            uthVo2MaxCalculator.estimate(
+                hrMax = inputs.context.initialBaselines.hrMax,
+                rhrBaselineBpm = inputs.context.initialBaselines.rhrBaselineValue,
+                isCalibrating = !isCalibrated,
+            )
+        val wearableVo2Max = bodyMetricsDataLoader.loadLatestVo2Max(inputs.context.nextDayMidnightMs)?.vo2Max
+        return vo2MaxSourceResolver.resolve(
+            mode = inputs.context.prefs.vo2MaxSourceMode,
+            wearableVo2Max = wearableVo2Max,
+            uthEstimatedVo2Max = uthEstimate,
         )
     }
 

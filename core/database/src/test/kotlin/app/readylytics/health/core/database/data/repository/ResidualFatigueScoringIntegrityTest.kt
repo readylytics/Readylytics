@@ -24,6 +24,8 @@ import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
+import app.readylytics.health.core.scoring.domain.cardio.UthVo2MaxCalculator
+import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxSourceResolver
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
 import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
@@ -524,6 +526,7 @@ class ResidualFatigueScoringIntegrityTest {
         val bodyMetricsDataLoader = BodyMetricsDataLoader(
             database.weightRecordDao(), database.bodyFatRecordDao(), database.bloodPressureRecordDao(),
             database.oxygenSaturationRecordDao(), database.bodyTemperatureRecordDao(),
+            database.vo2MaxRecordDao(),
         )
         val seriesLoader = ScoringSeriesLoader(database.workoutDao(), database.dailySummaryDao())
         val components = RepoComponents(
@@ -553,6 +556,8 @@ class ResidualFatigueScoringIntegrityTest {
                 ResolveDailyBaselinesUseCase(baselineComputer),
                 AssembleEverydayLoadInputUseCase(),
                         ComputeTrainingReadinessUseCase(scoringCalculator),
+                UthVo2MaxCalculator(),
+                Vo2MaxSourceResolver(),
             ),
             scoringHistoryRepository = scoringHistoryRepository,
             readinessSummaryCoordinator = coordinator,

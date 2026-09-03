@@ -1,6 +1,8 @@
 package app.readylytics.health.core.database.domain.scoring
 import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
+import app.readylytics.health.core.scoring.domain.cardio.UthVo2MaxCalculator
+import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxSourceResolver
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
 import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
@@ -25,6 +27,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.OxygenSaturatio
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepHrSample
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepStageDao
+import app.readylytics.health.core.databaseschema.data.local.dao.Vo2MaxRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
@@ -95,7 +98,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
     @Test
     fun `same target date yields identical outputs across 60d 365d 1y unlimited histories`() =
         runTest {
-            val fixture = buildFixture(includeFutureSessions = false)
+            val fixture = buildFixture(targetDate = targetDate, zoneId = zoneId, includeFutureSessions = false)
 
             val results =
                 listOf(
@@ -112,8 +115,8 @@ class ScoringSyncScopeOutputsDeterminismTest {
     @Test
     fun `same target date yields identical outputs when extra future data is present before recompute`() =
         runTest {
-            val baseFixture = buildFixture(includeFutureSessions = false)
-            val futureFixture = buildFixture(includeFutureSessions = true)
+            val baseFixture = buildFixture(targetDate = targetDate, zoneId = zoneId, includeFutureSessions = false)
+            val futureFixture = buildFixture(targetDate = targetDate, zoneId = zoneId, includeFutureSessions = true)
 
             val results =
                 listOf(
@@ -135,7 +138,8 @@ class ScoringSyncScopeOutputsDeterminismTest {
             for (sourceMode in LoadSourceMode.values()) {
                 val sourcePrefs = prefs.copy(strainLoadSourceMode = sourceMode)
                 val canonicalFixture =
-                    buildFixture(includeFutureSessions = false).copy(preferences = sourcePrefs)
+                    buildFixture(targetDate = targetDate, zoneId = zoneId, includeFutureSessions = false)
+                        .copy(preferences = sourcePrefs)
                 val incremental =
                     computeForScope(
                         label = "incremental sync",
@@ -151,7 +155,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
                         computeForScope(
                             label = "app restart",
                             fixture =
-                                buildFixture(includeFutureSessions = false)
+                                buildFixture(targetDate = targetDate, zoneId = zoneId, includeFutureSessions = false)
                                     .copy(preferences = sourcePrefs),
                             scopeDays = 60,
                         ),
@@ -207,7 +211,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
     @Test
     fun `same target date keeps rounded sleep and readiness when live summary becomes frozen`() =
         runTest {
-            val fixture = buildFixture(includeFutureSessions = false)
+            val fixture = buildFixture(targetDate = targetDate, zoneId = zoneId, includeFutureSessions = false)
             val live = computeForScope("live", fixture, scopeDays = 60).summary
             val frozenReplay =
                 computeForScope(
@@ -234,7 +238,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
     @Test
     fun `frozen baseline snapshot columns remain unchanged when target day is recomputed`() =
         runTest {
-            val fixture = buildFixture(includeFutureSessions = false)
+            val fixture = buildFixture(targetDate = targetDate, zoneId = zoneId, includeFutureSessions = false)
             val live = computeForScope("live", fixture, scopeDays = 60).summary
             val frozenSnapshot =
                 live.copy(
@@ -299,6 +303,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
         val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
         val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
         val bodyTemperatureRecordDao = mockk<BodyTemperatureRecordDao>(relaxed = true)
+        val vo2MaxRecordDao = mockk<Vo2MaxRecordDao>(relaxed = true)
 
         every { settingsRepo.userPreferences } returns flowOf(preferences)
 
@@ -460,6 +465,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
                 bloodPressureRecordDao,
                 oxygenSaturationRecordDao,
                 bodyTemperatureRecordDao,
+                vo2MaxRecordDao,
             )
         val seriesLoader = ScoringSeriesLoader(workoutDao, dailySummaryDao)
         val buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator)
@@ -494,6 +500,8 @@ class ScoringSyncScopeOutputsDeterminismTest {
                         resolveDailyBaselinesUseCase,
                         AssembleEverydayLoadInputUseCase(),
                         ComputeTrainingReadinessUseCase(scoringCalculator),
+                        UthVo2MaxCalculator(),
+                        Vo2MaxSourceResolver(),
                     ),
                 scoringHistoryRepository = scoringHistoryRepository,
                 readinessSummaryCoordinator = readinessSummaryCoordinator,
@@ -618,135 +626,146 @@ class ScoringSyncScopeOutputsDeterminismTest {
             recoveryFlags = summary.recoveryFlags,
         )
 
-    private fun buildFixture(includeFutureSessions: Boolean): Fixture {
-        val sessions = mutableListOf<SleepSessionEntity>()
-        val sleepHrBySession = mutableMapOf<String, List<Int>>()
-        val hrvBySession = mutableMapOf<String, List<Float>>()
-        val heartRateRecords = mutableListOf<HeartRateRecordEntity>()
+}
 
-        fun addSession(
-            sessionId: String,
-            dayOffset: Long,
-            lowHr: Int,
-            hrvBase: Float,
-        ) {
-            val end =
-                targetDate
-                    .minusDays(dayOffset)
-                    .atTime(6, 30)
-                    .atZone(zoneId)
-                    .toInstant()
-                    .toEpochMilli()
-            val start = end - 8 * 60 * 60 * 1000L
-            val session =
-                SleepSessionEntity(
-                    id = sessionId,
-                    startTime = start,
-                    endTime = end,
-                    durationMinutes = 480,
-                    efficiency = 92f,
-                    deepSleepMinutes = 105,
-                    remSleepMinutes = 90,
-                    lightSleepMinutes = 255,
-                    awakeMinutes = 30,
-                    startZoneOffsetSeconds = 0,
-                    endZoneOffsetSeconds = 0,
+// Moved out of ScoringSyncScopeOutputsDeterminismTest (rather than a member function) to keep the
+// test class under detekt's LargeClass threshold: takes targetDate/zoneId explicitly instead of
+// reading instance state, so behavior is unchanged from the previous private member function.
+private fun buildFixture(
+    targetDate: LocalDate,
+    zoneId: ZoneId,
+    includeFutureSessions: Boolean,
+): Fixture {
+    val sessions = mutableListOf<SleepSessionEntity>()
+    val sleepHrBySession = mutableMapOf<String, List<Int>>()
+    val hrvBySession = mutableMapOf<String, List<Float>>()
+    val heartRateRecords = mutableListOf<HeartRateRecordEntity>()
+
+    fun addSession(
+        sessionId: String,
+        dayOffset: Long,
+        lowHr: Int,
+        hrvBase: Float,
+    ) {
+        val end =
+            targetDate
+                .minusDays(dayOffset)
+                .atTime(6, 30)
+                .atZone(zoneId)
+                .toInstant()
+                .toEpochMilli()
+        val start = end - 8 * 60 * 60 * 1000L
+        val session =
+            SleepSessionEntity(
+                id = sessionId,
+                startTime = start,
+                endTime = end,
+                durationMinutes = 480,
+                efficiency = 92f,
+                deepSleepMinutes = 105,
+                remSleepMinutes = 90,
+                lightSleepMinutes = 255,
+                awakeMinutes = 30,
+                startZoneOffsetSeconds = 0,
+                endZoneOffsetSeconds = 0,
+                deviceName = "Pixel",
+            )
+        val bpmCurve =
+            listOf(
+                lowHr + 8,
+                lowHr + 6,
+                lowHr + 5,
+                lowHr + 4,
+                lowHr + 2,
+                lowHr,
+                lowHr + 1,
+                lowHr + 2,
+                lowHr + 3,
+                lowHr + 4,
+                lowHr + 5,
+                lowHr + 6,
+            )
+        val stepMs = (session.endTime - session.startTime) / (bpmCurve.size - 1)
+
+        sessions += session
+        sleepHrBySession[sessionId] = bpmCurve.sorted()
+        hrvBySession[sessionId] = listOf(hrvBase, hrvBase + 2f, hrvBase + 4f)
+        heartRateRecords +=
+            bpmCurve.mapIndexed { index, bpm ->
+                HeartRateRecordEntity(
+                    sourceRecordRef = index.toLong() + 1,
+                    timestampMs = session.startTime + stepMs * index,
+                    beatsPerMinute = bpm,
+                    recordType = "SLEEP",
+                    sessionId = sessionId,
                     deviceName = "Pixel",
                 )
-            val bpmCurve =
-                listOf(
-                    lowHr + 8,
-                    lowHr + 6,
-                    lowHr + 5,
-                    lowHr + 4,
-                    lowHr + 2,
-                    lowHr,
-                    lowHr + 1,
-                    lowHr + 2,
-                    lowHr + 3,
-                    lowHr + 4,
-                    lowHr + 5,
-                    lowHr + 6,
-                )
-            val stepMs = (session.endTime - session.startTime) / (bpmCurve.size - 1)
-
-            sessions += session
-            sleepHrBySession[sessionId] = bpmCurve.sorted()
-            hrvBySession[sessionId] = listOf(hrvBase, hrvBase + 2f, hrvBase + 4f)
-            heartRateRecords +=
-                bpmCurve.mapIndexed { index, bpm ->
-                    HeartRateRecordEntity(
-                        sourceRecordRef = index.toLong() + 1,
-                        timestampMs = session.startTime + stepMs * index,
-                        beatsPerMinute = bpm,
-                        recordType = "SLEEP",
-                        sessionId = sessionId,
-                        deviceName = "Pixel",
-                    )
-                }
-        }
-
-        for (offset in 0L..60L) {
-            val lowHr = if (offset == 0L) 51 else 48 + (offset % 6).toInt()
-            val hrvBase = if (offset == 0L) 66f else 48f + (offset % 9).toFloat()
-            addSession("day_$offset", offset, lowHr, hrvBase)
-        }
-        for (offset in 61L..365L) {
-            addSession("day_$offset", offset, 44 + (offset % 5).toInt(), 42f + (offset % 7).toFloat())
-        }
-        for (offset in 366L..500L) {
-            addSession("day_$offset", offset, 41 + (offset % 4).toInt(), 38f + (offset % 6).toFloat())
-        }
-        if (includeFutureSessions) {
-            for (offset in -5L..-1L) {
-                addSession(
-                    "future_${-offset}",
-                    offset,
-                    70 + offset.toInt().absoluteValue,
-                    82f + offset.toFloat().absoluteValue,
-                )
             }
-        }
-
-        return Fixture(
-            sessions = sessions.sortedBy { it.startTime },
-            sleepHrBySession = sleepHrBySession,
-            hrvBySession = hrvBySession,
-            heartRateRecords = heartRateRecords.sortedBy { it.timestampMs },
-        )
     }
 
-    private data class Fixture(
-        val sessions: List<SleepSessionEntity>,
-        val sleepHrBySession: Map<String, List<Int>>,
-        val hrvBySession: Map<String, List<Float>>,
-        val heartRateRecords: List<HeartRateRecordEntity>,
-        val preferences: UserPreferences? = null,
-    ) {
-        fun reversedIngestionOrder(): Fixture =
-            copy(
-                sessions = sessions.reversed(),
-                sleepHrBySession = sleepHrBySession.entries.reversed().associate { it.toPair() },
-                hrvBySession = hrvBySession.entries.reversed().associate { it.toPair() },
-                heartRateRecords = heartRateRecords.reversed(),
+    for (offset in 0L..60L) {
+        val lowHr = if (offset == 0L) 51 else 48 + (offset % 6).toInt()
+        val hrvBase = if (offset == 0L) 66f else 48f + (offset % 9).toFloat()
+        addSession("day_$offset", offset, lowHr, hrvBase)
+    }
+    for (offset in 61L..365L) {
+        addSession("day_$offset", offset, 44 + (offset % 5).toInt(), 42f + (offset % 7).toFloat())
+    }
+    for (offset in 366L..500L) {
+        addSession("day_$offset", offset, 41 + (offset % 4).toInt(), 38f + (offset % 6).toFloat())
+    }
+    if (includeFutureSessions) {
+        for (offset in -5L..-1L) {
+            addSession(
+                "future_${-offset}",
+                offset,
+                70 + offset.toInt().absoluteValue,
+                82f + offset.toFloat().absoluteValue,
             )
+        }
     }
 
-    private data class AdvisorInput(
-        val readiness: Float?,
-        val loadScore: Float?,
-        val trimp: Float?,
-        val atl: Float?,
-        val ctl: Float?,
-        val strainRatio: Float?,
-        val sleepScore: Float?,
-        val restoration: Float?,
-        val recoveryFlags: Set<app.readylytics.health.core.model.domain.model.RecoveryFlag>,
-    )
-
-    private data class ScopeResult(
-        val label: String,
-        val summary: DailySummary,
-        val advisorInput: AdvisorInput,
+    return Fixture(
+        sessions = sessions.sortedBy { it.startTime },
+        sleepHrBySession = sleepHrBySession,
+        hrvBySession = hrvBySession,
+        heartRateRecords = heartRateRecords.sortedBy { it.timestampMs },
     )
 }
+
+// Moved out of ScoringSyncScopeOutputsDeterminismTest (rather than nested) to keep the test class
+// under detekt's LargeClass threshold: these are plain data holders with no dependency on instance
+// state, so file-scoped visibility behaves identically to the previous nested/private declarations.
+private data class Fixture(
+    val sessions: List<SleepSessionEntity>,
+    val sleepHrBySession: Map<String, List<Int>>,
+    val hrvBySession: Map<String, List<Float>>,
+    val heartRateRecords: List<HeartRateRecordEntity>,
+    val preferences: UserPreferences? = null,
+) {
+    fun reversedIngestionOrder(): Fixture =
+        copy(
+            sessions = sessions.reversed(),
+            sleepHrBySession = sleepHrBySession.entries.reversed().associate { it.toPair() },
+            hrvBySession = hrvBySession.entries.reversed().associate { it.toPair() },
+            heartRateRecords = heartRateRecords.reversed(),
+        )
+}
+
+private data class AdvisorInput(
+    val readiness: Float?,
+    val loadScore: Float?,
+    val trimp: Float?,
+    val atl: Float?,
+    val ctl: Float?,
+    val strainRatio: Float?,
+    val sleepScore: Float?,
+    val restoration: Float?,
+    val recoveryFlags: Set<app.readylytics.health.core.model.domain.model.RecoveryFlag>,
+)
+
+private data class ScopeResult(
+    val label: String,
+    val summary: DailySummary,
+    val advisorInput: AdvisorInput,
+)

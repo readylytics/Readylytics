@@ -1,5 +1,7 @@
 package app.readylytics.health.core.database.data.repository
 
+import app.readylytics.health.core.scoring.domain.cardio.UthVo2MaxCalculator
+import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxSourceResolver
 import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase
@@ -25,4 +27,6 @@ data class ScoringDayUseCases
         val resolveDailyBaselines: ResolveDailyBaselinesUseCase,
         val assembleEverydayLoadInput: AssembleEverydayLoadInputUseCase,
         val computeTrainingReadiness: ComputeTrainingReadinessUseCase,
+        val uthVo2MaxCalculator: UthVo2MaxCalculator,
+        val vo2MaxSourceResolver: Vo2MaxSourceResolver,
     )

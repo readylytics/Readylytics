@@ -10,6 +10,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
 import app.readylytics.health.core.databaseschema.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
+import app.readylytics.health.core.databaseschema.data.local.dao.Vo2MaxRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
@@ -25,6 +26,8 @@ import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineCo
 import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
 import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.core.model.domain.scoring.ResidualFatigueConfig
+import app.readylytics.health.core.scoring.domain.cardio.UthVo2MaxCalculator
+import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxSourceResolver
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
 import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
@@ -76,6 +79,7 @@ abstract class ResidualFatigueWalkForwardTestBase {
     protected val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
     protected val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
     protected val bodyTemperatureRecordDao = mockk<BodyTemperatureRecordDao>(relaxed = true)
+    protected val vo2MaxRecordDao = mockk<Vo2MaxRecordDao>(relaxed = true)
     protected val scoringHistoryRepository = mockk<ScoringHistoryRepository>(relaxed = true)
 
     protected val zoneId: ZoneId = ZoneId.of("UTC")
@@ -114,6 +118,7 @@ abstract class ResidualFatigueWalkForwardTestBase {
                 bloodPressureRecordDao,
                 oxygenSaturationRecordDao,
                 bodyTemperatureRecordDao,
+                vo2MaxRecordDao,
             )
         val seriesLoader = ScoringSeriesLoader(workoutDao, dailySummaryDao)
         val readinessSummaryCoordinator =
@@ -142,6 +147,8 @@ abstract class ResidualFatigueWalkForwardTestBase {
                 ResolveDailyBaselinesUseCase(baselineComputer),
                 AssembleEverydayLoadInputUseCase(),
                         ComputeTrainingReadinessUseCase(scoringCalculator),
+                UthVo2MaxCalculator(),
+                Vo2MaxSourceResolver(),
             ),
             scoringHistoryRepository,
             readinessSummaryCoordinator,

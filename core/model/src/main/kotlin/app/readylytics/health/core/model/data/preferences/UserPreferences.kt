@@ -117,6 +117,7 @@ data class UserPreferences(
         SettingsDefaults.TRAINING_READINESS_LOAD_BALANCE_WEIGHT,
     val lastAppliedTrainingReadinessResidualFatigueScale: Float? = null,
     val lastAppliedTrainingReadinessLoadBalanceWeight: Float? = null,
+    val vo2MaxSourceMode: Vo2MaxSourceMode = Vo2MaxSourceMode.AUTO,
 )
 
 /**

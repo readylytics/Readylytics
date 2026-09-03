@@ -1,6 +1,8 @@
 package app.readylytics.health.core.database.domain.scoring
 import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
+import app.readylytics.health.core.scoring.domain.cardio.UthVo2MaxCalculator
+import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxSourceResolver
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
 import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
@@ -26,6 +28,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.OxygenSaturatio
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepHrSample
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepStageDao
+import app.readylytics.health.core.databaseschema.data.local.dao.Vo2MaxRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
@@ -215,6 +218,7 @@ class ScoringRepositoryN1Test {
         computeWorkoutTrimpUseCase = spyk(ComputeWorkoutTrimpUseCase())
         val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
         val bodyTemperatureRecordDao = mockk<BodyTemperatureRecordDao>(relaxed = true)
+        val vo2MaxRecordDao = mockk<Vo2MaxRecordDao>(relaxed = true)
 
         val dataLoader =
             ScoringDayDataLoader(
@@ -236,6 +240,7 @@ class ScoringRepositoryN1Test {
                 bloodPressureRecordDao,
                 oxygenSaturationRecordDao,
                 bodyTemperatureRecordDao,
+                vo2MaxRecordDao,
             )
         val seriesLoader = ScoringSeriesLoader(workoutDao, dailySummaryDao)
         val buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator)
@@ -270,6 +275,8 @@ class ScoringRepositoryN1Test {
                         resolveDailyBaselinesUseCase,
                         AssembleEverydayLoadInputUseCase(),
                         ComputeTrainingReadinessUseCase(scoringCalculator),
+                        UthVo2MaxCalculator(),
+                        Vo2MaxSourceResolver(),
                     ),
                 scoringHistoryRepository = scoringHistoryRepository,
                 readinessSummaryCoordinator = readinessSummaryCoordinator,
