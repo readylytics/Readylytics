@@ -9,6 +9,7 @@ import app.readylytics.health.feature.settings.SettingsIntents
 import app.readylytics.health.feature.settings.SettingsStates
 import app.readylytics.health.feature.settings.TrainingLoadSubsection
 import app.readylytics.health.feature.settings.TrainingReadinessSubsection
+import app.readylytics.health.feature.settings.nav.SettingsCategoryId
 import app.readylytics.health.feature.settings.nav.SettingsCategoryListItem
 import app.readylytics.health.feature.settings.nav.SettingsCategoryScaffold
 import app.readylytics.health.feature.settings.search.SettingsItemIds
@@ -23,6 +24,7 @@ internal fun TrainingCategoryScreen(
     val uiState = states.uiState
     val isResyncing = states.syncState.isResyncing
     SettingsCategoryScaffold(
+        titleRes = SettingsCategoryId.TRAINING.titleRes,
         items =
             listOf(
                 SettingsCategoryListItem(SettingsItemIds.TRAINING_STEP_GOAL) {

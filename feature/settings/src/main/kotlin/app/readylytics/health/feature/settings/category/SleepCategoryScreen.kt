@@ -14,6 +14,7 @@ import app.readylytics.health.feature.settings.SleepMinimumSegmentItem
 import app.readylytics.health.feature.settings.SleepRecalculateScoresItem
 import app.readylytics.health.feature.settings.SleepSupplementalCutoffItem
 import app.readylytics.health.feature.settings.SleepWeightProfileItem
+import app.readylytics.health.feature.settings.nav.SettingsCategoryId
 import app.readylytics.health.feature.settings.nav.SettingsCategoryListItem
 import app.readylytics.health.feature.settings.nav.SettingsCategoryScaffold
 import app.readylytics.health.feature.settings.search.SettingsItemIds
@@ -26,6 +27,7 @@ internal fun SleepCategoryScreen(
     highlightItemId: String?,
 ) {
     SettingsCategoryScaffold(
+        titleRes = SettingsCategoryId.SLEEP.titleRes,
         items =
             sleepScoringItems(states, intents, controlsEnabled) + sleepDetectionItems(states, intents, controlsEnabled),
         highlightItemId = highlightItemId,

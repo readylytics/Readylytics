@@ -6,6 +6,7 @@ import app.readylytics.health.feature.settings.SettingsStates
 import app.readylytics.health.feature.settings.data.DataManagementSection
 import app.readylytics.health.feature.settings.data.DataSourceSettingsSection
 import app.readylytics.health.feature.settings.data.SyncSettingsSection
+import app.readylytics.health.feature.settings.nav.SettingsCategoryId
 import app.readylytics.health.feature.settings.nav.SettingsCategoryListItem
 import app.readylytics.health.feature.settings.nav.SettingsCategoryScaffold
 import app.readylytics.health.feature.settings.search.SettingsItemIds
@@ -17,6 +18,7 @@ internal fun DataSourcesSyncCategoryScreen(
     highlightItemId: String?,
 ) {
     SettingsCategoryScaffold(
+        titleRes = SettingsCategoryId.DATA_SOURCES_SYNC.titleRes,
         items =
             listOf(
                 SettingsCategoryListItem(SettingsItemIds.DATA_DEVICE_SOURCES) {

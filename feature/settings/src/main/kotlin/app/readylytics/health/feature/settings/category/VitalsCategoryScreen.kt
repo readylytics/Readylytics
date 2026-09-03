@@ -13,6 +13,7 @@ import app.readylytics.health.feature.settings.RhrOptimalThresholdItem
 import app.readylytics.health.feature.settings.RhrWarningThresholdItem
 import app.readylytics.health.feature.settings.SettingsIntents
 import app.readylytics.health.feature.settings.SettingsStates
+import app.readylytics.health.feature.settings.nav.SettingsCategoryId
 import app.readylytics.health.feature.settings.nav.SettingsCategoryListItem
 import app.readylytics.health.feature.settings.nav.SettingsCategoryScaffold
 import app.readylytics.health.feature.settings.search.SettingsItemIds
@@ -25,6 +26,7 @@ internal fun VitalsCategoryScreen(
     highlightItemId: String?,
 ) {
     SettingsCategoryScaffold(
+        titleRes = SettingsCategoryId.VITALS.titleRes,
         items =
             vitalsItemsPartOne(states, intents, controlsEnabled) +
                 vitalsItemsPartTwo(states, intents, controlsEnabled),

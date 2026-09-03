@@ -15,6 +15,7 @@ import app.readylytics.health.feature.settings.SettingsEvent
 import app.readylytics.health.feature.settings.SettingsIntents
 import app.readylytics.health.feature.settings.SettingsStates
 import app.readylytics.health.feature.settings.WorkoutDetailLayoutSettingsSection
+import app.readylytics.health.feature.settings.nav.SettingsCategoryId
 import app.readylytics.health.feature.settings.nav.SettingsCategoryListItem
 import app.readylytics.health.feature.settings.nav.SettingsCategoryScaffold
 import app.readylytics.health.feature.settings.search.SettingsItemIds
@@ -27,6 +28,7 @@ internal fun DisplayCategoryScreen(
 ) {
     val uiState = states.uiState
     SettingsCategoryScaffold(
+        titleRes = SettingsCategoryId.DISPLAY.titleRes,
         items =
             listOf(
                 SettingsCategoryListItem(SettingsItemIds.DISPLAY_APP_THEME) {

@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import app.readylytics.health.feature.settings.SettingsIntents
 import app.readylytics.health.feature.settings.SettingsStates
 import app.readylytics.health.feature.settings.backup.LocalBackupSection
+import app.readylytics.health.feature.settings.nav.SettingsCategoryId
 import app.readylytics.health.feature.settings.nav.SettingsCategoryListItem
 import app.readylytics.health.feature.settings.nav.SettingsCategoryScaffold
 import app.readylytics.health.feature.settings.search.SettingsItemIds
@@ -15,6 +16,7 @@ internal fun BackupRestoreCategoryScreen(
     highlightItemId: String?,
 ) {
     SettingsCategoryScaffold(
+        titleRes = SettingsCategoryId.BACKUP_RESTORE.titleRes,
         items =
             listOf(
                 SettingsCategoryListItem(SettingsItemIds.BACKUP_RESTORE) {

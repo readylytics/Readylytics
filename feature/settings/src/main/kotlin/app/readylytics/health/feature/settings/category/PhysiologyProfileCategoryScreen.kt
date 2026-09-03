@@ -12,6 +12,7 @@ import app.readylytics.health.feature.settings.R
 import app.readylytics.health.feature.settings.SettingsEvent
 import app.readylytics.health.feature.settings.SettingsIntents
 import app.readylytics.health.feature.settings.SettingsStates
+import app.readylytics.health.feature.settings.nav.SettingsCategoryId
 import app.readylytics.health.feature.settings.nav.SettingsCategoryListItem
 import app.readylytics.health.feature.settings.nav.SettingsCategoryScaffold
 import app.readylytics.health.feature.settings.physiologyprofile.HeartRateZoneSection
@@ -25,6 +26,7 @@ internal fun PhysiologyProfileCategoryScreen(
     highlightItemId: String?,
 ) {
     SettingsCategoryScaffold(
+        titleRes = SettingsCategoryId.PHYSIOLOGY_PROFILE.titleRes,
         items =
             listOf(
                 SettingsCategoryListItem(SettingsItemIds.PHYSIOLOGY_PROFILE_PICKER) {
