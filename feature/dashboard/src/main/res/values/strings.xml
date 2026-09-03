@@ -25,6 +25,7 @@
     <string name="card_title_steps">Steps</string>
 
     <string name="card_title_weight">Weight</string>
+    <string name="card_title_cardio_fitness">Cardio Fitness</string>
     <string name="personal_baseline_within_range_description">within your baseline range</string>
     <string name="personal_baseline_above_range_description">above your baseline range</string>
     <string name="personal_baseline_below_range_description">below your baseline range</string>

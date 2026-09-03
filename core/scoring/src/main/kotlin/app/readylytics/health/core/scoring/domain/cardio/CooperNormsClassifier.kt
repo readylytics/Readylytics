@@ -9,7 +9,7 @@ enum class CooperCategory { SUPERIOR, EXCELLENT, GOOD, FAIR, POOR }
 @Singleton
 class CooperNormsClassifier @Inject constructor() {
     fun classify(vo2Max: Float, age: Int, sex: Gender): CooperCategory {
-        val thresholds = getThresholds(age, sex)
+        val thresholds = thresholds(age, sex)
         return when {
             vo2Max >= thresholds.superior -> CooperCategory.SUPERIOR
             vo2Max >= thresholds.excellent -> CooperCategory.EXCELLENT
@@ -21,7 +21,8 @@ class CooperNormsClassifier @Inject constructor() {
 
     data class Thresholds(val superior: Float, val excellent: Float, val good: Float, val fair: Float)
 
-    private fun getThresholds(age: Int, sex: Gender): Thresholds {
+    /** Age/sex-specific Cooper-norms band edges, exposed for the normative-ladder UI. */
+    fun thresholds(age: Int, sex: Gender): Thresholds {
         return when (sex) {
             Gender.MALE -> when {
                 age < 30 -> Thresholds(superior = 52.5f, excellent = 46.5f, good = 42.5f, fair = 36.5f)

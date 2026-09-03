@@ -26,4 +26,5 @@ fun CardId.displayName(): String =
         CardId.INSIGHTS -> "Insights"
         CardId.RESIDUAL_FATIGUE -> "Residual Fatigue"
         CardId.TRAINING_READINESS -> "Training Readiness"
+        CardId.CARDIO_FITNESS -> "Cardio Fitness"
     }

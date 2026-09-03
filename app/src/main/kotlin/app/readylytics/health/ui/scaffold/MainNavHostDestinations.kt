@@ -37,6 +37,7 @@ import app.readylytics.health.feature.settings.SyncSettingsViewModel
 import app.readylytics.health.feature.sleep.SleepRoute
 import app.readylytics.health.feature.vitals.bloodpressure.BloodPressureDetailRoute
 import app.readylytics.health.feature.vitals.bodyfat.BodyFatDetailRoute
+import app.readylytics.health.feature.vitals.cardio.CardioFitnessDetailRoute
 import app.readylytics.health.feature.vitals.heartrate.HeartRateDetailRoute
 import app.readylytics.health.feature.vitals.overview.VitalsRoute
 import app.readylytics.health.feature.vitals.steps.StepDetailRoute
@@ -61,6 +62,7 @@ internal fun NavGraphBuilder.vitalsAndSleepDestinations(navController: NavHostCo
         VitalsRoute(
             onNavigateToHrv = {},
             onNavigateToRhr = {},
+            onNavigateToCardioFitness = { navController.navigate(AppDestination.CardioFitnessDetail) },
         )
     }
     composable<AppDestination.StepDetail> {
@@ -80,6 +82,11 @@ internal fun NavGraphBuilder.vitalsAndSleepDestinations(navController: NavHostCo
     }
     composable<AppDestination.BodyFatDetail> {
         BodyFatDetailRoute(
+            onBack = { navController.popBackStack() },
+        )
+    }
+    composable<AppDestination.CardioFitnessDetail> {
+        CardioFitnessDetailRoute(
             onBack = { navController.popBackStack() },
         )
     }

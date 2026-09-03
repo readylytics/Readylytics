@@ -85,4 +85,21 @@
 
     <!-- Tooltips & specific card labels -->
 
+    <!-- Cardio Fitness (VO2 Max) -->
+    <string name="card_cardio_fitness">Cardio Fitness (VO2 Max)</string>
+    <string name="unit_ml_kg_min">ml/kg/min</string>
+    <string name="tooltip_cardio_fitness">Estimated maximal oxygen uptake (VO2 Max), a key indicator of cardiorespiratory fitness.</string>
+    <string name="label_cardio_fitness">Cardio Fitness</string>
+    <string name="label_cardio_fitness_trend">VO2 Max Trend</string>
+    <string name="cooper_category_superior">Superior</string>
+    <string name="cooper_category_excellent">Excellent</string>
+    <string name="cooper_category_good">Good</string>
+    <string name="cooper_category_fair">Fair</string>
+    <string name="cooper_category_poor">Poor</string>
+    <string name="vo2_max_source_wearable">Wearable</string>
+    <string name="vo2_max_source_estimated">Estimated (Resting HR)</string>
+    <string name="label_cooper_normative_ladder">Cooper Normative Ladder</string>
+    <string name="label_scientific_methodology">Scientific Methodology</string>
+    <string name="cardio_fitness_methodology_body">VO2 Max is read directly from your wearable when Health Connect provides it. Otherwise it is estimated from your resting heart rate and maximum heart rate using the method of Uth et al. (2004), \"Estimation of VO2max from the ratio between HRmax and HRrest\". Fitness categories follow the Cooper Institute\'s age- and sex-adjusted normative tables.</string>
+
 </resources>

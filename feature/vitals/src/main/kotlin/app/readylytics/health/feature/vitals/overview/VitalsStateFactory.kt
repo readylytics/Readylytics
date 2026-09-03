@@ -26,6 +26,8 @@ import app.readylytics.health.core.ui.common.bucketBy
 import app.readylytics.health.core.ui.common.bucketByFixedSize
 import app.readylytics.health.core.ui.common.bucketLengthDays
 import app.readylytics.health.core.ui.common.bucketStartForDate
+import app.readylytics.health.feature.vitals.cardio.Vo2MaxAssessment
+import app.readylytics.health.feature.vitals.cardio.assessVo2Max
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
@@ -80,6 +82,7 @@ data class VitalsPresentationState(
     val spo2: Spo2Assessment,
     val bodyTemp: BodyTemperatureAssessment,
     val bodyTempUnitSystem: UnitSystem,
+    val vo2Max: Vo2MaxAssessment,
 ) {
     companion object {
         fun empty(): VitalsPresentationState =
@@ -98,6 +101,7 @@ private fun presentationStateFromAssessments(
     spo2: Spo2Assessment,
     bodyTemp: BodyTemperatureAssessment,
     unitSystem: UnitSystem,
+    vo2Max: Vo2MaxAssessment,
 ): VitalsPresentationState =
     VitalsPresentationState(
         hrv = hrv,
@@ -105,6 +109,7 @@ private fun presentationStateFromAssessments(
         spo2 = spo2,
         bodyTemp = bodyTemp,
         bodyTempUnitSystem = unitSystem,
+        vo2Max = vo2Max,
     )
 
 /**
@@ -348,6 +353,13 @@ internal fun buildVitalsPresentationState(
             thresholdCelsius = prefs.bodyTempElevatedThresholdCelsius,
             unitSystem = prefs.unitSystem,
         )
+    val vo2MaxAssessment =
+        assessVo2Max(
+            vo2Max = summary?.vo2Max,
+            source = summary?.vo2MaxSource,
+            age = prefs.age,
+            gender = prefs.gender,
+        )
 
     return presentationStateFromAssessments(
         hrv = hrvAssessment,
@@ -355,5 +367,6 @@ internal fun buildVitalsPresentationState(
         spo2 = spo2Assessment,
         bodyTemp = bodyTempAssessment,
         unitSystem = prefs.unitSystem,
+        vo2Max = vo2MaxAssessment,
     )
 }

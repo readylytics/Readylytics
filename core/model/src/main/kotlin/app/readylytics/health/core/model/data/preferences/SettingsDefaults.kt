@@ -187,6 +187,11 @@ object SettingsDefaults {
                 position = 3,
                 requestedDisplayMode = DashboardCardDisplayMode.GAUGE,
             ),
+            CardConfiguration(
+                CardId.CARDIO_FITNESS,
+                isVisible = false,
+                position = 4,
+            ),
         )
 
     val DEFAULT_VITALS_CHARTS =
