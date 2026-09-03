@@ -20,18 +20,25 @@ fun buildWorkoutsChartDataMap(
     granularity: TrendGranularity,
     parentScrollInProgress: () -> Boolean,
     onFatigueRangeSelected: (app.readylytics.health.core.model.domain.workouts.FatigueCurveRange) -> Unit = {},
+    onTrainingLoadMetricSelected: (TrainingLoadMetric) -> Unit = {},
 ): Map<WorkoutChartId, @Composable (WorkoutChartConfiguration) -> Unit> =
     mapOf(
         WorkoutChartId.ACWR_TRIMP to { _: WorkoutChartConfiguration ->
             AcwrChartCard(
-                trimpPoints = uiState.dailyTrimp,
-                ratioPoints = uiState.dailyStrainRatio,
-                rangeStartMs = uiState.rangeStartMs,
-                rangeDays = rangeDays,
+                chartData =
+                    AcwrChartData(
+                        trimpPoints = uiState.dailyTrimp,
+                        ratioPoints = uiState.dailyStrainRatio,
+                        tsbPoints = uiState.dailyTsb,
+                        selectedMetric = uiState.selectedTrainingLoadMetric,
+                        rangeStartMs = uiState.rangeStartMs,
+                        rangeDays = rangeDays,
+                        granularity = granularity,
+                    ),
+                onMetricSelected = onTrainingLoadMetricSelected,
                 scrollState = scrollState,
                 zoomState = zoomState,
                 parentScrollInProgress = parentScrollInProgress,
-                granularity = granularity,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.pageHorizontal),
             )
         },

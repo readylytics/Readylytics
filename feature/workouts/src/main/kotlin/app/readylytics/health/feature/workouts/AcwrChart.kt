@@ -8,7 +8,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -22,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
@@ -60,17 +65,48 @@ import com.patrykandpatrick.vico.compose.common.data.ExtraStore
 import kotlin.math.ceil
 import app.readylytics.health.core.ui.R as CoreUiR
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TrainingLoadMetricToggle(
+    selectedMetric: TrainingLoadMetric,
+    onMetricSelected: (TrainingLoadMetric) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    SingleChoiceSegmentedButtonRow(modifier = modifier.fillMaxWidth()) {
+        TrainingLoadMetric.entries.forEachIndexed { index, metric ->
+            SegmentedButton(
+                selected = selectedMetric == metric,
+                onClick = { onMetricSelected(metric) },
+                shape =
+                    SegmentedButtonDefaults.itemShape(
+                        index = index,
+                        count = TrainingLoadMetric.entries.size,
+                    ),
+                label = {
+                    Text(
+                        text =
+                            stringResource(
+                                if (metric == TrainingLoadMetric.ACWR) {
+                                    R.string.training_load_metric_acwr
+                                } else {
+                                    R.string.training_load_metric_tsb
+                                },
+                            ),
+                    )
+                },
+            )
+        }
+    }
+}
+
 @Composable
 internal fun AcwrChartCard(
-    trimpPoints: List<DailyDataPoint>,
-    ratioPoints: List<DailyDataPoint>,
-    rangeStartMs: Long,
-    rangeDays: Int,
+    chartData: AcwrChartData,
+    onMetricSelected: (TrainingLoadMetric) -> Unit,
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
     modifier: Modifier = Modifier,
     parentScrollInProgress: () -> Boolean = { false },
-    granularity: TrendGranularity = TrendGranularity.DAILY,
 ) {
     val trimpColor = MaterialTheme.colorScheme.primary
     val ratioColor = MaterialTheme.colorScheme.tertiary
@@ -84,27 +120,70 @@ internal fun AcwrChartCard(
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Spacer(Modifier.height(MaterialTheme.spacing.small))
+            TrainingLoadMetricToggle(
+                selectedMetric = chartData.selectedMetric,
+                onMetricSelected = onMetricSelected,
+            )
             Spacer(Modifier.height(MaterialTheme.spacing.medium))
-            if (trimpPoints.isEmpty() && ratioPoints.isEmpty()) {
+            AcwrChartContent(
+                chartData = chartData,
+                scrollState = scrollState,
+                zoomState = zoomState,
+                parentScrollInProgress = parentScrollInProgress,
+                trimpColor = trimpColor,
+                ratioColor = ratioColor,
+            )
+        }
+    }
+}
+
+@Composable
+private fun AcwrChartContent(
+    chartData: AcwrChartData,
+    scrollState: VicoScrollState,
+    zoomState: VicoZoomState,
+    parentScrollInProgress: () -> Boolean,
+    trimpColor: Color,
+    ratioColor: Color,
+) {
+    when (chartData.selectedMetric) {
+        TrainingLoadMetric.ACWR -> {
+            if (chartData.trimpPoints.isEmpty() && chartData.ratioPoints.isEmpty()) {
                 EmptyAcwrChartPlaceholder()
             } else {
                 AcwrChart(
-                    trimpPoints = trimpPoints,
-                    ratioPoints = ratioPoints,
-                    rangeStartMs = rangeStartMs,
-                    rangeDays = rangeDays,
+                    trimpPoints = chartData.trimpPoints,
+                    ratioPoints = chartData.ratioPoints,
+                    rangeStartMs = chartData.rangeStartMs,
+                    rangeDays = chartData.rangeDays,
                     scrollState = scrollState,
                     zoomState = zoomState,
                     parentScrollInProgress = parentScrollInProgress,
-                    granularity = granularity,
+                    granularity = chartData.granularity,
                 )
             }
-
             Spacer(Modifier.height(MaterialTheme.spacing.small))
             AcwrChartLegends(
                 trimpColor = trimpColor,
                 ratioColor = ratioColor,
             )
+        }
+        TrainingLoadMetric.TSB -> {
+            if (chartData.tsbPoints.none { it.value != null }) {
+                EmptyAcwrChartPlaceholder()
+            } else {
+                TsbChart(
+                    tsbPoints = chartData.tsbPoints,
+                    rangeStartMs = chartData.rangeStartMs,
+                    rangeDays = chartData.rangeDays,
+                    scrollState = scrollState,
+                    zoomState = zoomState,
+                    granularity = chartData.granularity,
+                )
+            }
+            Spacer(Modifier.height(MaterialTheme.spacing.small))
+            TsbChartLegend()
         }
     }
 }

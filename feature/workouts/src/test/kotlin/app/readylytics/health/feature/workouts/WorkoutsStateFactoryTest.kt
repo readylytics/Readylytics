@@ -4,6 +4,7 @@ import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
+import app.readylytics.health.core.scoring.domain.cardio.TrainingStressBalanceCalculator
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.ui.common.TimeRange
 import io.mockk.every
@@ -18,6 +19,7 @@ import java.time.ZoneId
 
 class WorkoutsStateFactoryTest {
     private val scoringCalculator = mockk<ScoringCalculator>(relaxed = true)
+    private val trainingStressBalanceCalculator = TrainingStressBalanceCalculator()
     private val zoneId = ZoneId.of("UTC")
     private val selectedDate = LocalDate.of(2026, 6, 10)
 
@@ -33,6 +35,7 @@ class WorkoutsStateFactoryTest {
             buildWorkoutsState(
                 WorkoutsStateInputs(
                     scoringCalculator = scoringCalculator,
+                    trainingStressBalanceCalculator = trainingStressBalanceCalculator,
                     latestSummary = null,
                     trimpSummaries = emptyList(),
                     rasSummaries = emptyList(),
@@ -59,6 +62,7 @@ class WorkoutsStateFactoryTest {
             buildWorkoutsState(
                 WorkoutsStateInputs(
                     scoringCalculator = scoringCalculator,
+                    trainingStressBalanceCalculator = trainingStressBalanceCalculator,
                     latestSummary = null,
                     trimpSummaries = emptyList(),
                     rasSummaries = emptyList(),
@@ -91,6 +95,7 @@ class WorkoutsStateFactoryTest {
             buildWorkoutsState(
                 WorkoutsStateInputs(
                     scoringCalculator = scoringCalculator,
+                    trainingStressBalanceCalculator = trainingStressBalanceCalculator,
                     latestSummary = null,
                     trimpSummaries = summaries,
                     rasSummaries = emptyList(),
@@ -123,6 +128,7 @@ class WorkoutsStateFactoryTest {
             buildWorkoutsState(
                 WorkoutsStateInputs(
                     scoringCalculator = scoringCalculator,
+                    trainingStressBalanceCalculator = trainingStressBalanceCalculator,
                     latestSummary = null,
                     trimpSummaries = summaries,
                     rasSummaries = emptyList(),
@@ -155,6 +161,7 @@ class WorkoutsStateFactoryTest {
             buildWorkoutsState(
                 WorkoutsStateInputs(
                     scoringCalculator = scoringCalculator,
+                    trainingStressBalanceCalculator = trainingStressBalanceCalculator,
                     latestSummary = latest,
                     trimpSummaries = listOf(latest),
                     rasSummaries = emptyList(),
@@ -188,6 +195,7 @@ class WorkoutsStateFactoryTest {
             buildWorkoutsState(
                 WorkoutsStateInputs(
                     scoringCalculator = scoringCalculator,
+                    trainingStressBalanceCalculator = trainingStressBalanceCalculator,
                     latestSummary = null,
                     trimpSummaries = emptyList(),
                     rasSummaries = listOf(yesterdaySummary),
@@ -226,6 +234,7 @@ class WorkoutsStateFactoryTest {
             buildWorkoutsState(
                 WorkoutsStateInputs(
                     scoringCalculator = scoringCalculator,
+                    trainingStressBalanceCalculator = trainingStressBalanceCalculator,
                     latestSummary = null,
                     trimpSummaries = summaries,
                     rasSummaries = emptyList(),
@@ -253,6 +262,7 @@ class WorkoutsStateFactoryTest {
             buildWorkoutsState(
                 WorkoutsStateInputs(
                     scoringCalculator = scoringCalculator,
+                    trainingStressBalanceCalculator = trainingStressBalanceCalculator,
                     latestSummary = null,
                     trimpSummaries = emptyList(),
                     rasSummaries = emptyList(),

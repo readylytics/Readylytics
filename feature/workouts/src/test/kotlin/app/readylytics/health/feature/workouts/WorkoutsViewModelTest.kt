@@ -16,6 +16,7 @@ import app.readylytics.health.core.model.domain.scoring.WorkoutLoadLevel
 import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.core.model.domain.workouts.FatigueCurveRange
 import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
+import app.readylytics.health.core.scoring.domain.cardio.TrainingStressBalanceCalculator
 import app.readylytics.health.core.scoring.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.WorkoutDisplayMetrics
@@ -186,7 +187,7 @@ class WorkoutsViewModelTest {
                     heartRateRepository,
                 ),
             selectedDateRepository = selectedDateRepository,
-            scoringCalculator = scoringCalculator,
+            scoringCalculators = WorkoutsScoringCalculators(scoringCalculator, TrainingStressBalanceCalculator()),
             settingsRepo = settingsRepo,
             foregroundSyncController = foregroundSyncController,
             workoutsLayoutRepository = workoutsLayoutRepository,
