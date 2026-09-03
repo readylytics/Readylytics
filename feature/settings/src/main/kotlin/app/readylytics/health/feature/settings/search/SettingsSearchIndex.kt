@@ -238,7 +238,7 @@ private val displaySearchItems =
             SettingsItemIds.DISPLAY_WEEK_START_DAY,
             SettingsCategoryId.DISPLAY,
             CoreUiR.string.week_start_day_label,
-            listOf("monday", "sunday", "calendar"),
+            listOf("monday", "sunday", "calendar", "week start"),
         ),
         SettingsSearchItem(
             SettingsItemIds.DISPLAY_DASHBOARD_CARDS,
