@@ -97,10 +97,6 @@ internal fun UserPreferences.withThresholdsAndDisplay(proto: UserPreferencesProt
 
 internal fun UserPreferences.withPaletteAndUi(proto: UserPreferencesProto): UserPreferences =
     copy(
-        collapseHealthConnect = proto.collapseHealthConnect,
-        collapseBaselinesThresholds = proto.collapseBaselinesThresholds,
-        collapseDisplay = proto.collapseDisplay,
-        collapseAdvanced = proto.collapseAdvanced,
         aboutDismissed = proto.aboutDismissed,
         installDate = proto.installDate,
         circadianThresholdOverride =
