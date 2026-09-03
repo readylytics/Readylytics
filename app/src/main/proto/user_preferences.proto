@@ -155,10 +155,7 @@ message UserPreferencesProto {
     bool retention_days_enabled = 40;
     int32 retention_days = 41;
     
-    bool collapse_health_connect = 43;
-    bool collapse_baselines_thresholds = 44;
-    bool collapse_display = 45;
-    bool collapse_advanced = 46;
+    reserved 43, 44, 45, 46;
     
     bool about_dismissed = 47;
     

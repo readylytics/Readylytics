@@ -224,6 +224,7 @@
 <string name="load_sources_strain_help">Controls TRIMP, acute/chronic load (ACWR), Strain Ratio, Load Score, and Readiness. \"Workout only\" counts only exercise sessions; \"Everyday heart-rate load\" also counts elevated heart rate outside workouts, such as from stress, illness, or heat.</string>
 <string name="load_sources_strain_label">Strain / Training Load Source</string>
 <string name="load_sources_zone_caveat">Zone 0 minutes are excluded from TRIMP and load even when counted toward coverage. Everyday heart-rate load is affected by your configured heart-rate zones and TRIMP model in Heart Rate Zones settings.</string>
+<string name="physiology_profile_picker_label">Activity Profile</string>
 <string name="privacy_policy_url" translatable="false">https://gregorlauritz.github.io/MyHealthStatus/privacy/</string>
 <string name="provider_garmin_connect">Garmin Connect</string>
 <string name="provider_google_fit">Google Fit</string>
@@ -260,11 +261,6 @@
 <string name="settings_reset_color_desc">Reset to calculated color</string>
 <string name="settings_search_placeholder">Search settings…</string>
 <string name="settings_secondary_color_label">Secondary color</string>
-<string name="settings_section_advanced">Advanced</string>
-<string name="settings_section_baselines_thresholds">Baselines &amp; thresholds</string>
-<string name="settings_section_data_backup">Data &amp; backup</string>
-<string name="settings_section_display">Display</string>
-<string name="settings_section_miscellaneous">Miscellaneous</string>
 <string name="settings_step_goal_tooltip">Target steps per day. Reaching this goal shows as
         Optimal on the dashboard.</string>
 <string name="settings_sub_data_management">Data management</string>
@@ -302,6 +298,23 @@
 <string name="workout_detail_layouts_reset_dialog_title">Reset workout detail layouts?</string>
 <string name="workout_detail_layouts_reset_dialog_body">Every workout type returns to the default layout. Customizations you made per type are discarded. This cannot be undone.</string>
 <string name="workout_detail_layouts_reset_dialog_confirm">Reset</string>
+<string name="settings_category_physiology_profile_title">Physiology Profile</string>
+<string name="settings_category_physiology_profile_subtitle">Profile, heart rate zones</string>
+<string name="settings_category_sleep_title">Sleep</string>
+<string name="settings_category_sleep_subtitle">Sleep goal, score weighting, circadian consistency</string>
+<string name="settings_category_training_title">Training</string>
+<string name="settings_category_training_subtitle">Step goal, load sources, training load</string>
+<string name="settings_category_vitals_title">Vitals</string>
+<string name="settings_category_vitals_subtitle">HRV/RHR baselines, readiness thresholds</string>
+<string name="settings_category_data_sync_title">Data Sources &amp; Sync</string>
+<string name="settings_category_data_sync_subtitle">Devices, Health Connect sync, retention</string>
+<string name="settings_category_backup_title">Backup &amp; Restore</string>
+<string name="settings_category_backup_subtitle">Local encrypted backups</string>
+<string name="settings_category_display_title">Display &amp; Appearance</string>
+<string name="settings_category_display_subtitle">Theme, units, dashboard layout</string>
+<string name="settings_category_support_title">Support &amp; About</string>
+<string name="settings_category_support_subtitle">Report an issue, licenses, privacy</string>
+<string name="settings_search_no_results">No settings found</string>
 <plurals name="accessibility_circadian_threshold_state">
         <item quantity="one">Current value: %1$d minute</item>
         <item quantity="other">Current value: %1$d minutes</item>

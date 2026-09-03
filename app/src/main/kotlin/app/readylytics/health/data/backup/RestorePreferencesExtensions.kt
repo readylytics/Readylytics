@@ -150,10 +150,6 @@ internal fun UserPreferencesProto.Builder.applyScalingAndProfileSettings(backup:
     backup.stepGoal?.let { stepGoal = it }
     backup.retentionDaysEnabled?.let { retentionDaysEnabled = it }
     backup.retentionDays?.let { retentionDays = it }
-    backup.collapseHealthConnect?.let { collapseHealthConnect = it }
-    backup.collapseBaselinesThresholds?.let { collapseBaselinesThresholds = it }
-    backup.collapseDisplay?.let { collapseDisplay = it }
-    backup.collapseAdvanced?.let { collapseAdvanced = it }
     backup.aboutDismissed?.let { aboutDismissed = it }
 
     backup.physiologyProfile?.let { raw ->

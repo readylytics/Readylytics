@@ -1,5 +1,6 @@
 plugins {
     id("readylytics.compose-feature-conventions")
+    alias(libs.plugins.kotlin.serialization)
     id("kotlin-parcelize")
 }
 

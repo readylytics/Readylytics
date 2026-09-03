@@ -1,0 +1,314 @@
+package app.readylytics.health.feature.settings
+
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import app.readylytics.health.core.designsystem.dimens
+import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
+import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
+import app.readylytics.health.feature.settings.R
+import kotlin.math.roundToInt
+
+@Composable
+internal fun SleepGoalItem(
+    goalSleepHours: Float,
+    controlsEnabled: Boolean,
+    onEvent: (SettingsEvent) -> Unit,
+) {
+    var sleepGoalValue by remember(goalSleepHours) { mutableFloatStateOf(goalSleepHours) }
+    Column(
+        modifier =
+            Modifier.padding(
+                horizontal = MaterialTheme.spacing.medium,
+                vertical = MaterialTheme.spacing.extraSmall,
+            ),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.label_sleep_goal), style = MaterialTheme.typography.bodyMedium)
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = sleepGoalValue.toSleepHoursText(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        Slider(
+            value = sleepGoalValue,
+            onValueChange = { sleepGoalValue = it },
+            onValueChangeFinished = { onEvent(SettingsEvent.GoalSleepHoursChanged(sleepGoalValue)) },
+            valueRange = 4f..12f,
+            steps = 15,
+            enabled = controlsEnabled,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun SleepWeightProfileItem(
+    sleepScoreWeightProfile: SleepScoreWeightProfile,
+    controlsEnabled: Boolean,
+    onEvent: (SettingsEvent) -> Unit,
+) {
+    var profileMenuExpanded by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(controlsEnabled) {
+        if (!controlsEnabled) profileMenuExpanded = false
+    }
+    Column(
+        modifier =
+            Modifier.padding(
+                horizontal = MaterialTheme.spacing.medium,
+                vertical = MaterialTheme.spacing.extraSmall,
+            ),
+    ) {
+        ExposedDropdownMenuBox(
+            expanded = profileMenuExpanded,
+            onExpandedChange = { if (controlsEnabled) profileMenuExpanded = it },
+        ) {
+            TextField(
+                value = stringResource(sleepScoreWeightProfile.labelRes()),
+                onValueChange = {},
+                readOnly = true,
+                enabled = controlsEnabled,
+                label = { Text(stringResource(R.string.settings_sleep_score_emphasis_label)) },
+                supportingText = { Text(stringResource(sleepScoreWeightProfile.descriptionRes())) },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = profileMenuExpanded) },
+                modifier =
+                    Modifier
+                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                        .fillMaxWidth(),
+            )
+            DropdownMenu(
+                expanded = profileMenuExpanded && controlsEnabled,
+                onDismissRequest = { profileMenuExpanded = false },
+                modifier = Modifier.exposedDropdownSize(),
+            ) {
+                SleepScoreWeightProfile.entries.forEach { profile ->
+                    DropdownMenuItem(
+                        text = { Text(stringResource(profile.labelRes())) },
+                        onClick = {
+                            profileMenuExpanded = false
+                            onEvent(SettingsEvent.SleepScoreWeightProfileChanged(profile))
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun SleepHypersomniaOnsetItem(
+    hypersomniaOnsetPercent: Int,
+    controlsEnabled: Boolean,
+    onEvent: (SettingsEvent) -> Unit,
+) {
+    var value by remember(hypersomniaOnsetPercent) { mutableFloatStateOf(hypersomniaOnsetPercent.toFloat()) }
+    val minHypersomniaOnset = SettingsDefaults.MIN_HYPERSOMNIA_ONSET_PERCENT.toFloat()
+    val maxHypersomniaOnset = SettingsDefaults.MAX_HYPERSOMNIA_ONSET_PERCENT.toFloat()
+    val range = minHypersomniaOnset..maxHypersomniaOnset
+    ThresholdSliderItem(
+        label = stringResource(R.string.settings_sleep_hypersomnia_onset_label),
+        value = value,
+        onValueChange = { value = it },
+        onValueChangeFinished = {
+            onEvent(SettingsEvent.HypersomniaOnsetPercentChanged(value.roundToInt()))
+        },
+        valueRange = range,
+        steps = 4,
+        displayValue = stringResource(R.string.settings_sleep_hypersomnia_onset_value, value.roundToInt()),
+        enabled = controlsEnabled,
+    )
+}
+
+@Composable
+internal fun SleepRecalculateScoresItem(
+    hasPendingSleepScoreRecalc: Boolean,
+    controlsEnabled: Boolean,
+    isResyncing: Boolean,
+    onEvent: (SettingsEvent) -> Unit,
+) {
+    Column(
+        modifier =
+            Modifier.padding(
+                horizontal = MaterialTheme.spacing.medium,
+                vertical = MaterialTheme.spacing.smallMedium,
+            ),
+    ) {
+        Button(
+            onClick = { onEvent(SettingsEvent.RecalculateScores) },
+            enabled = hasPendingSleepScoreRecalc && controlsEnabled,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            if (isResyncing) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(MaterialTheme.dimens.iconMedium),
+                    color = MaterialTheme.colorScheme.onPrimary,
+                )
+                Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
+            }
+            Text(stringResource(R.string.settings_recalculate_scores_title))
+        }
+        Text(
+            text = stringResource(R.string.settings_recalculate_scores_description),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = MaterialTheme.spacing.extraSmall),
+        )
+    }
+}
+
+@Composable
+internal fun SleepCoreMergeGapItem(
+    coreMergeGapMinutes: Int,
+    controlsEnabled: Boolean,
+    onEvent: (SettingsEvent) -> Unit,
+) {
+    var value by remember(coreMergeGapMinutes) { mutableFloatStateOf(coreMergeGapMinutes.toFloat()) }
+    val range =
+        SettingsDefaults.MIN_CORE_MERGE_GAP_MINUTES.toFloat()..SettingsDefaults.MAX_CORE_MERGE_GAP_MINUTES.toFloat()
+    ThresholdSliderItem(
+        label = stringResource(R.string.settings_sleep_core_merge_gap_label),
+        value = value,
+        onValueChange = { value = it },
+        onValueChangeFinished = { onEvent(SettingsEvent.CoreMergeGapMinutesChanged(value.roundToInt())) },
+        valueRange = range,
+        steps =
+            steppedSliderSteps(
+                min = SettingsDefaults.MIN_CORE_MERGE_GAP_MINUTES,
+                max = SettingsDefaults.MAX_CORE_MERGE_GAP_MINUTES,
+                step = SettingsDefaults.CORE_MERGE_GAP_STEP_MINUTES,
+            ),
+        displayValue = stringResource(R.string.settings_sleep_minutes_value, value.roundToInt()),
+        description = stringResource(R.string.settings_sleep_core_merge_gap_tooltip),
+        enabled = controlsEnabled,
+    )
+}
+
+@Composable
+internal fun SleepSupplementalCutoffItem(
+    supplementalCutoffMinutesOfDay: Int,
+    controlsEnabled: Boolean,
+    onEvent: (SettingsEvent) -> Unit,
+) {
+    var value by remember(
+        supplementalCutoffMinutesOfDay,
+    ) { mutableFloatStateOf(supplementalCutoffMinutesOfDay.toFloat()) }
+    val minSupplementalCutoff = SettingsDefaults.MIN_SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY.toFloat()
+    val maxSupplementalCutoff = SettingsDefaults.MAX_SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY.toFloat()
+    val range = minSupplementalCutoff..maxSupplementalCutoff
+    ThresholdSliderItem(
+        label = stringResource(R.string.settings_sleep_supplemental_cutoff_label),
+        value = value,
+        onValueChange = { value = it },
+        onValueChangeFinished = {
+            onEvent(SettingsEvent.SupplementalCutoffMinutesOfDayChanged(value.roundToInt()))
+        },
+        valueRange = range,
+        steps =
+            steppedSliderSteps(
+                min = SettingsDefaults.MIN_SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY,
+                max = SettingsDefaults.MAX_SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY,
+                step = SettingsDefaults.SUPPLEMENTAL_CUTOFF_STEP_MINUTES,
+            ),
+        displayValue =
+            value.roundToInt().let { minutes ->
+                stringResource(R.string.settings_sleep_time_value, minutes / 60, minutes % 60)
+            },
+        description = stringResource(R.string.settings_sleep_supplemental_cutoff_tooltip),
+        enabled = controlsEnabled,
+    )
+}
+
+@Composable
+internal fun SleepMinimumSegmentItem(
+    minimumCountedSleepSegmentMinutes: Int,
+    controlsEnabled: Boolean,
+    onEvent: (SettingsEvent) -> Unit,
+) {
+    var value by remember(minimumCountedSleepSegmentMinutes) {
+        mutableFloatStateOf(minimumCountedSleepSegmentMinutes.toFloat())
+    }
+    val minSegmentMinutes = SettingsDefaults.MIN_MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES.toFloat()
+    val maxSegmentMinutes = SettingsDefaults.MAX_MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES.toFloat()
+    val range = minSegmentMinutes..maxSegmentMinutes
+    ThresholdSliderItem(
+        label = stringResource(R.string.settings_sleep_minimum_segment_label),
+        value = value,
+        onValueChange = { value = it },
+        onValueChangeFinished = {
+            onEvent(SettingsEvent.MinimumCountedSleepSegmentMinutesChanged(value.roundToInt()))
+        },
+        valueRange = range,
+        steps =
+            steppedSliderSteps(
+                min = SettingsDefaults.MIN_MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES,
+                max = SettingsDefaults.MAX_MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES,
+                step = SettingsDefaults.MINIMUM_COUNTED_SLEEP_SEGMENT_STEP_MINUTES,
+            ),
+        displayValue = stringResource(R.string.settings_sleep_minutes_value, value.roundToInt()),
+        description = stringResource(R.string.settings_sleep_minimum_segment_tooltip),
+        enabled = controlsEnabled,
+    )
+}
+
+@Composable
+internal fun SleepArchitectureCoverageItem(
+    supplementalArchitectureCoveragePercent: Int,
+    controlsEnabled: Boolean,
+    onEvent: (SettingsEvent) -> Unit,
+) {
+    var value by remember(supplementalArchitectureCoveragePercent) {
+        mutableFloatStateOf(supplementalArchitectureCoveragePercent.toFloat())
+    }
+    val minCoveragePercent = SettingsDefaults.MIN_SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT.toFloat()
+    val maxCoveragePercent = SettingsDefaults.MAX_SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT.toFloat()
+    val range = minCoveragePercent..maxCoveragePercent
+    ThresholdSliderItem(
+        label = stringResource(R.string.settings_sleep_architecture_coverage_label),
+        value = value,
+        onValueChange = { value = it },
+        onValueChangeFinished = {
+            onEvent(SettingsEvent.SupplementalArchitectureCoveragePercentChanged(value.roundToInt()))
+        },
+        valueRange = range,
+        steps =
+            steppedSliderSteps(
+                min = SettingsDefaults.MIN_SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT,
+                max = SettingsDefaults.MAX_SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT,
+                step = SettingsDefaults.SUPPLEMENTAL_ARCHITECTURE_COVERAGE_STEP_PERCENT,
+            ),
+        displayValue = stringResource(R.string.settings_sleep_percent_value, value.roundToInt()),
+        description = stringResource(R.string.settings_sleep_architecture_coverage_tooltip),
+        enabled = controlsEnabled,
+    )
+}

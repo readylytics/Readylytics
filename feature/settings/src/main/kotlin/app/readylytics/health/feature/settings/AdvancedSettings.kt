@@ -32,81 +32,9 @@ import app.readylytics.health.core.model.domain.validation.SettingsValidators
 import app.readylytics.health.core.model.domain.validation.ValidationResult
 import app.readylytics.health.core.model.domain.validation.ValidationRule
 import app.readylytics.health.core.ui.components.MetricTooltip
-import app.readylytics.health.feature.settings.common.resyncGateEnabled
 
 @Composable
-fun AdvancedSettingsSection(
-    sleepState: SleepSettingsState,
-    uiState: UIState,
-    onEvent: (SettingsEvent) -> Unit,
-    onPhysiologyEvent: (SettingsEvent) -> Unit,
-    onUIEvent: (SettingsEvent) -> Unit,
-    isResyncing: Boolean = false,
-) {
-    val controlsEnabled = resyncGateEnabled(isResyncing)
-
-    Column {
-        BaselineOverridesSubsection(
-            sleepState = sleepState,
-            controlsEnabled = controlsEnabled,
-            onEvent = onEvent,
-        )
-
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
-
-        RestingHrPercentileSubsection(
-            sleepState = sleepState,
-            controlsEnabled = controlsEnabled,
-            onEvent = onEvent,
-        )
-
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
-
-        RecoveryToleranceSubsection(
-            hrrToleranceSeconds = uiState.hrrToleranceSeconds,
-            controlsEnabled = controlsEnabled,
-            onUIEvent = onUIEvent,
-        )
-
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
-
-        RasScalingSubsection(
-            rasScalingFactor = uiState.rasScalingFactor,
-            controlsEnabled = controlsEnabled,
-            onPhysiologyEvent = onPhysiologyEvent,
-            onUIEvent = onUIEvent,
-        )
-
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
-
-        TrainingLoadSubsection(
-            uiState = uiState,
-            controlsEnabled = controlsEnabled,
-            isResyncing = isResyncing,
-            onUIEvent = onUIEvent,
-        )
-
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
-
-        ResidualFatigueSubsection(
-            uiState = uiState,
-            controlsEnabled = controlsEnabled,
-            onUIEvent = onUIEvent,
-        )
-
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
-
-        TrainingReadinessSubsection(
-            uiState = uiState,
-            controlsEnabled = controlsEnabled,
-            isResyncing = isResyncing,
-            onUIEvent = onUIEvent,
-        )
-    }
-}
-
-@Composable
-private fun BaselineOverridesSubsection(
+fun BaselineOverridesSubsection(
     sleepState: SleepSettingsState,
     controlsEnabled: Boolean,
     onEvent: (SettingsEvent) -> Unit,
@@ -189,7 +117,7 @@ private fun BaselineOverrideField(
 }
 
 @Composable
-private fun RestingHrPercentileSubsection(
+fun RestingHrPercentileSubsection(
     sleepState: SleepSettingsState,
     controlsEnabled: Boolean,
     onEvent: (SettingsEvent) -> Unit,
@@ -230,7 +158,7 @@ private fun RestingHrPercentileSubsection(
 }
 
 @Composable
-private fun RecoveryToleranceSubsection(
+fun RecoveryToleranceSubsection(
     hrrToleranceSeconds: Int,
     controlsEnabled: Boolean,
     onUIEvent: (SettingsEvent) -> Unit,
@@ -256,7 +184,7 @@ private fun RecoveryToleranceSubsection(
 }
 
 @Composable
-private fun RasScalingSubsection(
+fun RasScalingSubsection(
     rasScalingFactor: Float,
     controlsEnabled: Boolean,
     onPhysiologyEvent: (SettingsEvent) -> Unit,
