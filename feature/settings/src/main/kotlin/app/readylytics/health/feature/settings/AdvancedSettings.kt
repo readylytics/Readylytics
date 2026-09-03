@@ -106,7 +106,7 @@ fun AdvancedSettingsSection(
 }
 
 @Composable
-private fun BaselineOverridesSubsection(
+fun BaselineOverridesSubsection(
     sleepState: SleepSettingsState,
     controlsEnabled: Boolean,
     onEvent: (SettingsEvent) -> Unit,
@@ -189,7 +189,7 @@ private fun BaselineOverrideField(
 }
 
 @Composable
-private fun RestingHrPercentileSubsection(
+fun RestingHrPercentileSubsection(
     sleepState: SleepSettingsState,
     controlsEnabled: Boolean,
     onEvent: (SettingsEvent) -> Unit,
@@ -230,7 +230,7 @@ private fun RestingHrPercentileSubsection(
 }
 
 @Composable
-private fun RecoveryToleranceSubsection(
+fun RecoveryToleranceSubsection(
     hrrToleranceSeconds: Int,
     controlsEnabled: Boolean,
     onUIEvent: (SettingsEvent) -> Unit,
