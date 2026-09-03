@@ -15,6 +15,7 @@ import app.readylytics.health.feature.settings.R
 import kotlinx.serialization.Serializable
 
 @Keep
+@Serializable
 enum class SettingsCategoryId(
     val titleRes: Int,
     val subtitleRes: Int,

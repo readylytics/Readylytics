@@ -1,5 +1,7 @@
 package app.readylytics.health.feature.settings.nav
 
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -19,5 +21,14 @@ class SettingsCategoryTest {
         assertEquals(subtitleRes.size, subtitleRes.toSet().size)
         assertTrue(titleRes.none { it == 0 })
         assertTrue(subtitleRes.none { it == 0 })
+    }
+
+    @Test
+    fun `SettingsCategoryId serializes and deserializes via kotlinx serialization`() {
+        for (category in SettingsCategoryId.entries) {
+            val encoded = Json.encodeToString(category)
+            val decoded = Json.decodeFromString<SettingsCategoryId>(encoded)
+            assertEquals(category, decoded)
+        }
     }
 }
