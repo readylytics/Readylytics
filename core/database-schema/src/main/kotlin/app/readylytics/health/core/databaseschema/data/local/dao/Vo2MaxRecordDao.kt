@@ -27,4 +27,26 @@ interface Vo2MaxRecordDao {
 
     @Query("DELETE FROM vo2_max_records WHERE timestampMs < :cutoffMs")
     suspend fun deleteBefore(cutoffMs: Long): Int
+
+    @Query(
+        "SELECT * FROM vo2_max_records " +
+            "WHERE timestampMs >= :fromMs AND (" +
+            "  timestampMs > :afterTs OR " +
+            "  (timestampMs = :afterTs AND id > :afterId)" +
+            ") " +
+            "ORDER BY timestampMs ASC, id ASC " +
+            "LIMIT :limit",
+    )
+    suspend fun pageAfter(
+        fromMs: Long,
+        afterTs: Long,
+        afterId: String,
+        limit: Int,
+    ): List<Vo2MaxRecordEntity>
+
+    @Query("SELECT COUNT(*) FROM vo2_max_records")
+    suspend fun count(): Int
+
+    @Query("DELETE FROM vo2_max_records")
+    suspend fun deleteAll(): Int
 }

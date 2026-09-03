@@ -30,6 +30,7 @@ class RetentionCleanupTest {
     private lateinit var stepRecordDao: StepRecordDao
     private lateinit var minuteBucketDao: MinuteBucketDao
     private lateinit var minuteBucketMaintenanceDao: MinuteBucketMaintenanceDao
+    private lateinit var vo2MaxDao: Vo2MaxRecordDao
     private lateinit var retentionCleanup: RetentionCleanup
 
     @Before
@@ -54,6 +55,7 @@ class RetentionCleanupTest {
         stepRecordDao = database.stepRecordDao()
         minuteBucketDao = database.minuteBucketDao()
         minuteBucketMaintenanceDao = database.minuteBucketMaintenanceDao()
+        vo2MaxDao = database.vo2MaxRecordDao()
 
         val transactionRunner = RoomTransactionRunner(database)
         retentionCleanup =
@@ -77,6 +79,7 @@ class RetentionCleanupTest {
                         minuteBucketMaintenanceDao = minuteBucketMaintenanceDao,
                     ),
                 dailySummaryDao = dailySummaryDao,
+                vo2MaxRecordDao = vo2MaxDao,
             )
     }
 
@@ -335,7 +338,34 @@ class RetentionCleanupTest {
                 ),
             )
 
-            // 11. Warm-tier minute buckets
+            // 11. VO2 Max
+            vo2MaxDao.upsertAll(
+                listOf(
+                    Vo2MaxRecordEntity(
+                        id = "old_vo2",
+                        timestampMs = cutoffMs - 1,
+                        vo2Max = 45.0f,
+                        measurementMethod = 1,
+                        deviceName = "Test",
+                    ),
+                    Vo2MaxRecordEntity(
+                        id = "equal_vo2",
+                        timestampMs = cutoffMs,
+                        vo2Max = 46.0f,
+                        measurementMethod = 1,
+                        deviceName = "Test",
+                    ),
+                    Vo2MaxRecordEntity(
+                        id = "new_vo2",
+                        timestampMs = cutoffMs + 1,
+                        vo2Max = 47.0f,
+                        measurementMethod = 1,
+                        deviceName = "Test",
+                    ),
+                ),
+            )
+
+            // 12. Warm-tier minute buckets
             minuteBucketDao.upsertBuckets(
                 listOf(
                     HrMinuteBucketEntity(
@@ -424,6 +454,10 @@ class RetentionCleanupTest {
             val bodyTemperatureRemaining = bodyTemperatureDao.getByTimeRange(0, Long.MAX_VALUE)
             assertEquals(listOf("equal_bt", "new_bt"), bodyTemperatureRemaining.map { it.id }.sorted())
 
+            // Verify VO2 Max (old deleted, equal and new remain)
+            val vo2Remaining = vo2MaxDao.getByTimeRange(0, Long.MAX_VALUE)
+            assertEquals(listOf("equal_vo2", "new_vo2"), vo2Remaining.map { it.id }.sorted())
+
             // Verify warm-tier minute buckets (old deleted, equal/new remain)
             val bucketRemaining = minuteBucketDao.getMinuteBuckets(cutoffMs - 120_000, cutoffMs + 120_000)
             assertEquals(listOf(2, 3), bucketRemaining.map { it.bucketIndex })
@@ -462,6 +496,7 @@ class RetentionCleanupTest {
                     minuteBucketMaintenanceDao = minuteBucketMaintenanceDao,
                 ),
             dailySummaryDao = dailySummaryDao,
+            vo2MaxRecordDao = vo2MaxDao,
         )
 
     private suspend fun seedSingleHrHrvAndOldWorkout(cutoffMs: Long) {

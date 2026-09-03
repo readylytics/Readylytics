@@ -10,6 +10,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketMai
 import app.readylytics.health.core.databaseschema.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SourceRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.StepRecordDao
+import app.readylytics.health.core.databaseschema.data.local.dao.Vo2MaxRecordDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -47,4 +48,7 @@ object DaoProvidersSupplementModule {
     @Provides
     fun provideMinuteBucketMaintenanceDao(db: HealthDatabase): MinuteBucketMaintenanceDao =
         db.minuteBucketMaintenanceDao()
+
+    @Provides
+    fun provideVo2MaxRecordDao(db: HealthDatabase): Vo2MaxRecordDao = db.vo2MaxRecordDao()
 }

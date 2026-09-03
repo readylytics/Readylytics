@@ -66,6 +66,7 @@ data class HealthIngestionBatch(
     val oxygenSaturationSamples: List<OxygenSaturationInput>,
     val bodyTemperatureSamples: List<BodyTemperatureInput>,
     val stepRecords: List<StepRecordInput>,
+    val vo2MaxSamples: List<Vo2MaxInput> = emptyList(),
 )
 
 data class SleepSessionInput(
@@ -177,5 +178,13 @@ data class StepRecordInput(
     val startTime: Long,
     val endTime: Long,
     val count: Long,
+    val deviceName: String?,
+)
+
+data class Vo2MaxInput(
+    val id: String,
+    val timestampMs: Long,
+    val vo2Max: Float,
+    val measurementMethod: Int?,
     val deviceName: String?,
 )

@@ -65,6 +65,7 @@ class PersistenceBatchingTest {
                         ),
                     dailySummaryDao = recordingDao(events, "summary"),
                     transactionRunner = transactionRunner,
+                    vo2MaxRecordDao = recordingDao(events, "vo2Max"),
                 )
 
             store.persist(
@@ -376,6 +377,7 @@ class PersistenceBatchingTest {
                 ),
             dailySummaryDao = recordingDao(events, "summary"),
             transactionRunner = transactionRunner,
+            vo2MaxRecordDao = recordingDao(events, "vo2Max"),
         )
 
     private fun heartRateInput(index: Int) =

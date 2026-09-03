@@ -6,6 +6,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.core.model.domain.sync.HealthIngestionBatch
 import app.readylytics.health.core.model.domain.sync.HeartRateInput
 import app.readylytics.health.core.model.domain.sync.HrvInput
+import app.readylytics.health.core.model.domain.sync.Vo2MaxInput
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
@@ -48,6 +49,7 @@ class RoomHealthIngestionStoreTest {
                     ),
                 dailySummaryDao = database.dailySummaryDao(),
                 transactionRunner = RoomTransactionRunner(database),
+                vo2MaxRecordDao = database.vo2MaxRecordDao(),
             )
     }
 
@@ -204,6 +206,55 @@ class RoomHealthIngestionStoreTest {
             store.persist(batch)
             assertEquals(1500, database.heartRateDao().count())
             assertEquals(1500, database.hrvDao().count())
+        }
+
+    @Test
+    fun `persist persists vo2MaxSamples with idempotency`() =
+        runTest {
+            val samples =
+                listOf(
+                    Vo2MaxInput(
+                        id = "vo2_1",
+                        timestampMs = START_MS,
+                        vo2Max = 52.5f,
+                        measurementMethod = 1,
+                        deviceName = "Pixel Watch",
+                    ),
+                    Vo2MaxInput(
+                        id = "vo2_2",
+                        timestampMs = START_MS + 60_000,
+                        vo2Max = 53.0f,
+                        measurementMethod = 1,
+                        deviceName = "Pixel Watch",
+                    ),
+                )
+
+            val batch =
+                HealthIngestionBatch(
+                    sleepSessions = emptyList(),
+                    sleepStages = emptyList(),
+                    heartRateSamples = emptyList(),
+                    hrvSamples = emptyList(),
+                    workouts = emptyList(),
+                    weights = emptyList(),
+                    bodyFatSamples = emptyList(),
+                    bloodPressureSamples = emptyList(),
+                    oxygenSaturationSamples = emptyList(),
+                    bodyTemperatureSamples = emptyList(),
+                    stepRecords = emptyList(),
+                    vo2MaxSamples = samples,
+                )
+
+            store.persist(batch)
+            assertEquals(2, database.vo2MaxRecordDao().count())
+
+            // Idempotent re-persist
+            store.persist(batch)
+            assertEquals(2, database.vo2MaxRecordDao().count())
+            val records = database.vo2MaxRecordDao().getByTimeRange(START_MS, START_MS + 120_000)
+            assertEquals(2, records.size)
+            assertEquals("vo2_2", records[0].id)
+            assertEquals(53.0f, records[0].vo2Max)
         }
 
     private companion object {

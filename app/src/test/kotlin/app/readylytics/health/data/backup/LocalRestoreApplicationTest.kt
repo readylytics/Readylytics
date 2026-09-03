@@ -595,4 +595,34 @@ class LocalRestoreApplicationTest : LocalRestoreManagerTestBase() {
             assertEquals(42.5f, restored.residualFatigue)
             zipFile.delete()
         }
+
+    @Test
+    fun applyRestore_restoresVo2MaxRecords() =
+        runTest {
+            val json = createValidBackupJson()
+            val vo2MaxJson =
+                JSONArray().apply {
+                    put(
+                        JSONObject().apply {
+                            put("id", "vo2-restored-1")
+                            put("timestampMs", 1_000L)
+                            put("vo2Max", 49.5)
+                            put("measurementMethod", 1)
+                            put("deviceName", "Pixel Watch")
+                        },
+                    )
+                }
+            json.put("vo2MaxRecords", vo2MaxJson)
+            val zipFile = createBackupZipFile("vo2_max_backup.zip", json)
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
+            val records = db.vo2MaxRecordDao().getByTimeRange(0, 2_000L)
+            assertEquals(1, records.size)
+            assertEquals("vo2-restored-1", records[0].id)
+            assertEquals(49.5f, records[0].vo2Max)
+            assertEquals("Pixel Watch", records[0].deviceName)
+            zipFile.delete()
+        }
 }

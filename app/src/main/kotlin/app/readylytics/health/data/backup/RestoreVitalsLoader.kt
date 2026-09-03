@@ -7,6 +7,7 @@ import app.readylytics.health.core.databaseschema.data.local.entity.BodyFatRecor
 import app.readylytics.health.core.databaseschema.data.local.entity.BodyTemperatureRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.OxygenSaturationRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.StepRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.Vo2MaxRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
@@ -108,6 +109,22 @@ class RestoreVitalsLoader
             while (reader.hasNext()) {
                 batch.add(json.decodeFromString(readNextObjectAsString(json, reader)))
                 if (batch.size >= 500) {
+                    dao.upsertAll(batch)
+                    batch.clear()
+                }
+            }
+            if (batch.isNotEmpty()) dao.upsertAll(batch)
+            reader.endArray()
+        }
+
+        suspend fun restoreVo2MaxRecords(reader: JsonReader) {
+            val dao = healthDatabase.vo2MaxRecordDao()
+            dao.deleteAll()
+            reader.beginArray()
+            val batch = mutableListOf<Vo2MaxRecordEntity>()
+            while (reader.hasNext()) {
+                batch.add(json.decodeFromString(readNextObjectAsString(json, reader)))
+                if (batch.size >= 100) {
                     dao.upsertAll(batch)
                     batch.clear()
                 }

@@ -1,6 +1,7 @@
 package app.readylytics.health.core.database.data.local
 
 import app.readylytics.health.core.databaseschema.data.local.dao.DailySummaryDao
+import app.readylytics.health.core.databaseschema.data.local.dao.Vo2MaxRecordDao
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import java.time.Instant
@@ -15,9 +16,10 @@ class RetentionCleanup
         private val transactionRunner: TransactionRunner,
         private val daos: HealthRecordDaos,
         private val dailySummaryDao: DailySummaryDao,
+        private val vo2MaxRecordDao: Vo2MaxRecordDao,
     ) {
         // DB-002: heart_rate_records/hrv_records are deleted in bounded batches, each its own
-        // transaction, before the remaining nine low-volume tables run in a single transaction as
+        // transaction, before the remaining ten low-volume tables run in a single transaction as
         // before. Every constituent delete is `WHERE timestampMs < cutoff`, so re-running after a
         // killed worker (mid-batch, or between the HR/HRV phase and the low-volume phase) is safe
         // -- already-deleted rows simply contribute 0 to the next call.
@@ -47,6 +49,7 @@ class RetentionCleanup
                 daos.oxygenSaturationRecordDao.deleteBeforeTimestamp(cutoffMs)
                 daos.bodyTemperatureRecordDao.deleteBeforeTimestamp(cutoffMs)
                 daos.stepRecordDao.deleteBeforeTimestamp(cutoffMs)
+                vo2MaxRecordDao.deleteBefore(cutoffMs)
             }
 
             val earliest = earliestMs ?: return null
