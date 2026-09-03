@@ -129,7 +129,7 @@ internal fun DisplaySettingsSection(
 }
 
 @Composable
-private fun DynamicColorSettings(
+internal fun DynamicColorSettings(
     uiState: UIState,
     onUIEvent: (SettingsEvent) -> Unit,
 ) {
@@ -305,7 +305,7 @@ internal fun MiscellaneousSection(
 }
 
 @Composable
-private fun AppThemeItem(
+internal fun AppThemeItem(
     uiState: UIState,
     onEvent: (SettingsEvent) -> Unit,
 ) {
