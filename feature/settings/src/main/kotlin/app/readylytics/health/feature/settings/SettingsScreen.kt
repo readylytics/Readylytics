@@ -3,6 +3,8 @@ package app.readylytics.health.feature.settings
 import android.content.Context
 import android.content.Intent
 import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -24,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -47,6 +50,60 @@ import app.readylytics.health.feature.settings.nav.SettingsHomeScreen
 import com.google.android.gms.oss.licenses.v2.OssLicensesMenuActivity
 import kotlinx.coroutines.flow.collectLatest
 import app.readylytics.health.core.ui.R as CoreUiR
+
+// androidx.navigationevent.NavigationEvent.EDGE_RIGHT == 1. Predictive-back swipe origin:
+// a left-edge/NONE swipe follows the finger rightward (out through the End edge); a right-edge
+// swipe mirrors it. Without this override the default predictive-pop transition scales the page
+// down (scaleOut targetScale 0.7f) instead of sliding it away.
+private const val PREDICTIVE_BACK_SWIPE_EDGE_RIGHT = 1
+
+private val settingsEnterTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
+    fadeIn(animationSpec = tween(300)) +
+        slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300))
+}
+
+private val settingsExitTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
+    fadeOut(animationSpec = tween(300)) +
+        slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300))
+}
+
+private val settingsPopEnterTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
+    fadeIn(animationSpec = tween(300)) +
+        slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300))
+}
+
+private val settingsPopExitTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
+    fadeOut(animationSpec = tween(300)) +
+        slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300))
+}
+
+private val settingsPredictivePopEnterTransition:
+    AnimatedContentTransitionScope<NavBackStackEntry>.(Int) -> EnterTransition =
+    { swipeEdge: Int ->
+        fadeIn(animationSpec = tween(300)) +
+            slideIntoContainer(
+                if (swipeEdge == PREDICTIVE_BACK_SWIPE_EDGE_RIGHT) {
+                    AnimatedContentTransitionScope.SlideDirection.Start
+                } else {
+                    AnimatedContentTransitionScope.SlideDirection.End
+                },
+                tween(300),
+            )
+    }
+
+private val settingsPredictivePopExitTransition:
+    AnimatedContentTransitionScope<NavBackStackEntry>.(Int) -> ExitTransition =
+    { swipeEdge: Int ->
+        fadeOut(animationSpec = tween(300)) +
+            slideOutOfContainer(
+                if (swipeEdge == PREDICTIVE_BACK_SWIPE_EDGE_RIGHT) {
+                    AnimatedContentTransitionScope.SlideDirection.End
+                } else {
+                    AnimatedContentTransitionScope.SlideDirection.Start
+                },
+                tween(300),
+            )
+    }
 
 private fun openOssLicenses(
     context: Context,
@@ -238,22 +295,12 @@ private fun SettingsScreenContent(
         navController = navController,
         startDestination = SettingsDestination.Home,
         modifier = modifier.fillMaxSize(),
-        enterTransition = {
-            fadeIn(animationSpec = tween(300)) +
-                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300))
-        },
-        exitTransition = {
-            fadeOut(animationSpec = tween(300)) +
-                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300))
-        },
-        popEnterTransition = {
-            fadeIn(animationSpec = tween(300)) +
-                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300))
-        },
-        popExitTransition = {
-            fadeOut(animationSpec = tween(300)) +
-                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300))
-        },
+        enterTransition = settingsEnterTransition,
+        exitTransition = settingsExitTransition,
+        popEnterTransition = settingsPopEnterTransition,
+        popExitTransition = settingsPopExitTransition,
+        predictivePopEnterTransition = settingsPredictivePopEnterTransition,
+        predictivePopExitTransition = settingsPredictivePopExitTransition,
     ) {
         composable<SettingsDestination.Home> {
             SettingsHomeScreen(

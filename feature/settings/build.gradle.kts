@@ -11,6 +11,7 @@ android {
 dependencies {
     implementation(project(":core:scoring"))
     implementation(project(":core:designsystem"))
+    implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.documentfile)
     implementation(libs.androidx.health.connect.client)
     implementation(libs.androidx.compose.material.icons.extended)
