@@ -153,6 +153,138 @@ fun ThresholdSettingsSection(
 }
 
 @Composable
+internal fun HrvOptimalThresholdItem(
+    value: Float,
+    controlsEnabled: Boolean,
+    onEvent: (SettingsEvent) -> Unit,
+) {
+    var current by remember(value) { mutableFloatStateOf(value) }
+    ThresholdSliderItem(
+        label = stringResource(R.string.threshold_hrv_optimal_label),
+        enabled = controlsEnabled,
+        value = current,
+        onValueChange = { current = it },
+        onValueChangeFinished = { onEvent(SettingsEvent.HrvOptimalThresholdChanged(current)) },
+        valueRange = 1.0f..1.2f,
+        description = stringResource(R.string.threshold_hrv_optimal_desc),
+    )
+}
+
+@Composable
+internal fun HrvWarningThresholdItem(
+    value: Float,
+    controlsEnabled: Boolean,
+    onEvent: (SettingsEvent) -> Unit,
+) {
+    var current by remember(value) { mutableFloatStateOf(value) }
+    ThresholdSliderItem(
+        label = stringResource(R.string.threshold_hrv_warning_label),
+        enabled = controlsEnabled,
+        value = current,
+        onValueChange = { current = it },
+        onValueChangeFinished = { onEvent(SettingsEvent.HrvWarningThresholdChanged(current)) },
+        valueRange = 0.8f..1.0f,
+        description = stringResource(R.string.threshold_hrv_warning_desc),
+    )
+}
+
+@Composable
+internal fun RhrOptimalThresholdItem(
+    value: Float,
+    controlsEnabled: Boolean,
+    onEvent: (SettingsEvent) -> Unit,
+) {
+    var current by remember(value) { mutableFloatStateOf(value) }
+    ThresholdSliderItem(
+        label = stringResource(R.string.threshold_rhr_optimal_label),
+        enabled = controlsEnabled,
+        value = current,
+        onValueChange = { current = it },
+        onValueChangeFinished = { onEvent(SettingsEvent.RhrOptimalThresholdChanged(current)) },
+        valueRange = 0.8f..1.0f,
+        description = stringResource(R.string.threshold_rhr_optimal_desc),
+    )
+}
+
+@Composable
+internal fun RhrWarningThresholdItem(
+    value: Float,
+    controlsEnabled: Boolean,
+    onEvent: (SettingsEvent) -> Unit,
+) {
+    var current by remember(value) { mutableFloatStateOf(value) }
+    ThresholdSliderItem(
+        label = stringResource(R.string.threshold_rhr_warning_label),
+        enabled = controlsEnabled,
+        value = current,
+        onValueChange = { current = it },
+        onValueChangeFinished = { onEvent(SettingsEvent.RhrWarningThresholdChanged(current)) },
+        valueRange = 1.0f..1.2f,
+        description = stringResource(R.string.threshold_rhr_warning_desc),
+    )
+}
+
+@Composable
+internal fun BodyTempElevatedThresholdItem(
+    value: Float,
+    controlsEnabled: Boolean,
+    onEvent: (SettingsEvent) -> Unit,
+) {
+    var current by remember(value) { mutableFloatStateOf(value) }
+    ThresholdSliderItem(
+        label = stringResource(R.string.threshold_body_temp_elevated_label),
+        enabled = controlsEnabled,
+        value = current,
+        onValueChange = { current = it },
+        onValueChangeFinished = { onEvent(SettingsEvent.BodyTempElevatedThresholdChanged(current)) },
+        valueRange = 0.25f..1.5f,
+        steps = 4,
+        displayValue = stringResource(R.string.threshold_body_temp_elevated_value, current),
+        description = stringResource(R.string.threshold_body_temp_elevated_desc),
+    )
+}
+
+@Composable
+internal fun ConsistencyEvaluationPeriodItem(
+    days: Int,
+    controlsEnabled: Boolean,
+    onEvent: (SettingsEvent) -> Unit,
+) {
+    var value by remember(days) { mutableFloatStateOf(days.toFloat()) }
+    ThresholdSliderItem(
+        label = stringResource(R.string.threshold_evaluation_period_label),
+        enabled = controlsEnabled,
+        value = value,
+        onValueChange = { value = it },
+        onValueChangeFinished = { onEvent(SettingsEvent.ConsistencyEvaluationDaysChanged(value.roundToInt())) },
+        valueRange = 3f..14f,
+        steps = 10,
+        displayValue = "${value.roundToInt()} days",
+        description = stringResource(R.string.threshold_evaluation_period_desc),
+    )
+}
+
+@Composable
+internal fun ConsistencyBaselineWindowItem(
+    sessions: Int,
+    controlsEnabled: Boolean,
+    onEvent: (SettingsEvent) -> Unit,
+) {
+    var value by remember(sessions) { mutableFloatStateOf(sessions.toFloat()) }
+    ThresholdSliderItem(
+        label = stringResource(R.string.threshold_baseline_window_label),
+        enabled = controlsEnabled,
+        value = value,
+        onValueChange = { value = it },
+        onValueChangeFinished = { onEvent(SettingsEvent.ConsistencyBaselineDaysChanged(value.roundToInt())) },
+        valueRange = 3f..30f,
+        steps = 26,
+        displayValue = "${value.roundToInt()} sessions",
+        description = stringResource(R.string.threshold_baseline_window_desc),
+    )
+}
+
+@Composable
 fun ActivitySettingsSection(
     stepGoal: Int,
     onEvent: (SettingsEvent) -> Unit,
