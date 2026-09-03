@@ -1,6 +1,7 @@
 package app.readylytics.health.feature.settings
 
 import androidx.compose.material3.Surface
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -43,6 +44,7 @@ class SettingsSearchNavigationFlowTest {
         composeTestRule.onNodeWithText("Search settings…", substring = true).performTextInput("ras scaling")
         composeTestRule.onNodeWithText("RAS Scaling Factor", substring = true).performClick()
 
-        composeTestRule.onNodeWithText("RAS Scaling Factor", substring = true).assertExists()
+        composeTestRule.onNodeWithText("Search settings…", substring = true).assertDoesNotExist()
+        composeTestRule.onNodeWithText("RAS Scaling Factor", substring = true).assertIsDisplayed()
     }
 }
