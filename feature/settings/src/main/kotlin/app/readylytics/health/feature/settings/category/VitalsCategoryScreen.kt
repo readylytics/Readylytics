@@ -26,19 +26,24 @@ internal fun VitalsCategoryScreen(
 ) {
     SettingsCategoryScaffold(
         items =
-            vitalsSubsectionItems(states, intents, controlsEnabled) +
-                vitalsThresholdItems(states, intents, controlsEnabled),
+            vitalsItemsPartOne(states, intents, controlsEnabled) +
+                vitalsItemsPartTwo(states, intents, controlsEnabled),
         highlightItemId = highlightItemId,
     )
 }
 
-private fun vitalsSubsectionItems(
+/**
+ * First half of the vitals list, in brief order: baseline overrides, resting HR
+ * percentile, HRV optimal, HRV warning, RHR optimal, RHR warning. Contiguous with
+ * [vitalsItemsPartTwo] — concatenating the two reproduces the brief's exact order.
+ */
+private fun vitalsItemsPartOne(
     states: SettingsStates,
     intents: SettingsIntents,
     controlsEnabled: Boolean,
 ): List<SettingsCategoryListItem> {
     val sleepState = states.sleepState
-    val uiState = states.uiState
+    val thresholdState = states.thresholdState
     return listOf(
         SettingsCategoryListItem(SettingsItemIds.VITALS_BASELINE_OVERRIDES) {
             BaselineOverridesSubsection(
@@ -54,23 +59,6 @@ private fun vitalsSubsectionItems(
                 onEvent = intents.onSleepEvent,
             )
         },
-        SettingsCategoryListItem(SettingsItemIds.VITALS_HRR_RECOVERY_TOLERANCE) {
-            RecoveryToleranceSubsection(
-                hrrToleranceSeconds = uiState.hrrToleranceSeconds,
-                controlsEnabled = controlsEnabled,
-                onUIEvent = intents.onUIEvent,
-            )
-        },
-    )
-}
-
-private fun vitalsThresholdItems(
-    states: SettingsStates,
-    intents: SettingsIntents,
-    controlsEnabled: Boolean,
-): List<SettingsCategoryListItem> {
-    val thresholdState = states.thresholdState
-    return listOf(
         SettingsCategoryListItem(SettingsItemIds.VITALS_HRV_OPTIMAL_THRESHOLD) {
             HrvOptimalThresholdItem(thresholdState.hrvOptimalThreshold, controlsEnabled, intents.onThresholdEvent)
         },
@@ -83,6 +71,22 @@ private fun vitalsThresholdItems(
         SettingsCategoryListItem(SettingsItemIds.VITALS_RHR_WARNING_THRESHOLD) {
             RhrWarningThresholdItem(thresholdState.rhrWarningThreshold, controlsEnabled, intents.onThresholdEvent)
         },
+    )
+}
+
+/**
+ * Second half of the vitals list, in brief order: body temp, consistency evaluation
+ * period, consistency baseline window, HRR recovery tolerance. Contiguous with
+ * [vitalsItemsPartOne] — concatenating the two reproduces the brief's exact order.
+ */
+private fun vitalsItemsPartTwo(
+    states: SettingsStates,
+    intents: SettingsIntents,
+    controlsEnabled: Boolean,
+): List<SettingsCategoryListItem> {
+    val thresholdState = states.thresholdState
+    val uiState = states.uiState
+    return listOf(
         SettingsCategoryListItem(SettingsItemIds.VITALS_BODY_TEMP_THRESHOLD) {
             BodyTempElevatedThresholdItem(
                 thresholdState.bodyTempElevatedThreshold,
@@ -102,6 +106,13 @@ private fun vitalsThresholdItems(
                 thresholdState.consistencyBaselineDays,
                 controlsEnabled,
                 intents.onThresholdEvent,
+            )
+        },
+        SettingsCategoryListItem(SettingsItemIds.VITALS_HRR_RECOVERY_TOLERANCE) {
+            RecoveryToleranceSubsection(
+                hrrToleranceSeconds = uiState.hrrToleranceSeconds,
+                controlsEnabled = controlsEnabled,
+                onUIEvent = intents.onUIEvent,
             )
         },
     )
