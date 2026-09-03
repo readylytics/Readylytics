@@ -8,6 +8,8 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -21,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
@@ -51,58 +54,47 @@ import com.google.android.gms.oss.licenses.v2.OssLicensesMenuActivity
 import kotlinx.coroutines.flow.collectLatest
 import app.readylytics.health.core.ui.R as CoreUiR
 
-// androidx.navigationevent.NavigationEvent.EDGE_RIGHT == 1. Predictive-back swipe origin:
-// a left-edge/NONE swipe follows the finger rightward (out through the End edge); a right-edge
-// swipe mirrors it. Without this override the default predictive-pop transition scales the page
-// down (scaleOut targetScale 0.7f) instead of sliding it away.
-private const val PREDICTIVE_BACK_SWIPE_EDGE_RIGHT = 1
+private const val TRANSITION_DURATION_MS = 300
+private const val PREDICTIVE_POP_SCALE = 0.9f
 
 private val settingsEnterTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
-    fadeIn(animationSpec = tween(300)) +
-        slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300))
+    fadeIn(animationSpec = tween(TRANSITION_DURATION_MS)) +
+        slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(TRANSITION_DURATION_MS))
 }
 
 private val settingsExitTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
-    fadeOut(animationSpec = tween(300)) +
-        slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300))
+    fadeOut(animationSpec = tween(TRANSITION_DURATION_MS)) +
+        slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(TRANSITION_DURATION_MS))
 }
 
 private val settingsPopEnterTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
-    fadeIn(animationSpec = tween(300)) +
-        slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300))
+    fadeIn(animationSpec = tween(TRANSITION_DURATION_MS)) +
+        slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(TRANSITION_DURATION_MS))
 }
 
 private val settingsPopExitTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
-    fadeOut(animationSpec = tween(300)) +
-        slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300))
+    fadeOut(animationSpec = tween(TRANSITION_DURATION_MS)) +
+        slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(TRANSITION_DURATION_MS))
 }
 
-private val settingsPredictivePopEnterTransition:
+internal val settingsPredictivePopEnterTransition:
     AnimatedContentTransitionScope<NavBackStackEntry>.(Int) -> EnterTransition =
-    { swipeEdge: Int ->
-        fadeIn(animationSpec = tween(300)) +
-            slideIntoContainer(
-                if (swipeEdge == PREDICTIVE_BACK_SWIPE_EDGE_RIGHT) {
-                    AnimatedContentTransitionScope.SlideDirection.Start
-                } else {
-                    AnimatedContentTransitionScope.SlideDirection.End
-                },
-                tween(300),
-            )
+    { _: Int ->
+        scaleIn(
+            initialScale = PREDICTIVE_POP_SCALE,
+            transformOrigin = TransformOrigin.Center,
+            animationSpec = tween(TRANSITION_DURATION_MS),
+        ) + fadeIn(animationSpec = tween(TRANSITION_DURATION_MS))
     }
 
-private val settingsPredictivePopExitTransition:
+internal val settingsPredictivePopExitTransition:
     AnimatedContentTransitionScope<NavBackStackEntry>.(Int) -> ExitTransition =
-    { swipeEdge: Int ->
-        fadeOut(animationSpec = tween(300)) +
-            slideOutOfContainer(
-                if (swipeEdge == PREDICTIVE_BACK_SWIPE_EDGE_RIGHT) {
-                    AnimatedContentTransitionScope.SlideDirection.End
-                } else {
-                    AnimatedContentTransitionScope.SlideDirection.Start
-                },
-                tween(300),
-            )
+    { _: Int ->
+        scaleOut(
+            targetScale = PREDICTIVE_POP_SCALE,
+            transformOrigin = TransformOrigin.Center,
+            animationSpec = tween(TRANSITION_DURATION_MS),
+        ) + fadeOut(animationSpec = tween(TRANSITION_DURATION_MS))
     }
 
 private fun openOssLicenses(
