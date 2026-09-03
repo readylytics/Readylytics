@@ -256,10 +256,10 @@ internal fun ConsistencyEvaluationPeriodItem(
         enabled = controlsEnabled,
         value = value,
         onValueChange = { value = it },
-        onValueChangeFinished = { onEvent(SettingsEvent.ConsistencyEvaluationDaysChanged(value.roundToInt())) },
+        onValueChangeFinished = { onEvent(SettingsEvent.ConsistencyEvaluationDaysChanged(value.toInt())) },
         valueRange = 3f..14f,
         steps = 10,
-        displayValue = "${value.roundToInt()} days",
+        displayValue = "${value.toInt()} days",
         description = stringResource(R.string.threshold_evaluation_period_desc),
     )
 }
@@ -276,10 +276,10 @@ internal fun ConsistencyBaselineWindowItem(
         enabled = controlsEnabled,
         value = value,
         onValueChange = { value = it },
-        onValueChangeFinished = { onEvent(SettingsEvent.ConsistencyBaselineDaysChanged(value.roundToInt())) },
+        onValueChangeFinished = { onEvent(SettingsEvent.ConsistencyBaselineDaysChanged(value.toInt())) },
         valueRange = 3f..30f,
         steps = 26,
-        displayValue = "${value.roundToInt()} sessions",
+        displayValue = "${value.toInt()} sessions",
         description = stringResource(R.string.threshold_baseline_window_desc),
     )
 }
