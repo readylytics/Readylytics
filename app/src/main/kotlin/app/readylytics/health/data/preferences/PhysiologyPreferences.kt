@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import app.readylytics.health.core.model.data.preferences.LegacyBanisterMultipliers
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
+import app.readylytics.health.core.model.data.preferences.Vo2MaxSourceMode
 import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
 import app.readylytics.health.core.scoring.domain.scoring.RasCalculator
@@ -177,6 +178,20 @@ internal class PhysiologyPreferences
                     .setChengBeta(profile.defaultChengBeta)
                     .setItrimpB(profile.defaultItrimB)
                     .build()
+            }
+        }
+
+        suspend fun updateVo2MaxSourceMode(mode: Vo2MaxSourceMode) {
+            dataStore.updateData {
+                it
+                    .toBuilder()
+                    .setVo2MaxSourceMode(
+                        when (mode) {
+                            Vo2MaxSourceMode.AUTO -> Vo2MaxSourceModeProto.VO2_MAX_SOURCE_AUTO
+                            Vo2MaxSourceMode.WEARABLE_ONLY -> Vo2MaxSourceModeProto.VO2_MAX_SOURCE_WEARABLE_ONLY
+                            Vo2MaxSourceMode.ESTIMATED_ONLY -> Vo2MaxSourceModeProto.VO2_MAX_SOURCE_ESTIMATED_ONLY
+                        },
+                    ).build()
             }
         }
 

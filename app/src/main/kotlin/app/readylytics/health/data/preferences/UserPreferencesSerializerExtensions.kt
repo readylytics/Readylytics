@@ -2,6 +2,7 @@ package app.readylytics.health.data.preferences
 
 import app.readylytics.health.core.model.data.preferences.UnitSystem
 import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.data.preferences.Vo2MaxSourceMode
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
@@ -143,6 +144,7 @@ internal fun UserPreferencesProto.Builder.applyScoringAndRecalcFields(
                 LoadSourceMode.EVERYDAY_HEART_RATE -> LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE
             },
         )
+        setVo2MaxSourceMode(mapVo2MaxSourceMode(domain.vo2MaxSourceMode))
         setSleepScoreWeightProfile(mapSleepScoreWeightProfile(domain.sleepScoreWeightProfile))
         setHypersomniaOnsetPercent(domain.hypersomniaOnsetPercent)
         domain.lastRecalcSleepScoreWeightProfile?.let {
@@ -162,6 +164,13 @@ internal fun UserPreferencesProto.Builder.applyScoringAndRecalcFields(
         domain.lastAppliedTrainingReadinessLoadBalanceWeight?.let {
             setLastAppliedTrainingReadinessLoadBalanceWeight(it)
         }
+    }
+
+private fun mapVo2MaxSourceMode(mode: Vo2MaxSourceMode): Vo2MaxSourceModeProto =
+    when (mode) {
+        Vo2MaxSourceMode.AUTO -> Vo2MaxSourceModeProto.VO2_MAX_SOURCE_AUTO
+        Vo2MaxSourceMode.WEARABLE_ONLY -> Vo2MaxSourceModeProto.VO2_MAX_SOURCE_WEARABLE_ONLY
+        Vo2MaxSourceMode.ESTIMATED_ONLY -> Vo2MaxSourceModeProto.VO2_MAX_SOURCE_ESTIMATED_ONLY
     }
 
 private fun mapSleepScoreWeightProfile(profile: SleepScoreWeightProfile): SleepScoreWeightProfileProto =

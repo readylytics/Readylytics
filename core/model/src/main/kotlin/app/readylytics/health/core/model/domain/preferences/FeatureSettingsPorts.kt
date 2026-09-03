@@ -6,6 +6,7 @@ import app.readylytics.health.core.model.data.preferences.FallbackThemeColor
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.data.preferences.SyncPreference
 import app.readylytics.health.core.model.data.preferences.UnitSystem
+import app.readylytics.health.core.model.data.preferences.Vo2MaxSourceMode
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
@@ -23,6 +24,7 @@ interface PhysiologySettings {
     suspend fun updateGender(gender: String?)
     suspend fun updateHeight(heightCm: Float?)
     suspend fun updatePhysiologyProfile(profile: PhysiologyProfile)
+    suspend fun updateVo2MaxSourceMode(mode: Vo2MaxSourceMode)
 }
 
 interface HeartRateZoneSettings {

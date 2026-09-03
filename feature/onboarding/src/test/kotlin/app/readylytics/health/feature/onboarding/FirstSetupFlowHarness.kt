@@ -4,6 +4,7 @@ import app.readylytics.health.core.model.data.preferences.Gender
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.data.preferences.UnitSystem
 import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.data.preferences.Vo2MaxSourceMode
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.preferences.DisplaySettings
@@ -83,6 +84,10 @@ class FirstSetupFlowHarness(
 
         override suspend fun updatePhysiologyProfile(profile: PhysiologyProfile) {
             preferences.update { it.copy(physiologyProfile = profile) }
+        }
+
+        override suspend fun updateVo2MaxSourceMode(mode: Vo2MaxSourceMode) {
+            preferences.update { it.copy(vo2MaxSourceMode = mode) }
         }
     }
 

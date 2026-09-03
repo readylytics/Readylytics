@@ -7,6 +7,7 @@ import app.readylytics.health.core.model.data.preferences.FallbackThemeColor
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.data.preferences.SyncPreference
 import app.readylytics.health.core.model.data.preferences.UnitSystem
+import app.readylytics.health.core.model.data.preferences.Vo2MaxSourceMode
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.preferences.AboutPreferences
 import app.readylytics.health.core.model.domain.preferences.BackupSettings
@@ -162,6 +163,8 @@ class SettingsRepository
         override suspend fun updateGender(gender: String?) = physiology.updateGender(gender)
 
         override suspend fun updateHeight(heightCm: Float?) = physiology.updateHeight(heightCm)
+
+        override suspend fun updateVo2MaxSourceMode(mode: Vo2MaxSourceMode) = physiology.updateVo2MaxSourceMode(mode)
 
         override suspend fun updateHrvOptimalThreshold(value: Float) = thresholds.updateHrvOptimalThreshold(value)
 

@@ -76,6 +76,7 @@ class PhysiologySettingsViewModel
                         gender = prefs.gender,
                         heightCm = prefs.heightCm,
                         unitSystem = prefs.unitSystem,
+                        vo2MaxSourceMode = prefs.vo2MaxSourceMode,
                     )
                 }.stateIn(
                     scope = viewModelScope,
@@ -109,6 +110,10 @@ class PhysiologySettingsViewModel
                     viewModelScope.launch {
                         physiologySettings.updatePhysiologyProfile(profile = event.profile)
                         healthDataRefresh.refreshHistorical()
+                    }
+                is SettingsEvent.Vo2MaxSourceModeChanged ->
+                    viewModelScope.launch {
+                        physiologySettings.updateVo2MaxSourceMode(mode = event.mode)
                     }
                 SettingsEvent.ResetRasScalingFactor ->
                     viewModelScope.launch {

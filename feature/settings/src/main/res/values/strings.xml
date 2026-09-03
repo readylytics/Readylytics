@@ -292,6 +292,11 @@
 <string name="threshold_rhr_warning_desc">RHR ratio to baseline to be considered Warning (e.g.
         100-120%%).</string>
 <string name="threshold_rhr_warning_label">RHR Warning</string>
+<string name="vo2_max_source_auto">Auto (Wearable preferred)</string>
+<string name="vo2_max_source_description">Choose whether Cardio Fitness relies on smartwatch VO2 Max records or our pure-Kotlin resting HR ratio estimation.</string>
+<string name="vo2_max_source_estimated">Resting HR ratio estimate only</string>
+<string name="vo2_max_source_title">Cardio Fitness (VO2 Max) Source</string>
+<string name="vo2_max_source_wearable">Wearable only</string>
 <string name="workout_detail_layouts_section_header">Workout details</string>
 <string name="workout_detail_layouts_reset_button">Reset all workout detail layouts</string>
 <string name="workout_detail_layouts_reset_desc">Returns the workout detail screen to the default layout for every workout type.</string>
