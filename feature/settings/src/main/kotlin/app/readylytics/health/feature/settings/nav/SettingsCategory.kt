@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.settings.nav
 
+import androidx.annotation.Keep
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Bloodtype
@@ -13,6 +14,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import app.readylytics.health.feature.settings.R
 import kotlinx.serialization.Serializable
 
+@Keep
 enum class SettingsCategoryId(
     val titleRes: Int,
     val subtitleRes: Int,

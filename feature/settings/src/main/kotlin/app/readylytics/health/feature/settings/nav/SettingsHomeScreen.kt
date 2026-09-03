@@ -123,4 +123,4 @@ private fun SearchResultsList(
     }
 }
 
-private fun Modifier.clickableSettingsRow(onClick: () -> Unit): Modifier = this.then(clickable(onClick = onClick))
+private fun Modifier.clickableSettingsRow(onClick: () -> Unit): Modifier = this.clickable(onClick = onClick)
