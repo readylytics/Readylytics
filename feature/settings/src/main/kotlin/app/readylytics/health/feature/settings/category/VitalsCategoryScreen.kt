@@ -24,6 +24,7 @@ internal fun VitalsCategoryScreen(
     intents: SettingsIntents,
     controlsEnabled: Boolean,
     highlightItemId: String?,
+    onNavigateBack: () -> Unit = {},
 ) {
     SettingsCategoryScaffold(
         titleRes = SettingsCategoryId.VITALS.titleRes,
@@ -31,6 +32,7 @@ internal fun VitalsCategoryScreen(
             vitalsItemsPartOne(states, intents, controlsEnabled) +
                 vitalsItemsPartTwo(states, intents, controlsEnabled),
         highlightItemId = highlightItemId,
+        onNavigateBack = onNavigateBack,
     )
 }
 

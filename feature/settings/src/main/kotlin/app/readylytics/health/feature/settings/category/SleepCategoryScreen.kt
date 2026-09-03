@@ -25,12 +25,14 @@ internal fun SleepCategoryScreen(
     intents: SettingsIntents,
     controlsEnabled: Boolean,
     highlightItemId: String?,
+    onNavigateBack: () -> Unit = {},
 ) {
     SettingsCategoryScaffold(
         titleRes = SettingsCategoryId.SLEEP.titleRes,
         items =
             sleepScoringItems(states, intents, controlsEnabled) + sleepDetectionItems(states, intents, controlsEnabled),
         highlightItemId = highlightItemId,
+        onNavigateBack = onNavigateBack,
     )
 }
 

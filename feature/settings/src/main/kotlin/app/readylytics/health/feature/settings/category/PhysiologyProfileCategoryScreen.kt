@@ -24,6 +24,7 @@ internal fun PhysiologyProfileCategoryScreen(
     intents: SettingsIntents,
     controlsEnabled: Boolean,
     highlightItemId: String?,
+    onNavigateBack: () -> Unit = {},
 ) {
     SettingsCategoryScaffold(
         titleRes = SettingsCategoryId.PHYSIOLOGY_PROFILE.titleRes,
@@ -47,6 +48,7 @@ internal fun PhysiologyProfileCategoryScreen(
                 },
             ),
         highlightItemId = highlightItemId,
+        onNavigateBack = onNavigateBack,
     )
 }
 

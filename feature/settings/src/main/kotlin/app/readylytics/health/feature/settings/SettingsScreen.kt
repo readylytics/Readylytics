@@ -313,6 +313,7 @@ private fun SettingsScreenContent(
                 intents = intents,
                 controlsEnabled = controlsEnabled,
                 onReportTypeSelected = { pendingReportType = it },
+                onNavigateBack = { navController.popBackStack() },
             )
         }
     }
@@ -326,19 +327,25 @@ private fun CategoryScreenHost(
     intents: SettingsIntents,
     controlsEnabled: Boolean,
     onReportTypeSelected: (GitHubIssueType) -> Unit,
+    onNavigateBack: () -> Unit,
 ) {
     when (categoryId) {
         SettingsCategoryId.PHYSIOLOGY_PROFILE ->
-            PhysiologyProfileCategoryScreen(states, intents, controlsEnabled, highlightItemId)
-        SettingsCategoryId.SLEEP -> SleepCategoryScreen(states, intents, controlsEnabled, highlightItemId)
-        SettingsCategoryId.TRAINING -> TrainingCategoryScreen(states, intents, controlsEnabled, highlightItemId)
-        SettingsCategoryId.VITALS -> VitalsCategoryScreen(states, intents, controlsEnabled, highlightItemId)
+            PhysiologyProfileCategoryScreen(states, intents, controlsEnabled, highlightItemId, onNavigateBack)
+        SettingsCategoryId.SLEEP ->
+            SleepCategoryScreen(states, intents, controlsEnabled, highlightItemId, onNavigateBack)
+        SettingsCategoryId.TRAINING ->
+            TrainingCategoryScreen(states, intents, controlsEnabled, highlightItemId, onNavigateBack)
+        SettingsCategoryId.VITALS ->
+            VitalsCategoryScreen(states, intents, controlsEnabled, highlightItemId, onNavigateBack)
         SettingsCategoryId.DATA_SOURCES_SYNC ->
-            DataSourcesSyncCategoryScreen(states, intents, highlightItemId)
-        SettingsCategoryId.BACKUP_RESTORE -> BackupRestoreCategoryScreen(states, intents, highlightItemId)
-        SettingsCategoryId.DISPLAY -> DisplayCategoryScreen(states, intents, highlightItemId)
+            DataSourcesSyncCategoryScreen(states, intents, highlightItemId, onNavigateBack)
+        SettingsCategoryId.BACKUP_RESTORE ->
+            BackupRestoreCategoryScreen(states, intents, highlightItemId, onNavigateBack)
+        SettingsCategoryId.DISPLAY ->
+            DisplayCategoryScreen(states, intents, highlightItemId, onNavigateBack)
         SettingsCategoryId.SUPPORT_ABOUT ->
-            SupportAboutCategoryScreen(intents, onReportTypeSelected, highlightItemId)
+            SupportAboutCategoryScreen(intents, onReportTypeSelected, highlightItemId, onNavigateBack)
     }
 }
 

@@ -16,6 +16,7 @@ internal fun DataSourcesSyncCategoryScreen(
     states: SettingsStates,
     intents: SettingsIntents,
     highlightItemId: String?,
+    onNavigateBack: () -> Unit = {},
 ) {
     SettingsCategoryScaffold(
         titleRes = SettingsCategoryId.DATA_SOURCES_SYNC.titleRes,
@@ -37,5 +38,6 @@ internal fun DataSourcesSyncCategoryScreen(
                 },
             ),
         highlightItemId = highlightItemId,
+        onNavigateBack = onNavigateBack,
     )
 }

@@ -20,6 +20,7 @@ internal fun TrainingCategoryScreen(
     intents: SettingsIntents,
     controlsEnabled: Boolean,
     highlightItemId: String?,
+    onNavigateBack: () -> Unit = {},
 ) {
     val uiState = states.uiState
     val isResyncing = states.syncState.isResyncing
@@ -70,5 +71,6 @@ internal fun TrainingCategoryScreen(
                 },
             ),
         highlightItemId = highlightItemId,
+        onNavigateBack = onNavigateBack,
     )
 }

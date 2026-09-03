@@ -5,12 +5,17 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,11 +24,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import app.readylytics.health.core.designsystem.spacing
 import kotlinx.coroutines.delay
+import app.readylytics.health.core.ui.R as CoreUiR
 
 fun resolveHighlightIndex(
     itemIds: List<String>,
@@ -47,6 +54,7 @@ fun SettingsCategoryScaffold(
     items: List<SettingsCategoryListItem>,
     highlightItemId: String?,
     modifier: Modifier = Modifier,
+    onNavigateBack: (() -> Unit)? = null,
 ) {
     val listState = rememberLazyListState()
     var pulsingId by remember(highlightItemId) { mutableStateOf(highlightItemId) }
@@ -66,17 +74,9 @@ fun SettingsCategoryScaffold(
     }
 
     Column(modifier = modifier.fillMaxSize()) {
-        Text(
-            text = stringResource(titleRes),
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = MaterialTheme.spacing.pageHorizontal,
-                        vertical = MaterialTheme.spacing.pageSectionGapSmall,
-                    ),
+        SettingsCategoryHeader(
+            titleRes = titleRes,
+            onNavigateBack = onNavigateBack,
         )
         LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
             items(items = items, key = { it.id }) { item ->
@@ -95,5 +95,45 @@ fun SettingsCategoryScaffold(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SettingsCategoryHeader(
+    titleRes: Int,
+    onNavigateBack: (() -> Unit)?,
+) {
+    val startPadding =
+        if (onNavigateBack != null) {
+            MaterialTheme.spacing.extraSmall
+        } else {
+            MaterialTheme.spacing.pageHorizontal
+        }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(
+                    start = startPadding,
+                    end = MaterialTheme.spacing.pageHorizontal,
+                    top = MaterialTheme.spacing.pageSectionGapSmall,
+                    bottom = MaterialTheme.spacing.pageSectionGapSmall,
+                ),
+    ) {
+        if (onNavigateBack != null) {
+            IconButton(onClick = onNavigateBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(CoreUiR.string.back),
+                )
+            }
+        }
+        Text(
+            text = stringResource(titleRes),
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
     }
 }

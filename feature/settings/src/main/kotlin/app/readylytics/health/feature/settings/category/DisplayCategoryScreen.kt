@@ -25,6 +25,7 @@ internal fun DisplayCategoryScreen(
     states: SettingsStates,
     intents: SettingsIntents,
     highlightItemId: String?,
+    onNavigateBack: () -> Unit = {},
 ) {
     val uiState = states.uiState
     SettingsCategoryScaffold(
@@ -62,5 +63,6 @@ internal fun DisplayCategoryScreen(
                 },
             ),
         highlightItemId = highlightItemId,
+        onNavigateBack = onNavigateBack,
     )
 }

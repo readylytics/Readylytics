@@ -14,6 +14,7 @@ internal fun BackupRestoreCategoryScreen(
     states: SettingsStates,
     intents: SettingsIntents,
     highlightItemId: String?,
+    onNavigateBack: () -> Unit = {},
 ) {
     SettingsCategoryScaffold(
         titleRes = SettingsCategoryId.BACKUP_RESTORE.titleRes,
@@ -24,5 +25,6 @@ internal fun BackupRestoreCategoryScreen(
                 },
             ),
         highlightItemId = highlightItemId,
+        onNavigateBack = onNavigateBack,
     )
 }

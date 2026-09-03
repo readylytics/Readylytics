@@ -15,6 +15,7 @@ internal fun SupportAboutCategoryScreen(
     intents: SettingsIntents,
     onReportTypeSelected: (GitHubIssueType) -> Unit,
     highlightItemId: String?,
+    onNavigateBack: () -> Unit = {},
 ) {
     SettingsCategoryScaffold(
         titleRes = SettingsCategoryId.SUPPORT_ABOUT.titleRes,
@@ -33,5 +34,6 @@ internal fun SupportAboutCategoryScreen(
                 },
             ),
         highlightItemId = highlightItemId,
+        onNavigateBack = onNavigateBack,
     )
 }
