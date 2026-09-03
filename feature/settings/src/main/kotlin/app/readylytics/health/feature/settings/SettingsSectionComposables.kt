@@ -3,9 +3,7 @@ package app.readylytics.health.feature.settings
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
@@ -23,113 +21,12 @@ import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.model.data.preferences.AppTheme
 import app.readylytics.health.core.model.domain.githubissue.GitHubIssueType
 import app.readylytics.health.core.ui.components.DropdownPreferenceItem
-import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.SettingsToggleItem
-import app.readylytics.health.core.ui.components.settings.WeekStartDayPicker
-import app.readylytics.health.core.ui.settings.common.UnitSystemSelector
-import app.readylytics.health.feature.settings.backup.LocalBackupSection
 import app.readylytics.health.feature.settings.common.CustomColorPicker
-import app.readylytics.health.feature.settings.data.DataManagementSection
-import app.readylytics.health.feature.settings.data.SyncSettingsSection
 import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
-internal fun DataBackupSyncSection(
-    localBackupState: LocalBackupState,
-    uiState: UIState,
-    syncState: SyncSettingsState,
-    isResyncing: Boolean,
-    onLocalBackupEvent: (SettingsEvent) -> Unit,
-    onUIEvent: (SettingsEvent) -> Unit,
-    onSyncEvent: (SettingsEvent) -> Unit,
-) {
-    Column {
-        SectionHeader(stringResource(R.string.settings_sub_local_backup))
-        LocalBackupSection(
-            uiState = localBackupState,
-            onEvent = onLocalBackupEvent,
-        )
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-        SectionHeader(stringResource(R.string.settings_sub_data_management))
-        DataManagementSection(
-            uiState = uiState,
-            isResyncing = isResyncing,
-            onEvent = onUIEvent,
-            onSyncEvent = onSyncEvent,
-        )
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-        SectionHeader(stringResource(R.string.settings_sub_health_connect))
-        SyncSettingsSection(uiState = syncState, onEvent = onSyncEvent)
-    }
-}
-
-@Composable
-internal fun BaselinesThresholdsSection(context: BaselinesThresholdsContext) {
-    Column {
-        ActivityThresholdsSubsection(stepGoal = context.uiState.stepGoal, onUIEvent = context.onUIEvent)
-        SleepThresholdsSubsection(
-            sleepState = context.sleepState,
-            onSleepEvent = context.onSleepEvent,
-            isResyncing = context.isResyncing,
-        )
-        HeartRateProfileSubsection(
-            heartRateState = context.heartRateState,
-            physiologyState = context.physiologyState,
-            onHeartRateEvent = context.onHeartRateEvent,
-            onPhysiologyEvent = context.onPhysiologyEvent,
-            isResyncing = context.isResyncing,
-            controlsEnabled = context.controlsEnabled,
-        )
-        LoadSourcesTolerance(
-            sleepState = context.sleepState,
-            onSleepEvent = context.onSleepEvent,
-            isResyncing = context.isResyncing,
-        )
-        CircadianThresholdsSubsection(
-            thresholdState = context.thresholdState,
-            physiologyState = context.physiologyState,
-            onThresholdEvent = context.onThresholdEvent,
-            controlsEnabled = context.controlsEnabled,
-        )
-        ThresholdSettingsSection(
-            uiState = context.thresholdState,
-            onEvent = context.onThresholdEvent,
-            isResyncing = context.isResyncing,
-        )
-    }
-}
-
-@Composable
-internal fun DisplaySettingsSection(
-    uiState: UIState,
-    dashboardCardsState: DashboardCardsSettingsState,
-    onUIEvent: (SettingsEvent) -> Unit,
-    onDashboardCardsEvent: (SettingsEvent) -> Unit,
-) {
-    Column {
-        AppThemeItem(uiState = uiState, onEvent = onUIEvent)
-        DynamicColorSettings(uiState = uiState, onUIEvent = onUIEvent)
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.pageSectionGap))
-        UnitSystemSelector(
-            selectedUnit = uiState.unitSystem,
-            onUnitSelected = { onUIEvent(SettingsEvent.UnitSystemChanged(it)) },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.pageHorizontal),
-        )
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.pageSectionGap))
-        WeekStartDayPicker(
-            selectedDay = uiState.weekStartDay,
-            onDaySelected = { onUIEvent(SettingsEvent.WeekStartDayChanged(it)) },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.pageHorizontal),
-        )
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.pageSectionGap))
-        DashboardCardsSettingsSection(uiState = dashboardCardsState, onEvent = onDashboardCardsEvent)
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.pageSectionGap))
-        WorkoutDetailLayoutSettingsSection(onEvent = onUIEvent)
-    }
-}
-
-@Composable
-private fun DynamicColorSettings(
+internal fun DynamicColorSettings(
     uiState: UIState,
     onUIEvent: (SettingsEvent) -> Unit,
 ) {
@@ -305,7 +202,7 @@ internal fun MiscellaneousSection(
 }
 
 @Composable
-private fun AppThemeItem(
+internal fun AppThemeItem(
     uiState: UIState,
     onEvent: (SettingsEvent) -> Unit,
 ) {

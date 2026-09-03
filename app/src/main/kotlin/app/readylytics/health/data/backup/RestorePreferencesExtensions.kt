@@ -150,10 +150,6 @@ internal fun UserPreferencesProto.Builder.applyScalingAndProfileSettings(backup:
     backup.stepGoal?.let { stepGoal = it }
     backup.retentionDaysEnabled?.let { retentionDaysEnabled = it }
     backup.retentionDays?.let { retentionDays = it }
-    backup.collapseHealthConnect?.let { collapseHealthConnect = it }
-    backup.collapseBaselinesThresholds?.let { collapseBaselinesThresholds = it }
-    backup.collapseDisplay?.let { collapseDisplay = it }
-    backup.collapseAdvanced?.let { collapseAdvanced = it }
     backup.aboutDismissed?.let { aboutDismissed = it }
 
     backup.physiologyProfile?.let { raw ->
@@ -212,6 +208,30 @@ internal fun UserPreferencesProto.Builder.applyScoringSettings(backup: UserPrefe
             logW(
                 "RestorePreferencesApplier",
             ) { "Ignoring unrecognised lastRecalcSleepScoreWeightProfile '$raw' in backup settings" }
+        }
+    }
+    TrainingReadinessRestore.apply(this, backup)
+}
+
+private object TrainingReadinessRestore {
+    fun apply(
+        builder: UserPreferencesProto.Builder,
+        backup: UserPreferencesBackup,
+    ) {
+        builder.trainingReadinessResidualFatigueScale =
+            backup.trainingReadinessResidualFatigueScale
+                ?: SettingsDefaults.TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE
+        builder.trainingReadinessLoadBalanceWeight =
+            backup.trainingReadinessLoadBalanceWeight
+                ?: SettingsDefaults.TRAINING_READINESS_LOAD_BALANCE_WEIGHT
+        val appliedScale = backup.lastAppliedTrainingReadinessResidualFatigueScale
+        val appliedWeight = backup.lastAppliedTrainingReadinessLoadBalanceWeight
+        if (appliedScale != null && appliedWeight != null) {
+            builder.lastAppliedTrainingReadinessResidualFatigueScale = appliedScale
+            builder.lastAppliedTrainingReadinessLoadBalanceWeight = appliedWeight
+        } else {
+            builder.clearLastAppliedTrainingReadinessResidualFatigueScale()
+            builder.clearLastAppliedTrainingReadinessLoadBalanceWeight()
         }
     }
 }

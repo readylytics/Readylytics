@@ -88,6 +88,44 @@ class WorkerSchedulerTest {
     }
 
     @Test
+    fun `recompute request with a date range carries both epoch-day bounds as input data`() {
+        val request = slot<OneTimeWorkRequest>()
+        val startDate = java.time.LocalDate.of(2026, 1, 1)
+        val endDate = java.time.LocalDate.of(2026, 2, 1)
+
+        scheduler.scheduleResyncWorker(recomputeOnly = true, startDate = startDate, endDate = endDate)
+
+        verify {
+            workManager.enqueueUniqueWork(
+                WorkerScheduler.RESYNC_WORK_NAME,
+                ExistingWorkPolicy.APPEND_OR_REPLACE,
+                capture(request),
+            )
+        }
+        val input = request.captured.workSpec.input
+        assertEquals(startDate.toEpochDay(), input.getLong(HealthResyncWorker.KEY_RECOMPUTE_START_EPOCH_DAY, -1L))
+        assertEquals(endDate.toEpochDay(), input.getLong(HealthResyncWorker.KEY_RECOMPUTE_END_EPOCH_DAY, -1L))
+    }
+
+    @Test
+    fun `recompute request without a date range omits the epoch-day keys`() {
+        val request = slot<OneTimeWorkRequest>()
+
+        scheduler.scheduleResyncWorker(recomputeOnly = true)
+
+        verify {
+            workManager.enqueueUniqueWork(
+                WorkerScheduler.RESYNC_WORK_NAME,
+                ExistingWorkPolicy.APPEND_OR_REPLACE,
+                capture(request),
+            )
+        }
+        val input = request.captured.workSpec.input
+        assertEquals(-1L, input.getLong(HealthResyncWorker.KEY_RECOMPUTE_START_EPOCH_DAY, -1L))
+        assertEquals(-1L, input.getLong(HealthResyncWorker.KEY_RECOMPUTE_END_EPOCH_DAY, -1L))
+    }
+
+    @Test
     fun `cancelResyncWorker cancels unique work`() {
         scheduler.cancelResyncWorker()
         verify(exactly = 1) {

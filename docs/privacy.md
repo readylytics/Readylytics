@@ -71,6 +71,12 @@ Diagnostic logging stays on-device and is only enabled in debug builds.
 Production error handling uses sanitized messages rather than exposing raw
 exception text from health data, storage, or cryptographic operations.
 
+Diagnostic, crash, and logcat export files are written to the app's internal
+cache and are excluded from Android auto-backup and device-to-device transfer.
+Each export directory holds at most one file (a diagnostic export overwrites
+the previous one) and the app prunes these cache directories on startup, so
+diagnostic exports do not accumulate on your device.
+
 If Readylytics crashes, it stores a local, plain-text crash report on your
 device containing only the error's stack trace, app version, Android version,
 and device model — never health data. This report is never sent automatically.

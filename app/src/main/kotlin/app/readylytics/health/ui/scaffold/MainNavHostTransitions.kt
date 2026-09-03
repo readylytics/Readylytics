@@ -6,11 +6,31 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import app.readylytics.health.ui.navigation.AppDestination
 import app.readylytics.health.ui.navigation.TabDestination
+
+private const val TRANSITION_DURATION_MS = 300
+private const val PREDICTIVE_POP_SCALE = 0.9f
+
+internal fun predictivePopEnter(): EnterTransition =
+    scaleIn(
+        initialScale = PREDICTIVE_POP_SCALE,
+        transformOrigin = TransformOrigin.Center,
+        animationSpec = tween(TRANSITION_DURATION_MS),
+    ) + fadeIn(animationSpec = tween(TRANSITION_DURATION_MS))
+
+internal fun predictivePopExit(): ExitTransition =
+    scaleOut(
+        targetScale = PREDICTIVE_POP_SCALE,
+        transformOrigin = TransformOrigin.Center,
+        animationSpec = tween(TRANSITION_DURATION_MS),
+    ) + fadeOut(animationSpec = tween(TRANSITION_DURATION_MS))
 
 internal fun isDetailDestination(destination: NavDestination): Boolean =
     destination.hasRoute(AppDestination.WorkoutDetail::class) ||

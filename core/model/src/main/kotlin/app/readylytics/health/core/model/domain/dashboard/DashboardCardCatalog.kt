@@ -44,5 +44,6 @@ object DashboardCardCatalog {
             CardId.OXYGEN_SATURATION to ModeSpec(DashboardCardDisplayMode.VALUE, ALL_MODES),
             CardId.BODY_TEMPERATURE to ModeSpec(DashboardCardDisplayMode.VALUE, ALL_MODES),
             CardId.RESIDUAL_FATIGUE to ModeSpec(DashboardCardDisplayMode.GAUGE, ALL_MODES),
+            CardId.TRAINING_READINESS to ModeSpec(DashboardCardDisplayMode.GAUGE, ALL_MODES),
         )
 }

@@ -277,13 +277,21 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
 
         override fun scheduleDatabaseMigration() { /* no-op */ }
 
-        override fun scheduleResyncWorker(recomputeOnly: Boolean) {
+        override fun scheduleResyncWorker(
+            recomputeOnly: Boolean,
+            startDate: java.time.LocalDate?,
+            endDate: java.time.LocalDate?,
+        ) {
             if (recomputeOnly) {
                 recomputeOnlyRequests++
             }
         }
 
         override fun cancelResyncWorker() { /* no-op */ }
+
+        override fun scheduleTrainingReadinessRecompute(
+            config: app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig,
+        ) { /* no-op */ }
 
         override fun scheduleBackupWorker(schedule: BackupSchedule) { /* no-op */ }
 

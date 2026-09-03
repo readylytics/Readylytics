@@ -169,7 +169,7 @@ class LocalBackupSerializationRegressionTest {
         )
         assertEquals(
             1,
-            db.minuteBucketDao().pageAfter(Long.MIN_VALUE, "", "", 10).size,
+            db.minuteBucketMaintenanceDao().pageAfter(Long.MIN_VALUE, "", "", "", 10).size,
             "fixture must leave the table non-empty",
         )
     }

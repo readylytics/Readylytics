@@ -101,6 +101,11 @@ data class DailySummaryEntity(
     val supplementalSleepDurationMinutes: Int? = null,
     val napCount: Int? = null,
     val residualFatigue: Float? = null,
+    val acuteLoadRecovery: Float? = null,
+    val trainingLoadReadinessWorkoutOnly: Float? = null,
+    val trainingLoadReadinessEverydayHr: Float? = null,
+    val trainingReadinessWorkoutOnly: Float? = null,
+    val trainingReadinessEverydayHr: Float? = null,
 ) {
     val diagnostics: Diagnostics
         get() = diagnosticsEmbedded

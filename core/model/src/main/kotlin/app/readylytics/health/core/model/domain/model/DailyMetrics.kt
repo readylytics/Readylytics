@@ -31,6 +31,7 @@ data class DailyMetrics(
     val hrvBaselineRounded: Int? = null,
     val sleepScoreRounded: Int? = null,
     val readinessRounded: Int? = null,
+    val trainingReadinessRounded: Int? = null,
     val loadScoreRounded: Int? = null,
     val restorationRounded: Int? = null,
     val trimpRounded: Int? = null,

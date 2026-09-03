@@ -1,4 +1,5 @@
 package app.readylytics.health.core.database.data.repository
+import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
 import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
 import app.readylytics.health.core.databaseschema.data.local.dao.BloodPressureRecordDao
@@ -35,9 +36,7 @@ import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUse
 import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
-import io.mockk.coEvery
-import io.mockk.every
-import io.mockk.mockk
+import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -83,7 +82,7 @@ abstract class ResidualFatigueWalkForwardTestBase {
     protected val day0: LocalDate = LocalDate.of(2026, 1, 1)
     protected val day1: LocalDate = day0.plusDays(1)
     protected val day2: LocalDate = day0.plusDays(2)
-    protected val config = ResidualFatigueConfig(enabled = true, halfLifeHours = 24f, fatigueGain = 1.0f)
+    protected val config = ResidualFatigueConfig(halfLifeHours = 24f, fatigueGain = 1.0f)
     protected val useCase = ComputeResidualFatigueUseCase()
 
     protected lateinit var repo: ScoringRepositoryImpl
@@ -142,6 +141,7 @@ abstract class ResidualFatigueWalkForwardTestBase {
                 ComputeResidualFatigueUseCase(),
                 ResolveDailyBaselinesUseCase(baselineComputer),
                 AssembleEverydayLoadInputUseCase(),
+                        ComputeTrainingReadinessUseCase(scoringCalculator),
             ),
             scoringHistoryRepository,
             readinessSummaryCoordinator,
@@ -161,9 +161,30 @@ abstract class ResidualFatigueWalkForwardTestBase {
         coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
         coEvery { workoutDao.getTrimpPoints(any(), any()) } returns emptyList()
         coEvery { dailySummaryDao.getEverydayTrimpPoints(any(), any()) } returns emptyList()
-        coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any(), any(), any()) } returns null
-        coEvery { baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any(), any(), any()) } returns 60f
-        coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), any(), any()) } returns
+        coEvery {
+            baselineComputer.computeHrvBaselineBetween(any(), any(), any(), any(), any(), any())
+        } returns null
+        coEvery {
+            baselineComputer.computeHrvBaselineBetween(any(), any(), null, any(), null, null)
+        } returns null
+        coEvery {
+            baselineComputer.computeHrvBaselineBetween(any(), any(), any(), any(), null, null)
+        } returns null
+        coEvery {
+            baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any(), any(), any(), null)
+        } returns 60f
+        coEvery {
+            baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any(), any(), any(), any())
+        } returns 60f
+        coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), any(), any(), any(), null) } returns
+            BaselineComputer.HrvWindows(
+                muHistory = emptyList(),
+                sigmaHistory = emptyList(),
+                historicalSessions = emptyList(),
+                validHistoricalSessionIds = emptyList(),
+                validHistoricalDayCount = 6,
+            )
+        coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), any(), any(), any(), any()) } returns
             BaselineComputer.HrvWindows(
                 muHistory = emptyList(),
                 sigmaHistory = emptyList(),

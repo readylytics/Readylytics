@@ -15,6 +15,7 @@ import app.readylytics.health.core.ui.model.HrSample
 import app.readylytics.health.feature.sleep.SleepHrChart
 import app.readylytics.health.feature.sleep.SleepStagesChart
 import app.readylytics.health.feature.vitals.heartrate.HrTimelineChart
+import app.readylytics.health.feature.vitals.heartrate.HrZoneBounds
 import app.readylytics.health.feature.vitals.steps.StepsBar
 import app.readylytics.health.feature.workouts.TrimpBreakdownChart
 import org.junit.Rule
@@ -59,11 +60,14 @@ class ChartAccessibilityTest {
                     samples = samples,
                     dayStartMs = 1700000000000L,
                     dayEndMs = 1700000120000L,
-                    zone1MinBpm = 60,
-                    zone1MaxBpm = 70,
-                    zone2MaxBpm = 80,
-                    zone3MaxBpm = 90,
-                    zone4MaxBpm = 100,
+                    zoneBounds =
+                        HrZoneBounds(
+                            zone1MinBpm = 60,
+                            zone1MaxBpm = 70,
+                            zone2MaxBpm = 80,
+                            zone3MaxBpm = 90,
+                            zone4MaxBpm = 100,
+                        ),
                     zoneId = ZoneId.of("UTC"),
                 )
             }

@@ -27,6 +27,15 @@ class RetentionBoundsTest {
     }
 
     @Test
+    fun `hot tier cutoff is exactly 90 days before the supplied instant`() {
+        val now = Instant.parse("2026-08-31T12:00:00Z")
+        assertEquals(
+            Instant.parse("2026-06-02T12:00:00Z").toEpochMilli(),
+            RetentionBounds.resolveHotTierCutoffMs(now), // no default — must be supplied
+        )
+    }
+
+    @Test
     fun `enabled retention produces a non-null cutoff at the retention boundary`() {
         val zoneId = ZoneId.of("Europe/Berlin")
         val prefs =

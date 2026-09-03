@@ -1,6 +1,6 @@
 package app.readylytics.health.feature.workouts
 
-import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionChecker
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -30,7 +30,6 @@ internal object WorkoutsPermissionModule {
     @Provides
     @Singleton
     fun provideDistancePermissionGate(
-        healthConnectRepository: HealthConnectRepository,
-    ): WorkoutsDistancePermissionGate =
-        WorkoutsDistancePermissionGate { healthConnectRepository.hasDistancePermission() }
+        permissionChecker: HealthConnectPermissionChecker,
+    ): WorkoutsDistancePermissionGate = WorkoutsDistancePermissionGate { permissionChecker.hasDistancePermission() }
 }

@@ -16,7 +16,6 @@ import app.readylytics.health.core.model.data.preferences.SettingsDefaults
  * stored pref degrades to the nearest valid value instead of failing a day's recompute.
  */
 data class ResidualFatigueConfig(
-    val enabled: Boolean = SettingsDefaults.RESIDUAL_FATIGUE_ENABLED,
     val halfLifeHours: Float = SettingsDefaults.RESIDUAL_FATIGUE_HALF_LIFE_HOURS,
     val fatigueGain: Float = SettingsDefaults.RESIDUAL_FATIGUE_GAIN,
 ) {
@@ -34,12 +33,10 @@ data class ResidualFatigueConfig(
          * shipped default.
          */
         fun clamped(
-            enabled: Boolean,
             halfLifeHours: Float,
             fatigueGain: Float,
         ): ResidualFatigueConfig =
             ResidualFatigueConfig(
-                enabled = enabled,
                 halfLifeHours =
                     coerceOrDefault(
                         value = halfLifeHours,

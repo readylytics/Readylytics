@@ -1,5 +1,6 @@
 package app.readylytics.health.core.model.domain.sync
 
+import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -54,6 +55,16 @@ interface HealthDataRefresh {
      * years of history; raw Health Connect data is untouched, so it never re-reads HC.
      */
     suspend fun refreshHistorical()
+
+    /**
+     * Task 4: enqueues the durable, parameter-only Training Readiness projection recompute for the
+     * Settings explicit "Recalculate" action (task 5) after the user edits S/w. Reads and rewrites
+     * only already-persisted [app.readylytics.health.core.model.domain.model.DailySummary] rows --
+     * no Health Connect I/O, no TRIMP/residual-fatigue reconstruction. [config] is the exact
+     * requested value; every normal sync/resync path keeps using the previously *applied*
+     * configuration until this recompute succeeds.
+     */
+    suspend fun refreshTrainingReadiness(config: TrainingReadinessConfig)
 }
 
 interface HistoricalResyncController {

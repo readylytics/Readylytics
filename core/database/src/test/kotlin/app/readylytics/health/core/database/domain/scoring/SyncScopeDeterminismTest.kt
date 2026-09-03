@@ -16,6 +16,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
+import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -34,6 +35,7 @@ import kotlin.test.assertNotNull
  * a fresh onboarding sync where only those days exist.
  */
 class SyncScopeDeterminismTest {
+    private val zone: ZoneId = ZoneId.of("UTC")
     private val sleepSessionDao = mockk<SleepSessionDao>(relaxed = true)
     private val heartRateDao = mockk<HeartRateDao>(relaxed = true)
     private val hrvDao = mockk<HrvDao>(relaxed = true)
@@ -141,6 +143,7 @@ class SyncScopeDeterminismTest {
                 baselineComputer.computeHrvWindowsBetween(
                     fromMs = targetDayMs,
                     toMs = targetDayEndMs,
+                    zoneId = zone,
                     excludeSessionIds = setOf(targetSession.id),
                 )
 
@@ -148,6 +151,7 @@ class SyncScopeDeterminismTest {
             val unbounded =
                 baselineComputer.computeHrvWindows(
                     dayMidnight = targetDay,
+                    zoneId = zone,
                     excludeSessionId = targetSession.id,
                 )
 

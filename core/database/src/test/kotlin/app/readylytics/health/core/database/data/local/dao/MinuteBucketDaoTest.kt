@@ -56,16 +56,50 @@ class MinuteBucketDaoTest {
         }
 
     @Test
-    fun deleteBeforeTimestamp_prunesOldBuckets() =
+    fun getBucketsInTimeRange_returnsBucketsOverlappingWindowRegardlessOfRecordType() =
         runBlocking {
-            val bucket1 = HrMinuteBucketEntity(60000L, 120000L, 60, 80, 70.0, 60, "RESTING", "", null)
-            val bucket2 = HrMinuteBucketEntity(180000L, 240000L, 65, 85, 75.0, 60, "RESTING", "", null)
-            dao.upsertBuckets(listOf(bucket1, bucket2))
+            dao.upsertBuckets(
+                listOf(
+                    bucketFixture(
+                        recordType = "SLEEP", sessionId = "s1",
+                        bucketStartMs = 1_000L, bucketEndMs = 60_999L,
+                    ),
+                    bucketFixture(
+                        recordType = "RESTING", sessionId = "",
+                        bucketStartMs = 61_000L, bucketEndMs = 120_999L,
+                    ),
+                    bucketFixture(
+                        recordType = "EXERCISE", sessionId = "w1",
+                        bucketStartMs = 500_000L, bucketEndMs = 560_999L,
+                    ),
+                ),
+            )
 
-            val deleted = dao.deleteBeforeTimestamp(150000L)
-            assertEquals(1, deleted)
-            val remaining = dao.getMinuteBuckets(0L, 300000L)
-            assertEquals(1, remaining.size)
-            assertEquals(180000 / 60000, remaining[0].bucketIndex)
+            val result = dao.getBucketsInTimeRange(0L, 200_000L)
+
+            assertEquals(2, result.size)
         }
+
+    private fun bucketFixture(
+        recordType: String,
+        sessionId: String,
+        bucketStartMs: Long,
+        bucketEndMs: Long,
+        minBpm: Int = 60,
+        maxBpm: Int = 80,
+        avgBpm: Double = 70.0,
+        sampleCount: Int = 60,
+        deviceName: String = "",
+    ): HrMinuteBucketEntity =
+        HrMinuteBucketEntity(
+            bucketStartMs = bucketStartMs,
+            bucketEndMs = bucketEndMs,
+            minBpm = minBpm,
+            maxBpm = maxBpm,
+            avgBpm = avgBpm,
+            sampleCount = sampleCount,
+            recordType = recordType,
+            sessionId = sessionId,
+            deviceName = deviceName,
+        )
 }

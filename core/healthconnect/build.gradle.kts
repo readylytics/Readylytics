@@ -65,9 +65,10 @@ tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
 
 dependencies {
     implementation(project(":core:model"))
-    implementation(project(":core:database-schema"))
     implementation(project(":core:scoring"))
     implementation(project(":core:database"))
+    // core:database-schema dropped (R2-ARCH-002/DI-001): no main-source file references DAO or
+    // entity types directly anymore now the Changes API path routes through HealthIngestionStore.
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.hilt.android)

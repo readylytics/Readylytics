@@ -1137,7 +1137,6 @@ class WorkoutsViewModelTest {
                 )
             preferencesFlow.value =
                 UserPreferences(
-                    residualFatigueEnabled = true,
                     residualFatigueHalfLifeHours = 24f,
                     residualFatigueGain = 1.0f,
                 )
@@ -1159,7 +1158,6 @@ class WorkoutsViewModelTest {
             selectedDateFlow.value = selectedDate
             preferencesFlow.value =
                 UserPreferences(
-                    residualFatigueEnabled = true,
                     residualFatigueHalfLifeHours = 24f,
                     residualFatigueGain = 1.0f,
                 )

@@ -51,7 +51,7 @@ sealed interface PermissionStatus {
     ) : PermissionStatus
 }
 
-interface HealthConnectRepository {
+interface HealthConnectRepository : HealthConnectPermissionChecker {
     val criticalPermissions: Set<String>
     val requiredPermissions: Set<String>
     val optionalPermissions: Set<String>
@@ -85,20 +85,21 @@ interface HealthConnectRepository {
     /**
      * Streams heart-rate samples page-by-page instead of materializing the whole [from]..[to]
      * range in memory (HC-001). [onPage] is invoked once per Health Connect page, in the order
-     * pages are returned; pages are not guaranteed to be globally sorted across page boundaries,
-     * only within Health Connect's own per-page ordering.
+     * pages are returned, passing the page of records and the next page token (R2-HC-002).
      */
     suspend fun readHeartRateSamplesPaged(
         from: Instant,
         to: Instant,
-        onPage: suspend (List<DomainHeartRateRecord>) -> Unit,
+        startPageToken: String? = null,
+        onPage: suspend (records: List<DomainHeartRateRecord>, nextPageToken: String?) -> Unit,
     )
 
     /** HRV equivalent of [readHeartRateSamplesPaged]. */
     suspend fun readHrvSamplesPaged(
         from: Instant,
         to: Instant,
-        onPage: suspend (List<DomainHrvRecord>) -> Unit,
+        startPageToken: String? = null,
+        onPage: suspend (records: List<DomainHrvRecord>, nextPageToken: String?) -> Unit,
     )
 
     /**
@@ -163,30 +164,6 @@ interface HealthConnectRepository {
         to: Instant,
     ): List<DomainBodyTemperatureRecord>
 
-    /** Whether the optional `READ_BODY_TEMPERATURE` permission is currently granted. */
-    suspend fun hasBodyTemperaturePermission(): Boolean
-
-    /** Whether the optional `READ_STEPS` permission is currently granted. */
-    suspend fun hasStepsPermission(): Boolean
-
-    /** Whether the optional `READ_WEIGHT` permission is currently granted. */
-    suspend fun hasWeightPermission(): Boolean
-
-    /** Whether the optional `READ_DISTANCE` permission is currently granted. */
-    suspend fun hasDistancePermission(): Boolean
-
-    /** Whether the optional `READ_BODY_FAT` permission is currently granted. */
-    suspend fun hasBodyFatPermission(): Boolean
-
-    /** Whether the optional `READ_BLOOD_PRESSURE` permission is currently granted. */
-    suspend fun hasBloodPressurePermission(): Boolean
-
-    /** Whether the optional `READ_OXYGEN_SATURATION` permission is currently granted. */
-    suspend fun hasOxygenSaturationPermission(): Boolean
-
     /** Reads a single exercise session by ID with its route data. */
     suspend fun readExerciseSession(id: String): DomainExerciseSessionRecord?
-
-    /** Whether the optional `READ_EXERCISE_ROUTES` permission is currently granted. */
-    suspend fun hasExerciseRoutesPermission(): Boolean
 }

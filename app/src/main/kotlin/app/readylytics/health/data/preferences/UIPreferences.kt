@@ -1,12 +1,12 @@
 package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
+import app.readylytics.health.core.database.data.local.HealthDeviceRepository
 import app.readylytics.health.core.model.data.preferences.AppTheme
 import app.readylytics.health.core.model.data.preferences.FallbackThemeColor
 import app.readylytics.health.core.model.data.preferences.UnitSystem
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.model.HealthDataType
-import app.readylytics.health.data.device.HealthDeviceRepository
 import java.time.DayOfWeek
 import javax.inject.Inject
 
@@ -16,22 +16,6 @@ internal class UIPreferences
         private val dataStore: DataStore<UserPreferencesProto>,
         private val healthDeviceRepository: HealthDeviceRepository,
     ) {
-        suspend fun updateCollapseHealthConnect(collapsed: Boolean) {
-            dataStore.updateData { it.toBuilder().setCollapseHealthConnect(collapsed).build() }
-        }
-
-        suspend fun updateCollapseBaselinesThresholds(collapsed: Boolean) {
-            dataStore.updateData { it.toBuilder().setCollapseBaselinesThresholds(collapsed).build() }
-        }
-
-        suspend fun updateCollapseDisplay(collapsed: Boolean) {
-            dataStore.updateData { it.toBuilder().setCollapseDisplay(collapsed).build() }
-        }
-
-        suspend fun updateCollapseAdvanced(collapsed: Boolean) {
-            dataStore.updateData { it.toBuilder().setCollapseAdvanced(collapsed).build() }
-        }
-
         suspend fun updateAboutDismissed(dismissed: Boolean) {
             dataStore.updateData { it.toBuilder().setAboutDismissed(dismissed).build() }
         }

@@ -1,6 +1,6 @@
 # About your scores
 
-This app turns the data your phone and wearables already collect — sleep, heart rate, and exercise — into three daily numbers that try to answer one question: **how is your body doing today, and what should you do with that information?**
+This app turns the data your phone and wearables already collect — sleep, heart rate, and exercise — into four daily numbers that try to answer one question: **how is your body doing today, and what should you do with that information?**
 
 We try to be honest about what these numbers can and can't tell you. They are decision aids, not diagnoses. If something feels off in your body, trust your body over the score.
 
@@ -22,15 +22,16 @@ Wearables estimate sleep stages, HRV, and nocturnal physiology indirectly using 
 
 ---
 
-## The three scores at a glance
+## The four scores at a glance
 
 | Score                     | What it answers                                 | Range |
 | ------------------------- | ----------------------------------------------- | ----- |
 | **Sleep Score**           | How restorative was last night's sleep?         | 0–100 |
 | **Circadian Consistency** | How regular is your sleep schedule?             | 0–100 |
-| **Readiness**             | How prepared are you for today's training load? | 0–100 |
+| **Readiness**             | How prepared are you based on sleep, recovery, and load? | 0–100 |
+| **Training Readiness**    | How prepared are you after residual workout fatigue? | 0–100 |
 
-You'll see all three on your dashboard once enough data has been collected. Until then, we'll show you what we have and explain what's missing.
+You'll see the scores on your dashboard once enough data has been collected. Training Readiness is hidden by default until you enable its card. Until then, we'll show you what we have and explain what's missing.
 
 ---
 
@@ -163,14 +164,42 @@ _Implemented in: `LoadScoringStrategy.kt`, `RasScoringStrategy.kt`, `ComputeSlee
 
 ---
 
+## Training Readiness
+
+Training Readiness is an optional, default-hidden Dashboard score. It keeps legacy Readiness unchanged while adding Residual Fatigue to the load branch. Residual Fatigue is a raw, unbounded, non-normalized, provisional, workout-only derived input: it feeds Training Readiness when available but does not modify legacy Readiness or Load Score.
+
+**AcuteLoadRecovery = clamp(100 * exp(-ResidualFatigue / S), 0, 100)**
+
+**TrainingLoadReadiness = clamp(w * LoadScore + (1 - w) * AcuteLoadRecovery, 0, 100)**
+
+**TrainingReadiness = existingReadinessCalculator(Restoration, Sleep, TrainingLoadReadiness, recoveryFlags)**
+
+- **S default = 100; range 75..175; UI step 5.** Increasing S raises Acute Load Recovery for the same Residual Fatigue, so fatigue has less downward influence.
+- **w default = 0.90; range 0.80..1.00; UI step 0.01 / 1%.** Increasing w gives Load Score more influence and Acute Load Recovery less influence.
+
+At w = 1, Training Readiness equals the stored Readiness exactly, and Training Load Readiness preserves the source-matched Load Score.
+
+When Residual Fatigue is unavailable, Acute Load Recovery is unavailable, Training Load Readiness equals Load Score, and Training Readiness equals Readiness.
+
+Training Readiness uses the active Strain / Training Load source for its Load Score branch. Residual Fatigue remains workout-only and never includes everyday heart-rate load.
+
+Edits to S and w remain pending until you choose **Recalculate Training Readiness**. The durable projection-only recalculation reads stored daily summaries; only success advances the applied values, so current scores stay on the last-applied settings during a run or failure.
+
+The AI Advisor still uses Readiness, not Training Readiness. Training Readiness is excluded from Advisor/AI, Workouts card layouts, trends, insights, details/history, widgets, and standalone exports in this release.
+
+_Implemented in: `ComputeTrainingReadinessUseCase.kt`, `TrainingReadinessProjectionRecomputeUseCase.kt`, `FinalSummaryAssembler.kt`_
+
+---
+
 ## Load Sources
 
 Two independent settings control which heart-rate data feeds your strain/training-load
 metrics versus your Readylytics Activity Score (RAS):
 
 - **Strain / Training Load source** (default: **Workout only**) — controls TRIMP,
-  acute/chronic load (ATL/CTL), Strain Ratio, Load Score, and **Readiness**. Readiness
-  always uses this source; the RAS source never affects Readiness.
+  acute/chronic load (ATL/CTL), Strain Ratio, Load Score, **Readiness**, and the Load
+  Score branch of **Training Readiness**. Readiness always uses this source; the RAS
+  source never affects Readiness or Training Readiness.
 - **RAS source** (default: **Everyday heart-rate load**) — controls your daily and
   7-day total RAS only, independent of the Strain / Training Load source above.
 
@@ -376,6 +405,8 @@ _Implemented in: `Phase.kt`, `PhaseCalculator.kt`_
 
   _Implemented in: `RasCalculator.kt`, `ComputeWorkoutTrimpUseCase.kt`, `RasScoringStrategy.kt`, `HrMaxProvider.kt`_
 
+- **iTRIMP (individualized training impulse).** When selected as your training-load model, iTRIMP is a Manzi-inspired fixed-exponent variant: each minute of exercise accrues TRIMP as `duration × hrR × exp(b × hrR)`, where `hrR` is your fractional heart-rate reserve and `b` is a single fixed exponent — default **2.1** (adjustable 1.0–4.5 in Advanced Settings). The fixed exponent makes high-intensity minutes scale more steeply than the default Banister model. No sex-specific weighting factor is applied in this variant.
+
 - **ATL / CTL** — short-term and long-term rolling averages of TRIMP. Borrowed from Banister's training-load model and used by most cycling and running apps.
 - **Z-score** — a standardized number telling you how many standard deviations above or below your average a metric is. Z=0 is your average; Z=+2 is very high; Z=−2 is very low.
 
@@ -388,7 +419,8 @@ A few smaller modifiers shape the numbers behind the scenes. We list them here f
 - **HRV-score saturation.** Above a Z-score of 1.5, additional HRV improvement contributes less to your Restoration score (a 0.25 slope beyond that point) — so an extraordinarily high reading doesn't dominate the score the way a moderate one does.
 - **Late-nadir penalty.** If your lowest overnight heart rate occurs in the final third of your sleep period (after 67% of total sleep time has elapsed), we apply a small 0.95 multiplier to the restoration component. A very late RHR nadir often reflects a shortened or fragmented night rather than genuine recovery.
 - **Banister training-load multiplier.** Your Banister training-load model converts heart-rate-reserve intensity into TRIMP using a multiplier of **1.0 for every physiology profile**, so TRIMP is a consistent, profile-independent measure of training load — the same effort produces the same load regardless of profile (under the default Banister model). The multiplier remains adjustable in Advanced Settings if you want to scale your personal TRIMP magnitude.
-- **Residual Fatigue (shadow mode).** The app calculates an internal, exponential-decay residual fatigue metric from your logged workouts using continuous timestamps and customizable half-life (default 24 h, range 6–96 h) and gain (default 1.0, range 0.1–5.0) parameters. Each day's value is an end-of-day snapshot evaluated at the following midnight, so the current day is a projection to the end of today rather than your fatigue at this moment. Residual Fatigue is raw, non-normalized, provisional, workout-only, and strictly shadow-only — it does not modify Readiness, Load Score, or any other user-facing score. Users can optionally visualize it by enabling the default-hidden Residual Fatigue card on the Dashboard or the decay curve chart (with selectable 1D, 3D, and 7D time ranges) on the Workouts tab via their respective layout customization sheets. The curve is drawn only up to the present moment, with a dot marking where "now" sits; the remainder of the day is left blank rather than projected. The card's status colours and gauge scale move with your configured gain, so changing gain re-scales the reading rather than pushing every day to one extreme.
+- **TRIMP dead zone.** Heart rate must exceed your resting-HR baseline by at least 5bpm before any training load (TRIMP) accrues for that minute — below that, the minute contributes zero load rather than a small fractional amount. This avoids counting sensor noise around your baseline as training stress.
+- **Residual Fatigue.** The app calculates an internal, exponential-decay residual fatigue metric from your logged workouts using continuous timestamps and customizable half-life (default 24 h, range 6–96 h) and gain (default 1.0, range 0.1–5.0) parameters. Each day's value is an end-of-day snapshot evaluated at the following midnight; the Dashboard card shows that snapshot for past days, but for today it instead shows fatigue decayed through the current moment, on the same basis as the Workouts tab decay chart's "now" point, and refreshes about once a minute while you are looking at it. If a workout logged today has not yet had its training load calculated, the card shows no value rather than a total that would leave that workout out. Residual Fatigue is a raw, unbounded, non-normalized, provisional, workout-only derived input: it feeds Training Readiness when available but does not modify legacy Readiness or Load Score. Users can optionally visualize it by enabling the default-hidden Residual Fatigue card on the Dashboard or the decay curve chart (with selectable 1D, 3D, and 7D time ranges) on the Workouts tab via their respective layout customization sheets. The curve is drawn only up to the present moment, with a dot marking where "now" sits; the remainder of the day is left blank rather than projected. The card's status colours and gauge scale move with your configured gain, so changing gain re-scales the reading rather than pushing every day to one extreme.
 - **Readylytics Activity Score (RAS).** RAS is a PAI-style motivational activity metric with a daily cap and rolling 7-day accumulation. It is separate from the physiological Load Score: RAS never feeds Readiness, and Readiness/load continue to use TRIMP → ATL → CTL → Strain Ratio → Load Score.
 - **Suspicious sleep-stage reweight.** If your wearable's sleep-stage data for a night looks implausible (e.g., no deep or REM sleep detected at all), we reweight the Sleep Score: Architecture and Fragmentation drop out and the score renormalizes Duration and Restoration according to your active weight profile. This avoids penalising you for a wearable data glitch rather than your actual sleep.
 - **Missing-day handling in load averages.** Acute and chronic training-load averages (ATL/CTL) are exponential moving averages where a day with no logged exercise counts as zero TRIMP, not "no data". When you only have one day of history, that single day's value is used directly as the starting average.
@@ -413,6 +445,8 @@ Your scores are computed against a stored scoring timezone, so the same underlyi
 5. **One night is noise; trends are signal.** Treat any single day's score as a data point, not a verdict. Look at the 7-day trend.
 
 6. **This app does not diagnose anything.** If you suspect sleep apnea, a heart condition, an infection, an injury, or any other health concern, see a clinician. Physiological metrics such as HRV, sleep staging, and resting heart rate are non-specific and can be influenced by numerous behavioral, environmental, pharmacological, and measurement-related factors.
+
+7. **Heart-rate history older than 90 days is stored as a compact per-minute summary (min/max/average plus a five-point percentile sketch) rather than every raw sample.** Scores computed from that history are a very close approximation, not bit-identical to what the same night would have scored while still within the 90-day raw window.
 
 ---
 

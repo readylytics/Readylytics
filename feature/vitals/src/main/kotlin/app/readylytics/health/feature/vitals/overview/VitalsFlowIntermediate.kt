@@ -5,7 +5,7 @@ import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
 import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.dashboard.CardManagementDelegate
 import app.readylytics.health.core.model.domain.layout.LayoutManagementDelegate
-import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionChecker
 import app.readylytics.health.core.model.domain.vitals.VitalsChartConfiguration
 import app.readylytics.health.core.model.domain.vitals.VitalsChartId
 import app.readylytics.health.core.model.domain.vitals.VitalsLayoutRepository
@@ -39,14 +39,14 @@ internal data class VitalsChartState(
 internal fun createVitalsCardStateFlow(
     cardManagementDelegate: CardManagementDelegate,
     vitalsLayoutRepository: VitalsLayoutRepository,
-    healthConnectRepository: HealthConnectRepository,
+    permissionChecker: HealthConnectPermissionChecker,
 ): Flow<VitalsCardState> {
     // One-shot checks, not re-polled -- relies on VitalsViewModel.uiState's WhileSubscribed(5_000)
     // sharing policy naturally restarting this flow after a permission-grant round trip.
     val permissionGrants: Flow<Pair<Boolean, Boolean>> =
         combine(
-            flow { emit(healthConnectRepository.hasBodyTemperaturePermission()) },
-            flow { emit(healthConnectRepository.hasOxygenSaturationPermission()) },
+            flow { emit(permissionChecker.hasBodyTemperaturePermission()) },
+            flow { emit(permissionChecker.hasOxygenSaturationPermission()) },
         ) { bodyTempGranted, spo2Granted -> bodyTempGranted to spo2Granted }
 
     return combine(

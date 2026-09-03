@@ -6,6 +6,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.BloodPressureRe
 import app.readylytics.health.core.databaseschema.data.local.dao.BodyTemperatureRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.InsightDismissalDao
 import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
+import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketMaintenanceDao
 import app.readylytics.health.core.databaseschema.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SourceRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.StepRecordDao
@@ -42,4 +43,8 @@ object DaoProvidersSupplementModule {
 
     @Provides
     fun provideMinuteBucketDao(db: HealthDatabase): MinuteBucketDao = db.minuteBucketDao()
+
+    @Provides
+    fun provideMinuteBucketMaintenanceDao(db: HealthDatabase): MinuteBucketMaintenanceDao =
+        db.minuteBucketMaintenanceDao()
 }

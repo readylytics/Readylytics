@@ -61,5 +61,10 @@
     "everydayLoadConfidence": "LOW",
     "supplementalSleepDurationMinutes": 0,
     "napCount": 0,
-    "residualFatigue": 67.04113
+    "residualFatigue": 67.04113,
+    "acuteLoadRecovery": 51.149815,
+    "trainingLoadReadinessWorkoutOnly": 95.11498,
+    "trainingLoadReadinessEverydayHr": 95.11498,
+    "trainingReadinessWorkoutOnly": 73.222946,
+    "trainingReadinessEverydayHr": 73.222946
 }

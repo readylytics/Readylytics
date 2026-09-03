@@ -1,4 +1,5 @@
 package app.readylytics.health.core.database.domain.scoring
+import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
 import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
@@ -41,8 +42,13 @@ import app.readylytics.health.core.database.data.repository.ScoringSeriesLoader
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.core.database.data.repository.SleepSessionRepositoryImpl
+import app.readylytics.health.core.model.data.preferences.appliedTrainingReadinessConfig
+import app.readylytics.health.core.model.domain.model.LoadSourceSelector
+import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
+import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.security.EncryptionManager
 import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.core.scoring.domain.scoring.sleep.CurrentNightHrvResolver
 import app.readylytics.health.core.scoring.domain.scoring.sleep.HrCoverageValidator
@@ -55,6 +61,7 @@ import app.readylytics.health.core.scoring.domain.scoring.strategies.SleepScorin
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -123,6 +130,81 @@ class ScoringSyncScopeOutputsDeterminismTest {
         }
 
     @Test
+    fun `training readiness and legacy matrix is deterministic across every sync pathway and load source`() =
+        runTest {
+            for (sourceMode in LoadSourceMode.values()) {
+                val sourcePrefs = prefs.copy(strainLoadSourceMode = sourceMode)
+                val canonicalFixture =
+                    buildFixture(includeFutureSessions = false).copy(preferences = sourcePrefs)
+                val incremental =
+                    computeForScope(
+                        label = "incremental sync",
+                        fixture = canonicalFixture,
+                        scopeDays = 60,
+                    )
+                val results =
+                    listOf(
+                        incremental,
+                        computeForScope("full resync", canonicalFixture, 365),
+                        computeForScope("historical backfill", canonicalFixture, 365),
+                        computeProjectionOnly("partial recompute", incremental.summary, sourcePrefs),
+                        computeForScope(
+                            label = "app restart",
+                            fixture =
+                                buildFixture(includeFutureSessions = false)
+                                    .copy(preferences = sourcePrefs),
+                            scopeDays = 60,
+                        ),
+                        computeForScope(
+                            label = "reordered Health Connect ingestion",
+                            fixture = canonicalFixture.reversedIngestionOrder(),
+                            scopeDays = 60,
+                        ),
+                    )
+
+                assertMatrixPopulated(results.first().summary)
+                assertSameMatrix(results)
+            }
+        }
+
+    private suspend fun computeProjectionOnly(
+        label: String,
+        existingSummary: DailySummary,
+        preferences: UserPreferences,
+    ): ScopeResult {
+        val scoringHistoryRepository = mockk<ScoringHistoryRepository>()
+        coEvery { scoringHistoryRepository.getDailySummariesSince(any(), any()) } returns listOf(existingSummary)
+        val saved = slot<List<DailySummary>>()
+        coEvery { scoringHistoryRepository.upsertDailySummaries(capture(saved), any()) } returns Unit
+        val transactionRunner =
+            object : TransactionRunner {
+                override suspend fun <R> runInTransaction(block: suspend () -> R): R = block()
+            }
+        val scoringCalculator =
+            CompositeScoringCalculator(
+                SleepScoringStrategy(LoadScoringStrategy()),
+                RasScoringStrategy(),
+                LoadScoringStrategy(),
+            )
+        val projectionUseCase =
+            TrainingReadinessProjectionRecomputeUseCase(
+                scoringHistoryRepository = scoringHistoryRepository,
+                transactionRunner = transactionRunner,
+                computeTrainingReadiness = ComputeTrainingReadinessUseCase(scoringCalculator),
+            )
+
+        projectionUseCase.execute(
+            startDate = targetDate,
+            endDate = targetDate,
+            zoneId = zoneId,
+            config = preferences.appliedTrainingReadinessConfig(),
+        )
+
+        val summary = saved.captured.single()
+        return ScopeResult(label, summary, advisorInput(summary, preferences.strainLoadSourceMode))
+    }
+
+    @Test
     fun `same target date keeps rounded sleep and readiness when live summary becomes frozen`() =
         runTest {
             val fixture = buildFixture(includeFutureSessions = false)
@@ -185,6 +267,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
         scopeDays: Int?,
         existingTargetSummary: DailySummaryEntity? = null,
     ): ScopeResult {
+        val preferences = fixture.preferences ?: prefs
         val cutoffMs =
             scopeDays?.let {
                 targetDate
@@ -217,7 +300,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
         val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
         val bodyTemperatureRecordDao = mockk<BodyTemperatureRecordDao>(relaxed = true)
 
-        every { settingsRepo.userPreferences } returns flowOf(prefs)
+        every { settingsRepo.userPreferences } returns flowOf(preferences)
 
         coEvery { sleepSessionDao.countSince(any()) } coAnswers {
             val fromMs = firstArg<Long>()
@@ -410,13 +493,19 @@ class ScoringSyncScopeOutputsDeterminismTest {
                         ComputeResidualFatigueUseCase(),
                         resolveDailyBaselinesUseCase,
                         AssembleEverydayLoadInputUseCase(),
+                        ComputeTrainingReadinessUseCase(scoringCalculator),
                     ),
                 scoringHistoryRepository = scoringHistoryRepository,
                 readinessSummaryCoordinator = readinessSummaryCoordinator,
                 defaultDispatcher = UnconfinedTestDispatcher(),
             )
 
-        return ScopeResult(label = label, summary = repo.computeDailySummary(targetDate))
+        val summary = repo.computeDailySummary(targetDate)
+        return ScopeResult(
+            label = label,
+            summary = summary,
+            advisorInput = advisorInput(summary, preferences.strainLoadSourceMode),
+        )
     }
 
     private fun assertMatrixPopulated(summary: DailySummary) {
@@ -425,6 +514,24 @@ class ScoringSyncScopeOutputsDeterminismTest {
         assertNotNull(
             summary.readinessWorkoutOnly,
             "readinessWorkoutOnly should be populated by the determinism fixture",
+        )
+        assertNotNull(summary.residualFatigue, "residualFatigue should be populated by the determinism fixture")
+        assertNotNull(summary.acuteLoadRecovery, "acuteLoadRecovery should be populated by the determinism fixture")
+        assertNotNull(
+            summary.trainingLoadReadinessWorkoutOnly,
+            "trainingLoadReadinessWorkoutOnly should be populated by the determinism fixture",
+        )
+        assertNotNull(
+            summary.trainingLoadReadinessEverydayHr,
+            "trainingLoadReadinessEverydayHr should be populated by the determinism fixture",
+        )
+        assertNotNull(
+            summary.trainingReadinessWorkoutOnly,
+            "trainingReadinessWorkoutOnly should be populated by the determinism fixture",
+        )
+        assertNotNull(
+            summary.trainingReadinessEverydayHr,
+            "trainingReadinessEverydayHr should be populated by the determinism fixture",
         )
         assertNotNull(summary.rhrBpm, "rhrBpm should be populated by the determinism fixture")
         assertNotNull(summary.rhrSigma, "rhrSigma should be populated by the determinism fixture")
@@ -442,7 +549,24 @@ class ScoringSyncScopeOutputsDeterminismTest {
         val fields: List<Pair<String, (DailySummary) -> Any?>> =
             listOf(
                 "sleepScore" to { it.sleepScore },
+                "trimpWorkoutOnly" to { it.trimpWorkoutOnly },
+                "trimpEverydayHr" to { it.trimpEverydayHr },
+                "atlWorkoutOnly" to { it.atlWorkoutOnly },
+                "atlEverydayHr" to { it.atlEverydayHr },
+                "ctlWorkoutOnly" to { it.ctlWorkoutOnly },
+                "ctlEverydayHr" to { it.ctlEverydayHr },
+                "strainRatioWorkoutOnly" to { it.strainRatioWorkoutOnly },
+                "strainRatioEverydayHr" to { it.strainRatioEverydayHr },
+                "loadScoreWorkoutOnly" to { it.loadScoreWorkoutOnly },
+                "loadScoreEverydayHr" to { it.loadScoreEverydayHr },
                 "readinessWorkoutOnly" to { it.readinessWorkoutOnly },
+                "readinessEverydayHr" to { it.readinessEverydayHr },
+                "residualFatigue" to { it.residualFatigue },
+                "acuteLoadRecovery" to { it.acuteLoadRecovery },
+                "trainingLoadReadinessWorkoutOnly" to { it.trainingLoadReadinessWorkoutOnly },
+                "trainingLoadReadinessEverydayHr" to { it.trainingLoadReadinessEverydayHr },
+                "trainingReadinessWorkoutOnly" to { it.trainingReadinessWorkoutOnly },
+                "trainingReadinessEverydayHr" to { it.trainingReadinessEverydayHr },
                 "rhrBpm" to { it.rhrBpm },
                 "rhrSigma" to { it.rhrSigma },
                 "hrvMuMssd" to { it.hrvMuMssd },
@@ -470,7 +594,29 @@ class ScoringSyncScopeOutputsDeterminismTest {
                 fail("First divergent field: $fieldName\n$details")
             }
         }
+        val expectedAdvisorInput = baseline.advisorInput
+        val divergentAdvisorInputs = results.filter { it.advisorInput != expectedAdvisorInput }
+        if (divergentAdvisorInputs.isNotEmpty()) {
+            val details = results.joinToString(separator = "\n") { "${it.label}: ${it.advisorInput}" }
+            fail("Training Advisor inputs diverged\n$details")
+        }
     }
+
+    private fun advisorInput(
+        summary: DailySummary,
+        sourceMode: LoadSourceMode,
+    ): AdvisorInput =
+        AdvisorInput(
+            readiness = LoadSourceSelector.selectReadiness(summary, sourceMode),
+            loadScore = LoadSourceSelector.selectLoadScore(summary, sourceMode),
+            trimp = LoadSourceSelector.selectTrimp(summary, sourceMode),
+            atl = LoadSourceSelector.selectAtl(summary, sourceMode),
+            ctl = LoadSourceSelector.selectCtl(summary, sourceMode),
+            strainRatio = LoadSourceSelector.selectStrainRatio(summary, sourceMode),
+            sleepScore = summary.sleepScore,
+            restoration = summary.sRest,
+            recoveryFlags = summary.recoveryFlags,
+        )
 
     private fun buildFixture(includeFutureSessions: Boolean): Fixture {
         val sessions = mutableListOf<SleepSessionEntity>()
@@ -575,10 +721,32 @@ class ScoringSyncScopeOutputsDeterminismTest {
         val sleepHrBySession: Map<String, List<Int>>,
         val hrvBySession: Map<String, List<Float>>,
         val heartRateRecords: List<HeartRateRecordEntity>,
+        val preferences: UserPreferences? = null,
+    ) {
+        fun reversedIngestionOrder(): Fixture =
+            copy(
+                sessions = sessions.reversed(),
+                sleepHrBySession = sleepHrBySession.entries.reversed().associate { it.toPair() },
+                hrvBySession = hrvBySession.entries.reversed().associate { it.toPair() },
+                heartRateRecords = heartRateRecords.reversed(),
+            )
+    }
+
+    private data class AdvisorInput(
+        val readiness: Float?,
+        val loadScore: Float?,
+        val trimp: Float?,
+        val atl: Float?,
+        val ctl: Float?,
+        val strainRatio: Float?,
+        val sleepScore: Float?,
+        val restoration: Float?,
+        val recoveryFlags: Set<app.readylytics.health.core.model.domain.model.RecoveryFlag>,
     )
 
     private data class ScopeResult(
         val label: String,
         val summary: DailySummary,
+        val advisorInput: AdvisorInput,
     )
 }

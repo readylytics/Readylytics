@@ -12,6 +12,7 @@ import app.readylytics.health.core.model.domain.model.deepSleepStatus
 import app.readylytics.health.core.model.domain.model.efficiencyStatus
 import app.readylytics.health.core.model.domain.model.remSleepStatus
 import app.readylytics.health.core.model.domain.model.scoreStatus
+import app.readylytics.health.core.model.domain.repository.HeartRateResolution
 import app.readylytics.health.core.model.domain.repository.SleepSessionData
 import app.readylytics.health.core.model.domain.sleep.SleepCardCatalog
 import app.readylytics.health.core.model.domain.sleep.SleepMetricCardConfiguration
@@ -156,6 +157,9 @@ fun buildSleepTopCardDataMap(
                             session = singleSessionVisual,
                             samples = uiState.sleepHrSamples,
                             modifier = Modifier.fillMaxWidth(),
+                            // R2-UI-002: sleep-detail ViewModel isn't yet wired to the tier-aware
+                            // observeTimelineWithResolution pattern -- out of this task's scope.
+                            resolution = HeartRateResolution.RAW,
                         )
                     }
                 }

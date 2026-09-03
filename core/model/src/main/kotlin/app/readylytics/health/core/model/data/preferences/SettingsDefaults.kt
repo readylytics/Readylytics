@@ -28,7 +28,7 @@ object SettingsDefaults {
     const val MIN_HYPERSOMNIA_ONSET_PERCENT = 100
     const val MAX_HYPERSOMNIA_ONSET_PERCENT = 125
     const val HYPERSOMNIA_ONSET_PERCENT_STEP = 5
-    const val CURRENT_SCORING_VERSION = 2
+    const val CURRENT_SCORING_VERSION = 4
     const val CORE_MERGE_GAP_MINUTES = 180
     const val MIN_CORE_MERGE_GAP_MINUTES = 30
     const val MAX_CORE_MERGE_GAP_MINUTES = 240
@@ -99,10 +99,6 @@ object SettingsDefaults {
     const val STEP_GOAL = 10000
     const val RETENTION_DAYS_ENABLED = true
     const val RETENTION_DAYS = 360 // 12 months (30 days per month)
-    const val COLLAPSE_HEALTH_CONNECT = true
-    const val COLLAPSE_BASELINES_THRESHOLDS = true
-    const val COLLAPSE_DISPLAY = true
-    const val COLLAPSE_ADVANCED = true
     const val ABOUT_DISMISSED = false
     val PHYSIOLOGY_PROFILE = PhysiologyProfile.ACTIVE
     const val INSTALL_DATE = 0L // Set to System.currentTimeMillis() on first app run
@@ -112,13 +108,20 @@ object SettingsDefaults {
     const val SCORING_ZONE_ID = ""
     val CIRCADIAN_THRESHOLD_OVERRIDE: String? = null // null = use profile default
     val TRIMP_MODEL = TrimpModel.BANISTER
-    const val RESIDUAL_FATIGUE_ENABLED = true
     const val RESIDUAL_FATIGUE_HALF_LIFE_HOURS = 24f
     const val MIN_RESIDUAL_FATIGUE_HALF_LIFE_HOURS = 6f
     const val MAX_RESIDUAL_FATIGUE_HALF_LIFE_HOURS = 96f
     const val RESIDUAL_FATIGUE_GAIN = 1.0f
     const val MIN_RESIDUAL_FATIGUE_GAIN = 0.1f
     const val MAX_RESIDUAL_FATIGUE_GAIN = 5.0f
+    const val TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE = 100f
+    const val MIN_TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE = 75f
+    const val MAX_TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE = 175f
+    const val TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE_STEP = 5f
+    const val TRAINING_READINESS_LOAD_BALANCE_WEIGHT = .90f
+    const val MIN_TRAINING_READINESS_LOAD_BALANCE_WEIGHT = .80f
+    const val MAX_TRAINING_READINESS_LOAD_BALANCE_WEIGHT = 1f
+    const val TRAINING_READINESS_LOAD_BALANCE_WEIGHT_STEP = 0.01f
     val STRAIN_LOAD_SOURCE_MODE = LoadSourceMode.WORKOUT_ONLY
     val RAS_SOURCE_MODE = LoadSourceMode.EVERYDAY_HEART_RATE
     val UNIT_SYSTEM = UnitSystem.METRIC
@@ -155,6 +158,7 @@ object SettingsDefaults {
             CardConfiguration(CardId.BODY_TEMPERATURE, isVisible = true, position = 17),
             CardConfiguration(CardId.AI_RECOMMENDATION, isVisible = true, position = 18),
             CardConfiguration(CardId.RESIDUAL_FATIGUE, isVisible = false, position = 19),
+            CardConfiguration(CardId.TRAINING_READINESS, isVisible = false, position = 20),
         )
 
     val DEFAULT_VITALS_CARDS =

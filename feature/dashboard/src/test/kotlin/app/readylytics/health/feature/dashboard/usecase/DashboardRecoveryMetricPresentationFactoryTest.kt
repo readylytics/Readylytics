@@ -52,6 +52,7 @@ class DashboardRecoveryMetricPresentationFactoryTest {
         factory =
             DashboardMetricPresentationFactory(
                 resourceProvider,
+                ResidualFatiguePresentationFactory(resourceProvider),
             )
 
         every {

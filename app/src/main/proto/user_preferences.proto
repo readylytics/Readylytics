@@ -155,10 +155,7 @@ message UserPreferencesProto {
     bool retention_days_enabled = 40;
     int32 retention_days = 41;
     
-    bool collapse_health_connect = 43;
-    bool collapse_baselines_thresholds = 44;
-    bool collapse_display = 45;
-    bool collapse_advanced = 46;
+    reserved 43, 44, 45, 46;
     
     bool about_dismissed = 47;
     
@@ -281,12 +278,20 @@ message UserPreferencesProto {
     // Prevents re-running the migration on subsequent launches.
     bool trimp_normalization_migrated = 90;
 
-    // Residual Fatigue model parameters (Phase 1 — shadow mode).
-    // Proto3 defaults: bool=false, float=0.0. Domain read boundary resolves
-    // unset (0.0) to SettingsDefaults values.
-    optional bool residual_fatigue_enabled = 91;
+    // Removed residual-fatigue toggle. Keep its number/name permanently unavailable so old
+    // enabled=false values cannot gate the now always-on fatigue model.
+    reserved 91;
+    reserved "residual_fatigue_enabled";
+
+    // Always-on Residual Fatigue model parameters.
     optional float residual_fatigue_half_life_hours = 92;
     optional float residual_fatigue_gain = 93;
+
+    // Editable Training Readiness parameters plus the atomically applied recompute snapshot.
+    optional float training_readiness_residual_fatigue_scale = 94;
+    optional float training_readiness_load_balance_weight = 95;
+    optional float last_applied_training_readiness_residual_fatigue_scale = 96;
+    optional float last_applied_training_readiness_load_balance_weight = 97;
 }
 
 enum TrimpMethodProto {

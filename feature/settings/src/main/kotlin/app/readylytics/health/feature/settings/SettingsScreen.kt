@@ -2,48 +2,100 @@ package app.readylytics.health.feature.settings
 
 import android.content.Context
 import android.content.Intent
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.readylytics.health.core.designsystem.spacing
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import app.readylytics.health.core.model.domain.githubissue.GitHubIssueType
 import app.readylytics.health.core.model.domain.githubissue.IssueReportRequest
 import app.readylytics.health.feature.settings.LocalBackupViewModel.SideEffect
 import app.readylytics.health.feature.settings.R
+import app.readylytics.health.feature.settings.category.BackupRestoreCategoryScreen
+import app.readylytics.health.feature.settings.category.DataSourcesSyncCategoryScreen
+import app.readylytics.health.feature.settings.category.DisplayCategoryScreen
+import app.readylytics.health.feature.settings.category.PhysiologyProfileCategoryScreen
+import app.readylytics.health.feature.settings.category.SleepCategoryScreen
+import app.readylytics.health.feature.settings.category.SupportAboutCategoryScreen
+import app.readylytics.health.feature.settings.category.TrainingCategoryScreen
+import app.readylytics.health.feature.settings.category.VitalsCategoryScreen
 import app.readylytics.health.feature.settings.common.resyncGateEnabled
+import app.readylytics.health.feature.settings.nav.SettingsCategoryId
+import app.readylytics.health.feature.settings.nav.SettingsDestination
+import app.readylytics.health.feature.settings.nav.SettingsHomeScreen
 import com.google.android.gms.oss.licenses.v2.OssLicensesMenuActivity
 import kotlinx.coroutines.flow.collectLatest
 import app.readylytics.health.core.ui.R as CoreUiR
+
+private const val TRANSITION_DURATION_MS = 300
+private const val PREDICTIVE_POP_SCALE = 0.9f
+
+internal val settingsEnterTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
+    fadeIn(animationSpec = tween(TRANSITION_DURATION_MS)) +
+        slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(TRANSITION_DURATION_MS))
+}
+
+internal val settingsExitTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
+    fadeOut(animationSpec = tween(TRANSITION_DURATION_MS)) +
+        slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(TRANSITION_DURATION_MS))
+}
+
+internal val settingsPopEnterTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
+    fadeIn(animationSpec = tween(TRANSITION_DURATION_MS)) +
+        slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(TRANSITION_DURATION_MS))
+}
+
+internal val settingsPopExitTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
+    fadeOut(animationSpec = tween(TRANSITION_DURATION_MS)) +
+        slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(TRANSITION_DURATION_MS))
+}
+
+internal val settingsPredictivePopEnterTransition:
+    AnimatedContentTransitionScope<NavBackStackEntry>.(Int) -> EnterTransition =
+    { _: Int ->
+        scaleIn(
+            initialScale = PREDICTIVE_POP_SCALE,
+            transformOrigin = TransformOrigin.Center,
+            animationSpec = tween(TRANSITION_DURATION_MS),
+        ) + fadeIn(animationSpec = tween(TRANSITION_DURATION_MS))
+    }
+
+internal val settingsPredictivePopExitTransition:
+    AnimatedContentTransitionScope<NavBackStackEntry>.(Int) -> ExitTransition =
+    { _: Int ->
+        scaleOut(
+            targetScale = PREDICTIVE_POP_SCALE,
+            transformOrigin = TransformOrigin.Center,
+            animationSpec = tween(TRANSITION_DURATION_MS),
+        ) + fadeOut(animationSpec = tween(TRANSITION_DURATION_MS))
+    }
 
 private fun openOssLicenses(
     context: Context,
@@ -150,7 +202,6 @@ fun SettingsRoute(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     thresholdState: ThresholdSettingsState,
@@ -213,25 +264,16 @@ fun SettingsScreen(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SettingsScreenContent(
     states: SettingsStates,
     intents: SettingsIntents,
     modifier: Modifier = Modifier,
 ) {
-    var expandState by rememberSaveable { mutableStateOf(SettingsExpandState()) }
-    var searchQuery by rememberSaveable { mutableStateOf("") }
     var pendingReportType by remember { mutableStateOf<GitHubIssueType?>(null) }
-    val isResyncing = states.syncState.isResyncing
-    val controlsEnabled = resyncGateEnabled(isResyncing)
-
-    val matchingSections by remember(searchQuery) {
-        derivedStateOf { settingsSections.filter { sectionMatches(it, searchQuery) } }
-    }
-    val shouldExpandSection = { sectionId: String ->
-        searchQuery.isNotBlank() && matchingSections.any { it.id == sectionId }
-    }
+    val controlsEnabled = resyncGateEnabled(states.syncState.isResyncing)
+    val navController = rememberNavController()
+    var searchQuery by rememberSaveable { mutableStateOf("") }
 
     RestoreConfirmDialog(states = states, intents = intents)
     IssueReportDialogHandler(
@@ -241,122 +283,70 @@ private fun SettingsScreenContent(
         onSendIssueReport = intents.onSendIssueReport,
     )
 
-    Column(modifier = modifier.fillMaxSize()) {
-        SettingsContentScroll(
-            context =
-                SettingsContentScrollContext(
-                    states = states,
-                    intents = intents,
-                    searchQuery = searchQuery,
-                    onSearchQueryChanged = { searchQuery = it },
-                    matchingSections = matchingSections,
-                    expandState = expandState,
-                    shouldExpandSection = shouldExpandSection,
-                    controlsEnabled = controlsEnabled,
-                    onExpandStateChange = { expandState = it },
-                    onReportTypeSelected = { pendingReportType = it },
-                ),
-        )
-    }
-}
-
-@Composable
-private fun ColumnScope.SettingsContentScroll(context: SettingsContentScrollContext) {
-    Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-        Column(modifier = Modifier.fillMaxWidth().padding(vertical = MaterialTheme.spacing.pageSectionGapSmall)) {
-            SettingsSearchBar(
-                searchQuery = context.searchQuery,
-                onSearchQueryChanged = context.onSearchQueryChanged,
+    NavHost(
+        navController = navController,
+        startDestination = SettingsDestination.Home,
+        modifier = modifier.fillMaxSize(),
+        enterTransition = settingsEnterTransition,
+        exitTransition = settingsExitTransition,
+        popEnterTransition = settingsPopEnterTransition,
+        popExitTransition = settingsPopExitTransition,
+        predictivePopEnterTransition = settingsPredictivePopEnterTransition,
+        predictivePopExitTransition = settingsPredictivePopExitTransition,
+    ) {
+        composable<SettingsDestination.Home> {
+            SettingsHomeScreen(
+                searchQuery = searchQuery,
+                onSearchQueryChanged = { searchQuery = it },
+                onCategorySelected = { navController.navigate(SettingsDestination.Category(it)) },
+                onSearchResultSelected = {
+                    navController.navigate(SettingsDestination.Category(it.categoryId, highlightItemId = it.id))
+                },
             )
-            DataBackupSyncSectionWrapper(
-                states = context.states,
-                intents = context.intents,
-                matchingSections = context.matchingSections,
-                expandState = context.expandState,
-                shouldExpandSection = context.shouldExpandSection,
-                onExpandStateChange = context.onExpandStateChange,
-            )
-            DataSourcesSectionWrapper(
-                matchingSections = context.matchingSections,
-                expandState = context.expandState,
-                shouldExpandSection = context.shouldExpandSection,
-                onExpandStateChange = context.onExpandStateChange,
-            )
-            BaselinesThresholdsSectionWrapper(
-                states = context.states,
-                intents = context.intents,
-                matchingSections = context.matchingSections,
-                expandState = context.expandState,
-                shouldExpandSection = context.shouldExpandSection,
-                controlsEnabled = context.controlsEnabled,
-                onExpandStateChange = context.onExpandStateChange,
-            )
-            DisplaySectionWrapper(
-                states = context.states,
-                intents = context.intents,
-                matchingSections = context.matchingSections,
-                expandState = context.expandState,
-                shouldExpandSection = context.shouldExpandSection,
-                onExpandStateChange = context.onExpandStateChange,
-            )
-            AdvancedSectionWrapper(
-                states = context.states,
-                intents = context.intents,
-                matchingSections = context.matchingSections,
-                expandState = context.expandState,
-                shouldExpandSection = context.shouldExpandSection,
-                onExpandStateChange = context.onExpandStateChange,
-            )
-            IssueReportingSectionWrapper(
-                matchingSections = context.matchingSections,
-                expandState = context.expandState,
-                shouldExpandSection = context.shouldExpandSection,
-                onReportTypeSelected = context.onReportTypeSelected,
-                onExpandStateChange = context.onExpandStateChange,
-            )
-            MiscellaneousSectionWrapper(
-                matchingSections = context.matchingSections,
-                expandState = context.expandState,
-                shouldExpandSection = context.shouldExpandSection,
-                intents = context.intents,
-                onExpandStateChange = context.onExpandStateChange,
+        }
+        composable<SettingsDestination.Category> { backStackEntry ->
+            val destination: SettingsDestination.Category = backStackEntry.toRoute()
+            CategoryScreenHost(
+                categoryId = destination.id,
+                highlightItemId = destination.highlightItemId,
+                states = states,
+                intents = intents,
+                controlsEnabled = controlsEnabled,
+                onReportTypeSelected = { pendingReportType = it },
+                onNavigateBack = { navController.popBackStack() },
             )
         }
     }
 }
 
 @Composable
-private fun SettingsSearchBar(
-    searchQuery: String,
-    onSearchQueryChanged: (String) -> Unit,
+private fun CategoryScreenHost(
+    categoryId: SettingsCategoryId,
+    highlightItemId: String?,
+    states: SettingsStates,
+    intents: SettingsIntents,
+    controlsEnabled: Boolean,
+    onReportTypeSelected: (GitHubIssueType) -> Unit,
+    onNavigateBack: () -> Unit,
 ) {
-    OutlinedTextField(
-        value = searchQuery,
-        onValueChange = onSearchQueryChanged,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(
-                    horizontal = MaterialTheme.spacing.pageHorizontal,
-                    vertical = MaterialTheme.spacing.pageSectionGapSmall,
-                ),
-        placeholder = { Text(stringResource(R.string.settings_search_placeholder)) },
-        leadingIcon = {
-            Icon(Icons.Filled.Search, contentDescription = stringResource(R.string.accessibility_search))
-        },
-        trailingIcon = {
-            if (searchQuery.isNotEmpty()) {
-                IconButton(onClick = { onSearchQueryChanged("") }) {
-                    Icon(
-                        Icons.Filled.Clear,
-                        contentDescription = stringResource(R.string.accessibility_clear),
-                    )
-                }
-            }
-        },
-        shape = MaterialTheme.shapes.large,
-        singleLine = true,
-    )
+    when (categoryId) {
+        SettingsCategoryId.PHYSIOLOGY_PROFILE ->
+            PhysiologyProfileCategoryScreen(states, intents, controlsEnabled, highlightItemId, onNavigateBack)
+        SettingsCategoryId.SLEEP ->
+            SleepCategoryScreen(states, intents, controlsEnabled, highlightItemId, onNavigateBack)
+        SettingsCategoryId.TRAINING ->
+            TrainingCategoryScreen(states, intents, controlsEnabled, highlightItemId, onNavigateBack)
+        SettingsCategoryId.VITALS ->
+            VitalsCategoryScreen(states, intents, controlsEnabled, highlightItemId, onNavigateBack)
+        SettingsCategoryId.DATA_SOURCES_SYNC ->
+            DataSourcesSyncCategoryScreen(states, intents, highlightItemId, onNavigateBack)
+        SettingsCategoryId.BACKUP_RESTORE ->
+            BackupRestoreCategoryScreen(states, intents, highlightItemId, onNavigateBack)
+        SettingsCategoryId.DISPLAY ->
+            DisplayCategoryScreen(states, intents, highlightItemId, onNavigateBack)
+        SettingsCategoryId.SUPPORT_ABOUT ->
+            SupportAboutCategoryScreen(intents, onReportTypeSelected, highlightItemId, onNavigateBack)
+    }
 }
 
 @Composable

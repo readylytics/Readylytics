@@ -1,11 +1,14 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
+import app.readylytics.health.core.database.domain.scoring.TrainingReadinessProjectionRecomputeUseCase
 import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
 import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.core.model.domain.util.RetentionBounds
 import kotlinx.coroutines.flow.first
+import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import javax.inject.Inject
@@ -13,7 +16,7 @@ import javax.inject.Singleton
 
 internal fun resolveScoringToday(
     prefs: UserPreferences,
-    now: Instant = Instant.now(),
+    now: Instant,
 ): LocalDate = RetentionBounds.resolveHistoricalWindow(prefs, now).endDate
 
 /**
@@ -34,23 +37,63 @@ class FullHistoricalResyncUseCase
     constructor(
         private val settingsRepo: SettingsRepository,
         private val healthSyncUseCase: HealthSyncUseCase,
+        private val trainingReadinessProjectionRecomputeUseCase: TrainingReadinessProjectionRecomputeUseCase,
+        private val clock: Clock,
     ) {
         suspend fun execute(
             recomputeOnly: Boolean = false,
+            rangeOverride: ScoreInvalidation.AffectedRange? = null,
             onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)? = null,
         ): Result<Unit> {
             val prefs = settingsRepo.userPreferences.first()
-            val historicalWindow = RetentionBounds.resolveHistoricalWindow(prefs)
+            val historicalWindow = RetentionBounds.resolveHistoricalWindow(prefs, clock.instant())
+            // rangeOverride only narrows a recompute-only pass -- a full resync must always cover the
+            // whole retention window regardless. Clamp to the retention window in case retention
+            // shrank between when the range was computed (worker enqueue time) and now (worker run
+            // time).
+            val startDate =
+                rangeOverride?.takeIf { recomputeOnly }?.start?.coerceAtLeast(historicalWindow.startDate)
+                    ?: historicalWindow.startDate
+            val endDate =
+                rangeOverride?.takeIf { recomputeOnly }?.endInclusive?.coerceAtMost(historicalWindow.endDate)
+                    ?: historicalWindow.endDate
+            if (startDate.isAfter(endDate)) {
+                return Result.success(Unit)
+            }
             return if (recomputeOnly) {
-                healthSyncUseCase.recomputeRange(
-                    startDate = historicalWindow.startDate,
-                    endDate = historicalWindow.endDate,
-                    onProgress = onProgress,
-                )
+                healthSyncUseCase.recomputeRange(startDate = startDate, endDate = endDate, onProgress = onProgress)
             } else {
                 healthSyncUseCase.resyncRange(
                     startDate = historicalWindow.startDate,
                     endDate = historicalWindow.endDate,
+                    onProgress = onProgress,
+                )
+            }
+        }
+
+        /**
+         * Task 4: durable, parameter-only Training Readiness recompute triggered by the Settings
+         * explicit "Recalculate" action (task 5) after S/w change -- never by a normal sync/resync
+         * pass. Retention-bounded like [execute], and delegates its actual read-modify-write work to
+         * [TrainingReadinessProjectionRecomputeUseCase]: no Health Connect I/O, no raw ingestion, no
+         * TRIMP/residual-fatigue reconstruction. It still serializes through
+         * [HealthSyncUseCase.withSyncLock], though, because it reads and rewrites full
+         * `daily_summaries` rows the same way [app.readylytics.health.DatabaseReadyStartupInitializer]'s
+         * baseline backfill does -- a concurrent daily sync/resync updating those same rows mid-write
+         * could otherwise be clobbered by (or clobber) this stale full-row projection.
+         */
+        suspend fun executeTrainingReadinessProjection(
+            config: TrainingReadinessConfig,
+            onProgress: ((current: Int, total: Int) -> Unit)? = null,
+        ): Result<Unit> {
+            val prefs = settingsRepo.userPreferences.first()
+            val historicalWindow = RetentionBounds.resolveHistoricalWindow(prefs, clock.instant())
+            return healthSyncUseCase.withSyncLock {
+                trainingReadinessProjectionRecomputeUseCase.execute(
+                    startDate = historicalWindow.startDate,
+                    endDate = historicalWindow.endDate,
+                    zoneId = historicalWindow.zoneId,
+                    config = config,
                     onProgress = onProgress,
                 )
             }

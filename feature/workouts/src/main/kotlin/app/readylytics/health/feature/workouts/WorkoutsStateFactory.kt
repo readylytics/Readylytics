@@ -1,13 +1,13 @@
 package app.readylytics.health.feature.workouts
 
 import androidx.compose.runtime.Immutable
-import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
 import app.readylytics.health.core.model.domain.model.DailyMetrics
 import app.readylytics.health.core.model.domain.model.DailyMetricsMapper
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.model.LoadSourceSelector
 import app.readylytics.health.core.model.domain.preferences.UnitSystem
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.WorkoutData
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants

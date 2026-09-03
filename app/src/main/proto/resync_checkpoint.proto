@@ -26,4 +26,7 @@ message ResyncCheckpointProto {
   // override -- use the caller-supplied chunkDays". Additive field; checkpoints saved before this
   // field existed decode it as 0/no-override.
   int32 chunk_days_override = 7;
+  // R2-HC-002: Page tokens for resuming streamed sample reads mid-chunk.
+  string hr_page_token = 8;
+  string hrv_page_token = 9;
 }

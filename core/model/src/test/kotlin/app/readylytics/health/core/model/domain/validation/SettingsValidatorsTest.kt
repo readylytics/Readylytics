@@ -30,4 +30,26 @@ class SettingsValidatorsTest {
         assertTrue(SettingsValidators.FATIGUE_GAIN_RULE.validate(0.09f) is ValidationResult.Invalid)
         assertTrue(SettingsValidators.FATIGUE_GAIN_RULE.validate(5.1f) is ValidationResult.Invalid)
     }
+
+    @Test
+    fun `TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE_RULE accepts finite persistence values in range`() {
+        val rule = SettingsValidators.TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE_RULE
+
+        assertTrue(rule.validate(75f) is ValidationResult.Valid)
+        assertTrue(rule.validate(77.3f) is ValidationResult.Valid)
+        assertTrue(rule.validate(175f) is ValidationResult.Valid)
+        assertTrue(rule.validate(74.9f) is ValidationResult.Invalid)
+        assertTrue(rule.validate(175.1f) is ValidationResult.Invalid)
+    }
+
+    @Test
+    fun `TRAINING_READINESS_LOAD_BALANCE_WEIGHT_RULE accepts the full 0_8 to 1_0 range`() {
+        val rule = SettingsValidators.TRAINING_READINESS_LOAD_BALANCE_WEIGHT_RULE
+
+        assertTrue(rule.validate(0.8f) is ValidationResult.Valid)
+        assertTrue(rule.validate(0.9f) is ValidationResult.Valid)
+        assertTrue(rule.validate(1f) is ValidationResult.Valid)
+        assertTrue(rule.validate(0.79f) is ValidationResult.Invalid)
+        assertTrue(rule.validate(1.01f) is ValidationResult.Invalid)
+    }
 }

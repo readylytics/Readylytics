@@ -84,10 +84,6 @@ private fun buildThresholdsAndDisplay(
         stepGoal = prefs.stepGoal,
         retentionDaysEnabled = prefs.retentionDaysEnabled,
         retentionDays = prefs.retentionDays,
-        collapseHealthConnect = prefs.collapseHealthConnect,
-        collapseBaselinesThresholds = prefs.collapseBaselinesThresholds,
-        collapseDisplay = prefs.collapseDisplay,
-        collapseAdvanced = prefs.collapseAdvanced,
         aboutDismissed = prefs.aboutDismissed,
         physiologyProfile = prefs.physiologyProfile.name,
         installDate = prefs.installDate,
@@ -113,6 +109,11 @@ private fun buildScoringAndDevices(
         lastRecalcSleepScoreWeightProfile = prefs.lastRecalcSleepScoreWeightProfile?.name,
         lastRecalcGoalSleepHours = prefs.lastRecalcGoalSleepHours,
         lastRecalcHypersomniaOnsetPercent = prefs.lastRecalcHypersomniaOnsetPercent,
+        trainingReadinessResidualFatigueScale = prefs.trainingReadinessResidualFatigueScale,
+        trainingReadinessLoadBalanceWeight = prefs.trainingReadinessLoadBalanceWeight,
+        lastAppliedTrainingReadinessResidualFatigueScale =
+            prefs.lastAppliedTrainingReadinessResidualFatigueScale,
+        lastAppliedTrainingReadinessLoadBalanceWeight = prefs.lastAppliedTrainingReadinessLoadBalanceWeight,
     )
 
 private fun attachLayouts(

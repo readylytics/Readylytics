@@ -1,4 +1,5 @@
 package app.readylytics.health.core.database.domain.scoring
+import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
 import app.readylytics.health.core.model.domain.scoring.LoadCoverageConfidence
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
@@ -120,6 +121,7 @@ class ScoringPointInTimeRegressionTest {
                     ComputeResidualFatigueUseCase(),
                     ResolveDailyBaselinesUseCase(baselineComputer),
                     AssembleEverydayLoadInputUseCase(),
+                        ComputeTrainingReadinessUseCase(scoringCalculator),
                 ),
                 scoringHistoryRepository,
                 readinessSummaryCoordinator,

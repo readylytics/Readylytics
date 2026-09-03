@@ -19,6 +19,7 @@ import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import app.readylytics.health.core.healthconnect.domain.sync.retryWithBackoff
 import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.core.model.domain.model.DomainBloodPressureRecord
 import app.readylytics.health.core.model.domain.model.DomainBodyFatRecord
@@ -39,6 +40,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
+import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -54,6 +56,8 @@ class HealthConnectRepositoryImpl
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
         private val stepRecordReader: StepRecordReader,
         private val intervalTotalsReader: IntervalTotalsReader,
+        private val clock: Clock,
+        private val client: HealthConnectClient,
     ) : HealthConnectRepository {
         override val criticalPermissions: Set<String> =
             setOf(
@@ -96,10 +100,6 @@ class HealthConnectRepositoryImpl
 
         override val backgroundReadPermission: String =
             HealthPermission.PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND
-
-        private val client: HealthConnectClient by lazy {
-            HealthConnectClient.getOrCreate(context)
-        }
 
         override fun isAvailable(): Boolean =
             HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE
@@ -221,33 +221,38 @@ class HealthConnectRepositoryImpl
             to: Instant,
         ): List<T> {
             val all = mutableListOf<T>()
-            readAllPagesStreaming<T>(from, to) { page -> all.addAll(page) }
+            readAllPagesStreaming<T>(from, to) { page, _ -> all.addAll(page) }
             return all
         }
 
         /**
          * Paged variant of [readAllPages]: invokes [onPage] once per Health Connect page instead of
          * accumulating every page into one list, so a dense window never holds more than one page
-         * of raw HC records in memory at once (HC-001).
+         * of raw HC records in memory at once (HC-001). Individual page reads are retried via
+         * [retryWithBackoff] (R2-HC-002).
          */
         private suspend inline fun <reified T : androidx.health.connect.client.records.Record> readAllPagesStreaming(
             from: Instant,
             to: Instant,
-            onPage: suspend (List<T>) -> Unit,
+            startPageToken: String? = null,
+            onPage: suspend (records: List<T>, nextPageToken: String?) -> Unit,
         ) {
-            var pageToken: String? = null
+            var pageToken: String? = startPageToken
             try {
                 do {
+                    val currentToken = pageToken
                     val response =
-                        client.readRecords(
-                            ReadRecordsRequest(
-                                recordType = T::class,
-                                timeRangeFilter = TimeRangeFilter.between(from, to),
-                                pageToken = pageToken,
-                            ),
-                        )
-                    onPage(response.records)
+                        retryWithBackoff {
+                            client.readRecords(
+                                ReadRecordsRequest(
+                                    recordType = T::class,
+                                    timeRangeFilter = TimeRangeFilter.between(from, to),
+                                    pageToken = currentToken,
+                                ),
+                            )
+                        }
                     pageToken = response.pageToken
+                    onPage(response.records, pageToken)
                 } while (pageToken != null)
             } catch (e: CancellationException) {
                 throw e
@@ -283,11 +288,12 @@ class HealthConnectRepositoryImpl
         override suspend fun readHeartRateSamplesPaged(
             from: Instant,
             to: Instant,
-            onPage: suspend (List<DomainHeartRateRecord>) -> Unit,
+            startPageToken: String?,
+            onPage: suspend (List<DomainHeartRateRecord>, String?) -> Unit,
         ) {
             withContext(ioDispatcher) {
-                readAllPagesStreaming<HeartRateRecord>(from, to) { page ->
-                    onPage(page.map { it.toDomain() })
+                readAllPagesStreaming<HeartRateRecord>(from, to, startPageToken) { page, nextToken ->
+                    onPage(page.map { it.toDomain() }, nextToken)
                 }
             }
         }
@@ -295,11 +301,12 @@ class HealthConnectRepositoryImpl
         override suspend fun readHrvSamplesPaged(
             from: Instant,
             to: Instant,
-            onPage: suspend (List<DomainHrvRecord>) -> Unit,
+            startPageToken: String?,
+            onPage: suspend (List<DomainHrvRecord>, String?) -> Unit,
         ) {
             withContext(ioDispatcher) {
-                readAllPagesStreaming<HeartRateVariabilityRmssdRecord>(from, to) { page ->
-                    onPage(page.map { it.toDomain() })
+                readAllPagesStreaming<HeartRateVariabilityRmssdRecord>(from, to, startPageToken) { page, nextToken ->
+                    onPage(page.map { it.toDomain() }, nextToken)
                 }
             }
         }
@@ -509,8 +516,8 @@ class HealthConnectRepositoryImpl
                     app.readylytics.health.core.model.domain.util.logD(
                         "HealthConnectRepository",
                     ) { "Discovering devices in $windowDays day window..." }
-                    val from = Instant.now().minusSeconds(windowDays.toLong() * TimeUnit.DAYS.toSeconds(1))
-                    val to = Instant.now()
+                    val from = clock.instant().minusSeconds(windowDays.toLong() * TimeUnit.DAYS.toSeconds(1))
+                    val to = clock.instant()
 
                     val devices = mutableSetOf<String>()
 
@@ -522,7 +529,7 @@ class HealthConnectRepositoryImpl
                         val hrDevicesDeferred =
                             async {
                                 collectDeviceNames("Heart rate") { onNames ->
-                                    readHeartRateSamplesPaged(from, to) { page ->
+                                    readHeartRateSamplesPaged(from, to) { page, _ ->
                                         onNames(page.map { it.deviceName })
                                     }
                                 }
@@ -530,7 +537,7 @@ class HealthConnectRepositoryImpl
                         val hrvDevicesDeferred =
                             async {
                                 collectDeviceNames("HRV") { onNames ->
-                                    readHrvSamplesPaged(from, to) { page ->
+                                    readHrvSamplesPaged(from, to) { page, _ ->
                                         onNames(page.map { it.deviceName })
                                     }
                                 }

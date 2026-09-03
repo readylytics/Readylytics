@@ -71,7 +71,7 @@ class RoomHealthIngestionStoreZoneTest {
                     bodyTemperatureRecordDao = noOpDao(),
                     stepRecordDao = noOpDao(),
                     sourceRecordDao = noOpDao(),
-                    minuteBucketDao = noOpDao(),
+                    minuteBucketMaintenanceDao = noOpDao(),
                 ),
             dailySummaryDao = dailySummaryDao,
             transactionRunner =

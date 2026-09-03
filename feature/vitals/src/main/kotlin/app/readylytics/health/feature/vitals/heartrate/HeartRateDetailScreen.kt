@@ -161,11 +161,15 @@ fun HeartRateDetailScreen(
                         samples = uiState.samples,
                         dayStartMs = dayStartMs,
                         dayEndMs = dayEndMs,
-                        zone1MinBpm = uiState.zone1MinBpm,
-                        zone1MaxBpm = uiState.zone1MaxBpm,
-                        zone2MaxBpm = uiState.zone2MaxBpm,
-                        zone3MaxBpm = uiState.zone3MaxBpm,
-                        zone4MaxBpm = uiState.zone4MaxBpm,
+                        zoneBounds =
+                            HrZoneBounds(
+                                zone1MinBpm = uiState.zone1MinBpm,
+                                zone1MaxBpm = uiState.zone1MaxBpm,
+                                zone2MaxBpm = uiState.zone2MaxBpm,
+                                zone3MaxBpm = uiState.zone3MaxBpm,
+                                zone4MaxBpm = uiState.zone4MaxBpm,
+                            ),
+                        resolution = uiState.resolution,
                         modifier =
                             Modifier
                                 .fillMaxWidth()

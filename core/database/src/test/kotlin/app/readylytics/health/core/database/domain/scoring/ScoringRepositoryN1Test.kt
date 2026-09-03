@@ -1,4 +1,5 @@
 package app.readylytics.health.core.database.domain.scoring
+import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
 import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
@@ -55,6 +56,8 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.spyk
+import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -80,6 +83,7 @@ class ScoringRepositoryN1Test {
     private lateinit var bloodPressureRecordDao: BloodPressureRecordDao
     private lateinit var minuteBucketDao: MinuteBucketDao
     private lateinit var repo: ScoringRepository
+    private lateinit var computeWorkoutTrimpUseCase: ComputeWorkoutTrimpUseCase
 
     private val today = LocalDate.of(2026, 8, 27)
     private val todayMidnight =
@@ -208,7 +212,7 @@ class ScoringRepositoryN1Test {
                     sleepModifierResolver,
                 ),
             )
-        val computeWorkoutTrimpUseCase = ComputeWorkoutTrimpUseCase()
+        computeWorkoutTrimpUseCase = spyk(ComputeWorkoutTrimpUseCase())
         val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
         val bodyTemperatureRecordDao = mockk<BodyTemperatureRecordDao>(relaxed = true)
 
@@ -265,6 +269,7 @@ class ScoringRepositoryN1Test {
                         ComputeResidualFatigueUseCase(),
                         resolveDailyBaselinesUseCase,
                         AssembleEverydayLoadInputUseCase(),
+                        ComputeTrainingReadinessUseCase(scoringCalculator),
                     ),
                 scoringHistoryRepository = scoringHistoryRepository,
                 readinessSummaryCoordinator = readinessSummaryCoordinator,
@@ -440,6 +445,33 @@ class ScoringRepositoryN1Test {
         runTest {
             repo.computeAndPersistDailySummary(today)
             coVerify(exactly = 1) { dailySummaryDao.upsert(any<DailySummaryEntity>()) }
+        }
+
+    @Test
+    fun `training readiness projections reuse each workouts single TRIMP calculation`() =
+        runTest {
+            val workout =
+                app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity(
+                    id = "single-trimp",
+                    startTime = todayMidnight + 3_600_000L,
+                    endTime = todayMidnight + 7_200_000L,
+                    exerciseType = "RUN",
+                    durationMinutes = 60,
+                    zone1Minutes = 0f,
+                    zone2Minutes = 0f,
+                    zone3Minutes = 30f,
+                    zone4Minutes = 30f,
+                    zone5Minutes = 0f,
+                    trimp = 100f,
+                    avgHr = 150f,
+                )
+            coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns listOf(workout)
+
+            repo.computeAndPersistDailySummary(today)
+
+            verify(exactly = 1) {
+                computeWorkoutTrimpUseCase.execute(any(), any(), any(), any(), any(), any(), any())
+            }
         }
 
     @Test

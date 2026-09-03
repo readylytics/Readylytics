@@ -2,6 +2,7 @@ package app.readylytics.health.core.scoring.domain.util
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import kotlin.test.assertFailsWith
 
 class MathUtilsTest {
     @Test
@@ -41,4 +42,120 @@ class MathUtilsTest {
         // Stdev (unbiased) = sqrt(27.4107) = 5.2355
         assertEquals(5.237f, list.stdev(), 0.001f)
     }
+
+    @Test
+    fun `meanOrNull returns null for empty list and correct value otherwise`() {
+        assertEquals(null, emptyList<Float>().meanOrNull())
+        assertEquals(3f, listOf(1f, 2f, 3f, 4f, 5f).meanOrNull())
+    }
+
+    @Test
+    fun `medianOrNull for Float returns null on empty and correct value for odd and even`() {
+        assertEquals(null, emptyList<Float>().medianOrNull())
+        assertEquals(2f, listOf(1f, 3f, 2f).medianOrNull())
+        assertEquals(2.5f, listOf(1f, 2f, 3f, 4f).medianOrNull())
+    }
+
+    @Test
+    fun `medianOrNull for Int returns null on empty and correct value for odd and even`() {
+        assertEquals(null, emptyList<Int>().medianOrNull())
+        assertEquals(2f, listOf(1, 3, 2).medianOrNull())
+        assertEquals(2.5f, listOf(1, 2, 3, 4).medianOrNull())
+    }
+
+    @Test
+    fun `stdevOrNull for Float returns null on fewer than 2 elements and sample stdev otherwise`() {
+        assertEquals(null, emptyList<Float>().stdevOrNull())
+        assertEquals(null, listOf(1f).stdevOrNull())
+        val list = listOf(10f, 12f, 23f, 23f, 16f, 23f, 21f, 16f)
+        assertEquals(5.237f, list.stdevOrNull()!!, 0.001f)
+    }
+
+    @Test
+    fun `stdevOrNull for Int returns null on fewer than 2 elements and sample stdev otherwise`() {
+        assertEquals(null, emptyList<Int>().stdevOrNull())
+        assertEquals(null, listOf(1).stdevOrNull())
+        val list = listOf(10, 12, 23, 23, 16, 23, 21, 16)
+        assertEquals(5.237f, list.stdevOrNull()!!, 0.001f)
+    }
+
+    @Test
+    fun `percentile returns correct interpolated values`() {
+        val list = listOf(10, 20, 30, 40, 50)
+        assertEquals(10, list.percentile(0.0))
+        assertEquals(20, list.percentile(0.25))
+        assertEquals(30, list.percentile(0.5))
+        assertEquals(40, list.percentile(0.75))
+        assertEquals(50, list.percentile(1.0))
+    }
+
+    @Test
+    fun `percentile throws on empty list`() {
+        assertFailsWith<IllegalArgumentException> {
+            emptyList<Int>().percentile(0.5)
+        }
+    }
+
+    @Test
+    fun `weightedPercentile matches unweighted percentile for equal weights`() {
+        val values = intArrayOf(10, 20, 30, 40, 50)
+        val weights = intArrayOf(1, 1, 1, 1, 1)
+        assertEquals(10, weightedPercentile(values, weights, 0.0))
+        assertEquals(20, weightedPercentile(values, weights, 0.25))
+        assertEquals(30, weightedPercentile(values, weights, 0.5))
+        assertEquals(40, weightedPercentile(values, weights, 0.75))
+        assertEquals(50, weightedPercentile(values, weights, 1.0))
+    }
+
+    @Test
+    fun `weightedPercentile matches expanded list for arbitrary weights`() {
+        val values = intArrayOf(50, 60, 70, 80)
+        val weights = intArrayOf(10, 20, 15, 5) // total weight = 50
+        val expanded = ArrayList<Int>()
+        for (i in values.indices) {
+            repeat(weights[i]) { expanded.add(values[i]) }
+        }
+
+        listOf(0.0, 0.05, 0.10, 0.25, 0.50, 0.75, 0.90, 0.95, 1.0).forEach { p ->
+            val expectedIndex = ((p * (expanded.size - 1)).let { kotlin.math.round(it) }).toInt()
+            val expectedValue = expanded[expectedIndex]
+            val actualValue = weightedPercentile(values, weights, p)
+            assertEquals("Mismatch for p=$p", expectedValue, actualValue)
+        }
+    }
+
+    @Test
+    fun `weightedPercentile throws on empty array`() {
+        assertFailsWith<IllegalArgumentException> {
+            weightedPercentile(intArrayOf(), intArrayOf(), 0.5)
+        }
+    }
+
+    @Test
+    fun `weightedPercentile throws on mismatched array sizes`() {
+        assertFailsWith<IllegalArgumentException> {
+            weightedPercentile(intArrayOf(10, 20), intArrayOf(1), 0.5)
+        }
+    }
+
+    @Test
+    fun `weightedPercentile throws on out of bounds p`() {
+        assertFailsWith<IllegalArgumentException> {
+            weightedPercentile(intArrayOf(10, 20), intArrayOf(1, 1), -0.1)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            weightedPercentile(intArrayOf(10, 20), intArrayOf(1, 1), 1.1)
+        }
+    }
+
+    @Test
+    fun `weightedPercentile handles single element`() {
+        assertEquals(42, weightedPercentile(intArrayOf(42), intArrayOf(100), 0.5))
+    }
+
+    @Test
+    fun `weightedPercentile handles zero total weight`() {
+        assertEquals(42, weightedPercentile(intArrayOf(42, 50), intArrayOf(0, 0), 0.5))
+    }
 }
+

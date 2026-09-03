@@ -59,7 +59,7 @@ class ResyncCheckpointStoreImpl
         }
     }
 
-private fun ResyncCheckpointProto.toDomain(): ResyncCheckpoint =
+internal fun ResyncCheckpointProto.toDomain(): ResyncCheckpoint =
     ResyncCheckpoint(
         startDate = LocalDate.ofEpochDay(startEpochDay),
         endDate = LocalDate.ofEpochDay(endEpochDay),
@@ -77,22 +77,28 @@ private fun ResyncCheckpointProto.toDomain(): ResyncCheckpoint =
         selectionHash = selectionHash,
         baselineChangeTokens = baselineChangeTokensMap.mapKeys { (dataType, _) -> HealthDataType.valueOf(dataType) },
         chunkDaysOverride = chunkDaysOverride.takeIf { it > 0 },
+        hrPageToken = hrPageToken.takeIf { it.isNotBlank() },
+        hrvPageToken = hrvPageToken.takeIf { it.isNotBlank() },
     )
 
-private fun ResyncCheckpoint.toProto(): ResyncCheckpointProto =
-    ResyncCheckpointProto
-        .newBuilder()
-        .setStartEpochDay(startDate.toEpochDay())
-        .setEndEpochDay(endDate.toEpochDay())
-        .setPhase(
-            when (phase) {
-                ResyncPhase.INGEST -> ResyncPhaseProto.INGEST
-                ResyncPhase.PRUNE -> ResyncPhaseProto.PRUNE
-                ResyncPhase.RECONCILE -> ResyncPhaseProto.RECONCILE
-                ResyncPhase.RECOMPUTE -> ResyncPhaseProto.RECOMPUTE
-            },
-        ).setNextEpochDay(nextDate.toEpochDay())
-        .setSelectionHash(selectionHash)
-        .putAllBaselineChangeTokens(baselineChangeTokens.mapKeys { (dataType, _) -> dataType.name })
-        .setChunkDaysOverride(chunkDaysOverride ?: 0)
-        .build()
+internal fun ResyncCheckpoint.toProto(): ResyncCheckpointProto {
+    val builder =
+        ResyncCheckpointProto
+            .newBuilder()
+            .setStartEpochDay(startDate.toEpochDay())
+            .setEndEpochDay(endDate.toEpochDay())
+            .setPhase(
+                when (phase) {
+                    ResyncPhase.INGEST -> ResyncPhaseProto.INGEST
+                    ResyncPhase.PRUNE -> ResyncPhaseProto.PRUNE
+                    ResyncPhase.RECONCILE -> ResyncPhaseProto.RECONCILE
+                    ResyncPhase.RECOMPUTE -> ResyncPhaseProto.RECOMPUTE
+                },
+            ).setNextEpochDay(nextDate.toEpochDay())
+            .setSelectionHash(selectionHash)
+            .putAllBaselineChangeTokens(baselineChangeTokens.mapKeys { (dataType, _) -> dataType.name })
+            .setChunkDaysOverride(chunkDaysOverride ?: 0)
+    hrPageToken?.let { builder.setHrPageToken(it) }
+    hrvPageToken?.let { builder.setHrvPageToken(it) }
+    return builder.build()
+}

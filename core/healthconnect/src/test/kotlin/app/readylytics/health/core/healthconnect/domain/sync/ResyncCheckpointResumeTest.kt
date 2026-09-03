@@ -27,6 +27,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -68,13 +69,17 @@ class ResyncCheckpointResumeTest {
         useCase =
             ResyncRangeUseCase(
                 settingsRepo = settingsRepo,
+                clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
                 sessionLinkReconciler = sessionLinkReconciler,
                 changeSynchronizer = changeSynchronizer,
                 selectedSourcePruner = selectedSourcePruner,
                 checkpointStore = checkpointStore,
                 healthIngestionStore = healthIngestionStore,
-                ingestionCoordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore),
-                stepCountFetcher = StepCountFetcher(hcRepo),
+                ingestion =
+                    ResyncIngestionDependencies(
+                        ingestionCoordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore),
+                        stepCountFetcher = StepCountFetcher(hcRepo),
+                    ),
                 recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner),
                 ioDispatcher = Dispatchers.Unconfined,
             )
@@ -382,45 +387,6 @@ class ResyncCheckpointResumeTest {
             coEvery {
                 scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any())
             } returns Unit
-
-            useCase.run(
-                startDate = startDate,
-                endDate = endDate,
-                chunkDays = 30,
-                onProgress = null,
-                skipIngestAndPrune = true,
-            )
-
-            coVerifyOrder {
-                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any())
-                scoringRepository.computeAndPersistDailySummary(
-                    startDate.plusDays(1),
-                    any(),
-                    any(),
-                    any())
-                scoringRepository.computeAndPersistDailySummary(endDate, any(), any(), any())
-            }
-            assertEquals(null, checkpointStore.value)
-        }
-
-    @Test
-    fun `recompute restarts from start when residualFatigueEnabled changes`() =
-        runTest {
-            val startDate = LocalDate.of(2024, 6, 1)
-            val endDate = LocalDate.of(2024, 6, 3)
-            val oldPrefs = UserPreferences(residualFatigueEnabled = true)
-            val newPrefs = UserPreferences(residualFatigueEnabled = false)
-            val preferences = MutableStateFlow(newPrefs)
-            every { settingsRepo.userPreferences } returns preferences
-            checkpointStore.value =
-                ResyncCheckpoint(
-                    startDate = startDate,
-                    endDate = endDate,
-                    phase = ResyncPhase.RECOMPUTE,
-                    nextDate = startDate.plusDays(2),
-                    selectionHash = "RECOMPUTE_ONLY_V2||${oldPrefs.scoringCheckpointIdentity()}",
-                    baselineChangeTokens = emptyMap(),
-                )
 
             useCase.run(
                 startDate = startDate,

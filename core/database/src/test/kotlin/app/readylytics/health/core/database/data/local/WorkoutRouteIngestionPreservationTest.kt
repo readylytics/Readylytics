@@ -51,7 +51,7 @@ class WorkoutRouteIngestionPreservationTest {
                         bodyTemperatureRecordDao = database.bodyTemperatureRecordDao(),
                         stepRecordDao = database.stepRecordDao(),
                         sourceRecordDao = database.sourceRecordDao(),
-                        minuteBucketDao = database.minuteBucketDao(),
+                        minuteBucketMaintenanceDao = database.minuteBucketMaintenanceDao(),
                     ),
                 dailySummaryDao = database.dailySummaryDao(),
                 transactionRunner = RoomTransactionRunner(database),

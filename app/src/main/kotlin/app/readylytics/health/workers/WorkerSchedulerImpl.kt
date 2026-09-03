@@ -2,6 +2,7 @@ package app.readylytics.health.workers
 
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
+import androidx.work.Data
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
@@ -9,10 +10,11 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import androidx.work.workDataOf
 import app.readylytics.health.core.model.data.preferences.BackupSchedule
+import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import dagger.Lazy
+import java.time.LocalDate
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -53,15 +55,27 @@ class WorkerSchedulerImpl
          * [ExistingWorkPolicy.APPEND_OR_REPLACE]. Rapid settings changes may queue redundant local
          * passes, but the final queued pass captures the newest preferences without silently losing
          * a request. Expedited so it starts promptly when explicitly requested.
+         *
+         * R2-CACHE-001: [startDate]/[endDate], when both provided, carry a bounded recompute-only
+         * range (e.g. from `ScoreInvalidation.affectedRange`) through to
+         * [HealthResyncWorker]/`FullHistoricalResyncUseCase`. Left `null` (the default), the
+         * recompute-only pass keeps its prior full-retention-window behavior.
          */
-        override fun scheduleResyncWorker(recomputeOnly: Boolean) {
+        override fun scheduleResyncWorker(
+            recomputeOnly: Boolean,
+            startDate: LocalDate?,
+            endDate: LocalDate?,
+        ) {
+            val dataBuilder = Data.Builder().putBoolean(HealthResyncWorker.KEY_RECOMPUTE_ONLY, recomputeOnly)
+            startDate?.let { dataBuilder.putLong(HealthResyncWorker.KEY_RECOMPUTE_START_EPOCH_DAY, it.toEpochDay()) }
+            endDate?.let { dataBuilder.putLong(HealthResyncWorker.KEY_RECOMPUTE_END_EPOCH_DAY, it.toEpochDay()) }
+
             val request =
                 OneTimeWorkRequestBuilder<HealthResyncWorker>()
                     .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
                     .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
-                    .setInputData(
-                        workDataOf(HealthResyncWorker.KEY_RECOMPUTE_ONLY to recomputeOnly),
-                    ).build()
+                    .setInputData(dataBuilder.build())
+                    .build()
 
             val existingWorkPolicy =
                 if (recomputeOnly) {
@@ -79,6 +93,36 @@ class WorkerSchedulerImpl
 
         override fun cancelResyncWorker() {
             workManager.get().cancelUniqueWork(RESYNC_WORK_NAME)
+        }
+
+        /**
+         * Task 4: enqueues the durable, parameter-only Training Readiness projection recompute
+         * (settings explicit "Recalculate" action, task 5) into the same unique [RESYNC_WORK_NAME]
+         * chain, always [ExistingWorkPolicy.APPEND_OR_REPLACE] -- a projection request never needs
+         * [ExistingWorkPolicy.KEEP] since, unlike a full resync, it carries no Health Connect
+         * ingestion to protect from being superseded.
+         */
+        override fun scheduleTrainingReadinessRecompute(config: TrainingReadinessConfig) {
+            val data =
+                Data
+                    .Builder()
+                    .putString(HealthResyncWorker.KEY_RECOMPUTE_MODE, HealthResyncWorker.MODE_TRAINING_READINESS)
+                    .putFloat(HealthResyncWorker.KEY_TRAINING_READINESS_SCALE, config.residualFatigueScale)
+                    .putFloat(HealthResyncWorker.KEY_TRAINING_READINESS_WEIGHT, config.loadBalanceWeight)
+                    .build()
+
+            val request =
+                OneTimeWorkRequestBuilder<HealthResyncWorker>()
+                    .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+                    .setInputData(data)
+                    .build()
+
+            workManager.get().enqueueUniqueWork(
+                RESYNC_WORK_NAME,
+                ExistingWorkPolicy.APPEND_OR_REPLACE,
+                request,
+            )
         }
 
         override fun scheduleBackupWorker(schedule: BackupSchedule) {

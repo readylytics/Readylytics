@@ -21,6 +21,13 @@ data class HrvRecordData(
     val deviceName: String? = null,
 )
 
+enum class HeartRateResolution { RAW, RECONSTRUCTED }
+
+data class HeartRateSeries(
+    val points: List<HeartRateRecordData>,
+    val resolution: HeartRateResolution,
+)
+
 interface HeartRateRepository {
     suspend fun getMinHrInRange(
         startTimeMs: Long,
@@ -46,4 +53,16 @@ interface HeartRateRepository {
         startMs: Long,
         endMs: Long,
     ): Flow<HrRangeAggregate?>
+
+    /**
+     * WP-17/R2-UI-002: hot ∪ warm-tier heart-rate samples in `[startTimeMs, endTimeMs]`.
+     * [HeartRateSeries.resolution] is [HeartRateResolution.RAW] when every returned point came
+     * from the hot (raw) tier, [HeartRateResolution.RECONSTRUCTED] when any warm-tier bucket
+     * contributed a reconstructed point -- callers surface this so charts can label
+     * lower-fidelity data past the hot/warm boundary instead of rendering it as if it were raw.
+     */
+    suspend fun getRecoveryWindowSamples(startTimeMs: Long, endTimeMs: Long): HeartRateSeries
+
+    /** WP-17: observable equivalent of [getRecoveryWindowSamples], hot ∪ warm, deduped on emit. */
+    fun observeTimelineWithResolution(startMs: Long, endMs: Long): Flow<HeartRateSeries>
 }

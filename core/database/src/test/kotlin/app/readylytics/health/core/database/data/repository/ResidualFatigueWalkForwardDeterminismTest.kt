@@ -158,27 +158,6 @@ class ResidualFatigueWalkForwardDeterminismTest : ResidualFatigueWalkForwardTest
         }
 
     @Test
-    fun `disabled fatigue persists null on both walk-forward and single-day paths`() =
-        runTest {
-            val workouts = workoutInputs()
-            stubFatigueWorkouts(workouts)
-
-            val disabledPrefs =
-                UserPreferences(
-                    scoringZoneId = zoneId.id,
-                    residualFatigueEnabled = false,
-                    residualFatigueHalfLifeHours = config.halfLifeHours,
-                    residualFatigueGain = config.fatigueGain,
-                )
-            val walkForwardByDate = runWalkForward(day0, day1, disabledPrefs)
-            assertNull(walkForwardByDate[day0], "Walk-forward with fatigue disabled must persist null")
-
-            every { settingsRepo.userPreferences } returns flowOf(disabledPrefs)
-            val singleDay = repo.computeDailySummary(day1)
-            assertNull(singleDay.residualFatigue, "Single-day with fatigue disabled must persist null")
-        }
-
-    @Test
     fun `fetchWalkForwardFatigueContext holds sorted end-time impulse series`() =
         runTest {
             val workouts = workoutInputs()

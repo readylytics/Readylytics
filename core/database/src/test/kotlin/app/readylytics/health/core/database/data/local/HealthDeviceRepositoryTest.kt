@@ -1,0 +1,261 @@
+package app.readylytics.health.core.database.data.local
+
+import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
+import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao
+import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketMaintenanceDao
+import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
+import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.mockk
+import kotlinx.coroutines.test.runTest
+import org.junit.Before
+import org.junit.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+
+class HealthDeviceRepositoryTest {
+    private companion object {
+        /** Mirrors the private `HealthDeviceRepository.CACHE_TTL_MS` (5 minutes). */
+        const val CACHE_TTL_MS = 5 * 60 * 1000L
+    }
+
+    private lateinit var sleepSessionDao: SleepSessionDao
+    private lateinit var heartRateDao: HeartRateDao
+    private lateinit var hrvDao: HrvDao
+    private lateinit var workoutDao: WorkoutDao
+    private lateinit var minuteBucketDao: MinuteBucketMaintenanceDao
+    private lateinit var repository: HealthDeviceRepository
+
+    /**
+     * Drives [HealthDeviceRepository.elapsedRealtimeMs]. Held explicitly rather than left to
+     * `SystemClock`, which has no JVM implementation and therefore cannot advance in a unit test.
+     */
+    private var fakeElapsedRealtimeMs = 0L
+
+    @Before
+    fun setup() {
+        sleepSessionDao = mockk()
+        heartRateDao = mockk()
+        hrvDao = mockk()
+        workoutDao = mockk()
+        minuteBucketDao = mockk()
+        fakeElapsedRealtimeMs = 0L
+        repository =
+            HealthDeviceRepository(
+                sleepSessionDao,
+                heartRateDao,
+                hrvDao,
+                workoutDao,
+                minuteBucketDao,
+            ).apply { elapsedRealtimeMs = { fakeElapsedRealtimeMs } }
+    }
+
+    @Test
+    fun `getAvailableDevices fetches and caches devices`() =
+        runTest {
+            val expected = listOf("Device1", "Device2", "Device3").sorted()
+
+            coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Device1")
+            coEvery { heartRateDao.getDistinctDeviceNames() } returns listOf("Device2")
+            coEvery { minuteBucketDao.getDistinctDeviceNames() } returns listOf("Device3")
+            coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
+
+            // First call fetches and caches
+            val result1 = repository.getAvailableDevices()
+            assertEquals(expected, result1)
+
+            // Verify all DAOs were called
+            coVerify(exactly = 1) { sleepSessionDao.getDistinctDeviceNames() }
+            coVerify(exactly = 1) { heartRateDao.getDistinctDeviceNames() }
+            coVerify(exactly = 1) { minuteBucketDao.getDistinctDeviceNames() }
+            coVerify(exactly = 1) { hrvDao.getDistinctDeviceNames() }
+            coVerify(exactly = 1) { workoutDao.getDistinctDeviceNames() }
+        }
+
+    @Test
+    fun `getAvailableDevices returns cached value without additional queries`() =
+        runTest {
+            coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Device1")
+            coEvery { heartRateDao.getDistinctDeviceNames() } returns listOf("Device2")
+            coEvery { minuteBucketDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
+
+            // First call
+            val result1 = repository.getAvailableDevices()
+            assertEquals(2, result1.size)
+
+            // Clear all mock call counts
+            io.mockk.clearAllMocks(answers = false)
+
+            // Reset mocks to throw if called (verify they're NOT called)
+            coEvery { sleepSessionDao.getDistinctDeviceNames() } throws AssertionError("Should not be called")
+            coEvery { heartRateDao.getDistinctDeviceNames() } throws AssertionError("Should not be called")
+            coEvery { minuteBucketDao.getDistinctDeviceNames() } throws AssertionError("Should not be called")
+            coEvery { hrvDao.getDistinctDeviceNames() } throws AssertionError("Should not be called")
+            coEvery { workoutDao.getDistinctDeviceNames() } throws AssertionError("Should not be called")
+
+            // Second call should use cache
+            val result2 = repository.getAvailableDevices()
+            assertEquals(result1, result2)
+        }
+
+    @Test
+    fun `invalidateCache clears cached devices`() =
+        runTest {
+            coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Device1")
+            coEvery { heartRateDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { minuteBucketDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
+
+            // Fetch and cache
+            val result1 = repository.getAvailableDevices()
+            assertEquals(1, result1.size)
+
+            // Invalidate cache
+            repository.invalidateCache()
+
+            // Reset mocks with different data
+            coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Device3")
+            coEvery { heartRateDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { minuteBucketDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
+
+            // Next call should fetch fresh data
+            val result2 = repository.getAvailableDevices()
+            assertEquals(listOf("Device3"), result2)
+        }
+
+    @Test
+    fun `getAvailableDevices filters blank device names`() =
+        runTest {
+            coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Device1", "")
+            coEvery { heartRateDao.getDistinctDeviceNames() } returns listOf("  ", "Device2")
+            coEvery { minuteBucketDao.getDistinctDeviceNames() } returns listOf("", "Device3")
+            coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
+
+            val result = repository.getAvailableDevices()
+
+            // Blank strings should be filtered out
+            assertEquals(listOf("Device1", "Device2", "Device3"), result)
+        }
+
+    @Test
+    fun `getAvailableDevices removes duplicates`() =
+        runTest {
+            coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Device1", "Device2")
+            coEvery { heartRateDao.getDistinctDeviceNames() } returns listOf("Device2", "Device3")
+            coEvery { minuteBucketDao.getDistinctDeviceNames() } returns listOf("Device3", "Device4")
+            coEvery { hrvDao.getDistinctDeviceNames() } returns listOf("Device1")
+            coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
+
+            val result = repository.getAvailableDevices()
+
+            // All duplicates should be removed and sorted
+            assertEquals(listOf("Device1", "Device2", "Device3", "Device4"), result)
+        }
+
+    @Test
+    fun `getAvailableDevices sorts results`() =
+        runTest {
+            coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Zebra")
+            coEvery { heartRateDao.getDistinctDeviceNames() } returns listOf("Apple")
+            coEvery { minuteBucketDao.getDistinctDeviceNames() } returns listOf("Banana")
+            coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { workoutDao.getDistinctDeviceNames() } returns listOf("Mango")
+
+            val result = repository.getAvailableDevices()
+
+            // Results should be alphabetically sorted
+            assertEquals(listOf("Apple", "Banana", "Mango", "Zebra"), result)
+        }
+
+    @Test
+    fun `deviceCacheHitRate - second and third calls within TTL are cache hits`() =
+        runTest {
+            coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Device1")
+            coEvery { heartRateDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { minuteBucketDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
+
+            // First call: cache miss — triggers fetch
+            val devices1 = repository.getAvailableDevices()
+            coVerify(exactly = 1) { sleepSessionDao.getDistinctDeviceNames() }
+
+            // Second call, clock advanced but still inside the 5-minute TTL: cache hit
+            fakeElapsedRealtimeMs = 60_000L
+            val devices2 = repository.getAvailableDevices()
+            coVerify(exactly = 1) { sleepSessionDao.getDistinctDeviceNames() }
+
+            // Third call, still inside the TTL: cache hit — still no new fetch
+            fakeElapsedRealtimeMs = CACHE_TTL_MS
+            val devices3 = repository.getAvailableDevices()
+            coVerify(exactly = 1) { sleepSessionDao.getDistinctDeviceNames() }
+
+            assertEquals(devices1, devices2)
+            assertEquals(devices2, devices3)
+            // 2 hits out of 3 total calls = 66% hit rate; dao called exactly once confirms this
+            assertTrue(
+                actual = devices1 == devices2,
+                message = "Hit rate should be 66% (2/3 calls served from cache)",
+            )
+        }
+
+    @Test
+    fun `getAvailableDevices refetches once the TTL has elapsed`() =
+        runTest {
+            coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Device1")
+            coEvery { heartRateDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { minuteBucketDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
+
+            assertEquals(listOf("Device1"), repository.getAvailableDevices())
+            coVerify(exactly = 1) { sleepSessionDao.getDistinctDeviceNames() }
+
+            // Exactly at the TTL the entry is still valid — expiry is strictly greater-than.
+            fakeElapsedRealtimeMs = CACHE_TTL_MS
+            repository.getAvailableDevices()
+            coVerify(exactly = 1) { sleepSessionDao.getDistinctDeviceNames() }
+
+            // One millisecond past the TTL the entry is stale and must be refetched.
+            fakeElapsedRealtimeMs = CACHE_TTL_MS + 1
+            coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Device2")
+
+            assertEquals(listOf("Device2"), repository.getAvailableDevices())
+            coVerify(exactly = 2) { sleepSessionDao.getDistinctDeviceNames() }
+        }
+
+    @Test
+    fun `invalidateCache clears cached devices and forces fresh fetch`() =
+        runTest {
+            coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Device1")
+            coEvery { heartRateDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { minuteBucketDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
+
+            // Fetch and cache
+            repository.getAvailableDevices()
+
+            // Invalidate cache
+            repository.invalidateCache()
+
+            // Reset mocks with different data
+            coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Device3")
+            coEvery { heartRateDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { minuteBucketDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
+
+            // Next call should fetch fresh data
+            val result = repository.getAvailableDevices()
+            assertEquals(listOf("Device3"), result)
+        }
+}

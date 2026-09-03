@@ -3,14 +3,9 @@ package app.readylytics.health.feature.settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -20,7 +15,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
@@ -54,32 +48,11 @@ fun ResidualFatigueSubsection(
             )
             MetricTooltip(description = stringResource(R.string.advanced_residual_fatigue_info_tooltip))
         }
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-
-        ListItem(
-            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            trailingContent = {
-                Switch(
-                    checked = uiState.residualFatigueEnabled,
-                    onCheckedChange = { onUIEvent(SettingsEvent.ResidualFatigueEnabledChanged(it)) },
-                    enabled = controlsEnabled,
-                )
-            },
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(
-                text = stringResource(R.string.advanced_residual_fatigue_enabled_label),
-                style = MaterialTheme.typography.bodyLarge,
-            )
-        }
-
-        if (uiState.residualFatigueEnabled) {
-            ResidualFatigueControls(
-                uiState = uiState,
-                controlsEnabled = controlsEnabled,
-                onUIEvent = onUIEvent,
-            )
-        }
+        ResidualFatigueControls(
+            uiState = uiState,
+            controlsEnabled = controlsEnabled,
+            onUIEvent = onUIEvent,
+        )
     }
 }
 

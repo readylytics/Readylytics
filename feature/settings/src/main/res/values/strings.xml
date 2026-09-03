@@ -35,8 +35,7 @@
         RHR estimate. Default: 5%%.</string>
 <string name="advanced_rhr_baseline_label">RHR Baseline (bpm)</string>
 <string name="advanced_residual_fatigue_title">Residual Fatigue</string>
-<string name="advanced_residual_fatigue_enabled_label">Enabled</string>
-<string name="advanced_residual_fatigue_info_tooltip">Tracks training fatigue that accumulates from workouts and decays exponentially. Shadow mode: it does not affect Readiness or any other score. Configured half-life (24 h default) and gain (1.0 gain default) are provisional product guardrails, not scientifically validated ranges.</string>
+<string name="advanced_residual_fatigue_info_tooltip">Residual Fatigue is a raw, unbounded, non-normalized, provisional, workout-only derived input. It feeds Training Readiness when available but does not modify legacy Readiness or Load Score. It accumulates from workouts and decays exponentially. Configured half-life (24 h default, range 6–96 h) and gain (default 1.0, range 0.1–5.0) are provisional product guardrails, not scientifically validated ranges.</string>
 <string name="advanced_residual_fatigue_half_life_label">Fatigue half-life</string>
 <string name="advanced_residual_fatigue_half_life_hours">%1$.0f h</string>
 <string name="advanced_residual_fatigue_half_life_desc">Time required for workout fatigue to decay by half. Range (6–96 h) and default (24 h) are provisional product guardrails, not scientifically validated clinical ranges.</string>
@@ -45,6 +44,15 @@
 <string name="advanced_residual_fatigue_gain_desc">Scaling factor applied to workout impulses. Range (0.1–5.0) and default (1.00) are provisional product guardrails, not scientifically validated clinical ranges.</string>
 <string name="advanced_residual_fatigue_reset_button">Reset fatigue to defaults</string>
 <string name="advanced_training_load_label">Training Load Model</string>
+<string name="advanced_training_readiness_title">Training Readiness</string>
+<string name="advanced_training_readiness_scale_label">Residual fatigue scale</string>
+<string name="advanced_training_readiness_scale_value">%1$.0f</string>
+<string name="advanced_training_readiness_scale_desc">Increasing the scale raises Acute Load Recovery for the same Residual Fatigue, so fatigue has less downward influence. Default 100, range 75–175, step 5.</string>
+<string name="advanced_training_readiness_weight_label">Load balance weight</string>
+<string name="advanced_training_readiness_weight_value">%1$d%%</string>
+<string name="advanced_training_readiness_weight_desc" formatted="false">Increasing the weight gives Load Score more influence and Acute Load Recovery less influence. Default 90%, range 80–100%, step 1%.</string>
+<string name="advanced_training_readiness_reset_button">Reset to defaults</string>
+<string name="advanced_training_readiness_apply_button">Recalculate Training Readiness</string>
 <string name="advanced_trimp_banister">Banister</string>
 <string name="advanced_trimp_cheng">Cheng LT-TRIMP</string>
 <string name="advanced_trimp_itrimp">iTRIMP</string>
@@ -216,6 +224,7 @@
 <string name="load_sources_strain_help">Controls TRIMP, acute/chronic load (ACWR), Strain Ratio, Load Score, and Readiness. \"Workout only\" counts only exercise sessions; \"Everyday heart-rate load\" also counts elevated heart rate outside workouts, such as from stress, illness, or heat.</string>
 <string name="load_sources_strain_label">Strain / Training Load Source</string>
 <string name="load_sources_zone_caveat">Zone 0 minutes are excluded from TRIMP and load even when counted toward coverage. Everyday heart-rate load is affected by your configured heart-rate zones and TRIMP model in Heart Rate Zones settings.</string>
+<string name="physiology_profile_picker_label">Activity Profile</string>
 <string name="privacy_policy_url" translatable="false">https://gregorlauritz.github.io/MyHealthStatus/privacy/</string>
 <string name="provider_garmin_connect">Garmin Connect</string>
 <string name="provider_google_fit">Google Fit</string>
@@ -252,11 +261,6 @@
 <string name="settings_reset_color_desc">Reset to calculated color</string>
 <string name="settings_search_placeholder">Search settings…</string>
 <string name="settings_secondary_color_label">Secondary color</string>
-<string name="settings_section_advanced">Advanced</string>
-<string name="settings_section_baselines_thresholds">Baselines &amp; thresholds</string>
-<string name="settings_section_data_backup">Data &amp; backup</string>
-<string name="settings_section_display">Display</string>
-<string name="settings_section_miscellaneous">Miscellaneous</string>
 <string name="settings_step_goal_tooltip">Target steps per day. Reaching this goal shows as
         Optimal on the dashboard.</string>
 <string name="settings_sub_data_management">Data management</string>
@@ -294,8 +298,33 @@
 <string name="workout_detail_layouts_reset_dialog_title">Reset workout detail layouts?</string>
 <string name="workout_detail_layouts_reset_dialog_body">Every workout type returns to the default layout. Customizations you made per type are discarded. This cannot be undone.</string>
 <string name="workout_detail_layouts_reset_dialog_confirm">Reset</string>
-<plurals name="accessibility_circadian_threshold_state">
+<string name="settings_category_physiology_profile_title">Physiology Profile</string>
+<string name="settings_category_physiology_profile_subtitle">Profile, heart rate zones</string>
+<string name="settings_category_sleep_title">Sleep</string>
+<string name="settings_category_sleep_subtitle">Sleep goal, score weighting, circadian consistency</string>
+<string name="settings_category_training_title">Training</string>
+<string name="settings_category_training_subtitle">Step goal, load sources, training load</string>
+<string name="settings_category_vitals_title">Vitals</string>
+<string name="settings_category_vitals_subtitle">HRV/RHR baselines, readiness thresholds</string>
+<string name="settings_category_data_sync_title">Data Sources &amp; Sync</string>
+<string name="settings_category_data_sync_subtitle">Devices, Health Connect sync, retention</string>
+<string name="settings_category_backup_title">Backup &amp; Restore</string>
+<string name="settings_category_backup_subtitle">Local encrypted backups</string>
+<string name="settings_category_display_title">Display &amp; Appearance</string>
+<string name="settings_category_display_subtitle">Theme, units, dashboard layout</string>
+<string name="settings_category_support_title">Support &amp; About</string>
+<string name="settings_category_support_subtitle">Report an issue, licenses, privacy</string>
+<string name="settings_search_no_results">No settings found</string>
+    <plurals name="accessibility_circadian_threshold_state">
         <item quantity="one">Current value: %1$d minute</item>
         <item quantity="other">Current value: %1$d minutes</item>
+    </plurals>
+    <plurals name="threshold_consistency_days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+    <plurals name="threshold_consistency_sessions">
+        <item quantity="one">%1$d session</item>
+        <item quantity="other">%1$d sessions</item>
     </plurals>
 </resources>

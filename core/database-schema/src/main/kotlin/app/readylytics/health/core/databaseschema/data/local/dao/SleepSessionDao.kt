@@ -118,4 +118,10 @@ interface SleepSessionDao {
 
     @Query("SELECT MIN(startTime) FROM sleep_sessions")
     fun observeEarliestSessionTime(): Flow<Long?>
+
+    @Query("DELETE FROM sleep_sessions WHERE startTime >= :startMs AND endTime <= :endMs AND id NOT IN (:validIds)")
+    suspend fun deleteSessionsNotIn(startMs: Long, endMs: Long, validIds: List<String>): Int
+
+    @Query("DELETE FROM sleep_sessions WHERE startTime >= :startMs AND endTime <= :endMs")
+    suspend fun deleteBetween(startMs: Long, endMs: Long): Int
 }

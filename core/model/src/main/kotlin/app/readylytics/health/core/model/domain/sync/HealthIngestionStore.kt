@@ -1,5 +1,6 @@
 package app.readylytics.health.core.model.domain.sync
 
+import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.model.RouteState
 import app.readylytics.health.core.model.domain.model.WorkoutRoutePoint
 import java.time.LocalDate
@@ -37,6 +38,20 @@ interface HealthIngestionStore {
         avgSpeedKmh: Float?,
         elevationGainMeters: Float?,
     )
+
+    /**
+     * R2-HC-001: Reconciles local database records against the set of Health Connect record IDs
+     * fetched in [windowStartMs, windowEndMs] for [type]. Records in that window absent from [hcIds]
+     * are deleted within a transaction, and the bounding [ScoreInvalidation.AffectedRange] of deleted
+     * dates is returned (or null if no deletions occurred).
+     */
+    suspend fun reconcileWindow(
+        type: HealthDataType,
+        windowStartMs: Long,
+        windowEndMs: Long,
+        hcIds: Set<String>,
+        zoneId: ZoneId,
+    ): ScoreInvalidation.AffectedRange?
 }
 
 data class HealthIngestionBatch(

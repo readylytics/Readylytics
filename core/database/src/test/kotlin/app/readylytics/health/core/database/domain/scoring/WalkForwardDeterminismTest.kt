@@ -16,6 +16,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
+import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -28,6 +29,7 @@ import kotlin.test.assertNotNull
  * This is the integration-level guarantee that sync scope does not influence scores.
  */
 class WalkForwardDeterminismTest {
+    private val zone: ZoneId = ZoneId.of("UTC")
     private val sleepSessionDao = mockk<SleepSessionDao>(relaxed = true)
     private val heartRateDao = mockk<HeartRateDao>(relaxed = true)
     private val hrvDao = mockk<HrvDao>(relaxed = true)
@@ -131,6 +133,7 @@ class WalkForwardDeterminismTest {
                 baselineComputer.computeHrvWindowsBetween(
                     fromMs = targetDayMs,
                     toMs = targetDayEndMs,
+                    zoneId = zone,
                     excludeSessionIds = setOf(allSessions[60].id),
                 )
 
@@ -147,6 +150,7 @@ class WalkForwardDeterminismTest {
                 baselineComputer.computeHrvWindowsBetween(
                     fromMs = targetDayMs,
                     toMs = targetDayEndMs,
+                    zoneId = zone,
                     excludeSessionIds = setOf(allSessions[60].id),
                 )
 

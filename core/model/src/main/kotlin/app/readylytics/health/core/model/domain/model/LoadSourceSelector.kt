@@ -1,6 +1,6 @@
 package app.readylytics.health.core.model.domain.model
 
-import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.scoring.LoadCoverageConfidence
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import java.time.LocalDate
@@ -65,6 +65,21 @@ object LoadSourceSelector {
         when (mode) {
             LoadSourceMode.WORKOUT_ONLY -> summary.readinessWorkoutOnly
             LoadSourceMode.EVERYDAY_HEART_RATE -> summary.readinessEverydayHr
+        }
+
+    /**
+     * Final Training Readiness score (post readiness-calculator blend of [selectLoadScore] with
+     * acute residual-fatigue recovery) — distinct from [DailySummary.trainingLoadReadinessWorkoutOnly]
+     * / [DailySummary.trainingLoadReadinessEverydayHr], which is the intermediate blended-load
+     * value consumed internally by [selectLoadScore]'s downstream readiness calculation.
+     */
+    fun selectTrainingReadiness(
+        summary: DailySummary,
+        mode: LoadSourceMode,
+    ): Float? =
+        when (mode) {
+            LoadSourceMode.WORKOUT_ONLY -> summary.trainingReadinessWorkoutOnly
+            LoadSourceMode.EVERYDAY_HEART_RATE -> summary.trainingReadinessEverydayHr
         }
 
     fun selectDailyRas(

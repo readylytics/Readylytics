@@ -11,6 +11,7 @@ import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.data.preferences.normalizeHypersomniaOnsetPercent
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
+import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -96,10 +97,6 @@ internal fun UserPreferences.withThresholdsAndDisplay(proto: UserPreferencesProt
 
 internal fun UserPreferences.withPaletteAndUi(proto: UserPreferencesProto): UserPreferences =
     copy(
-        collapseHealthConnect = proto.collapseHealthConnect,
-        collapseBaselinesThresholds = proto.collapseBaselinesThresholds,
-        collapseDisplay = proto.collapseDisplay,
-        collapseAdvanced = proto.collapseAdvanced,
         aboutDismissed = proto.aboutDismissed,
         installDate = proto.installDate,
         circadianThresholdOverride =
@@ -188,14 +185,35 @@ internal fun UserPreferences.withScoringProfiles(
             },
     )
 
-internal fun UserPreferences.withResidualFatigue(proto: UserPreferencesProto): UserPreferences =
-    copy(
-        residualFatigueEnabled =
-            if (proto.hasResidualFatigueEnabled()) {
-                proto.residualFatigueEnabled
-            } else {
-                SettingsDefaults.RESIDUAL_FATIGUE_ENABLED
-            },
+internal fun UserPreferences.withResidualFatigueAndTrainingReadiness(proto: UserPreferencesProto): UserPreferences {
+    val editable =
+        TrainingReadinessConfig.fromStored(
+            scale =
+                if (proto.hasTrainingReadinessResidualFatigueScale()) {
+                    proto.trainingReadinessResidualFatigueScale
+                } else {
+                    SettingsDefaults.TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE
+                },
+            weight =
+                if (proto.hasTrainingReadinessLoadBalanceWeight()) {
+                    proto.trainingReadinessLoadBalanceWeight
+                } else {
+                    SettingsDefaults.TRAINING_READINESS_LOAD_BALANCE_WEIGHT
+                },
+        )
+    val applied =
+        if (
+            proto.hasLastAppliedTrainingReadinessResidualFatigueScale() &&
+            proto.hasLastAppliedTrainingReadinessLoadBalanceWeight()
+        ) {
+            TrainingReadinessConfig.fromStored(
+                proto.lastAppliedTrainingReadinessResidualFatigueScale,
+                proto.lastAppliedTrainingReadinessLoadBalanceWeight,
+            )
+        } else {
+            null
+        }
+    return copy(
         residualFatigueHalfLifeHours =
             if (proto.hasResidualFatigueHalfLifeHours() && proto.residualFatigueHalfLifeHours > 0f) {
                 proto.residualFatigueHalfLifeHours.coerceIn(
@@ -214,7 +232,12 @@ internal fun UserPreferences.withResidualFatigue(proto: UserPreferencesProto): U
             } else {
                 SettingsDefaults.RESIDUAL_FATIGUE_GAIN
             },
+        trainingReadinessResidualFatigueScale = editable.residualFatigueScale,
+        trainingReadinessLoadBalanceWeight = editable.loadBalanceWeight,
+        lastAppliedTrainingReadinessResidualFatigueScale = applied?.residualFatigueScale,
+        lastAppliedTrainingReadinessLoadBalanceWeight = applied?.loadBalanceWeight,
     )
+}
 
 internal fun UserPreferences.withRecalcAndVersion(proto: UserPreferencesProto): UserPreferences =
     copy(

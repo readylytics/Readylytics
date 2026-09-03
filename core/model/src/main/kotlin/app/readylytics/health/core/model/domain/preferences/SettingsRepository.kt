@@ -1,6 +1,6 @@
 package app.readylytics.health.core.model.domain.preferences
 
-import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
@@ -23,5 +23,9 @@ interface SettingsRepository {
         weightProfile: SleepScoreWeightProfile,
         goalSleepHours: Float,
         hypersomniaOnsetPercent: Int,
+    )
+    
+    suspend fun updateTrainingReadinessConfig(
+        config: app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
     )
 }

@@ -21,6 +21,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
+import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -36,6 +37,7 @@ import kotlin.test.assertTrue
  * 4. Performance improvement validated
  */
 class BaselineComputerN1FixTest {
+    private val zone: ZoneId = ZoneId.of("UTC")
     private lateinit var heartRateDao: HeartRateDao
     private lateinit var hrvDao: HrvDao
     private lateinit var sleepSessionDao: SleepSessionDao
@@ -61,21 +63,20 @@ class BaselineComputerN1FixTest {
 
     private fun session(
         startTime: Long,
-        id: String,
-        durationMs: Long,
-    ): SleepSessionEntity =
-        SleepSessionEntity(
-            id = id,
-            startTime = startTime,
-            endTime = startTime + durationMs,
-            durationMinutes = 480,
-            efficiency = 0.9f,
-            deepSleepMinutes = 120,
-            remSleepMinutes = 60,
-            lightSleepMinutes = 300,
-            awakeMinutes = 15,
-            deviceName = id.replace("session_", "Device"),
-        )
+        id: String = "s",
+        durationMs: Long = 8 * 60 * 60 * 1000,
+    ) = SleepSessionEntity(
+        id = id,
+        startTime = startTime,
+        endTime = startTime + durationMs,
+        durationMinutes = (durationMs / 60000).toInt(),
+        efficiency = 0.9f,
+        deepSleepMinutes = 120,
+        remSleepMinutes = 60,
+        lightSleepMinutes = 300,
+        awakeMinutes = 15,
+        deviceName = "Device",
+    )
 
     private fun stubAcceptingValidation() {
         every { scoringCalculator.validateNight(any(), any(), any(), any(), any(), any()) } returns
@@ -104,6 +105,7 @@ class BaselineComputerN1FixTest {
                     dayMidnight,
                     override,
                     SettingsDefaults.RESTING_HR_PERCENTILE,
+                    zoneId = zone,
                 )
             // Override path returns before DAO freeze check, so result is non-null
             assertEquals(override, result)
@@ -170,6 +172,7 @@ class BaselineComputerN1FixTest {
                     dayMidnight,
                     null,
                     SettingsDefaults.RESTING_HR_PERCENTILE,
+                    zoneId = zone,
                 )
 
             // Verify result is within expected range (non-frozen DAO returns null -> live recompute)
@@ -223,6 +226,7 @@ class BaselineComputerN1FixTest {
                     dayMidnight,
                     null,
                     SettingsDefaults.RESTING_HR_PERCENTILE,
+                    zoneId = zone,
                 )
 
             // Result should be around session_1's nadir (non-frozen path -> non-null)
@@ -242,6 +246,7 @@ class BaselineComputerN1FixTest {
                     dayMidnight,
                     null,
                     SettingsDefaults.RESTING_HR_PERCENTILE,
+                    zoneId = zone,
                 )
 
             assertEquals(ScoringConstants.DEFAULT_RHR_BPM, result)
@@ -299,6 +304,7 @@ class BaselineComputerN1FixTest {
                     dayMidnight,
                     null,
                     SettingsDefaults.RESTING_HR_PERCENTILE,
+                    zoneId = zone,
                 )
 
             assertNotNull(result)
@@ -355,7 +361,12 @@ class BaselineComputerN1FixTest {
             coEvery { heartRateDao.getSleepHrProjectionForSessions(any()) } returns allHrSamples
 
             val startTime = System.currentTimeMillis()
-            baselineComputer.computeAdaptiveBaselineRhrBpm(dayMidnight, null, SettingsDefaults.RESTING_HR_PERCENTILE)
+            baselineComputer.computeAdaptiveBaselineRhrBpm(
+                dayMidnight = dayMidnight,
+                rhrBaselineOverride = null,
+                percentile = SettingsDefaults.RESTING_HR_PERCENTILE,
+                zoneId = zone,
+            )
             val endTime = System.currentTimeMillis()
 
             // Verify database query count is constant (not N*2)

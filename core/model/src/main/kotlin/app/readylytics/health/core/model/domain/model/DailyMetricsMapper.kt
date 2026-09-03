@@ -1,6 +1,6 @@
 package app.readylytics.health.core.model.domain.model
 
-import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.display.MetricFormatter
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.util.UnitConverter
@@ -66,6 +66,7 @@ object DailyMetricsMapper {
             hrvBaselineRounded = hrvBaselineRoundedValue,
             sleepScoreRounded = summary.sleepScore?.roundToInt(),
             readinessRounded = loadScoreMetrics.readiness,
+            trainingReadinessRounded = loadScoreMetrics.trainingReadiness,
             loadScoreRounded = loadScoreMetrics.load,
             restorationRounded = summary.sRest?.roundToInt(),
             trimpRounded = loadScoreMetrics.trimp,
@@ -104,6 +105,7 @@ object DailyMetricsMapper {
 
     private data class LoadScoreMetrics(
         val readiness: Int?,
+        val trainingReadiness: Int?,
         val load: Int?,
         val trimp: Int?,
         val rasTotal: Int?,
@@ -127,11 +129,16 @@ object DailyMetricsMapper {
         prefs: UserPreferences,
     ): LoadScoreMetrics {
         val readiness = LoadSourceSelector.selectReadiness(summary, prefs.strainLoadSourceMode)?.roundToInt()
+        val trainingReadiness =
+            LoadSourceSelector
+                .selectTrainingReadiness(summary, prefs.strainLoadSourceMode)
+                ?.coerceIn(0f, 100f)
+                ?.roundToInt()
         val load = LoadSourceSelector.selectLoadScore(summary, prefs.strainLoadSourceMode)?.roundToInt()
         val trimp = LoadSourceSelector.selectTrimp(summary, prefs.strainLoadSourceMode)?.roundToInt()
         val rasTotal = LoadSourceSelector.selectTotalRas(summary, prefs.rasSourceMode)?.roundToInt()
         val rasDay = LoadSourceSelector.selectDailyRas(summary, prefs.rasSourceMode)?.roundToInt()
-        return LoadScoreMetrics(readiness, load, trimp, rasTotal, rasDay)
+        return LoadScoreMetrics(readiness, trainingReadiness, load, trimp, rasTotal, rasDay)
     }
 
     private fun formatWeight(weightKg: Float?): String? =

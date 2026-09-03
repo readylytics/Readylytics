@@ -7,7 +7,8 @@ import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.dashboard.CardManagementDelegate
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
-import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionChecker
+import app.readylytics.health.core.model.domain.repository.HeartRateRepository
 import app.readylytics.health.core.model.domain.repository.InsightDismissalRepository
 import app.readylytics.health.core.model.domain.service.BodyTemperatureBaselineProvider
 import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
@@ -18,6 +19,7 @@ import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRe
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
@@ -30,6 +32,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
+import java.time.ZoneId
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DashboardFlowIntermediateTest {
@@ -97,8 +100,8 @@ class DashboardFlowIntermediateTest {
                             ),
                         )
                 }
-            val healthConnectRepository =
-                mockk<HealthConnectRepository> {
+            val permissionChecker =
+                mockk<HealthConnectPermissionChecker> {
                     coEvery { hasBodyTemperaturePermission() } returns false
                     coEvery { hasStepsPermission() } returns false
                     coEvery { hasWeightPermission() } returns false
@@ -111,6 +114,10 @@ class DashboardFlowIntermediateTest {
                 mockk<DailySummaryRepository> {
                     every { observeFirstSessionEndingInRange(any(), any()) } returns flowOf(null)
                 }
+            val settingsRepository =
+                mockk<UserPreferencesReader> {
+                    every { userPreferences } returns MutableStateFlow(UserPreferences())
+                }
 
             val result =
                 createDashboardCardStateFlow(
@@ -118,7 +125,8 @@ class DashboardFlowIntermediateTest {
                     cardManagementDelegate = cardManagementDelegate,
                     cardConfigRepository = cardConfigRepository,
                     dailySummaryRepository = dailySummaryRepository,
-                    healthConnectRepository = healthConnectRepository,
+                    permissionChecker = permissionChecker,
+                    settingsRepository = settingsRepository,
                 ).first()
 
             assertTrue(result.cardConfiguration.none { it.cardId == CardId.BODY_TEMPERATURE })
@@ -133,8 +141,8 @@ class DashboardFlowIntermediateTest {
                     every { dashboardCardConfigurations() } returns
                         flowOf(listOf(CardConfiguration(CardId.BODY_TEMPERATURE, isVisible = true, position = 17)))
                 }
-            val healthConnectRepository =
-                mockk<HealthConnectRepository> {
+            val permissionChecker =
+                mockk<HealthConnectPermissionChecker> {
                     coEvery { hasBodyTemperaturePermission() } returns true
                     coEvery { hasStepsPermission() } returns false
                     coEvery { hasWeightPermission() } returns false
@@ -147,6 +155,10 @@ class DashboardFlowIntermediateTest {
                 mockk<DailySummaryRepository> {
                     every { observeFirstSessionEndingInRange(any(), any()) } returns flowOf(null)
                 }
+            val settingsRepository =
+                mockk<UserPreferencesReader> {
+                    every { userPreferences } returns MutableStateFlow(UserPreferences())
+                }
 
             val result =
                 createDashboardCardStateFlow(
@@ -154,7 +166,8 @@ class DashboardFlowIntermediateTest {
                     cardManagementDelegate = cardManagementDelegate,
                     cardConfigRepository = cardConfigRepository,
                     dailySummaryRepository = dailySummaryRepository,
-                    healthConnectRepository = healthConnectRepository,
+                    permissionChecker = permissionChecker,
+                    settingsRepository = settingsRepository,
                 ).first()
 
             assertTrue(result.cardConfiguration.any { it.cardId == CardId.BODY_TEMPERATURE })
@@ -173,8 +186,8 @@ class DashboardFlowIntermediateTest {
                     every { dashboardCardConfigurations() } returns
                         flowOf(listOf(CardConfiguration(CardId.SLEEP_SCORE, isVisible = true, position = 0)))
                 }
-            val healthConnectRepository =
-                mockk<HealthConnectRepository> {
+            val permissionChecker =
+                mockk<HealthConnectPermissionChecker> {
                     coEvery { hasBodyTemperaturePermission() } returns false
                     coEvery { hasStepsPermission() } returns false
                     coEvery { hasWeightPermission() } returns false
@@ -194,6 +207,10 @@ class DashboardFlowIntermediateTest {
                 mockk<DailySummaryRepository> {
                     every { observeFirstSessionEndingInRange(any(), any()) } returns flowOf(null)
                 }
+            val settingsRepository =
+                mockk<UserPreferencesReader> {
+                    every { userPreferences } returns MutableStateFlow(UserPreferences())
+                }
 
             val result =
                 createDashboardCardStateFlow(
@@ -201,7 +218,8 @@ class DashboardFlowIntermediateTest {
                     cardManagementDelegate = cardManagementDelegate,
                     cardConfigRepository = cardConfigRepository,
                     dailySummaryRepository = dailySummaryRepository,
-                    healthConnectRepository = healthConnectRepository,
+                    permissionChecker = permissionChecker,
+                    settingsRepository = settingsRepository,
                 ).first()
 
             assertTrue(result.pendingConfiguration.orEmpty().none { it.cardId == CardId.BODY_TEMPERATURE })
@@ -240,6 +258,86 @@ class DashboardFlowIntermediateTest {
                 emissions.last(),
             )
             job.cancel()
+        }
+
+    @Test
+    fun `createDashboardHrFlow queries repository using scoring zone`() =
+        runTest {
+            val scoringZone = ZoneId.of("Pacific/Honolulu")
+            val settingsRepo =
+                mockk<UserPreferencesReader> {
+                    every { userPreferences } returns
+                        MutableStateFlow(UserPreferences(scoringZoneId = scoringZone.id))
+                }
+            val heartRateRepository = mockk<HeartRateRepository>()
+            val selectedDate = LocalDate.of(2026, 6, 10)
+            val expectedStartMs = selectedDate.atStartOfDay(scoringZone).toInstant().toEpochMilli()
+            val expectedEndMs =
+                selectedDate
+                    .plusDays(1)
+                    .atStartOfDay(scoringZone)
+                    .toInstant()
+                    .toEpochMilli()
+
+            every {
+                heartRateRepository.observeAggregateByTimeRange(expectedStartMs, expectedEndMs)
+            } returns flowOf(null)
+
+            val result =
+                createDashboardHrFlow(
+                    selectedDate = flowOf(selectedDate),
+                    heartRateRepository = heartRateRepository,
+                    settingsRepository = settingsRepo,
+                ).first()
+
+            assertEquals(null, result)
+            verify {
+                heartRateRepository.observeAggregateByTimeRange(expectedStartMs, expectedEndMs)
+            }
+        }
+
+    @Test
+    fun `createDashboardCardStateFlow queries sleep session using scoring zone`() =
+        runTest {
+            val scoringZone = ZoneId.of("Pacific/Honolulu")
+            val settingsRepo =
+                mockk<UserPreferencesReader> {
+                    every { userPreferences } returns
+                        MutableStateFlow(UserPreferences(scoringZoneId = scoringZone.id))
+                }
+            val cardConfigRepository =
+                mockk<CardConfigurationRepository> {
+                    every { dashboardCardConfigurations() } returns flowOf(emptyList())
+                }
+            val permissionChecker =
+                mockk<HealthConnectPermissionChecker>(relaxed = true)
+            val cardManagementDelegate = mockCardManagementDelegate()
+            val dailySummaryRepository = mockk<DailySummaryRepository>()
+            val selectedDate = LocalDate.of(2026, 6, 10)
+            val expectedStartMs = selectedDate.atStartOfDay(scoringZone).toInstant().toEpochMilli()
+            val expectedEndMs =
+                selectedDate
+                    .plusDays(1)
+                    .atStartOfDay(scoringZone)
+                    .toInstant()
+                    .toEpochMilli()
+
+            every {
+                dailySummaryRepository.observeFirstSessionEndingInRange(expectedStartMs, expectedEndMs)
+            } returns flowOf(null)
+
+            createDashboardCardStateFlow(
+                selectedDate = flowOf(selectedDate),
+                cardManagementDelegate = cardManagementDelegate,
+                cardConfigRepository = cardConfigRepository,
+                dailySummaryRepository = dailySummaryRepository,
+                permissionChecker = permissionChecker,
+                settingsRepository = settingsRepo,
+            ).first()
+
+            verify {
+                dailySummaryRepository.observeFirstSessionEndingInRange(expectedStartMs, expectedEndMs)
+            }
         }
 
     private fun mockCardManagementDelegate(

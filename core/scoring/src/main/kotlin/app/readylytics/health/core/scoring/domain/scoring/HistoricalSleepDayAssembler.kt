@@ -1,15 +1,13 @@
 package app.readylytics.health.core.scoring.domain.scoring
 
-import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
-import app.readylytics.health.core.scoring.domain.scoring.HistoricalSleepDayAssembler
-import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
-
+import app.readylytics.health.core.model.domain.model.SleepHrSample
 import app.readylytics.health.core.model.domain.model.SleepSession
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayAggregator
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayPolicy
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDaySegment
 import app.readylytics.health.core.scoring.domain.util.mean
+import app.readylytics.health.core.scoring.domain.util.weightedPercentile
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -77,7 +75,8 @@ internal class HistoricalSleepDayAssembler(
     suspend fun buildHistoricalSleepDays(
         sessions: List<SleepSession>,
         percentile: Int,
-        sleepDayPolicy: SleepDayPolicy?,
+        zoneId: ZoneId,
+        sleepDayPolicy: SleepDayPolicy? = null,
         assumeCoverageValid: Boolean = false,
     ): List<HistoricalSleepDay> {
         if (sessions.isEmpty()) return emptyList()
@@ -90,57 +89,91 @@ internal class HistoricalSleepDayAssembler(
                 .groupBy { it.sessionId }
 
         return if (sleepDayPolicy == null) {
-            sessions.map { session ->
-                val hrvMean = rmssdBySession[session.id].orEmpty().takeIf { it.isNotEmpty() }?.mean()
+            buildDirectFromSessions(
+                sessions,
+                percentile,
+                zoneId,
+                assumeCoverageValid,
+                rmssdBySession,
+                hrProjectionBySession,
+            )
+        } else {
+            buildFromPolicy(
+                sessions,
+                percentile,
+                sleepDayPolicy,
+                assumeCoverageValid,
+                rmssdBySession,
+                hrProjectionBySession,
+            )
+        }
+    }
+
+    private fun buildDirectFromSessions(
+        sessions: List<SleepSession>,
+        percentile: Int,
+        zoneId: ZoneId,
+        assumeCoverageValid: Boolean,
+        rmssdBySession: Map<String, List<Float>>,
+        hrProjectionBySession: Map<String, List<SleepHrSample>>,
+    ): List<HistoricalSleepDay> =
+        sessions.map { session ->
+            val hrvMean = rmssdBySession[session.id].orEmpty().takeIf { it.isNotEmpty() }?.mean()
+            val hrSamples =
+                hrProjectionBySession[session.id]
+                    .orEmpty()
+                    .map { it.beatsPerMinute }
+                    .sorted()
+            historicalSleepDay(
+                scoreDay = Instant.ofEpochMilli(session.endTime).atZone(zoneId).toLocalDate(),
+                coreSessionIds = listOf(session.id),
+                durationMinutes = session.durationMinutes,
+                deepMinutes = session.deepSleepMinutes,
+                remMinutes = session.remSleepMinutes,
+                hrvMean = hrvMean,
+                hrSamples = hrSamples,
+                percentile = percentile,
+                assumeCoverageValid = assumeCoverageValid,
+            )
+        }
+
+    private fun buildFromPolicy(
+        sessions: List<SleepSession>,
+        percentile: Int,
+        sleepDayPolicy: SleepDayPolicy,
+        assumeCoverageValid: Boolean,
+        rmssdBySession: Map<String, List<Float>>,
+        hrProjectionBySession: Map<String, List<SleepHrSample>>,
+    ): List<HistoricalSleepDay> =
+        SleepDayAggregator
+            .aggregate(
+                segments = sessions.map(::toSleepDaySegment),
+                policy = sleepDayPolicy,
+            ).aggregates
+            .map { aggregate ->
+                val coreSessionIds = aggregate.coreCluster.segments.map { it.stableId }
+                val hrvMean =
+                    coreSessionIds
+                        .flatMap { rmssdBySession[it].orEmpty() }
+                        .takeIf { it.isNotEmpty() }
+                        ?.mean()
                 val hrSamples =
-                    hrProjectionBySession[session.id]
-                        .orEmpty()
+                    coreSessionIds
+                        .flatMap { hrProjectionBySession[it].orEmpty() }
                         .map { it.beatsPerMinute }
                         .sorted()
                 historicalSleepDay(
-                    scoreDay = Instant.ofEpochMilli(session.endTime).atZone(ZoneId.systemDefault()).toLocalDate(),
-                    coreSessionIds = listOf(session.id),
-                    durationMinutes = session.durationMinutes,
-                    deepMinutes = session.deepSleepMinutes,
-                    remMinutes = session.remSleepMinutes,
+                    scoreDay = aggregate.scoreDay,
+                    coreSessionIds = coreSessionIds,
+                    durationMinutes = aggregate.totalDurationMinutes,
+                    deepMinutes = aggregate.architectureTotals.deepMinutes,
+                    remMinutes = aggregate.architectureTotals.remMinutes,
                     hrvMean = hrvMean,
                     hrSamples = hrSamples,
                     percentile = percentile,
                     assumeCoverageValid = assumeCoverageValid,
                 )
             }
-        } else {
-            SleepDayAggregator
-                .aggregate(
-                    segments = sessions.map(::toSleepDaySegment),
-                    policy = sleepDayPolicy,
-                ).aggregates
-                .map { aggregate ->
-                    val coreSessionIds = aggregate.coreCluster.segments.map { it.stableId }
-                    val hrvMean =
-                        coreSessionIds
-                            .flatMap { rmssdBySession[it].orEmpty() }
-                            .takeIf { it.isNotEmpty() }
-                            ?.mean()
-                    val hrSamples =
-                        coreSessionIds
-                            .flatMap { hrProjectionBySession[it].orEmpty() }
-                            .map { it.beatsPerMinute }
-                            .sorted()
-                    historicalSleepDay(
-                        scoreDay = aggregate.scoreDay,
-                        coreSessionIds = coreSessionIds,
-                        durationMinutes = aggregate.totalDurationMinutes,
-                        deepMinutes = aggregate.architectureTotals.deepMinutes,
-                        remMinutes = aggregate.architectureTotals.remMinutes,
-                        hrvMean = hrvMean,
-                        hrSamples = hrSamples,
-                        percentile = percentile,
-                        assumeCoverageValid = assumeCoverageValid,
-                    )
-                }
-        }
-    }
 
     private fun historicalSleepDay(
         scoreDay: LocalDate,
@@ -189,8 +222,9 @@ internal class HistoricalSleepDayAssembler(
         percentile: Int,
     ): Int? {
         if (hrSamples.isEmpty()) return null
-        val index = ((percentile / 100.0) * (hrSamples.size - 1)).roundToInt().coerceIn(0, hrSamples.size - 1)
-        return hrSamples[index]
+        val values = hrSamples.toIntArray()
+        val weights = IntArray(values.size) { 1 }
+        return weightedPercentile(values, weights, percentile / 100.0)
     }
 
     private fun toSleepDaySegment(session: SleepSession): SleepDaySegment {

@@ -1,10 +1,12 @@
 package app.readylytics.health.feature.vitals.bloodpressure
 
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.date.SelectedDateStore
 import app.readylytics.health.core.model.domain.model.BloodPressureRecord
 import app.readylytics.health.core.model.domain.model.BloodPressureStatus
 import app.readylytics.health.core.model.domain.model.MetricStatus
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.repository.BloodPressureRepository
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.feature.vitals.R
@@ -48,6 +50,7 @@ class BloodPressureDetailViewModelTest {
     private lateinit var viewModel: BloodPressureDetailViewModel
     private lateinit var repository: BloodPressureRepository
     private lateinit var selectedDateRepo: SelectedDateStore
+    private lateinit var settingsRepo: UserPreferencesReader
 
     private val selectedDateFlow = MutableStateFlow(LocalDate.now())
     private val earliestDateFlow = MutableStateFlow<LocalDate?>(null)
@@ -62,6 +65,10 @@ class BloodPressureDetailViewModelTest {
                 coEvery { getByDateRangePaged(any(), any(), any(), any()) } returns emptyList()
                 coEvery { countByDateRange(any(), any()) } returns 0
                 coEvery { getLatest() } returns null
+            }
+        settingsRepo =
+            mockk {
+                every { userPreferences } returns MutableStateFlow(UserPreferences())
             }
         selectedDateRepo =
             mockk {
@@ -78,6 +85,7 @@ class BloodPressureDetailViewModelTest {
             BloodPressureDetailViewModel(
                 bloodPressureRepository = repository,
                 selectedDateRepository = selectedDateRepo,
+                settingsRepository = settingsRepo,
                 ioDispatcher = testDispatcher,
             )
         backgroundScope.launch { vm.uiState.collect {} }
@@ -302,6 +310,7 @@ class BloodPressureDetailViewModelTest {
                 BloodPressureDetailViewModel(
                     bloodPressureRepository = repository,
                     selectedDateRepository = selectedDateRepo,
+                    settingsRepository = settingsRepo,
                     ioDispatcher = testDispatcher,
                 )
 

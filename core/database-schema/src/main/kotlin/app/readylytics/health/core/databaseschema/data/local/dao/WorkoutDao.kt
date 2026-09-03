@@ -217,4 +217,13 @@ interface WorkoutDao {
         toMs: Long,
         deviceName: String,
     ): Int
+
+    @Query("SELECT * FROM workout_records WHERE startTime >= :startMs AND endTime <= :endMs ORDER BY startTime ASC")
+    suspend fun getBetween(startMs: Long, endMs: Long): List<WorkoutRecordEntity>
+
+    @Query("DELETE FROM workout_records WHERE startTime >= :startMs AND endTime <= :endMs AND id NOT IN (:validIds)")
+    suspend fun deleteWorkoutsNotIn(startMs: Long, endMs: Long, validIds: List<String>): Int
+
+    @Query("DELETE FROM workout_records WHERE startTime >= :startMs AND endTime <= :endMs")
+    suspend fun deleteBetween(startMs: Long, endMs: Long): Int
 }

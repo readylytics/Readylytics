@@ -8,6 +8,8 @@ import app.readylytics.health.core.databaseschema.data.local.dao.BodyFatRecordDa
 import app.readylytics.health.core.databaseschema.data.local.dao.BodyTemperatureRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao
+import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
+import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketMaintenanceDao
 import app.readylytics.health.core.databaseschema.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
@@ -15,6 +17,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import app.readylytics.health.core.databaseschema.data.local.entity.BodyTemperatureRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HealthSourceRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HrMinuteBucketEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.model.domain.model.HealthDataType
 import kotlinx.coroutines.test.runTest
@@ -32,6 +35,8 @@ class SelectedSourcePrunerImplTest {
     private lateinit var database: HealthDatabase
     private lateinit var sleepDao: SleepSessionDao
     private lateinit var heartRateDao: HeartRateDao
+    private lateinit var minuteBucketDao: MinuteBucketDao
+    private lateinit var minuteBucketMaintenanceDao: MinuteBucketMaintenanceDao
     private lateinit var hrvDao: HrvDao
     private lateinit var workoutDao: WorkoutDao
     private lateinit var weightDao: WeightRecordDao
@@ -52,6 +57,8 @@ class SelectedSourcePrunerImplTest {
 
         sleepDao = database.sleepSessionDao()
         heartRateDao = database.heartRateDao()
+        minuteBucketDao = database.minuteBucketDao()
+        minuteBucketMaintenanceDao = database.minuteBucketMaintenanceDao()
         hrvDao = database.hrvDao()
         workoutDao = database.workoutDao()
         weightDao = database.weightRecordDao()
@@ -80,7 +87,7 @@ class SelectedSourcePrunerImplTest {
                         bodyTemperatureRecordDao = bodyTemperatureDao,
                         stepRecordDao = database.stepRecordDao(),
                         sourceRecordDao = database.sourceRecordDao(),
-                        minuteBucketDao = database.minuteBucketDao(),
+                        minuteBucketMaintenanceDao = minuteBucketMaintenanceDao,
                     ),
             )
     }
@@ -161,6 +168,34 @@ class SelectedSourcePrunerImplTest {
                 ),
             )
 
+            // Seed warm-tier minute buckets
+            minuteBucketDao.upsertBuckets(
+                listOf(
+                    HrMinuteBucketEntity(
+                        bucketStartMs = timestamp,
+                        bucketEndMs = timestamp + 60000,
+                        minBpm = 60,
+                        maxBpm = 80,
+                        avgBpm = 70.0,
+                        sampleCount = 10,
+                        recordType = "RESTING",
+                        sessionId = "",
+                        deviceName = "Device A",
+                    ),
+                    HrMinuteBucketEntity(
+                        bucketStartMs = timestamp,
+                        bucketEndMs = timestamp + 60000,
+                        minBpm = 60,
+                        maxBpm = 80,
+                        avgBpm = 70.0,
+                        sampleCount = 10,
+                        recordType = "RESTING",
+                        sessionId = "",
+                        deviceName = "Device B",
+                    ),
+                ),
+            )
+
             val selections =
                 mapOf(
                     HealthDataType.SLEEP to "Device B",
@@ -176,6 +211,10 @@ class SelectedSourcePrunerImplTest {
             val remainingHr = heartRateDao.getByTimeRange(0, timestamp + 10000000)
             assertEquals(1, remainingHr.size)
             assertEquals(2L, remainingHr[0].sourceRecordRef)
+
+            val remainingBuckets = minuteBucketDao.getBucketsForSession("RESTING", "")
+            assertEquals(1, remainingBuckets.size)
+            assertEquals("Device B", remainingBuckets[0].deviceName)
         }
 
     @Test

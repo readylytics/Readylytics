@@ -5,11 +5,12 @@ import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueCon
 import app.readylytics.health.core.model.domain.scoring.ResidualFatigueConfig
 import app.readylytics.health.core.model.domain.util.RetentionBounds
 import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
 /**
- * Residual-fatigue snapshot computation for the daily scoring pipeline (shadow mode). Mirrors
+ * Residual-fatigue snapshot computation for the daily scoring pipeline. Mirrors
  * [RasTotalsComputer]/[DailyTrimpComputer]: the repository orchestrates, this class owns the
  * fatigue math. The walk-forward path advances the shared accumulator; the single-day fallback
  * reconstructs the same state from all retained canonical workout impulses.
@@ -50,7 +51,6 @@ class ResidualFatigueComputer(
         // Coerce rather than require: a stored pref outside the validated range should degrade the
         // day to the nearest valid parameter, never fail the whole recompute.
         ResidualFatigueConfig.clamped(
-            enabled = prefs.residualFatigueEnabled,
             halfLifeHours = prefs.residualFatigueHalfLifeHours,
             fatigueGain = prefs.residualFatigueGain,
         )
@@ -61,27 +61,39 @@ class ResidualFatigueComputer(
      * recompute-only resync and the self-heal, so counting them could never clear.
      */
     private fun retentionStartMs(prefs: UserPreferences): Long =
-        RetentionBounds.resolveHistoricalWindow(prefs).startTimeMs
+        RetentionBounds.resolveHistoricalWindow(prefs, Instant.now()).startTimeMs // outside WP-01 guard scope
 
     /**
      * Computes the day's residual-fatigue snapshot at next-day midnight. The walk-forward path
      * (non-null [fatigueContext]) advances the shared accumulator; the single-day fallback (null
      * context) reconstructs from every retained canonical impulse through the evaluation. Returns
-     * null when disabled (shadow metric: never feeds Readiness) or when the seed dropped a
-     * never-backfilled retained workout (unknown, not low — HIGH-2).
+     * null when the seed dropped a never-backfilled retained workout (unknown, not low — HIGH-2).
      */
     suspend fun compute(
         context: ScoringDayContext,
         fatigueContext: WalkForwardFatigueContext?,
     ): Float? {
         val config = clampedConfig(context.prefs)
-        if (!config.enabled) return null
-
         val evalMs = context.nextDayMidnightMs
         return when (fatigueContext) {
             null -> computeSingleDayFallback(evalMs, config, context.prefs)
             else -> computeWalkForward(fatigueContext, evalMs, config)
         }
+    }
+
+    /**
+     * Residual fatigue decayed through [nowMs] instead of [compute]'s persisted next-day-midnight
+     * snapshot. Reuses [computeSingleDayFallback] verbatim — reconstructs from every retained
+     * canonical impulse through [nowMs], with the same unbackfilled-gap gate as [compute].
+     * Never touches the walk-forward accumulator and is not persisted, so it cannot desync
+     * `daily_summaries` or a resync's exact-reconstruction guarantees.
+     */
+    suspend fun computeLive(
+        nowMs: Long,
+        prefs: UserPreferences,
+    ): Float? {
+        val config = clampedConfig(prefs)
+        return computeSingleDayFallback(nowMs, config, prefs)
     }
 
     private fun computeWalkForward(

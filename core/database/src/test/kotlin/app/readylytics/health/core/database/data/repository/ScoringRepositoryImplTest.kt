@@ -1,4 +1,5 @@
 package app.readylytics.health.core.database.data.repository
+import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
 import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
@@ -21,6 +22,7 @@ import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.model.Result
+import app.readylytics.health.core.model.domain.repository.FatigueWorkoutInput
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.model.domain.scoring.*
 import app.readylytics.health.core.scoring.domain.scoring.SleepMetricsCollaborators
@@ -39,6 +41,7 @@ import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlin.math.pow
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 
@@ -113,6 +116,7 @@ class ScoringRepositoryImplTest {
                 ComputeResidualFatigueUseCase(),
                 ResolveDailyBaselinesUseCase(baselineComputer),
                 AssembleEverydayLoadInputUseCase(),
+                        ComputeTrainingReadinessUseCase(scoringCalculator),
             ),
             scoringHistoryRepository,
             readinessSummaryCoordinator,
@@ -128,8 +132,21 @@ class ScoringRepositoryImplTest {
         coEvery { scoringHistoryRepository.getDailySummaryByDate(any(), any()) } returns null
         coEvery { sleepSessionDao.getOverlapping(any(), any()) } returns emptyList()
         coEvery { sleepSessionDao.countSince(any()) } returns 10
-        coEvery { baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any(), any()) } returns 60f
-        coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), any(), any()) } returns
+        coEvery {
+            baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any(), any(), any(), null)
+        } returns 60f
+        coEvery {
+            baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any(), any(), any(), any())
+        } returns 60f
+        coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), any(), any(), any(), null) } returns
+            BaselineComputer.HrvWindows(
+                muHistory = emptyList(),
+                sigmaHistory = emptyList(),
+                historicalSessions = emptyList(),
+                validHistoricalSessionIds = emptyList(),
+                validHistoricalDayCount = 6,
+            )
+        coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), any(), any(), any(), any()) } returns
             BaselineComputer.HrvWindows(
                 muHistory = emptyList(),
                 sigmaHistory = emptyList(),
@@ -157,12 +174,12 @@ class ScoringRepositoryImplTest {
 
             // Mock RHR baseline for today
             coEvery {
-                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(todayMs, tomorrowMs, any(), any())
+                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(todayMs, tomorrowMs, any(), any(), any(), null)
             } returns 55f
 
             // Mock RHR baseline for yesterday
             coEvery {
-                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(yesterdayMs, todayMs, any(), any())
+                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(yesterdayMs, todayMs, any(), any(), any(), null)
             } returns 60f
 
             // Mock sleep sessions so the sleep metrics flow is exercised
@@ -258,7 +275,7 @@ class ScoringRepositoryImplTest {
             coEvery { sleepSessionDao.getOverlapping(any(), any()) } returns listOf(mockSession)
             coEvery { sleepSessionDao.countSince(any()) } returns 7
 
-            coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any()) } returns 45
+            coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any(), any()) } returns 45
             coEvery {
                 computeSleepMetricsUseCase(any())
             } returns
@@ -283,7 +300,7 @@ class ScoringRepositoryImplTest {
             coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns null
             coEvery { sleepSessionDao.countSince(any()) } returns 7
 
-            coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any()) } returns 45
+            coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any(), any()) } returns 45
             coEvery {
                 computeSleepMetricsUseCase(any())
             } returns
@@ -324,7 +341,7 @@ class ScoringRepositoryImplTest {
                 )
             coEvery { sleepPercentileRhrCalculator.collect(any(), any(), any(), any()) } returns nullWakeHrResult
 
-            coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any()) } returns 45
+            coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any(), any()) } returns 45
             coEvery {
                 computeSleepMetricsUseCase(any())
             } returns
@@ -475,7 +492,7 @@ class ScoringRepositoryImplTest {
                     BodyTemperatureRecordEntity(id = "2", timestampMs = 2L, celsius = 36.8f),
                 )
 
-            coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any()) } returns 45
+            coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any(), any()) } returns 45
             coEvery {
                 computeSleepMetricsUseCase(any())
             } returns
@@ -558,5 +575,30 @@ class ScoringRepositoryImplTest {
             job2.await()
 
             assertEquals(1, maxConcurrentCalls.get(), "Database writes on compute paths must not execute concurrently")
+        }
+
+    @Test
+    fun `computeCurrentResidualFatigue decays through nowMs, not next-day midnight`() =
+        runTest {
+            val zoneId = ZoneId.of("UTC")
+            val workoutEndMs = 1_700_000_000_000L
+            val nowMs = workoutEndMs + 3 * 3_600_000L
+
+            every { settingsRepo.userPreferences } returns
+                flowOf(
+                    UserPreferences(
+                        scoringZoneId = zoneId.id,
+                        residualFatigueHalfLifeHours = 24f,
+                        residualFatigueGain = 1f,
+                    ),
+                )
+            coEvery { workoutDao.getCanonicalFatigueInputsThrough(nowMs) } returns
+                listOf(FatigueWorkoutInput(workoutId = "w1", endTimeMs = workoutEndMs, trimp = 100f))
+            coEvery { workoutDao.countUnbackfilledThrough(any(), nowMs) } returns 0
+
+            val result = repo.computeCurrentResidualFatigue(nowMs)
+
+            val expected = (100f * 2.0.pow(-3.0 / 24.0)).toFloat()
+            assertEquals(expected, requireNotNull(result), 0.01f)
         }
 }

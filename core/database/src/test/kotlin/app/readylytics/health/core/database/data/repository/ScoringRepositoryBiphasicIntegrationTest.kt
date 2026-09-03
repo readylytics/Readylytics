@@ -1,4 +1,5 @@
 package app.readylytics.health.core.database.data.repository
+import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
 import app.readylytics.health.core.databaseschema.data.local.dao.BloodPressureRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.BodyFatRecordDao
@@ -30,11 +31,7 @@ import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
 import app.readylytics.health.core.scoring.domain.scoring.SleepMetricsRequest
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepPercentileRhrCalculator
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.slot
+import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -114,6 +111,7 @@ class ScoringRepositoryBiphasicIntegrationTest {
                 ComputeResidualFatigueUseCase(),
                 ResolveDailyBaselinesUseCase(baselineComputer),
                 AssembleEverydayLoadInputUseCase(),
+                        ComputeTrainingReadinessUseCase(scoringCalculator),
             ),
             scoringHistoryRepository,
             readinessSummaryCoordinator,
@@ -128,8 +126,21 @@ class ScoringRepositoryBiphasicIntegrationTest {
 
             every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
             coEvery { scoringHistoryRepository.getDailySummaryByDate(any(), any()) } returns null
-            coEvery { baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any(), any()) } returns 60f
-            coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), any(), any()) } returns
+            coEvery {
+                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any(), any(), any(), null)
+            } returns 60f
+            coEvery {
+                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any(), any(), any(), any())
+            } returns 60f
+            coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), any(), any(), any(), null) } returns
+                BaselineComputer.HrvWindows(
+                    muHistory = emptyList(),
+                    sigmaHistory = emptyList(),
+                    historicalSessions = emptyList(),
+                    validHistoricalSessionIds = emptyList(),
+                    validHistoricalDayCount = 6,
+                )
+            coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), any(), any(), any(), any()) } returns
                 BaselineComputer.HrvWindows(
                     muHistory = emptyList(),
                     sigmaHistory = emptyList(),

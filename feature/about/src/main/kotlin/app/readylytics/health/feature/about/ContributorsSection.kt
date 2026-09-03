@@ -95,6 +95,21 @@ fun ContributorsSection() {
 
         SectionDivider()
 
+        SubHeader(stringResource(R.string.about_header_training_readiness))
+        BodyText(stringResource(R.string.about_training_readiness_intro))
+        BodyText(stringResource(R.string.about_training_readiness_formula_acute))
+        BodyText(stringResource(R.string.about_training_readiness_formula_load))
+        BodyText(stringResource(R.string.about_training_readiness_formula_final))
+        BulletItem(stringResource(R.string.about_training_readiness_scale))
+        BulletItem(stringResource(R.string.about_training_readiness_weight))
+        BodyText(stringResource(R.string.about_training_readiness_equivalence))
+        BodyText(stringResource(R.string.about_training_readiness_fallback))
+        BodyText(stringResource(R.string.about_training_readiness_source))
+        BodyText(stringResource(R.string.about_training_readiness_apply))
+        BodyText(stringResource(R.string.about_training_readiness_advisor))
+
+        SectionDivider()
+
         SubHeader(stringResource(R.string.about_header_load_sources))
         BodyText(stringResource(R.string.about_load_sources_intro))
         BulletItem(stringResource(R.string.about_load_sources_strain_bullet))

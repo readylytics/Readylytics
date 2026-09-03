@@ -117,6 +117,24 @@ class GetDailyPromptDataUseCaseTest {
     }
 
     @Test
+    fun `execute keeps Advisor on legacy Readiness when Training Readiness diverges`() = runTest {
+        val todaySummary =
+            summary(today).copy(
+                readinessWorkoutOnly = 78f,
+                trainingReadinessWorkoutOnly = 12f,
+            )
+        coEvery { dailySummaryRepository.getByDate(todayMidnight) } returns todaySummary
+        coEvery { dailySummaryRepository.getByDate(yesterdayMidnight) } returns null
+        coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
+        coEvery { workoutRepository.getInRange(any(), any()) } returns emptyList()
+
+        val result = useCase.execute(today)
+
+        assertEquals(78f, result.today.readinessScore)
+        assertEquals("NEUTRAL", result.today.readinessBand)
+    }
+
+    @Test
     fun `execute applies every everyday coverage tier to advisor confidence`() = runTest {
         every { preferencesReader.userPreferences } returns
             flowOf(UserPreferences(scoringZoneId = "UTC", strainLoadSourceMode = LoadSourceMode.EVERYDAY_HEART_RATE))

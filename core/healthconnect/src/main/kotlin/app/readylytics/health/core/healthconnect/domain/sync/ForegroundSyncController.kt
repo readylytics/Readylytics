@@ -70,7 +70,7 @@ class ForegroundSyncController
                 }
                 SyncPreference.BY_TIME -> {
                     val intervalMs = prefs.syncIntervalHours * 3_600_000L
-                    val timeSinceLast = System.currentTimeMillis() - prefs.lastSyncTimestamp
+                    val timeSinceLast = clock.millis() - prefs.lastSyncTimestamp
                     app.readylytics.health.core.model.domain.util.logD("ForegroundSyncController") {
                         "Sync type: BY_TIME. Time since last: ${timeSinceLast / 1000}s, Interval: ${intervalMs / 1000}s"
                     }

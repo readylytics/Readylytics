@@ -12,6 +12,7 @@ import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.test.assertEquals
@@ -25,7 +26,7 @@ class ResidualFatigueExactReconstructionTest {
     private val computer = ResidualFatigueComputer(dataLoader, useCase)
     private val zoneId = ZoneId.of("UTC")
     private val evaluationDay = LocalDate.of(2026, 1, 1)
-    private val config = ResidualFatigueConfig(enabled = true, halfLifeHours = 96f, fatigueGain = 1f)
+    private val config = ResidualFatigueConfig(halfLifeHours = 96f, fatigueGain = 1f)
     private val prefs =
         UserPreferences(
             scoringZoneId = zoneId.id,
@@ -108,7 +109,7 @@ class ResidualFatigueExactReconstructionTest {
         runTest {
             val retentionPrefs = prefs.copy(retentionDaysEnabled = true, retentionDays = 365)
             val expectedRetentionStartMs =
-                RetentionBounds.resolveHistoricalWindow(retentionPrefs).startTimeMs
+                RetentionBounds.resolveHistoricalWindow(retentionPrefs, Instant.now()).startTimeMs
             val gateLowerBound = slot<Long>()
             coEvery { dataLoader.loadCanonicalFatigueSeed(any()) } returns emptyList()
             coEvery { dataLoader.loadUnbackfilledCountBefore(capture(gateLowerBound), any()) } returns 0
@@ -125,7 +126,7 @@ class ResidualFatigueExactReconstructionTest {
         runTest {
             val retentionPrefs = prefs.copy(retentionDaysEnabled = true, retentionDays = 365)
             val expectedRetentionStartMs =
-                RetentionBounds.resolveHistoricalWindow(retentionPrefs).startTimeMs
+                RetentionBounds.resolveHistoricalWindow(retentionPrefs, Instant.now()).startTimeMs
             val gateLowerBound = slot<Long>()
             coEvery { dataLoader.loadUnbackfilledCountThrough(capture(gateLowerBound), any()) } returns 0
             coEvery { dataLoader.loadCanonicalFatigueInputsThrough(any()) } returns emptyList()

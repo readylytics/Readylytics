@@ -7,7 +7,6 @@ import app.readylytics.health.core.model.data.preferences.FallbackThemeColor
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.data.preferences.SyncPreference
 import app.readylytics.health.core.model.data.preferences.UnitSystem
-import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.preferences.AboutPreferences
 import app.readylytics.health.core.model.domain.preferences.BackupSettings
@@ -18,9 +17,11 @@ import app.readylytics.health.core.model.domain.preferences.PhysiologySettings
 import app.readylytics.health.core.model.domain.preferences.SleepSettings
 import app.readylytics.health.core.model.domain.preferences.SyncSettings
 import app.readylytics.health.core.model.domain.preferences.ThresholdSettings
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
+import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -191,15 +192,6 @@ class SettingsRepository
 
         override suspend fun updateRetentionDays(days: Int) = sleep.updateRetentionDays(days)
 
-        suspend fun updateCollapseHealthConnect(collapsed: Boolean) = ui.updateCollapseHealthConnect(collapsed)
-
-        suspend fun updateCollapseBaselinesThresholds(collapsed: Boolean) =
-            ui.updateCollapseBaselinesThresholds(collapsed)
-
-        suspend fun updateCollapseDisplay(collapsed: Boolean) = ui.updateCollapseDisplay(collapsed)
-
-        suspend fun updateCollapseAdvanced(collapsed: Boolean) = ui.updateCollapseAdvanced(collapsed)
-
         override suspend fun updateAboutDismissed(dismissed: Boolean) = ui.updateAboutDismissed(dismissed)
 
         override suspend fun updatePhysiologyProfile(profile: PhysiologyProfile) =
@@ -213,15 +205,22 @@ class SettingsRepository
 
         override suspend fun updateItrimB(value: Float) = physiology.updateItrimB(value)
 
-        override suspend fun updateResidualFatigueEnabled(enabled: Boolean) =
-            physiology.updateResidualFatigueEnabled(enabled)
-
         override suspend fun updateResidualFatigueHalfLifeHours(hours: Float) =
             physiology.updateResidualFatigueHalfLifeHours(hours)
 
         override suspend fun updateResidualFatigueGain(value: Float) = physiology.updateResidualFatigueGain(value)
 
         override suspend fun resetResidualFatigueToDefaults() = physiology.resetResidualFatigueToDefaults()
+
+        override suspend fun updateTrainingReadinessParameters(
+            scale: Float,
+            weight: Float,
+        ) = physiology.updateTrainingReadinessParameters(scale, weight)
+
+        override suspend fun resetTrainingReadinessToDefaults() = physiology.resetTrainingReadinessToDefaults()
+
+        override suspend fun updateAppliedTrainingReadinessParameters(config: TrainingReadinessConfig) =
+            physiology.updateAppliedTrainingReadinessParameters(config)
 
         suspend fun updateInstallDate(date: LocalDate) = sync.updateInstallDate(date)
 
@@ -305,6 +304,16 @@ class SettingsRepository
         suspend fun batchUpdate(block: UserPreferencesProto.Builder.() -> Unit) {
             dataStore.updateData { proto ->
                 proto.toBuilder().apply(block).build()
+            }
+        }
+
+        override suspend fun updateTrainingReadinessConfig(config: TrainingReadinessConfig) {
+            dataStore.updateData { proto ->
+                proto
+                    .toBuilder()
+                    .setLastAppliedTrainingReadinessResidualFatigueScale(config.residualFatigueScale)
+                    .setLastAppliedTrainingReadinessLoadBalanceWeight(config.loadBalanceWeight)
+                    .build()
             }
         }
     }

@@ -121,6 +121,24 @@ class DailySummaryMapperTest {
     }
 
     @Test
+    fun dailySummaryMapperPreservesTrainingReadinessFields() {
+        val zoneId = ZoneId.of("Europe/Berlin")
+        val summary =
+            DailySummary(
+                date = LocalDate.of(2026, 3, 29),
+                acuteLoadRecovery = 63f,
+                trainingLoadReadinessWorkoutOnly = 71f,
+                trainingLoadReadinessEverydayHr = 72f,
+                trainingReadinessWorkoutOnly = 74f,
+                trainingReadinessEverydayHr = 75f,
+            )
+
+        val restored = DailySummaryMapper.toDomain(DailySummaryMapper.toEntity(summary, zoneId), zoneId)
+
+        assertEquals(summary, restored)
+    }
+
+    @Test
     fun toEntityPersistsRecoveryFlagsFromReadinessResult() {
         val scoringZone = ZoneId.of("Europe/Berlin")
         val scoringDate = LocalDate.of(2026, 3, 29)

@@ -3,7 +3,6 @@ package app.readylytics.health.feature.workouts
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
-import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
 import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.dashboard.CardManagementDelegate
@@ -12,6 +11,7 @@ import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMo
 import app.readylytics.health.core.model.domain.date.SelectedDateStore
 import app.readylytics.health.core.model.domain.layout.LayoutManagementDelegate
 import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.WorkoutData
@@ -349,7 +349,6 @@ class WorkoutsViewModel
         ): List<FatigueCurvePoint> {
             val config =
                 ResidualFatigueConfig.clamped(
-                    enabled = prefs.residualFatigueEnabled,
                     halfLifeHours = prefs.residualFatigueHalfLifeHours,
                     fatigueGain = prefs.residualFatigueGain,
                 )

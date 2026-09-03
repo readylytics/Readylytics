@@ -8,6 +8,7 @@ import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.model.MetricStatus
 import app.readylytics.health.core.model.domain.model.StepsStatusClassifier
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
 import app.readylytics.health.core.model.domain.util.toMidnightEpochMilli
 import app.readylytics.health.core.model.domain.util.truncateToDayMs
@@ -31,7 +32,6 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import java.time.Instant
-import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
@@ -64,21 +64,22 @@ class StepDetailViewModel
             combine(
                 _selectedRange,
                 selectedDateRepository.selectedDate,
-            ) { range, date -> range to date }
-                .flatMapLatest { (range, date) ->
-                    val fromMs = range.fromMs(date)
+                settingsRepo.userPreferences,
+            ) { range, date, prefs -> Triple(range, date, prefs) }
+                .flatMapLatest { (range, date, prefs) ->
+                    val zoneId = prefs.scoringZone()
+                    val fromMs = range.fromMs(date, zoneId)
                     val startDayMs = fromMs.truncateToDayMs()
-                    val selectedDateMidnightMs = date.toMidnightEpochMilli()
+                    val selectedDateMidnightMs = date.toMidnightEpochMilli(zoneId)
 
                     combine(
                         dailySummaryRepository.observeByDate(selectedDateMidnightMs),
                         dailySummaryRepository.observeSince(fromMs),
-                        settingsRepo.userPreferences,
-                    ) { latest, history, prefs ->
+                    ) { latest, history ->
                         val startDate =
                             Instant
                                 .ofEpochMilli(startDayMs)
-                                .atZone(ZoneId.systemDefault())
+                                .atZone(zoneId)
                                 .toLocalDate()
                         val rawPoints =
                             history

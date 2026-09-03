@@ -122,4 +122,13 @@ interface OxygenSaturationRecordDao {
 
     @Query("SELECT MIN(timestampMs) FROM oxygen_saturation_records")
     fun observeEarliestSpo2Time(): Flow<Long?>
+
+    @Query(
+        "DELETE FROM oxygen_saturation_records " +
+            "WHERE timestampMs >= :startMs AND timestampMs <= :endMs AND id NOT IN (:validIds)",
+    )
+    suspend fun deleteNotIn(startMs: Long, endMs: Long, validIds: List<String>): Int
+
+    @Query("DELETE FROM oxygen_saturation_records WHERE timestampMs >= :startMs AND timestampMs <= :endMs")
+    suspend fun deleteBetween(startMs: Long, endMs: Long): Int
 }

@@ -47,6 +47,7 @@ class ComputeHistoricalBaselinesUseCase
             baselineComputer.computeBackfillBaselines(
                 allDailySummaries,
                 prefs.restingHrPercentile,
+                zoneId = sleepDayPolicy.scoringZoneId,
                 sleepDayPolicy = sleepDayPolicy,
             )
 
