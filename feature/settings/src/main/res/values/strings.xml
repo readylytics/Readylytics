@@ -315,8 +315,16 @@
 <string name="settings_category_support_title">Support &amp; About</string>
 <string name="settings_category_support_subtitle">Report an issue, licenses, privacy</string>
 <string name="settings_search_no_results">No settings found</string>
-<plurals name="accessibility_circadian_threshold_state">
+    <plurals name="accessibility_circadian_threshold_state">
         <item quantity="one">Current value: %1$d minute</item>
         <item quantity="other">Current value: %1$d minutes</item>
+    </plurals>
+    <plurals name="threshold_consistency_days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+    <plurals name="threshold_consistency_sessions">
+        <item quantity="one">%1$d session</item>
+        <item quantity="other">%1$d sessions</item>
     </plurals>
 </resources>

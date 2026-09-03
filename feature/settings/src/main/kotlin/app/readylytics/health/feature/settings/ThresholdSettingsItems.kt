@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import app.readylytics.health.feature.settings.R
 
@@ -115,7 +116,7 @@ internal fun ConsistencyEvaluationPeriodItem(
         onValueChangeFinished = { onEvent(SettingsEvent.ConsistencyEvaluationDaysChanged(value.toInt())) },
         valueRange = 3f..14f,
         steps = 10,
-        displayValue = "${value.toInt()} days",
+        displayValue = pluralStringResource(R.plurals.threshold_consistency_days, value.toInt(), value.toInt()),
         description = stringResource(R.string.threshold_evaluation_period_desc),
     )
 }
@@ -135,7 +136,7 @@ internal fun ConsistencyBaselineWindowItem(
         onValueChangeFinished = { onEvent(SettingsEvent.ConsistencyBaselineDaysChanged(value.toInt())) },
         valueRange = 3f..30f,
         steps = 26,
-        displayValue = "${value.toInt()} sessions",
+        displayValue = pluralStringResource(R.plurals.threshold_consistency_sessions, value.toInt(), value.toInt()),
         description = stringResource(R.string.threshold_baseline_window_desc),
     )
 }
