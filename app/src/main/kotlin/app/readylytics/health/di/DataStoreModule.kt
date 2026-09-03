@@ -279,16 +279,6 @@ object DataStoreModule {
                                             it
                                     }
                                     prefs[intPreferencesKey("retention_days")]?.let { retentionDays = it }
-                                    prefs[booleanPreferencesKey("collapse_health_connect")]?.let {
-                                        collapseHealthConnect =
-                                            it
-                                    }
-                                    prefs[booleanPreferencesKey("collapse_baselines_thresholds")]?.let {
-                                        collapseBaselinesThresholds =
-                                            it
-                                    }
-                                    prefs[booleanPreferencesKey("collapse_display")]?.let { collapseDisplay = it }
-                                    prefs[booleanPreferencesKey("collapse_advanced")]?.let { collapseAdvanced = it }
                                     prefs[booleanPreferencesKey("about_dismissed")]?.let { aboutDismissed = it }
                                     prefs[stringPreferencesKey("physiology_profile")]?.let { value ->
                                         runCatching { PhysiologyProfileProto.valueOf("PROFILE_${value.uppercase()}") }

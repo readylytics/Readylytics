@@ -192,15 +192,6 @@ class SettingsRepository
 
         override suspend fun updateRetentionDays(days: Int) = sleep.updateRetentionDays(days)
 
-        suspend fun updateCollapseHealthConnect(collapsed: Boolean) = ui.updateCollapseHealthConnect(collapsed)
-
-        suspend fun updateCollapseBaselinesThresholds(collapsed: Boolean) =
-            ui.updateCollapseBaselinesThresholds(collapsed)
-
-        suspend fun updateCollapseDisplay(collapsed: Boolean) = ui.updateCollapseDisplay(collapsed)
-
-        suspend fun updateCollapseAdvanced(collapsed: Boolean) = ui.updateCollapseAdvanced(collapsed)
-
         override suspend fun updateAboutDismissed(dismissed: Boolean) = ui.updateAboutDismissed(dismissed)
 
         override suspend fun updatePhysiologyProfile(profile: PhysiologyProfile) =
