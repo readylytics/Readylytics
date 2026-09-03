@@ -1,8 +1,9 @@
 package app.readylytics.health.feature.settings.category
 
 import androidx.compose.material3.Surface
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
-import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.feature.settings.DashboardCardsSettingsState
 import app.readylytics.health.feature.settings.HeartRateZonesState
@@ -66,7 +67,8 @@ class PhysiologyProfileCategoryScreenTest {
             }
         }
 
-        composeTestRule.onRoot().assertExists()
+        composeTestRule.onNodeWithText("Physiology Profile").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Activity Profile", substring = true).assertIsDisplayed()
     }
 
     @Test
@@ -83,6 +85,7 @@ class PhysiologyProfileCategoryScreenTest {
             }
         }
 
-        composeTestRule.onRoot().assertExists()
+        composeTestRule.onNodeWithText("Physiology Profile").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Activity Profile", substring = true).assertIsDisplayed()
     }
 }
