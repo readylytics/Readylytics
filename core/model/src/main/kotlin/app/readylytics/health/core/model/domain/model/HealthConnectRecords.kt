@@ -127,3 +127,12 @@ data class DomainBodyTemperatureRecord(
     val celsius: Float,
     val deviceName: String,
 )
+
+data class DomainVo2MaxRecord(
+    val id: String,
+    val time: Instant,
+    val vo2MillilitersPerMinuteKilogram: Double,
+    val measurementMethod: Int?,
+    val deviceName: String,
+)
+

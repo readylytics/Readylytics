@@ -97,15 +97,14 @@ Paths below are rooted at the project root. Module prefixes are explicit, for ex
 - **Critical:** `READ_SLEEP`, `READ_HEART_RATE`, `READ_HEART_RATE_VARIABILITY`, `READ_EXERCISE`
 - **Required:** critical + `READ_HEALTH_DATA_HISTORY`
 - **Optional:** `READ_STEPS`, `READ_WEIGHT`, `READ_BODY_FAT`, `READ_BLOOD_PRESSURE`,
-  `READ_OXYGEN_SATURATION`, `READ_BODY_TEMPERATURE`
+  `READ_OXYGEN_SATURATION`, `READ_BODY_TEMPERATURE`, `READ_VO2_MAX`
 
 **Read methods:** `readSleepSessions`, `readHeartRateSamples` / `readHeartRateSamplesPaged`,
 `readHrvSamples` / `readHrvSamplesPaged`,
 `readExerciseSessions`, `readSteps` / `readDailyStepTotals`, `readWeightRecords`,
 `readBodyFatRecords`, `readBloodPressureRecords`, `readOxygenSaturationRecords`,
-`readBodyTemperatureRecords`, `hasBodyTemperaturePermission()` (dedicated single-permission
-check, since body temperature is gated as its own dashboard-card/card-management concern rather
-than folded into the generic optional-permission status), `discoverDevices`.
+`readBodyTemperatureRecords`, `readVo2MaxRecords`, `hasBodyTemperaturePermission()`,
+`hasVo2MaxPermission()`, `discoverDevices`.
 
 **Rate-Limit and Transient Fault Protection:**
 Each Health Connect read is retried through `HealthConnectRetryPolicy`, which retries transient

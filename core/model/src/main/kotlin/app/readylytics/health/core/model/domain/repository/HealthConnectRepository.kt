@@ -9,6 +9,7 @@ import app.readylytics.health.core.model.domain.model.DomainHrvRecord
 import app.readylytics.health.core.model.domain.model.DomainOxygenSaturationRecord
 import app.readylytics.health.core.model.domain.model.DomainSleepSessionRecord
 import app.readylytics.health.core.model.domain.model.DomainStepsRecord
+import app.readylytics.health.core.model.domain.model.DomainVo2MaxRecord
 import app.readylytics.health.core.model.domain.model.DomainWeightRecord
 import java.time.Instant
 
@@ -163,6 +164,11 @@ interface HealthConnectRepository : HealthConnectPermissionChecker {
         from: Instant,
         to: Instant,
     ): List<DomainBodyTemperatureRecord>
+
+    suspend fun readVo2MaxRecords(
+        startTime: Instant,
+        endTime: Instant,
+    ): List<DomainVo2MaxRecord>
 
     /** Reads a single exercise session by ID with its route data. */
     suspend fun readExerciseSession(id: String): DomainExerciseSessionRecord?

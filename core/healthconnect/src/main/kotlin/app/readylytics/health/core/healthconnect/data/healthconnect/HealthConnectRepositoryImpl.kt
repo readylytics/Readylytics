@@ -16,6 +16,7 @@ import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
@@ -30,6 +31,7 @@ import app.readylytics.health.core.model.domain.model.DomainHrvRecord
 import app.readylytics.health.core.model.domain.model.DomainOxygenSaturationRecord
 import app.readylytics.health.core.model.domain.model.DomainSleepSessionRecord
 import app.readylytics.health.core.model.domain.model.DomainStepsRecord
+import app.readylytics.health.core.model.domain.model.DomainVo2MaxRecord
 import app.readylytics.health.core.model.domain.model.DomainWeightRecord
 import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
@@ -84,6 +86,7 @@ class HealthConnectRepositoryImpl
                 // integrate the GPS polyline, which reads ~1-3% short of the source app.
                 HealthPermission.getReadPermission(DistanceRecord::class),
                 HealthPermission.getReadPermission(ElevationGainedRecord::class),
+                HealthPermission.getReadPermission(Vo2MaxRecord::class),
                 // READ_EXERCISE_ROUTES is deliberately absent. Health Connect does not expose routes
                 // in the bulk data-type permission sheet -- it lives under "Additional access"
                 // (alongside background and past-data access) as a tri-state Always allow / Ask every
@@ -179,6 +182,9 @@ class HealthConnectRepositoryImpl
 
         override suspend fun hasOxygenSaturationPermission(): Boolean =
             hasPermission<OxygenSaturationRecord>("oxygen saturation")
+
+        override suspend fun hasVo2MaxPermission(): Boolean =
+            hasPermission<Vo2MaxRecord>("VO2 max")
 
         override suspend fun hasExerciseRoutesPermission(): Boolean =
             withContext(ioDispatcher) {
@@ -444,6 +450,12 @@ class HealthConnectRepositoryImpl
         ): List<DomainBodyTemperatureRecord> =
             readOptionalRecords<BodyTemperatureRecord, _>("Body temperature", from, to) { it.toDomain() }
 
+        override suspend fun readVo2MaxRecords(
+            startTime: Instant,
+            endTime: Instant,
+        ): List<DomainVo2MaxRecord> =
+            readOptionalRecords<Vo2MaxRecord, _>("VO2 max", startTime, endTime) { it.toDomain() }
+
         private suspend inline fun <reified T : androidx.health.connect.client.records.Record, R> readOptionalRecords(
             label: String,
             from: Instant,
@@ -594,3 +606,13 @@ class HealthConnectRepositoryImpl
                 }
             }
     }
+
+internal fun Vo2MaxRecord.toDomain(): DomainVo2MaxRecord =
+    DomainVo2MaxRecord(
+        id = metadata.id,
+        time = time,
+        vo2MillilitersPerMinuteKilogram = vo2MillilitersPerMinuteKilogram,
+        measurementMethod = measurementMethod,
+        deviceName = metadata.device?.model ?: metadata.device?.manufacturer ?: "",
+    )
+
