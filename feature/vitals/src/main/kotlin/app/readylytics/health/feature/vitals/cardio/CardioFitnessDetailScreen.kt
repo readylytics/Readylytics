@@ -306,5 +306,6 @@ private fun sourceLabelRes(source: String?): Int? =
     when (source) {
         "WEARABLE" -> CoreUiR.string.vo2_max_source_label_wearable
         "ESTIMATED_UTH" -> CoreUiR.string.vo2_max_source_label_estimated
+        "ESTIMATED_MATERKO_ADAPTED" -> CoreUiR.string.vo2_max_source_label_materko_adapted
         else -> null
     }

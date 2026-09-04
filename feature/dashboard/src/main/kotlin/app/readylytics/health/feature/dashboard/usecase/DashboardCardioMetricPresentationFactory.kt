@@ -119,6 +119,8 @@ class DashboardCardioMetricPresentationFactory
             when (rawSource) {
                 "WEARABLE" -> resourceProvider.getString(CoreUiR.string.vo2_max_source_label_wearable)
                 "ESTIMATED_UTH" -> resourceProvider.getString(CoreUiR.string.vo2_max_source_label_estimated)
+                "ESTIMATED_MATERKO_ADAPTED" ->
+                    resourceProvider.getString(CoreUiR.string.vo2_max_source_label_materko_adapted)
                 else -> rawSource.orEmpty()
             }
 
