@@ -3,6 +3,7 @@ package app.readylytics.health.feature.settings.category
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -10,7 +11,12 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -28,6 +34,7 @@ import app.readylytics.health.feature.settings.nav.SettingsCategoryListItem
 import app.readylytics.health.feature.settings.nav.SettingsCategoryScaffold
 import app.readylytics.health.feature.settings.physiologyprofile.HeartRateZoneSection
 import app.readylytics.health.feature.settings.search.SettingsItemIds
+import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
 internal fun PhysiologyProfileCategoryScreen(
@@ -70,7 +77,9 @@ internal fun PhysiologyProfileCategoryScreen(
                         onMethodSelected = {
                             intents.onPhysiologyEvent(SettingsEvent.Vo2MaxEstimationMethodChanged(it))
                         },
-                        enabled = controlsEnabled,
+                        enabled =
+                            controlsEnabled &&
+                                states.physiologyState.vo2MaxSourceMode != Vo2MaxSourceMode.WEARABLE_ONLY,
                     )
                 },
             ),
@@ -160,6 +169,8 @@ private fun Vo2MaxEstimationMethodPicker(
     onMethodSelected: (Vo2MaxEstimationMethod) -> Unit,
     enabled: Boolean,
 ) {
+    var pendingMethod by rememberSaveable { mutableStateOf<Vo2MaxEstimationMethod?>(null) }
+
     Column {
         ListItem(
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
@@ -169,36 +180,15 @@ private fun Vo2MaxEstimationMethodPicker(
                 style = MaterialTheme.typography.bodyLarge,
             )
         }
-        SingleChoiceSegmentedButtonRow(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
-        ) {
-            Vo2MaxEstimationMethod.entries.forEachIndexed { index, method ->
-                SegmentedButton(
-                    selected = selectedMethod == method,
-                    onClick = { onMethodSelected(method) },
-                    enabled = enabled,
-                    shape =
-                        SegmentedButtonDefaults.itemShape(
-                            index = index,
-                            count = Vo2MaxEstimationMethod.entries.size,
-                        ),
-                    label = {
-                        Text(
-                            text =
-                                when (method) {
-                                    Vo2MaxEstimationMethod.HR_RATIO ->
-                                        stringResource(R.string.vo2_max_method_hr_ratio)
-                                    Vo2MaxEstimationMethod.MATERKO_ADAPTED ->
-                                        stringResource(R.string.vo2_max_method_materko_adapted)
-                                },
-                        )
-                    },
-                )
-            }
-        }
+        Vo2MaxEstimationMethodRow(
+            selectedMethod = selectedMethod,
+            onMethodClick = { method ->
+                if (method != selectedMethod) {
+                    pendingMethod = method
+                }
+            },
+            enabled = enabled,
+        )
         Text(
             text = stringResource(R.string.vo2_max_method_description),
             style = MaterialTheme.typography.bodySmall,
@@ -210,4 +200,83 @@ private fun Vo2MaxEstimationMethodPicker(
                 ),
         )
     }
+
+    pendingMethod?.let { targetMethod ->
+        Vo2MaxMethodConfirmationDialog(
+            targetMethod = targetMethod,
+            onConfirm = {
+                onMethodSelected(targetMethod)
+                pendingMethod = null
+            },
+            onDismiss = { pendingMethod = null },
+        )
+    }
+}
+
+@Composable
+private fun Vo2MaxEstimationMethodRow(
+    selectedMethod: Vo2MaxEstimationMethod,
+    onMethodClick: (Vo2MaxEstimationMethod) -> Unit,
+    enabled: Boolean,
+) {
+    SingleChoiceSegmentedButtonRow(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+    ) {
+        Vo2MaxEstimationMethod.entries.forEachIndexed { index, method ->
+            SegmentedButton(
+                selected = selectedMethod == method,
+                onClick = { onMethodClick(method) },
+                enabled = enabled,
+                shape =
+                    SegmentedButtonDefaults.itemShape(
+                        index = index,
+                        count = Vo2MaxEstimationMethod.entries.size,
+                    ),
+                label = {
+                    Text(
+                        text =
+                            when (method) {
+                                Vo2MaxEstimationMethod.HR_RATIO ->
+                                    stringResource(R.string.vo2_max_method_hr_ratio)
+                                Vo2MaxEstimationMethod.MATERKO_ADAPTED ->
+                                    stringResource(R.string.vo2_max_method_materko_adapted)
+                            },
+                    )
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun Vo2MaxMethodConfirmationDialog(
+    targetMethod: Vo2MaxEstimationMethod,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val bodyText =
+        when (targetMethod) {
+            Vo2MaxEstimationMethod.MATERKO_ADAPTED ->
+                stringResource(R.string.vo2_max_method_dialog_body_materko)
+            Vo2MaxEstimationMethod.HR_RATIO ->
+                stringResource(R.string.vo2_max_method_dialog_body_hr_ratio)
+        }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.vo2_max_method_dialog_title)) },
+        text = { Text(bodyText) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.vo2_max_method_dialog_confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(CoreUiR.string.action_cancel))
+            }
+        },
+    )
 }

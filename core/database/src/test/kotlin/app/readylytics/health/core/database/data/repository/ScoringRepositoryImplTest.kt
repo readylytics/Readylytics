@@ -19,6 +19,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.*
 import app.readylytics.health.core.databaseschema.data.local.entity.BodyTemperatureRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.Vo2MaxRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
@@ -672,4 +673,27 @@ class ScoringRepositoryImplTest {
 
             assertEquals(Vo2MaxSourceResolver.SOURCE_ESTIMATED_UTH, result.vo2MaxSource)
         }
+
+    @Test
+    fun `fetchWalkForwardVo2MaxContext loads range covering through endDate plus one midnight`() =
+        runTest {
+            val zoneId = ZoneId.of("UTC")
+            val startDate = LocalDate.of(2026, 9, 1)
+            val endDate = LocalDate.of(2026, 9, 5)
+            val midnightAfterEnd = endDate.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val expectedRecord =
+                Vo2MaxRecordEntity(
+                    id = "v1",
+                    timestampMs = midnightAfterEnd,
+                    vo2Max = 45f,
+                    measurementMethod = null,
+                    deviceName = "TestDevice",
+                )
+            coEvery { vo2MaxRecordDao.getByTimeRange(any(), any()) } returns listOf(expectedRecord)
+
+            val context = repo.fetchWalkForwardVo2MaxContext(startDate, endDate, zoneId)
+
+            assertEquals(45f, context.vo2MaxByTimestampMs[midnightAfterEnd])
+        }
 }
+

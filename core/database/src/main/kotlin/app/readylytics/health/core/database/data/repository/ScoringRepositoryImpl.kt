@@ -151,7 +151,7 @@ class ScoringRepositoryImpl
                     .atStartOfDay(zoneId)
                     .toInstant()
                     .toEpochMilli()
-            val toMs = endDate.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val toMs = endDate.plusDays(2).atStartOfDay(zoneId).toInstant().toEpochMilli()
             val vo2MaxByTimestampMs = TreeMap<Long, Float>()
             bodyMetricsDataLoader.loadVo2MaxRange(fromMs, toMs).forEach {
                 vo2MaxByTimestampMs[it.timestampMs] = it.vo2Max

@@ -5,6 +5,7 @@ import app.readylytics.health.core.model.data.preferences.BackupSchedule
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.data.preferences.SyncPreference
 import app.readylytics.health.core.model.domain.preferences.Vo2MaxEstimationMethod
+import app.readylytics.health.core.model.domain.preferences.Vo2MaxSourceMode
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.data.preferences.AppThemeProto
 import app.readylytics.health.data.preferences.BackupScheduleProto
@@ -12,6 +13,7 @@ import app.readylytics.health.data.preferences.PhysiologyProfileProto
 import app.readylytics.health.data.preferences.SleepScoreWeightProfileProto
 import app.readylytics.health.data.preferences.SyncPreferenceProto
 import app.readylytics.health.data.preferences.Vo2MaxEstimationMethodProto
+import app.readylytics.health.data.preferences.Vo2MaxSourceModeProto
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -98,6 +100,20 @@ class RestorePreferenceEnumRoundTripTest {
                 )
             assertNotNull(resolved, "backup writes '${domain.name}'; restore must resolve it")
             assertEquals("VO2_MAX_METHOD_${domain.name}", resolved.name)
+        }
+    }
+
+    @Test
+    fun everyVo2MaxSourceModeValueSurvivesTheRoundTrip() {
+        Vo2MaxSourceMode.entries.forEach { domain ->
+            val resolved =
+                resolveProtoEnum(
+                    domain.name,
+                    "VO2_MAX_SOURCE_",
+                    Vo2MaxSourceModeProto::valueOf,
+                )
+            assertNotNull(resolved, "backup writes '${domain.name}'; restore must resolve it")
+            assertEquals("VO2_MAX_SOURCE_${domain.name}", resolved.name)
         }
     }
 

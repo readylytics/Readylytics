@@ -296,6 +296,10 @@
 <string name="vo2_max_method_hr_ratio">Heart rate ratio</string>
 <string name="vo2_max_method_materko_adapted">Resting HR + HRV</string>
 <string name="vo2_max_method_description">Experimental Materko-adapted estimate using your resting heart rate and HRV baselines.</string>
+<string name="vo2_max_method_dialog_title">Change VO2 Max Method</string>
+<string name="vo2_max_method_dialog_body_materko">The experimental resting HR + HRV method uses your resting heart rate and nighttime HRV baselines. Changing estimation methods triggers a historical recomputation of your cardio fitness records.</string>
+<string name="vo2_max_method_dialog_body_hr_ratio">The heart rate ratio method uses your resting heart rate and maximum heart rate baselines. Changing estimation methods triggers a historical recomputation of your cardio fitness records.</string>
+<string name="vo2_max_method_dialog_confirm">Change &amp; Recompute</string>
 <string name="vo2_max_source_auto">Auto</string>
 <string name="vo2_max_source_description">Choose whether Cardio Fitness relies on smartwatch VO2 Max records or our on-device estimate.</string>
 <string name="vo2_max_source_estimated">Estimate only</string>

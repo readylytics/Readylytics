@@ -82,6 +82,8 @@ class MaterkoAdaptedVo2MaxCalculator @Inject constructor() {
         private const val PNN50_THRESHOLD_MS = 50.0
         private const val MIN_PLAUSIBLE_RHR = 30.0
         private const val MIN_RMSSD_MS = 1.0
+        // REF: Materko 2018; 200 ms bounds the study population's resting RMSSD distribution.
+        // Extreme values above 200 ms cause unvalidated extrapolation in the linear regression.
         private const val MAX_RMSSD_MS = 200.0
         // Application-level supported/plausibility bounds (not physiological limits).
         private const val MIN_SUPPORTED_VO2_MAX = 15.0
