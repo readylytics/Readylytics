@@ -18,10 +18,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import app.readylytics.health.core.designsystem.FreshCyanDark
-import app.readylytics.health.core.designsystem.FreshCyanLight
 import app.readylytics.health.core.designsystem.LocalExtendedColors
 import app.readylytics.health.core.designsystem.LocalStatusColors
+import app.readylytics.health.core.designsystem.calculateFreshColor
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.feature.workouts.R
 
@@ -98,10 +97,11 @@ internal fun rememberTsbZoneVisuals(): List<TsbZoneVisual> {
     val extendedColors = LocalExtendedColors.current
     val colorScheme = MaterialTheme.colorScheme
     val freshColor =
-        if (colorScheme.surface.luminance() < 0.5f) {
-            FreshCyanDark
-        } else {
-            FreshCyanLight
+        remember(colorScheme) {
+            calculateFreshColor(
+                primary = colorScheme.primary,
+                isDark = colorScheme.surface.luminance() < 0.5f,
+            )
         }
 
     return remember(statusColors, extendedColors, freshColor) {

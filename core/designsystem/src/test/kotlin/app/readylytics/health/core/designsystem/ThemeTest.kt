@@ -111,4 +111,25 @@ class ThemeTest {
         assertNotEquals(0, scheme.secondary)
         assertNotEquals(0, scheme.tertiary)
     }
+
+    @Test
+    fun testCalculateFreshColor() {
+        val primary = Color(0xFFAA78FF)
+        val darkFresh = calculateFreshColor(primary, isDark = true)
+        val lightFresh = calculateFreshColor(primary, isDark = false)
+
+        val darkHsl = FloatArray(3)
+        darkFresh.toHsl(darkHsl)
+
+        val lightHsl = FloatArray(3)
+        lightFresh.toHsl(lightHsl)
+
+        // Lightness should adapt for dark theme vs light theme
+        assert(darkHsl[2] > lightHsl[2]) {
+            "Dark fresh lightness (${darkHsl[2]}) should be brighter than light fresh (${lightHsl[2]})"
+        }
+
+        // Saturation should be preserved and vivid
+        assert(darkHsl[1] >= 0.40f) { "Saturation should be at least 0.40" }
+    }
 }
