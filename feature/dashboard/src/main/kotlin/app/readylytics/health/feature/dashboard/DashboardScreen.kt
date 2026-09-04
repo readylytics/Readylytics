@@ -20,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -57,6 +58,7 @@ data class DashboardNavigationCallbacks(
     val onNavigateToBodyFat: () -> Unit = {},
     val onNavigateToBloodPressure: () -> Unit = {},
     val onNavigateToVitals: () -> Unit = {},
+    val onNavigateToCardioFitness: () -> Unit = {},
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -120,6 +122,7 @@ internal fun MetricGridSection(
                     onNavigateToBodyFat = navigationCallbacks.onNavigateToBodyFat,
                     onNavigateToBloodPressure = navigationCallbacks.onNavigateToBloodPressure,
                     onNavigateToVitals = navigationCallbacks.onNavigateToVitals,
+                    onNavigateToCardioFitness = navigationCallbacks.onNavigateToCardioFitness,
                     isEditing = isEditing,
                     isLoading = isLoading,
                     onDismissInsight = onDismissInsight,
@@ -145,38 +148,15 @@ internal fun MetricGridSection(
 }
 
 @Composable
-fun DashboardRoute(
-    onNavigateToSleep: () -> Unit,
-    onNavigateToWorkouts: () -> Unit,
-    onNavigateToRhr: () -> Unit,
-    onNavigateToSteps: () -> Unit,
-    onNavigateToHeartRate: () -> Unit = {},
-    onNavigateToHrv: () -> Unit = {},
-    onNavigateToWeight: () -> Unit = {},
-    onNavigateToBodyFat: () -> Unit = {},
-    onNavigateToBloodPressure: () -> Unit = {},
-    onNavigateToVitals: () -> Unit = {},
-    onOpenInsight: (InsightParams) -> Unit = {},
-    insightDetail: @Composable (() -> Unit)? = null,
-    insightsCard: @Composable (
-        DashboardUiState,
-        Boolean,
-        (InsightType) -> Unit,
-        () -> Unit,
-        (InsightParams) -> Unit,
-    ) -> Unit = { _, _, _, _, _ -> },
-    viewModel: DashboardViewModel = hiltViewModel(),
+private fun DashboardSnackbarEffects(
+    viewModel: DashboardViewModel,
+    snackbarHostState: SnackbarHostState,
+    clipboardManager: Clipboard,
+    copiedMessage: String,
+    clipLabel: String,
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
     val resolvedError = errorMessage.resolveOrNull()
-    val earliestDate by viewModel.earliestDate.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-    val clipboardManager = LocalClipboard.current
-    val copiedMessage = stringResource(R.string.ai_recommendation_copied_snackbar)
-    val setupPrompt = stringResource(R.string.ai_init_prompt)
-    val clipLabel = stringResource(R.string.ai_recommendation_clip_label)
     val dailyPromptText by viewModel.dailyPromptText.collectAsStateWithLifecycle()
 
     LaunchedEffect(errorMessage) {
@@ -192,6 +172,48 @@ fun DashboardRoute(
             viewModel.clearDailyPromptText()
         }
     }
+}
+
+@Composable
+fun DashboardRoute(
+    onNavigateToSleep: () -> Unit,
+    onNavigateToWorkouts: () -> Unit,
+    onNavigateToRhr: () -> Unit,
+    onNavigateToSteps: () -> Unit,
+    onNavigateToHeartRate: () -> Unit = {},
+    onNavigateToHrv: () -> Unit = {},
+    onNavigateToWeight: () -> Unit = {},
+    onNavigateToBodyFat: () -> Unit = {},
+    onNavigateToBloodPressure: () -> Unit = {},
+    onNavigateToVitals: () -> Unit = {},
+    onNavigateToCardioFitness: () -> Unit = {},
+    onOpenInsight: (InsightParams) -> Unit = {},
+    insightDetail: @Composable (() -> Unit)? = null,
+    insightsCard: @Composable (
+        DashboardUiState,
+        Boolean,
+        (InsightType) -> Unit,
+        () -> Unit,
+        (InsightParams) -> Unit,
+    ) -> Unit = { _, _, _, _, _ -> },
+    viewModel: DashboardViewModel = hiltViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val earliestDate by viewModel.earliestDate.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val clipboardManager = LocalClipboard.current
+    val copiedMessage = stringResource(R.string.ai_recommendation_copied_snackbar)
+    val setupPrompt = stringResource(R.string.ai_init_prompt)
+    val clipLabel = stringResource(R.string.ai_recommendation_clip_label)
+
+    DashboardSnackbarEffects(
+        viewModel = viewModel,
+        snackbarHostState = snackbarHostState,
+        clipboardManager = clipboardManager,
+        copiedMessage = copiedMessage,
+        clipLabel = clipLabel,
+    )
 
     DashboardScreen(
         uiState = uiState,
@@ -212,6 +234,7 @@ fun DashboardRoute(
                 onNavigateToBodyFat = onNavigateToBodyFat,
                 onNavigateToBloodPressure = onNavigateToBloodPressure,
                 onNavigateToVitals = onNavigateToVitals,
+                onNavigateToCardioFitness = onNavigateToCardioFitness,
             ),
         onToggleCardManagement = viewModel::toggleCardManagement,
         onCancelCardManagement = viewModel::onCancelCardManagement,
