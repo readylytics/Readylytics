@@ -71,8 +71,11 @@ class ScoringRepositoryImpl
                 readinessSummaryCoordinator,
                 residualFatigueComputer,
                 useCases.computeTrainingReadiness,
-                useCases.uthVo2MaxCalculator,
-                useCases.vo2MaxSourceResolver,
+                Vo2MaxScoringDependencies(
+                    useCases.uthVo2MaxCalculator,
+                    useCases.materkoAdaptedVo2MaxCalculator,
+                    useCases.vo2MaxSourceResolver,
+                ),
             )
 
         override suspend fun computeAndPersistDailySummary(

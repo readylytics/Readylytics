@@ -1248,8 +1248,8 @@ The calculation is always on; users can optionally visualize Residual Fatigue ac
 
 VO2 Max processing occurs across several layers:
 - **Ingestion:** Wearable VO2 Max records are ingested from Health Connect (`READ_VO2_MAX`) via `HealthConnectRepositoryImpl.readVo2MaxRecords` and persisted as `vo2_max_records` in Room.
-- **Resolver:** `Vo2MaxSourceResolver` determines the active VO2 Max value based on the user's `vo2MaxSource` preference (Auto, Wearable only, Estimate only).
-- **Estimation:** When using the Uth et al. (2004) resting HR ratio formula, VO2 Max is calculated as `15.3 * (hrMax / rhrBaselineBpm)`. The value is clamped to `[15.0, 95.0]`. If the baseline is still calibrating, it returns null.
+- **Resolver:** `FinalSummaryAssembler` selects the estimated-value calculator from the user's `vo2MaxEstimationMethod` preference, then `Vo2MaxSourceResolver` chooses between that tagged estimate and the latest wearable value according to `vo2MaxSourceMode` (Auto, Wearable only, Estimate only). Both estimates are unavailable until scoring calibration completes; the Materko-adapted path consumes the same day's resolved frozen-or-computed `hrvMuMssd` baseline used by the daily summary.
+- **Estimation:** `UthVo2MaxCalculator` implements the Uth et al. (2004) resting-HR-ratio method. `MaterkoAdaptedVo2MaxCalculator` implements the experimental resting-RHR + RMSSD-baseline adaptation and documents its departures from the published Materko model and its supported-input guards. Persisted sources distinguish `ESTIMATED_UTH` from `ESTIMATED_MATERKO_ADAPTED`.
 - **Classification:** `CooperNormsClassifier` benchmarks the resulting VO2 Max into 5 categories (Superior, Excellent, Good, Fair, Poor) based on the user's age and sex (using Cooper Institute normative data).
 
 ### 2.10 Training Stress Balance (TSB)

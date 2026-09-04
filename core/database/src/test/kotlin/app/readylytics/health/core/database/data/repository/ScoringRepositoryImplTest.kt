@@ -22,6 +22,8 @@ import app.readylytics.health.core.databaseschema.data.local.entity.SleepSession
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.preferences.Vo2MaxEstimationMethod
+import app.readylytics.health.core.model.domain.preferences.Vo2MaxSourceMode
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.repository.FatigueWorkoutInput
@@ -43,6 +45,7 @@ import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlin.math.ln
 import kotlin.math.pow
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -606,5 +609,67 @@ class ScoringRepositoryImplTest {
 
             val expected = (100f * 2.0.pow(-3.0 / 24.0)).toFloat()
             assertEquals(expected, requireNotNull(result), 0.01f)
+        }
+
+    @Test
+    fun `materkoAdapted method computes estimate from hrv baseline and persists tag`() =
+        runTest {
+            val zoneId = ZoneId.of("UTC")
+            val today = LocalDate.of(2026, 9, 1)
+            val todayMs = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val existingSummary =
+                DailySummaryEntity(
+                    dateMidnightMs = todayMs,
+                    baselineCalculatedAtDate = today.minusDays(1),
+                    hrvMuMssd = ln(50.0).toFloat(),
+                    rhrBpm = 60f,
+                )
+            val summary = DailySummaryMapper.toDomain(existingSummary, zoneId)
+            every { settingsRepo.userPreferences } returns
+                flowOf(
+                    UserPreferences(
+                        scoringZoneId = zoneId.id,
+                        vo2MaxEstimationMethod = Vo2MaxEstimationMethod.MATERKO_ADAPTED,
+                        vo2MaxSourceMode = Vo2MaxSourceMode.ESTIMATED_ONLY,
+                    ),
+                )
+            coEvery { scoringHistoryRepository.getDailySummaryByDate(todayMs, zoneId) } returns summary
+            coEvery { computeSleepMetricsUseCase(any()) } returns Result.success(summary)
+
+            val result = repo.computeDailySummary(today)
+
+            assertEquals(Vo2MaxSourceResolver.SOURCE_ESTIMATED_MATERKO_ADAPTED, result.vo2MaxSource)
+            assertEquals(38.54f, result.vo2Max!!, 0.01f)
+        }
+
+    @Test
+    fun `hrRatio method still emits uth tag`() =
+        runTest {
+            val zoneId = ZoneId.of("UTC")
+            val today = LocalDate.of(2026, 9, 1)
+            val todayMs = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val existingSummary =
+                DailySummaryEntity(
+                    dateMidnightMs = todayMs,
+                    baselineCalculatedAtDate = today.minusDays(1),
+                    hrvMuMssd = ln(50.0).toFloat(),
+                    rhrBpm = 60f,
+                    hrMax = 190f,
+                )
+            val summary = DailySummaryMapper.toDomain(existingSummary, zoneId)
+            every { settingsRepo.userPreferences } returns
+                flowOf(
+                    UserPreferences(
+                        scoringZoneId = zoneId.id,
+                        vo2MaxEstimationMethod = Vo2MaxEstimationMethod.HR_RATIO,
+                        vo2MaxSourceMode = Vo2MaxSourceMode.ESTIMATED_ONLY,
+                    ),
+                )
+            coEvery { scoringHistoryRepository.getDailySummaryByDate(todayMs, zoneId) } returns summary
+            coEvery { computeSleepMetricsUseCase(any()) } returns Result.success(summary)
+
+            val result = repo.computeDailySummary(today)
+
+            assertEquals(Vo2MaxSourceResolver.SOURCE_ESTIMATED_UTH, result.vo2MaxSource)
         }
 }

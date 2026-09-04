@@ -1,5 +1,6 @@
 package app.readylytics.health.core.database.data.repository
 
+import app.readylytics.health.core.scoring.domain.cardio.MaterkoAdaptedVo2MaxCalculator
 import app.readylytics.health.core.scoring.domain.cardio.UthVo2MaxCalculator
 import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxSourceResolver
 import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
@@ -29,4 +30,5 @@ data class ScoringDayUseCases
         val computeTrainingReadiness: ComputeTrainingReadinessUseCase,
         val uthVo2MaxCalculator: UthVo2MaxCalculator,
         val vo2MaxSourceResolver: Vo2MaxSourceResolver,
+        val materkoAdaptedVo2MaxCalculator: MaterkoAdaptedVo2MaxCalculator = MaterkoAdaptedVo2MaxCalculator(),
     )
