@@ -54,7 +54,7 @@ Paths below are rooted at the project root. Module prefixes are explicit, for ex
                │   columns in place, near-no-op on identical re-ingest; others: @Upsert on stable id
                ▼
 ┌──────────────────────────────┐
-│  HealthDatabase (SQLite v15) │   17 entities — single source of truth
+│  HealthDatabase (SQLite v18) │   18 entities — single source of truth
 └──────────────┬───────────────┘
                │ raw DAO reads (local; no further HC calls)
                ▼
@@ -1243,6 +1243,27 @@ The calculation is always on; users can optionally visualize Residual Fatigue ac
        and interactive touch drag-scrubber with tooltip readout (HH:mm for 1D, EEE, MMM d, HH:mm
        for 3D/7D, both read off the sample's own instant).
      ```
+
+### 2.9 Cardio Fitness (VO2 Max)
+
+VO2 Max processing occurs across several layers:
+- **Ingestion:** Wearable VO2 Max records are ingested from Health Connect (`READ_VO2_MAX`) via `HealthConnectRepositoryImpl.readVo2MaxRecords` and persisted as `vo2_max_records` in Room.
+- **Resolver:** `Vo2MaxSourceResolver` determines the active VO2 Max value based on the user's `vo2MaxSource` preference (Auto, Wearable only, Estimate only).
+- **Estimation:** When using the Uth et al. (2004) resting HR ratio formula, VO2 Max is calculated as `15.3 * (hrMax / rhrBaselineBpm)`. The value is clamped to `[15.0, 95.0]`. If the baseline is still calibrating, it returns null.
+- **Classification:** `CooperNormsClassifier` benchmarks the resulting VO2 Max into 5 categories (Superior, Excellent, Good, Fair, Poor) based on the user's age and sex (using Cooper Institute normative data).
+
+### 2.10 Training Stress Balance (TSB)
+
+Training Stress Balance (TSB) represents readiness based on training load, calculated as `TSB = CTL - ATL`.
+- **ATL (Acute Training Load):** 7-day exponentially weighted moving average of TRIMP.
+- **CTL (Chronic Training Load):** 42-day exponentially weighted moving average of TRIMP.
+- **TSB Zones:**
+  - **> +25:** Very Fresh
+  - **+5 to +25:** Fresh / Peaked
+  - **-10 to +5:** Optimal / Productive
+  - **-30 to -10:** Fatigued / Overload
+  - **< -30:** High Risk / Overreached
+- **UI Presentation:** TSB is shown in the Workouts tab (toggleable) and optionally as a Dashboard card.
 
 ---
 
