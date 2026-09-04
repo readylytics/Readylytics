@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
+import app.readylytics.health.core.model.domain.preferences.Vo2MaxEstimationMethod
 import app.readylytics.health.core.model.domain.preferences.Vo2MaxSourceMode
 import app.readylytics.health.core.ui.components.settings.PhysiologyProfilePicker
 import app.readylytics.health.feature.settings.R
@@ -59,6 +60,15 @@ internal fun PhysiologyProfileCategoryScreen(
                     Vo2MaxSourcePicker(
                         selectedMode = states.physiologyState.vo2MaxSourceMode,
                         onModeSelected = { intents.onPhysiologyEvent(SettingsEvent.Vo2MaxSourceModeChanged(it)) },
+                        enabled = controlsEnabled,
+                    )
+                },
+                SettingsCategoryListItem(SettingsItemIds.PHYSIOLOGY_VO2_MAX_METHOD) {
+                    Vo2MaxEstimationMethodPicker(
+                        selectedMethod = states.physiologyState.vo2MaxEstimationMethod,
+                        onMethodSelected = {
+                            intents.onPhysiologyEvent(SettingsEvent.Vo2MaxEstimationMethodChanged(it))
+                        },
                         enabled = controlsEnabled,
                     )
                 },
@@ -131,6 +141,62 @@ private fun Vo2MaxSourcePicker(
     }
     Text(
         text = stringResource(R.string.vo2_max_source_description),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier =
+            Modifier.padding(
+                horizontal = MaterialTheme.spacing.pageHorizontal,
+                vertical = MaterialTheme.spacing.small,
+            ),
+    )
+}
+
+@Composable
+private fun Vo2MaxEstimationMethodPicker(
+    selectedMethod: Vo2MaxEstimationMethod,
+    onMethodSelected: (Vo2MaxEstimationMethod) -> Unit,
+    enabled: Boolean,
+) {
+    ListItem(
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+    ) {
+        Text(
+            text = stringResource(R.string.vo2_max_method_title),
+            style = MaterialTheme.typography.bodyLarge,
+        )
+    }
+    SingleChoiceSegmentedButtonRow(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+    ) {
+        Vo2MaxEstimationMethod.entries.forEachIndexed { index, method ->
+            SegmentedButton(
+                selected = selectedMethod == method,
+                onClick = { onMethodSelected(method) },
+                enabled = enabled,
+                shape =
+                    SegmentedButtonDefaults.itemShape(
+                        index = index,
+                        count = Vo2MaxEstimationMethod.entries.size,
+                    ),
+                label = {
+                    Text(
+                        text =
+                            when (method) {
+                                Vo2MaxEstimationMethod.HR_RATIO ->
+                                    stringResource(R.string.vo2_max_method_hr_ratio)
+                                Vo2MaxEstimationMethod.MATERKO_ADAPTED ->
+                                    stringResource(R.string.vo2_max_method_materko_adapted)
+                            },
+                    )
+                },
+            )
+        }
+    }
+    Text(
+        text = stringResource(R.string.vo2_max_method_description),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier =
