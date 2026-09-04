@@ -92,6 +92,7 @@
         Warning\n• &gt;2.0: Poor</string>
     <string name="tooltip_cardio_fitness">Estimated maximal oxygen uptake (VO2 Max), a key indicator of cardiorespiratory fitness.</string>
     <string name="tooltip_cardio_fitness_current">Current: %1$s</string>
+    <string name="tooltip_vo2_max_estimation_method">Estimated VO2 Max can use the heart-rate-ratio method or the experimental Materko-adapted method (resting HR + HRV baselines). The adapted method is not the published Materko model; it omits the CDR term and approximates pNN50 from RMSSD.</string>
     <string name="tooltip_cooper_norms_header_profile">Cooper Institute Norms (%1$s, %2$s):</string>
     <string name="tooltip_cooper_norms_header">Cooper Institute Norms:</string>
     <string name="cooper_category_superior">Superior</string>
