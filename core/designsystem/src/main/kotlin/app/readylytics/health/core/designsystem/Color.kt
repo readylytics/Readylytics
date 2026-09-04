@@ -42,6 +42,9 @@ val WarningOrangeContainerLight = Color(0xFFFB8C00)
 val OnWarningOrangeLight = Color(0xFFFFFFFF)
 val OnWarningOrangeContainerLight = Color(0xFF4D2C00)
 
+val FreshCyanDark = Color(0xFF26C6DA) // M3 Cyan 400 - bright cyan for dark mode
+val FreshCyanLight = Color(0xFF00838F) // M3 Cyan 800 - clear teal for light mode
+
 // Fallback theme accent seed colors (used when Dynamic Color is disabled)
 val BrandPurpleSeed = Color(0xFFAA78FF)
 val BrandBlueSeed = Color(0xFF5AA0FF)

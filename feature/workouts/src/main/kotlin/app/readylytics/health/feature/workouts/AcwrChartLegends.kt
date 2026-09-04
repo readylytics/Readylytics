@@ -15,8 +15,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.FreshCyanDark
+import app.readylytics.health.core.designsystem.FreshCyanLight
+import app.readylytics.health.core.designsystem.LocalExtendedColors
 import app.readylytics.health.core.designsystem.LocalStatusColors
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.feature.workouts.R
@@ -91,8 +95,16 @@ internal data class TsbZoneVisual(
 @Composable
 internal fun rememberTsbZoneVisuals(): List<TsbZoneVisual> {
     val statusColors = LocalStatusColors.current
-    val tertiary = MaterialTheme.colorScheme.tertiary
-    return remember(statusColors, tertiary) {
+    val extendedColors = LocalExtendedColors.current
+    val colorScheme = MaterialTheme.colorScheme
+    val freshColor =
+        if (colorScheme.surface.luminance() < 0.5f) {
+            FreshCyanDark
+        } else {
+            FreshCyanLight
+        }
+
+    return remember(statusColors, extendedColors, freshColor) {
         listOf(
             TsbZoneVisual(
                 labelRes = R.string.tsb_zone_very_fresh,
@@ -101,8 +113,8 @@ internal fun rememberTsbZoneVisuals(): List<TsbZoneVisual> {
             ),
             TsbZoneVisual(
                 labelRes = R.string.tsb_zone_fresh,
-                legendColor = tertiary,
-                bandColor = tertiary.copy(alpha = 0.22f),
+                legendColor = freshColor,
+                bandColor = freshColor.copy(alpha = 0.20f),
             ),
             TsbZoneVisual(
                 labelRes = R.string.tsb_zone_optimal,
@@ -111,8 +123,8 @@ internal fun rememberTsbZoneVisuals(): List<TsbZoneVisual> {
             ),
             TsbZoneVisual(
                 labelRes = R.string.tsb_zone_fatigued,
-                legendColor = statusColors.warning,
-                bandColor = statusColors.warning.copy(alpha = 0.20f),
+                legendColor = extendedColors.warning,
+                bandColor = extendedColors.warning.copy(alpha = 0.20f),
             ),
             TsbZoneVisual(
                 labelRes = R.string.tsb_zone_overreached,
