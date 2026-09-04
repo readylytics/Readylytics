@@ -295,16 +295,16 @@ private fun StatusChip(
 /** Shared with [CooperLadderCard] in CardioFitnessSupplementaryCards.kt. */
 internal fun categoryLabelRes(category: CooperCategory): Int =
     when (category) {
-        CooperCategory.SUPERIOR -> R.string.cooper_category_superior
-        CooperCategory.EXCELLENT -> R.string.cooper_category_excellent
-        CooperCategory.GOOD -> R.string.cooper_category_good
-        CooperCategory.FAIR -> R.string.cooper_category_fair
-        CooperCategory.POOR -> R.string.cooper_category_poor
+        CooperCategory.SUPERIOR -> CoreUiR.string.cooper_category_superior
+        CooperCategory.EXCELLENT -> CoreUiR.string.cooper_category_excellent
+        CooperCategory.GOOD -> CoreUiR.string.cooper_category_good
+        CooperCategory.FAIR -> CoreUiR.string.cooper_category_fair
+        CooperCategory.POOR -> CoreUiR.string.cooper_category_poor
     }
 
 private fun sourceLabelRes(source: String?): Int? =
     when (source) {
-        "WEARABLE" -> R.string.vitals_vo2_max_source_wearable
-        "ESTIMATED_UTH" -> R.string.vitals_vo2_max_source_estimated
+        "WEARABLE" -> CoreUiR.string.vo2_max_source_label_wearable
+        "ESTIMATED_UTH" -> CoreUiR.string.vo2_max_source_label_estimated
         else -> null
     }
