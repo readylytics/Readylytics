@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -81,35 +82,71 @@ fun AcwrChartLegends(
     }
 }
 
+internal data class TsbZoneVisual(
+    val labelRes: Int,
+    val legendColor: Color,
+    val bandColor: Color,
+)
+
+@Composable
+internal fun rememberTsbZoneVisuals(): List<TsbZoneVisual> {
+    val statusColors = LocalStatusColors.current
+    val tertiary = MaterialTheme.colorScheme.tertiary
+    return remember(statusColors, tertiary) {
+        listOf(
+            TsbZoneVisual(
+                labelRes = R.string.tsb_zone_very_fresh,
+                legendColor = statusColors.neutral,
+                bandColor = statusColors.neutral.copy(alpha = 0.16f),
+            ),
+            TsbZoneVisual(
+                labelRes = R.string.tsb_zone_fresh,
+                legendColor = tertiary,
+                bandColor = tertiary.copy(alpha = 0.22f),
+            ),
+            TsbZoneVisual(
+                labelRes = R.string.tsb_zone_optimal,
+                legendColor = statusColors.optimal,
+                bandColor = statusColors.optimal.copy(alpha = 0.20f),
+            ),
+            TsbZoneVisual(
+                labelRes = R.string.tsb_zone_fatigued,
+                legendColor = statusColors.warning,
+                bandColor = statusColors.warning.copy(alpha = 0.20f),
+            ),
+            TsbZoneVisual(
+                labelRes = R.string.tsb_zone_overreached,
+                legendColor = statusColors.poor,
+                bandColor = statusColors.poor.copy(alpha = 0.20f),
+            ),
+        )
+    }
+}
+
 /**
  * Zone-label legend shown below the TSB chart, mirroring [AcwrChartLegends]'s layout but as a
  * vertical list since five zone labels don't comfortably fit a single horizontal row.
  *
- * Colours mirror [TsbChart]'s threshold lines: the zone a boundary line "enters" as TSB falls.
+ * Colours mirror [TsbChart]'s background zone band colors exactly.
  */
 @Composable
 fun TsbChartLegend(modifier: Modifier = Modifier) {
-    val statusColors = LocalStatusColors.current
-    val zones =
-        listOf(
-            statusColors.neutral to R.string.tsb_zone_very_fresh,
-            statusColors.optimal to R.string.tsb_zone_fresh,
-            MaterialTheme.colorScheme.tertiary to R.string.tsb_zone_optimal,
-            statusColors.warning to R.string.tsb_zone_fatigued,
-            statusColors.poor to R.string.tsb_zone_overreached,
-        )
-    Column(modifier = modifier) {
-        zones.forEach { (color, labelRes) ->
+    val zoneVisuals = rememberTsbZoneVisuals()
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall),
+    ) {
+        zoneVisuals.forEach { visual ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier =
                         Modifier
                             .size(width = 12.dp, height = 8.dp)
-                            .background(color = color, shape = MaterialTheme.shapes.extraSmall),
+                            .background(color = visual.legendColor, shape = MaterialTheme.shapes.extraSmall),
                 )
                 Spacer(Modifier.width(MaterialTheme.spacing.extraSmallMedium))
                 Text(
-                    text = stringResource(labelRes),
+                    text = stringResource(visual.labelRes),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

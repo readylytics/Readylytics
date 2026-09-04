@@ -8,11 +8,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import app.readylytics.health.core.designsystem.LocalExtendedColors
 import app.readylytics.health.core.model.domain.model.HealthZone
 import app.readylytics.health.core.model.domain.model.ZoneBand
 import app.readylytics.health.core.ui.common.ChartUtils
@@ -21,7 +19,6 @@ import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.core.ui.common.periodLabelFor
 import app.readylytics.health.core.ui.common.rememberPeriodOrdinalLabel
 import app.readylytics.health.core.ui.components.ChartDefaults
-import app.readylytics.health.core.ui.components.ChartZoneAlphas
 import app.readylytics.health.core.ui.components.ZoneBandDecoration
 import app.readylytics.health.feature.workouts.R
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
@@ -59,8 +56,7 @@ private fun rememberTsbDecorations(
     chartMinY: Double,
     chartMaxY: Double,
 ): List<Decoration> {
-    val extendedColors = LocalExtendedColors.current
-    val colorScheme = MaterialTheme.colorScheme
+    val zoneVisuals = rememberTsbZoneVisuals()
     val tsbZoneBands =
         remember {
             listOf(
@@ -91,16 +87,7 @@ private fun rememberTsbDecorations(
                 ),
             )
         }
-    val bandColors =
-        remember(extendedColors, colorScheme) {
-            listOf(
-                extendedColors.neutralContainer.copy(alpha = ChartZoneAlphas.RESTING),
-                colorScheme.tertiaryContainer.copy(alpha = ChartZoneAlphas.MODERATE),
-                colorScheme.primaryContainer.copy(alpha = ChartZoneAlphas.HIGH),
-                extendedColors.warningContainer.copy(alpha = ChartZoneAlphas.HIGH),
-                colorScheme.errorContainer.copy(alpha = ChartZoneAlphas.HIGH),
-            )
-        }
+    val bandColors = remember(zoneVisuals) { zoneVisuals.map { it.bandColor } }
 
     val decoration =
         remember(tsbZoneBands, bandColors, chartMinY, chartMaxY) {
@@ -183,15 +170,6 @@ private fun rememberTsbLine(): LineCartesianLayer.Line {
     val lineColor = MaterialTheme.colorScheme.primary
     return LineCartesianLayer.rememberLine(
         fill = LineCartesianLayer.LineFill.single(Fill(lineColor)),
-        areaFill =
-            LineCartesianLayer.AreaFill.single(
-                Fill(
-                    brush =
-                        Brush.verticalGradient(
-                            colors = listOf(lineColor.copy(alpha = 0.3f), lineColor.copy(alpha = 0.0f)),
-                        ),
-                ),
-            ),
         interpolator = LineCartesianLayer.Interpolator.cubic(0.2f),
     )
 }
