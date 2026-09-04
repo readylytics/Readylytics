@@ -359,7 +359,7 @@ Cardio Fitness (VO2 Max) is an indicator of your cardiovascular endurance. The a
 
 If an estimate is allowed, Readylytics can compute it two ways, selectable in Settings:
 - **Heart-rate-ratio method** — the Uth et al. (2004) resting heart rate ratio formula (`15.3 * (HRmax / HRrest)`).
-- **Materko-adapted method (experimental)** — combines your resting heart rate and HRV baselines. It is an adaptation of a published regression (Materko 2018) from which the CDR term is omitted and pNN50 is approximated from RMSSD; it is predominantly driven by resting heart rate. This adaptation is **not** equivalent to the published model, and it is not validated across the broad population — the original model was developed in young, healthy, physically active men.
+- **Materko-adapted method (experimental)** — combines your resting heart rate and HRV baselines. It is an adaptation of a published regression (Materko 2018) from which the CDR term is omitted and pNN50 is approximated from RMSSD; it is predominantly driven by resting heart rate. This adaptation is **not** equivalent to the published model, and it is not validated across the broad population — the original model was developed in young, healthy, physically active men. Its MeanRR input is derived from your resting-HR baseline rather than a measured beat-to-beat recording, which can introduce a systematic offset; estimates falling outside the supported range are withheld rather than clamped.
 
 Both estimation methods use stable daily baselines and are unavailable until scoring calibration completes.
 

@@ -297,8 +297,8 @@
 <string name="vo2_max_method_materko_adapted">Resting HR + HRV</string>
 <string name="vo2_max_method_description">Experimental Materko-adapted estimate using your resting heart rate and HRV baselines.</string>
 <string name="vo2_max_source_auto">Auto (Wearable preferred)</string>
-<string name="vo2_max_source_description">Choose whether Cardio Fitness relies on smartwatch VO2 Max records or our pure-Kotlin resting HR ratio estimation.</string>
-<string name="vo2_max_source_estimated">Resting HR ratio estimate only</string>
+<string name="vo2_max_source_description">Choose whether Cardio Fitness relies on smartwatch VO2 Max records or our on-device estimate.</string>
+<string name="vo2_max_source_estimated">Estimate only</string>
 <string name="vo2_max_source_title">Cardio Fitness (VO2 Max) Source</string>
 <string name="vo2_max_source_wearable">Wearable only</string>
 <string name="workout_detail_layouts_section_header">Workout details</string>

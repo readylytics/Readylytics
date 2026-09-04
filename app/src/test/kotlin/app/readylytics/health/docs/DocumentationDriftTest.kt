@@ -608,6 +608,24 @@ class DocumentationDriftTest {
     }
 
     @Test
+    fun `Materko-adapted VO2max estimation caveats are documented across About surfaces`() {
+        val requiredCaveatPhrases =
+            listOf(
+                "Materko-adapted method (experimental)",
+                "not validated across the broad population",
+            )
+
+        for ((surface, text) in listOf(
+            "ABOUT.md" to aboutMd,
+            "docs/about.md" to publicAboutMd,
+        )) {
+            for (phrase in requiredCaveatPhrases) {
+                assertTrue(text.contains(phrase), "$surface must contain '$phrase'")
+            }
+        }
+    }
+
+    @Test
     fun `warm-tier primitive reconstruction and zone determinism are documented in DATA_FLOW md`() {
         assertTrue(dataFlowMd.contains("reconstructSampleValues"))
         assertTrue(dataFlowMd.contains("TimestampedSamples"))

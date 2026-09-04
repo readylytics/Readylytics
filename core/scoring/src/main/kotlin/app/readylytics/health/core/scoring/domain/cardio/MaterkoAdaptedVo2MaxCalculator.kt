@@ -1,6 +1,7 @@
 package app.readylytics.health.core.scoring.domain.cardio
 
 import javax.inject.Inject
+import javax.inject.Singleton
 import kotlin.math.exp
 
 /**
@@ -21,6 +22,7 @@ import kotlin.math.exp
  * The original model was developed in young, healthy, physically active men and is not broadly
  * validated. Out-of-domain results return null per application-level supported bounds.
  */
+@Singleton
 class MaterkoAdaptedVo2MaxCalculator @Inject constructor() {
     private data class SupportedInputs(
         val rhrBaselineBpm: Float,
