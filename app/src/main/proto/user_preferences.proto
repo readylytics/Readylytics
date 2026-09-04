@@ -61,6 +61,12 @@ enum Vo2MaxSourceModeProto {
     VO2_MAX_SOURCE_ESTIMATED_ONLY = 3;
 }
 
+enum Vo2MaxEstimationMethodProto {
+    VO2_MAX_METHOD_UNSET = 0;
+    VO2_MAX_METHOD_HR_RATIO = 1;
+    VO2_MAX_METHOD_MATERKO_ADAPTED = 2;
+}
+
 enum DayOfWeekProto {
     DAY_OF_WEEK_UNSET = 0;
     DAY_OF_WEEK_MONDAY = 1;
@@ -304,6 +310,11 @@ message UserPreferencesProto {
     // VO2_MAX_SOURCE_UNSET (proto3 zero value) = never explicitly set; resolves to
     // Vo2MaxSourceMode.AUTO at the domain read boundary.
     Vo2MaxSourceModeProto vo2_max_source_mode = 98;
+
+    // Which resting estimator computes DailySummary.vo2Max when the source resolves to an estimate.
+    // VO2_MAX_METHOD_UNSET (proto3 zero value) = never explicitly set; resolves to
+    // Vo2MaxEstimationMethod.HR_RATIO at the domain read boundary.
+    Vo2MaxEstimationMethodProto vo2_max_estimation_method = 99;
 }
 
 enum TrimpMethodProto {
