@@ -19,6 +19,7 @@ import app.readylytics.health.core.model.domain.preferences.SyncSettings
 import app.readylytics.health.core.model.domain.preferences.ThresholdSettings
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.preferences.Vo2MaxEstimationMethod
 import app.readylytics.health.core.model.domain.preferences.Vo2MaxSourceMode
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
@@ -165,6 +166,9 @@ class SettingsRepository
         override suspend fun updateHeight(heightCm: Float?) = physiology.updateHeight(heightCm)
 
         override suspend fun updateVo2MaxSourceMode(mode: Vo2MaxSourceMode) = physiology.updateVo2MaxSourceMode(mode)
+
+        override suspend fun updateVo2MaxEstimationMethod(method: Vo2MaxEstimationMethod) =
+            physiology.updateVo2MaxEstimationMethod(method)
 
         override suspend fun updateHrvOptimalThreshold(value: Float) = thresholds.updateHrvOptimalThreshold(value)
 

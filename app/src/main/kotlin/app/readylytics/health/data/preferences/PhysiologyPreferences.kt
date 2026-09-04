@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import app.readylytics.health.core.model.data.preferences.LegacyBanisterMultipliers
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
+import app.readylytics.health.core.model.domain.preferences.Vo2MaxEstimationMethod
 import app.readylytics.health.core.model.domain.preferences.Vo2MaxSourceMode
 import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
@@ -190,6 +191,20 @@ internal class PhysiologyPreferences
                             Vo2MaxSourceMode.AUTO -> Vo2MaxSourceModeProto.VO2_MAX_SOURCE_AUTO
                             Vo2MaxSourceMode.WEARABLE_ONLY -> Vo2MaxSourceModeProto.VO2_MAX_SOURCE_WEARABLE_ONLY
                             Vo2MaxSourceMode.ESTIMATED_ONLY -> Vo2MaxSourceModeProto.VO2_MAX_SOURCE_ESTIMATED_ONLY
+                        },
+                    ).build()
+            }
+        }
+
+        suspend fun updateVo2MaxEstimationMethod(method: Vo2MaxEstimationMethod) {
+            dataStore.updateData {
+                it
+                    .toBuilder()
+                    .setVo2MaxEstimationMethod(
+                        when (method) {
+                            Vo2MaxEstimationMethod.HR_RATIO -> Vo2MaxEstimationMethodProto.VO2_MAX_METHOD_HR_RATIO
+                            Vo2MaxEstimationMethod.MATERKO_ADAPTED ->
+                                Vo2MaxEstimationMethodProto.VO2_MAX_METHOD_MATERKO_ADAPTED
                         },
                     ).build()
             }
