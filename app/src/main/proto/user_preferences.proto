@@ -54,6 +54,13 @@ enum LoadSourceModeProto {
     LOAD_SOURCE_EVERYDAY_HEART_RATE = 2;
 }
 
+enum Vo2MaxSourceModeProto {
+    VO2_MAX_SOURCE_UNSET = 0;
+    VO2_MAX_SOURCE_AUTO = 1;
+    VO2_MAX_SOURCE_WEARABLE_ONLY = 2;
+    VO2_MAX_SOURCE_ESTIMATED_ONLY = 3;
+}
+
 enum DayOfWeekProto {
     DAY_OF_WEEK_UNSET = 0;
     DAY_OF_WEEK_MONDAY = 1;
@@ -292,6 +299,11 @@ message UserPreferencesProto {
     optional float training_readiness_load_balance_weight = 95;
     optional float last_applied_training_readiness_residual_fatigue_scale = 96;
     optional float last_applied_training_readiness_load_balance_weight = 97;
+
+    // Source used to resolve DailySummary.vo2Max: wearable-measured vs. Uth resting-HR-ratio estimate.
+    // VO2_MAX_SOURCE_UNSET (proto3 zero value) = never explicitly set; resolves to
+    // Vo2MaxSourceMode.AUTO at the domain read boundary.
+    Vo2MaxSourceModeProto vo2_max_source_mode = 98;
 }
 
 enum TrimpMethodProto {

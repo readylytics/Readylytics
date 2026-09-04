@@ -90,6 +90,24 @@
     <string name="tooltip_strain_ratio">The ACWR (Acute:Chronic Workload Ratio). Compares recent
         training load to your baseline.\n\n• &lt;0.5: Poor\n• 0.5–&lt;0.8: Warning\n• 0.8–1.3: Optimal\n• &gt;1.3–1.5: Neutral\n• &gt;1.5–2.0:
         Warning\n• &gt;2.0: Poor</string>
+    <string name="tooltip_cardio_fitness">Estimated maximal oxygen uptake (VO2 Max), a key indicator of cardiorespiratory fitness.</string>
+    <string name="tooltip_cardio_fitness_current">Current: %1$s</string>
+    <string name="tooltip_cooper_norms_header_profile">Cooper Institute Norms (%1$s, %2$s):</string>
+    <string name="tooltip_cooper_norms_header">Cooper Institute Norms:</string>
+    <string name="cooper_category_superior">Superior</string>
+    <string name="cooper_category_excellent">Excellent</string>
+    <string name="cooper_category_good">Good</string>
+    <string name="cooper_category_fair">Fair</string>
+    <string name="cooper_category_poor">Poor</string>
+    <string name="vo2_max_source_label_wearable">Wearable</string>
+    <string name="vo2_max_source_label_estimated">Estimated (Resting HR)</string>
+    <string name="format_age_years">%1$d yrs</string>
+    <string name="tooltip_tsb">Training Stress Balance (TSB = CTL − ATL). Measures form by comparing chronic fitness (42-day CTL) against acute fatigue (7-day ATL).\n\n• &gt; +25: Very Fresh\n• +5 to +25: Fresh / Peaked\n• -10 to +5: Optimal / Productive\n• -30 to -10: Fatigued / Overload\n• &lt; -30: High Risk / Overreached</string>
+    <string name="tsb_zone_label_very_fresh">Transition / Very Fresh</string>
+    <string name="tsb_zone_label_fresh">Fresh / Peaked</string>
+    <string name="tsb_zone_label_optimal">Optimal / Productive</string>
+    <string name="tsb_zone_label_fatigued">Fatigued / Overload</string>
+    <string name="tsb_zone_label_overreached">High Risk / Overreached</string>
     <string name="card_title_readiness">Readiness</string>
     <string name="card_title_training_readiness">Training Readiness</string>
     <string name="card_title_strain_ratio">Strain Ratio</string>
@@ -102,6 +120,7 @@
     <string name="unit_lbs">lbs</string>
     <string name="unit_celsius">°C</string>
     <string name="unit_fahrenheit">°F</string>
+    <string name="unit_ml_kg_min">ml/kg/min</string>
     <string name="label_average">Average</string>
     <string name="label_normal_limit">Normal Limit</string>
     <string name="label_min">Min</string>

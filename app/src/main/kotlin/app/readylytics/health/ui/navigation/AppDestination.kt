@@ -37,4 +37,7 @@ sealed interface AppDestination {
 
     @Serializable
     data object BloodPressureDetail : AppDestination
+
+    @Serializable
+    data object CardioFitnessDetail : AppDestination
 }

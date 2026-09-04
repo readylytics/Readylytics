@@ -39,6 +39,7 @@ internal fun isDetailDestination(destination: NavDestination): Boolean =
         destination.hasRoute(AppDestination.WeightDetail::class) ||
         destination.hasRoute(AppDestination.BodyFatDetail::class) ||
         destination.hasRoute(AppDestination.BloodPressureDetail::class) ||
+        destination.hasRoute(AppDestination.CardioFitnessDetail::class) ||
         destination.hasRoute(AppDestination.About::class) ||
         destination.hasRoute(AppDestination.SyncProgress::class)
 
@@ -83,7 +84,8 @@ internal fun getTabIndex(destination: NavDestination?): Int =
             destination.hasRoute(AppDestination.HeartRateDetail::class) ||
             destination.hasRoute(AppDestination.WeightDetail::class) ||
             destination.hasRoute(AppDestination.BodyFatDetail::class) ||
-            destination.hasRoute(AppDestination.BloodPressureDetail::class) -> 0
+            destination.hasRoute(AppDestination.BloodPressureDetail::class) ||
+            destination.hasRoute(AppDestination.CardioFitnessDetail::class) -> 0
         destination.hasRoute(AppDestination.About::class) -> 4
         else -> -1
     }

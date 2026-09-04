@@ -11,6 +11,7 @@ import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEnt
 import app.readylytics.health.core.databaseschema.data.local.entity.OxygenSaturationRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.StepRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.Vo2MaxRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRoutePointEntity
@@ -78,6 +79,7 @@ class BackupStreamWriter
                         "stepRecords" to async { healthDatabase.stepRecordDao().count() },
                         "healthSourceRecords" to async { healthDatabase.sourceRecordDao().count() },
                         "hrMinuteBuckets" to async { healthDatabase.minuteBucketMaintenanceDao().count() },
+                        "vo2MaxRecords" to async { healthDatabase.vo2MaxRecordDao().count() },
                     )
                 counts.associate { (key, deferred) -> key to deferred.await() }
             }
@@ -283,6 +285,11 @@ class BackupStreamWriter
             )
             writer.write(",\n")
 
+            writeStepAndVo2MaxTables(writer)
+        }
+
+        private suspend fun writeStepAndVo2MaxTables(writer: BufferedWriter) {
+            val stepRecordDao = healthDatabase.stepRecordDao()
             var stepAfterTs = Long.MIN_VALUE
             var stepAfterId = ""
             writeTable<StepRecordEntity>(
@@ -292,6 +299,20 @@ class BackupStreamWriter
                 advance = {
                     stepAfterTs = it.startTime
                     stepAfterId = it.id
+                },
+            )
+            writer.write(",\n")
+
+            val vo2MaxRecordDao = healthDatabase.vo2MaxRecordDao()
+            var vo2MaxAfterTs = Long.MIN_VALUE
+            var vo2MaxAfterId = ""
+            writeTable<Vo2MaxRecordEntity>(
+                writer,
+                "vo2MaxRecords",
+                page = { vo2MaxRecordDao.pageAfter(0, vo2MaxAfterTs, vo2MaxAfterId, 100) },
+                advance = {
+                    vo2MaxAfterTs = it.timestampMs
+                    vo2MaxAfterId = it.id
                 },
             )
         }

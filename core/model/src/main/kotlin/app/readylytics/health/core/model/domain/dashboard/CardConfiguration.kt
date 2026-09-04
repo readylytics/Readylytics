@@ -29,6 +29,8 @@ enum class CardId {
     INSIGHTS,
     RESIDUAL_FATIGUE,
     TRAINING_READINESS,
+    CARDIO_FITNESS,
+    TSB,
 }
 
 @Serializable

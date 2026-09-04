@@ -9,6 +9,8 @@ import app.readylytics.health.core.model.domain.util.DomainLogSink
 import app.readylytics.health.core.model.domain.util.DomainLogger
 import app.readylytics.health.core.model.domain.util.LogContext
 import app.readylytics.health.core.model.domain.util.LogLevel
+import app.readylytics.health.core.scoring.domain.cardio.CooperNormsClassifier
+import app.readylytics.health.core.scoring.domain.cardio.TrainingStressBalanceCalculator
 import app.readylytics.health.feature.dashboard.domain.dashboard.GetWorkoutMetricsUseCase
 import io.mockk.every
 import io.mockk.mockk
@@ -36,6 +38,11 @@ class GetDashboardDataUseCaseTest {
                     DashboardMetricPresentationFactory(
                         resourceProvider,
                         ResidualFatiguePresentationFactory(resourceProvider),
+                        DashboardCardioMetricPresentationFactory(
+                            resourceProvider,
+                            TrainingStressBalanceCalculator(),
+                            CooperNormsClassifier(),
+                        ),
                     ),
             )
     }

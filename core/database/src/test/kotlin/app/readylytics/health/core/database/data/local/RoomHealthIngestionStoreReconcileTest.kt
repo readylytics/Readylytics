@@ -57,6 +57,7 @@ class RoomHealthIngestionStoreReconcileTest {
             daos = daos,
             dailySummaryDao = dailySummaryDao,
             transactionRunner = transactionRunner,
+            vo2MaxRecordDao = mockk(relaxed = true),
         )
 
     private val zoneId = ZoneId.of("UTC")

@@ -6,6 +6,8 @@ import app.readylytics.health.core.model.domain.model.SleepSessionSummary
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.util.ResourceProvider
+import app.readylytics.health.core.scoring.domain.cardio.CooperNormsClassifier
+import app.readylytics.health.core.scoring.domain.cardio.TrainingStressBalanceCalculator
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import io.mockk.every
 import io.mockk.mockk
@@ -53,6 +55,11 @@ class DashboardRecoveryMetricPresentationFactoryTest {
             DashboardMetricPresentationFactory(
                 resourceProvider,
                 ResidualFatiguePresentationFactory(resourceProvider),
+                DashboardCardioMetricPresentationFactory(
+                    resourceProvider,
+                    TrainingStressBalanceCalculator(),
+                    CooperNormsClassifier(),
+                ),
             )
 
         every {

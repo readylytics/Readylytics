@@ -8,6 +8,7 @@ import app.readylytics.health.core.model.data.preferences.normalizeCoreMergeGapM
 import app.readylytics.health.core.model.data.preferences.normalizeMinimumCountedSleepSegmentMinutes
 import app.readylytics.health.core.model.data.preferences.normalizeSupplementalArchitectureCoveragePercent
 import app.readylytics.health.core.model.data.preferences.normalizeSupplementalCutoffMinutesOfDay
+import app.readylytics.health.core.model.domain.preferences.Vo2MaxSourceMode
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 
 fun PhysiologyProfileProto.toDomainProfile(): PhysiologyProfile =
@@ -28,6 +29,13 @@ fun SleepScoreWeightProfileProto.toDomainProfile(): SleepScoreWeightProfile =
         SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_CONTINUITY_FOCUSED ->
             SleepScoreWeightProfile.CONTINUITY_FOCUSED
         else -> SleepScoreWeightProfile.BALANCED
+    }
+
+fun Vo2MaxSourceModeProto.toDomainMode(): Vo2MaxSourceMode =
+    when (this) {
+        Vo2MaxSourceModeProto.VO2_MAX_SOURCE_WEARABLE_ONLY -> Vo2MaxSourceMode.WEARABLE_ONLY
+        Vo2MaxSourceModeProto.VO2_MAX_SOURCE_ESTIMATED_ONLY -> Vo2MaxSourceMode.ESTIMATED_ONLY
+        else -> Vo2MaxSourceMode.AUTO
     }
 
 fun UserPreferencesProto.toDomainModel(): UserPreferences {

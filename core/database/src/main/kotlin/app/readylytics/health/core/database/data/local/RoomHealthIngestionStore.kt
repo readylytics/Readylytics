@@ -1,6 +1,7 @@
 package app.readylytics.health.core.database.data.local
 
 import app.readylytics.health.core.databaseschema.data.local.dao.DailySummaryDao
+import app.readylytics.health.core.databaseschema.data.local.dao.Vo2MaxRecordDao
 import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.model.RouteState
 import app.readylytics.health.core.model.domain.model.WorkoutRoutePoint
@@ -17,6 +18,7 @@ import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.sync.SleepSessionInput
 import app.readylytics.health.core.model.domain.sync.SleepStageInput
 import app.readylytics.health.core.model.domain.sync.StepRecordInput
+import app.readylytics.health.core.model.domain.sync.Vo2MaxInput
 import app.readylytics.health.core.model.domain.sync.WeightInput
 import app.readylytics.health.core.model.domain.sync.WorkoutInput
 import app.readylytics.health.core.model.domain.util.logD
@@ -35,6 +37,7 @@ class RoomHealthIngestionStore
         private val daos: HealthRecordDaos,
         private val dailySummaryDao: DailySummaryDao,
         private val transactionRunner: TransactionRunner,
+        private val vo2MaxRecordDao: Vo2MaxRecordDao,
     ) : HealthIngestionStore {
         override suspend fun persist(batch: HealthIngestionBatch) {
             // Persist parent and low-volume records first. Sample batches can then commit
@@ -90,6 +93,7 @@ class RoomHealthIngestionStore
                     batch.bodyTemperatureSamples.map(BodyTemperatureInput::toEntity),
                 )
                 daos.stepRecordDao.upsertAll(batch.stepRecords.map(StepRecordInput::toEntity))
+                vo2MaxRecordDao.upsertAll(batch.vo2MaxSamples.map(Vo2MaxInput::toEntity))
             }
 
             persistHeartRateSamples(batch.heartRateSamples)

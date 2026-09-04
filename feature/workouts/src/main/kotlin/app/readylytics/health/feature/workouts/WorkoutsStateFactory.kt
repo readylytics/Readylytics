@@ -15,6 +15,7 @@ import app.readylytics.health.core.model.domain.workouts.FatigueCurvePoint
 import app.readylytics.health.core.model.domain.workouts.FatigueCurveRange
 import app.readylytics.health.core.model.domain.workouts.WorkoutChartConfiguration
 import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryConfiguration
+import app.readylytics.health.core.scoring.domain.cardio.TrainingStressBalanceCalculator
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.WorkoutLoadClassification
 import app.readylytics.health.core.scoring.domain.scoring.calculateDailyStrainIncrease
@@ -45,6 +46,8 @@ data class WorkoutsUiState(
     val latestMetrics: DailyMetrics? = null,
     val dailyTrimp: List<DailyDataPoint> = emptyList(),
     val dailyStrainRatio: List<DailyDataPoint> = emptyList(),
+    val dailyTsb: List<DailyDataPoint> = emptyList(),
+    val selectedTrainingLoadMetric: TrainingLoadMetric = TrainingLoadMetric.ACWR,
     val recentWorkouts: List<WorkoutDisplayItem> = emptyList(),
     val selectedRange: TimeRange = TimeRange.SEVEN_DAYS,
     val selectedDate: LocalDate = LocalDate.now(),
@@ -58,6 +61,7 @@ data class WorkoutsUiState(
     val yesterdayStrainRatio: Float? = null,
     val yesterdayReadiness: Float? = null,
     val todayStrainIncrease: Float? = null,
+    val todayTsb: Float? = null,
     val weeklyTraining: WeeklyTrainingStats? = null,
     val unitSystem: UnitSystem = UnitSystem.METRIC,
     val hasDistancePermission: Boolean = true,
@@ -159,6 +163,7 @@ internal fun buildRasBreakdown(
  *  keeps detekt's LongParameterList/LongMethod honest about real complexity. */
 internal data class WorkoutsStateInputs(
     val scoringCalculator: ScoringCalculator,
+    val trainingStressBalanceCalculator: TrainingStressBalanceCalculator,
     val latestSummary: DailySummary?,
     val trimpSummaries: List<DailySummary>,
     val rasSummaries: List<DailySummary>,
@@ -190,13 +195,10 @@ internal fun buildWorkoutsState(inputs: WorkoutsStateInputs): WorkoutsUiState =
                 zoneId = zoneId,
             )
 
-        val (dailyTrimp, dailyStrainRatio) =
+        val (dailyTrimp, dailyStrainRatio, dailyTsb) =
             buildDailySeries(
-                scoringCalculator = scoringCalculator,
-                displayDayMidnights = ctx.displayDayMidnights,
-                trimpByDay = ctx.trimpByDay,
-                ctlSeries = ctx.ctlSeries,
-                atlSeries = ctx.atlSeries,
+                calculators = WorkoutsScoringCalculators(scoringCalculator, trainingStressBalanceCalculator),
+                ctx = ctx,
                 earliestLocalDate = earliestLocalDate,
                 zoneId = zoneId,
             )
@@ -205,6 +207,7 @@ internal fun buildWorkoutsState(inputs: WorkoutsStateInputs): WorkoutsUiState =
             buildPaddedSeries(
                 dailyTrimp = dailyTrimp,
                 dailyStrainRatio = dailyStrainRatio,
+                dailyTsb = dailyTsb,
                 range = range,
                 displayStartDayDate = ctx.displayStartDayDate,
                 selectedDate = selectedDate,
@@ -239,19 +242,25 @@ internal fun buildWorkoutsState(inputs: WorkoutsStateInputs): WorkoutsUiState =
         )
     }
 
-/** Daily TRIMP and strain-ratio series for the displayed range. Extracted verbatim from
+/** Daily TRIMP, strain-ratio and TSB series for the displayed range. Extracted verbatim from
  *  buildWorkoutsState; no expression changed. */
 private fun buildDailySeries(
-    scoringCalculator: ScoringCalculator,
-    displayDayMidnights: List<Long>,
-    trimpByDay: Map<Long, Float>,
-    ctlSeries: Map<LocalDate, Float>,
-    atlSeries: Map<LocalDate, Float>,
+    calculators: WorkoutsScoringCalculators,
+    ctx: RangeContext,
     earliestLocalDate: LocalDate?,
     zoneId: ZoneId,
-): Pair<List<DailyDataPoint>, List<DailyDataPoint>> {
+): Triple<List<DailyDataPoint>, List<DailyDataPoint>, List<DailyDataPoint>> {
+    val (scoringCalculator, trainingStressBalanceCalculator) = calculators
     val dailyTrimp = mutableListOf<DailyDataPoint>()
     val dailyStrainRatio = mutableListOf<DailyDataPoint>()
+    val dailyTsb = mutableListOf<DailyDataPoint>()
+
+    val displayDayMidnights = ctx.displayDayMidnights
+    val trimpByDay = ctx.trimpByDay
+    val ctlSeries = ctx.ctlSeries
+    val atlSeries = ctx.atlSeries
+    val ctlWorkoutSeries = ctx.ctlWorkoutSeries
+    val atlWorkoutSeries = ctx.atlWorkoutSeries
 
     displayDayMidnights.forEachIndexed { i, dayMidnight ->
         val trimp = trimpByDay[dayMidnight]
@@ -278,17 +287,29 @@ private fun buildDailySeries(
                 0
             }
 
+        val ctl = ctlSeries[currentDayDate] ?: ScoringConstants.DEFAULT_FITNESS_LEVEL
+        val atl = atlSeries[currentDayDate] ?: ScoringConstants.DEFAULT_FITNESS_LEVEL
+
         val sr =
             if (dataTenureDays >= 7) {
-                val ctl = ctlSeries[currentDayDate] ?: ScoringConstants.DEFAULT_FITNESS_LEVEL
-                val atl = atlSeries[currentDayDate] ?: ScoringConstants.DEFAULT_FITNESS_LEVEL
                 scoringCalculator.computeStrainRatio(atl, ctl)
             } else {
                 null
             }
         dailyStrainRatio.add(DailyDataPoint(dayOffset = i, value = sr))
+
+        val ctlWorkout = ctlWorkoutSeries[currentDayDate]
+        val atlWorkout = atlWorkoutSeries[currentDayDate]
+
+        val tsb =
+            if (dataTenureDays >= 7 && ctlWorkout != null && atlWorkout != null) {
+                trainingStressBalanceCalculator.calculate(ctlWorkout, atlWorkout)?.value
+            } else {
+                null
+            }
+        dailyTsb.add(DailyDataPoint(dayOffset = i, value = tsb))
     }
-    return dailyTrimp to dailyStrainRatio
+    return Triple(dailyTrimp, dailyStrainRatio, dailyTsb)
 }
 
 /** Today's strain increase, falling back to a per-load-source computation when the caller
@@ -345,6 +366,7 @@ private fun resolveTodayStrainIncrease(
 private fun buildPaddedSeries(
     dailyTrimp: List<DailyDataPoint>,
     dailyStrainRatio: List<DailyDataPoint>,
+    dailyTsb: List<DailyDataPoint>,
     range: TimeRange,
     displayStartDayDate: LocalDate,
     selectedDate: LocalDate,
@@ -355,6 +377,15 @@ private fun buildPaddedSeries(
             .aggregateByRange(range.granularity, displayStartDayDate, selectedDate, range.days)
     val (bucketedStrainRatio, strainSummary) =
         dailyStrainRatio
+            .aggregateByRange(
+                range.granularity,
+                displayStartDayDate,
+                selectedDate,
+                range.days,
+                valueDecimalPlaces = 2,
+            )
+    val (bucketedTsb, _) =
+        dailyTsb
             .aggregateByRange(
                 range.granularity,
                 displayStartDayDate,
@@ -375,12 +406,19 @@ private fun buildPaddedSeries(
             displayStartDayDate,
             selectedDate,
         )
-    return PaddedSeries(paddedTrimp, paddedStrain, trimpSummary, strainSummary)
+    val paddedTsb =
+        bucketedTsb.padBucketsToRange(
+            range.granularity,
+            displayStartDayDate,
+            selectedDate,
+        )
+    return PaddedSeries(paddedTrimp, paddedStrain, paddedTsb, trimpSummary, strainSummary)
 }
 
 private data class PaddedSeries(
     val paddedTrimp: List<DailyDataPoint>,
     val paddedStrain: List<DailyDataPoint>,
+    val paddedTsb: List<DailyDataPoint>,
     val trimpSummary: PeriodAverageSummary?,
     val strainSummary: PeriodAverageSummary?,
 )
@@ -439,6 +477,11 @@ private fun buildRangeContext(
             displayStartDayDate,
             selectedDate,
         )
+    val ctlWorkoutSeries =
+        trimpSummaries.mapNotNull { summary -> summary.ctlWorkoutOnly?.let { summary.date to it } }.toMap()
+    val atlWorkoutSeries =
+        trimpSummaries.mapNotNull { summary -> summary.atlWorkoutOnly?.let { summary.date to it } }.toMap()
+
     return RangeContext(
         displayStartDayDate,
         displayStartDayMs,
@@ -447,6 +490,8 @@ private fun buildRangeContext(
         displayDayMidnights,
         ctlSeries,
         atlSeries,
+        ctlWorkoutSeries,
+        atlWorkoutSeries,
     )
 }
 
@@ -458,6 +503,8 @@ private data class RangeContext(
     val displayDayMidnights: List<Long>,
     val ctlSeries: Map<LocalDate, Float>,
     val atlSeries: Map<LocalDate, Float>,
+    val ctlWorkoutSeries: Map<LocalDate, Float>,
+    val atlWorkoutSeries: Map<LocalDate, Float>,
 )
 
 /** Final [WorkoutsUiState] assembly. Extracted verbatim from buildWorkoutsState; no
@@ -475,6 +522,7 @@ private fun assembleWorkoutsUiState(
             latestMetrics = latestSummary?.let { DailyMetricsMapper.toMetrics(it, prefs) },
             dailyTrimp = series.paddedTrimp,
             dailyStrainRatio = series.paddedStrain,
+            dailyTsb = series.paddedTsb,
             recentWorkouts = recentWorkouts,
             selectedRange = range,
             selectedDate = selectedDate,
@@ -492,6 +540,10 @@ private fun assembleWorkoutsUiState(
             yesterdayStrainRatio = yesterdayMetrics?.strainRatioRaw,
             yesterdayReadiness = yesterdayMetrics?.readinessRounded?.toFloat(),
             todayStrainIncrease = resolvedTodayStrainIncrease,
+            todayTsb =
+                latestSummary?.let {
+                    inputs.trainingStressBalanceCalculator.calculate(it.ctlWorkoutOnly, it.atlWorkoutOnly)?.value
+                },
             weeklyTraining = weeklyTraining,
             unitSystem = prefs.unitSystem,
             hasDistancePermission = hasDistancePermission,

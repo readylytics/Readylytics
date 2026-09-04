@@ -26,7 +26,6 @@ import app.readylytics.health.core.model.domain.workouts.WorkoutChartId
 import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryConfiguration
 import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryId
 import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
-import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.scoring.domain.workouts.weekly.WeeklyTrainingStats
 import app.readylytics.health.core.ui.common.TimeRange
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -55,7 +54,7 @@ class WorkoutsViewModel
     constructor(
         private val repositories: WorkoutsRepositories,
         private val selectedDateRepository: SelectedDateStore,
-        private val scoringCalculator: ScoringCalculator,
+        private val scoringCalculators: WorkoutsScoringCalculators,
         private val settingsRepo: UserPreferencesReader,
         private val foregroundSyncController: ForegroundSyncGateway,
         private val workoutsLayoutRepository: WorkoutsLayoutRepository,
@@ -146,6 +145,13 @@ class WorkoutsViewModel
 
         private val selectedFatigueRangeState = MutableStateFlow(FatigueCurveRange.ONE_DAY)
 
+        // Ephemeral UI toggle (ACWR vs. TSB) for the training-load chart card. Not persisted and
+        // deliberately combined onto uiState *after* the heavy flatMapLatest pipeline below (like
+        // cardStateFlow/chartStateFlow) since dailyTsb is already computed on every pipeline run
+        // regardless of which series is displayed -- flipping the toggle must not re-trigger a
+        // data reload.
+        private val selectedTrainingLoadMetricState = MutableStateFlow(TrainingLoadMetric.ACWR)
+
         private val _currentPage = MutableStateFlow(1)
         val currentPage = _currentPage.asStateFlow()
 
@@ -224,7 +230,8 @@ class WorkoutsViewModel
 
                         buildWorkoutsState(
                             WorkoutsStateInputs(
-                                scoringCalculator = scoringCalculator,
+                                scoringCalculator = scoringCalculators.scoringCalculator,
+                                trainingStressBalanceCalculator = scoringCalculators.trainingStressBalanceCalculator,
                                 latestSummary = latest,
                                 trimpSummaries = trimpSummaries,
                                 rasSummaries = rasSummaries,
@@ -255,6 +262,8 @@ class WorkoutsViewModel
                     )
                 }.combine(isRangeChangingState) { state, isChanging ->
                     state.copy(isRangeChanging = isChanging)
+                }.combine(selectedTrainingLoadMetricState) { state, metric ->
+                    state.copy(selectedTrainingLoadMetric = metric)
                 }.combine(cardStateFlow) { state, cardState ->
                     state.copy(
                         cardConfigurations = cardState.pendingConfiguration ?: cardState.cardConfigurations,
@@ -367,6 +376,10 @@ class WorkoutsViewModel
 
         fun onFatigueRangeSelected(range: FatigueCurveRange) {
             selectedFatigueRangeState.value = range
+        }
+
+        fun onTrainingLoadMetricSelected(metric: TrainingLoadMetric) {
+            selectedTrainingLoadMetricState.value = metric
         }
 
         fun onRangeSelected(range: TimeRange) {

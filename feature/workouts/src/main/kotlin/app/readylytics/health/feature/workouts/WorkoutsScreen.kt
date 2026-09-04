@@ -58,6 +58,7 @@ fun WorkoutsRoute(
         onReorderHistory = viewModel::onReorderHistory,
         onResetWorkoutsToDefaults = viewModel::onResetWorkoutsToDefaults,
         onFatigueRangeSelected = viewModel::onFatigueRangeSelected,
+        onTrainingLoadMetricSelected = viewModel::onTrainingLoadMetricSelected,
     )
 }
 
@@ -98,6 +99,7 @@ fun WorkoutsScreen(
     ) -> Unit = {},
     onResetWorkoutsToDefaults: () -> Unit = {},
     onFatigueRangeSelected: (app.readylytics.health.core.model.domain.workouts.FatigueCurveRange) -> Unit = {},
+    onTrainingLoadMetricSelected: (TrainingLoadMetric) -> Unit = {},
 ) {
     val scrollState = rememberScrollState()
     val manageState = rememberManageLayoutState()
@@ -119,7 +121,14 @@ fun WorkoutsScreen(
             )
         }
     val chartDataMap =
-        remember(uiState, selectedRange, chartScrollState, chartZoomState, onFatigueRangeSelected) {
+        remember(
+            uiState,
+            selectedRange,
+            chartScrollState,
+            chartZoomState,
+            onFatigueRangeSelected,
+            onTrainingLoadMetricSelected,
+        ) {
             WorkoutChartDataMap(
                 buildWorkoutsChartDataMap(
                     uiState = uiState,
@@ -129,6 +138,7 @@ fun WorkoutsScreen(
                     granularity = selectedRange.granularity,
                     parentScrollInProgress = { scrollState.isScrollInProgress },
                     onFatigueRangeSelected = onFatigueRangeSelected,
+                    onTrainingLoadMetricSelected = onTrainingLoadMetricSelected,
                 ),
             )
         }

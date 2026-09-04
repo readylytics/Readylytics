@@ -6,6 +6,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.databaseschema.data.local.entity.HealthSourceRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrMinuteBucketEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.Vo2MaxRecordEntity
 import app.readylytics.health.core.model.data.preferences.AppTheme
 import app.readylytics.health.core.model.data.preferences.BackupSchedule
 import app.readylytics.health.core.model.data.preferences.SyncPreference
@@ -174,6 +175,21 @@ class LocalBackupSerializationRegressionTest {
         )
     }
 
+    private suspend fun seedVo2MaxRecords() {
+        db.vo2MaxRecordDao().upsertAll(
+            listOf(
+                Vo2MaxRecordEntity(
+                    id = "vo2-backup-1",
+                    timestampMs = 1_000L,
+                    vo2Max = 48.5f,
+                    measurementMethod = 1,
+                    deviceName = "Watch",
+                ),
+            ),
+        )
+        assertEquals(1, db.vo2MaxRecordDao().count(), "fixture must leave the table non-empty")
+    }
+
     private fun readBackupJson(zip: File): JSONObject {
         val zipFile = ZipFile(zip, "test_password".toCharArray())
         val header = zipFile.fileHeaders.first()
@@ -232,6 +248,22 @@ class LocalBackupSerializationRegressionTest {
             val json = readBackupJson(result.getOrNull()!!)
             assertEquals(2, json.getJSONArray("healthSourceRecords").length())
             assertEquals(1, json.getJSONArray("hrMinuteBuckets").length())
+        }
+
+    @Test
+    fun createBackup_withVo2MaxRows_succeedsAndRoundTripsThem() =
+        runTest {
+            seedVo2MaxRecords()
+
+            val result = manager.createBackup()
+
+            assertTrue(result.isSuccess, "backup must not fail on a non-empty vo2 max table")
+            val json = readBackupJson(result.getOrNull()!!)
+            val records = json.getJSONArray("vo2MaxRecords")
+            assertEquals(1, records.length())
+            assertEquals("vo2-backup-1", records.getJSONObject(0).getString("id"))
+            assertEquals(48.5, records.getJSONObject(0).getDouble("vo2Max"), 0.001)
+            assertEquals("Watch", records.getJSONObject(0).getString("deviceName"))
         }
 
     /** Local fake — LocalBackupManagerTest's equivalent is private to that class. */

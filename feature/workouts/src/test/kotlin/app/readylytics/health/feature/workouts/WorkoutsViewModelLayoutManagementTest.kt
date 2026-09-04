@@ -15,6 +15,7 @@ import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.core.model.domain.workouts.WorkoutChartId
 import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryId
 import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
+import app.readylytics.health.core.scoring.domain.cardio.TrainingStressBalanceCalculator
 import app.readylytics.health.core.scoring.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.scoring.domain.workouts.weekly.ComputeWeeklyTrainingStatsUseCase
@@ -112,7 +113,7 @@ class WorkoutsViewModelLayoutManagementTest {
                     heartRateRepository,
                 ),
             selectedDateRepository = selectedDateRepository,
-            scoringCalculator = scoringCalculator,
+            scoringCalculators = WorkoutsScoringCalculators(scoringCalculator, TrainingStressBalanceCalculator()),
             settingsRepo = settingsRepo,
             foregroundSyncController = foregroundSyncController,
             workoutsLayoutRepository = workoutsLayoutRepository,

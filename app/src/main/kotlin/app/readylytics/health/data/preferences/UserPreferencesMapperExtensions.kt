@@ -176,6 +176,7 @@ internal fun UserPreferences.withScoringProfiles(
                 LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE -> LoadSourceMode.EVERYDAY_HEART_RATE
                 else -> SettingsDefaults.RAS_SOURCE_MODE
             },
+        vo2MaxSourceMode = proto.vo2MaxSourceMode.toDomainMode(),
         sleepScoreWeightProfile = proto.sleepScoreWeightProfile.toDomainProfile(),
         hypersomniaOnsetPercent =
             if (proto.hasHypersomniaOnsetPercent()) {

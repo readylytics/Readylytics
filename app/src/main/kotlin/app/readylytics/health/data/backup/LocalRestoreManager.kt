@@ -229,6 +229,7 @@ class LocalRestoreManager
             healthDatabase.dailySummaryDao().deleteAll()
             healthDatabase.sourceRecordDao().deleteAll()
             healthDatabase.minuteBucketMaintenanceDao().deleteAll()
+            healthDatabase.vo2MaxRecordDao().deleteAll()
 
             val handlers =
                 mapOf<String, suspend (JsonReader) -> Unit>(
@@ -246,6 +247,7 @@ class LocalRestoreManager
                     "oxygenSaturationRecords" to { batchLoader.vitalsLoader.restoreOxygenSaturationRecords(it) },
                     "bodyTemperatureRecords" to { batchLoader.vitalsLoader.restoreBodyTemperatureRecords(it) },
                     "stepRecords" to { batchLoader.vitalsLoader.restoreStepRecords(it) },
+                    "vo2MaxRecords" to { batchLoader.vitalsLoader.restoreVo2MaxRecords(it) },
                 )
 
             reader.beginObject()

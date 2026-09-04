@@ -38,7 +38,7 @@
         duration and heart-rate coverage are sufficient.</string>
 
     <!-- Workout Stats -->
-    <string name="workout_stats_acwr_title">Training Load &amp; Strain Ratio (ACWR)</string>
+    <string name="workout_stats_acwr_title">Training Load &amp; Strain Ratio</string>
     <string name="workout_stats_ras_title">Readylytics Activity Score</string>
     <string name="workout_stats_history_title">History</string>
     <string name="workout_stats_weekly_title">Weekly training</string>
@@ -87,6 +87,16 @@
     <string name="acwr_tooltip_strain_format">Strain: %1$s</string>
     <string name="acwr_tooltip_avg_trimp_format">Avg. TRIMP: %1$s</string>
     <string name="acwr_tooltip_avg_strain_format">Avg. Strain: %1$s</string>
+    <string name="training_load_metric_acwr">Strain Ratio</string>
+    <string name="training_load_metric_tsb">Training Stress Balance (TSB)</string>
+    <string name="training_load_metric_tsb_toggle">TSB</string>
+    <string name="tsb_zone_very_fresh">Transition / Very Fresh</string>
+    <string name="tsb_zone_fresh">Fresh / Peaked</string>
+    <string name="tsb_zone_optimal">Optimal / Productive</string>
+    <string name="tsb_zone_fatigued">Fatigued / Overload</string>
+    <string name="tsb_zone_overreached">High Risk / Overreached</string>
+    <string name="tsb_tooltip_format">TSB: %1$s</string>
+    <string name="tsb_tooltip_avg_format">Avg. TSB: %1$s</string>
     <string name="message_no_hr_data">No HR data available</string>
     <string name="label_minutes">Minutes</string>
     <string name="chart_accessibility_selected_trimp">Selected: %1$s at %2$s</string>

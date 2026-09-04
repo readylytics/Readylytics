@@ -1,5 +1,7 @@
 package app.readylytics.health.core.model.domain.preferences
 
+import app.readylytics.health.core.model.domain.preferences.Vo2MaxSourceMode
+
 import app.readylytics.health.core.model.data.preferences.AppTheme
 import app.readylytics.health.core.model.data.preferences.BackupSchedule
 import app.readylytics.health.core.model.data.preferences.FallbackThemeColor
@@ -23,6 +25,7 @@ interface PhysiologySettings {
     suspend fun updateGender(gender: String?)
     suspend fun updateHeight(heightCm: Float?)
     suspend fun updatePhysiologyProfile(profile: PhysiologyProfile)
+    suspend fun updateVo2MaxSourceMode(mode: Vo2MaxSourceMode)
 }
 
 interface HeartRateZoneSettings {

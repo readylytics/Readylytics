@@ -10,6 +10,7 @@ import app.readylytics.health.core.model.data.preferences.SyncPreference
 import app.readylytics.health.core.model.data.preferences.UnitSystem
 import app.readylytics.health.core.model.domain.backup.BackupFileInfo
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.preferences.Vo2MaxSourceMode
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
@@ -56,6 +57,7 @@ data class PhysiologySettingsState(
     val heightCm: Float? = SettingsDefaults.HEIGHT_CM,
     val unitSystem: UnitSystem = UnitSystem.METRIC,
     val showBirthdatePickerDialog: Boolean = false,
+    val vo2MaxSourceMode: Vo2MaxSourceMode = Vo2MaxSourceMode.AUTO,
 )
 
 data class HeartRateZonesState(

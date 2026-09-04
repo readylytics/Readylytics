@@ -60,6 +60,7 @@ class WorkoutModelTrimpIngestionDeterminismTest {
                     ),
                 dailySummaryDao = database.dailySummaryDao(),
                 transactionRunner = RoomTransactionRunner(database),
+                vo2MaxRecordDao = database.vo2MaxRecordDao(),
             )
     }
 

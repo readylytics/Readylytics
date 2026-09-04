@@ -64,5 +64,7 @@
     "trainingLoadReadinessWorkoutOnly": 100.0,
     "trainingLoadReadinessEverydayHr": 100.0,
     "trainingReadinessWorkoutOnly": 72.653824,
-    "trainingReadinessEverydayHr": 72.653824
+    "trainingReadinessEverydayHr": 72.653824,
+    "vo2Max": 54.432693,
+    "vo2MaxSource": "ESTIMATED_UTH"
 }

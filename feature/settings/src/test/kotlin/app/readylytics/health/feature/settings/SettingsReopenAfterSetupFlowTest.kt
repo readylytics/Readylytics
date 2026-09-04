@@ -9,6 +9,7 @@ import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.preferences.DisplaySettings
 import app.readylytics.health.core.model.domain.preferences.PhysiologySettings
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.preferences.Vo2MaxSourceMode
 import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
 import app.readylytics.health.core.model.domain.sync.HealthDataRefresh
@@ -97,6 +98,10 @@ class SettingsReopenAfterSetupFlowTest {
 
                 override suspend fun updatePhysiologyProfile(profile: PhysiologyProfile) {
                     preferences.update { it.copy(physiologyProfile = profile) }
+                }
+
+                override suspend fun updateVo2MaxSourceMode(mode: Vo2MaxSourceMode) {
+                    preferences.update { it.copy(vo2MaxSourceMode = mode) }
                 }
             }
 

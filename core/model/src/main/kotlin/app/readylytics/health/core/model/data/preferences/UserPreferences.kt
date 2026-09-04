@@ -1,5 +1,7 @@
 package app.readylytics.health.core.model.data.preferences
 
+import app.readylytics.health.core.model.domain.preferences.Vo2MaxSourceMode
+
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
@@ -117,6 +119,7 @@ data class UserPreferences(
         SettingsDefaults.TRAINING_READINESS_LOAD_BALANCE_WEIGHT,
     val lastAppliedTrainingReadinessResidualFatigueScale: Float? = null,
     val lastAppliedTrainingReadinessLoadBalanceWeight: Float? = null,
+    val vo2MaxSourceMode: Vo2MaxSourceMode = Vo2MaxSourceMode.AUTO,
 )
 
 /**

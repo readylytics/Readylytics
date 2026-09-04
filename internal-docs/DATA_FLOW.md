@@ -54,7 +54,7 @@ Paths below are rooted at the project root. Module prefixes are explicit, for ex
                │   columns in place, near-no-op on identical re-ingest; others: @Upsert on stable id
                ▼
 ┌──────────────────────────────┐
-│  HealthDatabase (SQLite v15) │   17 entities — single source of truth
+│  HealthDatabase (SQLite v18) │   18 entities — single source of truth
 └──────────────┬───────────────┘
                │ raw DAO reads (local; no further HC calls)
                ▼
@@ -97,15 +97,14 @@ Paths below are rooted at the project root. Module prefixes are explicit, for ex
 - **Critical:** `READ_SLEEP`, `READ_HEART_RATE`, `READ_HEART_RATE_VARIABILITY`, `READ_EXERCISE`
 - **Required:** critical + `READ_HEALTH_DATA_HISTORY`
 - **Optional:** `READ_STEPS`, `READ_WEIGHT`, `READ_BODY_FAT`, `READ_BLOOD_PRESSURE`,
-  `READ_OXYGEN_SATURATION`, `READ_BODY_TEMPERATURE`
+  `READ_OXYGEN_SATURATION`, `READ_BODY_TEMPERATURE`, `READ_VO2_MAX`
 
 **Read methods:** `readSleepSessions`, `readHeartRateSamples` / `readHeartRateSamplesPaged`,
 `readHrvSamples` / `readHrvSamplesPaged`,
 `readExerciseSessions`, `readSteps` / `readDailyStepTotals`, `readWeightRecords`,
 `readBodyFatRecords`, `readBloodPressureRecords`, `readOxygenSaturationRecords`,
-`readBodyTemperatureRecords`, `hasBodyTemperaturePermission()` (dedicated single-permission
-check, since body temperature is gated as its own dashboard-card/card-management concern rather
-than folded into the generic optional-permission status), `discoverDevices`.
+`readBodyTemperatureRecords`, `readVo2MaxRecords`, `hasBodyTemperaturePermission()`,
+`hasVo2MaxPermission()`, `discoverDevices`.
 
 **Rate-Limit and Transient Fault Protection:**
 Each Health Connect read is retried through `HealthConnectRetryPolicy`, which retries transient
@@ -135,7 +134,7 @@ explicit and idempotent.
 | `DataCleanupWorker`           | `app/src/main/kotlin/app/readylytics/health/workers/DataCleanupWorker.kt`               | Daily retention enforcement; before resolving lazy `RetentionCleanup`, it requires `DatabaseReadiness.Ready` and retries without opening Room otherwise. Cutoff is `RetentionBounds.resolveHistoricalWindow(prefs).startTimeMs`, exposed via `resolveRetentionCutoffMs`: scoring-zone midnight shared with resync/startup, never device-zone midnight. No-op when retention is disabled. **R2-CACHE-001:** on a non-empty touch, enqueues a bounded recompute-only resync (`WorkerScheduler.scheduleResyncWorker(recomputeOnly = true, startDate, endDate)`) over `ScoreInvalidation.affectedRange(touched, today)` — the touched range widened 84 days forward, capped at today. A no-op deletion enqueues nothing. |
 | `DataRollupWorker`            | `app/src/main/kotlin/app/readylytics/health/workers/DataRollupWorker.kt`                | Daily hot→warm rollup; resolves the 90-day `RetentionBounds.resolveHotTierCutoffMs()` and delegates to `DataRollupManager`. `Result.retry()` on transient failure. **R2-CACHE-001:** on a non-empty touch, enqueues a bounded recompute-only resync (`WorkerScheduler.scheduleResyncWorker(recomputeOnly = true, startDate, endDate)`) over `ScoreInvalidation.affectedRange(touched, today)` — same edge as `DataCleanupWorker`, above. A no-op rollup enqueues nothing. |
 | `DataRollupManager`           | `core/database/src/main/kotlin/app/readylytics/health/core/database/data/local/DataRollupManager.kt`  | Atomically downsamples plausibility-filtered raw `heart_rate_records` older than the cutoff into `hr_minute_buckets` (min/max/avg/count plus a p5/p25/p50/p75/p95 percentile sketch, computed in Kotlin via `MinuteBucketAggregator` since SQLite has no `PERCENTILE_CONT`) then deletes the raw rows, day-chunked (R2-DB-004). **R2-CACHE-001:** `rollupExpiredHotTier` returns the `ScoreInvalidation.AffectedRange?` it actually touched (min/max dates of every rolled-up raw sample, merged across day-chunks), or `null` on a no-op run. |
-| `RetentionCleanup`            | `core/database/src/main/kotlin/app/readylytics/health/core/database/data/local/RetentionCleanup.kt`             | Executes deletions of data strictly older than the cutoff across all 12 sensitive tables. **DB-002:** `heart_rate_records` and `hrv_records` (the two high-volume tables) are deleted via `deleteBeforeTimestampBatch`, each call bounded to 10,000 rows and run in its own transaction, looping until a batch returns fewer than 10,000 deletes — so a large first-time cleanup opens many bounded transactions instead of one unbounded delete/WAL growth spike, and a killed worker mid-loop leaves already-deleted rows deleted (idempotent restart: `WHERE timestampMs < cutoff` simply matches fewer rows next time). The remaining 10 low-volume tables (`sleep_sessions`, `hr_minute_buckets`, `workout_records`, `daily_summaries`, `weight_records`, `body_fat_records`, `blood_pressure_records`, `oxygen_saturation_records`, `body_temperature_records`, `step_records`) are deleted together in one single transaction, as before. **R2-CACHE-001:** `deleteBefore` returns the `ScoreInvalidation.AffectedRange?` it actually touched — the earliest pre-deletion timestamp across `heart_rate_records`/`hr_minute_buckets` (the two sources that feed the scoring walk-forward and change size with the rolling cutoff) through `cutoffMs`, read before deletion — or `null` when nothing was older than the cutoff. |
+| `RetentionCleanup`            | `core/database/src/main/kotlin/app/readylytics/health/core/database/data/local/RetentionCleanup.kt`             | Executes deletions of data strictly older than the cutoff across all 13 sensitive tables. **DB-002:** `heart_rate_records` and `hrv_records` (the two high-volume tables) are deleted via `deleteBeforeTimestampBatch`, each call bounded to 10,000 rows and run in its own transaction, looping until a batch returns fewer than 10,000 deletes — so a large first-time cleanup opens many bounded transactions instead of one unbounded delete/WAL growth spike, and a killed worker mid-loop leaves already-deleted rows deleted (idempotent restart: `WHERE timestampMs < cutoff` simply matches fewer rows next time). The remaining 11 low-volume tables (`sleep_sessions`, `hr_minute_buckets`, `workout_records`, `daily_summaries`, `weight_records`, `body_fat_records`, `blood_pressure_records`, `oxygen_saturation_records`, `body_temperature_records`, `step_records`, `vo2_max_records`) are deleted together in one single transaction, as before. **R2-CACHE-001:** `deleteBefore` returns the `ScoreInvalidation.AffectedRange?` it actually touched — the earliest pre-deletion timestamp across `heart_rate_records`/`hr_minute_buckets` (the two sources that feed the scoring walk-forward and change size with the rolling cutoff) through `cutoffMs`, read before deletion — or `null` when nothing was older than the cutoff. |
 | `ScoreInvalidation`           | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/sync/ScoreInvalidation.kt`             | Pure Kotlin, zero Android dependencies. `AffectedRange(start, endInclusive)` plus `affectedRange(changed, today)`, which widens a touched range forward by `MAX_DEPENDENT_WINDOW_DAYS` (84 — the longest scoring lookback: the 84-day TRIMP fetch window) and caps the result at `today`. Bridges `DataRollupManager`/`RetentionCleanup's touched-range output to the bounded recompute-only resync both workers enqueue (see `DataRollupWorker`/`DataCleanupWorker`, above, and `WorkerScheduler.scheduleResyncWorker`'s `startDate`/`endDate` params below). A depth-guard test enumerates every scoring lookback constant (`ACUTE_DAYS`, `CHRONIC_DAYS`, `BASELINE_DAYS`, `HRV_SIGMA_WINDOW_DAYS`, `CIRCADIAN_CONSISTENCY_WINDOW_DAYS`, `MATURE_DATA_TENURE_DAYS`, the 84-day TRIMP fetch) and fails the build if any exceeds `MAX_DEPENDENT_WINDOW_DAYS`. |
 | `RetentionBounds`             | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/util/RetentionBounds.kt`             | Single source of truth for retention→date/instant math. `resolveHistoricalWindow(prefs, now)` derives `endDate` in `prefs.scoringZone()`, then enabled → `startDate = endDate − retentionDays`, disabled → `endDate − ABSOLUTE_MAX_DAYS` (3650 / 10y), and binds that date to scoring-zone midnight as `startTimeMs`. Inclusion is `workout.startTime >= startTimeMs`; cleanup deletes the complementary `< startTimeMs` set. Also owns the fixed 90-day hot/warm boundary (`HOT_TIER_WINDOW_DAYS`, `resolveHotTierCutoffMs`). |
 | `RoomTransactionRunner`       | `core/database/src/main/kotlin/app/readylytics/health/core/database/data/local/RoomTransactionRunner.kt`        | Wraps `HealthDatabase.withTransaction { … }`. Ingestion commits parent/low-volume records together, then HR and HRV in bounded 500-row transactions with cancellation checks between batches. A failed window may contain partial new upserts, but never deletes prior valid rows; its unchanged checkpoint causes an idempotent replay. Also wraps the sync/resync walk-forward recompute via `DailyRecomputeSupport`. |
@@ -386,7 +385,10 @@ across the 5 vitals tables (`weight_records`, `body_fat_records`, `blood_pressur
 Version 17 (`Migration16To17`) adds nullable Training Readiness projection columns to
 `daily_summaries`: `acuteLoadRecovery`, source-specific `trainingLoadReadiness`, and source-specific
 `trainingReadiness`; existing rows remain null until the deterministic scoring projection is populated.
-The current Room schema version = 17.
+Version 18 (`Migration17To18`) adds the `vo2_max_records` table and index (`index_vo2_max_records_timestampMs`)
+for VO2 max ingestion from Health Connect, and adds nullable `vo2Max` and `vo2MaxSource` columns to
+`daily_summaries`; existing rows remain null until populated.
+The current Room schema version = 18.
 
 **Workout distance and elevation come from separate records, not the session.** An
 `ExerciseSessionRecord` carries no distance — the recording app writes `DistanceRecord` and
@@ -504,7 +506,8 @@ per-bucket (min/avg/max or percentile) replay values are unchanged.
 | `BloodPressureRecordEntity`    | `blood_pressure_records`    | `id: String` (composite)               | systolic/diastolic, `timestampMs`, `deviceName`                                                                                                           |
 | `OxygenSaturationRecordEntity` | `oxygen_saturation_records` | `id: String` (composite)               | %, `timestampMs`, `deviceName`                                                                                                                            |
 | `BodyTemperatureRecordEntity`  | `body_temperature_records`  | `id: String` (composite)               | `celsius`, `timestampMs`, `deviceName`                                                                                                                     |
-| `DailySummaryEntity`           | `daily_summaries`           | `dateMidnightMs: Long`                 | computed scores (sleep/load/readiness), frozen baselines (`hrv_mu_mssd`, `hrv_sigma_mssd`, `rhr_bpm`, `rhr_sigma`, `hr_max`, …), weight/BP/SpO2/body-temp snapshots (`avgSleepingBodyTemp` — nightly average, never a scoring input) |
+| `DailySummaryEntity`           | `daily_summaries`           | `dateMidnightMs: Long`                 | computed scores (sleep/load/readiness), frozen baselines (`hrv_mu_mssd`, `hrv_sigma_mssd`, `rhr_bpm`, `rhr_sigma`, `hr_max`, …), weight/BP/SpO2/body-temp snapshots (`avgSleepingBodyTemp` — nightly average, never a scoring input), VO2 max snapshot (`vo2Max`, `vo2MaxSource`) |
+| `Vo2MaxRecordEntity`           | `vo2_max_records`           | `id: String` (HC id)                   | `timestampMs`, `vo2Max` (mL/kg/min), `measurementMethod` (nullable), `deviceName`                                                                         |
 | `InsightDismissalEntity`       | `insight_dismissals`        | `(dateMidnightMs: Long, type: String)` | `type: String` (LATE_NADIR, SICK_INDICATOR, STRONG_RECOVERY_SIGNAL, LOAD_SPIKE_RECOVERY_STRAIN, …) — represents dismissed dashboard insights                                                       |
 | `AuditEventEntity`             | `audit_events`              | `id: Long` (auto)                      | `type`, `occurredAtEpochMs`, optional coarse `detail` for local backup/restore/key-lifecycle events                                                       |
 
@@ -1241,6 +1244,27 @@ The calculation is always on; users can optionally visualize Residual Fatigue ac
        for 3D/7D, both read off the sample's own instant).
      ```
 
+### 2.9 Cardio Fitness (VO2 Max)
+
+VO2 Max processing occurs across several layers:
+- **Ingestion:** Wearable VO2 Max records are ingested from Health Connect (`READ_VO2_MAX`) via `HealthConnectRepositoryImpl.readVo2MaxRecords` and persisted as `vo2_max_records` in Room.
+- **Resolver:** `Vo2MaxSourceResolver` determines the active VO2 Max value based on the user's `vo2MaxSource` preference (Auto, Wearable only, Estimate only).
+- **Estimation:** When using the Uth et al. (2004) resting HR ratio formula, VO2 Max is calculated as `15.3 * (hrMax / rhrBaselineBpm)`. The value is clamped to `[15.0, 95.0]`. If the baseline is still calibrating, it returns null.
+- **Classification:** `CooperNormsClassifier` benchmarks the resulting VO2 Max into 5 categories (Superior, Excellent, Good, Fair, Poor) based on the user's age and sex (using Cooper Institute normative data).
+
+### 2.10 Training Stress Balance (TSB)
+
+Training Stress Balance (TSB) represents readiness based on training load, calculated as `TSB = CTL - ATL`.
+- **ATL (Acute Training Load):** 7-day exponentially weighted moving average of TRIMP.
+- **CTL (Chronic Training Load):** 42-day exponentially weighted moving average of TRIMP.
+- **TSB Zones:**
+  - **> +25:** Very Fresh
+  - **+5 to +25:** Fresh / Peaked
+  - **-10 to +5:** Optimal / Productive
+  - **-30 to -10:** Fatigued / Overload
+  - **< -30:** High Risk / Overreached
+- **UI Presentation:** TSB is shown in the Workouts tab (toggleable) and optionally as a Dashboard card.
+
 ---
 
 ## 3. Presentation Layer (Calculated States → UI)
@@ -1399,7 +1423,7 @@ defaults when unset).
 | `app/src/main/kotlin/app/readylytics/health/workers/PeriodicHealthSyncWorker.kt`                                      | Ingestion — periodic background sync (2-day window) | silent transient notification                                                            |
 | `core/model/src/main/kotlin/app/readylytics/health/core/model/workers/WorkerScheduler.kt`                                               | Ingestion — work scheduling                         | full resync (KEEP), recompute successor (APPEND_OR_REPLACE), periodic sync (UPDATE)       |
 | `app/src/main/kotlin/app/readylytics/health/workers/DataCleanupWorker.kt`                                             | Ingestion — retention enforcement                   | retention cutoff (shared)                                                                |
-| `core/database/src/main/kotlin/app/readylytics/health/core/database/data/local/RetentionCleanup.kt`                                           | Ingestion — retention cleanup                       | 12 sensitive tables: HR/HRV batched (10k rows/tx, DB-002), other 10 in one transaction    |
+| `core/database/src/main/kotlin/app/readylytics/health/core/database/data/local/RetentionCleanup.kt`                                           | Ingestion — retention cleanup                       | 13 sensitive tables: HR/HRV batched (10k rows/tx, DB-002), other 11 in one transaction    |
 | `core/database/src/main/kotlin/app/readylytics/health/core/database/data/local/RoomTransactionRunner.kt`                                      | Ingestion — atomic transaction                      | per-window upsert                                                                        |
 | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/sync/link/SessionLinker.kt`                                        | Ingestion — session linkage                         | pure `resolve()`: sleep > workout > resting precedence                                   |
 | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/sync/link/SessionLinkReconciler.kt`                                | Ingestion — post-resync reconcile                   | re-tags HR/HRV by session, recomputes workout TRIMP/zones                                |

@@ -353,6 +353,29 @@ _Implemented in: `RouteSimplifier.kt`, `RouteDistanceCalculator.kt`, `RouteConto
 
 ---
 
+## Cardio Fitness (VO2 Max)
+
+Cardio Fitness (VO2 Max) is an indicator of your cardiovascular endurance. The app determines your VO2 Max based on your selected source preference (Auto, Wearable only, Estimate only).
+If an estimate is allowed, we use the Uth et al. (2004) resting heart rate ratio formula (`15.3 * (HRmax / HRrest)`) to approximate your VO2 Max.
+Your VO2 Max is then benchmarked into five categories (Superior, Excellent, Good, Fair, Poor) based on normative percentiles from the Cooper Institute tailored to your age and sex.
+
+---
+
+## Training Stress Balance (TSB)
+
+Training Stress Balance (TSB) represents your readiness to perform based on your recent training load. It is calculated as `TSB = CTL - ATL`, where CTL is your Chronic Training Load (42-day average) and ATL is your Acute Training Load (7-day average).
+
+The TSB value places you into one of five zones:
+- **> +25 (Very Fresh):** You are fully recovered, but detraining may occur if prolonged.
+- **+5 to +25 (Fresh / Peaked):** Optimal state for a race or peak performance.
+- **-10 to +5 (Optimal / Productive):** The sweet spot for maintaining and building fitness.
+- **-30 to -10 (Fatigued / Overload):** Heavy training load; you are absorbing training but building fatigue.
+- **< -30 (High Risk / Overreached):** Warning zone; high fatigue and increased injury risk.
+
+You can view your TSB on the Workouts tab (via a toggle) and optionally enable it as a Dashboard card.
+
+---
+
 ## What the app needs from you
 
 We read from Android Health Connect:
@@ -362,6 +385,7 @@ We read from Android Health Connect:
 - **Heart rate variability (RMSSD)** during sleep
 - **Heart rate** during exercise sessions (for training load)
 - **Exercise routes & GPS data** (optional, for offline route visualization, pace, and elevation profiles)
+- **Distance & elevation gained** (optional, so a workout shows the same figures as the app that recorded it — re-measuring the GPS track instead reads about 1–3% short)
 
 The app reads only — it never writes. You can revoke access at any time in Health Connect settings.
 

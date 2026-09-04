@@ -159,6 +159,8 @@ object SettingsDefaults {
             CardConfiguration(CardId.AI_RECOMMENDATION, isVisible = true, position = 18),
             CardConfiguration(CardId.RESIDUAL_FATIGUE, isVisible = false, position = 19),
             CardConfiguration(CardId.TRAINING_READINESS, isVisible = false, position = 20),
+            CardConfiguration(CardId.CARDIO_FITNESS, isVisible = false, position = 21),
+            CardConfiguration(CardId.TSB, isVisible = false, position = 22),
         )
 
     val DEFAULT_VITALS_CARDS =
@@ -185,6 +187,12 @@ object SettingsDefaults {
                 CardId.BODY_TEMPERATURE,
                 isVisible = false,
                 position = 3,
+                requestedDisplayMode = DashboardCardDisplayMode.GAUGE,
+            ),
+            CardConfiguration(
+                CardId.CARDIO_FITNESS,
+                isVisible = false,
+                position = 4,
                 requestedDisplayMode = DashboardCardDisplayMode.GAUGE,
             ),
         )

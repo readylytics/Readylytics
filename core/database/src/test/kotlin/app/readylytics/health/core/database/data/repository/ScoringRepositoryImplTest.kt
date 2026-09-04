@@ -1,6 +1,8 @@
 package app.readylytics.health.core.database.data.repository
 import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
+import app.readylytics.health.core.scoring.domain.cardio.UthVo2MaxCalculator
+import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxSourceResolver
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
 import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
@@ -63,6 +65,7 @@ class ScoringRepositoryImplTest {
     private val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
     private val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
     private val bodyTemperatureRecordDao = mockk<BodyTemperatureRecordDao>(relaxed = true)
+    private val vo2MaxRecordDao = mockk<Vo2MaxRecordDao>(relaxed = true)
     private val sleepPercentileRhrCalculator = mockk<SleepPercentileRhrCalculator>(relaxed = true)
     private val scoringHistoryRepository = mockk<ScoringHistoryRepository>(relaxed = true)
     private val dataLoader =
@@ -85,6 +88,7 @@ class ScoringRepositoryImplTest {
             bloodPressureRecordDao,
             oxygenSaturationRecordDao,
             bodyTemperatureRecordDao,
+            vo2MaxRecordDao,
         )
     private val seriesLoader = ScoringSeriesLoader(workoutDao, dailySummaryDao)
 
@@ -117,6 +121,8 @@ class ScoringRepositoryImplTest {
                 ResolveDailyBaselinesUseCase(baselineComputer),
                 AssembleEverydayLoadInputUseCase(),
                         ComputeTrainingReadinessUseCase(scoringCalculator),
+                UthVo2MaxCalculator(),
+                Vo2MaxSourceResolver(),
             ),
             scoringHistoryRepository,
             readinessSummaryCoordinator,

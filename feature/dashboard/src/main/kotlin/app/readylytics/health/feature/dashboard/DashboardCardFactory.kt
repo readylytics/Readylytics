@@ -43,6 +43,14 @@ import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisua
 import app.readylytics.health.core.ui.components.metriccard.toDashboardMode
 import app.readylytics.health.core.ui.components.metriccard.toUniversalMode
 import kotlin.math.roundToInt
+import app.readylytics.health.core.ui.R as UiR
+
+private data class DashboardCardContext(
+    val uiState: DashboardUiState,
+    val isEditing: Boolean,
+    val isLoading: Boolean,
+    val onCardDisplayModeChanged: (CardId, DashboardCardDisplayMode) -> Unit,
+)
 
 // Renders a single catalog-registered metric card: resolves requested/render mode through
 // DashboardCardCatalog and dispatches to the shared DashboardMetricCard shell (Gauge/Bar/Value).
@@ -53,14 +61,12 @@ private fun ConfigurableMetricCard(
     cardId: CardId,
     presentation: UniversalMetricPresentation?,
     configuration: CardConfiguration,
-    isEditing: Boolean,
-    isLoading: Boolean,
+    ctx: DashboardCardContext,
     onClick: () -> Unit,
-    onCardDisplayModeChanged: (CardId, DashboardCardDisplayMode) -> Unit,
     skeleton: @Composable () -> Unit = { MetricCardSkeleton() },
 ) {
     CardLoader(
-        isLoading = isLoading,
+        isLoading = ctx.isLoading,
         skeleton = skeleton,
         content = {
             val spec = DashboardCardCatalog.spec(cardId)
@@ -69,14 +75,29 @@ private fun ConfigurableMetricCard(
                     presentation = presentation,
                     specification = spec.toUniversalSpec(cardId.usesDeltaPill()),
                     requestedMode = DashboardCardCatalog.requestedMode(configuration).toUniversalMode(),
-                    isEditing = isEditing,
-                    onModeSelected = { mode -> onCardDisplayModeChanged(cardId, mode.toDashboardMode()) },
-                    onClick = if (isEditing) null else onClick,
+                    isEditing = ctx.isEditing,
+                    onModeSelected = { mode -> ctx.onCardDisplayModeChanged(cardId, mode.toDashboardMode()) },
+                    onClick = if (ctx.isEditing) null else onClick,
                 )
             }
         },
     )
 }
+
+private data class SpecialCardCallbacks(
+    val onDismissInsight: (InsightType) -> Unit,
+    val onRestoreInsights: () -> Unit,
+    val onOpenInsight: (InsightParams) -> Unit,
+    val onCopySetupPrompt: () -> Unit,
+    val onCopyDailyPrompt: () -> Unit,
+    val insightsCard: @Composable (
+        DashboardUiState,
+        Boolean,
+        (InsightType) -> Unit,
+        () -> Unit,
+        (InsightParams) -> Unit,
+    ) -> Unit,
+)
 
 // Build a map of CardId to composable card content for the Dashboard screen
 // This factory method creates all available dashboard cards and maps them by ID
@@ -93,6 +114,7 @@ fun buildCardDataMap(
     onNavigateToBodyFat: () -> Unit = {},
     onNavigateToBloodPressure: () -> Unit = {},
     onNavigateToVitals: () -> Unit = {},
+    onNavigateToCardioFitness: () -> Unit = {},
     isEditing: Boolean = false,
     isLoading: Boolean = false,
     onDismissInsight: (InsightType) -> Unit = {},
@@ -110,169 +132,92 @@ fun buildCardDataMap(
     ) -> Unit,
 ): Map<CardId, @Composable (CardConfiguration) -> Unit> {
     val cardMap = mutableMapOf<CardId, @Composable (CardConfiguration) -> Unit>()
+    val ctx = DashboardCardContext(uiState, isEditing, isLoading, onCardDisplayModeChanged)
 
+    registerSleepCards(cardMap, ctx, onNavigateToSleep)
+    registerWorkoutCards(cardMap, ctx, onNavigateToWorkouts)
+    registerVitalsCards(
+        cardMap = cardMap,
+        ctx = ctx,
+        onNavigateToHrv = onNavigateToHrv,
+        onNavigateToRhr = onNavigateToRhr,
+        onNavigateToVitals = onNavigateToVitals,
+        onNavigateToCardioFitness = onNavigateToCardioFitness,
+    )
+    registerBodyMetricCards(
+        cardMap = cardMap,
+        ctx = ctx,
+        onNavigateToSteps = onNavigateToSteps,
+        onNavigateToHeartRate = onNavigateToHeartRate,
+        onNavigateToWeight = onNavigateToWeight,
+        onNavigateToBodyFat = onNavigateToBodyFat,
+        onNavigateToBloodPressure = onNavigateToBloodPressure,
+    )
+    registerSpecialCards(
+        cardMap = cardMap,
+        ctx = ctx,
+        callbacks =
+            SpecialCardCallbacks(
+                onDismissInsight = onDismissInsight,
+                onRestoreInsights = onRestoreInsights,
+                onOpenInsight = onOpenInsight,
+                onCopySetupPrompt = onCopySetupPrompt,
+                onCopyDailyPrompt = onCopyDailyPrompt,
+                insightsCard = insightsCard,
+            ),
+    )
+
+    return cardMap
+}
+
+private fun registerSleepCards(
+    cardMap: MutableMap<CardId, @Composable (CardConfiguration) -> Unit>,
+    ctx: DashboardCardContext,
+    onNavigateToSleep: () -> Unit,
+) {
     cardMap[CardId.SLEEP_SCORE] = { configuration ->
-        val sleepScoreCard = uiState.cardDataMap[CardId.SLEEP_SCORE]
+        val sleepScoreCard = ctx.uiState.cardDataMap[CardId.SLEEP_SCORE]
         val deltaText =
             formatRoundedScoreDelta(
                 currentRounded = (sleepScoreCard?.visual as? UniversalMetricVisual.Score)?.rawValue?.roundToInt(),
-                previousRounded = uiState.yesterdaySleepScoreRounded,
+                previousRounded = ctx.uiState.yesterdaySleepScoreRounded,
             ).resolveOrNull()
         ConfigurableMetricCard(
             cardId = CardId.SLEEP_SCORE,
             presentation = deltaText?.let { sleepScoreCard?.copy(secondaryText = it) } ?: sleepScoreCard,
             configuration = configuration,
-            isEditing = isEditing,
-            isLoading = isLoading,
+            ctx = ctx,
             skeleton = { ScoreDialSkeleton() },
             onClick = onNavigateToSleep,
-            onCardDisplayModeChanged = onCardDisplayModeChanged,
         )
     }
 
-    cardMap[CardId.READINESS] = { configuration ->
-        val readinessCard = uiState.cardDataMap[CardId.READINESS]
-        val readinessVal = (readinessCard?.visual as? UniversalMetricVisual.Score)?.rawValue
-        val readinessDelta =
-            formatRoundedScoreDelta(
-                currentRounded = readinessVal?.roundToInt(),
-                previousRounded = uiState.yesterdayReadiness?.toInt(),
-            ).resolveOrNull()
-        ConfigurableMetricCard(
-            cardId = CardId.READINESS,
-            presentation = readinessDelta?.let { readinessCard?.copy(secondaryText = it) } ?: readinessCard,
-            configuration = configuration,
-            isEditing = isEditing,
-            isLoading = isLoading,
-            skeleton = { ScoreDialSkeleton() },
-            onClick = onNavigateToWorkouts,
-            onCardDisplayModeChanged = onCardDisplayModeChanged,
-        )
-    }
-
-    if (uiState.activeInsightTypes.isNotEmpty() || isEditing) {
-        cardMap[CardId.INSIGHTS] = {
-            insightsCard(uiState, isEditing, onDismissInsight, onRestoreInsights, onOpenInsight)
+    listOf(CardId.SLEEP_RHR, CardId.SLEEP_DURATION, CardId.SLEEP_EFFICIENCY).forEach { id ->
+        cardMap[id] = { configuration ->
+            ConfigurableMetricCard(
+                cardId = id,
+                presentation = ctx.uiState.cardDataMap[id],
+                configuration = configuration,
+                ctx = ctx,
+                onClick = onNavigateToSleep,
+            )
         }
     }
 
-    cardMap[CardId.STEPS] = {
-        CardLoader(
-            isLoading = isLoading,
-            skeleton = { MetricCardSkeleton() },
-            content = {
-                StepsCard(
-                    stepCount = uiState.stepCount,
-                    stepGoal = uiState.stepGoal,
-                    onClick = if (isEditing) ({}) else onNavigateToSteps,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            },
-        )
-    }
-
-    cardMap[CardId.HRV] = { configuration ->
-        ConfigurableMetricCard(
-            cardId = CardId.HRV,
-            presentation = uiState.cardDataMap[CardId.HRV],
-            configuration = configuration,
-            isEditing = isEditing,
-            isLoading = isLoading,
-            onClick = onNavigateToHrv,
-            onCardDisplayModeChanged = onCardDisplayModeChanged,
-        )
-    }
-
-    cardMap[CardId.SLEEP_RHR] = { configuration ->
-        ConfigurableMetricCard(
-            cardId = CardId.SLEEP_RHR,
-            presentation = uiState.cardDataMap[CardId.SLEEP_RHR],
-            configuration = configuration,
-            isEditing = isEditing,
-            isLoading = isLoading,
-            onClick = onNavigateToSleep,
-            onCardDisplayModeChanged = onCardDisplayModeChanged,
-        )
-    }
-
-    cardMap[CardId.STRAIN_RATIO] = { configuration ->
-        ConfigurableMetricCard(
-            cardId = CardId.STRAIN_RATIO,
-            presentation = uiState.cardDataMap[CardId.STRAIN_RATIO],
-            configuration = configuration,
-            isEditing = isEditing,
-            isLoading = isLoading,
-            onClick = onNavigateToWorkouts,
-            onCardDisplayModeChanged = onCardDisplayModeChanged,
-        )
-    }
-
-    cardMap[CardId.SLEEP_DURATION] = { configuration ->
-        ConfigurableMetricCard(
-            cardId = CardId.SLEEP_DURATION,
-            presentation = uiState.cardDataMap[CardId.SLEEP_DURATION],
-            configuration = configuration,
-            isEditing = isEditing,
-            isLoading = isLoading,
-            onClick = onNavigateToSleep,
-            onCardDisplayModeChanged = onCardDisplayModeChanged,
-        )
-    }
-
-    cardMap[CardId.SLEEP_EFFICIENCY] = { configuration ->
-        ConfigurableMetricCard(
-            cardId = CardId.SLEEP_EFFICIENCY,
-            presentation = uiState.cardDataMap[CardId.SLEEP_EFFICIENCY],
-            configuration = configuration,
-            isEditing = isEditing,
-            isLoading = isLoading,
-            onClick = onNavigateToSleep,
-            onCardDisplayModeChanged = onCardDisplayModeChanged,
-        )
-    }
-
-    cardMap[CardId.RAS_DAILY] = { configuration ->
-        ConfigurableMetricCard(
-            cardId = CardId.RAS_DAILY,
-            presentation = uiState.cardDataMap[CardId.RAS_DAILY],
-            configuration = configuration,
-            isEditing = isEditing,
-            isLoading = isLoading,
-            onClick = onNavigateToWorkouts,
-            onCardDisplayModeChanged = onCardDisplayModeChanged,
-        )
-    }
-
-    cardMap[CardId.RESTING_HR] = { configuration ->
-        ConfigurableMetricCard(
-            cardId = CardId.RESTING_HR,
-            presentation = uiState.cardDataMap[CardId.RESTING_HR],
-            configuration = configuration,
-            isEditing = isEditing,
-            isLoading = isLoading,
-            onClick = onNavigateToRhr,
-            onCardDisplayModeChanged = onCardDisplayModeChanged,
-        )
-    }
-
     cardMap[CardId.CIRCADIAN_CONSISTENCY] = { configuration ->
-        val circadianCard = uiState.cardDataMap[CardId.CIRCADIAN_CONSISTENCY]
-        val result = uiState.circadianConsistency
-        val thresholdMinutes =
-            when (result) {
-                is CircadianConsistencyResult.Ready -> result.thresholdMinutes
-                else -> SettingsDefaults.CONSISTENCY_THRESHOLD_MINUTES
-            }
+        val circadianCard = ctx.uiState.cardDataMap[CardId.CIRCADIAN_CONSISTENCY]
+        val result = ctx.uiState.circadianConsistency
+        val ready = result as? CircadianConsistencyResult.Ready
+        val thresholdMinutes = ready?.thresholdMinutes ?: SettingsDefaults.CONSISTENCY_THRESHOLD_MINUTES
         val windowText =
-            (result as? CircadianConsistencyResult.Ready)?.let {
+            ready?.let {
                 stringResource(
-                    app.readylytics.health.core.ui.R.string.label_circadian_median,
+                    UiR.string.label_circadian_median,
                     it.medianBedtimeMinutes.toTimeString(),
                     it.medianWakeMinutes.toTimeString(),
                 )
             }
-        val tooltipText =
-            stringResource(app.readylytics.health.core.ui.R.string.tooltip_circadian_score, thresholdMinutes)
+        val tooltipText = stringResource(UiR.string.tooltip_circadian_score, thresholdMinutes)
         ConfigurableMetricCard(
             cardId = CardId.CIRCADIAN_CONSISTENCY,
             presentation =
@@ -282,10 +227,134 @@ fun buildCardDataMap(
                     status = result?.toStatus() ?: circadianCard.status,
                 ),
             configuration = configuration,
-            isEditing = isEditing,
-            isLoading = isLoading,
+            ctx = ctx,
             onClick = onNavigateToSleep,
-            onCardDisplayModeChanged = onCardDisplayModeChanged,
+        )
+    }
+}
+
+private fun registerWorkoutCards(
+    cardMap: MutableMap<CardId, @Composable (CardConfiguration) -> Unit>,
+    ctx: DashboardCardContext,
+    onNavigateToWorkouts: () -> Unit,
+) {
+    cardMap[CardId.READINESS] = { configuration ->
+        val readinessCard = ctx.uiState.cardDataMap[CardId.READINESS]
+        val readinessVal = (readinessCard?.visual as? UniversalMetricVisual.Score)?.rawValue
+        val readinessDelta =
+            formatRoundedScoreDelta(
+                currentRounded = readinessVal?.roundToInt(),
+                previousRounded = ctx.uiState.yesterdayReadiness?.toInt(),
+            ).resolveOrNull()
+        ConfigurableMetricCard(
+            cardId = CardId.READINESS,
+            presentation = readinessDelta?.let { readinessCard?.copy(secondaryText = it) } ?: readinessCard,
+            configuration = configuration,
+            ctx = ctx,
+            skeleton = { ScoreDialSkeleton() },
+            onClick = onNavigateToWorkouts,
+        )
+    }
+
+    listOf(
+        CardId.STRAIN_RATIO,
+        CardId.RAS_DAILY,
+        CardId.RESIDUAL_FATIGUE,
+        CardId.TRAINING_READINESS,
+        CardId.TSB,
+    ).forEach { id ->
+        cardMap[id] = { configuration ->
+            ConfigurableMetricCard(
+                cardId = id,
+                presentation = ctx.uiState.cardDataMap[id],
+                configuration = configuration,
+                ctx = ctx,
+                onClick = onNavigateToWorkouts,
+            )
+        }
+    }
+}
+
+private fun registerVitalsCards(
+    cardMap: MutableMap<CardId, @Composable (CardConfiguration) -> Unit>,
+    ctx: DashboardCardContext,
+    onNavigateToHrv: () -> Unit,
+    onNavigateToRhr: () -> Unit,
+    onNavigateToVitals: () -> Unit,
+    onNavigateToCardioFitness: () -> Unit,
+) {
+    cardMap[CardId.HRV] = { configuration ->
+        ConfigurableMetricCard(
+            cardId = CardId.HRV,
+            presentation = ctx.uiState.cardDataMap[CardId.HRV],
+            configuration = configuration,
+            ctx = ctx,
+            onClick = onNavigateToHrv,
+        )
+    }
+
+    cardMap[CardId.RESTING_HR] = { configuration ->
+        ConfigurableMetricCard(
+            cardId = CardId.RESTING_HR,
+            presentation = ctx.uiState.cardDataMap[CardId.RESTING_HR],
+            configuration = configuration,
+            ctx = ctx,
+            onClick = onNavigateToRhr,
+        )
+    }
+
+    cardMap[CardId.OXYGEN_SATURATION] = { configuration ->
+        ConfigurableMetricCard(
+            cardId = CardId.OXYGEN_SATURATION,
+            presentation = ctx.uiState.cardDataMap[CardId.OXYGEN_SATURATION],
+            configuration = configuration,
+            ctx = ctx,
+            onClick = onNavigateToVitals,
+        )
+    }
+
+    cardMap[CardId.BODY_TEMPERATURE] = { configuration ->
+        ConfigurableMetricCard(
+            cardId = CardId.BODY_TEMPERATURE,
+            presentation = ctx.uiState.cardDataMap[CardId.BODY_TEMPERATURE],
+            configuration = configuration,
+            ctx = ctx,
+            onClick = onNavigateToVitals,
+        )
+    }
+
+    cardMap[CardId.CARDIO_FITNESS] = { configuration ->
+        ConfigurableMetricCard(
+            cardId = CardId.CARDIO_FITNESS,
+            presentation = ctx.uiState.cardDataMap[CardId.CARDIO_FITNESS],
+            configuration = configuration,
+            ctx = ctx,
+            onClick = onNavigateToCardioFitness,
+        )
+    }
+}
+
+private fun registerBodyMetricCards(
+    cardMap: MutableMap<CardId, @Composable (CardConfiguration) -> Unit>,
+    ctx: DashboardCardContext,
+    onNavigateToSteps: () -> Unit,
+    onNavigateToHeartRate: () -> Unit,
+    onNavigateToWeight: () -> Unit,
+    onNavigateToBodyFat: () -> Unit,
+    onNavigateToBloodPressure: () -> Unit,
+) {
+    cardMap[CardId.STEPS] = {
+        CardLoader(
+            isLoading = ctx.isLoading,
+            skeleton = { MetricCardSkeleton() },
+            content = {
+                StepsCard(
+                    stepCount = ctx.uiState.stepCount,
+                    stepGoal = ctx.uiState.stepGoal,
+                    onClick = if (ctx.isEditing) ({}) else onNavigateToSteps,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
         )
     }
 
@@ -293,107 +362,67 @@ fun buildCardDataMap(
         val tooltipText = stringResource(R.string.tooltip_heart_rate_card)
         ConfigurableMetricCard(
             cardId = CardId.HEART_RATE,
-            presentation = uiState.cardDataMap[CardId.HEART_RATE]?.copy(tooltip = tooltipText),
+            presentation = ctx.uiState.cardDataMap[CardId.HEART_RATE]?.copy(tooltip = tooltipText),
             configuration = configuration,
-            isEditing = isEditing,
-            isLoading = isLoading,
+            ctx = ctx,
             onClick = onNavigateToHeartRate,
-            onCardDisplayModeChanged = onCardDisplayModeChanged,
         )
     }
 
     cardMap[CardId.WEIGHT] = { configuration ->
         ConfigurableMetricCard(
             cardId = CardId.WEIGHT,
-            presentation = uiState.cardDataMap[CardId.WEIGHT],
+            presentation = ctx.uiState.cardDataMap[CardId.WEIGHT],
             configuration = configuration,
-            isEditing = isEditing,
-            isLoading = isLoading,
+            ctx = ctx,
             onClick = onNavigateToWeight,
-            onCardDisplayModeChanged = onCardDisplayModeChanged,
         )
     }
 
     cardMap[CardId.BODY_FAT] = { configuration ->
         ConfigurableMetricCard(
             cardId = CardId.BODY_FAT,
-            presentation = uiState.cardDataMap[CardId.BODY_FAT],
+            presentation = ctx.uiState.cardDataMap[CardId.BODY_FAT],
             configuration = configuration,
-            isEditing = isEditing,
-            isLoading = isLoading,
+            ctx = ctx,
             onClick = onNavigateToBodyFat,
-            onCardDisplayModeChanged = onCardDisplayModeChanged,
         )
     }
 
     cardMap[CardId.BLOOD_PRESSURE] = { configuration ->
         ConfigurableMetricCard(
             cardId = CardId.BLOOD_PRESSURE,
-            presentation = uiState.cardDataMap[CardId.BLOOD_PRESSURE],
+            presentation = ctx.uiState.cardDataMap[CardId.BLOOD_PRESSURE],
             configuration = configuration,
-            isEditing = isEditing,
-            isLoading = isLoading,
+            ctx = ctx,
             onClick = onNavigateToBloodPressure,
-            onCardDisplayModeChanged = onCardDisplayModeChanged,
         )
     }
+}
 
-    cardMap[CardId.OXYGEN_SATURATION] = { configuration ->
-        ConfigurableMetricCard(
-            cardId = CardId.OXYGEN_SATURATION,
-            presentation = uiState.cardDataMap[CardId.OXYGEN_SATURATION],
-            configuration = configuration,
-            isEditing = isEditing,
-            isLoading = isLoading,
-            onClick = onNavigateToVitals,
-            onCardDisplayModeChanged = onCardDisplayModeChanged,
-        )
+private fun registerSpecialCards(
+    cardMap: MutableMap<CardId, @Composable (CardConfiguration) -> Unit>,
+    ctx: DashboardCardContext,
+    callbacks: SpecialCardCallbacks,
+) {
+    if (ctx.uiState.activeInsightTypes.isNotEmpty() || ctx.isEditing) {
+        cardMap[CardId.INSIGHTS] = {
+            callbacks.insightsCard(
+                ctx.uiState,
+                ctx.isEditing,
+                callbacks.onDismissInsight,
+                callbacks.onRestoreInsights,
+                callbacks.onOpenInsight,
+            )
+        }
     }
 
     cardMap[CardId.AI_RECOMMENDATION] = {
         AiRecommendationCard(
-            onCopySetupPrompt = onCopySetupPrompt,
-            onCopyDailyPrompt = onCopyDailyPrompt,
+            onCopySetupPrompt = callbacks.onCopySetupPrompt,
+            onCopyDailyPrompt = callbacks.onCopyDailyPrompt,
         )
     }
-
-    cardMap[CardId.BODY_TEMPERATURE] = { configuration ->
-        ConfigurableMetricCard(
-            cardId = CardId.BODY_TEMPERATURE,
-            presentation = uiState.cardDataMap[CardId.BODY_TEMPERATURE],
-            configuration = configuration,
-            isEditing = isEditing,
-            isLoading = isLoading,
-            onClick = onNavigateToVitals,
-            onCardDisplayModeChanged = onCardDisplayModeChanged,
-        )
-    }
-
-    cardMap[CardId.RESIDUAL_FATIGUE] = { configuration ->
-        ConfigurableMetricCard(
-            cardId = CardId.RESIDUAL_FATIGUE,
-            presentation = uiState.cardDataMap[CardId.RESIDUAL_FATIGUE],
-            configuration = configuration,
-            isEditing = isEditing,
-            isLoading = isLoading,
-            onClick = onNavigateToWorkouts,
-            onCardDisplayModeChanged = onCardDisplayModeChanged,
-        )
-    }
-
-    cardMap[CardId.TRAINING_READINESS] = { configuration ->
-        ConfigurableMetricCard(
-            cardId = CardId.TRAINING_READINESS,
-            presentation = uiState.cardDataMap[CardId.TRAINING_READINESS],
-            configuration = configuration,
-            isEditing = isEditing,
-            isLoading = isLoading,
-            onClick = onNavigateToWorkouts,
-            onCardDisplayModeChanged = onCardDisplayModeChanged,
-        )
-    }
-
-    return cardMap
 }
 
 fun DashboardUiState.toDailyInsightContext(): DailyInsightContext =

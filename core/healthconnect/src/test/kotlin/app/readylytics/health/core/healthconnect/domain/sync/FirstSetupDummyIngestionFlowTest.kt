@@ -15,6 +15,7 @@ import app.readylytics.health.core.model.domain.model.DomainSleepSessionRecord
 import app.readylytics.health.core.model.domain.model.DomainSleepStage
 import app.readylytics.health.core.model.domain.model.DomainSleepStageType
 import app.readylytics.health.core.model.domain.model.DomainStepsRecord
+import app.readylytics.health.core.model.domain.model.DomainVo2MaxRecord
 import app.readylytics.health.core.model.domain.model.DomainWeightRecord
 import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.model.WorkoutRoutePoint
@@ -414,6 +415,13 @@ class FirstSetupDummyIngestionFlowTest {
             }
 
         override suspend fun hasExerciseRoutesPermission(): Boolean = true
+
+        override suspend fun hasVo2MaxPermission(): Boolean = false
+
+        override suspend fun readVo2MaxRecords(
+            startTime: Instant,
+            endTime: Instant,
+        ): List<DomainVo2MaxRecord> = emptyList()
 
         private companion object {
             val sleepStart: Instant = Instant.parse("2026-06-28T22:00:00Z")

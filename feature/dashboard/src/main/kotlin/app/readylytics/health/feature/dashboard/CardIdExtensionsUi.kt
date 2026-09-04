@@ -32,4 +32,6 @@ val CardId.displayNameResId: Int
             CardId.INSIGHTS -> CoreUiR.string.card_title_insights
             CardId.RESIDUAL_FATIGUE -> R.string.card_residual_fatigue_title
             CardId.TRAINING_READINESS -> app.readylytics.health.core.ui.R.string.card_title_training_readiness
+            CardId.CARDIO_FITNESS -> R.string.card_title_cardio_fitness
+            CardId.TSB -> R.string.card_title_tsb
         }

@@ -116,30 +116,14 @@ class HealthIngestionCoordinator
                         SleepDataMapper.mapSleepSessionStages(it)
                     }.filter { it.sessionId in filteredSleepIds }
 
-            val stepRecordInputs =
-                raw.stepsRecords.map { record ->
-                    StepRecordInput(
-                        id = record.id,
-                        startTime = record.startTime.toEpochMilli(),
-                        endTime = record.endTime.toEpochMilli(),
-                        count = record.count,
-                        deviceName = record.deviceName,
-                    )
-                }
-
             healthIngestionStore.persist(
-                HealthIngestionBatch(
-                    sleepSessions = filteredSleep,
-                    sleepStages = allStages,
-                    heartRateSamples = emptyList(),
-                    hrvSamples = emptyList(),
-                    workouts = filteredWorkouts,
-                    weights = vitals.weights,
-                    bodyFatSamples = vitals.bodyFatSamples,
-                    bloodPressureSamples = vitals.bloodPressureSamples,
-                    oxygenSaturationSamples = vitals.oxygenSaturationSamples,
-                    bodyTemperatureSamples = vitals.bodyTemperatureSamples,
-                    stepRecords = stepRecordInputs,
+                buildBulkBatch(
+                    filteredSleep = filteredSleep,
+                    allStages = allStages,
+                    filteredWorkouts = filteredWorkouts,
+                    vitals = vitals,
+                    stepsRecords = raw.stepsRecords,
+                    vo2MaxRecords = raw.vo2MaxRecords,
                 ),
             )
 
@@ -169,6 +153,12 @@ class HealthIngestionCoordinator
             val bodyTemperatureRecords =
                 retryWithBackoff { hcRepo.readBodyTemperatureRecords(windowStart, windowEnd) }
             val stepsRecords = retryWithBackoff { hcRepo.readStepsRecords(windowStart, windowEnd) }
+            val vo2MaxRecords =
+                if (hcRepo.hasVo2MaxPermission()) {
+                    retryWithBackoff { hcRepo.readVo2MaxRecords(windowStart, windowEnd) }
+                } else {
+                    emptyList()
+                }
             return RawBulkRecords(
                 sleepSessions = sleepSessions,
                 exerciseRecords = exerciseRecords,
@@ -178,6 +168,7 @@ class HealthIngestionCoordinator
                 spo2Records = spo2Records,
                 bodyTemperatureRecords = bodyTemperatureRecords,
                 stepsRecords = stepsRecords,
+                vo2MaxRecords = vo2MaxRecords,
             )
         }
 
@@ -427,6 +418,7 @@ private data class RawBulkRecords(
     val spo2Records: List<app.readylytics.health.core.model.domain.model.DomainOxygenSaturationRecord>,
     val bodyTemperatureRecords: List<app.readylytics.health.core.model.domain.model.DomainBodyTemperatureRecord>,
     val stepsRecords: List<app.readylytics.health.core.model.domain.model.DomainStepsRecord>,
+    val vo2MaxRecords: List<app.readylytics.health.core.model.domain.model.DomainVo2MaxRecord> = emptyList(),
 )
 
 private data class FilteredVitals(
@@ -453,3 +445,44 @@ private data class IngestionSessionContext(
     val sleepInputs: List<SleepSessionInput>,
     val workoutInputs: List<WorkoutInput>,
 )
+
+private fun buildBulkBatch(
+    filteredSleep: List<SleepSessionInput>,
+    allStages: List<SleepStageInput>,
+    filteredWorkouts: List<WorkoutInput>,
+    vitals: FilteredVitals,
+    stepsRecords: List<app.readylytics.health.core.model.domain.model.DomainStepsRecord>,
+    vo2MaxRecords: List<app.readylytics.health.core.model.domain.model.DomainVo2MaxRecord>,
+): HealthIngestionBatch =
+    HealthIngestionBatch(
+        sleepSessions = filteredSleep,
+        sleepStages = allStages,
+        heartRateSamples = emptyList(),
+        hrvSamples = emptyList(),
+        workouts = filteredWorkouts,
+        weights = vitals.weights,
+        bodyFatSamples = vitals.bodyFatSamples,
+        bloodPressureSamples = vitals.bloodPressureSamples,
+        oxygenSaturationSamples = vitals.oxygenSaturationSamples,
+        bodyTemperatureSamples = vitals.bodyTemperatureSamples,
+        stepRecords =
+            stepsRecords.map { record ->
+                StepRecordInput(
+                    id = record.id,
+                    startTime = record.startTime.toEpochMilli(),
+                    endTime = record.endTime.toEpochMilli(),
+                    count = record.count,
+                    deviceName = record.deviceName,
+                )
+            },
+        vo2MaxSamples =
+            vo2MaxRecords.map { record ->
+                Vo2MaxInput(
+                    id = record.id,
+                    timestampMs = record.time.toEpochMilli(),
+                    vo2Max = record.vo2MillilitersPerMinuteKilogram.toFloat(),
+                    measurementMethod = record.measurementMethod,
+                    deviceName = record.deviceName,
+                )
+            },
+    )

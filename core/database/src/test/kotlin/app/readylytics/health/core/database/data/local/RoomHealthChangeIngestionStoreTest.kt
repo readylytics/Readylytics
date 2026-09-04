@@ -58,6 +58,7 @@ class RoomHealthChangeIngestionStoreTest {
                 daos = daos,
                 dailySummaryDao = database.dailySummaryDao(),
                 transactionRunner = RoomTransactionRunner(database),
+                vo2MaxRecordDao = database.vo2MaxRecordDao(),
             )
         changeStore = RoomHealthChangeIngestionStore(daos = daos)
     }

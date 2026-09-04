@@ -4,6 +4,8 @@ import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadine
 
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
+import app.readylytics.health.core.scoring.domain.cardio.UthVo2MaxCalculator
+import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxSourceResolver
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
 import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
@@ -25,6 +27,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
 import app.readylytics.health.core.databaseschema.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
+import app.readylytics.health.core.databaseschema.data.local.dao.Vo2MaxRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
@@ -86,6 +89,7 @@ class ScoringDeterminismRegressionTest {
     private val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
     private val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
     private val bodyTemperatureRecordDao = mockk<BodyTemperatureRecordDao>(relaxed = true)
+    private val vo2MaxRecordDao = mockk<Vo2MaxRecordDao>(relaxed = true)
     private val scoringHistoryRepository = mockk<ScoringHistoryRepository>(relaxed = true)
 
     private lateinit var repo: ScoringRepositoryImpl
@@ -112,8 +116,18 @@ class ScoringDeterminismRegressionTest {
                 bloodPressureRecordDao,
                 oxygenSaturationRecordDao,
                 bodyTemperatureRecordDao,
+                vo2MaxRecordDao,
             )
         val seriesLoader = ScoringSeriesLoader(workoutDao, dailySummaryDao)
+        repo = buildRepo(dataLoader, bodyMetricsDataLoader, seriesLoader)
+        coEvery { sleepSessionDao.getOverlapping(any(), any()) } returns emptyList()
+    }
+
+    private fun buildRepo(
+        dataLoader: ScoringDayDataLoader,
+        bodyMetricsDataLoader: BodyMetricsDataLoader,
+        seriesLoader: ScoringSeriesLoader,
+    ): ScoringRepositoryImpl {
         val readinessSummaryCoordinator =
             ReadinessSummaryCoordinator(
                 dataLoader,
@@ -125,28 +139,28 @@ class ScoringDeterminismRegressionTest {
                 ResolveDailyBaselinesUseCase(baselineComputer),
                 AssembleDailySummaryUseCase(),
             )
-        repo =
-            ScoringRepositoryImpl(
-                ScoringDataLoaders(
-                    dataLoader,
-                    bodyMetricsDataLoader,
-                    seriesLoader,
-                ),
-                settingsRepo,
-                baselineComputer,
-                scoringConfigFactory,
-                ScoringDayUseCases(
-                    ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
-                    ComputeResidualFatigueUseCase(),
-                    ResolveDailyBaselinesUseCase(baselineComputer),
-                    AssembleEverydayLoadInputUseCase(),
-                        ComputeTrainingReadinessUseCase(scoringCalculator),
-                ),
-                scoringHistoryRepository,
-                readinessSummaryCoordinator,
-                UnconfinedTestDispatcher(),
-            )
-        coEvery { sleepSessionDao.getOverlapping(any(), any()) } returns emptyList()
+        return ScoringRepositoryImpl(
+            ScoringDataLoaders(
+                dataLoader,
+                bodyMetricsDataLoader,
+                seriesLoader,
+            ),
+            settingsRepo,
+            baselineComputer,
+            scoringConfigFactory,
+            ScoringDayUseCases(
+                ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
+                ComputeResidualFatigueUseCase(),
+                ResolveDailyBaselinesUseCase(baselineComputer),
+                AssembleEverydayLoadInputUseCase(),
+                ComputeTrainingReadinessUseCase(scoringCalculator),
+                UthVo2MaxCalculator(),
+                Vo2MaxSourceResolver(),
+            ),
+            scoringHistoryRepository,
+            readinessSummaryCoordinator,
+            UnconfinedTestDispatcher(),
+        )
     }
 
     private fun frozenSnapshot(

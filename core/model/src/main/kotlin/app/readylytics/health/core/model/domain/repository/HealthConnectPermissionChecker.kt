@@ -28,4 +28,7 @@ interface HealthConnectPermissionChecker {
 
     /** Whether the optional `READ_EXERCISE_ROUTES` permission is currently granted. */
     suspend fun hasExerciseRoutesPermission(): Boolean
+
+    /** Whether the optional `READ_VO2_MAX` permission is currently granted. */
+    suspend fun hasVo2MaxPermission(): Boolean
 }

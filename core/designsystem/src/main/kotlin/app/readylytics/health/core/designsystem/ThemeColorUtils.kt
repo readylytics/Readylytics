@@ -27,6 +27,22 @@ fun calculateTertiarySeedColor(primary: Color): Color {
     return hslToColor(tHue, tSat, hsl[2])
 }
 
+/**
+ * Dynamically calculates a fresh/peaked accent color from the theme's primary color,
+ * harmonized with the active palette and adapted for dark or light theme.
+ */
+fun calculateFreshColor(
+    primary: Color,
+    isDark: Boolean,
+): Color {
+    val hsl = FloatArray(3)
+    primary.toHsl(hsl)
+    val freshHue = 180f
+    val freshSat = maxOf(0.50f, hsl[1] * 0.8f)
+    val freshLightness = if (isDark) 0.65f else 0.35f
+    return hslToColor(freshHue, freshSat, freshLightness).harmonizeWith(primary)
+}
+
 internal fun Color.toHsl(outHsl: FloatArray) {
     val r = red
     val g = green

@@ -63,4 +63,6 @@ data class DailySummary(
     val trainingLoadReadinessEverydayHr: Float? = null,
     val trainingReadinessWorkoutOnly: Float? = null,
     val trainingReadinessEverydayHr: Float? = null,
+    val vo2Max: Float? = null,
+    val vo2MaxSource: String? = null,
 )

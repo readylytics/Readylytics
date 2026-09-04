@@ -109,17 +109,8 @@ fun MainScaffold(
     }
 }
 
-private fun shouldShowBottomBar(currentDestination: NavDestination?): Boolean =
-    currentDestination?.let { dest ->
-        !dest.hasRoute(AppDestination.WorkoutDetail::class) &&
-            !dest.hasRoute(AppDestination.StepDetail::class) &&
-            !dest.hasRoute(AppDestination.HeartRateDetail::class) &&
-            !dest.hasRoute(AppDestination.WeightDetail::class) &&
-            !dest.hasRoute(AppDestination.BodyFatDetail::class) &&
-            !dest.hasRoute(AppDestination.BloodPressureDetail::class) &&
-            !dest.hasRoute(AppDestination.About::class) &&
-            !dest.hasRoute(AppDestination.SyncProgress::class)
-    } ?: true
+internal fun shouldShowBottomBar(currentDestination: NavDestination?): Boolean =
+    currentDestination?.let { dest -> !isDetailDestination(dest) } ?: true
 
 private fun NavigationSuiteScope.renderNavigationSuiteItems(
     navController: NavHostController,

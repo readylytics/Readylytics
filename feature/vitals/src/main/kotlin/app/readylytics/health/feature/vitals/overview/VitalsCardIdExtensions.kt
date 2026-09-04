@@ -15,5 +15,6 @@ val CardId.displayNameResId: Int
             CardId.RESTING_HR -> R.string.label_resting_heart_rate
             CardId.OXYGEN_SATURATION -> R.string.label_oxygen_saturation
             CardId.BODY_TEMPERATURE -> CoreUiR.string.label_body_temperature
+            CardId.CARDIO_FITNESS -> R.string.card_cardio_fitness
             else -> error("Unexpected CardId for Vitals: $this")
         }

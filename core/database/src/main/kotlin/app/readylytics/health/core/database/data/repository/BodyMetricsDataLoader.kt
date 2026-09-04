@@ -4,8 +4,10 @@ import app.readylytics.health.core.databaseschema.data.local.dao.BloodPressureRe
 import app.readylytics.health.core.databaseschema.data.local.dao.BodyFatRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.BodyTemperatureRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.OxygenSaturationRecordDao
+import app.readylytics.health.core.databaseschema.data.local.dao.Vo2MaxRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.Vo2MaxRecordEntity
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -18,6 +20,7 @@ class BodyMetricsDataLoader
         private val bloodPressureRecordDao: BloodPressureRecordDao,
         private val oxygenSaturationRecordDao: OxygenSaturationRecordDao,
         private val bodyTemperatureRecordDao: BodyTemperatureRecordDao,
+        private val vo2MaxRecordDao: Vo2MaxRecordDao,
     ) {
         suspend fun loadAvgSpo2(session: SleepSessionEntity?): Float? {
             if (session == null) return null
@@ -57,4 +60,7 @@ class BodyMetricsDataLoader
                 bloodPressureDiastolic = bp?.diastolicMmHg,
             )
         }
+
+        suspend fun loadLatestVo2Max(nextDayMidnightMs: Long, minTimestampMs: Long): Vo2MaxRecordEntity? =
+            vo2MaxRecordDao.getLatestInWindow(minTimestampMs, nextDayMidnightMs)
     }

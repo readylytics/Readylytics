@@ -11,6 +11,7 @@ import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
 import app.readylytics.health.core.model.domain.model.DomainBloodPressureRecord
 import app.readylytics.health.core.model.domain.model.DomainBodyFatRecord
@@ -24,6 +25,7 @@ import app.readylytics.health.core.model.domain.model.DomainSleepSessionRecord
 import app.readylytics.health.core.model.domain.model.DomainSleepStage
 import app.readylytics.health.core.model.domain.model.DomainSleepStageType
 import app.readylytics.health.core.model.domain.model.DomainStepsRecord
+import app.readylytics.health.core.model.domain.model.DomainVo2MaxRecord
 import app.readylytics.health.core.model.domain.model.DomainWeightRecord
 import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
@@ -87,6 +89,7 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
             HealthPermission.getReadPermission(BloodPressureRecord::class),
             HealthPermission.getReadPermission(OxygenSaturationRecord::class),
             HealthPermission.getReadPermission(BodyTemperatureRecord::class),
+            HealthPermission.getReadPermission(Vo2MaxRecord::class),
         )
 
     override val allPermissions: Set<String> = requiredPermissions + optionalPermissions
@@ -318,6 +321,14 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
     override suspend fun hasExerciseRoutesPermission(): Boolean =
         granted.contains("android.permission.health.READ_EXERCISE_ROUTES") ||
             granted.contains("com.google.android.apps.healthdata.permission.READ_EXERCISE_ROUTES")
+
+    override suspend fun hasVo2MaxPermission(): Boolean =
+        granted.contains(HealthPermission.getReadPermission(Vo2MaxRecord::class))
+
+    override suspend fun readVo2MaxRecords(
+        startTime: Instant,
+        endTime: Instant,
+    ): List<DomainVo2MaxRecord> = emptyList()
 
     override suspend fun discoverDevices(windowDays: Int): List<String> {
         lastDiscoveryWindowDays = windowDays

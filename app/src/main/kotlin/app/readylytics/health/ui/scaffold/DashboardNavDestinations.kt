@@ -57,6 +57,7 @@ private fun DashboardDestination(navController: NavHostController) {
         onNavigateToBodyFat = { navController.navigate(AppDestination.BodyFatDetail) },
         onNavigateToBloodPressure = { navController.navigate(AppDestination.BloodPressureDetail) },
         onNavigateToVitals = { navigateToTab(navController, TabDestination.Vitals) },
+        onNavigateToCardioFitness = { navController.navigate(AppDestination.CardioFitnessDetail) },
         onOpenInsight = { selectedInsightParams = it },
         insightDetail = {
             val selected = selectedInsightForDetails

@@ -3,6 +3,7 @@ layout: default
 title: About Your Scores
 permalink: /about/
 ---
+
 # About your scores
 
 This app turns the data your phone and wearables already collect — sleep, heart rate, and exercise — into four daily numbers that try to answer one question: **how is your body doing today, and what should you do with that information?**
@@ -358,6 +359,29 @@ _Implemented in: `RouteSimplifier.kt`, `RouteDistanceCalculator.kt`, `RouteConto
 
 ---
 
+## Cardio Fitness (VO2 Max)
+
+Cardio Fitness (VO2 Max) is an indicator of your cardiovascular endurance. The app determines your VO2 Max based on your selected source preference (Auto, Wearable only, Estimate only).
+If an estimate is allowed, we use the Uth et al. (2004) resting heart rate ratio formula (`15.3 * (HRmax / HRrest)`) to approximate your VO2 Max.
+Your VO2 Max is then benchmarked into five categories (Superior, Excellent, Good, Fair, Poor) based on normative percentiles from the Cooper Institute tailored to your age and sex.
+
+---
+
+## Training Stress Balance (TSB)
+
+Training Stress Balance (TSB) represents your readiness to perform based on your recent training load. It is calculated as `TSB = CTL - ATL`, where CTL is your Chronic Training Load (42-day average) and ATL is your Acute Training Load (7-day average).
+
+The TSB value places you into one of five zones:
+- **> +25 (Very Fresh):** You are fully recovered, but detraining may occur if prolonged.
+- **+5 to +25 (Fresh / Peaked):** Optimal state for a race or peak performance.
+- **-10 to +5 (Optimal / Productive):** The sweet spot for maintaining and building fitness.
+- **-30 to -10 (Fatigued / Overload):** Heavy training load; you are absorbing training but building fatigue.
+- **< -30 (High Risk / Overreached):** Warning zone; high fatigue and increased injury risk.
+
+You can view your TSB on the Workouts tab (via a toggle) and optionally enable it as a Dashboard card.
+
+---
+
 ## What the app needs from you
 
 We read from Android Health Connect:
@@ -375,6 +399,10 @@ If a particular metric is missing on a given day, we'll either:
 
 - show the score with a "data partial" badge and explain which component was estimated, or
 - skip the score for that day entirely if too much is missing (especially total sleep time).
+
+Local encryption keys are stored through Android Keystore. On devices that support StrongBox,
+Readylytics attempts to use StrongBox-backed key protection and falls back to standard Keystore
+when StrongBox is unavailable. Backup passwords and database keys remain local to the device.
 
 ---
 
@@ -461,3 +489,9 @@ _Selected primary sources informing the scoring: Buysse 1989 (PSQI); Buysse 2014
 This app describes a fitness and training-readiness monitoring framework derived from consumer wearable signals and sports-science literature. The framework is **not validated for medical diagnosis, disease screening, treatment guidance, or injury prediction**. Profiles and their associated thresholds optimize _estimated_ recovery signals and are engineering heuristics chosen for practical usability, not clinical validation.
 
 If you have concerns about your health, sleep, or recovery, consult a qualified healthcare provider.
+
+---
+
+## Development Transparency
+
+This application was developed with the assistance of AI. While the implementation and scoring logic have been thoroughly reviewed, both AI and human developers can make errors. We encourage community review and welcome issue reports to help improve the application.

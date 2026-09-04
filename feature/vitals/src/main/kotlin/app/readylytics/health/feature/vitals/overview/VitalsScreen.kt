@@ -49,6 +49,7 @@ import app.readylytics.health.core.ui.R as CoreUiR
 fun VitalsRoute(
     onNavigateToHrv: () -> Unit,
     onNavigateToRhr: () -> Unit,
+    onNavigateToCardioFitness: () -> Unit,
     viewModel: VitalsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -63,6 +64,7 @@ fun VitalsRoute(
         earliestDate = earliestDate,
         onNavigateToHrv = onNavigateToHrv,
         onNavigateToRhr = onNavigateToRhr,
+        onNavigateToCardioFitness = onNavigateToCardioFitness,
         onToggleVitalsManagement = {
             viewModel.toggleVitalsCardManagement()
             viewModel.toggleVitalsChartManagement()
@@ -90,6 +92,7 @@ fun VitalsScreen(
     onNextDay: () -> Unit,
     onNavigateToHrv: () -> Unit,
     onNavigateToRhr: () -> Unit,
+    onNavigateToCardioFitness: () -> Unit,
     modifier: Modifier = Modifier,
     onDateSelected: (java.time.LocalDate) -> Unit = {},
     earliestDate: java.time.LocalDate? = null,
@@ -121,6 +124,7 @@ fun VitalsScreen(
                     isEditing = uiState.isManagingVitalsCards,
                     onNavigateToHrv = onNavigateToHrv,
                     onNavigateToRhr = onNavigateToRhr,
+                    onNavigateToCardioFitness = onNavigateToCardioFitness,
                     onVitalsCardDisplayModeChanged = onVitalsCardDisplayModeChanged,
                 ),
             )
