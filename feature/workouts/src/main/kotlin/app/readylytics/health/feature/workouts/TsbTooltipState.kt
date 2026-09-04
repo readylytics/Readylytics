@@ -9,7 +9,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import app.readylytics.health.core.ui.common.ChartUtils
@@ -101,14 +101,14 @@ internal fun rememberTsbTooltipState(
 
     val tsbFormat = stringResource(R.string.tsb_tooltip_format)
     val avgTsbFormat = stringResource(R.string.tsb_tooltip_avg_format)
-    val context = LocalContext.current
+    val resources = LocalResources.current
 
     val markerVisibilityListener =
         rememberChartMarkerVisibilityListener { x, y, canvasX, canvasY ->
             val dayOffset = x.toInt()
             val point = remappedPoints.firstOrNull { it.dayOffset == dayOffset }
             val tsbVal = point?.value ?: y.toFloat()
-            val zoneText = context.getString(tsbZoneLabelRes(tsbVal))
+            val zoneText = resources.getString(tsbZoneLabelRes(tsbVal))
             selectedPointOffset = Offset(canvasX, canvasY)
             tooltipData =
                 TsbTooltipParams(
