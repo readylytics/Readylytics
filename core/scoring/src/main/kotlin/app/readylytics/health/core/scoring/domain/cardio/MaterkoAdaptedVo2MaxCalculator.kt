@@ -22,21 +22,35 @@ import kotlin.math.exp
  * validated. Out-of-domain results return null per application-level supported bounds.
  */
 class MaterkoAdaptedVo2MaxCalculator @Inject constructor() {
+    private data class SupportedInputs(
+        val rhrBaselineBpm: Float,
+        val rmssd: Float,
+    )
 
     fun estimate(
         rhrBaselineBpm: Float,
         hrvMuMssd: Float?,
         isCalibrated: Boolean,
     ): Float? {
-        if (!isCalibrated) return null
-        if (!rhrBaselineBpm.isFinite() || rhrBaselineBpm < MIN_PLAUSIBLE_RHR) return null
-        if (hrvMuMssd == null || !hrvMuMssd.isFinite()) return null
-        val rmssd = exp(hrvMuMssd)
-        if (!rmssd.isFinite() || rmssd < MIN_RMSSD_MS || rmssd > MAX_RMSSD_MS) return null
-        val meanRR = MEAN_RR_CONSTANT / rhrBaselineBpm
-        val approxPnn50 = approxPnn50(rmssd)
+        val inputs = supportedInputs(rhrBaselineBpm, hrvMuMssd, isCalibrated) ?: return null
+        val meanRR = MEAN_RR_CONSTANT / inputs.rhrBaselineBpm
+        val approxPnn50 = approxPnn50(inputs.rmssd)
         val raw = INTERCEPT + MEAN_RR_COEFF * meanRR + PNN50_COEFF * approxPnn50
         return raw.takeIf { it in MIN_SUPPORTED_VO2_MAX..MAX_SUPPORTED_VO2_MAX }?.toFloat()
+    }
+
+    private fun supportedInputs(
+        rhrBaselineBpm: Float,
+        hrvMuMssd: Float?,
+        isCalibrated: Boolean,
+    ): SupportedInputs? {
+        val rmssd = hrvMuMssd?.let { exp(it) }
+        return when {
+            !isCalibrated -> null
+            !rhrBaselineBpm.isFinite() || rhrBaselineBpm < MIN_PLAUSIBLE_RHR -> null
+            rmssd == null || !rmssd.isFinite() || rmssd !in MIN_RMSSD_MS..MAX_RMSSD_MS -> null
+            else -> SupportedInputs(rhrBaselineBpm, rmssd)
+        }
     }
 
     internal fun approxPnn50(rmssd: Float): Float {
@@ -46,13 +60,16 @@ class MaterkoAdaptedVo2MaxCalculator @Inject constructor() {
 
     internal fun standardNormalCdf(x: Double): Double = 0.5 * (1.0 + erf(x / SQRT_2))
 
-    private fun erf(x: Double): Double {
-        if (x == 0.0) return 0.0
-        if (x < 0.0) return -erf(-x)
-        val t = 1.0 / (1.0 + ERF_P * x)
-        val poly = t * (ERF_A1 + t * (ERF_A2 + t * (ERF_A3 + t * (ERF_A4 + t * ERF_A5))))
-        return 1.0 - poly * exp(-x * x)
-    }
+    private fun erf(x: Double): Double =
+        when {
+            x == 0.0 -> 0.0
+            x < 0.0 -> -erf(-x)
+            else -> {
+                val t = 1.0 / (1.0 + ERF_P * x)
+                val poly = t * (ERF_A1 + t * (ERF_A2 + t * (ERF_A3 + t * (ERF_A4 + t * ERF_A5))))
+                1.0 - poly * exp(-x * x)
+            }
+        }
 
     companion object {
         // REF: Materko 2018, OABB.000536, fold #1 (original full-model context only).
