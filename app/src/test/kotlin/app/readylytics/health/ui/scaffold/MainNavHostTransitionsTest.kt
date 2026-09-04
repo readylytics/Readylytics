@@ -9,4 +9,9 @@ class MainNavHostTransitionsTest {
         assertNotNull(predictivePopEnter())
         assertNotNull(predictivePopExit())
     }
+
+    @Test
+    fun `shouldShowBottomBar returns true when currentDestination is null`() {
+        org.junit.Assert.assertTrue(shouldShowBottomBar(null))
+    }
 }
