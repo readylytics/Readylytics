@@ -87,8 +87,6 @@
 
     <!-- Cardio Fitness (VO2 Max) -->
     <string name="card_cardio_fitness">Cardio Fitness (VO2 Max)</string>
-    <string name="unit_ml_kg_min">ml/kg/min</string>
-    <string name="tooltip_cardio_fitness">Estimated maximal oxygen uptake (VO2 Max), a key indicator of cardiorespiratory fitness.</string>
     <string name="label_cardio_fitness">Cardio Fitness</string>
     <string name="label_cardio_fitness_trend">VO2 Max Trend</string>
     <string name="cooper_category_superior">Superior</string>

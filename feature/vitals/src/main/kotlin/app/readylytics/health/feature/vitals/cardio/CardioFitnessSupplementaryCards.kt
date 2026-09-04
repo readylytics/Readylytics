@@ -18,6 +18,7 @@ import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.scoring.domain.cardio.CooperCategory
 import app.readylytics.health.feature.vitals.R
 import java.util.Locale
+import app.readylytics.health.core.ui.R as CoreUiR
 
 /** Age/sex-specific Cooper norms band edges, with the user's current band highlighted. */
 @Composable
@@ -26,7 +27,7 @@ internal fun CooperLadderCard(
     modifier: Modifier = Modifier,
 ) {
     val thresholds = uiState.thresholds ?: return
-    val unit = stringResource(R.string.unit_ml_kg_min)
+    val unit = stringResource(CoreUiR.string.unit_ml_kg_min)
 
     Card(
         modifier = modifier.fillMaxWidth(),

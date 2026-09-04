@@ -185,7 +185,7 @@ private fun CardioFitnessTrendSection(
             points = uiState.dailyVo2Max,
             rangeStartMs = uiState.rangeStartMs,
             rangeDays = uiState.selectedRange.days,
-            baselineUnit = stringResource(R.string.unit_ml_kg_min),
+            baselineUnit = stringResource(CoreUiR.string.unit_ml_kg_min),
             baseline = uiState.averageVo2Max,
             baselineLabel = stringResource(CoreUiR.string.label_average),
             baselineDecimalPlaces = 1,
@@ -235,7 +235,7 @@ private fun CardioFitnessOverviewCard(
                     style = MaterialTheme.typography.displaySmall,
                 )
                 Text(
-                    text = stringResource(R.string.unit_ml_kg_min),
+                    text = stringResource(CoreUiR.string.unit_ml_kg_min),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier =

@@ -251,5 +251,5 @@ Example shape (values are illustrative, never defaults):
 </string>
 
     <string name="card_title_cardio_fitness">Cardio Fitness</string>
-    <string name="card_title_tsb">Training Stress Balance</string>
+    <string name="card_title_tsb">TSB</string>
 </resources>

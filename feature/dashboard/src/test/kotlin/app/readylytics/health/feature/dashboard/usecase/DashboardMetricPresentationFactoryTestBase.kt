@@ -113,6 +113,9 @@ abstract class DashboardMetricPresentationFactoryTestBase {
             CoreUiR.string.tooltip_circadian_score to "tooltip circadian",
             CoreUiR.string.tooltip_strain_ratio to "tooltip strain ratio",
             DashboardR.string.tooltip_residual_fatigue to "tooltip residual fatigue",
+            CoreUiR.string.tooltip_cardio_fitness to "tooltip cardio fitness",
+            CoreUiR.string.tooltip_tsb to "tooltip tsb",
+            CoreUiR.string.unit_ml_kg_min to "ml/kg/min",
         )
 
     protected fun stubTooltips() {

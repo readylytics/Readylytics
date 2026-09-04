@@ -13,7 +13,6 @@ import app.readylytics.health.core.model.domain.preferences.UnitSystem
 import app.readylytics.health.core.model.domain.util.UnitConverter
 import app.readylytics.health.core.ui.components.metriccard.toDashboardMode
 import app.readylytics.health.core.ui.components.metriccard.toUniversalMode
-import app.readylytics.health.feature.vitals.R
 import app.readylytics.health.feature.vitals.UniversalVitalsMetricCard
 import app.readylytics.health.feature.vitals.cardio.Vo2MaxAssessment
 import java.util.Locale
@@ -264,10 +263,10 @@ private fun cardioFitnessCardContent(
                 valueText =
                     vo2MaxValue?.let { String.format(Locale.US, "%.1f", it) }
                         ?: stringResource(CoreUiR.string.metric_value_unavailable),
-                unitText = stringResource(R.string.unit_ml_kg_min),
+                unitText = stringResource(CoreUiR.string.unit_ml_kg_min),
                 status = vo2MaxAssessment.status,
                 secondaryText = null,
-                tooltip = stringResource(R.string.tooltip_cardio_fitness),
+                tooltip = stringResource(CoreUiR.string.tooltip_cardio_fitness),
                 supportedModes = spec.supportedModes.map { it.toUniversalMode() },
                 requestedMode = DashboardCardCatalog.requestedMode(configuration).toUniversalMode(),
                 isEditing = isEditing,

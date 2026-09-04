@@ -81,6 +81,8 @@ class DashboardCardioMetricPresentationFactory
                     null
                 }
 
+            val vo2MaxUnitText = resourceProvider.getString(CoreUiR.string.unit_ml_kg_min)
+            val vo2MaxTooltip = resourceProvider.getString(CoreUiR.string.tooltip_cardio_fitness)
             val vo2MaxDesc =
                 resourceProvider.getString(
                     DashboardR.string.semantics_value_note_format,
@@ -91,10 +93,10 @@ class DashboardCardioMetricPresentationFactory
             return UniversalMetricPresentation(
                 title = vo2MaxTitle,
                 valueText = vo2MaxValText,
-                unitText = "",
+                unitText = vo2MaxUnitText,
                 secondaryText = vo2MaxSecondary,
                 status = vo2MaxStatus,
-                tooltip = "",
+                tooltip = vo2MaxTooltip,
                 accessibilityDescription = vo2MaxDesc,
                 visual = UniversalMetricVisual.ValueOnly,
             )
@@ -105,6 +107,7 @@ class DashboardCardioMetricPresentationFactory
             unavailableValueText: String,
         ): UniversalMetricPresentation? {
             val tsbTitle = resourceProvider.getString(DashboardR.string.card_title_tsb)
+            val tsbTooltip = resourceProvider.getString(CoreUiR.string.tooltip_tsb)
             val tsbResult = tsbCalculator.calculate(summary?.ctlWorkoutOnly, summary?.atlWorkoutOnly)
             val tsbValue = tsbResult?.value?.roundToInt()
             val tsbValText = tsbValue?.let { if (it > 0) "+$it" else "$it" } ?: unavailableValueText
@@ -137,7 +140,7 @@ class DashboardCardioMetricPresentationFactory
                 unitText = "",
                 secondaryText = tsbSecondary,
                 status = tsbStatus,
-                tooltip = "",
+                tooltip = tsbTooltip,
                 accessibilityDescription = tsbDesc,
                 visual = UniversalMetricVisual.ValueOnly,
             )
