@@ -89,7 +89,7 @@ private fun TrainingLoadMetricToggle(
                                 if (metric == TrainingLoadMetric.ACWR) {
                                     R.string.training_load_metric_acwr
                                 } else {
-                                    R.string.training_load_metric_tsb
+                                    R.string.training_load_metric_tsb_toggle
                                 },
                             ),
                     )

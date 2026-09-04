@@ -89,6 +89,7 @@
     <string name="acwr_tooltip_avg_strain_format">Avg. Strain: %1$s</string>
     <string name="training_load_metric_acwr">Strain Ratio (ACWR)</string>
     <string name="training_load_metric_tsb">Training Stress Balance (TSB)</string>
+    <string name="training_load_metric_tsb_toggle">TSB</string>
     <string name="tsb_zone_very_fresh">Transition / Very Fresh</string>
     <string name="tsb_zone_fresh">Fresh / Peaked</string>
     <string name="tsb_zone_optimal">Optimal / Productive</string>

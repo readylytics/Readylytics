@@ -12,13 +12,17 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import app.readylytics.health.core.designsystem.LocalStatusColors
+import app.readylytics.health.core.designsystem.LocalExtendedColors
+import app.readylytics.health.core.model.domain.model.HealthZone
+import app.readylytics.health.core.model.domain.model.ZoneBand
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.core.ui.common.periodLabelFor
 import app.readylytics.health.core.ui.common.rememberPeriodOrdinalLabel
 import app.readylytics.health.core.ui.components.ChartDefaults
+import app.readylytics.health.core.ui.components.ChartZoneAlphas
+import app.readylytics.health.core.ui.components.ZoneBandDecoration
 import app.readylytics.health.feature.workouts.R
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
@@ -30,13 +34,11 @@ import com.patrykandpatrick.vico.compose.cartesian.data.CartesianLayerRangeProvi
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.compose.cartesian.data.lineModel
 import com.patrykandpatrick.vico.compose.cartesian.decoration.Decoration
-import com.patrykandpatrick.vico.compose.cartesian.decoration.HorizontalLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.common.Fill
-import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.data.ExtraStore
 import java.util.Locale
 import kotlin.math.ceil
@@ -53,41 +55,83 @@ private const val Y_AXIS_PADDING = 5f
 private const val Y_AXIS_STEP = 10f
 
 @Composable
-private fun rememberTsbDecorations(): List<Decoration> {
-    val statusColors = LocalStatusColors.current
-    val optimalColor = MaterialTheme.colorScheme.tertiary
-    val veryFreshLineComponent = rememberLineComponent(fill = Fill(statusColors.optimal), thickness = 1.dp)
-    val freshLineComponent = rememberLineComponent(fill = Fill(optimalColor), thickness = 1.dp)
-    val fatiguedLineComponent = rememberLineComponent(fill = Fill(statusColors.warning), thickness = 1.dp)
-    val highRiskLineComponent = rememberLineComponent(fill = Fill(statusColors.poor), thickness = 1.dp)
+private fun rememberTsbDecorations(
+    chartMinY: Double,
+    chartMaxY: Double,
+): List<Decoration> {
+    val extendedColors = LocalExtendedColors.current
+    val colorScheme = MaterialTheme.colorScheme
+    val tsbZoneBands =
+        remember {
+            listOf(
+                ZoneBand(
+                    lowerBound = VERY_FRESH_THRESHOLD.toDouble(),
+                    upperBound = Double.POSITIVE_INFINITY,
+                    zone = HealthZone.NEUTRAL,
+                ),
+                ZoneBand(
+                    lowerBound = FRESH_THRESHOLD.toDouble(),
+                    upperBound = VERY_FRESH_THRESHOLD.toDouble(),
+                    zone = HealthZone.OPTIMAL,
+                ),
+                ZoneBand(
+                    lowerBound = FATIGUED_THRESHOLD.toDouble(),
+                    upperBound = FRESH_THRESHOLD.toDouble(),
+                    zone = HealthZone.OPTIMAL,
+                ),
+                ZoneBand(
+                    lowerBound = HIGH_RISK_THRESHOLD.toDouble(),
+                    upperBound = FATIGUED_THRESHOLD.toDouble(),
+                    zone = HealthZone.WARNING,
+                ),
+                ZoneBand(
+                    lowerBound = Double.NEGATIVE_INFINITY,
+                    upperBound = HIGH_RISK_THRESHOLD.toDouble(),
+                    zone = HealthZone.CRITICAL,
+                ),
+            )
+        }
+    val bandColors =
+        remember(extendedColors, colorScheme) {
+            listOf(
+                extendedColors.neutralContainer.copy(alpha = ChartZoneAlphas.RESTING),
+                colorScheme.tertiaryContainer.copy(alpha = ChartZoneAlphas.MODERATE),
+                colorScheme.primaryContainer.copy(alpha = ChartZoneAlphas.HIGH),
+                extendedColors.warningContainer.copy(alpha = ChartZoneAlphas.HIGH),
+                colorScheme.errorContainer.copy(alpha = ChartZoneAlphas.HIGH),
+            )
+        }
 
-    return remember(veryFreshLineComponent, freshLineComponent, fatiguedLineComponent, highRiskLineComponent) {
-        listOf(
-            HorizontalLine(y = { VERY_FRESH_THRESHOLD.toDouble() }, line = veryFreshLineComponent),
-            HorizontalLine(y = { FRESH_THRESHOLD.toDouble() }, line = freshLineComponent),
-            HorizontalLine(y = { FATIGUED_THRESHOLD.toDouble() }, line = fatiguedLineComponent),
-            HorizontalLine(y = { HIGH_RISK_THRESHOLD.toDouble() }, line = highRiskLineComponent),
-        )
-    }
+    val decoration =
+        remember(tsbZoneBands, bandColors, chartMinY, chartMaxY) {
+            ZoneBandDecoration(
+                zoneBands = tsbZoneBands,
+                bandColors = bandColors,
+                minY = chartMinY,
+                maxY = chartMaxY,
+            )
+        }
+
+    return listOf(decoration)
 }
 
 @Composable
-private fun rememberTsbRangeProvider(
-    remappedPoints: List<DailyDataPoint>,
-    xAxisRangeDays: Int,
-): CartesianLayerRangeProvider {
-    val minY =
-        remember(remappedPoints) {
-            val dataMin = remappedPoints.mapNotNull { it.value }.minOrNull() ?: HIGH_RISK_THRESHOLD
-            (floor(minOf(dataMin, HIGH_RISK_THRESHOLD - Y_AXIS_PADDING) / Y_AXIS_STEP) * Y_AXIS_STEP).toDouble()
-        }
-    val maxY =
-        remember(remappedPoints) {
-            val dataMax = remappedPoints.mapNotNull { it.value }.maxOrNull() ?: VERY_FRESH_THRESHOLD
-            (ceil(maxOf(dataMax, VERY_FRESH_THRESHOLD + Y_AXIS_PADDING) / Y_AXIS_STEP) * Y_AXIS_STEP).toDouble()
-        }
+internal fun rememberTsbYBounds(remappedPoints: List<DailyDataPoint>): Pair<Double, Double> =
+    remember(remappedPoints) {
+        val dataMin = remappedPoints.mapNotNull { it.value }.minOrNull() ?: HIGH_RISK_THRESHOLD
+        val dataMax = remappedPoints.mapNotNull { it.value }.maxOrNull() ?: VERY_FRESH_THRESHOLD
+        val minY = (floor(minOf(dataMin, HIGH_RISK_THRESHOLD - Y_AXIS_PADDING) / Y_AXIS_STEP) * Y_AXIS_STEP).toDouble()
+        val maxY = (ceil(maxOf(dataMax, VERY_FRESH_THRESHOLD + Y_AXIS_PADDING) / Y_AXIS_STEP) * Y_AXIS_STEP).toDouble()
+        minY to maxY
+    }
 
-    return remember(xAxisRangeDays, minY, maxY) {
+@Composable
+private fun rememberTsbRangeProvider(
+    xAxisRangeDays: Int,
+    chartMinY: Double,
+    chartMaxY: Double,
+): CartesianLayerRangeProvider =
+    remember(xAxisRangeDays, chartMinY, chartMaxY) {
         object : CartesianLayerRangeProvider {
             override fun getMinX(
                 minX: Double,
@@ -105,16 +149,15 @@ private fun rememberTsbRangeProvider(
                 minY: Double,
                 maxY: Double,
                 extraStore: ExtraStore,
-            ) = minY
+            ) = chartMinY
 
             override fun getMaxY(
                 minY: Double,
                 maxY: Double,
                 extraStore: ExtraStore,
-            ) = maxY
+            ) = chartMaxY
         }
     }
-}
 
 @Composable
 private fun rememberTsbModelProducer(remappedPoints: List<DailyDataPoint>): CartesianChartModelProducer {
@@ -196,6 +239,7 @@ private data class TsbChartHostConfig(
     val itemPlacer: com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis.ItemPlacer,
     val modelProducer: CartesianChartModelProducer,
     val hasData: Boolean,
+    val decorations: List<Decoration>,
 )
 
 @Composable
@@ -206,7 +250,6 @@ private fun TsbChartHost(
     modifier: Modifier,
 ) {
     val tsbLine = rememberTsbLine()
-    val decorations = rememberTsbDecorations()
     val yAxisFormatter =
         remember {
             CartesianValueFormatter { _, value, _ -> String.format(Locale.US, "%+d", value.roundToInt()) }
@@ -241,7 +284,7 @@ private fun TsbChartHost(
                             itemPlacer = config.itemPlacer,
                             guideline = guidelineComponent,
                         ),
-                    decorations = decorations,
+                    decorations = config.decorations,
                 ),
             modelProducer = config.modelProducer,
             scrollState = scrollState,
@@ -252,7 +295,7 @@ private fun TsbChartHost(
 }
 
 /**
- * Zero-centered Training Stress Balance (TSB = CTL - ATL) line chart. Horizontal reference lines
+ * Zero-centered Training Stress Balance (TSB = CTL - ATL) line chart. Background zone band colors
  * mark the [app.readylytics.health.core.model.domain.cardio.TsbZone] boundaries so the current
  * trend can be read against "very fresh / fresh / optimal / fatigued / high risk" at a glance.
  */
@@ -272,7 +315,9 @@ internal fun TsbChart(
             if (granularity == TrendGranularity.DAILY) rangeDays else tsbPoints.size
         }
 
-    val rangeProvider = rememberTsbRangeProvider(remappedPoints, xAxisRangeDays)
+    val (minY, maxY) = rememberTsbYBounds(remappedPoints)
+    val rangeProvider = rememberTsbRangeProvider(xAxisRangeDays, minY, maxY)
+    val decorations = rememberTsbDecorations(minY, maxY)
     val modelProducer = rememberTsbModelProducer(remappedPoints)
     val xAxisFormatter = rememberTsbXAxisFormatter(tsbPoints, rangeStartMs, granularity)
 
@@ -299,6 +344,7 @@ internal fun TsbChart(
                 itemPlacer = itemPlacer,
                 modelProducer = modelProducer,
                 hasData = hasData,
+                decorations = decorations,
             ),
         scrollState = scrollState,
         zoomState = zoomState,
