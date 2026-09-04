@@ -9,7 +9,6 @@ import app.readylytics.health.data.preferences.SleepScoreWeightProfileProto
 import app.readylytics.health.data.preferences.SyncPreferenceProto
 import app.readylytics.health.data.preferences.TrimpMethodProto
 import app.readylytics.health.data.preferences.UserPreferencesProto
-import app.readylytics.health.data.preferences.Vo2MaxEstimationMethodProto
 
 private fun hasCompleteZonePercentSettings(backup: UserPreferencesBackup) =
     backup.zone1MinPercent != null &&
@@ -198,16 +197,7 @@ internal fun UserPreferencesProto.Builder.applyScoringSettings(backup: UserPrefe
             ) { "Ignoring unrecognised sleep score weight profile '$raw' in backup settings" }
         }
     }
-    backup.vo2MaxEstimationMethod?.let { raw ->
-        val resolved = resolveProtoEnum(raw, "VO2_MAX_METHOD_", Vo2MaxEstimationMethodProto::valueOf)
-        if (resolved != null) {
-            vo2MaxEstimationMethod = resolved
-        } else {
-            logW(
-                "RestorePreferencesApplier",
-            ) { "Ignoring unrecognised vo2MaxEstimationMethod '$raw' in backup settings" }
-        }
-    }
+    applyVo2MaxSettings(backup)
     backup.hypersomniaOnsetPercent?.let { hypersomniaOnsetPercent = it }
     backup.scoringVersion?.let { scoringVersion = it }
     backup.lastRecalcSleepScoreWeightProfile?.let { raw ->

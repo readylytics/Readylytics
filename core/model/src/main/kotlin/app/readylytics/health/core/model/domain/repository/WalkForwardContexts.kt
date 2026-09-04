@@ -15,4 +15,5 @@ data class WalkForwardContexts(
     val trimp: WalkForwardTrimpContext? = null,
     val baseline: WalkForwardBaselineContext? = null,
     val fatigue: WalkForwardFatigueContext? = null,
+    val vo2Max: WalkForwardVo2MaxContext? = null,
 )

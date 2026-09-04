@@ -12,6 +12,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
+import app.readylytics.health.core.scoring.domain.cardio.TrainingStressBalanceCalculator.Companion.FATIGUED_THRESHOLD
+import app.readylytics.health.core.scoring.domain.cardio.TrainingStressBalanceCalculator.Companion.FRESH_THRESHOLD
+import app.readylytics.health.core.scoring.domain.cardio.TrainingStressBalanceCalculator.Companion.HIGH_RISK_THRESHOLD
+import app.readylytics.health.core.scoring.domain.cardio.TrainingStressBalanceCalculator.Companion.VERY_FRESH_THRESHOLD
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.TrendGranularity

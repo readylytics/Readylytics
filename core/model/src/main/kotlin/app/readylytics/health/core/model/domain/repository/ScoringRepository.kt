@@ -63,6 +63,17 @@ interface ScoringRepository {
         zoneId: ZoneId,
     ): WalkForwardFatigueContext
 
+    /**
+     * Fetches wearable-reported VO2 Max readings covering the 30-day trailing lookback every day
+     * in `[startDate, endDate]` will need, for a caller to hold across a multi-day walk-forward
+     * instead of re-querying per day.
+     */
+    suspend fun fetchWalkForwardVo2MaxContext(
+        startDate: LocalDate,
+        endDate: LocalDate,
+        zoneId: ZoneId,
+    ): WalkForwardVo2MaxContext
+
     suspend fun computeDailySummary(targetDate: LocalDate): DailySummary
 
     /**

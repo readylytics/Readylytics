@@ -116,7 +116,7 @@ class PhysiologySettingsViewModelTest {
     }
 
     @Test
-    fun onEvent_vo2MaxSourceModeChanged_doesNotRefreshHistorical() {
+    fun onEvent_vo2MaxSourceModeChanged_updatesPrefAndRefreshesHistoricalExactlyOnce() {
         viewModel.onEvent(
             SettingsEvent.Vo2MaxSourceModeChanged(Vo2MaxSourceMode.ESTIMATED_ONLY),
         )
@@ -124,6 +124,6 @@ class PhysiologySettingsViewModelTest {
         coVerify(timeout = 1000, exactly = 1) {
             physiologySettings.updateVo2MaxSourceMode(Vo2MaxSourceMode.ESTIMATED_ONLY)
         }
-        coVerify(timeout = 1000, exactly = 0) { healthDataRefresh.refreshHistorical() }
+        coVerify(timeout = 1000, exactly = 1) { healthDataRefresh.refreshHistorical() }
     }
 }

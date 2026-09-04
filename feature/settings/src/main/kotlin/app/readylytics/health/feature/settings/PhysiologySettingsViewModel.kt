@@ -115,6 +115,9 @@ class PhysiologySettingsViewModel
                 is SettingsEvent.Vo2MaxSourceModeChanged ->
                     viewModelScope.launch {
                         physiologySettings.updateVo2MaxSourceMode(mode = event.mode)
+                        // The source mode is historical-scope: every persisted day's VO2 Max must be
+                        // recomputed under the new mode. Exactly one refresh per change.
+                        healthDataRefresh.refreshHistorical()
                     }
                 is SettingsEvent.Vo2MaxEstimationMethodChanged ->
                     viewModelScope.launch {

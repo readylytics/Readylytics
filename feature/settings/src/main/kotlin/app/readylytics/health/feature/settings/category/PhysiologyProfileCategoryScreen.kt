@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.settings.category
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ListItem
@@ -99,56 +100,58 @@ private fun Vo2MaxSourcePicker(
     onModeSelected: (Vo2MaxSourceMode) -> Unit,
     enabled: Boolean,
 ) {
-    ListItem(
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-    ) {
-        Text(
-            text = stringResource(R.string.vo2_max_source_title),
-            style = MaterialTheme.typography.bodyLarge,
-        )
-    }
-    SingleChoiceSegmentedButtonRow(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
-    ) {
-        Vo2MaxSourceMode.entries.forEachIndexed { index, mode ->
-            SegmentedButton(
-                selected = selectedMode == mode,
-                onClick = { onModeSelected(mode) },
-                enabled = enabled,
-                shape =
-                    SegmentedButtonDefaults.itemShape(
-                        index = index,
-                        count = Vo2MaxSourceMode.entries.size,
-                    ),
-                label = {
-                    Text(
-                        text =
-                            when (mode) {
-                                Vo2MaxSourceMode.AUTO ->
-                                    stringResource(R.string.vo2_max_source_auto)
-                                Vo2MaxSourceMode.WEARABLE_ONLY ->
-                                    stringResource(R.string.vo2_max_source_wearable)
-                                Vo2MaxSourceMode.ESTIMATED_ONLY ->
-                                    stringResource(R.string.vo2_max_source_estimated)
-                            },
-                    )
-                },
+    Column {
+        ListItem(
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        ) {
+            Text(
+                text = stringResource(R.string.vo2_max_source_title),
+                style = MaterialTheme.typography.bodyLarge,
             )
         }
+        SingleChoiceSegmentedButtonRow(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+        ) {
+            Vo2MaxSourceMode.entries.forEachIndexed { index, mode ->
+                SegmentedButton(
+                    selected = selectedMode == mode,
+                    onClick = { onModeSelected(mode) },
+                    enabled = enabled,
+                    shape =
+                        SegmentedButtonDefaults.itemShape(
+                            index = index,
+                            count = Vo2MaxSourceMode.entries.size,
+                        ),
+                    label = {
+                        Text(
+                            text =
+                                when (mode) {
+                                    Vo2MaxSourceMode.AUTO ->
+                                        stringResource(R.string.vo2_max_source_auto)
+                                    Vo2MaxSourceMode.WEARABLE_ONLY ->
+                                        stringResource(R.string.vo2_max_source_wearable)
+                                    Vo2MaxSourceMode.ESTIMATED_ONLY ->
+                                        stringResource(R.string.vo2_max_source_estimated)
+                                },
+                        )
+                    },
+                )
+            }
+        }
+        Text(
+            text = stringResource(R.string.vo2_max_source_description),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier =
+                Modifier.padding(
+                    horizontal = MaterialTheme.spacing.pageHorizontal,
+                    vertical = MaterialTheme.spacing.small,
+                ),
+        )
     }
-    Text(
-        text = stringResource(R.string.vo2_max_source_description),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier =
-            Modifier.padding(
-                horizontal = MaterialTheme.spacing.pageHorizontal,
-                vertical = MaterialTheme.spacing.small,
-            ),
-    )
 }
 
 @Composable
@@ -157,52 +160,54 @@ private fun Vo2MaxEstimationMethodPicker(
     onMethodSelected: (Vo2MaxEstimationMethod) -> Unit,
     enabled: Boolean,
 ) {
-    ListItem(
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-    ) {
-        Text(
-            text = stringResource(R.string.vo2_max_method_title),
-            style = MaterialTheme.typography.bodyLarge,
-        )
-    }
-    SingleChoiceSegmentedButtonRow(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
-    ) {
-        Vo2MaxEstimationMethod.entries.forEachIndexed { index, method ->
-            SegmentedButton(
-                selected = selectedMethod == method,
-                onClick = { onMethodSelected(method) },
-                enabled = enabled,
-                shape =
-                    SegmentedButtonDefaults.itemShape(
-                        index = index,
-                        count = Vo2MaxEstimationMethod.entries.size,
-                    ),
-                label = {
-                    Text(
-                        text =
-                            when (method) {
-                                Vo2MaxEstimationMethod.HR_RATIO ->
-                                    stringResource(R.string.vo2_max_method_hr_ratio)
-                                Vo2MaxEstimationMethod.MATERKO_ADAPTED ->
-                                    stringResource(R.string.vo2_max_method_materko_adapted)
-                            },
-                    )
-                },
+    Column {
+        ListItem(
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        ) {
+            Text(
+                text = stringResource(R.string.vo2_max_method_title),
+                style = MaterialTheme.typography.bodyLarge,
             )
         }
+        SingleChoiceSegmentedButtonRow(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+        ) {
+            Vo2MaxEstimationMethod.entries.forEachIndexed { index, method ->
+                SegmentedButton(
+                    selected = selectedMethod == method,
+                    onClick = { onMethodSelected(method) },
+                    enabled = enabled,
+                    shape =
+                        SegmentedButtonDefaults.itemShape(
+                            index = index,
+                            count = Vo2MaxEstimationMethod.entries.size,
+                        ),
+                    label = {
+                        Text(
+                            text =
+                                when (method) {
+                                    Vo2MaxEstimationMethod.HR_RATIO ->
+                                        stringResource(R.string.vo2_max_method_hr_ratio)
+                                    Vo2MaxEstimationMethod.MATERKO_ADAPTED ->
+                                        stringResource(R.string.vo2_max_method_materko_adapted)
+                                },
+                        )
+                    },
+                )
+            }
+        }
+        Text(
+            text = stringResource(R.string.vo2_max_method_description),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier =
+                Modifier.padding(
+                    horizontal = MaterialTheme.spacing.pageHorizontal,
+                    vertical = MaterialTheme.spacing.small,
+                ),
+        )
     }
-    Text(
-        text = stringResource(R.string.vo2_max_method_description),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier =
-            Modifier.padding(
-                horizontal = MaterialTheme.spacing.pageHorizontal,
-                vertical = MaterialTheme.spacing.small,
-            ),
-    )
 }

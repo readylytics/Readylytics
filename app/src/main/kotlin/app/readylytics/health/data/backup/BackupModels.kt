@@ -179,6 +179,7 @@ data class UserPreferencesBackup(
     val workoutDetailLayouts: Map<String, List<WorkoutDetailItemConfiguration>>? = null,
     val sleepScoreWeightProfile: String? = null,
     val vo2MaxEstimationMethod: String? = null,
+    val vo2MaxSourceMode: String? = null,
     val hypersomniaOnsetPercent: Int? = null,
     val scoringVersion: Int? = null,
     val lastRecalcSleepScoreWeightProfile: String? = null,

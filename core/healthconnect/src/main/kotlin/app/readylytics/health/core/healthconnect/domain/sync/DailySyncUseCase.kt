@@ -229,6 +229,10 @@ class DailySyncUseCase
                     // per recomputed day in the chronological loop below.
                     val fatigueContext =
                         recomputeSupport.buildWalkForwardFatigueContext(oldestTargetDay, today, zoneId)
+                    // PERF: fetch the wearable-VO2-Max series once for the whole walk-forward,
+                    // same batched-once shape as trimpContext/baselineContext/fatigueContext above.
+                    val vo2MaxContext =
+                        recomputeSupport.buildWalkForwardVo2MaxContext(oldestTargetDay, today, zoneId)
 
                     var processedDays = 0
                     onProgress?.invoke(ResyncPhase.RECOMPUTE, processedDays, totalDays)
@@ -264,7 +268,7 @@ class DailySyncUseCase
                                     currentDay,
                                     steps,
                                     prefs,
-                                    WalkForwardContexts(trimpContext, baselineContext, fatigueContext),
+                                    WalkForwardContexts(trimpContext, baselineContext, fatigueContext, vo2MaxContext),
                                 )
                             }
 

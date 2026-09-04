@@ -7,6 +7,7 @@ import app.readylytics.health.core.model.domain.preferences.Vo2MaxEstimationMeth
 import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
+import app.readylytics.health.core.model.domain.repository.WalkForwardVo2MaxContext
 import app.readylytics.health.core.scoring.domain.cardio.MaterkoAdaptedVo2MaxCalculator
 import app.readylytics.health.core.scoring.domain.cardio.UthVo2MaxCalculator
 import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxResolution
@@ -50,6 +51,7 @@ class FinalSummaryAssembler(
         val trimpContext: WalkForwardTrimpContext?,
         val baselineContext: WalkForwardBaselineContext?,
         val fatigueContext: WalkForwardFatigueContext?,
+        val vo2MaxContext: WalkForwardVo2MaxContext?,
     )
 
     suspend fun assemble(inputs: Inputs): DailySummary {
@@ -149,15 +151,32 @@ class FinalSummaryAssembler(
             }
         val thirtyDaysMs = TimeUnit.DAYS.toMillis(30)
         val wearableLookbackMs = inputs.context.nextDayMidnightMs - thirtyDaysMs
-        val wearableVo2Max = bodyMetricsDataLoader
-            .loadLatestVo2Max(inputs.context.nextDayMidnightMs, wearableLookbackMs)
-            ?.vo2Max
+        val wearableVo2Max = resolveWearableVo2Max(inputs, wearableLookbackMs)
         return vo2MaxDependencies.sourceResolver.resolve(
             mode = prefs.vo2MaxSourceMode,
             wearableVo2Max = wearableVo2Max,
             estimatedVo2Max = estimate,
             estimatedSource = source,
         )
+    }
+
+    /**
+     * PERF: prefers the prefetched-once [Inputs.vo2MaxContext] over a per-day DB query when a
+     * multi-day walk-forward is running (see [WalkForwardVo2MaxContext]); falls back to
+     * [BodyMetricsDataLoader.loadLatestVo2Max] for the single-day case (context null).
+     */
+    private suspend fun resolveWearableVo2Max(inputs: Inputs, wearableLookbackMs: Long): Float? {
+        val context = inputs.vo2MaxContext
+        return if (context != null) {
+            context.vo2MaxByTimestampMs
+                .floorEntry(inputs.context.nextDayMidnightMs)
+                ?.takeIf { it.key >= wearableLookbackMs }
+                ?.value
+        } else {
+            bodyMetricsDataLoader
+                .loadLatestVo2Max(inputs.context.nextDayMidnightMs, wearableLookbackMs)
+                ?.vo2Max
+        }
     }
 
     private suspend fun resolveScoredSummary(

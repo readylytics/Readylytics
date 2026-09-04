@@ -1,10 +1,25 @@
 package app.readylytics.health.core.scoring.domain.cardio
 
+import app.readylytics.health.core.model.domain.model.MetricStatus
 import app.readylytics.health.core.model.domain.preferences.Gender
 import javax.inject.Inject
 import javax.inject.Singleton
 
 enum class CooperCategory { SUPERIOR, EXCELLENT, GOOD, FAIR, POOR }
+
+/**
+ * Maps a [CooperCategory] onto the shared dashboard status ladder. SUPERIOR/EXCELLENT read as
+ * [MetricStatus.OPTIMAL], GOOD as [MetricStatus.NEUTRAL], and FAIR/POOR as WARNING/POOR
+ * respectively -- collapsing the 5-band Cooper scale onto the 4-band metric status scale used by
+ * every other Vitals/Dashboard card.
+ */
+fun CooperCategory.toMetricStatus(): MetricStatus =
+    when (this) {
+        CooperCategory.SUPERIOR, CooperCategory.EXCELLENT -> MetricStatus.OPTIMAL
+        CooperCategory.GOOD -> MetricStatus.NEUTRAL
+        CooperCategory.FAIR -> MetricStatus.WARNING
+        CooperCategory.POOR -> MetricStatus.POOR
+    }
 
 @Singleton
 class CooperNormsClassifier @Inject constructor() {

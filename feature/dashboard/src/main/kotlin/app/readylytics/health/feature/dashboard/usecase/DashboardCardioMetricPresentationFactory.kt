@@ -10,6 +10,8 @@ import app.readylytics.health.core.model.domain.util.ResourceProvider
 import app.readylytics.health.core.scoring.domain.cardio.CooperCategory
 import app.readylytics.health.core.scoring.domain.cardio.CooperNormsClassifier
 import app.readylytics.health.core.scoring.domain.cardio.TrainingStressBalanceCalculator
+import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxSourceResolver
+import app.readylytics.health.core.scoring.domain.cardio.toMetricStatus
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import java.util.Locale
@@ -72,15 +74,7 @@ class DashboardCardioMetricPresentationFactory
                 vo2MaxVal?.let {
                     cooperClassifier.classify(it, preferences.age, gender)
                 }
-            val vo2MaxStatus =
-                when (cooperCat) {
-                    null -> MetricStatus.NO_DATA
-                    CooperCategory.SUPERIOR -> MetricStatus.OPTIMAL
-                    CooperCategory.EXCELLENT -> MetricStatus.OPTIMAL
-                    CooperCategory.GOOD -> MetricStatus.OPTIMAL
-                    CooperCategory.FAIR -> MetricStatus.WARNING
-                    CooperCategory.POOR -> MetricStatus.POOR
-                }
+            val vo2MaxStatus = cooperCat?.toMetricStatus() ?: MetricStatus.NO_DATA
 
             val vo2MaxSecondary = resourceProvider.getString(CoreUiR.string.unit_ml_kg_min)
             val vo2MaxTooltip = buildCardioTooltip(cooperCat, summary?.vo2MaxSource, preferences.age, gender)
@@ -117,9 +111,11 @@ class DashboardCardioMetricPresentationFactory
 
         private fun resolveSourceLabel(rawSource: String?): String =
             when (rawSource) {
-                "WEARABLE" -> resourceProvider.getString(CoreUiR.string.vo2_max_source_label_wearable)
-                "ESTIMATED_UTH" -> resourceProvider.getString(CoreUiR.string.vo2_max_source_label_estimated)
-                "ESTIMATED_MATERKO_ADAPTED" ->
+                Vo2MaxSourceResolver.SOURCE_WEARABLE ->
+                    resourceProvider.getString(CoreUiR.string.vo2_max_source_label_wearable)
+                Vo2MaxSourceResolver.SOURCE_ESTIMATED_UTH ->
+                    resourceProvider.getString(CoreUiR.string.vo2_max_source_label_estimated)
+                Vo2MaxSourceResolver.SOURCE_ESTIMATED_MATERKO_ADAPTED ->
                     resourceProvider.getString(CoreUiR.string.vo2_max_source_label_materko_adapted)
                 else -> rawSource.orEmpty()
             }
