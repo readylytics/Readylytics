@@ -1,4 +1,4 @@
-package app.readylytics.health.core.model.data.preferences
+package app.readylytics.health.core.model.domain.preferences
 
 enum class Vo2MaxSourceMode {
     AUTO,

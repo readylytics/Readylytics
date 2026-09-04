@@ -4,7 +4,7 @@ import app.readylytics.health.core.model.data.preferences.Gender
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.data.preferences.UnitSystem
 import app.readylytics.health.core.model.data.preferences.UserPreferences
-import app.readylytics.health.core.model.data.preferences.Vo2MaxSourceMode
+import app.readylytics.health.core.model.domain.preferences.Vo2MaxSourceMode
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.preferences.DisplaySettings

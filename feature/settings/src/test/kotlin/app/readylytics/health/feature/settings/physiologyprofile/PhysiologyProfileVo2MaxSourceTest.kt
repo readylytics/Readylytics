@@ -1,6 +1,6 @@
 package app.readylytics.health.feature.settings.physiologyprofile
 
-import app.readylytics.health.core.model.data.preferences.Vo2MaxSourceMode
+import app.readylytics.health.core.model.domain.preferences.Vo2MaxSourceMode
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

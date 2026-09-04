@@ -4,7 +4,7 @@ import androidx.datastore.core.DataStore
 import app.readylytics.health.core.model.data.preferences.LegacyBanisterMultipliers
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
-import app.readylytics.health.core.model.data.preferences.Vo2MaxSourceMode
+import app.readylytics.health.core.model.domain.preferences.Vo2MaxSourceMode
 import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
 import app.readylytics.health.core.scoring.domain.scoring.RasCalculator

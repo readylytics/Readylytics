@@ -304,7 +304,7 @@ internal fun categoryLabelRes(category: CooperCategory): Int =
 
 private fun sourceLabelRes(source: String?): Int? =
     when (source) {
-        "WEARABLE" -> R.string.vo2_max_source_wearable
-        "ESTIMATED_UTH" -> R.string.vo2_max_source_estimated
+        "WEARABLE" -> R.string.vitals_vo2_max_source_wearable
+        "ESTIMATED_UTH" -> R.string.vitals_vo2_max_source_estimated
         else -> null
     }
