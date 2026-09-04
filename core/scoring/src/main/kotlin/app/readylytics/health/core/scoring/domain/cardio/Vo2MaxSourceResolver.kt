@@ -11,28 +11,35 @@ class Vo2MaxSourceResolver @Inject constructor() {
     fun resolve(
         mode: Vo2MaxSourceMode,
         wearableVo2Max: Float?,
-        uthEstimatedVo2Max: Float?,
+        estimatedVo2Max: Float?,
+        estimatedSource: String?,
     ): Vo2MaxResolution =
         when (mode) {
             Vo2MaxSourceMode.AUTO ->
                 if (wearableVo2Max != null) {
-                    Vo2MaxResolution(wearableVo2Max, "WEARABLE")
-                } else if (uthEstimatedVo2Max != null) {
-                    Vo2MaxResolution(uthEstimatedVo2Max, "ESTIMATED_UTH")
+                    Vo2MaxResolution(wearableVo2Max, SOURCE_WEARABLE)
+                } else if (estimatedVo2Max != null) {
+                    Vo2MaxResolution(estimatedVo2Max, estimatedSource)
                 } else {
                     Vo2MaxResolution(null, null)
                 }
             Vo2MaxSourceMode.WEARABLE_ONLY ->
                 if (wearableVo2Max != null) {
-                    Vo2MaxResolution(wearableVo2Max, "WEARABLE")
+                    Vo2MaxResolution(wearableVo2Max, SOURCE_WEARABLE)
                 } else {
                     Vo2MaxResolution(null, null)
                 }
             Vo2MaxSourceMode.ESTIMATED_ONLY ->
-                if (uthEstimatedVo2Max != null) {
-                    Vo2MaxResolution(uthEstimatedVo2Max, "ESTIMATED_UTH")
+                if (estimatedVo2Max != null) {
+                    Vo2MaxResolution(estimatedVo2Max, estimatedSource)
                 } else {
                     Vo2MaxResolution(null, null)
                 }
         }
+
+    companion object {
+        const val SOURCE_WEARABLE = "WEARABLE"
+        const val SOURCE_ESTIMATED_UTH = "ESTIMATED_UTH"
+        const val SOURCE_ESTIMATED_MATERKO_ADAPTED = "ESTIMATED_MATERKO_ADAPTED"
+    }
 }

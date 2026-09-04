@@ -13,21 +13,35 @@ class Vo2MaxSourceResolverTest {
         val result = resolver.resolve(
             mode = Vo2MaxSourceMode.AUTO,
             wearableVo2Max = 48.0f,
-            uthEstimatedVo2Max = 45.0f
+            estimatedVo2Max = 45.0f,
+            estimatedSource = Vo2MaxSourceResolver.SOURCE_ESTIMATED_UTH,
         )
         assertEquals(48.0f, result.vo2Max)
         assertEquals("WEARABLE", result.source)
     }
 
     @Test
-    fun autoFallsBackToEstimateWhenWearableNull() {
+    fun autoFallsBackToUthEstimateWhenWearableNull() {
         val result = resolver.resolve(
             mode = Vo2MaxSourceMode.AUTO,
             wearableVo2Max = null,
-            uthEstimatedVo2Max = 45.0f
+            estimatedVo2Max = 45.0f,
+            estimatedSource = Vo2MaxSourceResolver.SOURCE_ESTIMATED_UTH,
         )
         assertEquals(45.0f, result.vo2Max)
         assertEquals("ESTIMATED_UTH", result.source)
+    }
+
+    @Test
+    fun autoFallsBackToMaterkoAdaptedEstimateWhenWearableNull() {
+        val result = resolver.resolve(
+            mode = Vo2MaxSourceMode.AUTO,
+            wearableVo2Max = null,
+            estimatedVo2Max = 39.0f,
+            estimatedSource = Vo2MaxSourceResolver.SOURCE_ESTIMATED_MATERKO_ADAPTED,
+        )
+        assertEquals(39.0f, result.vo2Max)
+        assertEquals("ESTIMATED_MATERKO_ADAPTED", result.source)
     }
 
     @Test
@@ -35,7 +49,8 @@ class Vo2MaxSourceResolverTest {
         val result = resolver.resolve(
             mode = Vo2MaxSourceMode.WEARABLE_ONLY,
             wearableVo2Max = null,
-            uthEstimatedVo2Max = 45.0f
+            estimatedVo2Max = 45.0f,
+            estimatedSource = Vo2MaxSourceResolver.SOURCE_ESTIMATED_UTH,
         )
         assertNull(result.vo2Max)
         assertNull(result.source)
@@ -46,20 +61,22 @@ class Vo2MaxSourceResolverTest {
         val result = resolver.resolve(
             mode = Vo2MaxSourceMode.WEARABLE_ONLY,
             wearableVo2Max = 48.0f,
-            uthEstimatedVo2Max = 45.0f
+            estimatedVo2Max = 45.0f,
+            estimatedSource = Vo2MaxSourceResolver.SOURCE_ESTIMATED_UTH,
         )
         assertEquals(48.0f, result.vo2Max)
         assertEquals("WEARABLE", result.source)
     }
 
     @Test
-    fun estimatedOnlyIgnoresWearable() {
+    fun estimatedOnlyEmitsEstimatedSourceTag() {
         val result = resolver.resolve(
             mode = Vo2MaxSourceMode.ESTIMATED_ONLY,
             wearableVo2Max = 48.0f,
-            uthEstimatedVo2Max = 45.0f
+            estimatedVo2Max = 39.0f,
+            estimatedSource = Vo2MaxSourceResolver.SOURCE_ESTIMATED_MATERKO_ADAPTED,
         )
-        assertEquals(45.0f, result.vo2Max)
-        assertEquals("ESTIMATED_UTH", result.source)
+        assertEquals(39.0f, result.vo2Max)
+        assertEquals("ESTIMATED_MATERKO_ADAPTED", result.source)
     }
 }
