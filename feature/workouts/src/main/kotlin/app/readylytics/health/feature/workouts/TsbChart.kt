@@ -14,6 +14,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.model.domain.model.HealthZone
 import app.readylytics.health.core.model.domain.model.ZoneBand
+import app.readylytics.health.core.scoring.domain.cardio.TrainingStressBalanceCalculator.Companion.FATIGUED_THRESHOLD
+import app.readylytics.health.core.scoring.domain.cardio.TrainingStressBalanceCalculator.Companion.FRESH_THRESHOLD
+import app.readylytics.health.core.scoring.domain.cardio.TrainingStressBalanceCalculator.Companion.HIGH_RISK_THRESHOLD
+import app.readylytics.health.core.scoring.domain.cardio.TrainingStressBalanceCalculator.Companion.VERY_FRESH_THRESHOLD
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.TrendGranularity
@@ -47,12 +51,6 @@ import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
-// Mirrors the zone boundaries in TrainingStressBalanceCalculator (core/scoring). Kept as local
-// named constants here since the calculator does not expose them as a shared constants object.
-internal const val VERY_FRESH_THRESHOLD = 25f
-internal const val FRESH_THRESHOLD = 5f
-internal const val FATIGUED_THRESHOLD = -10f
-internal const val HIGH_RISK_THRESHOLD = -30f
 private const val Y_AXIS_PADDING = 5f
 private const val Y_AXIS_STEP = 10f
 

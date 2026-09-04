@@ -1,19 +1,28 @@
 package app.readylytics.health.core.database.data.repository
 
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
-import java.util.concurrent.TimeUnit
+import app.readylytics.health.core.model.data.preferences.appliedTrainingReadinessConfig
 import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.preferences.Vo2MaxEstimationMethod
 import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
-import app.readylytics.health.core.model.data.preferences.appliedTrainingReadinessConfig
+import app.readylytics.health.core.model.domain.repository.WalkForwardVo2MaxContext
+import app.readylytics.health.core.scoring.domain.cardio.MaterkoAdaptedVo2MaxCalculator
 import app.readylytics.health.core.scoring.domain.cardio.UthVo2MaxCalculator
 import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxResolution
 import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxSourceResolver
-import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
+import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 import app.readylytics.health.core.scoring.domain.scoring.EverydayHrLoadResult
 import app.readylytics.health.core.scoring.domain.scoring.TrainingReadinessProjection
+import java.util.concurrent.TimeUnit
+
+data class Vo2MaxScoringDependencies(
+    val uthCalculator: UthVo2MaxCalculator,
+    val materkoAdaptedCalculator: MaterkoAdaptedVo2MaxCalculator,
+    val sourceResolver: Vo2MaxSourceResolver,
+)
 
 /**
  * Assembles the final per-day [DailySummary] from the raw scoring inputs, mirroring
@@ -28,8 +37,7 @@ class FinalSummaryAssembler(
     private val readinessSummaryCoordinator: ReadinessSummaryCoordinator,
     private val residualFatigueComputer: ResidualFatigueComputer,
     private val computeTrainingReadiness: ComputeTrainingReadinessUseCase,
-    private val uthVo2MaxCalculator: UthVo2MaxCalculator,
-    private val vo2MaxSourceResolver: Vo2MaxSourceResolver,
+    private val vo2MaxDependencies: Vo2MaxScoringDependencies,
 ) {
     data class Inputs(
         val context: ScoringDayContext,
@@ -43,6 +51,7 @@ class FinalSummaryAssembler(
         val trimpContext: WalkForwardTrimpContext?,
         val baselineContext: WalkForwardBaselineContext?,
         val fatigueContext: WalkForwardFatigueContext?,
+        val vo2MaxContext: WalkForwardVo2MaxContext?,
     )
 
     suspend fun assemble(inputs: Inputs): DailySummary {
@@ -74,7 +83,7 @@ class FinalSummaryAssembler(
             residualFatigue = residualFatigueComputer.compute(inputs.context, inputs.fatigueContext)
         )
         val (projectionForWorkout, projectionForEveryday) = resolveReadinessProjections(withFatigue, inputs)
-        val vo2MaxResolution = resolveVo2Max(inputs, isCalibrated)
+        val vo2MaxResolution = resolveVo2Max(inputs, isCalibrated, withFatigue.hrvMuMssd)
         return withFatigue.copy(
             acuteLoadRecovery = projectionForWorkout.acuteLoadRecovery,
             trainingLoadReadinessWorkoutOnly = projectionForWorkout.trainingLoadReadiness,
@@ -115,23 +124,59 @@ class FinalSummaryAssembler(
         return projectionForWorkout to projectionForEveryday
     }
 
-    private suspend fun resolveVo2Max(inputs: Inputs, isCalibrated: Boolean): Vo2MaxResolution {
-        val uthEstimate =
-            uthVo2MaxCalculator.estimate(
-                hrMax = inputs.context.initialBaselines.hrMax,
-                rhrBaselineBpm = inputs.context.initialBaselines.rhrBaselineValue,
-                isCalibrating = !isCalibrated,
-            )
+    private suspend fun resolveVo2Max(
+        inputs: Inputs,
+        isCalibrated: Boolean,
+        hrvMuMssd: Float?,
+    ): Vo2MaxResolution {
+        val prefs = inputs.context.prefs
+        val (estimate, source) =
+            when (prefs.vo2MaxEstimationMethod) {
+                Vo2MaxEstimationMethod.HR_RATIO ->
+                    vo2MaxDependencies.uthCalculator.estimate(
+                        hrMax = inputs.context.initialBaselines.hrMax,
+                        rhrBaselineBpm = inputs.context.initialBaselines.rhrBaselineValue,
+                        isCalibrating = !isCalibrated,
+                    ) to Vo2MaxSourceResolver.SOURCE_ESTIMATED_UTH
+                // Calibration semantics: `isCalibrated` is passed DIRECTLY here (guard inside the
+                // calculator is `if (!isCalibrated) return null`). The Uth calculator above keeps its
+                // existing `isCalibrating` contract, so its call site inverts (`!isCalibrated`). Do
+                // not "unify" the two call sites — that is what would introduce an inversion bug.
+                Vo2MaxEstimationMethod.MATERKO_ADAPTED ->
+                    vo2MaxDependencies.materkoAdaptedCalculator.estimate(
+                        rhrBaselineBpm = inputs.context.initialBaselines.rhrBaselineValue,
+                        hrvMuMssd = hrvMuMssd,
+                        isCalibrated = isCalibrated,
+                    ) to Vo2MaxSourceResolver.SOURCE_ESTIMATED_MATERKO_ADAPTED
+            }
         val thirtyDaysMs = TimeUnit.DAYS.toMillis(30)
         val wearableLookbackMs = inputs.context.nextDayMidnightMs - thirtyDaysMs
-        val wearableVo2Max = bodyMetricsDataLoader
-            .loadLatestVo2Max(inputs.context.nextDayMidnightMs, wearableLookbackMs)
-            ?.vo2Max
-        return vo2MaxSourceResolver.resolve(
-            mode = inputs.context.prefs.vo2MaxSourceMode,
+        val wearableVo2Max = resolveWearableVo2Max(inputs, wearableLookbackMs)
+        return vo2MaxDependencies.sourceResolver.resolve(
+            mode = prefs.vo2MaxSourceMode,
             wearableVo2Max = wearableVo2Max,
-            uthEstimatedVo2Max = uthEstimate,
+            estimatedVo2Max = estimate,
+            estimatedSource = source,
         )
+    }
+
+    /**
+     * PERF: prefers the prefetched-once [Inputs.vo2MaxContext] over a per-day DB query when a
+     * multi-day walk-forward is running (see [WalkForwardVo2MaxContext]); falls back to
+     * [BodyMetricsDataLoader.loadLatestVo2Max] for the single-day case (context null).
+     */
+    private suspend fun resolveWearableVo2Max(inputs: Inputs, wearableLookbackMs: Long): Float? {
+        val context = inputs.vo2MaxContext
+        return if (context != null) {
+            context.vo2MaxByTimestampMs
+                .floorEntry(inputs.context.nextDayMidnightMs)
+                ?.takeIf { it.key >= wearableLookbackMs }
+                ?.value
+        } else {
+            bodyMetricsDataLoader
+                .loadLatestVo2Max(inputs.context.nextDayMidnightMs, wearableLookbackMs)
+                ?.vo2Max
+        }
     }
 
     private suspend fun resolveScoredSummary(

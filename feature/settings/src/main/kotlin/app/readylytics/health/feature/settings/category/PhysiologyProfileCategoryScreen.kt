@@ -1,7 +1,9 @@
 package app.readylytics.health.feature.settings.category
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -9,12 +11,18 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
+import app.readylytics.health.core.model.domain.preferences.Vo2MaxEstimationMethod
 import app.readylytics.health.core.model.domain.preferences.Vo2MaxSourceMode
 import app.readylytics.health.core.ui.components.settings.PhysiologyProfilePicker
 import app.readylytics.health.feature.settings.R
@@ -26,6 +34,7 @@ import app.readylytics.health.feature.settings.nav.SettingsCategoryListItem
 import app.readylytics.health.feature.settings.nav.SettingsCategoryScaffold
 import app.readylytics.health.feature.settings.physiologyprofile.HeartRateZoneSection
 import app.readylytics.health.feature.settings.search.SettingsItemIds
+import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
 internal fun PhysiologyProfileCategoryScreen(
@@ -62,6 +71,17 @@ internal fun PhysiologyProfileCategoryScreen(
                         enabled = controlsEnabled,
                     )
                 },
+                SettingsCategoryListItem(SettingsItemIds.PHYSIOLOGY_VO2_MAX_METHOD) {
+                    Vo2MaxEstimationMethodPicker(
+                        selectedMethod = states.physiologyState.vo2MaxEstimationMethod,
+                        onMethodSelected = {
+                            intents.onPhysiologyEvent(SettingsEvent.Vo2MaxEstimationMethodChanged(it))
+                        },
+                        enabled =
+                            controlsEnabled &&
+                                states.physiologyState.vo2MaxSourceMode != Vo2MaxSourceMode.WEARABLE_ONLY,
+                    )
+                },
             ),
         highlightItemId = highlightItemId,
         onNavigateBack = onNavigateBack,
@@ -89,54 +109,174 @@ private fun Vo2MaxSourcePicker(
     onModeSelected: (Vo2MaxSourceMode) -> Unit,
     enabled: Boolean,
 ) {
-    ListItem(
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-    ) {
+    Column {
+        ListItem(
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        ) {
+            Text(
+                text = stringResource(R.string.vo2_max_source_title),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        }
+        SingleChoiceSegmentedButtonRow(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+        ) {
+            Vo2MaxSourceMode.entries.forEachIndexed { index, mode ->
+                SegmentedButton(
+                    selected = selectedMode == mode,
+                    onClick = { onModeSelected(mode) },
+                    enabled = enabled,
+                    shape =
+                        SegmentedButtonDefaults.itemShape(
+                            index = index,
+                            count = Vo2MaxSourceMode.entries.size,
+                        ),
+                    label = {
+                        Text(
+                            text =
+                                when (mode) {
+                                    Vo2MaxSourceMode.AUTO ->
+                                        stringResource(R.string.vo2_max_source_auto)
+                                    Vo2MaxSourceMode.WEARABLE_ONLY ->
+                                        stringResource(R.string.vo2_max_source_wearable)
+                                    Vo2MaxSourceMode.ESTIMATED_ONLY ->
+                                        stringResource(R.string.vo2_max_source_estimated)
+                                },
+                        )
+                    },
+                )
+            }
+        }
         Text(
-            text = stringResource(R.string.vo2_max_source_title),
-            style = MaterialTheme.typography.bodyLarge,
+            text = stringResource(R.string.vo2_max_source_description),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier =
+                Modifier.padding(
+                    horizontal = MaterialTheme.spacing.pageHorizontal,
+                    vertical = MaterialTheme.spacing.small,
+                ),
         )
     }
+}
+
+@Composable
+private fun Vo2MaxEstimationMethodPicker(
+    selectedMethod: Vo2MaxEstimationMethod,
+    onMethodSelected: (Vo2MaxEstimationMethod) -> Unit,
+    enabled: Boolean,
+) {
+    var pendingMethod by rememberSaveable { mutableStateOf<Vo2MaxEstimationMethod?>(null) }
+
+    Column {
+        ListItem(
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        ) {
+            Text(
+                text = stringResource(R.string.vo2_max_method_title),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        }
+        Vo2MaxEstimationMethodRow(
+            selectedMethod = selectedMethod,
+            onMethodClick = { method ->
+                if (method != selectedMethod) {
+                    pendingMethod = method
+                }
+            },
+            enabled = enabled,
+        )
+        Text(
+            text = stringResource(R.string.vo2_max_method_description),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier =
+                Modifier.padding(
+                    horizontal = MaterialTheme.spacing.pageHorizontal,
+                    vertical = MaterialTheme.spacing.small,
+                ),
+        )
+    }
+
+    pendingMethod?.let { targetMethod ->
+        Vo2MaxMethodConfirmationDialog(
+            targetMethod = targetMethod,
+            onConfirm = {
+                onMethodSelected(targetMethod)
+                pendingMethod = null
+            },
+            onDismiss = { pendingMethod = null },
+        )
+    }
+}
+
+@Composable
+private fun Vo2MaxEstimationMethodRow(
+    selectedMethod: Vo2MaxEstimationMethod,
+    onMethodClick: (Vo2MaxEstimationMethod) -> Unit,
+    enabled: Boolean,
+) {
     SingleChoiceSegmentedButtonRow(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
     ) {
-        Vo2MaxSourceMode.entries.forEachIndexed { index, mode ->
+        Vo2MaxEstimationMethod.entries.forEachIndexed { index, method ->
             SegmentedButton(
-                selected = selectedMode == mode,
-                onClick = { onModeSelected(mode) },
+                selected = selectedMethod == method,
+                onClick = { onMethodClick(method) },
                 enabled = enabled,
                 shape =
                     SegmentedButtonDefaults.itemShape(
                         index = index,
-                        count = Vo2MaxSourceMode.entries.size,
+                        count = Vo2MaxEstimationMethod.entries.size,
                     ),
                 label = {
                     Text(
                         text =
-                            when (mode) {
-                                Vo2MaxSourceMode.AUTO ->
-                                    stringResource(R.string.vo2_max_source_auto)
-                                Vo2MaxSourceMode.WEARABLE_ONLY ->
-                                    stringResource(R.string.vo2_max_source_wearable)
-                                Vo2MaxSourceMode.ESTIMATED_ONLY ->
-                                    stringResource(R.string.vo2_max_source_estimated)
+                            when (method) {
+                                Vo2MaxEstimationMethod.HR_RATIO ->
+                                    stringResource(R.string.vo2_max_method_hr_ratio)
+                                Vo2MaxEstimationMethod.MATERKO_ADAPTED ->
+                                    stringResource(R.string.vo2_max_method_materko_adapted)
                             },
                     )
                 },
             )
         }
     }
-    Text(
-        text = stringResource(R.string.vo2_max_source_description),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier =
-            Modifier.padding(
-                horizontal = MaterialTheme.spacing.pageHorizontal,
-                vertical = MaterialTheme.spacing.small,
-            ),
+}
+
+@Composable
+private fun Vo2MaxMethodConfirmationDialog(
+    targetMethod: Vo2MaxEstimationMethod,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val bodyText =
+        when (targetMethod) {
+            Vo2MaxEstimationMethod.MATERKO_ADAPTED ->
+                stringResource(R.string.vo2_max_method_dialog_body_materko)
+            Vo2MaxEstimationMethod.HR_RATIO ->
+                stringResource(R.string.vo2_max_method_dialog_body_hr_ratio)
+        }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.vo2_max_method_dialog_title)) },
+        text = { Text(bodyText) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.vo2_max_method_dialog_confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(CoreUiR.string.action_cancel))
+            }
+        },
     )
 }

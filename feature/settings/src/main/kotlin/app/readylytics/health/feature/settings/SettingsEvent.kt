@@ -8,6 +8,7 @@ import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.data.preferences.SyncPreference
 import app.readylytics.health.core.model.domain.backup.BackupFileInfo
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.preferences.Vo2MaxEstimationMethod
 import app.readylytics.health.core.model.domain.preferences.Vo2MaxSourceMode
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
@@ -230,6 +231,10 @@ sealed interface SettingsEvent {
 
     data class Vo2MaxSourceModeChanged(
         val mode: Vo2MaxSourceMode,
+    ) : SettingsEvent
+
+    data class Vo2MaxEstimationMethodChanged(
+        val method: Vo2MaxEstimationMethod,
     ) : SettingsEvent
 
     data class CircadianThresholdOverrideChanged(

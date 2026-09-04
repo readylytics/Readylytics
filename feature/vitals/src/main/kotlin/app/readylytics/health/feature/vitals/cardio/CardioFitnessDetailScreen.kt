@@ -37,6 +37,8 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.scoring.domain.cardio.CooperCategory
+import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxSourceResolver
+import app.readylytics.health.core.scoring.domain.cardio.toMetricStatus
 import app.readylytics.health.core.ui.common.DeltaDirection
 import app.readylytics.health.core.ui.common.ScoreDialSkeleton
 import app.readylytics.health.core.ui.common.SkeletonCard
@@ -304,7 +306,8 @@ internal fun categoryLabelRes(category: CooperCategory): Int =
 
 private fun sourceLabelRes(source: String?): Int? =
     when (source) {
-        "WEARABLE" -> CoreUiR.string.vo2_max_source_label_wearable
-        "ESTIMATED_UTH" -> CoreUiR.string.vo2_max_source_label_estimated
+        Vo2MaxSourceResolver.SOURCE_WEARABLE -> CoreUiR.string.vo2_max_source_label_wearable
+        Vo2MaxSourceResolver.SOURCE_ESTIMATED_UTH -> CoreUiR.string.vo2_max_source_label_estimated
+        Vo2MaxSourceResolver.SOURCE_ESTIMATED_MATERKO_ADAPTED -> CoreUiR.string.vo2_max_source_label_materko_adapted
         else -> null
     }

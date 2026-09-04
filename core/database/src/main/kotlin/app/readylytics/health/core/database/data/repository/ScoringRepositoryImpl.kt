@@ -13,6 +13,7 @@ import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineCo
 import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
+import app.readylytics.health.core.model.domain.repository.WalkForwardVo2MaxContext
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
@@ -29,6 +30,9 @@ import java.time.ZoneId
 import java.util.TreeMap
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/** Trailing lookback for wearable VO2 Max readings, mirroring [FinalSummaryAssembler]'s per-day window. */
+private const val VO2_MAX_LOOKBACK_DAYS = 30L
 
 @Singleton
 class ScoringRepositoryImpl
@@ -71,8 +75,11 @@ class ScoringRepositoryImpl
                 readinessSummaryCoordinator,
                 residualFatigueComputer,
                 useCases.computeTrainingReadiness,
-                useCases.uthVo2MaxCalculator,
-                useCases.vo2MaxSourceResolver,
+                Vo2MaxScoringDependencies(
+                    useCases.uthVo2MaxCalculator,
+                    useCases.materkoAdaptedVo2MaxCalculator,
+                    useCases.vo2MaxSourceResolver,
+                ),
             )
 
         override suspend fun computeAndPersistDailySummary(
@@ -86,14 +93,6 @@ class ScoringRepositoryImpl
             val computed = computeDailySummary(targetDate, resolvedPrefs, contexts)
             dataLoader.persistDailySummary(computed.withStepCount(steps), zoneId)
         }
-
-        /** A null [steps] means no fresh count for the day; the stored value is preserved. */
-        private fun DailySummary.withStepCount(steps: Long?): DailySummary =
-            if (steps == null) {
-                this
-            } else {
-                copy(stepCount = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
-            }
 
         override suspend fun fetchWalkForwardTrimpContext(
             startDate: LocalDate,
@@ -141,6 +140,24 @@ class ScoringRepositoryImpl
                 zoneId = zoneId,
                 prefs = settingsRepo.userPreferences.first(),
             )
+
+        override suspend fun fetchWalkForwardVo2MaxContext(
+            startDate: LocalDate,
+            endDate: LocalDate,
+            zoneId: ZoneId,
+        ): WalkForwardVo2MaxContext {
+            val fromMs =
+                startDate.minusDays(VO2_MAX_LOOKBACK_DAYS)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val toMs = endDate.plusDays(2).atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val vo2MaxByTimestampMs = TreeMap<Long, Float>()
+            bodyMetricsDataLoader.loadVo2MaxRange(fromMs, toMs).forEach {
+                vo2MaxByTimestampMs[it.timestampMs] = it.vo2Max
+            }
+            return WalkForwardVo2MaxContext(vo2MaxByTimestampMs)
+        }
 
         override suspend fun computeDailySummary(targetDate: LocalDate): DailySummary {
             val prefs = settingsRepo.userPreferences.first()
@@ -198,18 +215,14 @@ class ScoringRepositoryImpl
                     )
                 val finalSummary =
                     finalSummaryAssembler.assemble(
-                        FinalSummaryAssembler.Inputs(
-                            context = context,
-                            session = session,
-                            currentSessionIds = currentSessionIds,
-                            dailyTrimpRaw = processed.dailyTrimpRaw,
-                            trimpEverydayHr = everydayResult.totalEverydayTrimp,
-                            rasTotals = rasTotals,
-                            everydayResult = everydayResult,
-                            aggregatedSleep = aggregatedSleep,
-                            trimpContext = contexts.trimp,
-                            baselineContext = contexts.baseline,
-                            fatigueContext = contexts.fatigue,
+                        contexts.buildFinalSummaryInputs(
+                            context,
+                            session,
+                            currentSessionIds,
+                            processed,
+                            everydayResult,
+                            aggregatedSleep,
+                            rasTotals,
                         ),
                     )
                 ScoringTelemetry.logTelemetry(
@@ -227,3 +240,35 @@ class ScoringRepositoryImpl
 
         override suspend fun toReadinessResult(summary: DailySummary): ReadinessResult = summary.readinessResult
     }
+
+/** A null [steps] means no fresh count for the day; the stored value is preserved. */
+private fun DailySummary.withStepCount(steps: Long?): DailySummary =
+    if (steps == null) {
+        this
+    } else {
+        copy(stepCount = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
+    }
+
+private fun WalkForwardContexts.buildFinalSummaryInputs(
+    context: ScoringDayContext,
+    session: SleepSessionEntity?,
+    currentSessionIds: Set<String>,
+    processed: DailyTrimpComputer.ProcessedWorkoutDay,
+    everydayResult: EverydayHrLoadResult,
+    aggregatedSleep: SleepAggregationContext?,
+    rasTotals: RasTotalsComputer.RasTotals,
+): FinalSummaryAssembler.Inputs =
+    FinalSummaryAssembler.Inputs(
+        context = context,
+        session = session,
+        currentSessionIds = currentSessionIds,
+        dailyTrimpRaw = processed.dailyTrimpRaw,
+        trimpEverydayHr = everydayResult.totalEverydayTrimp,
+        rasTotals = rasTotals,
+        everydayResult = everydayResult,
+        aggregatedSleep = aggregatedSleep,
+        trimpContext = trimp,
+        baselineContext = baseline,
+        fatigueContext = fatigue,
+        vo2MaxContext = vo2Max,
+    )

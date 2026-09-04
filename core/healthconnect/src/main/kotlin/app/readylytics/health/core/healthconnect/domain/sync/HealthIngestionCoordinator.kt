@@ -16,6 +16,8 @@ import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeout
 
 /**
@@ -136,41 +138,50 @@ class HealthIngestionCoordinator
             )
         }
 
+        // Each read is independent of the others' results, so they run concurrently instead of
+        // sequentially -- total latency drops from the sum of all 9 round trips to their max.
         private suspend fun fetchBulkRecords(
             windowStart: Instant,
             windowEnd: Instant,
-        ): RawBulkRecords {
-            val sleepSessions = retryWithBackoff { hcRepo.readSleepSessions(windowStart, windowEnd) }
-            val exerciseRecords =
-                retryWithBackoff {
-                    hcRepo.readExerciseSessions(windowStart, windowEnd, includeDetails = true)
-                }
-            val weightRecords = retryWithBackoff { hcRepo.readWeightRecords(windowStart, windowEnd) }
-            val bodyFatRecords = retryWithBackoff { hcRepo.readBodyFatRecords(windowStart, windowEnd) }
-            val bloodPressureRecords =
-                retryWithBackoff { hcRepo.readBloodPressureRecords(windowStart, windowEnd) }
-            val spo2Records = retryWithBackoff { hcRepo.readOxygenSaturationRecords(windowStart, windowEnd) }
-            val bodyTemperatureRecords =
-                retryWithBackoff { hcRepo.readBodyTemperatureRecords(windowStart, windowEnd) }
-            val stepsRecords = retryWithBackoff { hcRepo.readStepsRecords(windowStart, windowEnd) }
-            val vo2MaxRecords =
-                if (hcRepo.hasVo2MaxPermission()) {
-                    retryWithBackoff { hcRepo.readVo2MaxRecords(windowStart, windowEnd) }
-                } else {
-                    emptyList()
-                }
-            return RawBulkRecords(
-                sleepSessions = sleepSessions,
-                exerciseRecords = exerciseRecords,
-                weightRecords = weightRecords,
-                bodyFatRecords = bodyFatRecords,
-                bloodPressureRecords = bloodPressureRecords,
-                spo2Records = spo2Records,
-                bodyTemperatureRecords = bodyTemperatureRecords,
-                stepsRecords = stepsRecords,
-                vo2MaxRecords = vo2MaxRecords,
-            )
-        }
+        ): RawBulkRecords =
+            coroutineScope {
+                val sleepSessions = async { retryWithBackoff { hcRepo.readSleepSessions(windowStart, windowEnd) } }
+                val exerciseRecords =
+                    async {
+                        retryWithBackoff {
+                            hcRepo.readExerciseSessions(windowStart, windowEnd, includeDetails = true)
+                        }
+                    }
+                val weightRecords = async { retryWithBackoff { hcRepo.readWeightRecords(windowStart, windowEnd) } }
+                val bodyFatRecords =
+                    async { retryWithBackoff { hcRepo.readBodyFatRecords(windowStart, windowEnd) } }
+                val bloodPressureRecords =
+                    async { retryWithBackoff { hcRepo.readBloodPressureRecords(windowStart, windowEnd) } }
+                val spo2Records =
+                    async { retryWithBackoff { hcRepo.readOxygenSaturationRecords(windowStart, windowEnd) } }
+                val bodyTemperatureRecords =
+                    async { retryWithBackoff { hcRepo.readBodyTemperatureRecords(windowStart, windowEnd) } }
+                val stepsRecords = async { retryWithBackoff { hcRepo.readStepsRecords(windowStart, windowEnd) } }
+                val vo2MaxRecords =
+                    async {
+                        if (hcRepo.hasVo2MaxPermission()) {
+                            retryWithBackoff { hcRepo.readVo2MaxRecords(windowStart, windowEnd) }
+                        } else {
+                            emptyList()
+                        }
+                    }
+                RawBulkRecords(
+                    sleepSessions = sleepSessions.await(),
+                    exerciseRecords = exerciseRecords.await(),
+                    weightRecords = weightRecords.await(),
+                    bodyFatRecords = bodyFatRecords.await(),
+                    bloodPressureRecords = bloodPressureRecords.await(),
+                    spo2Records = spo2Records.await(),
+                    bodyTemperatureRecords = bodyTemperatureRecords.await(),
+                    stepsRecords = stepsRecords.await(),
+                    vo2MaxRecords = vo2MaxRecords.await(),
+                )
+            }
 
         private fun mapAndFilterVitals(
             raw: RawBulkRecords,

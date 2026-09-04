@@ -11,6 +11,7 @@ import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineCo
 import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
+import app.readylytics.health.core.model.domain.repository.WalkForwardVo2MaxContext
 import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
@@ -111,6 +112,17 @@ class DailyRecomputeSupport
             endDate: LocalDate,
             zoneId: ZoneId,
         ): WalkForwardFatigueContext = scoringRepository.fetchWalkForwardFatigueContext(startDate, endDate, zoneId)
+
+        /**
+         * PERF: fetches the shared wearable-VO2-Max context once for the whole
+         * `[startDate, endDate]` walk-forward; pass the result to every [recomputeDay] call in
+         * that run instead of letting each day re-query its own 30-day lookback window.
+         */
+        suspend fun buildWalkForwardVo2MaxContext(
+            startDate: LocalDate,
+            endDate: LocalDate,
+            zoneId: ZoneId,
+        ): WalkForwardVo2MaxContext = scoringRepository.fetchWalkForwardVo2MaxContext(startDate, endDate, zoneId)
 
         /**
          * F7: runs a whole walk-forward's worth of [recomputeDay] calls inside ONE Room

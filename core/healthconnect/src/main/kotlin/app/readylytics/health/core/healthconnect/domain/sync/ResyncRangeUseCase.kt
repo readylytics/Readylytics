@@ -500,6 +500,15 @@ class ResyncRangeUseCase
                         } else {
                             null
                         }
+                    // PERF: fetch the wearable-VO2-Max series once for the whole walk-forward
+                    // instead of every recomputed day independently re-querying its own 30-day
+                    // lookback -- same batched-once shape as trimpContext/baselineContext/fatigueContext.
+                    val vo2MaxContext =
+                        if (!recomputeStartDate.isAfter(endDate)) {
+                            recomputeSupport.buildWalkForwardVo2MaxContext(recomputeStartDate, endDate, zoneId)
+                        } else {
+                            null
+                        }
                     if (checkpoint == null || checkpoint.phase != ResyncPhase.RECOMPUTE) {
                         healthIngestionStore.clearFrozenBaselines(startDate, endDate.plusDays(1), zoneId)
                     }
@@ -544,7 +553,12 @@ class ResyncRangeUseCase
                                             day,
                                             stepsForDay,
                                             prefs,
-                                            WalkForwardContexts(trimpContext, baselineContext, fatigueContext),
+                                            WalkForwardContexts(
+                                                trimpContext,
+                                                baselineContext,
+                                                fatigueContext,
+                                                vo2MaxContext,
+                                            ),
                                         )
                                     if (dayResult is Result.Failure) {
                                         logD(TELEMETRY_TAG) { "[RECOMPUTE] Failed at day $day: ${dayResult.reason}" }

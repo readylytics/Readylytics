@@ -197,6 +197,7 @@ internal fun UserPreferencesProto.Builder.applyScoringSettings(backup: UserPrefe
             ) { "Ignoring unrecognised sleep score weight profile '$raw' in backup settings" }
         }
     }
+    applyVo2MaxSettings(backup)
     backup.hypersomniaOnsetPercent?.let { hypersomniaOnsetPercent = it }
     backup.scoringVersion?.let { scoringVersion = it }
     backup.lastRecalcSleepScoreWeightProfile?.let { raw ->

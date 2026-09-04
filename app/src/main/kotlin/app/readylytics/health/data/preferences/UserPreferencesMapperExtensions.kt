@@ -177,6 +177,7 @@ internal fun UserPreferences.withScoringProfiles(
                 else -> SettingsDefaults.RAS_SOURCE_MODE
             },
         vo2MaxSourceMode = proto.vo2MaxSourceMode.toDomainMode(),
+        vo2MaxEstimationMethod = proto.vo2MaxEstimationMethod.toDomainMethod(),
         sleepScoreWeightProfile = proto.sleepScoreWeightProfile.toDomainProfile(),
         hypersomniaOnsetPercent =
             if (proto.hasHypersomniaOnsetPercent()) {

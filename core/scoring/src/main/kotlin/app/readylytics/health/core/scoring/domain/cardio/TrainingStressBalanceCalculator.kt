@@ -11,12 +11,19 @@ class TrainingStressBalanceCalculator @Inject constructor() {
         if (ctl == null || atl == null) return null
         val tsb = ctl - atl
         val zone = when {
-            tsb > 25.0f -> TsbZone.VERY_FRESH_OR_TRANSITION
-            tsb >= 5.0f -> TsbZone.FRESH_PEAKED
-            tsb >= -10.0f -> TsbZone.OPTIMAL_PRODUCTIVE
-            tsb >= -30.0f -> TsbZone.FATIGUED_OVERLOAD
+            tsb > VERY_FRESH_THRESHOLD -> TsbZone.VERY_FRESH_OR_TRANSITION
+            tsb >= FRESH_THRESHOLD -> TsbZone.FRESH_PEAKED
+            tsb >= FATIGUED_THRESHOLD -> TsbZone.OPTIMAL_PRODUCTIVE
+            tsb >= HIGH_RISK_THRESHOLD -> TsbZone.FATIGUED_OVERLOAD
             else -> TsbZone.HIGH_RISK_OVERREACHED
         }
         return TrainingStressBalance(value = tsb, zone = zone)
+    }
+
+    companion object {
+        const val VERY_FRESH_THRESHOLD = 25.0f
+        const val FRESH_THRESHOLD = 5.0f
+        const val FATIGUED_THRESHOLD = -10.0f
+        const val HIGH_RISK_THRESHOLD = -30.0f
     }
 }

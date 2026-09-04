@@ -26,6 +26,7 @@ interface PhysiologySettings {
     suspend fun updateHeight(heightCm: Float?)
     suspend fun updatePhysiologyProfile(profile: PhysiologyProfile)
     suspend fun updateVo2MaxSourceMode(mode: Vo2MaxSourceMode)
+    suspend fun updateVo2MaxEstimationMethod(method: Vo2MaxEstimationMethod)
 }
 
 interface HeartRateZoneSettings {

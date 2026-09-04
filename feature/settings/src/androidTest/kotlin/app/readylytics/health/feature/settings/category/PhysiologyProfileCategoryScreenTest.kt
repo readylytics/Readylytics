@@ -85,7 +85,6 @@ class PhysiologyProfileCategoryScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithText("Physiology Profile").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Activity Profile", substring = true).assertIsDisplayed()
+        composeTestRule.onNodeWithText("Auto-calculate Max HR", substring = true).assertIsDisplayed()
     }
 }

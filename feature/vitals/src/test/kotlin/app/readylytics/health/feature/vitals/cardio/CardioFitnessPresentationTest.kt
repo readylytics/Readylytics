@@ -4,6 +4,7 @@ import app.readylytics.health.core.model.domain.model.MetricStatus
 import app.readylytics.health.core.model.domain.preferences.Gender
 import app.readylytics.health.core.scoring.domain.cardio.CooperCategory
 import app.readylytics.health.core.scoring.domain.cardio.CooperNormsClassifier
+import app.readylytics.health.core.scoring.domain.cardio.toMetricStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

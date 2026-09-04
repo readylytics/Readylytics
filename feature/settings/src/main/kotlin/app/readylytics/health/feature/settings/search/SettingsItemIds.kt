@@ -4,6 +4,7 @@ object SettingsItemIds {
     const val PHYSIOLOGY_PROFILE_PICKER = "physiology_profile_picker"
     const val PHYSIOLOGY_HR_ZONES = "physiology_hr_zones"
     const val PHYSIOLOGY_VO2_MAX_SOURCE = "physiology_vo2_max_source"
+    const val PHYSIOLOGY_VO2_MAX_METHOD = "physiology_vo2_max_method"
 
     const val SLEEP_GOAL = "sleep_goal"
     const val SLEEP_WEIGHT_PROFILE = "sleep_weight_profile"

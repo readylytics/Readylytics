@@ -104,6 +104,8 @@ private fun buildScoringAndDevices(
         deviceByDataType = prefs.deviceByDataType.takeIf { it.isNotEmpty() },
         backupDirectoryUri = prefs.backupDirectoryUri,
         sleepScoreWeightProfile = prefs.sleepScoreWeightProfile.name,
+        vo2MaxEstimationMethod = prefs.vo2MaxEstimationMethod.name,
+        vo2MaxSourceMode = prefs.vo2MaxSourceMode.name,
         hypersomniaOnsetPercent = prefs.hypersomniaOnsetPercent,
         scoringVersion = prefs.scoringVersion,
         lastRecalcSleepScoreWeightProfile = prefs.lastRecalcSleepScoreWeightProfile?.name,

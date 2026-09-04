@@ -4,6 +4,8 @@ import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.preferences.DisplaySettings
 import app.readylytics.health.core.model.domain.preferences.PhysiologySettings
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.preferences.Vo2MaxEstimationMethod
+import app.readylytics.health.core.model.domain.preferences.Vo2MaxSourceMode
 import app.readylytics.health.core.model.domain.sync.HealthDataRefresh
 import app.readylytics.health.core.model.domain.user.UserProfileActions
 import io.mockk.coVerify
@@ -99,5 +101,29 @@ class PhysiologySettingsViewModelTest {
         coVerify(timeout = 1000, exactly = 0) { displaySettings.updateResidualFatigueHalfLifeHours(any()) }
         coVerify(timeout = 1000, exactly = 0) { displaySettings.updateResidualFatigueGain(any()) }
         coVerify(timeout = 1000, exactly = 0) { displaySettings.resetResidualFatigueToDefaults() }
+    }
+
+    @Test
+    fun onEvent_vo2MaxMethodChanged_updatesPrefAndRefreshesHistoricalExactlyOnce() {
+        viewModel.onEvent(
+            SettingsEvent.Vo2MaxEstimationMethodChanged(Vo2MaxEstimationMethod.MATERKO_ADAPTED),
+        )
+
+        coVerify(timeout = 1000, exactly = 1) {
+            physiologySettings.updateVo2MaxEstimationMethod(Vo2MaxEstimationMethod.MATERKO_ADAPTED)
+        }
+        coVerify(timeout = 1000, exactly = 1) { healthDataRefresh.refreshHistorical() }
+    }
+
+    @Test
+    fun onEvent_vo2MaxSourceModeChanged_updatesPrefAndRefreshesHistoricalExactlyOnce() {
+        viewModel.onEvent(
+            SettingsEvent.Vo2MaxSourceModeChanged(Vo2MaxSourceMode.ESTIMATED_ONLY),
+        )
+
+        coVerify(timeout = 1000, exactly = 1) {
+            physiologySettings.updateVo2MaxSourceMode(Vo2MaxSourceMode.ESTIMATED_ONLY)
+        }
+        coVerify(timeout = 1000, exactly = 1) { healthDataRefresh.refreshHistorical() }
     }
 }

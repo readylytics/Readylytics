@@ -77,6 +77,7 @@ class PhysiologySettingsViewModel
                         heightCm = prefs.heightCm,
                         unitSystem = prefs.unitSystem,
                         vo2MaxSourceMode = prefs.vo2MaxSourceMode,
+                        vo2MaxEstimationMethod = prefs.vo2MaxEstimationMethod,
                     )
                 }.stateIn(
                     scope = viewModelScope,
@@ -114,6 +115,16 @@ class PhysiologySettingsViewModel
                 is SettingsEvent.Vo2MaxSourceModeChanged ->
                     viewModelScope.launch {
                         physiologySettings.updateVo2MaxSourceMode(mode = event.mode)
+                        // The source mode is historical-scope: every persisted day's VO2 Max must be
+                        // recomputed under the new mode. Exactly one refresh per change.
+                        healthDataRefresh.refreshHistorical()
+                    }
+                is SettingsEvent.Vo2MaxEstimationMethodChanged ->
+                    viewModelScope.launch {
+                        physiologySettings.updateVo2MaxEstimationMethod(method = event.method)
+                        // The estimator is historical-scope: every persisted day's VO2 Max must be
+                        // recomputed under the new method. Exactly one refresh per change.
+                        healthDataRefresh.refreshHistorical()
                     }
                 SettingsEvent.ResetRasScalingFactor ->
                     viewModelScope.launch {
