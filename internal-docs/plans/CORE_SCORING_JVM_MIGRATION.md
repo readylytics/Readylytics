@@ -1,7 +1,9 @@
 # Plan: Convert `core:scoring` to a pure JVM module
 
-> **Status:** DEFERRED — blocked on **AGP 9.4.0 stable**. Do not start until the
-> precondition in §2 is met. Written 2026-08-18.
+> **Status:** DEFERRED — blocked on an AGP whose bundled built-in Kotlin compiler is
+> confirmed compatible with the matching standalone Kotlin release. **AGP 9.4.0 was
+> attempted and does NOT qualify** (see §1/§2 spike result, 2026-09-04). Do not start
+> until the precondition in §2 passes. Written 2026-08-18.
 
 This plan is the "migration we couldn't do" during the repo-wide architecture remediation that
 landed on the `feat/code-review` branch: converting `:core:scoring` from an Android library to
@@ -50,12 +52,32 @@ What was tried and did **not** help:
   compilation" it gated was replaced by ABI-snapshot-based incremental
   compilation), so the feature cannot be turned off.
 
-**Why we wait for AGP 9.4.0.** The only clean fix is to make the built-in Kotlin
-compiler and the standalone compiler use a common snapshot format. That requires
-a coordinated bump of AGP (which bundles the built-in compiler) **and** the
-standalone `kotlin` version in the catalog. As of 2026-08-18, `9.3.1` is the
-newest *stable* AGP; the only newer releases are pre-releases (`9.4.0-rc01`,
-`9.5.0-alpha01`), which this project will not adopt.
+**Why we wait for an AGP + standalone pairing that is actually compatible.** The
+only clean fix is to make the built-in Kotlin compiler and the standalone compiler
+use a common snapshot format. That requires a coordinated bump of AGP (which
+bundles the built-in compiler) **and** the standalone `kotlin` version in the
+catalog. As of 2026-08-18, `9.3.1` is the newest *stable* AGP; the only newer
+releases are pre-releases (`9.4.0-rc01`, `9.5.0-alpha01`), which this project will
+not adopt.
+
+**2026-09-04 update — AGP 9.4.0 was tried and does NOT resolve this.** On
+`feat/agp-9.4.0` (AGP `9.4.0` in the catalog), the spike was run with standalone
+`kotlin = "2.2.10"` (AGP 9.4.0 has a runtime dependency on `kotlin-gradle-plugin
+2.2.10` and bundles `com.android.tools.external.com-intellij:kotlin-compiler:32.3.2`,
+the same compiler family as 9.3.x's `32.3.1`). Result: `:core:scoring:compileKotlin`
+succeeded on the very first run (the classpath snapshot file happened to be absent),
+then failed **deterministically on every clean rebuild** with the identical crash —
+`ArrayIndexOutOfBoundsException: Index 33 out of bounds for length 3` in
+`shrinkAndSaveClasspathSnapshot` / `DelegateDataExternalizer.read`, reading
+`core/model/build/kotlin/compileDebugKotlin/classpath-snapshot/shrunk-classpath-snapshot.bin`
+written by the built-in compiler. The `kotlin.incremental.useClasspathSnapshot=false`
+escape hatch was also retried and still crashes (it is removed in 2.2.x as well, not
+just 2.3.x). Conclusion: the "bump AGP to a newer bundled compiler that matches a
+standalone Kotlin" hypothesis is falsified by AGP 9.4.0. The migration remains
+blocked on a future AGP whose bundled compiler genuinely shares the snapshot format,
+or on removing the Android-built-module-on-JVM-classpath boundary entirely (see the
+§3.4 alternative: convert `core:model` to `kotlin("jvm")` too — bigger blast radius,
+separate PR).
 
 **What was already landed** (keep this): `org.gradle.caching=true` in
 `gradle.properties` (commit `ab15774`).
@@ -64,17 +86,23 @@ newest *stable* AGP; the only newer releases are pre-releases (`9.4.0-rc01`,
 
 ## 2. Precondition + spike gate (must pass before §3)
 
-1. Wait for **AGP 9.4.0 stable** (or any stable AGP whose bundled built-in Kotlin
-   is confirmed compatible with the matching standalone Kotlin release).
-2. Determine AGP 9.4.0's built-in Kotlin version. Inspect the Gradle cache after
-   a sync:
+1. Wait for an **AGP whose bundled built-in Kotlin compiler is confirmed compatible
+   with a matching standalone Kotlin release**. **AGP 9.4.0 is explicitly known NOT
+   to qualify** (attempted 2026-09-04, see §1 — it bundles KGP 2.2.10 / intellij
+   compiler 32.3.2, and standalone 2.2.10 still crashes deterministically on clean
+   rebuilds).
+2. Determine the AGP's built-in Kotlin version. Inspect the Gradle cache after a
+   sync:
    ```bash
    find ~/.gradle/caches -name "kotlin-compiler-*.jar" | grep -i com.android.tools
    # e.g. kotlin-compiler-32.4.0.jar
    ```
    Then set `kotlin = "<matching Maven version>"` in `gradle/libs.versions.toml`
    (the built-in compiler's snapshot format must match the standalone
-   `kotlin("jvm")` compiler's).
+   `kotlin("jvm")` compiler's). Note: matching the catalog `kotlin` version to the
+   AGP's `kotlin-gradle-plugin` runtime dependency (`find ~/.gradle/caches
+   .../com.android.tools.build/gradle/<ver>/*.pom` → `kotlin-gradle-plugin`) is a
+   necessary but NOT sufficient check — the pairing must still pass the spike.
 3. **Spike — do not proceed to §3 until this passes.** Reproduce the crash and
    confirm it is gone with the *smallest possible* change:
    - Temporarily convert only `core/scoring/build.gradle.kts` to `kotlin("jvm")`
@@ -82,7 +110,11 @@ newest *stable* AGP; the only newer releases are pre-releases (`9.4.0-rc01`,
      ```bash
      ./gradlew :core:scoring:compileKotlin --console=plain
      ```
-   - If it compiles clean, the compiler mismatch is resolved and §3 can proceed.
+   - If it compiles clean, **verify determinism**: delete the module build dir and
+     recompile at least once (`rm -rf core/scoring/build && ./gradlew
+     :core:scoring:compileKotlin`). A single green run is NOT sufficient — the
+     2026-09-04 attempt passed once and then failed every clean rebuild. Only a
+     repeatable clean compile counts as the mismatch being resolved.
    - If it still crashes with `ArrayIndexOutOfBoundsException` / `EOFException`
      in `shrinkAndSaveClasspathSnapshot`, the versions are still incompatible —
      stop and re-check the version pairing. Do **not** paper over it.
@@ -122,10 +154,12 @@ package app.readylytics.health.domain.scoring
 internal const val SCORING_DEBUG = false
 ```
 
-In `core/scoring/src/main/kotlin/app/readylytics/health/domain/scoring/ComputeSleepMetricsUseCase.kt`:
+In `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/SleepScoringDebugLogger.kt`
+(note: the file is `SleepScoringDebugLogger.kt`, not `ComputeSleepMetricsUseCase.kt` —
+verified 2026-09-04):
 
-- Remove the import at line 22: `import app.readylytics.health.core.scoring.BuildConfig`
-- At line 467, change `if (BuildConfig.DEBUG) {` to `if (SCORING_DEBUG) {`
+- Remove the import `import app.readylytics.health.core.scoring.BuildConfig`
+- Change `if (!BuildConfig.DEBUG) return` to `if (!SCORING_DEBUG) return`
 
 ### 3.3 Move the Hilt modules out of `core:scoring`
 
@@ -133,28 +167,33 @@ A `kotlin("jvm")` module cannot contain Hilt `@InstallIn` modules (they depend o
 `dagger.hilt.android`, an Android artifact). `core:scoring` currently has exactly
 two files that import `dagger.*`/`dagger.hilt.*`:
 
-- `core/scoring/src/main/kotlin/app/readylytics/health/di/ScoringBindsModule.kt`
-- `core/scoring/src/main/kotlin/app/readylytics/health/di/ScoringModule.kt`
+- `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/di/ScoringBindsModule.kt`
+- `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/di/ScoringModule.kt`
+
+(Actual package is `app.readylytics.health.core.scoring.di`, not
+`app.readylytics.health.di` — verified 2026-09-04.)
 
 Every other `core:scoring` file uses only `javax.inject.Inject` /
-`javax.inject.Singleton` (verified: 30 files `@Inject`, 21 `@Singleton`, and only
+`javax.inject.Singleton` (verified: 45 files import `javax.inject`, and only
 the two module files import `dagger.*`). Those `javax.inject` annotations are
 plain JVM-safe annotations and stay put.
 
 **Delete** both files above. **Create** a single merged module in the app module:
 
-`app/src/main/kotlin/app/readylytics/health/di/ScoringModule.kt`:
+`app/src/main/kotlin/app/readylytics/health/di/ScoringModule.kt` (note the actual
+package prefixes `app.readylytics.health.core.model.domain.*` / 
+`app.readylytics.health.core.scoring.domain.scoring.*`):
 
 ```kotlin
 package app.readylytics.health.di
 
-import app.readylytics.health.domain.preferences.SettingsRepository
-import app.readylytics.health.domain.repository.ScoringHistoryRepository
-import app.readylytics.health.domain.scoring.AdaptiveRhrBaselineProvider
-import app.readylytics.health.domain.scoring.CompositeScoringCalculator
-import app.readylytics.health.domain.scoring.RasSourceModeBootstrapUseCase
-import app.readylytics.health.domain.scoring.RhrBaselineProvider
-import app.readylytics.health.domain.scoring.ScoringCalculator
+import app.readylytics.health.core.model.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
+import app.readylytics.health.core.scoring.domain.scoring.AdaptiveRhrBaselineProvider
+import app.readylytics.health.core.scoring.domain.scoring.CompositeScoringCalculator
+import app.readylytics.health.core.scoring.domain.scoring.RasSourceModeBootstrapUseCase
+import app.readylytics.health.core.scoring.domain.scoring.RhrBaselineProvider
+import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -296,7 +335,7 @@ tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
     violationRules {
         rule {
             element = "PACKAGE"
-            includes = listOf("app.readylytics.health.domain.scoring")
+            includes = listOf("app.readylytics.health.core.scoring.domain.scoring")
             limit {
                 counter = "LINE"
                 value = "COVEREDRATIO"
@@ -353,6 +392,14 @@ Notes on what changed vs. the current file:
 - `implementation(libs.kotlinx.coroutines.android)` → `implementation(libs.kotlinx.coroutines.core)`.
 - `implementation(libs.hilt.android)` + `ksp(libs.hilt.compiler)` → `implementation(libs.javax.inject)`.
 - `testImplementation(project(":core:database-schema"))` is handled separately in §3.7.
+- **Jacoco floor caveat (verified 2026-09-04):** the current (Android) rule targets
+  the wrong package (`app.readylytics.health.domain.scoring` — no such package), so
+  the 80% floor is NOT currently enforced. Measuring the real package
+  (`app.readylytics.health.core.scoring.domain.scoring`) yields **0.6**, not 0.8.
+  The JVM build file above corrects the package, so `jacocoCoverageVerification`
+  will start actually enforcing the floor and **will fail until coverage is raised
+  to 0.8** — plan for that work when the migration proceeds (do not silently lower
+  the floor; it is an explicit goal of §3.6).
 
 ### 3.6 Run `:core:scoring` tests
 
