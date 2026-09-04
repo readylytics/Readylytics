@@ -3,6 +3,7 @@ layout: default
 title: About Your Scores
 permalink: /about/
 ---
+
 # About your scores
 
 This app turns the data your phone and wearables already collect — sleep, heart rate, and exercise — into four daily numbers that try to answer one question: **how is your body doing today, and what should you do with that information?**
@@ -399,6 +400,10 @@ If a particular metric is missing on a given day, we'll either:
 - show the score with a "data partial" badge and explain which component was estimated, or
 - skip the score for that day entirely if too much is missing (especially total sleep time).
 
+Local encryption keys are stored through Android Keystore. On devices that support StrongBox,
+Readylytics attempts to use StrongBox-backed key protection and falls back to standard Keystore
+when StrongBox is unavailable. Backup passwords and database keys remain local to the device.
+
 ---
 
 ## How long until your scores stabilise
@@ -484,3 +489,9 @@ _Selected primary sources informing the scoring: Buysse 1989 (PSQI); Buysse 2014
 This app describes a fitness and training-readiness monitoring framework derived from consumer wearable signals and sports-science literature. The framework is **not validated for medical diagnosis, disease screening, treatment guidance, or injury prediction**. Profiles and their associated thresholds optimize _estimated_ recovery signals and are engineering heuristics chosen for practical usability, not clinical validation.
 
 If you have concerns about your health, sleep, or recovery, consult a qualified healthcare provider.
+
+---
+
+## Development Transparency
+
+This application was developed with the assistance of AI. While the implementation and scoring logic have been thoroughly reviewed, both AI and human developers can make errors. We encourage community review and welcome issue reports to help improve the application.

@@ -4,11 +4,11 @@ import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.data.preferences.SyncPreference
 import app.readylytics.health.core.model.data.preferences.UserPreferences
-import app.readylytics.health.core.model.domain.preferences.Vo2MaxSourceMode
 import app.readylytics.health.core.model.data.preferences.normalizeCoreMergeGapMinutes
 import app.readylytics.health.core.model.data.preferences.normalizeMinimumCountedSleepSegmentMinutes
 import app.readylytics.health.core.model.data.preferences.normalizeSupplementalArchitectureCoveragePercent
 import app.readylytics.health.core.model.data.preferences.normalizeSupplementalCutoffMinutesOfDay
+import app.readylytics.health.core.model.domain.preferences.Vo2MaxSourceMode
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 
 fun PhysiologyProfileProto.toDomainProfile(): PhysiologyProfile =
