@@ -95,6 +95,8 @@
     <string name="tsb_zone_optimal">Optimal / Productive</string>
     <string name="tsb_zone_fatigued">Fatigued / Overload</string>
     <string name="tsb_zone_overreached">High Risk / Overreached</string>
+    <string name="tsb_tooltip_format">TSB: %1$s</string>
+    <string name="tsb_tooltip_avg_format">Avg. TSB: %1$s</string>
     <string name="message_no_hr_data">No HR data available</string>
     <string name="label_minutes">Minutes</string>
     <string name="chart_accessibility_selected_trimp">Selected: %1$s at %2$s</string>

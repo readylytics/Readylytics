@@ -3,6 +3,7 @@ package app.readylytics.health.feature.workouts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -19,6 +20,9 @@ import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.core.ui.common.periodLabelFor
 import app.readylytics.health.core.ui.common.rememberPeriodOrdinalLabel
 import app.readylytics.health.core.ui.components.ChartDefaults
+import app.readylytics.health.core.ui.components.DataPointTooltip
+import app.readylytics.health.core.ui.components.InvisibleMarker
+import app.readylytics.health.core.ui.components.VicoChartTooltipOverlay
 import app.readylytics.health.core.ui.components.ZoneBandDecoration
 import app.readylytics.health.feature.workouts.R
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
@@ -36,6 +40,7 @@ import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.common.Fill
+import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
 import com.patrykandpatrick.vico.compose.common.data.ExtraStore
 import java.util.Locale
 import kotlin.math.ceil
@@ -44,10 +49,10 @@ import kotlin.math.roundToInt
 
 // Mirrors the zone boundaries in TrainingStressBalanceCalculator (core/scoring). Kept as local
 // named constants here since the calculator does not expose them as a shared constants object.
-private const val VERY_FRESH_THRESHOLD = 25f
-private const val FRESH_THRESHOLD = 5f
-private const val FATIGUED_THRESHOLD = -10f
-private const val HIGH_RISK_THRESHOLD = -30f
+internal const val VERY_FRESH_THRESHOLD = 25f
+internal const val FRESH_THRESHOLD = 5f
+internal const val FATIGUED_THRESHOLD = -10f
+internal const val HIGH_RISK_THRESHOLD = -30f
 private const val Y_AXIS_PADDING = 5f
 private const val Y_AXIS_STEP = 10f
 
@@ -168,31 +173,43 @@ private fun rememberTsbModelProducer(remappedPoints: List<DailyDataPoint>): Cart
 @Composable
 private fun rememberTsbLine(): LineCartesianLayer.Line {
     val lineColor = MaterialTheme.colorScheme.primary
+    val dotComponent = rememberShapeComponent(fill = Fill(lineColor), shape = CircleShape)
     return LineCartesianLayer.rememberLine(
         fill = LineCartesianLayer.LineFill.single(Fill(lineColor)),
+        pointProvider =
+            LineCartesianLayer.PointProvider.single(
+                LineCartesianLayer.Point(dotComponent, 6.dp),
+            ),
         interpolator = LineCartesianLayer.Interpolator.cubic(0.2f),
     )
 }
 
 @Composable
-private fun rememberTsbXAxisFormatter(
+private fun rememberTsbPeriodLabels(
     tsbPoints: List<DailyDataPoint>,
     rangeStartMs: Long,
     granularity: TrendGranularity,
-): CartesianValueFormatter {
+): List<String> {
     val ordinalLabel = rememberPeriodOrdinalLabel(granularity)
-    val periodLabels =
-        remember(tsbPoints, rangeStartMs, granularity, ordinalLabel) {
-            if (granularity == TrendGranularity.DAILY) {
-                emptyList()
-            } else {
-                tsbPoints.map { point ->
-                    val date = ChartUtils.dayOffsetToLocalDate(point.dayOffset, rangeStartMs)
-                    periodLabelFor(granularity, date, ordinalLabel)
-                }
+    return remember(tsbPoints, rangeStartMs, granularity, ordinalLabel) {
+        if (granularity == TrendGranularity.DAILY) {
+            emptyList()
+        } else {
+            tsbPoints.map { point ->
+                val date = ChartUtils.dayOffsetToLocalDate(point.dayOffset, rangeStartMs)
+                periodLabelFor(granularity, date, ordinalLabel)
             }
         }
-    return if (granularity == TrendGranularity.DAILY) {
+    }
+}
+
+@Composable
+private fun rememberTsbXAxisFormatter(
+    periodLabels: List<String>,
+    rangeStartMs: Long,
+    granularity: TrendGranularity,
+): CartesianValueFormatter =
+    if (granularity == TrendGranularity.DAILY) {
         ChartDefaults.rememberPeriodFormatter(rangeStartMs, granularity)
     } else {
         val fallback = periodLabels.firstOrNull().orEmpty()
@@ -200,7 +217,6 @@ private fun rememberTsbXAxisFormatter(
             CartesianValueFormatter { _, value, _ -> periodLabels.getOrElse(value.toInt()) { fallback } }
         }
     }
-}
 
 @Composable
 private fun rememberTsbRemappedPoints(
@@ -218,6 +234,7 @@ private data class TsbChartHostConfig(
     val modelProducer: CartesianChartModelProducer,
     val hasData: Boolean,
     val decorations: List<Decoration>,
+    val tooltipState: TsbTooltipState,
 )
 
 @Composable
@@ -263,12 +280,29 @@ private fun TsbChartHost(
                             guideline = guidelineComponent,
                         ),
                     decorations = config.decorations,
+                    marker = InvisibleMarker,
+                    markerVisibilityListener = config.tooltipState.markerVisibilityListener,
                 ),
             modelProducer = config.modelProducer,
             scrollState = scrollState,
             zoomState = zoomState,
             modifier = Modifier.fillMaxWidth().height(chartHeight),
         )
+
+        VicoChartTooltipOverlay(
+            selectedPointOffset = config.tooltipState.selectedPointOffset,
+            pulseColor = MaterialTheme.colorScheme.primary,
+            chartHeight = chartHeight,
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        config.tooltipState.tooltipData?.let { data ->
+            DataPointTooltip(
+                isVisible = true,
+                data = data,
+                onDismissRequest = config.tooltipState.onDismissTooltip,
+            )
+        }
     }
 }
 
@@ -286,6 +320,7 @@ internal fun TsbChart(
     zoomState: VicoZoomState,
     modifier: Modifier = Modifier,
     granularity: TrendGranularity = TrendGranularity.DAILY,
+    parentScrollInProgress: () -> Boolean = { false },
 ) {
     val remappedPoints = rememberTsbRemappedPoints(tsbPoints, granularity)
     val xAxisRangeDays =
@@ -297,7 +332,17 @@ internal fun TsbChart(
     val rangeProvider = rememberTsbRangeProvider(xAxisRangeDays, minY, maxY)
     val decorations = rememberTsbDecorations(minY, maxY)
     val modelProducer = rememberTsbModelProducer(remappedPoints)
-    val xAxisFormatter = rememberTsbXAxisFormatter(tsbPoints, rangeStartMs, granularity)
+    val periodLabels = rememberTsbPeriodLabels(tsbPoints, rangeStartMs, granularity)
+    val xAxisFormatter = rememberTsbXAxisFormatter(periodLabels, rangeStartMs, granularity)
+    val tooltipState =
+        rememberTsbTooltipState(
+            remappedPoints = remappedPoints,
+            rangeStartMs = rangeStartMs,
+            granularity = granularity,
+            periodLabels = periodLabels,
+            scrollState = scrollState,
+            parentScrollInProgress = parentScrollInProgress,
+        )
 
     val itemPlacer =
         ChartDefaults.rememberTrendAxisItemPlacer(
@@ -323,6 +368,7 @@ internal fun TsbChart(
                 modelProducer = modelProducer,
                 hasData = hasData,
                 decorations = decorations,
+                tooltipState = tooltipState,
             ),
         scrollState = scrollState,
         zoomState = zoomState,

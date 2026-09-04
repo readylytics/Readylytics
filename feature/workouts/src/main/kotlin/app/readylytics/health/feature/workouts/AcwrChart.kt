@@ -180,6 +180,7 @@ private fun AcwrChartContent(
                     scrollState = scrollState,
                     zoomState = zoomState,
                     granularity = chartData.granularity,
+                    parentScrollInProgress = parentScrollInProgress,
                 )
             }
             Spacer(Modifier.height(MaterialTheme.spacing.small))
