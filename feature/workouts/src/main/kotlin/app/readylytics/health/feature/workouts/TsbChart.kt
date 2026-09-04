@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -170,6 +171,19 @@ private fun rememberTsbLine(): LineCartesianLayer.Line {
     val lineColor = MaterialTheme.colorScheme.primary
     return LineCartesianLayer.rememberLine(
         fill = LineCartesianLayer.LineFill.single(Fill(lineColor)),
+        areaFill =
+            LineCartesianLayer.AreaFill.single(
+                Fill(
+                    brush =
+                        Brush.verticalGradient(
+                            colors =
+                                listOf(
+                                    lineColor.copy(alpha = 0.3f),
+                                    lineColor.copy(alpha = 0.0f),
+                                ),
+                        ),
+                ),
+            ),
         interpolator = LineCartesianLayer.Interpolator.cubic(0.2f),
     )
 }

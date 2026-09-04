@@ -103,6 +103,11 @@
     <string name="vo2_max_source_label_estimated">Estimated (Resting HR)</string>
     <string name="format_age_years">%1$d yrs</string>
     <string name="tooltip_tsb">Training Stress Balance (TSB = CTL − ATL). Measures form by comparing chronic fitness (42-day CTL) against acute fatigue (7-day ATL).\n\n• &gt; +25: Very Fresh\n• +5 to +25: Fresh / Peaked\n• -10 to +5: Optimal / Productive\n• -30 to -10: Fatigued / Overload\n• &lt; -30: High Risk / Overreached</string>
+    <string name="tsb_zone_label_very_fresh">Transition / Very Fresh</string>
+    <string name="tsb_zone_label_fresh">Fresh / Peaked</string>
+    <string name="tsb_zone_label_optimal">Optimal / Productive</string>
+    <string name="tsb_zone_label_fatigued">Fatigued / Overload</string>
+    <string name="tsb_zone_label_overreached">High Risk / Overreached</string>
     <string name="card_title_readiness">Readiness</string>
     <string name="card_title_training_readiness">Training Readiness</string>
     <string name="card_title_strain_ratio">Strain Ratio</string>

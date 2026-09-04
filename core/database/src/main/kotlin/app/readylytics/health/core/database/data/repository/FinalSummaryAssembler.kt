@@ -1,6 +1,7 @@
 package app.readylytics.health.core.database.data.repository
 
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
+import java.util.concurrent.TimeUnit
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
@@ -121,7 +122,11 @@ class FinalSummaryAssembler(
                 rhrBaselineBpm = inputs.context.initialBaselines.rhrBaselineValue,
                 isCalibrating = !isCalibrated,
             )
-        val wearableVo2Max = bodyMetricsDataLoader.loadLatestVo2Max(inputs.context.nextDayMidnightMs)?.vo2Max
+        val thirtyDaysMs = TimeUnit.DAYS.toMillis(30)
+        val wearableLookbackMs = inputs.context.nextDayMidnightMs - thirtyDaysMs
+        val wearableVo2Max = bodyMetricsDataLoader
+            .loadLatestVo2Max(inputs.context.nextDayMidnightMs, wearableLookbackMs)
+            ?.vo2Max
         return vo2MaxSourceResolver.resolve(
             mode = inputs.context.prefs.vo2MaxSourceMode,
             wearableVo2Max = wearableVo2Max,

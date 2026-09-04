@@ -18,6 +18,15 @@ import kotlin.math.roundToInt
 import app.readylytics.health.core.ui.R as CoreUiR
 import app.readylytics.health.feature.dashboard.R as DashboardR
 
+private fun tsbZoneLabelResId(zone: TsbZone): Int =
+    when (zone) {
+        TsbZone.VERY_FRESH_OR_TRANSITION -> CoreUiR.string.tsb_zone_label_very_fresh
+        TsbZone.FRESH_PEAKED -> CoreUiR.string.tsb_zone_label_fresh
+        TsbZone.OPTIMAL_PRODUCTIVE -> CoreUiR.string.tsb_zone_label_optimal
+        TsbZone.FATIGUED_OVERLOAD -> CoreUiR.string.tsb_zone_label_fatigued
+        TsbZone.HIGH_RISK_OVERREACHED -> CoreUiR.string.tsb_zone_label_overreached
+    }
+
 class DashboardCardioMetricPresentationFactory
     @Inject
     constructor(
@@ -216,12 +225,9 @@ class DashboardCardioMetricPresentationFactory
                     TsbZone.HIGH_RISK_OVERREACHED -> MetricStatus.POOR
                 }
             val tsbSecondary =
-                tsbResult
-                    ?.zone
-                    ?.name
-                    ?.replace("_", " ")
-                    ?.lowercase()
-                    ?.replaceFirstChar { it.uppercase() }
+                tsbResult?.zone?.let { zone ->
+                    resourceProvider.getString(tsbZoneLabelResId(zone))
+                }
             val tsbDesc =
                 resourceProvider.getString(
                     DashboardR.string.semantics_value_note_format,

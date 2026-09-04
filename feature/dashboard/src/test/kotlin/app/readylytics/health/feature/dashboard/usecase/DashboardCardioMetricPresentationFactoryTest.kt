@@ -70,6 +70,12 @@ class DashboardCardioMetricPresentationFactoryTest {
             "Estimated (Resting HR)"
         every { resourceProvider.getString(CoreUiR.string.gender_male) } returns "Male"
         every { resourceProvider.getString(CoreUiR.string.gender_female) } returns "Female"
+        every { resourceProvider.getString(CoreUiR.string.tsb_zone_label_very_fresh) } returns "Transition / Very Fresh"
+        every { resourceProvider.getString(CoreUiR.string.tsb_zone_label_fresh) } returns "Fresh / Peaked"
+        every { resourceProvider.getString(CoreUiR.string.tsb_zone_label_optimal) } returns "Optimal / Productive"
+        every { resourceProvider.getString(CoreUiR.string.tsb_zone_label_fatigued) } returns "Fatigued / Overload"
+        every { resourceProvider.getString(CoreUiR.string.tsb_zone_label_overreached) } returns
+            "High Risk / Overreached"
     }
 
     @Test
@@ -137,6 +143,7 @@ class DashboardCardioMetricPresentationFactoryTest {
         assertEquals("TSB", tsb?.title)
         assertEquals("+15", tsb?.valueText)
         assertEquals("", tsb?.unitText)
+        assertEquals("Fresh / Peaked", tsb?.secondaryText)
         assertEquals("tooltip tsb", tsb?.tooltip)
         assertEquals(MetricStatus.OPTIMAL, tsb?.status)
     }
@@ -157,6 +164,7 @@ class DashboardCardioMetricPresentationFactoryTest {
         assertEquals("TSB", tsb?.title)
         assertEquals("-20", tsb?.valueText)
         assertEquals("", tsb?.unitText)
+        assertEquals("Fatigued / Overload", tsb?.secondaryText)
         assertEquals("tooltip tsb", tsb?.tooltip)
         assertEquals(MetricStatus.WARNING, tsb?.status)
     }
