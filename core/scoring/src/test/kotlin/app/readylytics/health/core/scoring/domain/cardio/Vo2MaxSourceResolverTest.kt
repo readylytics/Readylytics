@@ -42,6 +42,17 @@ class Vo2MaxSourceResolverTest {
     }
 
     @Test
+    fun wearableOnlyUsesWearableWhenAvailable() {
+        val result = resolver.resolve(
+            mode = Vo2MaxSourceMode.WEARABLE_ONLY,
+            wearableVo2Max = 48.0f,
+            uthEstimatedVo2Max = 45.0f
+        )
+        assertEquals(48.0f, result.vo2Max)
+        assertEquals("WEARABLE", result.source)
+    }
+
+    @Test
     fun estimatedOnlyIgnoresWearable() {
         val result = resolver.resolve(
             mode = Vo2MaxSourceMode.ESTIMATED_ONLY,

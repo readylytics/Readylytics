@@ -7,6 +7,7 @@ import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.model.MetricStatus
 import app.readylytics.health.core.model.domain.preferences.UnitSystem
 import app.readylytics.health.core.model.domain.util.UnitConverter
+import app.readylytics.health.core.scoring.domain.cardio.CooperNormsClassifier
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.common.TrendGranularity
@@ -64,6 +65,9 @@ class VitalsStateFactoryTest {
     fun `Vitals presentation uses rounded selected day HRV baseline for status and bands`() {
         val result =
             buildVitalsPresentationState(
+                cooperClassifier =
+                    app.readylytics.health.core.scoring.domain.cardio
+                        .CooperNormsClassifier(),
                 metrics = metrics(hrvBaselineRounded = 41),
                 summary = summary(date = LocalDate.of(2026, 8, 8), hrv = 42),
                 prefs = prefs(hrvOptimal = 1.10f),
@@ -83,6 +87,9 @@ class VitalsStateFactoryTest {
     fun `Vitals presentation excludes default RHR fallback from personal assessment`() {
         val result =
             buildVitalsPresentationState(
+                cooperClassifier =
+                    app.readylytics.health.core.scoring.domain.cardio
+                        .CooperNormsClassifier(),
                 metrics =
                     metrics(
                         rhr = 63,
@@ -102,6 +109,9 @@ class VitalsStateFactoryTest {
     fun `Vitals presentation uses canonical RHR projection instead of raw snapshot`() {
         val result =
             buildVitalsPresentationState(
+                cooperClassifier =
+                    app.readylytics.health.core.scoring.domain.cardio
+                        .CooperNormsClassifier(),
                 metrics =
                     metrics(
                         rhr = 62,
@@ -121,6 +131,9 @@ class VitalsStateFactoryTest {
     fun `Vitals presentation treats explicit RHR override as personal baseline`() {
         val result =
             buildVitalsPresentationState(
+                cooperClassifier =
+                    app.readylytics.health.core.scoring.domain.cardio
+                        .CooperNormsClassifier(),
                 metrics =
                     metrics(
                         rhr = 63,
@@ -178,6 +191,9 @@ class VitalsStateFactoryTest {
     fun `buildVitalsPresentationState converts the body temperature baseline to the display unit`() {
         val metricState =
             buildVitalsPresentationState(
+                cooperClassifier =
+                    app.readylytics.health.core.scoring.domain.cardio
+                        .CooperNormsClassifier(),
                 metrics = metrics(hrvBaselineRounded = 50, rhrSnapshotRaw = 55f),
                 summary = summary(date = LocalDate.of(2026, 6, 1)),
                 prefs = prefs(unitSystem = UnitSystem.METRIC),
@@ -187,6 +203,9 @@ class VitalsStateFactoryTest {
 
         val imperialState =
             buildVitalsPresentationState(
+                cooperClassifier =
+                    app.readylytics.health.core.scoring.domain.cardio
+                        .CooperNormsClassifier(),
                 metrics = metrics(hrvBaselineRounded = 50, rhrSnapshotRaw = 55f),
                 summary = summary(date = LocalDate.of(2026, 6, 1)),
                 prefs = prefs(unitSystem = UnitSystem.IMPERIAL),
@@ -205,6 +224,9 @@ class VitalsStateFactoryTest {
     fun `body temperature assessment status derives from deviation against baseline`() {
         val neutralState =
             buildVitalsPresentationState(
+                cooperClassifier =
+                    app.readylytics.health.core.scoring.domain.cardio
+                        .CooperNormsClassifier(),
                 metrics = metrics(hrvBaselineRounded = 50, rhrSnapshotRaw = 55f),
                 summary = summary(date = LocalDate.of(2026, 6, 1), bodyTemp = 36.5f),
                 prefs = prefs(),
@@ -215,6 +237,9 @@ class VitalsStateFactoryTest {
 
         val warningState =
             buildVitalsPresentationState(
+                cooperClassifier =
+                    app.readylytics.health.core.scoring.domain.cardio
+                        .CooperNormsClassifier(),
                 metrics = metrics(hrvBaselineRounded = 50, rhrSnapshotRaw = 55f),
                 summary = summary(date = LocalDate.of(2026, 6, 1), bodyTemp = 37.6f),
                 prefs = prefs(),
@@ -225,6 +250,9 @@ class VitalsStateFactoryTest {
 
         val noBaselineState =
             buildVitalsPresentationState(
+                cooperClassifier =
+                    app.readylytics.health.core.scoring.domain.cardio
+                        .CooperNormsClassifier(),
                 metrics = metrics(hrvBaselineRounded = 50, rhrSnapshotRaw = 55f),
                 summary = summary(date = LocalDate.of(2026, 6, 1), bodyTemp = 36.5f),
                 prefs = prefs(),

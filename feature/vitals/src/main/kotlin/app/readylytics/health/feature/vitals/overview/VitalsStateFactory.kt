@@ -18,6 +18,7 @@ import app.readylytics.health.core.model.domain.model.rhrZoneBandsForBaseline
 import app.readylytics.health.core.model.domain.preferences.UnitSystem
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.util.UnitConverter
+import app.readylytics.health.core.scoring.domain.cardio.CooperNormsClassifier
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.PeriodAverageSummary
 import app.readylytics.health.core.ui.common.TimeRange
@@ -324,11 +325,14 @@ private fun baselineOverlayBucketSizeDays(range: TimeRange): Int? =
         TimeRange.SIX_MONTHS, TimeRange.TWELVE_MONTHS -> null
     }
 
+private val defaultCooperClassifier = CooperNormsClassifier()
+
 internal fun buildVitalsPresentationState(
     metrics: DailyMetrics?,
     summary: DailySummary?,
     prefs: UserPreferences,
     bodyTemperatureBaselineCelsius: Float? = null,
+    cooperClassifier: CooperNormsClassifier = defaultCooperClassifier,
 ): VitalsPresentationState {
     val selectedMetrics = metrics ?: summary?.let { DailyMetricsMapper.toMetrics(it, prefs) }
     val hrvAssessment =
@@ -359,6 +363,7 @@ internal fun buildVitalsPresentationState(
             source = summary?.vo2MaxSource,
             age = prefs.age,
             gender = prefs.gender,
+            classifier = cooperClassifier,
         )
 
     return presentationStateFromAssessments(

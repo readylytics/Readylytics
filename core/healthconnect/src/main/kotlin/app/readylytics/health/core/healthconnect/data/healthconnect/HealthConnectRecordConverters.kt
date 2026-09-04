@@ -13,6 +13,7 @@ import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
 import app.readylytics.health.core.model.domain.model.DomainBloodPressureRecord
 import app.readylytics.health.core.model.domain.model.DomainBodyFatRecord
@@ -28,6 +29,7 @@ import app.readylytics.health.core.model.domain.model.DomainSleepSessionRecord
 import app.readylytics.health.core.model.domain.model.DomainSleepStage
 import app.readylytics.health.core.model.domain.model.DomainSleepStageType
 import app.readylytics.health.core.model.domain.model.DomainStepsRecord
+import app.readylytics.health.core.model.domain.model.DomainVo2MaxRecord
 import app.readylytics.health.core.model.domain.model.DomainWeightRecord
 import app.readylytics.health.core.model.domain.model.RouteState
 
@@ -209,4 +211,13 @@ fun BodyTemperatureRecord.toDomain(): DomainBodyTemperatureRecord =
         time = time,
         celsius = temperature.inCelsius.toFloat(),
         deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
+    )
+
+internal fun Vo2MaxRecord.toDomain(): DomainVo2MaxRecord =
+    DomainVo2MaxRecord(
+        id = metadata.id,
+        time = time,
+        vo2MillilitersPerMinuteKilogram = vo2MillilitersPerMinuteKilogram,
+        measurementMethod = measurementMethod,
+        deviceName = metadata.device?.model ?: metadata.device?.manufacturer ?: "",
     )

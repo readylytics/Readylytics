@@ -607,12 +607,5 @@ class HealthConnectRepositoryImpl
             }
     }
 
-internal fun Vo2MaxRecord.toDomain(): DomainVo2MaxRecord =
-    DomainVo2MaxRecord(
-        id = metadata.id,
-        time = time,
-        vo2MillilitersPerMinuteKilogram = vo2MillilitersPerMinuteKilogram,
-        measurementMethod = measurementMethod,
-        deviceName = metadata.device?.model ?: metadata.device?.manufacturer ?: "",
-    )
+
 

@@ -193,6 +193,7 @@ object SettingsDefaults {
                 CardId.CARDIO_FITNESS,
                 isVisible = false,
                 position = 4,
+                requestedDisplayMode = DashboardCardDisplayMode.GAUGE,
             ),
         )
 

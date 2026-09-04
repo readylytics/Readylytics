@@ -3,6 +3,7 @@ package app.readylytics.health.feature.vitals.cardio
 import app.readylytics.health.core.model.domain.model.MetricStatus
 import app.readylytics.health.core.model.domain.preferences.Gender
 import app.readylytics.health.core.scoring.domain.cardio.CooperCategory
+import app.readylytics.health.core.scoring.domain.cardio.CooperNormsClassifier
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -26,7 +27,16 @@ class CardioFitnessPresentationTest {
 
     @Test
     fun assessVo2MaxClassifiesWhenValuePresent() {
-        val assessment = assessVo2Max(vo2Max = 50f, source = "WEARABLE", age = 25, gender = Gender.MALE)
+        val assessment =
+            assessVo2Max(
+                vo2Max = 50f,
+                source = "WEARABLE",
+                age = 25,
+                gender = Gender.MALE,
+                classifier =
+                    app.readylytics.health.core.scoring.domain.cardio
+                        .CooperNormsClassifier(),
+            )
 
         assertEquals(50f, assessment.value)
         assertEquals("WEARABLE", assessment.source)
@@ -35,11 +45,20 @@ class CardioFitnessPresentationTest {
     }
 
     @Test
-    fun assessVo2MaxDegradesToCalibratingWhenMissing() {
-        val assessment = assessVo2Max(vo2Max = null, source = null, age = 25, gender = Gender.MALE)
+    fun assessVo2MaxDegradesToNoDataWhenMissing() {
+        val assessment =
+            assessVo2Max(
+                vo2Max = null,
+                source = null,
+                age = 25,
+                gender = Gender.MALE,
+                classifier =
+                    app.readylytics.health.core.scoring.domain.cardio
+                        .CooperNormsClassifier(),
+            )
 
         assertNull(assessment.value)
         assertNull(assessment.category)
-        assertEquals(MetricStatus.CALIBRATING, assessment.status)
+        assertEquals(MetricStatus.NO_DATA, assessment.status)
     }
 }

@@ -64,7 +64,7 @@ class DashboardCardioMetricPresentationFactory
                 }
             val vo2MaxStatus =
                 when (cooperCat) {
-                    null -> MetricStatus.CALIBRATING
+                    null -> MetricStatus.NO_DATA
                     CooperCategory.SUPERIOR -> MetricStatus.OPTIMAL
                     CooperCategory.EXCELLENT -> MetricStatus.OPTIMAL
                     CooperCategory.GOOD -> MetricStatus.OPTIMAL

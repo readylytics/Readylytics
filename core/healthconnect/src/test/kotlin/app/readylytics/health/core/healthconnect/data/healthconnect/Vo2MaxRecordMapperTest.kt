@@ -38,4 +38,51 @@ class Vo2MaxRecordMapperTest {
         assertEquals(Vo2MaxRecord.MEASUREMENT_METHOD_HEART_RATE_RATIO, domain.measurementMethod)
         assertEquals("Pixel Watch", domain.deviceName)
     }
+
+    @Test
+    fun mapsSdkVo2MaxRecordToDomainWithNullDevice() {
+        val now = Instant.parse("2026-09-03T10:00:00Z")
+        val sdkRecord =
+            Vo2MaxRecord(
+                time = now,
+                zoneOffset = null,
+                vo2MillilitersPerMinuteKilogram = 48.5,
+                measurementMethod = Vo2MaxRecord.MEASUREMENT_METHOD_HEART_RATE_RATIO,
+                metadata =
+                    Metadata.autoRecordedWithId(
+                        id = "test-vo2-123",
+                        device = Device(type = Device.TYPE_UNKNOWN, manufacturer = null, model = null)
+                    ),
+            )
+
+        val domain = sdkRecord.toDomain()
+
+        assertEquals("", domain.deviceName)
+    }
+
+    @Test
+    fun mapsSdkVo2MaxRecordToDomainWithFallbackDeviceManufacturer() {
+        val now = Instant.parse("2026-09-03T10:00:00Z")
+        val sdkRecord =
+            Vo2MaxRecord(
+                time = now,
+                zoneOffset = null,
+                vo2MillilitersPerMinuteKilogram = 48.5,
+                measurementMethod = Vo2MaxRecord.MEASUREMENT_METHOD_HEART_RATE_RATIO,
+                metadata =
+                    Metadata.autoRecordedWithId(
+                        id = "test-vo2-123",
+                        device =
+                            Device(
+                                type = Device.TYPE_WATCH,
+                                manufacturer = "Google",
+                                model = null,
+                            ),
+                    ),
+            )
+
+        val domain = sdkRecord.toDomain()
+
+        assertEquals("Google", domain.deviceName)
+    }
 }

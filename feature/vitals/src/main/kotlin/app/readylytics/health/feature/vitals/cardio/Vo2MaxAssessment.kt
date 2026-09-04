@@ -39,13 +39,13 @@ fun assessVo2Max(
     source: String?,
     age: Int,
     gender: Gender?,
-    classifier: CooperNormsClassifier = CooperNormsClassifier(),
+    classifier: CooperNormsClassifier,
 ): Vo2MaxAssessment {
     val category = vo2Max?.let { classifier.classify(it, age, gender ?: Gender.OTHER) }
     return Vo2MaxAssessment(
         value = vo2Max,
         source = source,
-        status = category?.toMetricStatus() ?: MetricStatus.CALIBRATING,
+        status = category?.toMetricStatus() ?: MetricStatus.NO_DATA,
         category = category,
     )
 }
