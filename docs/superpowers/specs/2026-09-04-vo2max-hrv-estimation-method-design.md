@@ -1,6 +1,6 @@
 # Design: Materko-Adapted (Resting HR + HRV) VO2 Max Estimation Method
 
-> **Date:** 2026-09-04 (rev. 2 — critical review pass)
+> **Date:** 2026-09-04 (rev. 3 — final review pass)
 > **Status:** APPROVED
 > **Target Module(s):** `:core:model`, `:core:scoring`, `:core:database`, `:feature:settings`, `:feature:vitals`, `:feature:dashboard`, `:app`
 
@@ -16,7 +16,7 @@ VO2max = 15.3 × (HRmax / HRrest_baseline)
 
 This design adds a **second, selectable estimation method** so users can choose which estimator drives the "estimated" VO2 Max shown in the Vitals/Dashboard cardio-fitness cards.
 
-**Important framing decision (per critical review):** the second method is **not** an exact implementation of a published model. It is a **Readylytics experimental adaptation** of the **Materko (2018)** resting-HRV regression, because Health Connect cannot supply two of the three inputs the published model requires. It is presented and labelled as such everywhere (code, settings UI, About text, internal docs). No published R²/SEE is attributed to the adaptation.
+**Important framing decision (per critical review):** the second method is **not** an exact implementation of a published model. It is a **Readylytics experimental adaptation** of the **Materko (2018)** resting-HRV regression, because Health Connect cannot supply two of the three inputs the published model requires. It is framed as experimental in code, internal docs, and user-facing methodological copy, and the segmented-control label is chosen so the method **cannot reasonably be mistaken for the exact published Materko model** — without requiring the word "experimental" to appear in every short UI label. No published R²/SEE is attributed to the adaptation.
 
 **Scope:** estimation-method selection only. No changes to the source-mode picker (`AUTO` / `WEARABLE_ONLY` / `ESTIMATED_ONLY`), no schema migration, no changes to readiness/sleep scoring formulas. Wearable VO2 Max remains the winner in `AUTO` mode.
 
@@ -43,7 +43,7 @@ Health Connect exposes HRV as **RMSSD samples only** (`hrv_records.rmssdMs`); th
 
 | Published input | Readylytics substitution | Deviation |
 |---|---|---|
-| MeanRR | `meanRR = 60000 / rhrBaselineBpm` | Approximation — MeanRR was tachogram-derived; here derived from the stable RHR baseline |
+| MeanRR | `meanRR = 60000 / rhrBaselineBpm` | Approximation — MeanRR was tachogram-derived; here derived from the stable RHR baseline, which may itself be percentile-derived rather than a true arithmetic mean resting HR from a contemporaneous tachogram (can introduce systematic offset) |
 | CDR | **omitted** | Cannot be recovered from RMSSD; no tachogram |
 | pNN50 | `approxPnn50 = 200·(1 − Φ(50 / rmssd))` from the RMSSD baseline | Approximation — assumes successive NN differences ~ Normal(0, RMSSD²); normality not guaranteed physiologically; **not** true/measured pNN50 |
 
@@ -53,6 +53,8 @@ VO2max_adapted = −13.05 + 0.05·meanRR + 0.05·approxPnn50   (no CDR term)
 
 The original intercept and remaining coefficients are retained **unchanged**; this is not a re-fitted regression. Deleting the CDR term while keeping the jointly-fitted coefficients is a documented statistical deviation — the result is an experimental estimator, not the published model. No attempt is made to invent replacement coefficients (no source data to refit).
 
+**Explicit non-change — no synthetic CDR.** A Gaussian-proxy term such as `approxCdr ≈ RMSSD × √(2/π)` is deliberately **not** added. CDR carries distributional/asymmetry information that RMSSD does not preserve; adding it would stack unvalidated assumptions on top of the existing approximations. CDR stays omitted, and the estimator stays classified as Materko-adapted/experimental.
+
 ### 2.3 What actually drives the estimator
 
 Substituting `meanRR = 60000/RHR`:
@@ -61,7 +63,7 @@ Substituting `meanRR = 60000/RHR`:
 VO2max_adapted ≈ −13.05 + 3000/RHR + 0.05·approxPnn50
 ```
 
-`approxPnn50` ∈ [0, 100] contributes at most 0–5 ml/kg/min. The estimator is therefore **predominantly driven by resting heart rate**, with HRV acting as a small adjustment. User-facing labels must reflect this (e.g. "Resting HR + HRV (experimental)"), not imply HRV is the primary input.
+`approxPnn50` ∈ [0, 100] contributes at most 0–5 ml/kg/min. The estimator is therefore **predominantly driven by resting heart rate**, with HRV acting as a small adjustment. User-facing labels must reflect this (concise segmented-button label "Resting HR + HRV"; "experimental" conveyed in the description text, per §4.4), not imply HRV is the primary input.
 
 ---
 
@@ -92,18 +94,19 @@ approxPnn50  = 200·(1 − Φ(50 / rmssd))          // %, via erf approx (Abramo
 raw          = −13.05 + 0.05·meanRR + 0.05·approxPnn50
 ```
 
-**Out-of-domain → `null` (no silent clamping).** If `raw` falls outside `15f..95f`, return `null` rather than coercing to 15/95: an invalid extrapolation must not present as a real estimate. This is a documented application-level safety/display constraint, tested explicitly.
+**Out-of-domain → `null` (no silent clamping).** If `raw` falls outside `MIN_SUPPORTED_VO2_MAX..MAX_SUPPORTED_VO2_MAX`, return `null` rather than coercing to a boundary: an invalid extrapolation must not present as a real estimate. These bounds are **application-level supported/plausibility bounds** intended to reject unreasonable extrapolation — not absolute physiological limits. This is a documented application-level safety/display constraint, tested explicitly.
 
 **Companion constants** (named, REF-commented):
 - `INTERCEPT = −13.05f`, `MEAN_RR_COEFF = 0.05f`, `PNN50_COEFF = 0.05f` — REF: Materko 2018, OABB.000536, fold #1 (original full-model context only; see §2.1 disclaimer).
-- `PNN50_THRESHOLD_MS = 50f`, `PHYSIOLOGICAL_MIN_VO2 = 15f`, `PHYSIOLOGICAL_MAX_VO2 = 95f`, `MIN_PLAUSIBLE_RHR = 30f`.
+- `PNN50_THRESHOLD_MS = 50f`, `MIN_SUPPORTED_VO2_MAX = 15f`, `MAX_SUPPORTED_VO2_MAX = 95f`, `MIN_PLAUSIBLE_RHR = 30f`.
 - `approxPnn50` private helper: monotonic increasing in `rmssd`, → 0 as `rmssd → 0`, bounded `[0, 100]`.
 
 **KDoc must state, verbatim in substance:**
 1. This is an experimental Readylytics adaptation, not the published Materko model.
-2. Deviations: CDR omitted; pNN50 approximated from RMSSD under a normality assumption; MeanRR derived from the RHR baseline.
+2. Deviations: CDR omitted (no synthetic proxy); pNN50 approximated from RMSSD under a normality assumption; MeanRR derived from the RHR baseline, which may be percentile-derived rather than a true arithmetic mean resting HR from a contemporaneous tachogram (possible systematic offset).
 3. Original model developed in young, healthy, physically active men; not broadly validated.
 4. Published R²/SEE are context only, not attributable to this adaptation.
+5. Out-of-domain estimates return `null` per application-level supported bounds.
 
 ---
 
@@ -126,11 +129,15 @@ enum class Vo2MaxEstimationMethod { HR_RATIO, MATERKO_ADAPTED }
 - `PhysiologySettingsViewModel.onEvent`: update pref, then **`healthDataRefresh.refreshHistorical()`** exactly once (same intended path as gender/profile/RAS-factor changes — VO2 Max is historical-scope). No separate pending-recalc flag/button.
 
 ### 4.4 UI
-In `PhysiologyProfileCategoryScreen`, a second `SingleChoiceSegmentedButtonRow` immediately below the existing `Vo2MaxSourcePicker`. Concise labels for the M3 segmented control (must not imply HRV is primary):
+In `PhysiologyProfileCategoryScreen`, a second `SingleChoiceSegmentedButtonRow` immediately below the existing `Vo2MaxSourcePicker`. Concise labels for the M3 segmented control (must not imply HRV is primary; "experimental" stays in the description text, not the button):
 - `HR_RATIO` → "Heart rate ratio"
 - `MATERKO_ADAPTED` → "Resting HR + HRV"
 
-New strings: `vo2_max_method_title`, `vo2_max_method_hr_ratio`, `vo2_max_method_materko_adapted`, `vo2_max_method_description`. `PhysiologySettingsState` gains `vo2MaxEstimationMethod`; picker emits `Vo2MaxEstimationMethodChanged`.
+New strings: `vo2_max_method_title`, `vo2_max_method_hr_ratio`, `vo2_max_method_materko_adapted`, `vo2_max_method_description`. The description text under the picker explicitly communicates the status, e.g.:
+
+> "Experimental Materko-adapted estimate using your resting heart rate and HRV baselines."
+
+`PhysiologySettingsState` gains `vo2MaxEstimationMethod`; picker emits `Vo2MaxEstimationMethodChanged`.
 
 ---
 
@@ -145,7 +152,7 @@ Branch on `inputs.context.prefs.vo2MaxEstimationMethod` (single walk-forward pre
 
 **HRV input `hrvMuMssd`:** the day's scored ln-RMSSD baseline from the assembled summary (`withFatigue.hrvMuMssd`) — frozen per-day baseline when a snapshot exists, otherwise freshly computed for the day. `exp(hrvMuMssd)` is the RMSSD baseline (ms). This reuses the existing stable log-RMSSD baseline pipeline; **no new aggregation path** is introduced. Multiple overnight RMSSD samples already feed this baseline; note that aggregating samples still cannot reconstruct true pNN50 — `approxPnn50` is used regardless.
 
-**RHR input `rhrBaselineBpm`:** the existing stable RHR baseline from `initialBaselines.rhrBaselineValue` (frozen snapshot → override → adaptive sleep-RHR percentile). This is the physiologically coherent counterpart to the overnight HRV observation window; no new pipeline.
+**RHR input `rhrBaselineBpm`:** Readylytics' existing stable RHR baseline from `initialBaselines.rhrBaselineValue` (frozen snapshot → override → adaptive sleep-RHR percentile). It is used as a **practical proxy** for the tachogram-derived MeanRR the published model requires — explicitly documented as an approximation. Because the Readylytics baseline may be percentile-derived rather than a true arithmetic mean resting HR from a contemporaneous tachogram, it can introduce systematic offset. This is the intended input; no new HR aggregation pipeline is introduced. The percentile-derived baseline is the stable counterpart to the overnight HRV observation window.
 
 `FinalSummaryAssembler` constructor gains `materkoAdaptedVo2MaxCalculator` (wired in `ScoringDayUseCases`).
 
@@ -180,7 +187,7 @@ Changing the method writes the pref and calls `healthDataRefresh.refreshHistoric
 
 | Test | Coverage |
 |---|---|
-| `MaterkoAdaptedVo2MaxCalculatorTest` (pure Kotlin) | guards: `!isCalibrated` → null; rhr < 30 / non-finite → null; `hrvMuMssd` null → null; `exp(hrvMuMssd)` outside 1–200 → null; **HRmax not required** (no param); out-of-domain raw → null (both below 15 and above 95) |
+| `MaterkoAdaptedVo2MaxCalculatorTest` (pure Kotlin) | guards: `!isCalibrated` → null; rhr < 30 / non-finite → null; `hrvMuMssd` null → null; `exp(hrvMuMssd)` outside 1–200 → null; **HRmax not required** (no param); out-of-domain raw → null (both below `MIN_SUPPORTED_VO2_MAX` and above `MAX_SUPPORTED_VO2_MAX`) |
 | `approxPnn50` tests | → 0 for very low RMSSD; monotonic increasing with RMSSD; bounded `[0, 100]` |
 | Φ/erf reference tests | Φ(0)=0.5, Φ(1)≈0.84134, Φ(−1)≈0.15866, Φ(1.96)≈0.97500 — verify the numerical helper directly, not only via final VO2max |
 | Representative outputs | known-value matrix across several RHR/RMSSD combos (e.g. RHR 60→meanRR=1000; RMSSD 50→approxPnn50≈31.73%); assert exact expected VO2max_adapted |
@@ -196,7 +203,7 @@ Changing the method writes the pref and calls `healthDataRefresh.refreshHistoric
 
 Per the repo's Documentation Synchronization Rule, the same change must update:
 - `internal-docs/DATA_FLOW.md` — scoring path: new estimator, `Vo2MaxSourceResolver` signature, `resolveVo2Max` branch.
-- `ABOUT.md`, `docs/about.md`, in-app About strings (`about_*` / `tooltip_*` in `values/strings.xml`) — new method explanation including: experimental-adaptation framing, the CDR/pNN50/MeanRR deviations, RHR-dominance, and the **population caveat** (original model developed in young, healthy, physically active men; not broadly validated).
+- `ABOUT.md`, `docs/about.md`, in-app About strings (`about_*` / `tooltip_*` in `values/strings.xml`) — new method explanation including: experimental-adaptation framing; the CDR/pNN50/MeanRR deviations (incl. the percentile-derived RHR-baseline-as-MeanRR proxy and its possible systematic offset); RHR-dominance; the **population caveat** (original model developed in young, healthy, physically active men; not broadly validated); and the supported-bounds (`MIN_SUPPORTED_VO2_MAX`..`MAX_SUPPORTED_VO2_MAX`) null-on-out-of-domain behavior. User-facing copy must make it impossible to mistake the method for the exact published Materko model (concise segmented-button label + explicit description text).
 - `DocumentationDriftTest` must pass.
 
 No `docs/index.md`/`docs/privacy.md` change: no new data collection or sharing.
