@@ -1,5 +1,6 @@
 package app.readylytics.health.core.model.data.preferences
 
+import app.readylytics.health.core.model.domain.preferences.Vo2MaxEstimationMethod
 import app.readylytics.health.core.model.domain.preferences.Vo2MaxSourceMode
 
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
@@ -120,6 +121,7 @@ data class UserPreferences(
     val lastAppliedTrainingReadinessResidualFatigueScale: Float? = null,
     val lastAppliedTrainingReadinessLoadBalanceWeight: Float? = null,
     val vo2MaxSourceMode: Vo2MaxSourceMode = Vo2MaxSourceMode.AUTO,
+    val vo2MaxEstimationMethod: Vo2MaxEstimationMethod = Vo2MaxEstimationMethod.HR_RATIO,
 )
 
 /**
