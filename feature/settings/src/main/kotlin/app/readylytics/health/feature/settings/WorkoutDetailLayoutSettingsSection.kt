@@ -1,6 +1,7 @@
 package app.readylytics.health.feature.settings
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
@@ -25,7 +26,10 @@ fun WorkoutDetailLayoutSettingsSection(onEvent: (SettingsEvent) -> Unit) {
     Column {
         SectionHeader(stringResource(R.string.workout_detail_layouts_section_header))
         Column(modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal)) {
-            OutlinedButton(onClick = { showResetDialog = true }) {
+            OutlinedButton(
+                onClick = { showResetDialog = true },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 Text(stringResource(R.string.workout_detail_layouts_reset_button))
             }
             Text(

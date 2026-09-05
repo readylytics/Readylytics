@@ -11,8 +11,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -74,8 +74,7 @@ private fun TrainingReadinessControls(
         controlsEnabled = controlsEnabled,
         onUIEvent = onUIEvent,
     )
-    TrainingReadinessResetRow(controlsEnabled = controlsEnabled, onUIEvent = onUIEvent)
-    TrainingReadinessApplyButton(
+    TrainingReadinessResetAndApplyRow(
         hasPendingRecalc = uiState.hasPendingTrainingReadinessRecalc,
         controlsEnabled = controlsEnabled,
         isResyncing = isResyncing,
@@ -138,44 +137,33 @@ private fun TrainingReadinessWeightSlider(
 }
 
 @Composable
-private fun TrainingReadinessResetRow(
+private fun TrainingReadinessResetAndApplyRow(
+    hasPendingRecalc: Boolean,
     controlsEnabled: Boolean,
+    isResyncing: Boolean,
     onUIEvent: (SettingsEvent) -> Unit,
 ) {
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = MaterialTheme.spacing.medium),
-        horizontalArrangement = Arrangement.End,
+                .padding(
+                    horizontal = MaterialTheme.spacing.medium,
+                    vertical = MaterialTheme.spacing.smallMedium,
+                ),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.smallMedium),
     ) {
-        TextButton(
+        OutlinedButton(
             onClick = { onUIEvent(SettingsEvent.ResetTrainingReadinessToDefaults) },
             enabled = controlsEnabled,
+            modifier = Modifier.weight(1f),
         ) {
             Text(stringResource(R.string.advanced_training_readiness_reset_button))
         }
-    }
-}
-
-@Composable
-private fun TrainingReadinessApplyButton(
-    hasPendingRecalc: Boolean,
-    controlsEnabled: Boolean,
-    isResyncing: Boolean,
-    onUIEvent: (SettingsEvent) -> Unit,
-) {
-    Column(
-        modifier =
-            Modifier.padding(
-                horizontal = MaterialTheme.spacing.medium,
-                vertical = MaterialTheme.spacing.smallMedium,
-            ),
-    ) {
         Button(
             onClick = { onUIEvent(SettingsEvent.RecalculateTrainingReadiness) },
             enabled = hasPendingRecalc && controlsEnabled,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.weight(1f),
         ) {
             if (isResyncing) {
                 CircularProgressIndicator(
