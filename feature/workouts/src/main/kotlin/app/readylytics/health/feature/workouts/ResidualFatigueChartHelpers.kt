@@ -189,7 +189,6 @@ private class SingleEntryPointProvider(
 ) : LineCartesianLayer.PointProvider {
     override fun getPoint(
         entry: LineCartesianLayerModel.Entry,
-        seriesIndex: Int,
         extraStore: ExtraStore,
     ): LineCartesianLayer.Point? = point.takeIf { kotlin.math.abs(entry.x - targetX) <= NOW_MARKER_EPSILON_MINUTES }
 
