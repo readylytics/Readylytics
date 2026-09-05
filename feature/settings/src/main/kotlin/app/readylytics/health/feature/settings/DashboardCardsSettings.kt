@@ -56,7 +56,7 @@ fun DashboardCardsSettingsSection(
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-            Row {
+            Row(modifier = Modifier.fillMaxWidth()) {
                 Button(
                     onClick = {
                         selectedMode?.let {
@@ -64,6 +64,7 @@ fun DashboardCardsSettingsSection(
                         }
                     },
                     enabled = selectedMode != null && selectedMode != uiState.currentGlobalMode,
+                    modifier = Modifier.weight(1f),
                 ) {
                     Text(stringResource(R.string.dashboard_cards_global_mode_apply))
                 }
@@ -71,6 +72,7 @@ fun DashboardCardsSettingsSection(
                 OutlinedButton(
                     onClick = { onEvent(SettingsEvent.DashboardGlobalDisplayModeResetRequested) },
                     enabled = selectedMode == uiState.currentGlobalMode,
+                    modifier = Modifier.weight(1f),
                 ) {
                     Text(stringResource(R.string.dashboard_cards_global_mode_reset))
                 }
