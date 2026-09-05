@@ -56,27 +56,16 @@ fun DashboardCardsSettingsSection(
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Button(
-                    onClick = {
-                        selectedMode?.let {
-                            onEvent(SettingsEvent.DashboardGlobalDisplayModeApplyRequested(it))
-                        }
-                    },
-                    enabled = selectedMode != null && selectedMode != uiState.currentGlobalMode,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text(stringResource(R.string.dashboard_cards_global_mode_apply))
-                }
-                Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
-                OutlinedButton(
-                    onClick = { onEvent(SettingsEvent.DashboardGlobalDisplayModeResetRequested) },
-                    enabled = selectedMode == uiState.currentGlobalMode,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text(stringResource(R.string.dashboard_cards_global_mode_reset))
-                }
-            }
+            DashboardGlobalModeApplyResetRow(
+                applyEnabled = selectedMode != null && selectedMode != uiState.currentGlobalMode,
+                resetEnabled = selectedMode == uiState.currentGlobalMode,
+                onApply = {
+                    selectedMode?.let {
+                        onEvent(SettingsEvent.DashboardGlobalDisplayModeApplyRequested(it))
+                    }
+                },
+                onReset = { onEvent(SettingsEvent.DashboardGlobalDisplayModeResetRequested) },
+            )
             Text(
                 text = stringResource(R.string.dashboard_cards_global_mode_desc),
                 style = MaterialTheme.typography.bodySmall,
@@ -94,6 +83,32 @@ fun DashboardCardsSettingsSection(
             },
             onDismiss = { onEvent(SettingsEvent.DashboardGlobalDisplayModeDialogDismissed) },
         )
+    }
+}
+
+@Composable
+private fun DashboardGlobalModeApplyResetRow(
+    applyEnabled: Boolean,
+    resetEnabled: Boolean,
+    onApply: () -> Unit,
+    onReset: () -> Unit,
+) {
+    Row(modifier = Modifier.fillMaxWidth()) {
+        Button(
+            onClick = onApply,
+            enabled = applyEnabled,
+            modifier = Modifier.weight(1f),
+        ) {
+            Text(stringResource(R.string.dashboard_cards_global_mode_apply))
+        }
+        Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
+        OutlinedButton(
+            onClick = onReset,
+            enabled = resetEnabled,
+            modifier = Modifier.weight(1f),
+        ) {
+            Text(stringResource(R.string.dashboard_cards_global_mode_reset))
+        }
     }
 }
 
