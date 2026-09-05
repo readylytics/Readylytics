@@ -30,26 +30,28 @@ internal fun DynamicColorSettings(
     uiState: UIState,
     onUIEvent: (SettingsEvent) -> Unit,
 ) {
-    SettingsToggleItem(
-        label = stringResource(CoreUiR.string.onboarding_dynamic_color_label),
-        description = stringResource(CoreUiR.string.onboarding_dynamic_color_desc),
-        checked = uiState.dynamicColorEnabled,
-        onCheckedChange = { onUIEvent(SettingsEvent.DynamicColorEnabledChanged(it)) },
-    )
-    AnimatedVisibility(visible = !uiState.dynamicColorEnabled) {
-        Column {
-            CustomColorPicker(
-                label = stringResource(R.string.fallback_theme_color_label),
-                selectedColor = Color(uiState.customPrimaryColor),
-                onColorSelected = { onUIEvent(SettingsEvent.CustomPrimaryColorChanged(it.toArgb().toLong())) },
-                enabled = true,
-                modifier =
-                    Modifier.fillMaxWidth().padding(
-                        horizontal = MaterialTheme.spacing.pageHorizontal,
-                        vertical = MaterialTheme.spacing.small,
-                    ),
-            )
-            PaletteCustomizationSettings(uiState = uiState, onUIEvent = onUIEvent)
+    Column {
+        SettingsToggleItem(
+            label = stringResource(CoreUiR.string.onboarding_dynamic_color_label),
+            description = stringResource(CoreUiR.string.onboarding_dynamic_color_desc),
+            checked = uiState.dynamicColorEnabled,
+            onCheckedChange = { onUIEvent(SettingsEvent.DynamicColorEnabledChanged(it)) },
+        )
+        AnimatedVisibility(visible = !uiState.dynamicColorEnabled) {
+            Column {
+                CustomColorPicker(
+                    label = stringResource(R.string.fallback_theme_color_label),
+                    selectedColor = Color(uiState.customPrimaryColor),
+                    onColorSelected = { onUIEvent(SettingsEvent.CustomPrimaryColorChanged(it.toArgb().toLong())) },
+                    enabled = true,
+                    modifier =
+                        Modifier.fillMaxWidth().padding(
+                            horizontal = MaterialTheme.spacing.pageHorizontal,
+                            vertical = MaterialTheme.spacing.small,
+                        ),
+                )
+                PaletteCustomizationSettings(uiState = uiState, onUIEvent = onUIEvent)
+            }
         }
     }
 }
