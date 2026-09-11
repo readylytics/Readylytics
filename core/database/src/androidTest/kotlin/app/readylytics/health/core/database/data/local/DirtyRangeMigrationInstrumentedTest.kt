@@ -5,6 +5,8 @@ import androidx.room.testing.MigrationTestHelper
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import app.readylytics.health.core.databaseschema.data.local.dao.SourceRecordDao
+import app.readylytics.health.core.databaseschema.data.local.entity.HealthSourceRecordEntity
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

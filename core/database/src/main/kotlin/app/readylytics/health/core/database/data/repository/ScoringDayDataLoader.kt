@@ -214,6 +214,16 @@ class ScoringDayDataLoader
         suspend fun persistDailySummary(summary: DailySummary, zoneId: ZoneId) {
             dailySummaryDao.upsert(DailySummaryMapper.toEntity(summary, zoneId))
         }
+
+        suspend fun persistDailySummaryAndWorkouts(
+            summary: DailySummary,
+            zoneId: ZoneId,
+            workouts: List<WorkoutRecordEntity>,
+            updates: List<ComputeDailyTrimpUseCase.WorkoutModelTrimpUpdate>,
+        ) {
+            persistDailySummary(summary, zoneId)
+            persistModelTrimp(workouts, updates)
+        }
     }
 
 private fun mergeMinuteBuckets(

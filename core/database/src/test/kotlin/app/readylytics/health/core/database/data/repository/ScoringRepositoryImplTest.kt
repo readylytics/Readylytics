@@ -401,7 +401,7 @@ class ScoringRepositoryImplTest {
         }
 
     @Test
-    fun `computeDailySummary persists modelTrimp per workout using computeWorkoutTrimpUseCase result`() =
+    fun `computeAndPersistDailySummary persists modelTrimp per workout using computeWorkoutTrimpUseCase result`() =
         runTest {
             // SCORE-001/WP-10: the user-selected-model TRIMP computed per workout must be written
             // back onto WorkoutRecordEntity.modelTrimp, not just summed into dailyTrimpRaw in memory.
@@ -436,7 +436,7 @@ class ScoringRepositoryImplTest {
             val workoutSlot = slot<List<WorkoutRecordEntity>>()
             coEvery { workoutDao.upsertAll(capture(workoutSlot)) } returns Unit
 
-            repo.computeDailySummary(today)
+            repo.computeAndPersistDailySummary(today)
 
             coVerify(exactly = 1) { workoutDao.upsertAll(any()) }
             assertEquals(1, workoutSlot.captured.size)
@@ -445,7 +445,7 @@ class ScoringRepositoryImplTest {
         }
 
     @Test
-    fun `computeDailySummary skips workoutDao upsertAll when no workout's modelTrimp changed`() =
+    fun `computeAndPersistDailySummary skips workoutDao upsertAll when no workout's modelTrimp changed`() =
         runTest {
             // A workout already carrying the freshly computed modelTrimp value shouldn't trigger a
             // redundant write on every single walk-forward day.
@@ -477,7 +477,7 @@ class ScoringRepositoryImplTest {
                 computeSleepMetricsUseCase(any())
             } returns Result.success(DailySummaryMapper.toDomain(DailySummaryEntity(0L), zoneId))
 
-            repo.computeDailySummary(today)
+            repo.computeAndPersistDailySummary(today)
 
             coVerify(exactly = 0) { workoutDao.upsertAll(any()) }
         }

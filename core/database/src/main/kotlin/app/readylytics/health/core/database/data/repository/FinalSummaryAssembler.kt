@@ -1,9 +1,11 @@
 package app.readylytics.health.core.database.data.repository
 
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.model.data.preferences.appliedTrainingReadinessConfig
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.preferences.Vo2MaxEstimationMethod
+import app.readylytics.health.core.model.domain.repository.FatigueWorkoutInput
 import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
@@ -52,6 +54,8 @@ class FinalSummaryAssembler(
         val baselineContext: WalkForwardBaselineContext?,
         val fatigueContext: WalkForwardFatigueContext?,
         val vo2MaxContext: WalkForwardVo2MaxContext?,
+        val stagedFatigueInputs: List<FatigueWorkoutInput> = emptyList(),
+        val stagedWorkouts: List<WorkoutRecordEntity> = emptyList(),
     )
 
     suspend fun assemble(inputs: Inputs): DailySummary {
@@ -79,9 +83,16 @@ class FinalSummaryAssembler(
                 avgBodyTemp = bodyMetricsDataLoader.loadAvgBodyTemp(inputs.session),
             )
         val summary = resolveScoredSummary(base, inputs, isCalibrated)
-        val withFatigue = summary.copy(
-            residualFatigue = residualFatigueComputer.compute(inputs.context, inputs.fatigueContext)
-        )
+        val withFatigue =
+            summary.copy(
+                residualFatigue =
+                    residualFatigueComputer.compute(
+                        context = inputs.context,
+                        fatigueContext = inputs.fatigueContext,
+                        stagedFatigueInputs = inputs.stagedFatigueInputs,
+                        stagedWorkouts = inputs.stagedWorkouts,
+                    ),
+            )
         val (projectionForWorkout, projectionForEveryday) = resolveReadinessProjections(withFatigue, inputs)
         val vo2MaxResolution = resolveVo2Max(inputs, isCalibrated, withFatigue.hrvMuMssd)
         return withFatigue.copy(

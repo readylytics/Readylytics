@@ -20,6 +20,8 @@ import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
+import app.readylytics.health.core.model.domain.sync.DirtyRangeStore
+import app.readylytics.health.core.model.domain.sync.DirtyTicket
 import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.util.RetentionBounds
@@ -55,6 +57,12 @@ class HealthResyncWorker
         private val foregroundSyncController: Lazy<ForegroundSyncController>,
         private val databaseReadinessGate: DatabaseReadinessInspector,
         private val settingsRepository: Lazy<SettingsRepository>,
+        private val dirtyRangeStore: Lazy<DirtyRangeStore> =
+            Lazy {
+                object : DirtyRangeStore {
+                    override suspend fun pending(limit: Int): List<DirtyTicket> = emptyList()
+                }
+            },
     ) : CoroutineWorker(appContext, params) {
         // Progress notifications (posted from runNormalRecompute/runTrainingReadinessProjection)
         // are best-effort (wrapped in runCatching); POST_NOTIFICATIONS is declared in the manifest
@@ -111,6 +119,20 @@ class HealthResyncWorker
                         start = LocalDate.ofEpochDay(startEpochDay),
                         endInclusive = LocalDate.ofEpochDay(endEpochDay),
                     )
+                } ?: run {
+                    if (recomputeOnly) {
+                        val pending = runCatching { dirtyRangeStore.get().pending(100) }.getOrDefault(emptyList())
+                        if (pending.isNotEmpty()) {
+                            ScoreInvalidation.AffectedRange(
+                                start = pending.minOf { it.nextDay },
+                                endInclusive = pending.maxOf { it.endInclusive },
+                            )
+                        } else {
+                            null
+                        }
+                    } else {
+                        null
+                    }
                 }
             val result =
                 resyncUseCase.execute(

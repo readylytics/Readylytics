@@ -6,6 +6,7 @@ import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.WorkoutTrimpBackfillStatus
+import app.readylytics.health.core.model.domain.sync.DirtyRangeStore
 import app.readylytics.health.core.model.domain.util.RetentionBounds
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
@@ -32,6 +33,7 @@ internal class DatabaseReadyStartupInitializer(
     private val workerScheduler: WorkerScheduler,
     private val workoutTrimpBackfillStatus: Lazy<WorkoutTrimpBackfillStatus>,
     private val context: Context? = null,
+    private val dirtyRangeStore: Lazy<DirtyRangeStore>? = null,
 ) {
     private val initialized = AtomicBoolean(false)
 
@@ -118,12 +120,20 @@ internal class DatabaseReadyStartupInitializer(
                 .startTimeMs
         val needsBackfillRecompute =
             workoutTrimpBackfillStatus.get().hasUnbackfilledWorkouts(retentionStartMs)
-        if (!needsVersionRecompute && !needsBackfillRecompute) return
+        val hasPendingDirty =
+            try {
+                dirtyRangeStore?.get()?.pending(100)?.isNotEmpty() == true
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                false
+            }
+        if (!needsVersionRecompute && !needsBackfillRecompute && !hasPendingDirty) return
 
         logD(TAG) {
             "Enqueueing recompute-only resync (staleVersion=$needsVersionRecompute " +
                 "stored=$storedScoringVersion current=${SettingsDefaults.CURRENT_SCORING_VERSION}, " +
-                "unbackfilledCanonicalTrimp=$needsBackfillRecompute)"
+                "unbackfilledCanonicalTrimp=$needsBackfillRecompute, pendingDirty=$hasPendingDirty)"
         }
         // The worker owns the version bump (HealthResyncWorker.persistPostRecomputeState, on
         // success only). Never bump here: a killed worker must leave the stale version in

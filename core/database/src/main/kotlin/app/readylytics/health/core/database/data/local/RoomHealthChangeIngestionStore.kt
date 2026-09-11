@@ -1,9 +1,15 @@
 package app.readylytics.health.core.database.data.local
 
+import app.readylytics.health.core.databaseschema.data.local.dao.HealthMutationStateDao
+import app.readylytics.health.core.model.data.preferences.scoringZone
 import app.readylytics.health.core.model.domain.model.DomainHeartRateSample
 import app.readylytics.health.core.model.domain.model.HealthDataType
+import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.sync.HealthChangeIngestionStore
 import app.readylytics.health.core.model.domain.sync.SessionSpans
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
+import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -15,6 +21,10 @@ class RoomHealthChangeIngestionStore
     @Inject
     constructor(
         private val daos: HealthRecordDaos,
+        private val dirtyRangeStore: RoomDirtyRangeStore? = null,
+        private val healthMutationStateDao: HealthMutationStateDao? = null,
+        private val settingsRepo: SettingsRepository? = null,
+        private val clock: Clock = Clock.systemDefaultZone(),
     ) : HealthChangeIngestionStore {
         override suspend fun affectedDatesForRecord(
             type: HealthDataType,
@@ -62,6 +72,42 @@ class RoomHealthChangeIngestionStore
             }
 
         override suspend fun deleteRecord(type: HealthDataType, hcRecordId: String) {
+            val zoneId =
+                try {
+                    settingsRepo?.userPreferences?.first()?.scoringZone() ?: clock.zone
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    clock.zone
+                }
+            deleteRecordAndJournal(type, hcRecordId, zoneId)
+        }
+
+        suspend fun deleteRecordAndJournal(
+            type: HealthDataType,
+            hcRecordId: String,
+            zoneId: ZoneId,
+            reason: String = "RECORD_DELETION",
+            snapshotId: String = "ACTIVE",
+            today: LocalDate = LocalDate.now(clock.withZone(zoneId)),
+        ): Set<LocalDate> {
+            val affected = affectedDatesForRecord(type, hcRecordId, zoneId)
+            if (affected.isNotEmpty() && dirtyRangeStore != null && healthMutationStateDao != null) {
+                val earliest = affected.minOrNull()!!
+                val end = maxOf(today, affected.maxOrNull()!!)
+                healthMutationStateDao.incrementGeneration()
+                dirtyRangeStore.append(
+                    start = earliest,
+                    endInclusive = end,
+                    reason = reason,
+                    snapshotId = snapshotId,
+                )
+            }
+            deleteFromDaos(type, hcRecordId)
+            return affected
+        }
+
+        private suspend fun deleteFromDaos(type: HealthDataType, hcRecordId: String) {
             when (type) {
                 HealthDataType.SLEEP -> daos.sleepSessionDao.deleteById(hcRecordId)
                 HealthDataType.HEART_RATE -> {

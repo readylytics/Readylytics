@@ -14,7 +14,10 @@ import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspe
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
+import app.readylytics.health.core.model.domain.sync.DirtyRangeStore
+import app.readylytics.health.core.model.domain.sync.DirtyTicket
 import app.readylytics.health.core.model.domain.sync.ResyncPhase
+import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import dagger.Lazy
 import io.mockk.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -120,6 +123,39 @@ class HealthResyncWorkerTest {
             worker.doWork()
 
             assertTrue(recomputeOnlySlot.captured)
+        }
+
+    @Test
+    fun `doWork with recomputeOnly and pending dirty ranges derives rangeOverride from dirty tickets`() =
+        runBlocking {
+            every { workerParams.inputData } returns
+                androidx.work.Data
+                    .Builder()
+                    .putBoolean(HealthResyncWorker.KEY_RECOMPUTE_ONLY, true)
+                    .build()
+            val rangeSlot = slot<ScoreInvalidation.AffectedRange?>()
+            coEvery { useCase.execute(any(), captureNullable(rangeSlot), any()) } returns
+                app.readylytics.health.core.model.domain.model.Result
+                    .Success(Unit)
+
+            val dirtyStore =
+                object : DirtyRangeStore {
+                    override suspend fun pending(limit: Int): List<DirtyTicket> =
+                        listOf(
+                            DirtyTicket(
+                                id = 1L,
+                                sourceGeneration = 1L,
+                                nextDay = java.time.LocalDate.of(2026, 9, 2),
+                                endInclusive = java.time.LocalDate.of(2026, 9, 8),
+                                scoringSnapshotId = "s1",
+                            ),
+                        )
+                }
+            val worker = createWorker(dirtyStore)
+            worker.doWork()
+
+            assertEquals(java.time.LocalDate.of(2026, 9, 2), rangeSlot.captured?.start)
+            assertEquals(java.time.LocalDate.of(2026, 9, 8), rangeSlot.captured?.endInclusive)
         }
 
     @Test
@@ -434,7 +470,7 @@ class HealthResyncWorkerTest {
             )
         }
 
-    private fun createWorker() =
+    private fun createWorker(dirtyRangeStore: DirtyRangeStore? = null) =
         HealthResyncWorker(
             appContext = context,
             params = workerParams,
@@ -442,5 +478,11 @@ class HealthResyncWorkerTest {
             foregroundSyncController = foregroundSyncControllerLazy,
             databaseReadinessGate = databaseReadinessGate,
             settingsRepository = settingsRepositoryLazy,
+            dirtyRangeStore =
+                Lazy {
+                    dirtyRangeStore ?: object : DirtyRangeStore {
+                        override suspend fun pending(limit: Int): List<DirtyTicket> = emptyList()
+                    }
+                },
         )
 }

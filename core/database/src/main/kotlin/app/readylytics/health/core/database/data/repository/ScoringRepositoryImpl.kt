@@ -1,6 +1,7 @@
 package app.readylytics.health.core.database.data.repository
 
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.model.data.preferences.scoringZone
 import app.readylytics.health.core.model.di.DefaultDispatcher
 import app.readylytics.health.core.model.domain.model.DailySummary
@@ -20,6 +21,7 @@ import app.readylytics.health.core.database.data.repository.recommendation.Morni
 import app.readylytics.health.core.database.data.repository.recommendation.MorningRecoveryLoader
 import app.readylytics.health.core.database.data.repository.recommendation.WorkoutExampleLoader
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
+import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.EverydayHrLoadResult
 import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
 import app.readylytics.health.core.scoring.domain.scoring.TrimpDateBucketer
@@ -116,8 +118,13 @@ class ScoringRepositoryImpl
         ) = calculationMutex.withLock {
             val resolvedPrefs = prefs ?: settingsRepo.userPreferences.first()
             val zoneId = resolvedPrefs.scoringZone()
-            val computed = computeDailySummary(targetDate, resolvedPrefs, contexts)
-            dataLoader.persistDailySummary(computed.withStepCount(steps), zoneId)
+            val computed = computeDay(targetDate, resolvedPrefs, contexts)
+            dataLoader.persistDailySummaryAndWorkouts(
+                computed.summary.withStepCount(steps),
+                zoneId,
+                computed.workouts,
+                computed.workoutUpdates,
+            )
         }
 
         override suspend fun fetchWalkForwardTrimpContext(
@@ -187,7 +194,7 @@ class ScoringRepositoryImpl
 
         override suspend fun computeDailySummary(targetDate: LocalDate): DailySummary {
             val prefs = settingsRepo.userPreferences.first()
-            return calculationMutex.withLock { computeDailySummary(targetDate, prefs, WalkForwardContexts()) }
+            return calculationMutex.withLock { computeDay(targetDate, prefs, WalkForwardContexts()).summary }
         }
 
         // Deliberately does not take calculationMutex, unlike its siblings: holding it would block
@@ -199,11 +206,17 @@ class ScoringRepositoryImpl
                 residualFatigueComputer.computeLive(nowMs, settingsRepo.userPreferences.first())
             }
 
-        private suspend fun computeDailySummary(
+        override suspend fun persist(summary: DailySummary) {
+            dataLoader.persistDailySummary(summary, settingsRepo.userPreferences.first().scoringZone())
+        }
+
+        override suspend fun toReadinessResult(summary: DailySummary): ReadinessResult = summary.readinessResult
+
+        private suspend fun computeDay(
             targetDate: LocalDate,
             prefs: UserPreferences,
             contexts: WalkForwardContexts,
-        ): DailySummary =
+        ): ComputedDay =
             withContext(defaultDispatcher) {
                 val context =
                     scoringDayContextResolver.resolveScoringDayContext(targetDate, prefs, contexts.baseline)
@@ -239,33 +252,52 @@ class ScoringRepositoryImpl
                         context.targetDate,
                         context.zoneId,
                     )
-                val finalSummary =
-                    finalSummaryAssembler.assemble(
-                        contexts.buildFinalSummaryInputs(
-                            context,
-                            session,
-                            currentSessionIds,
-                            processed,
-                            everydayResult,
-                            aggregatedSleep,
-                            rasTotals,
-                        ),
+                val inputs =
+                    contexts.buildFinalSummaryInputs(
+                        context = context,
+                        session = session,
+                        currentSessionIds = currentSessionIds,
+                        processed = processed,
+                        everydayResult = everydayResult,
+                        aggregatedSleep = aggregatedSleep,
+                        rasTotals = rasTotals,
                     )
-                ScoringTelemetry.logTelemetry(
-                    context.scoringConfig,
-                    context.prefs,
-                    rasTotals.last6DaysRasWorkoutOnly,
-                    finalSummary.totalRasWorkoutOnly,
+                assembleComputedDay(
+                    inputs = inputs,
+                    processed = processed,
+                    finalSummaryAssembler = finalSummaryAssembler,
+                    morningRecommendationAssembler = morningRecommendationAssembler,
                 )
-                morningRecommendationAssembler.applyRecommendation(context, finalSummary)
             }
-
-        override suspend fun persist(summary: DailySummary) {
-            dataLoader.persistDailySummary(summary, settingsRepo.userPreferences.first().scoringZone())
-        }
-
-        override suspend fun toReadinessResult(summary: DailySummary): ReadinessResult = summary.readinessResult
     }
+
+private suspend fun assembleComputedDay(
+    inputs: FinalSummaryAssembler.Inputs,
+    processed: DailyTrimpComputer.ProcessedWorkoutDay,
+    finalSummaryAssembler: FinalSummaryAssembler,
+    morningRecommendationAssembler: MorningRecommendationAssembler,
+): ComputedDay {
+    val finalSummary = finalSummaryAssembler.assemble(inputs)
+    ScoringTelemetry.logTelemetry(
+        inputs.context.scoringConfig,
+        inputs.context.prefs,
+        inputs.rasTotals.last6DaysRasWorkoutOnly,
+        finalSummary.totalRasWorkoutOnly,
+    )
+    val summaryWithRecommendation =
+        morningRecommendationAssembler.applyRecommendation(inputs.context, finalSummary)
+    return ComputedDay(
+        summary = summaryWithRecommendation,
+        workouts = processed.workouts,
+        workoutUpdates = processed.workoutModelTrimpUpdates,
+    )
+}
+
+private data class ComputedDay(
+    val summary: DailySummary,
+    val workouts: List<WorkoutRecordEntity>,
+    val workoutUpdates: List<ComputeDailyTrimpUseCase.WorkoutModelTrimpUpdate>,
+)
 
 /**
  * Anchored to the wake time, entirely independent of the TRIMP/readiness pipeline that produced
@@ -316,4 +348,6 @@ private fun WalkForwardContexts.buildFinalSummaryInputs(
         baselineContext = baseline,
         fatigueContext = fatigue,
         vo2MaxContext = vo2Max,
+        stagedFatigueInputs = processed.fatigueInputs,
+        stagedWorkouts = processed.workouts,
     )

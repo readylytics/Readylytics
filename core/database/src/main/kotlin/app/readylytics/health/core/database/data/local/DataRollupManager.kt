@@ -1,13 +1,18 @@
 package app.readylytics.health.core.database.data.local
 
+import app.readylytics.health.core.databaseschema.data.local.dao.DirtyRangeDao
+import app.readylytics.health.core.databaseschema.data.local.dao.HealthMutationStateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
+import app.readylytics.health.core.databaseschema.data.local.entity.DirtyRangeEntity
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
+import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.yield
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneOffset
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -45,6 +50,9 @@ class DataRollupManager
         private val minuteBucketDao: MinuteBucketDao,
         private val heartRateDao: HeartRateDao,
         private val transactionRunner: TransactionRunner,
+        private val coordinator: HealthMutationCoordinator? = null,
+        private val dirtyRangeDao: DirtyRangeDao? = null,
+        private val healthMutationStateDao: HealthMutationStateDao? = null,
     ) {
         /**
          * Aggregates and deletes raw heart-rate rows older than [cutoffMs]. R2-CACHE-001: returns
@@ -53,6 +61,15 @@ class DataRollupManager
          * when no chunk aggregated any plausible sample -- a no-op rollup enqueues no recompute.
          */
         suspend fun rollupExpiredHotTier(cutoffMs: Long): ScoreInvalidation.AffectedRange? {
+            val runner: suspend () -> ScoreInvalidation.AffectedRange? = { doRollupExpiredHotTier(cutoffMs) }
+            return if (coordinator != null) {
+                coordinator.withMutation { runner() }
+            } else {
+                runner()
+            }
+        }
+
+        private suspend fun doRollupExpiredHotTier(cutoffMs: Long): ScoreInvalidation.AffectedRange? {
             var touched: ScoreInvalidation.AffectedRange? = null
             var cursorMs = heartRateDao.getEarliestTimestampMs() ?: return touched
             while (cursorMs < cutoffMs) {
@@ -77,11 +94,26 @@ class DataRollupManager
                         minuteBucketDao.upsertBuckets(rawSamples.aggregateIntoMinuteBuckets())
                         val minMs = rawSamples.minOf { it.timestampMs }
                         val maxMs = rawSamples.maxOf { it.timestampMs }
-                        // Bucket timestamps carry no timezone, and this range only needs to be a safe
-                        // superset of the true scoring-zone dates (fed straight into
-                        // ScoreInvalidation.affectedRange's 84-day forward widening) -- the at-most-one-
-                        // day fuzz from ignoring the user's scoring zone here is immaterial next to that
-                        // 84-day slack.
+
+                        if (dirtyRangeDao != null && healthMutationStateDao != null) {
+                            healthMutationStateDao.incrementGeneration()
+                            val currentGen = healthMutationStateDao.current().sourceGeneration
+                            val startDate = Instant.ofEpochMilli(minMs).atZone(ZoneOffset.UTC).toLocalDate()
+                            val maxDate = Instant.ofEpochMilli(maxMs).atZone(ZoneOffset.UTC).toLocalDate()
+                            val today = LocalDate.now(ZoneOffset.UTC)
+                            val endInclusive = maxOf(today, maxDate)
+                            dirtyRangeDao.insert(
+                                DirtyRangeEntity(
+                                    sourceGeneration = currentGen,
+                                    startEpochDay = startDate.toEpochDay(),
+                                    endEpochDayInclusive = endInclusive.toEpochDay(),
+                                    nextEpochDay = startDate.toEpochDay(),
+                                    reason = "HOT_TIER_ROLLUP",
+                                    scoringSnapshotId = "ACTIVE",
+                                ),
+                            )
+                        }
+
                         ScoreInvalidation.AffectedRange(
                             start = Instant.ofEpochMilli(minMs).atZone(ZoneOffset.UTC).toLocalDate(),
                             endInclusive = Instant.ofEpochMilli(maxMs).atZone(ZoneOffset.UTC).toLocalDate(),
@@ -108,6 +140,6 @@ class DataRollupManager
             }
 
         private companion object {
-            const val DAY_MS = 24L * 60 * 60 * 1000
+            private const val DAY_MS = 86_400_000L
         }
     }

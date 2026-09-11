@@ -16,6 +16,7 @@ import app.readylytics.health.core.healthconnect.domain.sync.HealthSyncUseCase
 import app.readylytics.health.core.model.di.ApplicationScope
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.repository.WorkoutTrimpBackfillStatus
+import app.readylytics.health.core.model.domain.sync.DirtyRangeStore
 import app.readylytics.health.core.model.domain.util.DomainLogSink
 import app.readylytics.health.core.model.domain.util.DomainLogger
 import app.readylytics.health.core.model.domain.util.LogContext
@@ -64,6 +65,9 @@ class HealthDashboardApplication :
 
     @Inject
     lateinit var healthSyncUseCase: Lazy<HealthSyncUseCase>
+
+    @Inject
+    lateinit var dirtyRangeStore: Lazy<DirtyRangeStore>
 
     @Inject
     lateinit var databaseMigrationController: DatabaseMigrationController
@@ -130,6 +134,7 @@ class HealthDashboardApplication :
                 workerScheduler = workerScheduler,
                 workoutTrimpBackfillStatus = workoutTrimpBackfillStatus,
                 context = this,
+                dirtyRangeStore = dirtyRangeStore,
             )
         val startupCoordinator = DatabaseReadyStartupCoordinator(startupInitializer)
         val preferencesPrewarmer = PreferencesPrewarmer(settingsRepo)

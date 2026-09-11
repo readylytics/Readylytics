@@ -589,6 +589,37 @@ sync, and historical resync. Recent sync and historical resync both run `Session
 after ingestion so overlap upserts cannot replace canonical session links with mapper-local links
 before scoring.
 
+### 1.4.1 Concurrency, Lock Hierarchy, and Atomic Transaction Boundaries (WP-04)
+
+**Lock Hierarchy & Mutual Exclusion:**
+To guarantee safe concurrency between foreground daily sync, background historical resync, data retention cleanup, warm-tier rollup, and backup/restore, the application enforces a strict, unidirectional lock hierarchy:
+```
+syncMutex (if applicable) -> HealthMutationCoordinator -> calculationMutex -> Room transaction
+```
+1. **`syncMutex`**: Held by `HealthSyncUseCase` during foreground pull-to-refresh (`sync`), catch-up sync, or full historical resync. Serializes sync flows against each other before acquiring database mutation privileges.
+2. **`HealthMutationCoordinator` (`withMutation`, `withMaintenance`)**: Application-scoped owner backed by a coroutine `Mutex`. All mutation entry points (Health Connect ingestion, retention cleanup, data rollup, restore, backup snapshot capture) acquire this coordinator. Before admitting any ordinary mutation, it inspects durable state (`stateDao.current().maintenanceOperationId == null`). If a durable maintenance operation is pending or running, ordinary mutations fail fast. `withMaintenance(operationId)` records and validates the operation ID in `health_mutation_state` under the coordinator lock and only clears durable state upon verified completion. Cancellation or failures release in-memory locks while leaving durable recovery state intact. Internal store and scoring helpers never re-acquire the non-reentrant coordinator.
+3. **`calculationMutex`**: Guards daily scoring computations in `ScoringRepositoryImpl`, preventing concurrent score derivations for overlapping days.
+4. **Room Transactions**: Leaf SQLite transactions executed via `RoomTransactionRunner` or `SupportSQLiteDatabase.runInTransaction`.
+
+**The Two Atomic Transaction Boundaries:**
+The architecture couples health data changes to durable rescoring via two distinct transaction boundaries:
+
+1. **Atomic Mutation Boundary (Ingestion & Maintenance):**
+   - Whenever raw records are deleted or upserted (Health Connect change ingest, data cleanup, or minute bucket rollup), old and new date extents are resolved using the stored scoring timezone.
+   - Inside a single atomic Room transaction, raw data mutations are applied to SQLite, `health_mutation_state.sourceGeneration` is incremented (a data revision counter, not a timestamp; identical replays do not increment it), and dirty date extents (`[earliestAffectedDay, today]`) are appended to `dirty_ranges`.
+   - WorkManager enqueue never precedes the database commit. If process death or crash occurs before enqueue, `DatabaseReadyStartupInitializer` queries `dirtyRangeStore.pending(100)` at startup and enqueues a recompute-only pass, closing the crash gap.
+
+2. **Atomic Publication Boundary (Scoring & Acknowledgment):**
+   - The scoring pipeline reads data under the captured `sourceGeneration` and immutable settings outside of a writer transaction.
+   - Workout canonical updates (`modelTrimp`) are staged in memory in `ProcessedWorkoutDay` during computation rather than persisted midway in `DailyTrimpComputer`.
+   - `DirtySummaryPublisher.publish` executes inside a single atomic Room transaction:
+     - Re-verifies that live `sourceGeneration == expectedSourceGeneration` and maintenance is idle.
+     - Upserts the calculated `DailySummaryEntity`.
+     - Applies staged canonical workout updates in the same transaction.
+     - Advances `dirty_ranges.nextEpochDay` by exactly 1 (`dirty_ranges.advance`) using the ticket's original `id`, `sourceGeneration`, and cursor.
+     - Deletes only fully completed tickets (`dirty_ranges.deleteCompleted`).
+   - If a concurrent mutation arrived during computation (`liveGeneration != expectedSourceGeneration`), the publisher rejects acknowledgment and rolls back the transaction, returning `false`. The unacknowledged dirty range remains intact in SQLite, guaranteeing that the newer revision is recomputed without losing historical invalidation state.
+
 ### 1.5 Body Temperature — 14-day baseline, elevated-deviation threshold, and display surfaces
 
 Raw ingestion, the nightly-average `avgSleepingBodyTemp` cache, and the entity/table shape are

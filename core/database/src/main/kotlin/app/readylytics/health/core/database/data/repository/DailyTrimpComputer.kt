@@ -21,6 +21,7 @@ class DailyTrimpComputer(
         val workouts: List<WorkoutRecordEntity>,
         val dailyTrimpRaw: Float,
         val fatigueInputs: List<FatigueWorkoutInput>,
+        val workoutModelTrimpUpdates: List<ComputeDailyTrimpUseCase.WorkoutModelTrimpUpdate> = emptyList(),
     )
 
     suspend fun processWorkouts(context: ScoringDayContext): ProcessedWorkoutDay {
@@ -49,7 +50,6 @@ class DailyTrimpComputer(
                 context.initialBaselines.rhrBaselineValue,
                 context.initialBaselines.frozenHrMax,
             )
-        dataLoader.persistModelTrimp(workouts, dailyTrimpResult.workoutModelTrimpUpdates)
         return ProcessedWorkoutDay(
             workouts = workouts,
             dailyTrimpRaw = dailyTrimpResult.totalDailyTrimpRaw,
@@ -61,6 +61,7 @@ class DailyTrimpComputer(
                         trimp = it.trimp,
                     )
                 },
+            workoutModelTrimpUpdates = dailyTrimpResult.workoutModelTrimpUpdates,
         )
     }
 

@@ -6,6 +6,8 @@ import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.repository.WorkoutTrimpBackfillStatus
+import app.readylytics.health.core.model.domain.sync.DirtyRangeStore
+import app.readylytics.health.core.model.domain.sync.DirtyTicket
 import app.readylytics.health.core.model.domain.util.RetentionBounds
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.core.scoring.domain.scoring.BackfillHistoricalBaselinesUseCase
@@ -233,6 +235,58 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
             assertEquals(0, scheduler.recomputeOnlyRequests)
         }
 
+    @Test
+    fun `pending dirty ranges trigger recompute worker scheduling even on current scoring version`() =
+        runTest {
+            val scheduler = FakeWorkerScheduler()
+            val dirtyStore =
+                object : DirtyRangeStore {
+                    override suspend fun pending(limit: Int): List<DirtyTicket> =
+                        listOf(
+                            DirtyTicket(
+                                id = 1L,
+                                sourceGeneration = 1L,
+                                nextDay = java.time.LocalDate.of(2026, 9, 1),
+                                endInclusive = java.time.LocalDate.of(2026, 9, 5),
+                                scoringSnapshotId = "s1",
+                            ),
+                        )
+                }
+            val initializer =
+                initializerWith(
+                    storedScoringVersion = SettingsDefaults.CURRENT_SCORING_VERSION,
+                    scheduler = scheduler,
+                    backfillStatus = FakeBackfillStatus(hasUnbackfilled = false),
+                    dirtyRangeStore = dirtyStore,
+                )
+
+            initializer.initializeIfReady(DatabaseReadiness.Ready)
+
+            assertEquals(1, scheduler.recomputeOnlyRequests)
+        }
+
+    @Test
+    fun `failing dirty range query does not crash startup or block initialization`() =
+        runTest {
+            val scheduler = FakeWorkerScheduler()
+            val failingDirtyStore =
+                object : DirtyRangeStore {
+                    override suspend fun pending(limit: Int): List<DirtyTicket> = throw IOException("database locked")
+                }
+            val initializer =
+                initializerWith(
+                    storedScoringVersion = SettingsDefaults.CURRENT_SCORING_VERSION,
+                    scheduler = scheduler,
+                    backfillStatus = FakeBackfillStatus(hasUnbackfilled = false),
+                    dirtyRangeStore = failingDirtyStore,
+                )
+
+            val result = initializer.initializeIfReady(DatabaseReadiness.Ready)
+
+            assertEquals(StartupInitializationResult.COMPLETE, result)
+            assertEquals(0, scheduler.recomputeOnlyRequests)
+        }
+
     private fun initializerWith(
         storedScoringVersion: Int,
         scheduler: FakeWorkerScheduler,
@@ -240,6 +294,7 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
         physiology: PhysiologyPreferences = mockk(relaxed = true),
         backfillStatus: WorkoutTrimpBackfillStatus = FakeBackfillStatus(hasUnbackfilled = false),
         userPreferences: UserPreferences = UserPreferences(scoringVersion = storedScoringVersion),
+        dirtyRangeStore: DirtyRangeStore? = null,
     ): DatabaseReadyStartupInitializer {
         val healthSyncUseCase = mockk<HealthSyncUseCase>()
         coEvery { healthSyncUseCase.withSyncLock<Int>(any()) } coAnswers {
@@ -257,6 +312,12 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
         coEvery { settings.backupSchedule } returns flowOf(BackupSchedule.DAILY)
         coEvery { settings.backgroundSyncEnabled } returns flowOf(false)
         val settingsLazy = Lazy { settings }
+        val dirtyRangeLazy =
+            Lazy {
+                dirtyRangeStore ?: object : DirtyRangeStore {
+                    override suspend fun pending(limit: Int): List<DirtyTicket> = emptyList()
+                }
+            }
 
         return DatabaseReadyStartupInitializer(
             healthSyncUseCase = healthSyncLazy,
@@ -265,6 +326,7 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
             physiologyPreferences = physiologyLazy,
             workerScheduler = scheduler,
             workoutTrimpBackfillStatus = Lazy { backfillStatus },
+            dirtyRangeStore = dirtyRangeLazy,
         )
     }
 

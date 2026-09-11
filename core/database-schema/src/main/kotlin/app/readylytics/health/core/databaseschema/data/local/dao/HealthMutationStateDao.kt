@@ -12,8 +12,26 @@ interface HealthMutationStateDao {
     @Query("SELECT * FROM health_mutation_state WHERE id = 1")
     suspend fun get(): HealthMutationStateEntity?
 
+    @Query("SELECT * FROM health_mutation_state WHERE id = 1")
+    suspend fun current(): HealthMutationStateEntity
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(state: HealthMutationStateEntity)
+
+    @Query("UPDATE health_mutation_state SET sourceGeneration = sourceGeneration + 1 WHERE id = 1")
+    suspend fun incrementGeneration()
+
+    @Query(
+        "UPDATE health_mutation_state " +
+            "SET maintenanceOperationId = :operationId, maintenancePhase = :phase WHERE id = 1",
+    )
+    suspend fun setMaintenance(
+        operationId: String?,
+        phase: String?,
+    )
+
+    @Query("UPDATE health_mutation_state SET backfillAfterSourceRef = :afterRef WHERE id = 1")
+    suspend fun advanceBackfill(afterRef: Long)
 
     @Query("UPDATE health_mutation_state SET backfillAfterSourceRef = :afterRef WHERE id = 1")
     suspend fun updateBackfillAfterSourceRef(afterRef: Long): Int
