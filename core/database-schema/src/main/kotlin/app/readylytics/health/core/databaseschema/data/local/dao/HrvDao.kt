@@ -237,4 +237,18 @@ interface HrvDao {
 
     @Query("SELECT MIN(timestampMs) FROM hrv_records")
     fun observeEarliestHrvTime(): Flow<Long?>
+
+    @Query(
+        "SELECT sourceRecordRef, MIN(timestampMs) AS minTimestampMs, MAX(timestampMs) AS maxTimestampMs " +
+            "FROM hrv_records WHERE sourceRecordRef IN (:sourceRecordRefs) " +
+            "GROUP BY sourceRecordRef",
+    )
+    suspend fun getChildBoundsForRefs(sourceRecordRefs: List<Long>): List<RefChildBounds>
+
+    @Query(
+        "SELECT sourceRecordRef, MIN(timestampMs) AS minTimestampMs, MAX(timestampMs) AS maxTimestampMs " +
+            "FROM hrv_records WHERE sourceRecordRef = :sourceRecordRef " +
+            "GROUP BY sourceRecordRef",
+    )
+    suspend fun getChildBoundsForRef(sourceRecordRef: Long): RefChildBounds?
 }

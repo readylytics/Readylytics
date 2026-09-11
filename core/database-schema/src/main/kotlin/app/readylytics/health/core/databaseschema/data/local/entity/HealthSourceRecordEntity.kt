@@ -1,5 +1,6 @@
 package app.readylytics.health.core.databaseschema.data.local.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -14,6 +15,7 @@ import kotlinx.serialization.Serializable
     tableName = "health_source_records",
     indices = [
         Index(value = ["sourceRecordId"], unique = true),
+        Index(value = ["recordType", "metadataState", "recordStartMs"]),
     ],
 )
 data class HealthSourceRecordEntity(
@@ -22,4 +24,12 @@ data class HealthSourceRecordEntity(
     val sourceRecordId: String,
     val recordType: String,
     val createdAtMs: Long,
+    val originPackage: String? = null,
+    val recordStartMs: Long? = null,
+    val recordEndExclusiveMs: Long? = null,
+    val lastModifiedMs: Long? = null,
+    @ColumnInfo(defaultValue = "UNKNOWN")
+    val metadataState: String = "UNKNOWN",
+    @ColumnInfo(defaultValue = "0")
+    val sourceRevision: Long = 0,
 )

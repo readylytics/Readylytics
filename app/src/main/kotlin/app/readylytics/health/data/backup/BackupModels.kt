@@ -46,6 +46,7 @@ data class BackupManifest(
     val schemaVersion: Int,
     val exportedAt: String,
     val rowCounts: Map<String, Int>,
+    val sourceGeneration: Long = 0L,
 )
 
 @Serializable

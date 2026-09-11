@@ -26,6 +26,7 @@ class RestoreInventoryValidator
         fun validate(reader: JsonReader): ValidatedBackupInventory {
             var schemaVersion: Int? = null
             var exportedAt: String? = null
+            var sourceGeneration: Long? = null
             val declaredCounts = mutableMapOf<String, Long>()
             val observedCounts = mutableMapOf<String, Long>()
             val encounteredKeys = mutableSetOf<String>()
@@ -44,6 +45,9 @@ class RestoreInventoryValidator
                     }
                     "exportedAt" -> {
                         exportedAt = reader.nextString()
+                    }
+                    "sourceGeneration" -> {
+                        sourceGeneration = reader.nextLong()
                     }
                     "rowCounts" -> {
                         readRowCounts(reader, declaredCounts)
@@ -76,6 +80,7 @@ class RestoreInventoryValidator
                     schemaVersion = version,
                     exportedAt = exported,
                     rowCounts = declaredCounts.mapValues { it.value.toInt() },
+                    sourceGeneration = sourceGeneration ?: 0L,
                 )
             return ValidatedBackupInventory(manifest, declaredCounts, observedCounts)
         }

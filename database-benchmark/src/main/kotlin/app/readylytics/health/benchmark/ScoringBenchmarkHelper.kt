@@ -17,6 +17,7 @@ import app.readylytics.health.core.database.data.repository.ScoringRepositoryImp
 import app.readylytics.health.core.database.data.repository.ScoringSeriesLoader
 import app.readylytics.health.core.database.data.repository.SleepSessionRepositoryImpl
 import app.readylytics.health.core.database.data.repository.WorkoutRepositoryImpl
+import app.readylytics.health.core.databaseschema.data.local.entity.HealthSourceRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
@@ -243,11 +244,31 @@ object ScoringBenchmarkHelper {
 
         val hrSourceRef =
             runBlocking {
-                db.sourceRecordDao().getOrCreateSourceRef("bench-calibrated-hr", "HEART_RATE", 0L)
+                db.sourceRecordDao().getSourceRef("bench-calibrated-hr")
+                    ?: run {
+                        db.sourceRecordDao().insertIgnore(
+                            HealthSourceRecordEntity(
+                                sourceRecordId = "bench-calibrated-hr",
+                                recordType = "HEART_RATE",
+                                createdAtMs = 0L,
+                            ),
+                        )
+                        db.sourceRecordDao().getSourceRef("bench-calibrated-hr") ?: 1L
+                    }
             }
         val hrvSourceRef =
             runBlocking {
-                db.sourceRecordDao().getOrCreateSourceRef("bench-calibrated-hrv", "HRV", 0L)
+                db.sourceRecordDao().getSourceRef("bench-calibrated-hrv")
+                    ?: run {
+                        db.sourceRecordDao().insertIgnore(
+                            HealthSourceRecordEntity(
+                                sourceRecordId = "bench-calibrated-hrv",
+                                recordType = "HRV",
+                                createdAtMs = 0L,
+                            ),
+                        )
+                        db.sourceRecordDao().getSourceRef("bench-calibrated-hrv") ?: 1L
+                    }
             }
 
         val startDate = targetDate.minusDays(historyDays.toLong())

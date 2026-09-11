@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.readylytics.health.core.database.data.local.DataRollupManager
 import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.database.data.local.RoomTransactionRunner
+import app.readylytics.health.core.databaseschema.data.local.dao.getOrCreateSourceRef
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrMinuteBucketEntity
 import app.readylytics.health.core.model.domain.heartrate.ZoneThresholds

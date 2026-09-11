@@ -2,6 +2,7 @@ package app.readylytics.health.core.database.data.local
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import app.readylytics.health.core.databaseschema.data.local.dao.getOrCreateSourceRef
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import kotlinx.coroutines.runBlocking
 import org.junit.After

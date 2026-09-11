@@ -66,6 +66,13 @@ class BackupInventoryPolicyTest {
     }
 
     @Test
+    fun requiredTables_versionTwentyMaintainsTableRequirements() {
+        val tables = BackupInventoryPolicy.requiredTables(20)
+        assertEquals(15, tables.size)
+        assertTrue("vo2MaxRecords" in tables)
+    }
+
+    @Test
     fun validateInventory_acceptsMatchingInventory() {
         val required = setOf("tableA", "tableB")
         val declared = mapOf("tableA" to 5L, "tableB" to 0L)

@@ -8,6 +8,8 @@ import app.readylytics.health.core.databaseschema.data.local.dao.BloodPressureRe
 import app.readylytics.health.core.databaseschema.data.local.dao.BodyFatRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.BodyTemperatureRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.DailySummaryDao
+import app.readylytics.health.core.databaseschema.data.local.dao.DirtyRangeDao
+import app.readylytics.health.core.databaseschema.data.local.dao.HealthMutationStateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao
 import app.readylytics.health.core.databaseschema.data.local.dao.InsightDismissalDao
@@ -27,6 +29,8 @@ import app.readylytics.health.core.databaseschema.data.local.entity.BloodPressur
 import app.readylytics.health.core.databaseschema.data.local.entity.BodyFatRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.BodyTemperatureRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.DirtyRangeEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HealthMutationStateEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HealthSourceRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity
@@ -61,6 +65,8 @@ import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRoute
         HrMinuteBucketEntity::class,
         WorkoutRoutePointEntity::class,
         Vo2MaxRecordEntity::class,
+        DirtyRangeEntity::class,
+        HealthMutationStateEntity::class,
     ],
     version = HealthDatabase.DATABASE_VERSION,
 )
@@ -107,7 +113,11 @@ abstract class HealthDatabase : RoomDatabase() {
 
     abstract fun vo2MaxRecordDao(): Vo2MaxRecordDao
 
+    abstract fun dirtyRangeDao(): DirtyRangeDao
+
+    abstract fun healthMutationStateDao(): HealthMutationStateDao
+
     companion object {
-        const val DATABASE_VERSION = 19
+        const val DATABASE_VERSION = 20
     }
 }

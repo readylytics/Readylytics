@@ -44,6 +44,9 @@ class BackupStreamWriter
             writer.write("{\n")
             writer.write("  \"schemaVersion\": ${HealthDatabase.DATABASE_VERSION},\n")
             writer.write("  \"exportedAt\": \"${Instant.now()}\",\n")
+            val mutationState = healthDatabase.healthMutationStateDao().get()
+            val sourceGeneration = mutationState?.sourceGeneration ?: 0L
+            writer.write("  \"sourceGeneration\": $sourceGeneration,\n")
 
             val rowCounts = collectRowCounts()
             writer.write("  \"rowCounts\": ${json.encodeToString(rowCounts)},\n")

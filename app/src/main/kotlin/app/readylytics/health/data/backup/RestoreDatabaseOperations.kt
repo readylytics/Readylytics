@@ -4,6 +4,8 @@ import android.util.JsonReader
 import androidx.room.withTransaction
 import androidx.sqlite.db.SimpleSQLiteQuery
 import app.readylytics.health.core.database.data.local.HealthDatabase
+import app.readylytics.health.core.databaseschema.data.local.entity.DirtyRangeEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HealthMutationStateEntity
 import kotlinx.serialization.json.Json
 import net.lingala.zip4j.ZipFile
 import net.lingala.zip4j.model.FileHeader
@@ -52,11 +54,26 @@ class RestoreDatabaseOperations
 
                 // Foreign key validation check before committing transaction
                 checkForeignKeys()
+
+                // Initialize mutation state without live lock
+                healthDatabase.healthMutationStateDao().upsert(
+                    HealthMutationStateEntity(
+                        id = 1,
+                        sourceGeneration = validated.manifest.sourceGeneration,
+                        maintenanceOperationId = null,
+                        maintenancePhase = null,
+                        backfillAfterSourceRef = 0,
+                    ),
+                )
+
+                // Journal conservative dirty work across all restored retained dates
+                regenerateRestoredDirtyWork(validated.manifest.sourceGeneration)
             }
             return prefsBackup
         }
 
         private suspend fun clearDatabaseTablesChildBeforeParent() {
+            healthDatabase.dirtyRangeDao().deleteAll()
             healthDatabase.workoutRoutePointDao().deleteAll()
             healthDatabase.sleepStageDao().deleteAll()
             healthDatabase.heartRateDao().deleteAll()
@@ -73,6 +90,27 @@ class RestoreDatabaseOperations
             healthDatabase.sleepSessionDao().deleteAll()
             healthDatabase.workoutDao().deleteAll()
             healthDatabase.sourceRecordDao().deleteAll()
+        }
+
+        private suspend fun regenerateRestoredDirtyWork(sourceGeneration: Long) {
+            val earliestDateMs = healthDatabase.dailySummaryDao().getEarliestDateMs()
+            val latestDateMs = healthDatabase.dailySummaryDao().getLatestDateMs()
+            if (earliestDateMs != null && latestDateMs != null) {
+                val startEpochDay = earliestDateMs / 86_400_000L
+                val endEpochDay = latestDateMs / 86_400_000L
+                if (startEpochDay <= endEpochDay) {
+                    healthDatabase.dirtyRangeDao().insert(
+                        DirtyRangeEntity(
+                            sourceGeneration = sourceGeneration,
+                            startEpochDay = startEpochDay,
+                            endEpochDayInclusive = endEpochDay,
+                            nextEpochDay = startEpochDay,
+                            reason = "RESTORE_REGENERATE",
+                            scoringSnapshotId = "RESTORED",
+                        ),
+                    )
+                }
+            }
         }
 
         private suspend fun performParentsPass(

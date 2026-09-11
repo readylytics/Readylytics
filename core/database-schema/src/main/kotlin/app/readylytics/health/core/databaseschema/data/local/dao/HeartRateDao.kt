@@ -379,4 +379,18 @@ interface HeartRateDao {
     // deletion touched.
     @Query("SELECT MIN(timestampMs) FROM heart_rate_records WHERE timestampMs < :beforeMs")
     suspend fun minTimestampBefore(beforeMs: Long): Long?
+
+    @Query(
+        "SELECT sourceRecordRef, MIN(timestampMs) AS minTimestampMs, MAX(timestampMs) AS maxTimestampMs " +
+            "FROM heart_rate_records WHERE sourceRecordRef IN (:sourceRecordRefs) " +
+            "GROUP BY sourceRecordRef",
+    )
+    suspend fun getChildBoundsForRefs(sourceRecordRefs: List<Long>): List<RefChildBounds>
+
+    @Query(
+        "SELECT sourceRecordRef, MIN(timestampMs) AS minTimestampMs, MAX(timestampMs) AS maxTimestampMs " +
+            "FROM heart_rate_records WHERE sourceRecordRef = :sourceRecordRef " +
+            "GROUP BY sourceRecordRef",
+    )
+    suspend fun getChildBoundsForRef(sourceRecordRef: Long): RefChildBounds?
 }
