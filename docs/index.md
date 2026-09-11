@@ -23,9 +23,12 @@ title: Readylytics
   <p>
     Designed with privacy at its core, all calculations are performed locally
     on your device. Your health data stays yours — no cloud processing, no
-    hidden tracking, and no third-party data sharing. Connect your health
-    data, gain meaningful insights, and maintain full control over your
-    information.
+    hidden tracking, and no third-party data sharing. Release diagnostics and
+    crash reports route through strict sanitization (using structured reason
+    codes and bounded stack frames with zero raw exception messages, device IDs,
+    GPS coordinates, or private health payloads) and remain local unless explicitly
+    shared. Connect your health data, gain meaningful insights, and maintain full
+    control over your information.
   </p>
   <p>
     Readylytics is fully open source and transparent, published under the

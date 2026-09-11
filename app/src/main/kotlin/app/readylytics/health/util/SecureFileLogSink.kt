@@ -2,9 +2,11 @@ package app.readylytics.health.util
 
 import android.content.Context
 import android.util.Log
+import app.readylytics.health.core.model.domain.util.DiagnosticReason
 import app.readylytics.health.core.model.domain.util.DomainLogSink
 import app.readylytics.health.core.model.domain.util.LogContext
 import app.readylytics.health.core.model.domain.util.LogLevel
+import app.readylytics.health.core.model.domain.util.safeDiagnostic
 import app.readylytics.health.data.security.SecureFileStore
 import app.readylytics.health.data.security.TinkSecureFileStore
 import kotlinx.coroutines.CoroutineScope
@@ -15,8 +17,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 import kotlin.coroutines.CoroutineContext
 import kotlin.time.Duration.Companion.milliseconds
@@ -32,9 +32,8 @@ class SecureFileLogSink(
     private val flushIntervalMs: Long = DEFAULT_FLUSH_INTERVAL_MS,
 ) : DomainLogSink {
     private val writeDispatcher: CoroutineContext = coroutineContext
-    private val logDirectory = File(context.cacheDir, "logs")
+    private val logDirectory = File(context.cacheDir, LOG_DIRECTORY_NAME)
     private val scope = CoroutineScope(SupervisorJob() + writeDispatcher)
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)
 
     // Slot rotation, crypto, and the active-slot memory buffer live here; this class only formats,
     // sanitizes, and batches. Confined to the single-threaded [writeDispatcher], so LogSlotStore
@@ -74,45 +73,57 @@ class SecureFileLogSink(
         throwable: Throwable?,
         context: LogContext,
     ) {
-        // Log to standard Logcat for developers/debugging in real-time
-        val formattedMessage = "[Session:${context.sessionId ?: "none"}] $message"
-        when (level) {
-            LogLevel.DEBUG -> Log.d(tag, formattedMessage)
-            LogLevel.INFO -> Log.i(tag, formattedMessage)
-            LogLevel.WARN -> Log.w(tag, formattedMessage, throwable)
-            LogLevel.ERROR -> Log.e(tag, formattedMessage, throwable)
-        }
+        if (!isLoggable(level, tag)) return
+
+        val priority =
+            when (level) {
+                LogLevel.DEBUG -> Log.DEBUG
+                LogLevel.INFO -> Log.INFO
+                LogLevel.WARN -> Log.WARN
+                LogLevel.ERROR -> Log.ERROR
+            }
+        val reason = resolveReason(tag, message, throwable)
+        val safeText = safeDiagnostic(reason, throwable)
+        Log.println(priority, LOGCAT_TAG, safeText)
 
         // Offload file writing to serialization coroutine scope
         scope.launch {
             try {
-                bufferLog(level, tag, message, throwable, context)
+                bufferSafeLog(safeText)
             } catch (e: Exception) {
                 // Deliberately broad: this is the logging sink itself, running detached in
-                // `scope.launch`. bufferLog does file I/O, formatting and sanitisation, so a
-                // narrower type would let an unexpected failure escape into the scope's handler
-                // and take down logging (or the app) because a log line could not be written.
-                Log.e("SecureFileLogSink", "Failed to write log to file", e)
+                // `scope.launch`. bufferSafeLog does file I/O, so a narrower type would let
+                // an unexpected failure escape into the scope's handler and take down logging.
+                val failureText = safeDiagnostic(DiagnosticReason.LOG_WRITE_FAILED, e)
+                Log.println(Log.ERROR, LOGCAT_TAG, failureText)
             }
         }
     }
 
-    private fun bufferLog(
-        level: LogLevel,
+    private fun resolveReason(
         tag: String,
         message: String,
         throwable: Throwable?,
-        logContext: LogContext,
-    ) {
-        val timestamp = dateFormat.format(Date())
-        val sessionId = logContext.sessionId ?: "none"
-        val sanitizedMessage = sanitizeLogMessage(message)
-        val sanitizedStackTrace = throwable?.let { sanitizeLogMessage(Log.getStackTraceString(it)) }
-        val logLine =
-            "$timestamp [$level] [$tag] [Session:$sessionId] $sanitizedMessage" +
-                (sanitizedStackTrace?.let { "\n$it" } ?: "") + "\n"
+    ): DiagnosticReason {
+        val matchingEntry =
+            DiagnosticReason.entries.find {
+                it.name.equals(tag, ignoreCase = true) || it.name.equals(message, ignoreCase = true)
+            }
+        val lowerTag = tag.lowercase(Locale.US)
+        return when {
+            throwable is SecurityException -> DiagnosticReason.PERMISSION_DENIED
+            matchingEntry != null -> matchingEntry
+            lowerTag.contains("permission") -> DiagnosticReason.PERMISSION_DENIED
+            lowerTag.contains("backup") -> DiagnosticReason.BACKUP_FAILED
+            lowerTag.contains("restore") -> DiagnosticReason.RESTORE_FAILED
+            lowerTag.contains("log") -> DiagnosticReason.LOG_WRITE_FAILED
+            else -> DiagnosticReason.OPERATION_FAILED
+        }
+    }
 
-        pendingLogs.add(logLine)
+    private fun bufferSafeLog(safeText: String) {
+        val line = if (safeText.endsWith("\n")) safeText else "$safeText\n"
+        pendingLogs.add(line)
 
         val timeSinceLastWrite = System.currentTimeMillis() - lastWriteTimestamp
         if (pendingLogs.size >= flushLineThreshold || timeSinceLastWrite >= flushIntervalMs) {
@@ -152,6 +163,9 @@ class SecureFileLogSink(
         }
 
     companion object {
+        const val LOG_DIRECTORY_NAME: String = "logs_v2"
+        private const val LOGCAT_TAG: String = "Readylytics"
+
         // 512 KB x 12 slots keeps total retention at the historical ~6 MB while bounding both the
         // in-memory active-slot buffer and the per-flush encrypt to 512 KB (F2). Before F2 a flush
         // decrypted and rewrote all 6 MB.

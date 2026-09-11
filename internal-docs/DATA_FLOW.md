@@ -2100,6 +2100,45 @@ Key behaviors:
 - **Residual Fatigue (optional):** `CardId.RESIDUAL_FATIGUE` in Cards and `WorkoutChartId.RESIDUAL_FATIGUE_CURVE` in Diagrams are registered as default-hidden items (`visible = false`). Users can enable them via the Workouts layout management bottom sheet.
 - **Backup & Restore Integration:** `LocalBackupManager` streams active workout layout configurations (`workoutCards`, `workoutCharts`, `workoutHistory`) into `UserPreferencesBackup` within encrypted ZIP backups. `LocalRestoreManager` restores these back to `WorkoutsLayoutRepository` (Proto DataStore) during the post-database preference restoration stage.
 
+
+---
+
+### 3.9 Release Diagnostics Sanitization & Safe-Field Policy (SEC-001, WP-02)
+
+Release diagnostics (logcat mirroring, encrypted file logs, and crash reports) must never leak private health payloads, record source IDs, GPS coordinates, or raw exception messages. All diagnostic emission in release builds is sanitized through a centralized pipeline before reaching any sink or persistent storage.
+
+```
+Diagnostic Event (Exception / Log statement)
+  │
+  ▼
+SafeDiagnosticFormatter.safeDiagnostic(DiagnosticReason, Throwable?)
+  │  Emits only:
+  │  • Structured reason (DiagnosticReason enum)
+  │  • Exception class names (e.g., java.lang.IllegalStateException)
+  │  • Bounded stack traces (max 16 causes, 32 frames per cause, 8 suppressed)
+  │  • Cyclic exception cycle detection via IdentityHashMap
+  │  • NEVER interpolates raw exception messages, device IDs, GPS coordinates, or payload data
+  ├──► SecureFileLogSink (logs_v2/prod_logs.txt)
+  │      • Buffers safe text lines into encrypted active slot
+  │      • Mirrors to logcat via Log.println(priority, "Readylytics", safeText) without throwable overload
+  │      • Drops DEBUG logs in release builds (INFO+ only)
+  │      • Retires legacy un-sanitized "logs" slot on startup via CachePrune
+  │
+  └──► CrashReportStoreImpl (crash_reports_v2/)
+         • Formats unhandled crashes via CrashReportFormatter using safeDiagnostic(OPERATION_FAILED, throwable)
+         • Persists plain-text diagnostic files in crash_reports_v2/
+         • Retires legacy un-sanitized "crash_reports" slot on startup via CachePrune
+         • Exported only when explicitly shared by user (email or GitHub issue)
+```
+
+Key components:
+- **`SafeDiagnosticFormatter` (`core/model/.../SafeDiagnosticFormatter.kt`):** Pure-Kotlin formatter defining `DiagnosticReason` (`OPERATION_FAILED`, `PERMISSION_DENIED`, `BACKUP_FAILED`, `RESTORE_FAILED`, `LOG_WRITE_FAILED`) and `safeDiagnostic(reason, failure)`. Strips all message interpolation and enforces bounded traversal of cause and suppressed chains.
+- **`SecureFileLogSink` (`app/.../SecureFileLogSink.kt`):** Release logging sink configured under `logs_v2/`. Resolves structured `DiagnosticReason` from incoming tags and formats all entries with `SafeDiagnosticFormatter`. Uses `Log.println` directly to ensure Android's logcat runtime does not print unsanitized `throwable.message`.
+- **`CrashReportFormatter` (`core/model/.../CrashReportFormatter.kt`):** Generates crash report text containing device/OS metadata and sanitized stack frames via `SafeDiagnosticFormatter`. Raw crash messages and payload contexts are excluded.
+- **`CrashReportStoreImpl` (`app/.../CrashReportStoreImpl.kt`):** Manages crash report files under the isolated directory `crash_reports_v2/`, exposed via `FileProvider` cache path `crash_reports_v2`.
+- **`CachePrune` (`app/.../CachePrune.kt`):** Executed during `Application.onCreate()`. Recursively deletes deprecated legacy diagnostic slots (`logs` and `crash_reports`) while bounding file retention in active directories (`logs_v2` and `crash_reports_v2`).
+
 ---
 
 Keep this document synchronized with the source.
+

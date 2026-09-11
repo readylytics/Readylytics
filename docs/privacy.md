@@ -72,24 +72,26 @@ Readylytics does not sell health data, does not use advertising trackers, and
 does not upload Health Connect data to third-party sign-in, cloud backup, or
 Readylytics-hosted services.
 
-Diagnostic logging stays on-device and is only enabled in debug builds.
-Production error handling uses sanitized messages rather than exposing raw
-exception text from health data, storage, or cryptographic operations.
+Diagnostic logging stays on-device. Production diagnostics and crash reports
+route through strict sanitization that emits only structured reason codes,
+exception class names, and bounded stack frames — raw exception messages,
+source/device IDs, GPS coordinates, and private health payloads are never
+logged or stored.
 
 Diagnostic, crash, and logcat export files are written to the app's internal
 cache and are excluded from Android auto-backup and device-to-device transfer.
-Each export directory holds at most one file (a diagnostic export overwrites
-the previous one) and the app prunes these cache directories on startup, so
-diagnostic exports do not accumulate on your device.
+The app prunes these cache directories on startup, so diagnostic files do not
+accumulate on your device.
 
 If Readylytics crashes, it stores a local, plain-text crash report on your
-device containing only the error's stack trace, app version, Android version,
-and device model — never health data. This report is never sent automatically.
-You can choose to share it, either from the prompt shown after a crash or from
-Settings: by emailing it to readylytics@gmail.com through your own email app
-(private, only seen by the developer), or by filing it as an issue on the
-project's public GitHub repository through your own browser (publicly visible
-to anyone). If you don't send it, it stays local to your device.
+device containing only structured reason codes, sanitized stack frames, app
+version, Android version, and device model — never health data or raw exception
+messages. This report is never sent automatically. You can choose to share it,
+either from the prompt shown after a crash or from Settings: by emailing it to
+readylytics@gmail.com through your own email app (private, only seen by the
+developer), or by filing it as an issue on the project's public GitHub repository
+through your own browser (publicly visible to anyone). If you don't send it, it
+stays local to your device.
 
 Settings also has "Report Bug or Crash" and "Request Feature" buttons you can
 use at any time, independent of whether the app has crashed. These share only

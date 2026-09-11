@@ -24,6 +24,7 @@ import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.core.scoring.domain.scoring.BackfillHistoricalBaselinesUseCase
+import app.readylytics.health.crashreport.CachePrune
 import app.readylytics.health.crashreport.CrashReportHandler
 import app.readylytics.health.data.preferences.PhysiologyPreferences
 import app.readylytics.health.data.preferences.SettingsRepository
@@ -87,6 +88,7 @@ class HealthDashboardApplication :
 
     override fun onCreate() {
         super.onCreate()
+        CachePrune.pruneCacheDirectories(this)
         val crashReportHandler = CrashReportHandler(applicationContext, Thread.getDefaultUncaughtExceptionHandler())
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             if (sqlCipherKeyManager.get().isKeyCorrupted.value) {

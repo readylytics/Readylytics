@@ -41,6 +41,7 @@ class LogcatCaptureStoreImplTest {
         every { Log.w(any(), any() as String, any()) } returns 0
         every { Log.e(any(), any() as String) } returns 0
         every { Log.e(any(), any() as String, any()) } returns 0
+        every { Log.println(any(), any(), any()) } returns 0
         every { Log.getStackTraceString(any()) } answers { firstArg<Throwable>().stackTraceToString() }
     }
 
@@ -72,7 +73,7 @@ class LogcatCaptureStoreImplTest {
             val captureStore = LogcatCaptureStoreImpl(mockContext, sink, Dispatchers.Unconfined)
             val output = captureStore.capture(10)
 
-            assertTrue(output != null && output.contains("Direct Local Log Message"))
+            assertTrue(output != null && output.contains("OPERATION_FAILED"))
         }
 
     @Test
