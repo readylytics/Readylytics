@@ -5,6 +5,7 @@ import app.readylytics.health.core.model.data.preferences.scoringZone
 import app.readylytics.health.core.model.domain.model.DomainHeartRateSample
 import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.sync.HealthChangeIngestionStore
 import app.readylytics.health.core.model.domain.sync.SessionSpans
 import kotlinx.coroutines.CancellationException
@@ -25,6 +26,7 @@ class RoomHealthChangeIngestionStore
         private val healthMutationStateDao: HealthMutationStateDao? = null,
         private val settingsRepo: SettingsRepository? = null,
         private val clock: Clock = Clock.systemDefaultZone(),
+        private val transactionRunner: TransactionRunner? = null,
     ) : HealthChangeIngestionStore {
         override suspend fun affectedDatesForRecord(
             type: HealthDataType,
@@ -90,22 +92,26 @@ class RoomHealthChangeIngestionStore
             reason: String = "RECORD_DELETION",
             snapshotId: String = "ACTIVE",
             today: LocalDate = LocalDate.now(clock.withZone(zoneId)),
-        ): Set<LocalDate> {
-            val affected = affectedDatesForRecord(type, hcRecordId, zoneId)
-            if (affected.isNotEmpty() && dirtyRangeStore != null && healthMutationStateDao != null) {
-                val earliest = affected.minOrNull()!!
-                val end = maxOf(today, affected.maxOrNull()!!)
-                healthMutationStateDao.incrementGeneration()
-                dirtyRangeStore.append(
-                    start = earliest,
-                    endInclusive = end,
-                    reason = reason,
-                    snapshotId = snapshotId,
-                )
+        ): Set<LocalDate> =
+            inTransaction {
+                val affected = affectedDatesForRecord(type, hcRecordId, zoneId)
+                if (affected.isNotEmpty() && dirtyRangeStore != null && healthMutationStateDao != null) {
+                    val earliest = affected.minOrNull()!!
+                    val end = maxOf(today, affected.maxOrNull()!!)
+                    healthMutationStateDao.incrementGeneration()
+                    dirtyRangeStore.append(
+                        start = earliest,
+                        endInclusive = end,
+                        reason = reason,
+                        snapshotId = snapshotId,
+                    )
+                }
+                deleteFromDaos(type, hcRecordId)
+                affected
             }
-            deleteFromDaos(type, hcRecordId)
-            return affected
-        }
+
+        private suspend fun <R> inTransaction(block: suspend () -> R): R =
+            transactionRunner?.runInTransaction(block) ?: block()
 
         private suspend fun deleteFromDaos(type: HealthDataType, hcRecordId: String) {
             when (type) {

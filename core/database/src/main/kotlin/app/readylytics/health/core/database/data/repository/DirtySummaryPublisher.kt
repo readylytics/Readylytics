@@ -31,51 +31,54 @@ class DirtySummaryPublisher
             stagedWorkoutUpdates: List<ComputeDailyTrimpUseCase.WorkoutModelTrimpUpdate> = emptyList(),
             activeSnapshotId: String? = null,
         ): Boolean =
-            transactionRunner.runInTransaction {
-                val state = healthMutationStateDao.current()
-                if (state.maintenanceOperationId != null) {
-                    return@runInTransaction false
-                }
-                if (state.sourceGeneration != expectedSourceGeneration) {
-                    return@runInTransaction false
-                }
-                if (activeSnapshotId != null && ticket.scoringSnapshotId != activeSnapshotId) {
-                    return@runInTransaction false
-                }
-
-                dailySummaryDao.upsert(DailySummaryMapper.toEntity(summary, zoneId))
-
-                if (stagedWorkoutUpdates.isNotEmpty()) {
-                    val updateMap = stagedWorkoutUpdates.associate { it.workoutId to it.modelTrimp }
-                    val dayStartMs = summary.date.atStartOfDay(zoneId).toInstant().toEpochMilli()
-                    val nextDayMs = summary.date.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
-                    val workouts = workoutDao.getWorkoutsInRange(dayStartMs, nextDayMs)
-                    val matching = workouts.filter { it.id in updateMap }
-                    if (matching.isNotEmpty()) {
-                        workoutDao.upsertAll(
-                            matching.map { it.copy(modelTrimp = updateMap[it.id]) },
-                        )
+            try {
+                transactionRunner.runInTransaction {
+                    val state = healthMutationStateDao.current()
+                    if (state.maintenanceOperationId != null || state.sourceGeneration != expectedSourceGeneration) {
+                        throw PublishAbortedException()
                     }
-                }
+                    if (activeSnapshotId != null && ticket.scoringSnapshotId != activeSnapshotId) {
+                        throw PublishAbortedException()
+                    }
 
-                val expectedDay = ticket.nextDay.toEpochDay()
-                val nextDay = ticket.nextDay.plusDays(1).toEpochDay()
-                val rowsUpdated =
-                    dirtyRangeDao.advance(
+                    val expectedDay = ticket.nextDay.toEpochDay()
+                    val nextDay = ticket.nextDay.plusDays(1).toEpochDay()
+                    val rowsUpdated =
+                        dirtyRangeDao.advance(
+                            id = ticket.id,
+                            generation = ticket.sourceGeneration,
+                            expectedDay = expectedDay,
+                            nextDay = nextDay,
+                        )
+                    if (rowsUpdated == 0) {
+                        throw PublishAbortedException()
+                    }
+
+                    dailySummaryDao.upsert(DailySummaryMapper.toEntity(summary, zoneId))
+
+                    if (stagedWorkoutUpdates.isNotEmpty()) {
+                        val updateMap = stagedWorkoutUpdates.associate { it.workoutId to it.modelTrimp }
+                        val dayStartMs = summary.date.atStartOfDay(zoneId).toInstant().toEpochMilli()
+                        val nextDayMs = summary.date.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
+                        val workouts = workoutDao.getWorkoutsInRange(dayStartMs, nextDayMs)
+                        val matching = workouts.filter { it.id in updateMap }
+                        if (matching.isNotEmpty()) {
+                            workoutDao.upsertAll(
+                                matching.map { it.copy(modelTrimp = updateMap[it.id]) },
+                            )
+                        }
+                    }
+
+                    dirtyRangeDao.deleteCompleted(
                         id = ticket.id,
                         generation = ticket.sourceGeneration,
-                        expectedDay = expectedDay,
-                        nextDay = nextDay,
                     )
-                if (rowsUpdated == 0) {
-                    return@runInTransaction false
+
+                    true
                 }
-
-                dirtyRangeDao.deleteCompleted(
-                    id = ticket.id,
-                    generation = ticket.sourceGeneration,
-                )
-
-                true
+            } catch (_: PublishAbortedException) {
+                false
             }
+
+        private class PublishAbortedException : RuntimeException()
     }

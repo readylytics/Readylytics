@@ -11,10 +11,12 @@ import app.readylytics.health.core.databaseschema.data.local.entity.DirtyRangeEn
 import app.readylytics.health.core.databaseschema.data.local.entity.HealthMutationStateEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HealthSourceRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.model.ReadinessResult
 import app.readylytics.health.core.model.domain.sync.DirtyTicket
+import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -84,6 +86,7 @@ class DirtyMutationRecoveryTest {
                 daos = daos,
                 dirtyRangeStore = dirtyRangeStore,
                 healthMutationStateDao = database.healthMutationStateDao(),
+                transactionRunner = transactionRunner,
             )
         publisher =
             DirtySummaryPublisher(
@@ -195,29 +198,41 @@ class DirtyMutationRecoveryTest {
             val oldSummary = createTestDailySummary(day, 70f)
             database.dailySummaryDao().upsert(oldSummary)
 
-            database.dirtyRangeDao().insert(
-                DirtyRangeEntity(
-                    sourceGeneration = 1L,
-                    startEpochDay = day.toEpochDay(),
-                    nextEpochDay = day.toEpochDay(),
-                    endEpochDayInclusive = day.plusDays(100).toEpochDay(),
-                    reason = "test_publication",
-                    scoringSnapshotId = "snap-1",
-                ),
-            )
+            database.insertTestWorkout("workout-adv-fail", dayMs)
 
-            assertThrows(IllegalStateException::class.java) {
-                runBlocking {
-                    transactionRunner.runInTransaction {
-                        database.dailySummaryDao().upsert(oldSummary.copy(sleepScore = 95f))
-                        error("Failure before advance")
-                    }
-                }
-            }
+            val ticketId = database.insertTestTicket(day = day)
+
+            val mismatchedTicket =
+                DirtyTicket(
+                    id = ticketId,
+                    sourceGeneration = 1L,
+                    nextDay = day.plusDays(5),
+                    endInclusive = day.plusDays(100),
+                    scoringSnapshotId = "snap-1",
+                )
+
+            val newDomainSummary =
+                DailySummaryMapper.toDomain(oldSummary.copy(sleepScore = 95f), ZoneOffset.UTC)
+            val stagedUpdates =
+                listOf(ComputeDailyTrimpUseCase.WorkoutModelTrimpUpdate("workout-adv-fail", 42f))
+
+            val published =
+                publisher.publish(
+                    ticket = mismatchedTicket,
+                    summary = newDomainSummary,
+                    zoneId = ZoneOffset.UTC,
+                    expectedSourceGeneration = 1L,
+                    stagedWorkoutUpdates = stagedUpdates,
+                    activeSnapshotId = "snap-1",
+                )
+
+            assertFalse(published)
 
             reopenDatabase()
             assertEquals(1, database.dirtyRangeDao().pending(100).size)
+            assertEquals(day.toEpochDay(), database.dirtyRangeDao().pending(100).first().nextEpochDay)
             assertEquals(oldSummary, database.dailySummaryDao().getByDate(dayMs))
+            assertNull(database.workoutDao().getById("workout-adv-fail")?.modelTrimp)
         }
 
     @Test
@@ -229,17 +244,7 @@ class DirtyMutationRecoveryTest {
             val oldSummary = createTestDailySummary(day, 70f)
             database.dailySummaryDao().upsert(oldSummary)
 
-            val ticketId =
-                database.dirtyRangeDao().insert(
-                    DirtyRangeEntity(
-                        sourceGeneration = 1L,
-                        startEpochDay = day.toEpochDay(),
-                        nextEpochDay = day.toEpochDay(),
-                        endEpochDayInclusive = day.plusDays(100).toEpochDay(),
-                        reason = "test_publication",
-                        scoringSnapshotId = "snap-1",
-                    ),
-                )
+            val ticketId = database.insertTestTicket(day = day)
 
             val ticket =
                 DirtyTicket(
@@ -279,17 +284,7 @@ class DirtyMutationRecoveryTest {
         runBlocking {
             database.seedDefaultMutationState(1L)
             val day = LocalDate.of(2026, 2, 1)
-            val ticketId =
-                database.dirtyRangeDao().insert(
-                    DirtyRangeEntity(
-                        sourceGeneration = 1L,
-                        startEpochDay = day.toEpochDay(),
-                        nextEpochDay = day.plusDays(1).toEpochDay(),
-                        endEpochDayInclusive = day.plusDays(100).toEpochDay(),
-                        reason = "test_publication",
-                        scoringSnapshotId = "snap-1",
-                    ),
-                )
+            val ticketId = database.insertTestTicket(day = day, nextDay = day.plusDays(1))
 
             val staleTicket =
                 DirtyTicket(
@@ -353,4 +348,46 @@ private fun createTestDailySummary(
             isCalibrating = false,
         ),
         ZoneOffset.UTC,
+    )
+
+private suspend fun HealthDatabase.insertTestWorkout(
+    id: String,
+    dayMs: Long,
+): WorkoutRecordEntity {
+    val workout =
+        WorkoutRecordEntity(
+            id = id,
+            startTime = dayMs + 1000L,
+            endTime = dayMs + 2000L,
+            exerciseType = "Run",
+            durationMinutes = 15,
+            zone1Minutes = 5f,
+            zone2Minutes = 5f,
+            zone3Minutes = 5f,
+            zone4Minutes = 0f,
+            zone5Minutes = 0f,
+            trimp = 25f,
+            avgHr = 135f,
+            modelTrimp = null,
+        )
+    workoutDao().upsertAll(listOf(workout))
+    return workout
+}
+
+private suspend fun HealthDatabase.insertTestTicket(
+    day: LocalDate,
+    generation: Long = 1L,
+    nextDay: LocalDate = day,
+    endInclusive: LocalDate = day.plusDays(100),
+    snapshotId: String = "snap-1",
+): Long =
+    dirtyRangeDao().insert(
+        DirtyRangeEntity(
+            sourceGeneration = generation,
+            startEpochDay = day.toEpochDay(),
+            nextEpochDay = nextDay.toEpochDay(),
+            endEpochDayInclusive = endInclusive.toEpochDay(),
+            reason = "test_publication",
+            scoringSnapshotId = snapshotId,
+        ),
     )

@@ -21,6 +21,7 @@ import app.readylytics.health.core.model.domain.model.HrMinuteBucketRow
 import app.readylytics.health.core.model.domain.model.RecordType
 import app.readylytics.health.core.model.domain.model.TimestampedTrimp
 import app.readylytics.health.core.model.domain.repository.FatigueWorkoutInput
+import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
 import java.time.ZoneId
 import javax.inject.Inject
@@ -42,6 +43,7 @@ class ScoringDayDataLoader
         private val bloodPressureRecordDao: BloodPressureRecordDao,
         private val oxygenSaturationRecordDao: OxygenSaturationRecordDao,
         private val bodyTemperatureRecordDao: BodyTemperatureRecordDao,
+        private val transactionRunner: TransactionRunner? = null,
     ) {
         // from processWorkouts L298
         suspend fun loadWorkouts(dayMidnightMs: Long, nextDayMidnightMs: Long): List<WorkoutRecordEntity> =
@@ -221,8 +223,15 @@ class ScoringDayDataLoader
             workouts: List<WorkoutRecordEntity>,
             updates: List<ComputeDailyTrimpUseCase.WorkoutModelTrimpUpdate>,
         ) {
-            persistDailySummary(summary, zoneId)
-            persistModelTrimp(workouts, updates)
+            val persistAction: suspend () -> Unit = {
+                persistDailySummary(summary, zoneId)
+                persistModelTrimp(workouts, updates)
+            }
+            if (transactionRunner != null) {
+                transactionRunner.runInTransaction { persistAction() }
+            } else {
+                persistAction()
+            }
         }
     }
 
