@@ -2,9 +2,6 @@ package app.readylytics.health.data.backup
 
 import android.content.Context
 import android.net.Uri
-import android.util.JsonReader
-import androidx.room.withTransaction
-import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.core.model.domain.audit.AuditEvent
 import app.readylytics.health.core.model.domain.audit.AuditTrailRepository
@@ -18,11 +15,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
 import net.lingala.zip4j.ZipFile
 import net.lingala.zip4j.exception.ZipException
 import java.io.File
-import java.io.InputStreamReader
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -32,17 +27,15 @@ class LocalRestoreManager
     @Inject
     constructor(
         @param:ApplicationContext private val context: Context,
-        private val healthDatabase: HealthDatabase,
         private val settingsRepository: SettingsRepository,
-        private val batchLoader: RestoreBatchLoader,
+        private val restoreDatabaseOperations: RestoreDatabaseOperations,
         private val restorePrefsApplier: RestorePreferencesApplier,
         private val encryptionManager: EncryptionManager,
         private val auditTrailRepository: AuditTrailRepository,
         private val recommendationCoverageChecker: RestoreRecommendationCoverageChecker,
+        private val inventoryValidator: RestoreInventoryValidator,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) {
-        private val json = Json { ignoreUnknownKeys = true }
-
         suspend fun validate(
             backupUri: Uri,
             providedPassword: String? = null,
@@ -58,10 +51,7 @@ class LocalRestoreManager
                             providedPassword
                                 ?.takeIf { it.isNotBlank() }
                                 ?: settingsRepository.userPreferences.first().backupPasswordHash?.let {
-                                    encryptionManager
-                                        .decrypt(
-                                            it,
-                                        )
+                                    encryptionManager.decrypt(it)
                                 }
 
                         if (zipFile.isEncrypted) {
@@ -69,7 +59,15 @@ class LocalRestoreManager
                             zipFile.setPassword(password.toCharArray())
                         }
 
-                        readManifest(zipFile)
+                        val header =
+                            zipFile.fileHeaders.firstOrNull { it.fileName.endsWith(".json") }
+                                ?: error("No JSON file found in backup ZIP")
+
+                        val validated =
+                            zipFile.getInputStream(header).use { inputStream ->
+                                inventoryValidator.validate(inputStream)
+                            }
+                        validated.manifest
                     } finally {
                         tempZipFile.delete()
                     }
@@ -114,9 +112,7 @@ class LocalRestoreManager
                 providedPassword
                     ?.takeIf { it.isNotBlank() }
                     ?: settingsRepository.userPreferences.first().backupPasswordHash?.let {
-                        encryptionManager.decrypt(
-                            it,
-                        )
+                        encryptionManager.decrypt(it)
                     }
 
             if (zipFile.isEncrypted) {
@@ -124,7 +120,22 @@ class LocalRestoreManager
                 zipFile.setPassword(password.toCharArray())
             }
 
-            val prefsBackup = readManifestAndStream(zipFile)
+            val header =
+                zipFile.fileHeaders.firstOrNull { it.fileName.endsWith(".json") }
+                    ?: error("No JSON file found in backup ZIP")
+
+            // Read-only streaming validation pass before replacing any database data
+            val validated =
+                zipFile.getInputStream(header).use { inputStream ->
+                    inventoryValidator.validate(inputStream)
+                }
+
+            val prefsBackup =
+                restoreDatabaseOperations.executeDatabaseRestore(
+                    zipFile = zipFile,
+                    header = header,
+                    validated = validated,
+                )
 
             if (prefsBackup != null) {
                 try {
@@ -133,9 +144,6 @@ class LocalRestoreManager
                     throw e
                 } catch (e: Throwable) {
                     logAudit(AuditEvent.Type.RESTORE_FAILED, "prefs_failed: ${e::class.simpleName}")
-                    // Task 5: the database data already committed and is fully valid even though
-                    // preferences restore failed (only settings restoration is being reported as a
-                    // partial failure here), so still check/schedule the recommendation backfill.
                     recommendationCoverageChecker.scheduleRecomputeIfIncomplete()
                     return RestoreResult.PartialSuccessRequiresRestart(
                         failedStage = RestoreStage.PREFERENCES,
@@ -144,16 +152,6 @@ class LocalRestoreManager
                 }
             }
 
-            // Task 5: a restored backup may predate workout-recommendation assembly, or -- since
-            // it can be internally inconsistent (e.g. it predates a rule-version bump the restored
-            // scoringVersion doesn't reflect) -- simply carry payloads this build's codec no longer
-            // recognizes. Either way the restored data is still fully valid and must restore
-            // successfully; this only ever *schedules* a local backfill, it never fails the restore.
-            // Runs after preferences restore succeeds (or in the catch above if it doesn't) so its
-            // retention-bounded coverage check reads the just-restored preferences, not stale ones
-            // from before restore -- scheduling this before preferences commit could let the worker
-            // start recomputing against a pre-restore scoring zone, retention window, or weight
-            // profile.
             recommendationCoverageChecker.scheduleRecomputeIfIncomplete()
 
             logAudit(AuditEvent.Type.RESTORE_COMPLETED, "success_requires_restart")
@@ -174,113 +172,9 @@ class LocalRestoreManager
             )
         }
 
-        private suspend fun readManifestAndStream(zipFile: ZipFile): UserPreferencesBackup? {
-            val manifest = readManifest(zipFile)
-            val header =
-                zipFile.fileHeaders.firstOrNull { it.fileName.endsWith(".json") }
-                    ?: error("No JSON file found in backup ZIP")
-
-            var prefsBackup: UserPreferencesBackup? = null
-            healthDatabase.withTransaction {
-                zipFile.getInputStream(header).use { inputStream ->
-                    val reader = JsonReader(InputStreamReader(inputStream, "UTF-8"))
-                    performStreamingRestore(reader, manifest.schemaVersion) { parsedPreferences ->
-                        prefsBackup = parsedPreferences
-                    }
-                }
-            }
-            return prefsBackup
-        }
-
         private suspend fun buildRestoreFailure(cause: Throwable): RestoreResult.Failure {
             logAudit(AuditEvent.Type.RESTORE_FAILED, cause::class.simpleName)
             return RestoreResult.Failure(cause)
-        }
-
-        private fun readManifest(zipFile: ZipFile): BackupManifest {
-            val header =
-                zipFile.fileHeaders.firstOrNull { it.fileName.endsWith(".json") }
-                    ?: error("No JSON file found in backup ZIP")
-
-            return zipFile.getInputStream(header).use { inputStream ->
-                val reader = JsonReader(InputStreamReader(inputStream, "UTF-8"))
-                var schemaVersion = -1
-                var exportedAt = ""
-                var rowCounts = emptyMap<String, Int>()
-
-                reader.beginObject()
-                while (reader.hasNext()) {
-                    when (reader.nextName()) {
-                        "schemaVersion" -> schemaVersion = reader.nextInt()
-                        "exportedAt" -> exportedAt = reader.nextString()
-                        "rowCounts" -> rowCounts = readRowCounts(reader)
-                        else -> reader.skipValue()
-                    }
-                }
-                reader.endObject()
-
-                BackupSchemaPolicy.requireSupported(schemaVersion)
-                BackupManifest(schemaVersion, exportedAt, rowCounts)
-            }
-        }
-
-        private fun readRowCounts(reader: JsonReader): Map<String, Int> {
-            val counts = mutableMapOf<String, Int>()
-            reader.beginObject()
-            while (reader.hasNext()) {
-                counts[reader.nextName()] = reader.nextInt()
-            }
-            reader.endObject()
-            return counts
-        }
-
-        private suspend fun performStreamingRestore(
-            reader: JsonReader,
-            schemaVersion: Int,
-            onPreferencesParsed: (UserPreferencesBackup) -> Unit,
-        ) {
-            healthDatabase.sleepSessionDao().deleteAll()
-            healthDatabase.heartRateDao().deleteAll()
-            healthDatabase.hrvDao().deleteAll()
-            healthDatabase.workoutDao().deleteAll()
-            healthDatabase.dailySummaryDao().deleteAll()
-            healthDatabase.sourceRecordDao().deleteAll()
-            healthDatabase.minuteBucketMaintenanceDao().deleteAll()
-            healthDatabase.vo2MaxRecordDao().deleteAll()
-
-            val handlers =
-                mapOf<String, suspend (JsonReader) -> Unit>(
-                    "sleepSessions" to { batchLoader.restoreSleepSessions(it) },
-                    "healthSourceRecords" to { batchLoader.restoreHealthSourceRecords(it) },
-                    "heartRateRecords" to { batchLoader.restoreHeartRateRecords(it, schemaVersion) },
-                    "hrvRecords" to { batchLoader.restoreHrvRecords(it, schemaVersion) },
-                    "hrMinuteBuckets" to { batchLoader.restoreHrMinuteBuckets(it) },
-                    "workouts" to { batchLoader.restoreWorkouts(it) },
-                    "workoutRoutePoints" to { batchLoader.restoreWorkoutRoutePoints(it) },
-                    "dailySummaries" to { batchLoader.restoreDailySummaries(it) },
-                    "weightRecords" to { batchLoader.vitalsLoader.restoreWeightRecords(it) },
-                    "bodyFatRecords" to { batchLoader.vitalsLoader.restoreBodyFatRecords(it) },
-                    "bloodPressureRecords" to { batchLoader.vitalsLoader.restoreBloodPressureRecords(it) },
-                    "oxygenSaturationRecords" to { batchLoader.vitalsLoader.restoreOxygenSaturationRecords(it) },
-                    "bodyTemperatureRecords" to { batchLoader.vitalsLoader.restoreBodyTemperatureRecords(it) },
-                    "stepRecords" to { batchLoader.vitalsLoader.restoreStepRecords(it) },
-                    "vo2MaxRecords" to { batchLoader.vitalsLoader.restoreVo2MaxRecords(it) },
-                )
-
-            reader.beginObject()
-            while (reader.hasNext()) {
-                val key = reader.nextName()
-                when {
-                    key == "preferences" -> {
-                        val prefsString = readNextObjectAsString(json, reader)
-                        val prefsBackup = json.decodeFromString<UserPreferencesBackup>(prefsString)
-                        onPreferencesParsed(prefsBackup)
-                    }
-                    key in handlers -> handlers[key]!!.invoke(reader)
-                    else -> reader.skipValue()
-                }
-            }
-            reader.endObject()
         }
 
         private fun copyUriToTempFile(

@@ -474,7 +474,7 @@ class LocalRestoreApplicationTest : LocalRestoreManagerTestBase() {
         }
 
     @Test
-    fun applyRestore_oldFormatBackupWithoutVitalsKeysLeavesExistingVitalsUntouched() =
+    fun applyRestore_legacyBackupWithoutVitalsEmptiesExistingVitals() =
         runTest {
             db.weightRecordDao().upsertAll(
                 listOf(
@@ -486,17 +486,16 @@ class LocalRestoreApplicationTest : LocalRestoreManagerTestBase() {
                 ),
             )
 
-            // createValidBackupJson() has no "weightRecords"/"bodyFatRecords"/etc keys, matching
-            // every backup created before this table set was added to the export.
-            val json = createValidBackupJson()
-            val zipFile = createBackupZipFile("old_format_no_vitals_backup.zip", json)
+            // createValidV5BackupJson() has no "weightRecords"/"bodyFatRecords"/etc keys, matching
+            // legitimate historical backups that predated these tables.
+            val json = createValidV5BackupJson()
+            val zipFile = createBackupZipFile("legacy_no_vitals_backup.zip", json)
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
             assertTrue(result is RestoreResult.SuccessRequiresRestart)
             val remainingWeights = db.weightRecordDao().getSince(0)
-            assertEquals(1, remainingWeights.size)
-            assertEquals("existing_weight", remainingWeights.single().id)
+            assertTrue(remainingWeights.isEmpty(), "Absent legitimate old arrays must be empty after restore")
             zipFile.delete()
         }
 
@@ -526,6 +525,7 @@ class LocalRestoreApplicationTest : LocalRestoreManagerTestBase() {
                     )
                 },
             )
+            json.getJSONObject("rowCounts").put("weightRecords", 1)
             val zipFile = createBackupZipFile("new_format_vitals_backup.zip", json)
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
@@ -552,6 +552,7 @@ class LocalRestoreApplicationTest : LocalRestoreManagerTestBase() {
                     )
                 }
             json.put("dailySummaries", summariesJson)
+            json.getJSONObject("rowCounts").put("dailySummaries", 1)
             val zipFile = createBackupZipFile("legacy_summary_backup.zip", json)
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
@@ -582,6 +583,7 @@ class LocalRestoreApplicationTest : LocalRestoreManagerTestBase() {
                     )
                 }
             json.put("dailySummaries", summariesJson)
+            json.getJSONObject("rowCounts").put("dailySummaries", 1)
             val zipFile = createBackupZipFile("current_summary_backup.zip", json)
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
@@ -613,6 +615,7 @@ class LocalRestoreApplicationTest : LocalRestoreManagerTestBase() {
                     )
                 }
             json.put("vo2MaxRecords", vo2MaxJson)
+            json.getJSONObject("rowCounts").put("vo2MaxRecords", 1)
             val zipFile = createBackupZipFile("vo2_max_backup.zip", json)
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))

@@ -72,9 +72,8 @@ abstract class LocalRestoreManagerTestBase {
         manager =
             LocalRestoreManager(
                 context,
-                db,
                 settingsRepo,
-                RestoreBatchLoader(db, RestoreVitalsLoader(db)),
+                RestoreDatabaseOperations(db, RestoreBatchLoader(db, RestoreVitalsLoader(db))),
                 RestorePreferencesApplier(
                     settingsRepo,
                     RestoreLayoutRepositories(
@@ -90,6 +89,7 @@ abstract class LocalRestoreManagerTestBase {
                 encryptionManager,
                 auditTrailRepository,
                 RestoreRecommendationCoverageChecker(db, settingsRepo, workerScheduler),
+                RestoreInventoryValidator(),
                 Dispatchers.Unconfined,
             )
     }
@@ -102,18 +102,82 @@ abstract class LocalRestoreManagerTestBase {
     protected fun createBackupZipFile(
         fileName: String,
         json: JSONObject,
+    ): File = createRawBackupZipFile(fileName, json.toString())
+
+    protected fun createRawBackupZipFile(
+        fileName: String,
+        rawContent: String,
     ): File {
         val zipFile = File(context.cacheDir, fileName)
         if (zipFile.exists()) zipFile.delete()
         val jsonFile = File(context.cacheDir, fileName.replace(".zip", ".json"))
-        jsonFile.writeText(json.toString())
+        jsonFile.writeText(rawContent)
         val zip = net.lingala.zip4j.ZipFile(zipFile)
         zip.addFile(jsonFile)
         jsonFile.delete()
         return zipFile
     }
 
-    protected fun createValidBackupJson(): JSONObject {
+    protected fun createValidBackupJson(): JSONObject = createValidBackupJsonForVersion(HealthDatabase.DATABASE_VERSION)
+
+    protected fun createValidV5BackupJson(): JSONObject =
+        createBaseBackupJson(5, setOf("sleepSessions", "heartRateRecords", "hrvRecords", "workouts", "dailySummaries"))
+
+    protected fun createValidV7BackupJson(): JSONObject =
+        createBaseBackupJson(7, setOf("sleepSessions", "heartRateRecords", "hrvRecords", "workouts", "dailySummaries"))
+
+    protected fun createValidV9BeforeFixBackupJson(): JSONObject =
+        createBaseBackupJson(9, setOf("sleepSessions", "heartRateRecords", "hrvRecords", "workouts", "dailySummaries"))
+
+    protected fun createValidV9AfterFixBackupJson(): JSONObject {
+        val tables =
+            setOf(
+                "sleepSessions",
+                "heartRateRecords",
+                "hrvRecords",
+                "workouts",
+                "dailySummaries",
+                "weightRecords",
+                "bodyFatRecords",
+                "bloodPressureRecords",
+                "oxygenSaturationRecords",
+                "bodyTemperatureRecords",
+                "stepRecords",
+            )
+        return createBaseBackupJson(9, tables)
+    }
+
+    protected fun createValidV10BackupJson(): JSONObject {
+        val tables =
+            setOf(
+                "sleepSessions",
+                "heartRateRecords",
+                "hrvRecords",
+                "workouts",
+                "dailySummaries",
+                "weightRecords",
+                "bodyFatRecords",
+                "bloodPressureRecords",
+                "oxygenSaturationRecords",
+                "bodyTemperatureRecords",
+                "stepRecords",
+                "healthSourceRecords",
+                "hrMinuteBuckets",
+            )
+        return createBaseBackupJson(10, tables)
+    }
+
+    protected fun createValidBackupJsonForVersion(version: Int): JSONObject {
+        val tables =
+            app.readylytics.health.core.model.domain.backup.BackupInventoryPolicy
+                .requiredTables(version)
+        return createBaseBackupJson(version, tables)
+    }
+
+    private fun createBaseBackupJson(
+        version: Int,
+        tables: Set<String>,
+    ): JSONObject {
         val sleepSessions =
             JSONArray().apply {
                 put(
@@ -132,22 +196,30 @@ abstract class LocalRestoreManagerTestBase {
                 )
             }
 
-        return JSONObject().apply {
-            put("schemaVersion", HealthDatabase.DATABASE_VERSION)
-            put("exportedAt", Instant.now().toString())
-            put("rowCounts", JSONObject().apply { put("sleepSessions", 1) })
-            put("sleepSessions", sleepSessions)
-            put("heartRateRecords", JSONArray())
-            put("hrvRecords", JSONArray())
-            put("workouts", JSONArray())
-            put("dailySummaries", JSONArray())
-            put(
-                "preferences",
-                JSONObject().apply {
-                    put("goalSleepHours", 8.0)
-                },
-            )
+        val rowCountsJson = JSONObject()
+        val root =
+            JSONObject().apply {
+                put("schemaVersion", version)
+                put("exportedAt", Instant.now().toString())
+                put(
+                    "preferences",
+                    JSONObject().apply {
+                        put("goalSleepHours", 8.0)
+                    },
+                )
+            }
+
+        tables.forEach { table ->
+            if (table == "sleepSessions") {
+                rowCountsJson.put(table, 1)
+                root.put(table, sleepSessions)
+            } else {
+                rowCountsJson.put(table, 0)
+                root.put(table, JSONArray())
+            }
         }
+        root.put("rowCounts", rowCountsJson)
+        return root
     }
 
     protected class FakeAuditTrailRepository : AuditTrailRepository {

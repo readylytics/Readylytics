@@ -23,6 +23,9 @@ interface WorkoutRoutePointDao {
     @Query("SELECT COUNT(*) FROM workout_route_points")
     suspend fun count(): Int
 
+    @Query("DELETE FROM workout_route_points")
+    suspend fun deleteAll(): Int
+
 
     @Query(
         "SELECT * FROM workout_route_points WHERE id > :afterId " +

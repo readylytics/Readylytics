@@ -36,7 +36,7 @@ interface SourceRecordDao {
     @Query("DELETE FROM health_source_records WHERE sourceRecordId = :sourceRecordId")
     suspend fun deleteBySourceRecordId(sourceRecordId: String): Int
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertAll(entities: List<HealthSourceRecordEntity>)
 
     @Query("SELECT * FROM health_source_records ORDER BY id ASC")

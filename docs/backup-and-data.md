@@ -18,13 +18,13 @@ Your supported local records, calculated summaries, and preferences can be backe
 
 **What gets backed up:**
 - Sleep-session aggregates, including the stored session span and stage totals
-- Heart-rate and HRV records
-- Workout records
+- Heart-rate and HRV records, health source records, and heart-rate minute buckets
+- Workout records and workout GPS route points
 - Calculated daily summaries, including frozen baselines
-- Preferences, including scoring, readiness, UI, backup, and dashboard card configuration (order, visibility, and visualization mode)
-- Vitals layout configuration (vitals card order, visibility, and visualization mode; trend diagram order and visibility)
+- Body measurements and vitals (weight, body fat, blood pressure, oxygen saturation, body temperature, step records, and VO2 Max records)
+- Preferences, including scoring, readiness, UI, backup schedule, and custom card/chart layout configurations across dashboard, sleep, workouts, and vitals
 
-**Not included:** Raw sleep-stage rows, raw step records, weight, body fat, blood pressure, and oxygen-saturation records are not exported by the current local backup format. A backup does not modify or replace the original data managed by Health Connect.
+**Not included:** Raw sleep-stage rows (which are aggregated from Health Connect) and transient device-local logs/insight dismissals. A backup does not modify or replace the original data managed by Health Connect.
 
 **Cache and diagnostics are never backed up.** The app's internal cache — including the diagnostic-log, crash-report, and logcat-capture export directories — is excluded from both Android auto-backup and device-to-device transfer (`data_extraction_rules.xml` / `full_backup_content.xml`). These plaintext exports are transient on-device diagnostics; they are pruned on startup and never included in a Readylytics backup.
 
@@ -53,11 +53,9 @@ Lost your settings after reinstalling the app? Restore them in seconds.
 1. **Go to:** Settings → Data & Backup → Available Backups
 2. **Select the backup** you want to restore.
 3. **Enter the backup password** (if you set one).
-4. **Tap "Restore"** — The supported local records, summaries, and preferences are restored; the app may restart to apply changes.
+4. **Tap "Restore"** — Readylytics validates the complete schema inventory, declared record counts, and data integrity before replacing local data. The supported local records, summaries, and preferences are restored in an atomic transaction; the app may restart to apply changes.
 
-Backup manifests v5, v6, and v7 all restore into the current v7 entities. When restoring a v5 or v6
-backup, Readylytics normalizes legacy heart-rate and HRV composite IDs to
-`(sourceRecordId, timestampMs)` so records retain their current stable identity.
+Backup manifests from version 5 through current version 19 all restore into current entities. When restoring legacy v5 or v6 backups, Readylytics normalizes legacy heart-rate and HRV composite IDs to `(sourceRecordId, timestampMs)` so records retain their current stable identity. All table replacements execute in child-before-parent order with transaction rollback protection if validation or foreign-key checks fail.
 
 ### Changing your backup password
 

@@ -23,6 +23,7 @@ internal class ResidualFatigueScenarioSeeder(
         val heartRates: MutableList<HeartRateRecordEntity> = mutableListOf(),
         val hrvs: MutableList<HrvRecordEntity> = mutableListOf(),
         val sleepSessions: MutableList<SleepSessionEntity> = mutableListOf(),
+        var nextSourceRef: Long = 1000L,
     )
 
     suspend fun seedDeterministicScenario(database: HealthDatabase, seedEverydayAndHrv: Boolean = false) {
@@ -186,9 +187,8 @@ internal class ResidualFatigueScenarioSeeder(
             ),
         )
         var t = startEpochMs
-        var ref = 1000L + records.workouts.size * 100L
         while (t < endEpochMs) {
-            val currentRef = ++ref
+            val currentRef = ++records.nextSourceRef
             records.sourceRecords.add(
                 HealthSourceRecordEntity(
                     id = currentRef,

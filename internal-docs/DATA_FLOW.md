@@ -526,25 +526,16 @@ result detail. They do not store health samples, backup contents, passwords, enc
 Health Connect payloads.
 
 **Staged Restore Design:**
-Restore is staged. Database replacement is atomic within Room. Preferences and layout configurations (dashboard cards, vitals layout, and sleep tab layout configurations via `SleepLayoutRepository`) are restored after the
-database transaction commits because Room and DataStore cannot share a transaction. If a later
-stage fails, the app returns an explicit partial-success result requiring restart and instructs
-the user to rerun restore. Backup manifests v5, v6, and v7 restore into the current v7 entities.
-Sleep/heart-rate/HRV/workout/daily-summary tables are cleared and replaced unconditionally on every
-restore (their keys have been present in every supported backup format). The six raw-vitals tables
-(weight, body fat, blood pressure, SpO2, body temperature, steps) are cleared and replaced only when
-their corresponding JSON key is present in the backup being restored, so restoring an older backup
-that predates these tables leaves the current local rows for them untouched. Immediately after that
-commit, `LocalRestoreManager` also checks whether every restored `daily_summaries` row carries a
-recommendation payload `WorkoutRecommendationCodec` still recognizes (never trusting the restored
-`scoringVersion` preference for this — see §1.2's scoring-version-5 paragraph) and enqueues a
-recompute-only backfill if not; this is a background follow-up, never a restore failure.
-For v5/v6 payloads, legacy HR/HRV composite IDs normalize to
-`(sourceRecordId, timestampMs)` by removing only an exact trailing `_<timestampMs>` suffix.
-As of v10, backups also carry `health_source_records` and `hr_minute_buckets`; HR/HRV rows
-serialize the integer `sourceRecordRef` directly, and restore re-decodes older schema-7–9
-`sourceRecordId`-format rows (and pre-v7 legacy rows) back into `sourceRecordRef` via
-`SourceRecordDao.getOrCreateSourceRef`, resolving the base UUID the same way the migration does.
+Restore is staged and pre-validated. Before any database modifications occur, `RestoreInventoryValidator` executes a read-only streaming inventory and count validation pass: it verifies the archive JSON structure, rejects duplicate top-level keys, validates that declared row counts are non-negative and exactly match observed decoded record counts, and enforces minimum required tables via `BackupInventoryPolicy.requiredTables(version)` (core tables for v5–9; vitals, sources, and buckets added in v10; workout routes added in v11; VO2 Max added in v19).
+
+Database replacement is atomic within a Room transaction:
+1. **Child-Before-Parent Clearing:** All health tables are cleared in strict child-before-parent order: routes (`workout_route_points`), sleep stages (`sleep_stages`), HR/HRV (`heart_rate_records`, `hrv_records`), warm minute buckets (`hr_minute_buckets`), vitals/steps/VO2 (`weight_records`, `body_fat_records`, `blood_pressure_records`, `oxygen_saturation_records`, `body_temperature_records`, `step_records`, `vo2_max_records`), daily summaries (`daily_summaries`), sleep/workout parents (`sleep_sessions`, `workouts`), and health source records (`health_source_records`). Device-local state (`insight_dismissals` and `audit_events`) is retained under documented app ownership and never cleared during restore.
+2. **Stable Parent-Before-Child Streaming:** Records stream from the backup archive in stable relational order independently of JSON field ordering via two passes (Pass 1: parent entities `health_source_records`, `workouts`, `sleep_sessions`, plus `preferences`; Pass 2: child entities `heart_rate_records`, `hrv_records`, `workout_route_points`, and remaining vitals tables).
+3. **Transaction Verification:** Before commit, `LocalRestoreManager` verifies that actual inserted database counts match observed counts and executes `PRAGMA foreign_key_check`. Any foreign key or count violation throws and rolls back all database modifications, leaving pre-existing data completely intact.
+
+Preferences and layout configurations (dashboard cards, vitals layout, and sleep tab layout configurations via `SleepLayoutRepository`) are restored only after the database transaction commits because Room and DataStore cannot share a transaction. If preferences restoration fails, the app returns an explicit partial-success result requiring restart and instructs the user to rerun restore. Backup manifests v5 through current v19 restore into current entities.
+For legacy v5/v6 payloads, legacy HR/HRV composite IDs normalize to `(sourceRecordId, timestampMs)` by removing only an exact trailing `_<timestampMs>` suffix. As of v10, backups carry `health_source_records` and `hr_minute_buckets`; HR/HRV rows serialize the integer `sourceRecordRef` directly, and restore re-decodes older schema-7–9 `sourceRecordId`-format rows back into `sourceRecordRef` via `SourceRecordDao.getOrCreateSourceRef`.
+Immediately after database commit, `LocalRestoreManager` checks whether restored `daily_summaries` rows carry a recognized recommendation payload and schedules a recompute-only backfill if incomplete.
 
 **Encryption & Key Management:**
 Local encryption keys are versioned (e.g., `readylytics_master_key_v1`) and protected via Android Keystore.

@@ -23,7 +23,6 @@ class RestoreVitalsLoader
 
         suspend fun restoreWeightRecords(reader: JsonReader) {
             val dao = healthDatabase.weightRecordDao()
-            dao.deleteAll()
             reader.beginArray()
             val batch = mutableListOf<WeightRecordEntity>()
             while (reader.hasNext()) {
@@ -39,7 +38,6 @@ class RestoreVitalsLoader
 
         suspend fun restoreBodyFatRecords(reader: JsonReader) {
             val dao = healthDatabase.bodyFatRecordDao()
-            dao.deleteAll()
             reader.beginArray()
             val batch = mutableListOf<BodyFatRecordEntity>()
             while (reader.hasNext()) {
@@ -55,7 +53,6 @@ class RestoreVitalsLoader
 
         suspend fun restoreBloodPressureRecords(reader: JsonReader) {
             val dao = healthDatabase.bloodPressureRecordDao()
-            dao.deleteAll()
             reader.beginArray()
             val batch = mutableListOf<BloodPressureRecordEntity>()
             while (reader.hasNext()) {
@@ -71,7 +68,6 @@ class RestoreVitalsLoader
 
         suspend fun restoreOxygenSaturationRecords(reader: JsonReader) {
             val dao = healthDatabase.oxygenSaturationRecordDao()
-            dao.deleteAll()
             reader.beginArray()
             val batch = mutableListOf<OxygenSaturationRecordEntity>()
             while (reader.hasNext()) {
@@ -87,7 +83,6 @@ class RestoreVitalsLoader
 
         suspend fun restoreBodyTemperatureRecords(reader: JsonReader) {
             val dao = healthDatabase.bodyTemperatureRecordDao()
-            dao.deleteAll()
             reader.beginArray()
             val batch = mutableListOf<BodyTemperatureRecordEntity>()
             while (reader.hasNext()) {
@@ -103,7 +98,6 @@ class RestoreVitalsLoader
 
         suspend fun restoreStepRecords(reader: JsonReader) {
             val dao = healthDatabase.stepRecordDao()
-            dao.deleteAll()
             reader.beginArray()
             val batch = mutableListOf<StepRecordEntity>()
             while (reader.hasNext()) {
@@ -119,7 +113,6 @@ class RestoreVitalsLoader
 
         suspend fun restoreVo2MaxRecords(reader: JsonReader) {
             val dao = healthDatabase.vo2MaxRecordDao()
-            dao.deleteAll()
             reader.beginArray()
             val batch = mutableListOf<Vo2MaxRecordEntity>()
             while (reader.hasNext()) {

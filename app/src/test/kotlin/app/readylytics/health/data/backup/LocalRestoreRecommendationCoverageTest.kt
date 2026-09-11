@@ -49,6 +49,7 @@ class LocalRestoreRecommendationCoverageTest : LocalRestoreManagerTestBase() {
                     )
                 }
             json.put("dailySummaries", summariesJson)
+            json.getJSONObject("rowCounts").put("dailySummaries", summariesJson.length())
             val zipFile = createBackupZipFile("old_backup_missing_recommendation.zip", json)
 
             val builderSlot = io.mockk.slot<UserPreferencesProto.Builder.() -> Unit>()
@@ -81,6 +82,7 @@ class LocalRestoreRecommendationCoverageTest : LocalRestoreManagerTestBase() {
                     )
                 }
             json.put("dailySummaries", summariesJson)
+            json.getJSONObject("rowCounts").put("dailySummaries", summariesJson.length())
             val zipFile = createBackupZipFile("valid_recommendation_backup.zip", json)
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
@@ -122,6 +124,7 @@ class LocalRestoreRecommendationCoverageTest : LocalRestoreManagerTestBase() {
                     )
                 }
             json.put("dailySummaries", summariesJson)
+            json.getJSONObject("rowCounts").put("dailySummaries", summariesJson.length())
             val zipFile = createBackupZipFile("partially_covered_backup.zip", json)
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
@@ -170,6 +173,7 @@ class LocalRestoreRecommendationCoverageTest : LocalRestoreManagerTestBase() {
                     )
                 }
             json.put("dailySummaries", summariesJson)
+            json.getJSONObject("rowCounts").put("dailySummaries", summariesJson.length())
             val zipFile = createBackupZipFile("outside_retention_missing_payload_backup.zip", json)
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
@@ -200,6 +204,7 @@ class LocalRestoreRecommendationCoverageTest : LocalRestoreManagerTestBase() {
                     )
                 }
             json.put("dailySummaries", summariesJson)
+            json.getJSONObject("rowCounts").put("dailySummaries", summariesJson.length())
             val zipFile = createBackupZipFile("within_retention_missing_payload_backup.zip", json)
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
@@ -226,6 +231,7 @@ class LocalRestoreRecommendationCoverageTest : LocalRestoreManagerTestBase() {
                     )
                 }
             json.put("dailySummaries", summariesJson)
+            json.getJSONObject("rowCounts").put("dailySummaries", summariesJson.length())
             val zipFile = createBackupZipFile("ordering_backup.zip", json)
 
             val builderSlot = io.mockk.slot<UserPreferencesProto.Builder.() -> Unit>()
@@ -258,6 +264,7 @@ class LocalRestoreRecommendationCoverageTest : LocalRestoreManagerTestBase() {
                     )
                 }
             json.put("dailySummaries", summariesJson)
+            json.getJSONObject("rowCounts").put("dailySummaries", summariesJson.length())
             val zipFile = createBackupZipFile("prefs_fail_still_recomputes_backup.zip", json)
 
             coEvery { settingsRepo.batchUpdate(any()) } throws RuntimeException("prefs fail")

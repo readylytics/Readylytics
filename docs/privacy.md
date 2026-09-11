@@ -56,11 +56,7 @@ Local encryption keys are stored through Android Keystore. On devices that suppo
 Readylytics attempts to use StrongBox-backed key protection and falls back to standard Keystore
 when StrongBox is unavailable. Backup passwords and database keys remain local to the device.
 
-A local restore replaces local health data from the selected backup. If settings restoration fails
-after health data is restored, Readylytics reports a partial restore and asks you to restart and
-rerun restore. An older backup made before workout recommendations existed, or one otherwise missing
-that computed data, still restores successfully; Readylytics detects the gap from the restored data
-itself and quietly recomputes those recommendations locally afterward, entirely on-device.
+A local restore replaces local health data from the selected backup after validating the complete schema inventory and declared record counts. If parsing, count verification, or database integrity checks fail, no data is modified and the database is rolled back. If settings restoration fails after health data is restored, Readylytics reports a partial restore and asks you to restart and rerun restore. An older backup made before workout recommendations existed, or one otherwise missing that computed data, still restores successfully; Readylytics detects the gap from the restored data itself and quietly recomputes those recommendations locally afterward, entirely on-device.
 
 The production app does not request the Android `INTERNET` permission. It does
 not include analytics, advertising, telemetry uploads, or any Readylytics-run

@@ -326,6 +326,12 @@ class PersistenceBatchingTest {
 
         override suspend fun count(): Int = points.size
 
+        override suspend fun deleteAll(): Int {
+            val count = points.size
+            points.clear()
+            return count
+        }
+
 
         override suspend fun pageAfter(
             afterId: Long,
