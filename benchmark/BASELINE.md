@@ -172,6 +172,84 @@ SEC-002 | ba89eb9c | `./gradlew :feature:settings:testDebugUnitTest --tests '*Lo
 SEC-003 | ba89eb9c | `./gradlew :app:testDebugUnitTest --tests '*BackupStreamWriterTest*'` | Backup export captures an atomic snapshot across source records, raw samples, warm buckets, and daily summaries | not run: planned fixture to be implemented in Task R1; code inspection confirms BackupStreamWriter performs uncoordinated sequential table queries without an enclosing transaction or generation lock | R1
 SEC-004 | ba89eb9c | `./gradlew :app:testDebugUnitTest --tests '*LocalRestoreValidationTest*'` | Local restore validates complete schema-specific table inventory and row counts before clearing existing database tables | not run: planned fixture to be implemented in Task S2/S3; code inspection confirms performStreamingRestore executes deleteAll() on core tables before validating payload completeness | S2/S3
 SEC-005 | ba89eb9c | `./gradlew :app:testDebugUnitTest --tests '*LocalBackupManagerTest*'` | Backup creation preserves prior valid archive until new archive is verified, and clears plaintext staging on process restart | not run: planned fixture to be implemented in Task S2/R3; code inspection confirms createBackup prunes old archives before new archive verification and leaves plaintext cache files on crash | S2/R3
-PERF-001 | ba89eb9c | `./gradlew :core:database:testDebugUnitTest --tests '*DatabaseBenchmarkFixture*'` | Paged ingestion memory does not scale with total scanned parent records; source lookups batch within sample transactions | not run: planned fixture to be implemented in Task B2; code inspection confirms getOrCreateSourceRef executed once per parent record outside sample transaction batching | B2
-PERF-002 | ba89eb9c | `./gradlew :core:database:testDebugUnitTest --tests '*ScoringWalkForwardBenchmark*'` | Historical walk-forward recompute caches nightly aggregations without re-expanding warm samples or re-scanning prior workout histories per day | not run: planned fixture to be implemented in Task B2; code inspection confirms ScoringHistoryRepositoryImpl reconstructs individual samples from minute buckets on every night query | B2
-PERF-003 | ba89eb9c | `./gradlew :core:database:testDebugUnitTest --tests '*DataRollupBenchmark*'` | DataRollupManager and BackupStreamWriter process samples and sources in bounded pages rather than loading full day/table into memory | not run: planned fixture to be implemented in Task B2; code inspection confirms DataRollupManager.rollupDayChunk loads all plausible samples for a day at once into memory | B2
+PERF-001 | 410c8c82 | `./gradlew :database-benchmark:connectedBenchmarkAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=app.readylytics.health.benchmark.HealthPipelineBaselineBenchmark#measureIngestionPipelineStages` | Paged ingestion memory does not scale with total scanned parent records; source lookups batch within sample transactions | Fixtures & test suite compiled; device execution blocked (0 adb devices attached); code inspection confirms getOrCreateSourceRef executed per parent record outside sample transaction batching | B2
+PERF-002 | 410c8c82 | `./gradlew :database-benchmark:connectedBenchmarkAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=app.readylytics.health.benchmark.ScoringWalkForwardBenchmark#recomputeSingleDay` | Historical walk-forward recompute caches nightly aggregations without re-expanding warm samples or re-scanning prior workout histories per day | Fixtures & test suite compiled; device execution blocked (0 adb devices attached); code inspection confirms ScoringHistoryRepositoryImpl reconstructs individual samples from minute buckets on every night query | B2
+PERF-003 | 410c8c82 | `./gradlew :database-benchmark:connectedBenchmarkAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=app.readylytics.health.benchmark.HealthPipelineBaselineBenchmark#measurePostIngestionStages` | DataRollupManager and BackupStreamWriter process samples and sources in bounded pages rather than loading full day/table into memory | Fixtures & test suite compiled; device execution blocked (0 adb devices attached); code inspection confirms DataRollupManager.rollupDayChunk loads all plausible samples for a day at once into memory | B2
+
+---
+
+## Health Data Remediation Pipeline & Distribution Baseline (Task B2)
+
+### Baseline Execution Environment & Device Status
+
+- **Plan Baseline Commit:** `410c8c8282414d957ee7251b504c23fa153166f2` (`410c8c82`)
+- **Schema Version:** Room Schema 19 (`HealthDatabase.DATABASE_VERSION = 19`)
+- **Execution Timestamp:** 2026-09-11 08:00 UTC+2
+- **Compilation Status:** PASSED
+  - `./gradlew :database-benchmark:assembleAndroidTest` (BUILD SUCCESSFUL)
+  - `./gradlew :database-benchmark:ktlintCheck` (BUILD SUCCESSFUL)
+- **Device Availability Status:** **BLOCKED ON DEVICE EXECUTION**
+  - Command: `adb devices`
+  - Output: `List of devices attached` (empty, 0 devices available)
+  - As specified in the Task B2 protocol, an unavailable physical/emulator device blocks runtime device measurement completion, while synthetic generator fixtures (`HealthParentFixture.kt`), current-schema harness (`CurrentSchemaBenchmarkFixture.kt`), dense store benchmark wiring (`ScoringWalkForwardBenchmark.kt`), and full pipeline benchmark (`HealthPipelineBaselineBenchmark.kt`) are fully prepared, verified, and compiled.
+
+### Dataset Matrix & Synthetic Distributions
+
+`HealthParentFixture.kt` provides lazy, memory-efficient synthetic generator sequences independent of Android runtime dependencies, modeling the two distinct distributions that govern pipeline performance:
+
+1. **Sparse Parent Distribution (HC-001 & PERF-001 Stress Shape):**
+   - **Configuration:** `HealthParentFixture.pages(parentCount = 1_000_001, samplesPerParent = 1, pageSize = 1_000)`
+   - **Shape Verification:** Verified by assertion `assertEquals(1_000_001, parents.sumOf { it.size })`.
+   - **Characteristics:** 1,000,001 parent records with 1 sample per parent. Evaluates whether memory footprint or source lookup latency scales linearly with total parent record count due to per-record `getOrCreateSourceRef` calls.
+
+2. **Dense Parent Distribution (PERF-004 & Rollup Stress Shape):**
+   - **Configuration:** `HealthParentFixture.pages(parentCount = 1_001, samplesPerParent = 1_000, pageSize = 100)`
+   - **Shape Verification:** Verified by assertion `assertEquals(1_001_000, dense.sumOf { page -> page.sumOf { it.samples.size } })`.
+   - **Characteristics:** 1,001 parent records with 1,000 samples each (1,001,000 samples total). Evaluates sample downsampling, batch write throughput, conflict handling, and transaction chunk sizing.
+
+3. **Time Window & Origin Modeling:**
+   - Window: Fixed 30-day epoch interval (`WINDOW_MS = 2,592,000,000L` / 30 days) starting at `2026-01-01T00:00:00Z`.
+   - Device Distribution: Origin devices round-robined across 3 synthetic sources (`fixture-origin-0`, `fixture-origin-1`, `fixture-origin-2`).
+
+### End-to-End Pipeline Stages & Instrumentation
+
+`HealthPipelineBaselineBenchmark.kt` exercises and separates each distinct stage of the current-schema health data pipeline using monotonic nanosecond timing (`SystemClock.elapsedRealtimeNanos()` via `measured`):
+
+| Stage | Pipeline Hot Path | Implementation Target | Instrumentation & Verification |
+|---|---|---|---|
+| **1. Provider Read** | Synthetic Health Connect IPC Read | `HealthParentFixture.pages(...)` | Measures generator and paging iteration overhead independently of Android HC IPC. |
+| **2. Ingestion Mapping** | Domain Record -> Store Input | `HeartRateMapper.mapToInputs(...)` | Maps `DomainHeartRateRecord`s to `HeartRateInput`s with session sweep link resolution. |
+| **3. Store Persistence** | Current-Schema Room Upsert | `RoomHealthIngestionStore.persistHeartRateSamples(...)` | Monitored with `CountingTransactionRunner` and `CountingQueryCallback` (counter-only, zero SQL parameter logging). Verifies idempotent replay (0 duplicate rows on second run). |
+| **4. Session Link Reconcile** | Whole-Range Session Linking | `SessionLinkReconcilerImpl.reconcile(...)` | Runs across 30-day window linking resting vs workout/sleep intervals and recalculating TRIMP/zones. |
+| **5. Chronological Scoring** | Calibrated Walk-Forward Scoring | `ScoringRepositoryImpl.computeAndPersistDailySummary(...)` | Evaluated against 30-day seeded history (sleep sessions, sleep stages, HRV, workouts, resting HR) to traverse fully calibrated scoring models rather than the sparse/calibrating branch. |
+| **6. Hot-to-Warm Rollup** | Tier Downsampling & Pruning | `DataRollupManager.rollupExpiredHotTier(...)` | Aggregates raw 1-second samples older than 7-day cutoff into 1-minute `hr_minute_buckets` and deletes raw rows atomically per day-chunk. |
+| **7. Backup Export** | Streaming Archive Serialization | `exportDatabaseTablesStreaming(...)` / `BackupStreamWriter` | Paged streaming export of database tables to JSON stream without materializing entire tables in memory. |
+
+### Baseline Execution Instructions (Device Run)
+
+Once an Android physical device or emulator is attached to `adb`:
+
+```bash
+# 1. Verify device connection
+adb devices
+
+# 2. Execute pipeline stage baseline benchmark
+./gradlew :database-benchmark:connectedBenchmarkAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=app.readylytics.health.benchmark.HealthPipelineBaselineBenchmark
+
+# 3. Execute dense store and scoring walk-forward benchmark
+./gradlew :database-benchmark:connectedBenchmarkAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=app.readylytics.health.benchmark.ScoringWalkForwardBenchmark
+
+# 4. Results JSON destination:
+# database-benchmark/build/outputs/connected_android_test_additional_output/benchmarkBenchmark/connected/...
+```
+
+### Initial Numeric Optimization Budgets (Derived from Current-Schema Baseline Architecture)
+
+1. **Write Batch Sizing (PERF-004):** Baseline writes operate at 500-sample chunks. Target budget: transactional writes must sustain $\ge 2,500$ samples/sec without unbounded memory allocations.
+2. **Reconciliation Batch Sizing (PERF-001):** Baseline reconciliation operates at 5,000-row chunks. Target budget: 30-day reconciliation across $10^5$ samples must execute in $\le 1.5$ seconds wall-clock time.
+3. **Ingestion Memory Bound (HC-001):** Memory allocation during paged ingestion must scale as $O(\text{page\_size})$ (bounded at $\le 1,000$ records per page) and remain flat regardless of whether total history contains 1,000 or 1,000,000 parent records.
+4. **Scoring Recompute (PERF-002):** Calibrated daily summary recompute for day $D$ must not re-scan or expand unneeded historical raw samples, completing within $\le 50$ ms per scored day.
+5. **Rollup & Export Streaming (PERF-003):** Hot-to-warm rollup and backup export must maintain chunked page boundaries (500 rows/page) with zero full-table heap buffering.
+
