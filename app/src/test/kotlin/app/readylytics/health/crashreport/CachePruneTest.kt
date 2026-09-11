@@ -88,4 +88,25 @@ class CachePruneTest {
             cacheDir.deleteRecursively()
         }
     }
+
+    @Test
+    fun `pruneCacheDirectories removes orphan staging and legacy json files`() {
+        val cacheDir = Files.createTempDirectory("cache").toFile()
+        try {
+            val stagingDir = File(cacheDir, "backup-staging").apply { mkdirs() }
+            val orphanStagingJson = File(stagingDir, "backup_2026-09-11_100000_uuid1.json").apply { writeText("{}") }
+            val orphanStagingZip = File(stagingDir, "backup_2026-09-11_100000_uuid1.zip").apply { writeText("zip") }
+            val legacyJson = File(cacheDir, "backup_2026-09-10_100000.json").apply { writeText("{}") }
+            val unrelatedFile = File(cacheDir, "other_file.txt").apply { writeText("keep-me") }
+
+            CachePrune.pruneCacheDirectories(mockContextWithCacheDir(cacheDir))
+
+            assertFalse(orphanStagingJson.exists(), "Staging JSON file should be pruned")
+            assertFalse(orphanStagingZip.exists(), "Staging ZIP file should be pruned")
+            assertFalse(legacyJson.exists(), "Legacy root backup JSON should be pruned")
+            assertTrue(unrelatedFile.exists(), "Unrelated cache file should be preserved")
+        } finally {
+            cacheDir.deleteRecursively()
+        }
+    }
 }

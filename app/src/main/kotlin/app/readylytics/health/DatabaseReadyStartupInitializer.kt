@@ -1,5 +1,6 @@
 package app.readylytics.health
 
+import android.content.Context
 import app.readylytics.health.core.healthconnect.domain.sync.HealthSyncUseCase
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
@@ -10,6 +11,7 @@ import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.core.scoring.domain.scoring.BackfillHistoricalBaselinesUseCase
+import app.readylytics.health.crashreport.CachePrune
 import app.readylytics.health.data.preferences.PhysiologyPreferences
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.domain.migration.DatabaseMigrationUiState
@@ -29,6 +31,7 @@ internal class DatabaseReadyStartupInitializer(
     private val physiologyPreferences: Lazy<PhysiologyPreferences>,
     private val workerScheduler: WorkerScheduler,
     private val workoutTrimpBackfillStatus: Lazy<WorkoutTrimpBackfillStatus>,
+    private val context: Context? = null,
 ) {
     private val initialized = AtomicBoolean(false)
 
@@ -37,6 +40,12 @@ internal class DatabaseReadyStartupInitializer(
         if (!initialized.compareAndSet(false, true)) return StartupInitializationResult.COMPLETE
 
         return try {
+            if (context != null) {
+                runNonFatal("Orphan backup staging cleanup") {
+                    CachePrune.pruneBackupStaging(context)
+                }
+            }
+
             runNonFatal("Historical baseline backfill") {
                 val backfilled =
                     healthSyncUseCase.get().withSyncLock {

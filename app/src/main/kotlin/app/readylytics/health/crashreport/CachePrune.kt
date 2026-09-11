@@ -18,6 +18,7 @@ object CachePrune {
     private const val CANONICAL_DIAGNOSTIC_FILE = "readylytics_diagnostics.txt"
     private const val LOGCAT_CAPTURE_DIR = "logcat_capture"
     private const val CANONICAL_LOGCAT_FILE = "logcat_capture.txt"
+    const val BACKUP_STAGING_DIR = "backup-staging"
 
     fun pruneCacheDirectories(context: Context) {
         retireLegacySlots(context)
@@ -29,6 +30,23 @@ object CachePrune {
             ),
         )
         pruneDirectory(File(File(context.cacheDir, LOGCAT_CAPTURE_DIR), CANONICAL_LOGCAT_FILE))
+        pruneBackupStaging(context)
+    }
+
+    fun pruneBackupStaging(context: Context) {
+        val stagingDir = File(context.cacheDir, BACKUP_STAGING_DIR)
+        if (stagingDir.exists()) {
+            stagingDir.listFiles()?.forEach { file ->
+                if (file.isFile) {
+                    file.delete()
+                }
+            }
+        }
+        context.cacheDir.listFiles()?.forEach { file ->
+            if (file.isFile && file.name.startsWith("backup_") && file.name.endsWith(".json")) {
+                file.delete()
+            }
+        }
     }
 
     private fun retireLegacySlots(context: Context) {

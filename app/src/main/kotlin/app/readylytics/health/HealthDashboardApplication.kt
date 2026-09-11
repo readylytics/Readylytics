@@ -129,6 +129,7 @@ class HealthDashboardApplication :
                 physiologyPreferences = physiologyPreferences,
                 workerScheduler = workerScheduler,
                 workoutTrimpBackfillStatus = workoutTrimpBackfillStatus,
+                context = this,
             )
         val startupCoordinator = DatabaseReadyStartupCoordinator(startupInitializer)
         val preferencesPrewarmer = PreferencesPrewarmer(settingsRepo)

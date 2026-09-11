@@ -1,5 +1,6 @@
 package app.readylytics.health
 
+import android.content.Context
 import app.readylytics.health.core.healthconnect.domain.sync.HealthSyncUseCase
 import app.readylytics.health.core.model.data.preferences.BackupSchedule
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
@@ -29,8 +30,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DatabaseReadyStartupInitializerTest {
@@ -263,7 +266,39 @@ class DatabaseReadyStartupInitializerTest {
             verify(exactly = 0) { workerScheduler.schedulePeriodicSync(any()) }
         }
 
-    private fun createInitializer(): DatabaseReadyStartupInitializer {
+    @Test
+    fun `ready startup cleans up orphan backup staging before scheduling work`() =
+        runTest {
+            val cacheDir =
+                java.nio.file.Files
+                    .createTempDirectory("cache")
+                    .toFile()
+            try {
+                val stagingDir = File(cacheDir, "backup-staging").apply { mkdirs() }
+                val orphan = File(stagingDir, "backup_orphan.json").apply { writeText("{}") }
+                val context = mockk<Context>()
+                every { context.cacheDir } returns cacheDir
+
+                every { healthSyncLazy.get() } returns healthSyncUseCase
+                every { backfillLazy.get() } returns backfill
+                every { settingsRepository.backupSchedule } returns flowOf(BackupSchedule.DAILY)
+                every { settingsRepository.backgroundSyncEnabled } returns flowOf(false)
+                coEvery { healthSyncUseCase.withSyncLock<Int>(any()) } coAnswers {
+                    firstArg<suspend () -> Int>().invoke()
+                }
+                coEvery { backfill.execute() } returns 0
+                val initializer = createInitializer(context = context)
+
+                initializer.initializeIfReady(DatabaseReadiness.Ready)
+
+                assertFalse(orphan.exists())
+                verify(exactly = 1) { workerScheduler.scheduleBackupWorker(BackupSchedule.DAILY) }
+            } finally {
+                cacheDir.deleteRecursively()
+            }
+        }
+
+    private fun createInitializer(context: Context? = null): DatabaseReadyStartupInitializer {
         every { settingsRepositoryLazy.get() } returns settingsRepository
         every { physiologyPreferencesLazy.get() } returns physiologyPreferences
         every { settingsRepository.userPreferences } returns
@@ -284,6 +319,7 @@ class DatabaseReadyStartupInitializerTest {
                         override suspend fun hasUnbackfilledWorkouts(retentionStartMs: Long): Boolean = false
                     }
                 },
+            context = context,
         )
     }
 }

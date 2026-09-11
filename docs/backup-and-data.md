@@ -26,13 +26,13 @@ Your supported local records, calculated summaries, and preferences can be backe
 
 **Not included:** Raw sleep-stage rows (which are aggregated from Health Connect) and transient device-local logs/insight dismissals. A backup does not modify or replace the original data managed by Health Connect.
 
-**Cache and diagnostics are never backed up.** The app's internal cache — including the diagnostic-log, crash-report, and logcat-capture export directories — is excluded from both Android auto-backup and device-to-device transfer (`data_extraction_rules.xml` / `full_backup_content.xml`). These plaintext exports are transient on-device diagnostics; they are pruned on startup and never included in a Readylytics backup.
+**Cache and diagnostics are never backed up.** The app's internal cache — including temporary backup staging, diagnostic logs, crash reports, and logcat captures — is excluded from both Android auto-backup and device-to-device transfer (`data_extraction_rules.xml` / `full_backup_content.xml`). Transient plaintext staging files and exports are pruned on startup and never included in a Readylytics backup.
 
 ### Create a backup
 
 1. **Set a backup directory** — Choose a folder where the app can store backups (e.g., Documents/Readylytics Backups).
 2. **Set a password** (optional but recommended) — Encrypts the backup file. Without a password, the file is stored unencrypted.
-3. **Tap "Create Backup Now"** — The app creates a timestamped backup file.
+3. **Tap "Create Backup Now"** — The app creates a timestamped backup file. Existing backups are retained until the newly published archive is verified (read-back and schema inventory check), protecting recovery points against creation or publication failure.
 
 ### Automate backups
 

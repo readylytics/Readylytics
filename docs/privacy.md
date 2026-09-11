@@ -50,7 +50,9 @@ Readylytics to a cloud service.
 
 Readylytics may create encrypted local backup files when you use the backup
 feature. These backup files are controlled by you and remain local to your
-device or the storage location you choose.
+device or the storage location you choose. Prior valid backups are retained
+until any replacement archive is fully published and verified; temporary
+plaintext staging files in private app cache are cleaned up on process startup.
 
 Local encryption keys are stored through Android Keystore. On devices that support StrongBox,
 Readylytics attempts to use StrongBox-backed key protection and falls back to standard Keystore
@@ -74,10 +76,10 @@ exception class names, and bounded stack frames — raw exception messages,
 source/device IDs, GPS coordinates, and private health payloads are never
 logged or stored.
 
-Diagnostic, crash, and logcat export files are written to the app's internal
+Diagnostic, crash, logcat export, and backup staging files are written to the app's internal
 cache and are excluded from Android auto-backup and device-to-device transfer.
-The app prunes these cache directories on startup, so diagnostic files do not
-accumulate on your device.
+The app prunes these cache directories on startup, so transient staging and diagnostic
+files do not accumulate on your device.
 
 If Readylytics crashes, it stores a local, plain-text crash report on your
 device containing only structured reason codes, sanitized stack frames, app

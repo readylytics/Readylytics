@@ -9,6 +9,7 @@ import app.readylytics.health.core.model.domain.audit.AuditTrailRepository
 import app.readylytics.health.core.model.domain.backup.BackupFileInfo
 import app.readylytics.health.core.model.domain.backup.BackupLocation
 import app.readylytics.health.core.model.domain.util.logE
+import app.readylytics.health.crashreport.CachePrune
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.security.EncryptionManager
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -25,6 +26,7 @@ import java.io.FileOutputStream
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -39,6 +41,7 @@ class LocalBackupManager
         private val auditTrailRepository: AuditTrailRepository,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
         private val backupStoreFactory: BackupStoreFactory = DefaultBackupStoreFactory(context),
+        private val inventoryValidator: RestoreInventoryValidator = RestoreInventoryValidator(),
     ) {
         private val defaultBackupDir = File(context.filesDir, "backups")
 
@@ -46,20 +49,22 @@ class LocalBackupManager
             withContext(ioDispatcher) {
                 var tempJsonFile: File? = null
                 var tempZipFile: File? = null
+                var tempVerifyZipFile: File? = null
                 try {
                     val prefs = settingsRepository.userPreferences.first()
                     val customUri = prefs.backupDirectoryUri?.toUri()
-
-                    // Prune old backups from both internal and custom locations
-                    pruneOldBackups(customUri)
+                    val store = backupStoreFactory.create(customUri)
 
                     val timestamp =
                         Instant.now().atZone(ZoneId.systemDefault()).format(FILENAME_FORMATTER)
-                    val jsonFilename = "backup_$timestamp.json"
-                    val zipFilename = "backup_$timestamp.zip"
+                    val opId = UUID.randomUUID().toString()
+                    val stagingDir = File(context.cacheDir, CachePrune.BACKUP_STAGING_DIR).apply { mkdirs() }
+                    val jsonFilename = "backup_${timestamp}_$opId.json"
+                    val tempZipFilename = "backup_${timestamp}_$opId.zip"
+                    val publishedZipFilename = "backup_$timestamp.zip"
 
-                    // 1. Write JSON to a temporary file
-                    val jsonFile = File(context.cacheDir, jsonFilename)
+                    // 1. Write JSON to a temporary file in backup-staging
+                    val jsonFile = File(stagingDir, jsonFilename)
                     tempJsonFile = jsonFile
                     FileOutputStream(jsonFile).use { fos ->
                         backupStreamWriter.writeJsonStreaming(fos)
@@ -71,13 +76,27 @@ class LocalBackupManager
                             encryptionManager.decrypt(hash)
                         } ?: error("Backup password not set")
 
-                    // 3. Create ZIP file
-                    tempZipFile = File(context.cacheDir, zipFilename)
-                    createZip(jsonFile, tempZipFile, password)
+                    // 3. Create ZIP file in staging
+                    val zipFile = File(stagingDir, tempZipFilename)
+                    tempZipFile = zipFile
+                    createZip(jsonFile, zipFile, password)
 
-                    val store = backupStoreFactory.create(customUri)
-                    store.publish(tempZipFile, zipFilename)
-                    val finalFile = if (customUri != null) null else File(defaultBackupDir, zipFilename)
+                    // 4. Publish to store and verify read-back
+                    val verifyFile = File(stagingDir, "verify_${timestamp}_$opId.zip")
+                    tempVerifyZipFile = verifyFile
+                    publishAndVerify(
+                        store = store,
+                        tempZipFile = zipFile,
+                        zipFilename = publishedZipFilename,
+                        password = password,
+                        verifyFile = verifyFile,
+                        customUri = customUri,
+                    )
+
+                    // 6. Prune old backups from the selected store only after verified publication
+                    store.prune(RETENTION_PERIOD_MS)
+
+                    val finalFile = if (customUri != null) null else File(defaultBackupDir, publishedZipFilename)
 
                     auditTrailRepository.appendBestEffort(
                         "LocalBackupManager",
@@ -98,6 +117,7 @@ class LocalBackupManager
                 } finally {
                     tempJsonFile?.delete()
                     tempZipFile?.delete()
+                    tempVerifyZipFile?.delete()
                 }
             }
 
@@ -251,10 +271,55 @@ class LocalBackupManager
                 store.list()
             }
 
-        private suspend fun pruneOldBackups(customUri: Uri?) {
-            backupStoreFactory.createDefault().prune(RETENTION_PERIOD_MS)
-            if (customUri != null) {
-                backupStoreFactory.create(customUri).prune(RETENTION_PERIOD_MS)
+        private suspend fun publishAndVerify(
+            store: BackupStore,
+            tempZipFile: File,
+            zipFilename: String,
+            password: String,
+            verifyFile: File,
+            customUri: Uri?,
+        ) {
+            store.publish(tempZipFile, zipFilename)
+            val publishedLocation =
+                store.list().firstOrNull { it.name == zipFilename }?.location
+                    ?: if (customUri == null) {
+                        BackupLocation(Uri.fromFile(File(defaultBackupDir, zipFilename)).toString())
+                    } else {
+                        error("Published backup not found in store: $zipFilename")
+                    }
+
+            try {
+                verifyPublishedBackup(store, publishedLocation, password, verifyFile)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                try {
+                    store.delete(publishedLocation)
+                } catch (_: Exception) {
+                    // best-effort cleanup of unverified published archive
+                }
+                throw e
+            }
+        }
+
+        private suspend fun verifyPublishedBackup(
+            store: BackupStore,
+            location: BackupLocation,
+            password: String,
+            tempVerifyFile: File,
+        ) {
+            store.read(location).use { input ->
+                FileOutputStream(tempVerifyFile).use { output ->
+                    input.copyTo(output)
+                }
+            }
+            ZipFile(tempVerifyFile, password.toCharArray()).use { zip ->
+                val header =
+                    zip.fileHeaders.firstOrNull { it.fileName.endsWith(".json") }
+                        ?: error("No JSON file found in backup ZIP")
+                zip.getInputStream(header).use { jsonStream ->
+                    inventoryValidator.validate(jsonStream)
+                }
             }
         }
 
