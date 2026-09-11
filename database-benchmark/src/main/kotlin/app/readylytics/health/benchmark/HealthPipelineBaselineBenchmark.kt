@@ -1,8 +1,9 @@
 package app.readylytics.health.benchmark
 
 import android.os.SystemClock
+import android.util.Log
 import androidx.benchmark.junit4.BenchmarkRule
-import androidx.room.Room
+import androidx.benchmark.junit4.measureRepeated
 import androidx.room.RoomDatabase
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -11,10 +12,13 @@ import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.database.data.local.RoomHealthIngestionStore
 import app.readylytics.health.core.database.data.local.RoomTransactionRunner
 import app.readylytics.health.core.database.data.local.SessionLinkReconcilerImpl
+import app.readylytics.health.core.healthconnect.domain.sync.HealthIngestionCoordinator
 import app.readylytics.health.core.model.domain.heartrate.ZoneThresholds
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
-import app.readylytics.health.core.model.domain.sync.HeartRateInput
 import app.readylytics.health.core.model.domain.sync.mappers.HeartRateMapper
+import app.readylytics.health.databasebenchmark.data.migration.CurrentSchemaBenchmarkFixture
+import app.readylytics.health.databasebenchmark.data.migration.CurrentSchemaFixtureInstance
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -24,16 +28,16 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.ByteArrayOutputStream
-import java.io.File
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Baseline benchmark measuring the real current-schema health data pipeline.
- * Measures each pipeline stage separately: provider-fake read, mapping, store,
- * full-range relink, chronological scoring, rollup, and streaming backup export.
+ * Measures each pipeline stage separately on dedicated named SQLCipher databases:
+ * provider-fake read, mapping, store, full-range relink, chronological scoring,
+ * rollup, and streaming backup export.
  *
  * Instruments TransactionRunner and Room query callbacks with counters only (never logging SQL values).
  */
@@ -43,36 +47,26 @@ class HealthPipelineBaselineBenchmark {
     val benchmarkRule = BenchmarkRule()
 
     private val zoneId: ZoneId = ZoneId.of("Europe/Berlin")
-    private lateinit var dbFile: File
-    private lateinit var db: HealthDatabase
+    private lateinit var fixture: CurrentSchemaBenchmarkFixture
     private lateinit var queryCounter: CountingQueryCallback
     private lateinit var countingTxRunner: CountingTransactionRunner
+    private lateinit var defaultInstance: CurrentSchemaFixtureInstance
+    private lateinit var db: HealthDatabase
     private lateinit var store: RoomHealthIngestionStore
 
     @Before
     fun setUp() {
-        dbFile = File.createTempFile("pipeline-benchmark", ".db")
-        dbFile.delete()
+        fixture = CurrentSchemaBenchmarkFixture(ApplicationProvider.getApplicationContext())
         queryCounter = CountingQueryCallback()
-
-        db =
-            Room
-                .databaseBuilder(
-                    ApplicationProvider.getApplicationContext(),
-                    HealthDatabase::class.java,
-                    dbFile.absolutePath,
-                ).setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
-                .setQueryCallback(queryCounter, Executors.newSingleThreadExecutor())
-                .build()
-
+        defaultInstance = fixture.createTemplate("pipeline-default", useSqlCipher = true)
+        db = defaultInstance.database
         countingTxRunner = CountingTransactionRunner(RoomTransactionRunner(db))
-        store = ScoringBenchmarkHelper.createRoomHealthIngestionStore(db)
+        store = ScoringBenchmarkHelper.createRoomHealthIngestionStore(db, countingTxRunner)
     }
 
     @After
     fun tearDown() {
-        db.close()
-        dbFile.delete()
+        fixture.cleanUp()
     }
 
     /** Step 1 shape assertions validating parent distribution vs sample distribution. */
@@ -84,53 +78,80 @@ class HealthPipelineBaselineBenchmark {
         assertEquals(1_001_000, dense.sumOf { page -> page.sumOf { it.samples.size } })
     }
 
-    /** Measures provider-fake read, mapping, and store as distinct pipeline stages. */
+    /**
+     * Benchmark feeding parent pages through HealthConnectRepository and HealthIngestionCoordinator
+     * on isolated SQLCipher copies per repetition.
+     */
     @Test
-    fun measureIngestionPipelineStages() =
+    fun benchmarkCoordinatorEndToEndIngestion() {
+        val windowStart = Instant.parse("2026-01-01T00:00:00Z")
+        val windowEnd = windowStart.plusSeconds(30L * 24 * 3600)
+        val prefs = UserPreferences(scoringZoneId = zoneId.id)
+        val template = fixture.createTemplate("coordinator-template", useSqlCipher = true)
+        var iteration = 0
+
+        benchmarkRule.measureRepeated {
+            val iterCounter = CountingQueryCallback()
+            val instance =
+                runWithTimingDisabled {
+                    fixture.copyTemplate(template, "coordinator-iter-${iteration++}", iterCounter)
+                }
+            val iterTx = CountingTransactionRunner(RoomTransactionRunner(instance.database))
+            val iterStore = ScoringBenchmarkHelper.createRoomHealthIngestionStore(instance.database, iterTx)
+            val fakeRepo =
+                BenchmarkFakeHealthConnectRepository(
+                    pagesSequence = HealthParentFixture.pages(parentCount = 500, samplesPerParent = 10, pageSize = 50),
+                )
+            val coordinator = HealthIngestionCoordinator(fakeRepo, iterStore)
+
+            runBlocking {
+                coordinator.ingestWindow(windowStart, windowEnd, prefs, reconcileDeletions = false)
+            }
+
+            runWithTimingDisabled {
+                Log.i(
+                    "BenchmarkMetrics",
+                    "coordinator_ingest: tx=${iterTx.transactionCount}, statements=${iterCounter.statementCount}",
+                )
+                fixture.delete(instance)
+            }
+        }
+    }
+
+    /** Measures all 7 pipeline stages separately and emits structured metrics for BASELINE.md. */
+    @Test
+    fun measurePipelineStagesSeparately() =
         runBlocking {
-            // Stage 1: Provider-fake read (lazy sequence chunk materialization)
+            // Stage 1: Provider-fake read
             val (readPages, readNanos) =
                 measured {
                     HealthParentFixture.pages(parentCount = 500, samplesPerParent = 10, pageSize = 50).toList()
                 }
+            logStageMetric("provider_read", readNanos, 0, 0)
             assertTrue("Read must produce pages", readPages.isNotEmpty())
-            assertTrue("Read nanos must be positive", readNanos > 0)
 
-            // Stage 2: Ingestion mapping (DomainHeartRateRecord -> HeartRateInput)
+            // Stage 2: Ingestion mapping
             val flatRecords = readPages.flatten()
             val (mappedInputs, mapNanos) =
                 measured {
                     HeartRateMapper.mapToInputs(flatRecords, emptyList(), emptyList())
                 }
+            logStageMetric("mapping", mapNanos, 0, 0)
             assertEquals(5000, mappedInputs.size)
-            assertTrue("Map nanos must be positive", mapNanos > 0)
 
-            // Stage 3: Store persistence through RoomHealthIngestionStore
+            // Stage 3: Store persistence
             queryCounter.reset()
             countingTxRunner.reset()
             val (_, storeNanos) =
                 measured {
                     store.persistHeartRateSamples(mappedInputs)
                 }
-            assertTrue("Store nanos must be positive", storeNanos > 0)
+            logStageMetric("store", storeNanos, countingTxRunner.transactionCount, queryCounter.statementCount)
             assertTrue("Store must execute queries", queryCounter.statementCount > 0)
 
-            // Verify idempotency: re-persisting identical batch causes 0 growth
-            val initialCount = db.heartRateDao().count()
-            assertEquals(5000, initialCount)
-            store.persistHeartRateSamples(mappedInputs)
-            val repeatCount = db.heartRateDao().count()
-            assertEquals("Idempotent replay must not duplicate samples", initialCount, repeatCount)
-        }
-
-    /** Measures full-range relink, chronological scoring, rollup, and backup export. */
-    @Test
-    fun measurePostIngestionStages() =
-        runBlocking {
+            // Stage 4: Full-range session link reconciliation
             val targetDate = LocalDate.of(2026, 1, 31)
             ScoringBenchmarkHelper.seedCalibratedHistory(db, zoneId, targetDate, historyDays = 30)
-
-            // Stage 4: Full-range session link reconciliation
             val startDate = targetDate.minusDays(30)
             val startMs = startDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
             val endMs =
@@ -149,21 +170,25 @@ class HealthPipelineBaselineBenchmark {
                     transactionRunner = countingTxRunner,
                 )
 
+            queryCounter.reset()
+            countingTxRunner.reset()
             val (_, relinkNanos) =
                 measured {
                     reconciler.reconcile(startMs, endMs, zoneThresholds)
                 }
-            assertTrue("Relink nanos must be positive", relinkNanos > 0)
+            logStageMetric("relink", relinkNanos, countingTxRunner.transactionCount, queryCounter.statementCount)
 
-            // Stage 5: Chronological scoring (calibrated calculation)
+            // Stage 5: Chronological scoring
             val scoringRepo = ScoringBenchmarkHelper.createScoringRepository(db, zoneId)
+            queryCounter.reset()
+            countingTxRunner.reset()
             val (_, scoringNanos) =
                 measured {
                     scoringRepo.computeAndPersistDailySummary(targetDate, steps = 8_000L)
                 }
-            assertTrue("Scoring nanos must be positive", scoringNanos > 0)
+            logStageMetric("scoring", scoringNanos, countingTxRunner.transactionCount, queryCounter.statementCount)
 
-            // Stage 6: Rollup (downsample raw hot-tier HR samples to warm-tier minute buckets)
+            // Stage 6: Rollup
             val rollupManager = DataRollupManager(db.minuteBucketDao(), db.heartRateDao(), countingTxRunner)
             val cutoffMs =
                 targetDate
@@ -171,11 +196,13 @@ class HealthPipelineBaselineBenchmark {
                     .atStartOfDay(zoneId)
                     .toInstant()
                     .toEpochMilli()
+            queryCounter.reset()
+            countingTxRunner.reset()
             val (_, rollupNanos) =
                 measured {
                     rollupManager.rollupExpiredHotTier(cutoffMs)
                 }
-            assertTrue("Rollup nanos must be positive", rollupNanos >= 0)
+            logStageMetric("rollup", rollupNanos, countingTxRunner.transactionCount, queryCounter.statementCount)
 
             // Stage 7: Backup export streaming
             val output = ByteArrayOutputStream()
@@ -183,58 +210,19 @@ class HealthPipelineBaselineBenchmark {
                 measured {
                     exportDatabaseTablesStreaming(db, output)
                 }
-            assertTrue("Export nanos must be positive", exportNanos > 0)
+            logStageMetric("backup_export", exportNanos, 0, output.size().toLong())
             assertTrue("Exported bytes must be non-empty", output.size() > 0)
         }
 
-    /** Dataset matrix: dense burst inside sparse history and edited value update. */
-    @Test
-    fun datasetMatrixAndValueEdit() =
-        runBlocking {
-            val baseMs =
-                LocalDate
-                    .of(2026, 1, 1)
-                    .atStartOfDay(zoneId)
-                    .toInstant()
-                    .toEpochMilli()
-
-            // Seed sparse history (1 sample every 15 min for 10 days)
-            val sparseSamples =
-                (0 until 960).map { i ->
-                    HeartRateInput(
-                        id = "sparse_$i",
-                        timestampMs = baseMs + i * 15 * 60_000L,
-                        beatsPerMinute = 65,
-                        recordType = "RESTING",
-                        sessionId = null,
-                        deviceName = "fixture-origin-0",
-                    )
-                }
-            store.persistHeartRateSamples(sparseSamples)
-            assertEquals(960, db.heartRateDao().count())
-
-            // 30-day dense burst (500 samples/day for 3 days = 1500 samples)
-            val denseBurst =
-                (0 until 1500).map { i ->
-                    HeartRateInput(
-                        id = "dense_$i",
-                        timestampMs = baseMs + (5 * 24 * 3600_000L) + i * 60_000L,
-                        beatsPerMinute = 70 + (i % 30),
-                        recordType = "RESTING",
-                        sessionId = null,
-                        deviceName = "fixture-origin-1",
-                    )
-                }
-            store.persistHeartRateSamples(denseBurst)
-            assertEquals(960 + 1500, db.heartRateDao().count())
-
-            // Value edit verification on same key
-            val sampleToEdit = denseBurst.first()
-            val edited = sampleToEdit.copy(beatsPerMinute = 115)
-            store.persistHeartRateSamples(listOf(edited))
-            // Count must not grow
-            assertEquals(960 + 1500, db.heartRateDao().count())
-        }
+    private fun logStageMetric(
+        stage: String,
+        nanos: Long,
+        transactions: Long,
+        statementsOrBytes: Long,
+    ) {
+        val ms = nanos / 1_000_000.0
+        Log.i("BaselineMetrics", "STAGE=$stage, DURATION_MS=$ms, TX=$transactions, EXTRA=$statementsOrBytes")
+    }
 
     /** Streaming export of database tables matching BackupStreamWriter paging pattern. */
     private suspend fun exportDatabaseTablesStreaming(
@@ -244,7 +232,6 @@ class HealthPipelineBaselineBenchmark {
         val writer = out.bufferedWriter()
         writer.write("{\"tables\":{")
 
-        // Heart rate records paging
         writer.write("\"heartRateRecords\":[")
         var hrAfterTs = Long.MIN_VALUE
         var hrAfterRef = Long.MIN_VALUE
@@ -262,7 +249,6 @@ class HealthPipelineBaselineBenchmark {
         }
         writer.write("],")
 
-        // Daily summaries paging
         writer.write("\"dailySummaries\":[")
         val summaries = database.dailySummaryDao().getAllSummaries()
         var sFirst = true

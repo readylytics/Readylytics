@@ -199,7 +199,11 @@ object ScoringBenchmarkHelper {
         )
     }
 
-    fun createRoomHealthIngestionStore(db: HealthDatabase): RoomHealthIngestionStore {
+    fun createRoomHealthIngestionStore(
+        db: HealthDatabase,
+        transactionRunner: app.readylytics.health.core.model.domain.repository.TransactionRunner =
+            RoomTransactionRunner(db),
+    ): RoomHealthIngestionStore {
         val daos =
             HealthRecordDaos(
                 sleepSessionDao = db.sleepSessionDao(),
@@ -220,7 +224,7 @@ object ScoringBenchmarkHelper {
         return RoomHealthIngestionStore(
             daos = daos,
             dailySummaryDao = db.dailySummaryDao(),
-            transactionRunner = RoomTransactionRunner(db),
+            transactionRunner = transactionRunner,
             vo2MaxRecordDao = db.vo2MaxRecordDao(),
         )
     }

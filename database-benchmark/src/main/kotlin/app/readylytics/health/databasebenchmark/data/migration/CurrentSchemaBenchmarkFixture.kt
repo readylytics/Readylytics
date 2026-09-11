@@ -8,11 +8,12 @@ import app.readylytics.health.core.database.data.security.AndroidKeystoreKeyProv
 import app.readylytics.health.core.database.data.security.SqlCipherKeyManager
 import kotlinx.coroutines.runBlocking
 import java.io.File
+import java.util.concurrent.Executors
 
 /**
  * Fixture factory for current-schema (Room v19) database benchmarks.
  * Extracted separately from the legacy v6/v7 migration driver to ensure current-schema
- * benchmarking exercises the real Room architecture without pretending v7 migrators support v19.
+ * benchmarking exercises the real Room architecture with SQLCipher encryption enabled.
  */
 internal class CurrentSchemaBenchmarkFixture(
     private val context: Context,
@@ -21,7 +22,8 @@ internal class CurrentSchemaBenchmarkFixture(
 
     fun createDatabase(
         name: String,
-        useSqlCipher: Boolean = false,
+        useSqlCipher: Boolean = true,
+        queryCallback: RoomDatabase.QueryCallback? = null,
     ): HealthDatabase {
         context.deleteDatabase(name)
         createdNames += name
@@ -34,12 +36,15 @@ internal class CurrentSchemaBenchmarkFixture(
             val keyManager = SqlCipherKeyManager(context, AndroidKeystoreKeyProvider())
             builder.openHelperFactory(keyManager.getOrCreateFactory())
         }
+        if (queryCallback != null) {
+            builder.setQueryCallback(queryCallback, Executors.newSingleThreadExecutor())
+        }
         return builder.build()
     }
 
     fun createTemplate(
         suffix: String,
-        useSqlCipher: Boolean = false,
+        useSqlCipher: Boolean = true,
         seed: (suspend (HealthDatabase) -> Unit)? = null,
     ): CurrentSchemaFixtureInstance {
         val name = "current-benchmark-$suffix.db"
@@ -55,19 +60,21 @@ internal class CurrentSchemaBenchmarkFixture(
     fun copyTemplate(
         source: CurrentSchemaFixtureInstance,
         suffix: String,
+        queryCallback: RoomDatabase.QueryCallback? = null,
     ): CurrentSchemaFixtureInstance {
         val targetName = "current-benchmark-$suffix.db"
         context.deleteDatabase(targetName)
         createdNames += targetName
         val targetFile = context.getDatabasePath(targetName)
         source.file.copyTo(targetFile, overwrite = true)
-        val database = openExistingDatabase(targetFile, source.useSqlCipher)
+        val database = openExistingDatabase(targetFile, source.useSqlCipher, queryCallback)
         return CurrentSchemaFixtureInstance(targetName, targetFile, source.useSqlCipher, database)
     }
 
     private fun openExistingDatabase(
         file: File,
         useSqlCipher: Boolean,
+        queryCallback: RoomDatabase.QueryCallback? = null,
     ): HealthDatabase {
         val builder =
             Room
@@ -76,6 +83,9 @@ internal class CurrentSchemaBenchmarkFixture(
         if (useSqlCipher) {
             val keyManager = SqlCipherKeyManager(context, AndroidKeystoreKeyProvider())
             builder.openHelperFactory(keyManager.getOrCreateFactory())
+        }
+        if (queryCallback != null) {
+            builder.setQueryCallback(queryCallback, Executors.newSingleThreadExecutor())
         }
         return builder.build()
     }
