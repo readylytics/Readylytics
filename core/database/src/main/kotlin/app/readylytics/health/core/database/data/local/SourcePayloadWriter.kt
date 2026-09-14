@@ -56,10 +56,11 @@ class SourcePayloadWriter
             val newRows = payload.rows
 
             val (existingSource, sourceRef) = resolveOrCreateSource(source)
-            val oldRecords = daos.heartRateDao.getBySourceRecordRef(sourceRef)
-            val oldTimestamps = oldRecords.map { it.timestampMs }
+            val oldTimestamps = daos.heartRateDao.readTimestampsKeyset(sourceRef)
 
-            if (!isMetadataChanged(existingSource, source) && areHeartRateRowsIdentical(oldRecords, newRows)) {
+            if (!isMetadataChanged(existingSource, source) &&
+                areHeartRateRowsIdentical(daos.heartRateDao, sourceRef, oldTimestamps, newRows)
+            ) {
                 return
             }
 
@@ -82,10 +83,11 @@ class SourcePayloadWriter
             val newRows = payload.rows
 
             val (existingSource, sourceRef) = resolveOrCreateSource(source)
-            val oldRecords = daos.hrvDao.getBySourceRecordRef(sourceRef)
-            val oldTimestamps = oldRecords.map { it.timestampMs }
+            val oldTimestamps = daos.hrvDao.readTimestampsKeyset(sourceRef)
 
-            if (!isMetadataChanged(existingSource, source) && areHrvRowsIdentical(oldRecords, newRows)) {
+            if (!isMetadataChanged(existingSource, source) &&
+                areHrvRowsIdentical(daos.hrvDao, sourceRef, oldTimestamps, newRows)
+            ) {
                 return
             }
 
@@ -297,42 +299,74 @@ private fun HrvRecordEntity.matchesPayload(input: HrvInput): Boolean {
     return coreMatches && metaMatches
 }
 
-private fun buildResolvedHeartRateMap(newRows: List<HeartRateInput>): Map<Long, HeartRateInput> {
-    if (newRows.isEmpty()) return emptyMap()
-    val map = LinkedHashMap<Long, HeartRateInput>(newRows.size)
-    for (row in newRows) {
-        map[row.timestampMs] = row
+private suspend fun HeartRateDao.readTimestampsKeyset(sourceRef: Long): List<Long> {
+    val timestamps = mutableListOf<Long>()
+    var afterTs = Long.MIN_VALUE
+    var hasMore = true
+    while (hasMore) {
+        val page = getTimestampsBySourceRecordRef(sourceRef, afterTs, BATCH_SIZE)
+        timestamps.addAll(page)
+        hasMore = page.size == BATCH_SIZE
+        if (hasMore) {
+            afterTs = page.last()
+        }
     }
-    return map
+    return timestamps
 }
 
-private fun areHeartRateRowsIdentical(
-    oldRecords: List<HeartRateRecordEntity>,
+private suspend fun HrvDao.readTimestampsKeyset(sourceRef: Long): List<Long> {
+    val timestamps = mutableListOf<Long>()
+    var afterTs = Long.MIN_VALUE
+    var hasMore = true
+    while (hasMore) {
+        val page = getTimestampsBySourceRecordRef(sourceRef, afterTs, BATCH_SIZE)
+        timestamps.addAll(page)
+        hasMore = page.size == BATCH_SIZE
+        if (hasMore) {
+            afterTs = page.last()
+        }
+    }
+    return timestamps
+}
+
+private suspend fun areHeartRateRowsIdentical(
+    dao: HeartRateDao,
+    sourceRef: Long,
+    oldTimestamps: List<Long>,
     newRows: List<HeartRateInput>,
 ): Boolean {
-    val resolvedNew = buildResolvedHeartRateMap(newRows)
-    if (oldRecords.size != resolvedNew.size) return false
-    return oldRecords.all { old ->
-        resolvedNew[old.timestampMs]?.let { old.matchesPayload(it) } == true
+    val timestampsMatch = oldTimestamps.size == newRows.size &&
+        oldTimestamps == newRows.map { it.timestampMs }.sorted()
+    if (!timestampsMatch) return false
+
+    return if (newRows.isEmpty()) {
+        true
+    } else {
+        val oldRecords = dao.getBySourceRecordRef(sourceRef)
+        val resolvedNew = newRows.associateBy { it.timestampMs }
+        oldRecords.size == resolvedNew.size && oldRecords.all { old ->
+            resolvedNew[old.timestampMs]?.let { old.matchesPayload(it) } == true
+        }
     }
 }
 
-private fun buildResolvedHrvMap(newRows: List<HrvInput>): Map<Long, HrvInput> {
-    if (newRows.isEmpty()) return emptyMap()
-    val map = LinkedHashMap<Long, HrvInput>(newRows.size)
-    for (row in newRows) {
-        map[row.timestampMs] = row
-    }
-    return map
-}
-
-private fun areHrvRowsIdentical(
-    oldRecords: List<HrvRecordEntity>,
+private suspend fun areHrvRowsIdentical(
+    dao: HrvDao,
+    sourceRef: Long,
+    oldTimestamps: List<Long>,
     newRows: List<HrvInput>,
 ): Boolean {
-    val resolvedNew = buildResolvedHrvMap(newRows)
-    if (oldRecords.size != resolvedNew.size) return false
-    return oldRecords.all { old ->
-        resolvedNew[old.timestampMs]?.let { old.matchesPayload(it) } == true
+    val timestampsMatch = oldTimestamps.size == newRows.size &&
+        oldTimestamps == newRows.map { it.timestampMs }.sorted()
+    if (!timestampsMatch) return false
+
+    return if (newRows.isEmpty()) {
+        true
+    } else {
+        val oldRecords = dao.getBySourceRecordRef(sourceRef)
+        val resolvedNew = newRows.associateBy { it.timestampMs }
+        oldRecords.size == resolvedNew.size && oldRecords.all { old ->
+            resolvedNew[old.timestampMs]?.let { old.matchesPayload(it) } == true
+        }
     }
 }

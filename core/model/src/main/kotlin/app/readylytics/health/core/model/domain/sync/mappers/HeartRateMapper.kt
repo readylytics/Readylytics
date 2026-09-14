@@ -6,6 +6,7 @@ import app.readylytics.health.core.model.domain.sync.SleepSessionInput
 import app.readylytics.health.core.model.domain.sync.SourceMetadata
 import app.readylytics.health.core.model.domain.sync.SourcePayload
 import app.readylytics.health.core.model.domain.sync.WorkoutInput
+import app.readylytics.health.core.model.domain.sync.link.SampleLink
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkSweep
 import app.readylytics.health.core.model.domain.sync.link.SessionSpan
 import java.time.Instant
@@ -21,6 +22,20 @@ object HeartRateMapper {
         val sleepSpans = sleepSessions.map { SessionSpan(it.id, it.startTime, it.endTime) }
         val workoutSpans = workoutSessions.map { SessionSpan(it.id, it.startTime, it.endTime) }
         val sweep = SessionLinkSweep(sleepSpans, workoutSpans)
+
+        val distinctTimestamps =
+            records
+                .asSequence()
+                .flatMap { it.samples.asSequence() }
+                .map { it.time.toEpochMilli() }
+                .distinct()
+                .sorted()
+                .toList()
+
+        val resolvedLinks = HashMap<Long, SampleLink>(distinctTimestamps.size)
+        for (ts in distinctTimestamps) {
+            resolvedLinks[ts] = sweep.resolve(ts)
+        }
 
         return records.map { record ->
             val devName = record.deviceName
@@ -50,7 +65,7 @@ object HeartRateMapper {
             val samples =
                 record.samples.map { sample ->
                     val sampleMs = sample.time.toEpochMilli()
-                    val link = sweep.resolve(sampleMs)
+                    val link = resolvedLinks[sampleMs] ?: sweep.resolve(sampleMs)
                     HeartRateInput(
                         id = "${recId}_$sampleMs",
                         timestampMs = sampleMs,
