@@ -1147,8 +1147,7 @@ scoring-zone day end -- never `Clock.now()`/the system zone.
 
 **Repair of frozen historical RHR baselines:** if a future app version detects that already-frozen
 historical days have RHR baselines computed under the old unbounded-lookback logic (pre-WP-11),
-repair must route through the existing `DirtyRangeStore` journaling mechanism (see §3.5.1, Atomic
-Mutation Boundary), marking affected date ranges dirty so the normal walk-forward recompute picks
+repair must route through the existing `DirtyRangeStore` journaling mechanism (see §1.4.1, Concurrency, Lock Hierarchy, and Atomic Transaction Boundaries), marking affected date ranges dirty so the normal walk-forward recompute picks
 them up. Do not blanket-thaw every frozen day on app startup — that would be slow and unnecessarily
 touch days that never had the bug manifest in their data.
 
