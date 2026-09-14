@@ -1145,6 +1145,13 @@ lookup for a past date could read sessions dated after it. They now call the bou
 `getSleepSessionsBetween(fromMs, toMs)` with `toMs` derived from the *requested* date's own
 scoring-zone day end -- never `Clock.now()`/the system zone.
 
+**Repair of frozen historical RHR baselines:** if a future app version detects that already-frozen
+historical days have RHR baselines computed under the old unbounded-lookback logic (pre-WP-11),
+repair must route through the existing `DirtyRangeStore` journaling mechanism (see §3.5.1, Atomic
+Mutation Boundary), marking affected date ranges dirty so the normal walk-forward recompute picks
+them up. Do not blanket-thaw every frozen day on app startup — that would be slow and unnecessarily
+touch days that never had the bug manifest in their data.
+
 **PERF-002/WP-22 (resync/daily-sync walk-forward baselines):** the sleep-session-to-per-day
 aggregation machinery (`filterValidBaselineSessions`, `buildHistoricalSleepDays`, and the
 `HistoricalSleepDay` per-night data class) is extracted out of `BaselineComputer` into
