@@ -75,7 +75,7 @@ class DataCleanupWorkerTest {
 
             assertEquals(ListenableWorker.Result.success(), result)
             coVerify(exactly = 0) { retentionCleanup.deleteBefore(any()) }
-            verify(exactly = 0) { workerScheduler.scheduleResyncWorker(any(), any(), any()) }
+            coVerify(exactly = 0) { workerScheduler.scheduleResyncWorker(any(), any(), any()) }
         }
 
     @Test
@@ -112,7 +112,7 @@ class DataCleanupWorkerTest {
 
             createWorker().doWork()
 
-            verify(exactly = 1) {
+            coVerify(exactly = 1) {
                 workerScheduler.scheduleResyncWorker(
                     recomputeOnly = true,
                     startDate = LocalDate.of(2026, 1, 1),
@@ -130,7 +130,7 @@ class DataCleanupWorkerTest {
 
             createWorker().doWork()
 
-            verify(exactly = 0) { workerScheduler.scheduleResyncWorker(any(), any(), any()) }
+            coVerify(exactly = 0) { workerScheduler.scheduleResyncWorker(any(), any(), any()) }
         }
 
     private fun createWorker() =

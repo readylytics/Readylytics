@@ -1,11 +1,14 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
+import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.sync.HistoricalRunIdentity
 import app.readylytics.health.core.model.domain.sync.ResyncCheckpoint
 import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneId
@@ -204,5 +207,186 @@ class HistoricalRunResolverTest {
                 changed.scoringCheckpointIdentity(),
             )
         }
+    }
+
+    // --- Review fix (finding #4): HR-zone/link-policy change -> RECONCILE restart ------------
+
+    @Test
+    fun `resolveEffectiveCheckpoint restarts reconcile when HR zone threshold changes`() {
+        val startDate = LocalDate.of(2026, 3, 1)
+        val endDate = LocalDate.of(2026, 3, 28)
+        val oldRun = createRun(startDate = startDate, endDate = endDate, prefs = UserPreferences(zone3MaxBpm = 160))
+        val newRun =
+            createRun(
+                runId = "new-attempt",
+                startDate = startDate,
+                endDate = endDate,
+                prefs = UserPreferences(zone3MaxBpm = 170),
+            )
+        val checkpoint =
+            ResyncCheckpoint(
+                startDate = startDate,
+                endDate = endDate,
+                phase = ResyncPhase.RECOMPUTE,
+                nextDate = startDate.plusDays(10),
+                selectionHash = "old-hash",
+                baselineChangeTokens = mapOf(HealthDataType.SLEEP to "tok-sleep"),
+                completedTypes = setOf(HealthDataType.SLEEP, HealthDataType.HEART_RATE),
+                runIdentity = oldRun,
+            )
+
+        val resolved =
+            HistoricalRunResolver.resolveEffectiveCheckpoint(
+                savedCheckpoint = checkpoint,
+                runIdentity = newRun,
+                isSameRun = false,
+                skipIngestAndPrune = false,
+                runStartDate = startDate,
+            )
+
+        // Not a no-op: phase rewound from RECOMPUTE to RECONCILE and nextDate reset to the run start.
+        assertNotNull(resolved)
+        assertEquals(ResyncPhase.RECONCILE, resolved?.phase)
+        assertEquals(startDate, resolved?.nextDate)
+        assertEquals(newRun, resolved?.runIdentity)
+        // Not a full restart: a full restart clears the checkpoint (resolveEffectiveCheckpoint would
+        // return null here, forcing the caller to recapture fresh baseline tokens/completedTypes).
+        assertEquals(checkpoint.baselineChangeTokens, resolved?.baselineChangeTokens)
+        assertEquals(checkpoint.completedTypes, resolved?.completedTypes)
+    }
+
+    @Test
+    fun `resolveEffectiveCheckpoint restarts reconcile when source link policy changes`() {
+        val startDate = LocalDate.of(2026, 3, 1)
+        val endDate = LocalDate.of(2026, 3, 28)
+        val oldRun =
+            createRun(
+                startDate = startDate,
+                endDate = endDate,
+                prefs = UserPreferences(rasSourceMode = LoadSourceMode.WORKOUT_ONLY),
+            )
+        val newRun =
+            createRun(
+                runId = "new-attempt",
+                startDate = startDate,
+                endDate = endDate,
+                prefs = UserPreferences(rasSourceMode = LoadSourceMode.EVERYDAY_HEART_RATE),
+            )
+        val checkpoint =
+            ResyncCheckpoint(
+                startDate = startDate,
+                endDate = endDate,
+                phase = ResyncPhase.RECOMPUTE,
+                nextDate = startDate.plusDays(10),
+                selectionHash = "old-hash",
+                runIdentity = oldRun,
+            )
+
+        val resolved =
+            HistoricalRunResolver.resolveEffectiveCheckpoint(
+                savedCheckpoint = checkpoint,
+                runIdentity = newRun,
+                isSameRun = false,
+                skipIngestAndPrune = false,
+                runStartDate = startDate,
+            )
+
+        assertNotNull(resolved)
+        assertEquals(ResyncPhase.RECONCILE, resolved?.phase)
+        assertEquals(startDate, resolved?.nextDate)
+    }
+
+    // --- Review fix (finding #2): source-selection change -> affected-type INGEST restart -----
+
+    @Test
+    fun `resolveEffectiveCheckpoint restarts ingest for source selection change, preserving types and tokens`() {
+        val startDate = LocalDate.of(2026, 3, 1)
+        val endDate = LocalDate.of(2026, 3, 28)
+        val oldRun =
+            createRun(
+                startDate = startDate,
+                endDate = endDate,
+                prefs = UserPreferences(deviceByDataType = mapOf("HEART_RATE" to "watch-a", "SLEEP" to "phone-a")),
+            )
+        val newRun =
+            createRun(
+                runId = "new-attempt",
+                startDate = startDate,
+                endDate = endDate,
+                prefs = UserPreferences(deviceByDataType = mapOf("HEART_RATE" to "watch-b", "SLEEP" to "phone-a")),
+            )
+        val preservedTokens = mapOf(HealthDataType.SLEEP to "tok-sleep", HealthDataType.HEART_RATE to "tok-hr")
+        val preservedCompletedTypes = setOf(HealthDataType.SLEEP, HealthDataType.HEART_RATE, HealthDataType.EXERCISE)
+        val checkpoint =
+            ResyncCheckpoint(
+                startDate = startDate,
+                endDate = endDate,
+                phase = ResyncPhase.RECOMPUTE,
+                nextDate = startDate.plusDays(15),
+                selectionHash = "old-hash",
+                baselineChangeTokens = preservedTokens,
+                completedTypes = preservedCompletedTypes,
+                runIdentity = oldRun,
+            )
+
+        val resolved =
+            HistoricalRunResolver.resolveEffectiveCheckpoint(
+                savedCheckpoint = checkpoint,
+                runIdentity = newRun,
+                isSameRun = false,
+                skipIngestAndPrune = false,
+                runStartDate = startDate,
+            )
+
+        // Only the INGEST phase (and what naturally follows it) restarts -- not a full restart.
+        assertNotNull(resolved)
+        assertEquals(ResyncPhase.INGEST, resolved?.phase)
+        assertEquals(startDate, resolved?.nextDate)
+        assertEquals(newRun, resolved?.runIdentity)
+        // Other types' bookkeeping (and the run's original Changes-API baseline) is preserved rather
+        // than reset -- a full restart would instead clear the checkpoint and recapture a fresh
+        // baseline via changeSynchronizer.captureChangesTokens(), losing this continuity.
+        assertEquals(preservedCompletedTypes, resolved?.completedTypes)
+        assertEquals(preservedTokens, resolved?.baselineChangeTokens)
+    }
+
+    @Test
+    fun `resolveEffectiveCheckpoint does not restart ingest when only the primary device fallback changes`() {
+        val startDate = LocalDate.of(2026, 3, 1)
+        val endDate = LocalDate.of(2026, 3, 28)
+        val oldRun =
+            createRun(startDate = startDate, endDate = endDate, prefs = UserPreferences(primaryDeviceName = "phone-a"))
+        val newRun =
+            createRun(
+                runId = "new-attempt",
+                startDate = startDate,
+                endDate = endDate,
+                prefs = UserPreferences(primaryDeviceName = "phone-b"),
+            )
+        val checkpoint =
+            ResyncCheckpoint(
+                startDate = startDate,
+                endDate = endDate,
+                phase = ResyncPhase.RECOMPUTE,
+                nextDate = startDate.plusDays(10),
+                selectionHash = "old-hash",
+                runIdentity = oldRun,
+            )
+
+        val resolved =
+            HistoricalRunResolver.resolveEffectiveCheckpoint(
+                savedCheckpoint = checkpoint,
+                runIdentity = newRun,
+                isSameRun = false,
+                skipIngestAndPrune = false,
+                runStartDate = startDate,
+            )
+
+        // Ingestion filters by deviceByDataType only (never the primary-device fallback), so a
+        // primary-device-only change has no effect on what is ingested -- it must not force an
+        // ingest restart, instead falling through to the scoring-only recompute-restart branch.
+        assertNotNull(resolved)
+        assertEquals(ResyncPhase.RECOMPUTE, resolved?.phase)
+        assertEquals(checkpoint.startDate, resolved?.nextDate)
     }
 }

@@ -352,7 +352,7 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
 
         override fun scheduleDatabaseMigration() { /* no-op */ }
 
-        override fun scheduleResyncWorker(
+        override suspend fun scheduleResyncWorker(
             recomputeOnly: Boolean,
             startDate: java.time.LocalDate?,
             endDate: java.time.LocalDate?,

@@ -1,5 +1,6 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
+import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.sync.HistoricalRunIdentity
@@ -44,14 +45,27 @@ object HistoricalRunResolver {
         }
     }
 
+    /**
+     * WP-10 review fix: dropped the exact `sourceSelectionId` match this used to require -- a
+     * source-selection change is now handled by its own narrower [remapForSourceSelectionRestart]
+     * branch in [remapCheckpointForNewSettings] instead of forcing every phase back to a full
+     * restart (see [affectedSourceTypes]).
+     */
     private fun canPreservePhases(oldRun: HistoricalRunIdentity, newRun: HistoricalRunIdentity): Boolean =
         oldRun.protocolVersion == newRun.protocolVersion &&
             oldRun.mode == newRun.mode &&
             oldRun.startEpochDay == newRun.startEpochDay &&
             oldRun.endEpochDayInclusive == newRun.endEpochDayInclusive &&
-            oldRun.zoneId == newRun.zoneId &&
-            oldRun.sourceSelectionId == newRun.sourceSelectionId
+            oldRun.zoneId == newRun.zoneId
 
+    /**
+     * WP-10 review fix: narrows settings-change invalidation to exactly one of three outcomes,
+     * checked in priority order: HR-zone/link-policy changes always win (they can silently corrupt
+     * already-reconciled session links, so they must invalidate reconcile+recompute regardless of
+     * what else changed); a source-selection change with no HR-zone/link-policy change next; any
+     * other scoring-only change last. A `null` decode (legacy/incompatible snapshot) is treated as
+     * the most conservative case (HR-zone branch) since neither narrower diff can be computed safely.
+     */
     private fun remapCheckpointForNewSettings(
         checkpoint: ResyncCheckpoint,
         runIdentity: HistoricalRunIdentity,
@@ -61,28 +75,92 @@ object HistoricalRunResolver {
         val newSnapshot = runIdentity.decodeScoringSnapshot()
         val hrZonesChanged =
             oldSnapshot == null || newSnapshot == null || hasHrZonesOrLinkPolicyChanged(oldSnapshot, newSnapshot)
+        val affectedTypes =
+            if (oldSnapshot != null && newSnapshot != null) {
+                affectedSourceTypes(oldSnapshot, newSnapshot)
+            } else {
+                emptySet()
+            }
 
-        return if (hrZonesChanged) {
-            val nextPhase =
-                if (checkpoint.phase == ResyncPhase.RECONCILE || checkpoint.phase == ResyncPhase.RECOMPUTE) {
-                    ResyncPhase.RECONCILE
-                } else {
-                    checkpoint.phase
-                }
-            checkpoint.copy(
-                phase = nextPhase,
-                nextDate = if (nextPhase == ResyncPhase.RECONCILE) runStartDate else checkpoint.nextDate,
-                runIdentity = runIdentity,
-                selectionHash = runIdentity.scoringSnapshotId,
-            )
-        } else {
-            checkpoint.copy(
-                nextDate = if (checkpoint.phase == ResyncPhase.RECOMPUTE) runStartDate else checkpoint.nextDate,
-                runIdentity = runIdentity,
-                selectionHash = runIdentity.scoringSnapshotId,
-            )
+        return when {
+            hrZonesChanged -> remapForReconcileRestart(checkpoint, runIdentity, runStartDate)
+            affectedTypes.isNotEmpty() -> remapForSourceSelectionRestart(checkpoint, runIdentity, runStartDate)
+            else -> remapForRecomputeRestart(checkpoint, runIdentity)
         }
     }
+
+    private fun remapForReconcileRestart(
+        checkpoint: ResyncCheckpoint,
+        runIdentity: HistoricalRunIdentity,
+        runStartDate: LocalDate,
+    ): ResyncCheckpoint {
+        val nextPhase =
+            if (checkpoint.phase == ResyncPhase.RECONCILE || checkpoint.phase == ResyncPhase.RECOMPUTE) {
+                ResyncPhase.RECONCILE
+            } else {
+                checkpoint.phase
+            }
+        return checkpoint.copy(
+            phase = nextPhase,
+            nextDate = if (nextPhase == ResyncPhase.RECONCILE) runStartDate else checkpoint.nextDate,
+            runIdentity = runIdentity,
+            selectionHash = runIdentity.scoringSnapshotId,
+        )
+    }
+
+    private fun remapForRecomputeRestart(
+        checkpoint: ResyncCheckpoint,
+        runIdentity: HistoricalRunIdentity,
+    ): ResyncCheckpoint =
+        checkpoint.copy(
+            nextDate = if (checkpoint.phase == ResyncPhase.RECOMPUTE) checkpoint.startDate else checkpoint.nextDate,
+            runIdentity = runIdentity,
+            selectionHash = runIdentity.scoringSnapshotId,
+        )
+
+    /**
+     * WP-10 review fix: a device/source-selection change alone -- no HR-zone/link-policy change --
+     * invalidates only the INGEST phase (and whatever naturally follows it: PRUNE, then RECONCILE,
+     * then RECOMPUTE), rather than collapsing into the same full-restart-from-scratch path a
+     * protocol-version or date-range mismatch takes. The run is rewound to [ResyncPhase.INGEST] at
+     * `runStartDate` because ingestion filters records to the selected device *before persisting*
+     * (`HealthIngestionCoordinator.fetchAndPersistBulkRecords`), so a newly selected device's
+     * records were never persisted under the old selection and must be re-fetched from Health
+     * Connect across the full range -- there is no per-type ingest cursor to resume mid-range from.
+     *
+     * Deliberately preserves, rather than resets, [ResyncCheckpoint.completedTypes] and
+     * [ResyncCheckpoint.baselineChangeTokens] from the old checkpoint: unlike a full restart (fresh
+     * baseline tokens captured, `completedTypes` reset to that fresh baseline), this keeps the run's
+     * original Changes-API baseline anchored and lets the ingest loop's own
+     * `runCompletedTypes.intersect(...)` bookkeeping re-derive accurate per-type completion as the
+     * re-scan proceeds -- removing the affected type(s) here instead would incorrectly and
+     * permanently exclude them forever, since that intersect can only shrink a type set, never
+     * re-admit a removed one.
+     *
+     * KNOWN LIMITATION: because [HistoricalIngestPhase]/`HealthIngestionCoordinator.ingestWindow`
+     * ingest every [HealthDataType] together per chunk (no `typesToIngest` filter exists), this
+     * re-scan still re-fetches Health Connect data for *every* type across the full range, not only
+     * [affectedSourceTypes] -- idempotent (upsert-keyed, immediately corrected by the following
+     * [HistoricalPrunePhase]) but not scoped at the network-I/O level. Scoping the re-fetch itself
+     * to just the affected type(s) would require threading a type filter through
+     * `IngestWindowParams`/`HealthIngestionCoordinator` and reworking how `completedTypes` are
+     * intersected per chunk (which currently assumes every chunk scans every type) -- a larger
+     * restructure than this checkpoint-resolution fix.
+     */
+    private fun remapForSourceSelectionRestart(
+        checkpoint: ResyncCheckpoint,
+        runIdentity: HistoricalRunIdentity,
+        runStartDate: LocalDate,
+    ): ResyncCheckpoint =
+        checkpoint.copy(
+            phase = ResyncPhase.INGEST,
+            nextDate = runStartDate,
+            runIdentity = runIdentity,
+            selectionHash = runIdentity.scoringSnapshotId,
+            chunkDaysOverride = null,
+            hrPageToken = null,
+            hrvPageToken = null,
+        )
 
     private fun hasHrZonesOrLinkPolicyChanged(
         old: ScoringRunSnapshot,
@@ -95,6 +173,23 @@ object HistoricalRunResolver {
             old.part3.zone4MaxBpm != new.part3.zone4MaxBpm ||
             old.part6.strainLoadSourceMode != new.part6.strainLoadSourceMode ||
             old.part6.rasSourceMode != new.part6.rasSourceMode
+
+    /**
+     * WP-10 review fix: the [HealthDataType]s whose device selection actually differs between
+     * [old] and [new]'s [ScoringRunSnapshot.sourceSelection] maps. Keys that aren't a valid
+     * [HealthDataType] name (namely `PRIMARY_DEVICE_KEY`) are dropped -- ingestion's per-type device
+     * filter (`HealthIngestionCoordinator`'s private `deviceFor(type)`) reads only
+     * `UserPreferences.deviceByDataType`, never the primary-device fallback, so a primary-device-only
+     * change has no effect on what gets ingested/pruned and correctly yields an empty set here.
+     */
+    private fun affectedSourceTypes(old: ScoringRunSnapshot, new: ScoringRunSnapshot): Set<HealthDataType> {
+        val oldSelection = old.sourceSelection
+        val newSelection = new.sourceSelection
+        val changedKeys = (oldSelection.keys + newSelection.keys).filter { oldSelection[it] != newSelection[it] }
+        return changedKeys.mapNotNullTo(mutableSetOf()) { key ->
+            runCatching { HealthDataType.valueOf(key) }.getOrNull()
+        }
+    }
 }
 
 internal fun UserPreferences.scoringCheckpointIdentity(): String =

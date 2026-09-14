@@ -12,6 +12,7 @@ import app.readylytics.health.core.model.domain.repository.HealthConnectPermissi
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import dagger.Lazy
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -104,7 +105,7 @@ class PeriodicHealthSyncWorkerTest {
 
             val result = createWorker().doWork()
 
-            verify(exactly = 1) { workerScheduler.scheduleResyncWorker() }
+            coVerify(exactly = 1) { workerScheduler.scheduleResyncWorker() }
             verify(exactly = 1) { foregroundSyncController.onBackgroundRecalcFinished(false) }
             assertEquals(ListenableWorker.Result.success(), result)
         }

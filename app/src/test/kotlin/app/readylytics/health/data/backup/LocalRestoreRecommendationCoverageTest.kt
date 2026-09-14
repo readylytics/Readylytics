@@ -10,8 +10,8 @@ import app.readylytics.health.core.model.domain.recommendation.WorkoutRecommenda
 import app.readylytics.health.core.model.domain.recommendation.WorkoutRecommendationState
 import app.readylytics.health.data.preferences.UserPreferencesProto
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.coVerifyOrder
-import io.mockk.verify
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.json.JSONArray
@@ -58,7 +58,7 @@ class LocalRestoreRecommendationCoverageTest : LocalRestoreManagerTestBase() {
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
             assertTrue(result is RestoreResult.SuccessRequiresRestart)
-            verify(exactly = 1) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
+            coVerify(exactly = 1) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
             zipFile.delete()
         }
 
@@ -88,7 +88,7 @@ class LocalRestoreRecommendationCoverageTest : LocalRestoreManagerTestBase() {
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
             assertTrue(result is RestoreResult.SuccessRequiresRestart)
-            verify(exactly = 0) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
+            coVerify(exactly = 0) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
             zipFile.delete()
         }
 
@@ -130,7 +130,7 @@ class LocalRestoreRecommendationCoverageTest : LocalRestoreManagerTestBase() {
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
             assertTrue(result is RestoreResult.SuccessRequiresRestart)
-            verify(exactly = 0) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
+            coVerify(exactly = 0) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
             zipFile.delete()
         }
 
@@ -144,7 +144,7 @@ class LocalRestoreRecommendationCoverageTest : LocalRestoreManagerTestBase() {
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
             assertTrue(result is RestoreResult.SuccessRequiresRestart)
-            verify(exactly = 0) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
+            coVerify(exactly = 0) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
             zipFile.delete()
         }
 
@@ -179,7 +179,7 @@ class LocalRestoreRecommendationCoverageTest : LocalRestoreManagerTestBase() {
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
             assertTrue(result is RestoreResult.SuccessRequiresRestart)
-            verify(exactly = 0) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
+            coVerify(exactly = 0) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
             zipFile.delete()
         }
 
@@ -210,7 +210,7 @@ class LocalRestoreRecommendationCoverageTest : LocalRestoreManagerTestBase() {
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
             assertTrue(result is RestoreResult.SuccessRequiresRestart)
-            verify(exactly = 1) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
+            coVerify(exactly = 1) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
             zipFile.delete()
         }
 
@@ -272,7 +272,7 @@ class LocalRestoreRecommendationCoverageTest : LocalRestoreManagerTestBase() {
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
             assertTrue(result is RestoreResult.PartialSuccessRequiresRestart)
-            verify(exactly = 1) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
+            coVerify(exactly = 1) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
             zipFile.delete()
         }
 }

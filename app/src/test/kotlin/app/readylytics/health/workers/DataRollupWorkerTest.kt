@@ -11,7 +11,6 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -59,7 +58,7 @@ class DataRollupWorkerTest {
 
             createWorker().doWork()
 
-            verify(exactly = 1) {
+            coVerify(exactly = 1) {
                 workerScheduler.scheduleResyncWorker(
                     recomputeOnly = true,
                     startDate = LocalDate.of(2026, 1, 1),
@@ -75,7 +74,7 @@ class DataRollupWorkerTest {
 
             createWorker().doWork()
 
-            verify(exactly = 0) { workerScheduler.scheduleResyncWorker(any(), any(), any()) }
+            coVerify(exactly = 0) { workerScheduler.scheduleResyncWorker(any(), any(), any()) }
         }
 
     @Test
