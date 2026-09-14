@@ -112,6 +112,7 @@ class HealthResyncWorker
             onSuccessChanged: (Boolean) -> Unit,
         ): Result {
             val recomputeOnly = inputData.getBoolean(KEY_RECOMPUTE_ONLY, false)
+            val runId = inputData.getString(KEY_RUN_ID)
             val rangeOverride =
                 inputData.getLong(KEY_RECOMPUTE_START_EPOCH_DAY, -1L).takeIf { it >= 0 }?.let { startEpochDay ->
                     val endEpochDay = inputData.getLong(KEY_RECOMPUTE_END_EPOCH_DAY, startEpochDay)
@@ -138,6 +139,7 @@ class HealthResyncWorker
                 resyncUseCase.execute(
                     recomputeOnly = recomputeOnly,
                     rangeOverride = rangeOverride,
+                    runId = runId,
                 ) { phase, current, total ->
                     setProgressAsync(workDataOf(KEY_CURRENT to current, KEY_TOTAL to total))
                     syncController.onBackgroundRecalcProgress(phase, current, total)
@@ -315,6 +317,9 @@ class HealthResyncWorker
 
             /** Input data key: true routes this run through the SCORE-007 recompute-only path. */
             const val KEY_RECOMPUTE_ONLY = "recompute_only"
+
+            /** WP-10: optional input data key referencing the immutable historical run ID. */
+            const val KEY_RUN_ID = "run_id"
 
             /**
              * R2-CACHE-001: optional input data keys carrying a bounded recompute-only date-range

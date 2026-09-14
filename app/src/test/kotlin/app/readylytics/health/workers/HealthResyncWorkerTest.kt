@@ -87,8 +87,8 @@ class HealthResyncWorkerTest {
     @Test
     fun `doWork reports progress and returns success when resync usecase succeeds`() =
         runBlocking {
-            coEvery { useCase.execute(any(), any(), any()) } answers {
-                val progressCallback = thirdArg<(ResyncPhase, Int, Int) -> Unit>()
+            coEvery { useCase.execute(any(), any(), any(), any()) } answers {
+                val progressCallback = args[3] as (ResyncPhase, Int, Int) -> Unit
                 progressCallback(ResyncPhase.RECOMPUTE, 1, 10)
                 app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
@@ -115,7 +115,7 @@ class HealthResyncWorkerTest {
                     .putBoolean(HealthResyncWorker.KEY_RECOMPUTE_ONLY, true)
                     .build()
             val recomputeOnlySlot = slot<Boolean>()
-            coEvery { useCase.execute(capture(recomputeOnlySlot), any(), any()) } returns
+            coEvery { useCase.execute(capture(recomputeOnlySlot), any(), any(), any()) } returns
                 app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
 
@@ -134,7 +134,7 @@ class HealthResyncWorkerTest {
                     .putBoolean(HealthResyncWorker.KEY_RECOMPUTE_ONLY, true)
                     .build()
             val rangeSlot = slot<ScoreInvalidation.AffectedRange?>()
-            coEvery { useCase.execute(any(), captureNullable(rangeSlot), any()) } returns
+            coEvery { useCase.execute(any(), captureNullable(rangeSlot), any(), any()) } returns
                 app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
 
@@ -162,7 +162,7 @@ class HealthResyncWorkerTest {
     fun `doWork defaults recomputeOnly to false when input data is absent`() =
         runBlocking {
             val recomputeOnlySlot = slot<Boolean>()
-            coEvery { useCase.execute(capture(recomputeOnlySlot), any(), any()) } returns
+            coEvery { useCase.execute(capture(recomputeOnlySlot), any(), any(), any()) } returns
                 app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
 
@@ -191,7 +191,7 @@ class HealthResyncWorkerTest {
                             .toEpochDay(),
                     ).build()
             val rangeSlot = slot<app.readylytics.health.core.model.domain.sync.ScoreInvalidation.AffectedRange>()
-            coEvery { useCase.execute(any(), capture(rangeSlot), any()) } returns
+            coEvery { useCase.execute(any(), capture(rangeSlot), any(), any()) } returns
                 app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
 
@@ -207,7 +207,7 @@ class HealthResyncWorkerTest {
         runBlocking {
             val rangeSlot =
                 slot<app.readylytics.health.core.model.domain.sync.ScoreInvalidation.AffectedRange?>()
-            coEvery { useCase.execute(any(), captureNullable(rangeSlot), any()) } returns
+            coEvery { useCase.execute(any(), captureNullable(rangeSlot), any(), any()) } returns
                 app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
 
@@ -220,7 +220,7 @@ class HealthResyncWorkerTest {
     @Test
     fun `doWork returns retry when resync usecase fails`() =
         runBlocking {
-            coEvery { useCase.execute(any(), any(), any()) } returns
+            coEvery { useCase.execute(any(), any(), any(), any()) } returns
                 app.readylytics.health.core.model.domain.model.Result
                     .Failure("error", "network error")
             val worker = createWorker()
@@ -235,7 +235,7 @@ class HealthResyncWorkerTest {
     @Test
     fun `doWork returns retry when resync usecase throws exception`() =
         runBlocking {
-            coEvery { useCase.execute(any(), any(), any()) } throws RuntimeException("critical error")
+            coEvery { useCase.execute(any(), any(), any(), any()) } throws RuntimeException("critical error")
             val worker = createWorker()
             val result = worker.doWork()
             assertEquals(
@@ -248,7 +248,7 @@ class HealthResyncWorkerTest {
     @Test
     fun `doWork returns terminal failure when Health Connect permission is revoked`() =
         runBlocking {
-            coEvery { useCase.execute(any(), any(), any()) } throws
+            coEvery { useCase.execute(any(), any(), any(), any()) } throws
                 HealthConnectPermissionRevokedException(SecurityException("permission revoked"))
             val worker = createWorker()
 
@@ -280,7 +280,7 @@ class HealthResyncWorkerTest {
     @Test
     fun `success bumps scoring version and marks the sleep-score recalc baseline`() =
         runBlocking {
-            coEvery { useCase.execute(any(), any(), any()) } returns
+            coEvery { useCase.execute(any(), any(), any(), any()) } returns
                 app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
             createWorker().doWork()
@@ -298,7 +298,7 @@ class HealthResyncWorkerTest {
     @Test
     fun `success with a current scoring version skips the bump but still marks the baseline`() =
         runBlocking {
-            coEvery { useCase.execute(any(), any(), any()) } returns
+            coEvery { useCase.execute(any(), any(), any(), any()) } returns
                 app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
             coEvery { settingsRepository.userPreferences } returns
@@ -312,7 +312,7 @@ class HealthResyncWorkerTest {
     @Test
     fun `retry path does not persist scoring version or baseline`() =
         runBlocking {
-            coEvery { useCase.execute(any(), any(), any()) } returns
+            coEvery { useCase.execute(any(), any(), any(), any()) } returns
                 app.readylytics.health.core.model.domain.model.Result
                     .Failure("error", "network error")
             createWorker().doWork()
@@ -324,7 +324,7 @@ class HealthResyncWorkerTest {
     @Test
     fun `exception path does not persist scoring version or baseline`() =
         runBlocking {
-            coEvery { useCase.execute(any(), any(), any()) } throws RuntimeException("critical error")
+            coEvery { useCase.execute(any(), any(), any(), any()) } throws RuntimeException("critical error")
             createWorker().doWork()
 
             coVerify(exactly = 0) { settingsRepository.updateScoringVersion(any()) }
@@ -444,20 +444,39 @@ class HealthResyncWorkerTest {
                     .putString(HealthResyncWorker.KEY_RECOMPUTE_MODE, "not_a_real_mode")
                     .putBoolean(HealthResyncWorker.KEY_RECOMPUTE_ONLY, true)
                     .build()
-            coEvery { useCase.execute(any(), any(), any()) } returns
+            coEvery { useCase.execute(any(), any(), any(), any()) } returns
                 app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
 
             createWorker().doWork()
 
-            coVerify(exactly = 1) { useCase.execute(true, any(), any()) }
+            coVerify(exactly = 1) { useCase.execute(true, any(), any(), any()) }
             coVerify(exactly = 0) { useCase.executeTrainingReadinessProjection(any(), any()) }
+        }
+
+    @Test
+    fun `doWork passes runId from input data through to the use case`() =
+        runBlocking {
+            every { workerParams.inputData } returns
+                androidx.work.Data
+                    .Builder()
+                    .putString(HealthResyncWorker.KEY_RUN_ID, "test-run-123")
+                    .build()
+            val runIdSlot = slot<String?>()
+            coEvery { useCase.execute(any(), any(), captureNullable(runIdSlot), any()) } returns
+                app.readylytics.health.core.model.domain.model.Result
+                    .Success(Unit)
+
+            val worker = createWorker()
+            worker.doWork()
+
+            assertEquals("test-run-123", runIdSlot.captured)
         }
 
     @Test
     fun `persistence failure does not fail the worker`() =
         runBlocking {
-            coEvery { useCase.execute(any(), any(), any()) } returns
+            coEvery { useCase.execute(any(), any(), any(), any()) } returns
                 app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
             coEvery { settingsRepository.userPreferences } throws

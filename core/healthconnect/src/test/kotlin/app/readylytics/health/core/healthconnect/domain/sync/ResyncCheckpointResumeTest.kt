@@ -99,6 +99,30 @@ class ResyncCheckpointResumeTest {
             )
     }
 
+    private fun createRunIdentity(
+        startDate: LocalDate,
+        endDate: LocalDate,
+        mode: String = HistoricalRunIdentity.MODE_FULL_INGEST,
+        prefs: UserPreferences = UserPreferences(),
+    ): HistoricalRunIdentity {
+        val resolvedHrMax =
+            if (prefs.autoCalculateMaxHr) {
+                (208 - 0.7 * prefs.age).toFloat()
+            } else {
+                prefs.maxHeartRate.toFloat()
+            }
+        return HistoricalRunIdentity.create(
+            runId = "test-run",
+            mode = mode,
+            startDate = startDate,
+            endDate = endDate,
+            zoneId = ZoneId.systemDefault(),
+            prefs = prefs,
+            resolvedHrMax = resolvedHrMax,
+            startedAtEpochMs = 1000L,
+        )
+    }
+
     @Test
     fun `resyncRange resumes ingest from saved chunk checkpoint`() =
         runTest {
@@ -114,6 +138,7 @@ class ResyncCheckpointResumeTest {
                     nextDate = resumedChunkStart,
                     selectionHash = "",
                     baselineChangeTokens = baselineTokens,
+                    runIdentity = createRunIdentity(startDate, endDate),
                 )
 
             val sleepFromSlot = slot<Instant>()
@@ -142,6 +167,7 @@ class ResyncCheckpointResumeTest {
                     nextDate = startDate.plusDays(2),
                     selectionHash = "",
                     baselineChangeTokens = baselineTokens,
+                    runIdentity = createRunIdentity(startDate, endDate),
                 )
             val progress = mutableListOf<Triple<ResyncPhase, Int, Int>>()
 
@@ -192,6 +218,7 @@ class ResyncCheckpointResumeTest {
                     nextDate = resumedStart,
                     selectionHash = "",
                     baselineChangeTokens = baselineTokens,
+                    runIdentity = createRunIdentity(startDate, endDate),
                 )
             coEvery {
                 scoringRepository.fetchWalkForwardFatigueContext(resumedStart, endDate, any())
@@ -226,6 +253,7 @@ class ResyncCheckpointResumeTest {
                     nextDate = LocalDate.of(2024, 7, 1),
                     selectionHash = "stale",
                     baselineChangeTokens = baselineTokens,
+                    runIdentity = createRunIdentity(startDate.minusDays(10), endDate),
                 )
 
             val sleepFromInstants = mutableListOf<Instant>()
@@ -255,6 +283,7 @@ class ResyncCheckpointResumeTest {
                     nextDate = LocalDate.of(2024, 7, 1),
                     selectionHash = "",
                     baselineChangeTokens = emptyMap(),
+                    runIdentity = createRunIdentity(startDate, endDate),
                 )
 
             val sleepFromSlot = slot<Instant>()
@@ -336,6 +365,7 @@ class ResyncCheckpointResumeTest {
                     baselineChangeTokens = hrvOnlyTokens,
                     completedTypes = emptySet(),
                     completedTypesRecorded = true,
+                    runIdentity = createRunIdentity(startDate, endDate),
                 )
 
             // The resumed chunk (6/3-6/4) regrants HRV -- it must NOT resurrect HRV's promotion
@@ -369,6 +399,7 @@ class ResyncCheckpointResumeTest {
                     baselineChangeTokens = baselineTokens,
                     completedTypes = emptySet(),
                     completedTypesRecorded = false,
+                    runIdentity = createRunIdentity(startDate, startDate),
                 )
 
             useCase.run(startDate = startDate, endDate = startDate, chunkDays = 30, onProgress = null)
@@ -391,6 +422,7 @@ class ResyncCheckpointResumeTest {
                     selectionHash = "",
                     baselineChangeTokens = baselineTokens,
                     hrPageToken = "saved-token-2",
+                    runIdentity = createRunIdentity(startDate, startDate),
                 )
 
             val tokenSlot = slot<String?>()
@@ -555,6 +587,13 @@ class ResyncCheckpointResumeTest {
                     nextDate = startDate.plusDays(2),
                     selectionHash = "RECOMPUTE_ONLY_V2||${oldPrefs.scoringCheckpointIdentity()}",
                     baselineChangeTokens = emptyMap(),
+                    runIdentity =
+                        createRunIdentity(
+                            startDate,
+                            endDate,
+                            mode = HistoricalRunIdentity.MODE_RECOMPUTE_ONLY,
+                            prefs = oldPrefs,
+                        ),
                 )
 
             useCase.run(
@@ -594,6 +633,13 @@ class ResyncCheckpointResumeTest {
                     nextDate = startDate.plusDays(2),
                     selectionHash = "RECOMPUTE_ONLY_V2||${oldPrefs.scoringCheckpointIdentity()}",
                     baselineChangeTokens = emptyMap(),
+                    runIdentity =
+                        createRunIdentity(
+                            startDate,
+                            endDate,
+                            mode = HistoricalRunIdentity.MODE_RECOMPUTE_ONLY,
+                            prefs = oldPrefs,
+                        ),
                 )
 
             useCase.run(

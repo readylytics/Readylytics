@@ -137,4 +137,54 @@ class ResyncCheckpointStoreImplTest {
         assertNull(domain.hrPageToken)
         assertNull(domain.hrvPageToken)
     }
+
+    @Test
+    fun `round trips HistoricalRunIdentity with all fields`() {
+        val identity =
+            app.readylytics.health.core.model.domain.sync.HistoricalRunIdentity(
+                protocolVersion = 2,
+                runId = "run-uuid-123",
+                mode = "FULL_INGEST",
+                startEpochDay = LocalDate.of(2024, 1, 1).toEpochDay(),
+                endEpochDayInclusive = LocalDate.of(2024, 1, 31).toEpochDay(),
+                zoneId = "Europe/Berlin",
+                startedAtEpochMs = 1704067200000L,
+                sourceSelectionId = "source-selection-hash-456",
+                algorithmRevision = 5,
+                scoringSnapshotJson = """{"part1":{"goalSleepHours":8.0}}""",
+                scoringSnapshotId = "snapshot-hash-789",
+            )
+        val checkpoint =
+            ResyncCheckpoint(
+                startDate = LocalDate.of(2024, 1, 1),
+                endDate = LocalDate.of(2024, 1, 31),
+                phase = ResyncPhase.RECOMPUTE,
+                nextDate = LocalDate.of(2024, 1, 15),
+                selectionHash = "snapshot-hash-789",
+                baselineChangeTokens = mapOf(HealthDataType.HEART_RATE to "token-hr"),
+                runIdentity = identity,
+            )
+
+        val proto = checkpoint.toProto()
+        val restored = proto.toDomain()
+
+        assertEquals(identity, restored.runIdentity)
+        assertEquals(checkpoint, restored)
+    }
+
+    @Test
+    fun `maps missing run_identity to null in domain (legacy checkpoint)`() {
+        val proto =
+            ResyncCheckpointProto
+                .newBuilder()
+                .setStartEpochDay(LocalDate.of(2024, 1, 1).toEpochDay())
+                .setEndEpochDay(LocalDate.of(2024, 1, 31).toEpochDay())
+                .setPhase(ResyncPhaseProto.INGEST)
+                .setNextEpochDay(LocalDate.of(2024, 1, 1).toEpochDay())
+                .setSelectionHash("hash-123")
+                .build()
+
+        val domain = proto.toDomain()
+        assertNull(domain.runIdentity)
+    }
 }

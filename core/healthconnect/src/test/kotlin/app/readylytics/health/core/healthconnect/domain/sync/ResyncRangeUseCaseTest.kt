@@ -375,6 +375,17 @@ class ResyncRangeUseCaseTest {
                     nextDate = startDate,
                     selectionHash = "",
                     baselineChangeTokens = mapOf(HealthDataType.STEPS to "token"),
+                    runIdentity =
+                        app.readylytics.health.core.model.domain.sync.HistoricalRunIdentity.create(
+                            runId = "test-run",
+                            mode = app.readylytics.health.core.model.domain.sync.HistoricalRunIdentity.MODE_FULL_INGEST,
+                            startDate = startDate,
+                            endDate = endDate,
+                            zoneId = java.time.ZoneId.systemDefault(),
+                            prefs = app.readylytics.health.core.model.data.preferences.UserPreferences(),
+                            resolvedHrMax = 187f,
+                            startedAtEpochMs = 1000L,
+                        ),
                 )
             val phases = mutableListOf<ResyncPhase>()
 

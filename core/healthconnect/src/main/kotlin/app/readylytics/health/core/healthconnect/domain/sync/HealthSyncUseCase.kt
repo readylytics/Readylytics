@@ -106,10 +106,17 @@ class HealthSyncUseCase
             endDate: LocalDate,
             chunkDays: Int = 30,
             onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)? = null,
+            requestedRunId: String? = null,
         ): Result<Unit> =
             syncMutex.withLock {
                 coordinator.withMutation {
-                    resyncRangeUseCase.run(startDate, endDate, chunkDays, onProgress)
+                    resyncRangeUseCase.run(
+                        startDate = startDate,
+                        endDate = endDate,
+                        chunkDays = chunkDays,
+                        onProgress = onProgress,
+                        requestedRunId = requestedRunId,
+                    )
                 }
             }
 
@@ -125,6 +132,7 @@ class HealthSyncUseCase
             startDate: LocalDate,
             endDate: LocalDate,
             onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)? = null,
+            requestedRunId: String? = null,
         ): Result<Unit> =
             syncMutex.withLock {
                 coordinator.withMutation {
@@ -134,6 +142,7 @@ class HealthSyncUseCase
                         chunkDays = 30,
                         onProgress = onProgress,
                         skipIngestAndPrune = true,
+                        requestedRunId = requestedRunId,
                     )
                 }
             }

@@ -37,4 +37,21 @@ message ResyncCheckpointProto {
   // absent, fall back to the permissive baseline-tokens default" rather than conflating a genuine
   // narrowed-to-empty completed_types with a legacy/absent one.
   bool completed_types_recorded = 11;
+  // WP-10: immutable run identity and scoring snapshot.
+  HistoricalRunIdentityProto run_identity = 12;
 }
+
+message HistoricalRunIdentityProto {
+  int32 protocol_version = 1;
+  string run_id = 2;
+  string mode = 3;
+  int64 start_epoch_day = 4;
+  int64 end_epoch_day_inclusive = 5;
+  string zone_id = 6;
+  int64 started_at_epoch_ms = 7;
+  string source_selection_id = 8;
+  int32 algorithm_revision = 9;
+  string scoring_snapshot_json = 10;
+  string scoring_snapshot_id = 11;
+}
+

@@ -43,6 +43,8 @@ data class ResyncCheckpoint(
      * down to empty" (trust the empty set, never re-promote a type denied earlier in this same run).
      */
     val completedTypesRecorded: Boolean = true,
+    /** WP-10: immutable run identity and scoring snapshot. */
+    val runIdentity: HistoricalRunIdentity? = null,
 )
 
 interface ResyncCheckpointStore {
