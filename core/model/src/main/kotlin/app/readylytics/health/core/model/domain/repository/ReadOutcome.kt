@@ -26,3 +26,9 @@ inline fun <T, R> ReadOutcome<T>.map(transform: (T) -> R): ReadOutcome<R> =
         ReadOutcome.Denied -> ReadOutcome.Denied
         ReadOutcome.Unsupported -> ReadOutcome.Unsupported
     }
+
+fun <T> ReadOutcome<List<T>>.dataOrEmpty(): List<T> =
+    when (this) {
+        is ReadOutcome.Available -> data
+        ReadOutcome.Denied, ReadOutcome.Unsupported -> emptyList()
+    }

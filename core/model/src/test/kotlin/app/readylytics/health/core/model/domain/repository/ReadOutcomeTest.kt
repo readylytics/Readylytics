@@ -41,4 +41,15 @@ class ReadOutcomeTest {
         assertEquals(ReadOutcome.Denied, ReadOutcome.Denied.map { it })
         assertEquals(ReadOutcome.Unsupported, ReadOutcome.Unsupported.map { it })
     }
+
+    @Test
+    fun `dataOrEmpty returns list when Available and emptyList when Denied or Unsupported`() {
+        val sample = listOf("a", "b")
+        val available: ReadOutcome<List<String>> = ReadOutcome.Available(sample)
+        val denied: ReadOutcome<List<String>> = ReadOutcome.Denied
+        val unsupported: ReadOutcome<List<String>> = ReadOutcome.Unsupported
+        assertEquals(sample, available.dataOrEmpty())
+        assertEquals(emptyList<String>(), denied.dataOrEmpty())
+        assertEquals(emptyList<String>(), unsupported.dataOrEmpty())
+    }
 }

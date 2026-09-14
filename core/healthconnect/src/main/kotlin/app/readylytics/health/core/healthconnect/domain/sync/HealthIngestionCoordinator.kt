@@ -15,6 +15,7 @@ import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
 import app.readylytics.health.core.model.domain.repository.HealthConnectWindowTimeoutException
 import app.readylytics.health.core.model.domain.repository.ReadOutcome
+import app.readylytics.health.core.model.domain.repository.dataOrEmpty
 import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.sync.mappers.SleepDataMapper
@@ -601,9 +602,3 @@ private suspend fun streamHrvSamples(
         }
     return readOutcome to hrvSampleCount
 }
-
-private fun <T> ReadOutcome<List<T>>.dataOrEmpty(): List<T> =
-    (this as? ReadOutcome.Available<*>)?.let {
-        @Suppress("UNCHECKED_CAST")
-        it.data as? List<T>
-    } ?: emptyList()

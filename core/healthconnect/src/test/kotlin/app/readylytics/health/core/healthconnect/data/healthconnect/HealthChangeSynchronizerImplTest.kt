@@ -134,24 +134,12 @@ class HealthChangeSynchronizerImplTest {
     @Test
     fun `grant sync revoke repeat twice regrant lifecycle suspends type and bootstraps upon regrant`() =
         runTest {
-            val allPerms =
-                HealthDataType.entries.flatMap { current ->
-                    recordClassesFor(current).map {
-                        HealthPermission.getReadPermission(it)
-                    }
-                }.toSet()
+            val allPerms = allPermissions()
+            val permsWithoutSteps = allPerms - stepsPermissions()
 
-            val stepsPerms =
-                recordClassesFor(HealthDataType.STEPS).map {
-                    HealthPermission.getReadPermission(it)
-                }.toSet()
-
-            val permsWithoutSteps = allPerms - stepsPerms
-
-            // Fake token store state
             val inMemoryTokens = HealthDataType.entries.associateWith { "token-$it" }.toMutableMap()
-            coEvery { tokenStore.get(any()) } answers { inMemoryTokens[firstArg()] }
-            coEvery { tokenStore.suspendType(any()) } answers { inMemoryTokens.remove(firstArg()) }
+            val suspended = mutableSetOf<HealthDataType>()
+            setupFakeTokenStore(inMemoryTokens, suspended)
 
             HealthDataType.entries.forEach { current ->
                 coEvery { client.getChanges("token-$current") } returns changesResponse(emptyList())
@@ -182,6 +170,30 @@ class HealthChangeSynchronizerImplTest {
             assertTrue(
                 "Regrant must request full resync to bootstrap the newly regranted type",
                 outcome5.requiresFullResync,
+            )
+
+            // 6. Resync captures baseline tokens (including newly regranted STEPS)
+            coEvery { client.getChangesToken(any()) } answers {
+                val request = firstArg<ChangesTokenRequest>()
+                "fresh-token-${request.recordTypes.first().simpleName}"
+            }
+            val baselineTokens = synchronizer.captureChangesTokens()
+            assertTrue(
+                "Baseline tokens must include newly regranted STEPS",
+                baselineTokens.containsKey(HealthDataType.STEPS),
+            )
+
+            // 7. Commit baseline tokens, clearing suspension and bootstrapping delta sync
+            synchronizer.commitTokens(baselineTokens)
+            baselineTokens.forEach { (_, token) ->
+                coEvery { client.getChanges(token) } returns changesResponse(emptyList())
+            }
+
+            // 8. Subsequent delta sync resumes without requiring full resync
+            val outcome6 = synchronizer.applyPendingChanges()
+            assertFalse(
+                "Subsequent sync after regrant and baseline commit should not request full resync",
+                outcome6.requiresFullResync,
             )
         }
 
@@ -531,4 +543,30 @@ class HealthChangeSynchronizerImplTest {
             every { nextChangesToken } returns "next-token"
             every { hasMore } returns false
         }
+
+    private fun allPermissions(): Set<String> =
+        HealthDataType.entries.flatMap { current ->
+            recordClassesFor(current).map { HealthPermission.getReadPermission(it) }
+        }.toSet()
+
+    private fun stepsPermissions(): Set<String> =
+        recordClassesFor(HealthDataType.STEPS).map { HealthPermission.getReadPermission(it) }.toSet()
+
+    private fun setupFakeTokenStore(
+        inMemoryTokens: MutableMap<HealthDataType, String>,
+        suspended: MutableSet<HealthDataType>,
+    ) {
+        coEvery { tokenStore.get(any()) } answers { inMemoryTokens[firstArg()] }
+        coEvery { tokenStore.isSuspended(any()) } answers { firstArg<HealthDataType>() in suspended }
+        coEvery { tokenStore.suspendType(any()) } answers {
+            val type = firstArg<HealthDataType>()
+            suspended.add(type)
+            inMemoryTokens.remove(type)
+        }
+        coEvery { tokenStore.putAll(any(), any()) } answers {
+            val tokens = firstArg<Map<HealthDataType, String>>()
+            inMemoryTokens.putAll(tokens)
+            suspended.removeAll(tokens.keys)
+        }
+    }
 }

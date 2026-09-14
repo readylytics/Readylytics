@@ -3,6 +3,7 @@ package app.readylytics.health.core.healthconnect.domain.sync
 import app.readylytics.health.core.model.domain.model.DomainVo2MaxRecord
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.ReadOutcome
 import app.readylytics.health.core.model.domain.sync.HealthIngestionBatch
 import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
 import io.mockk.coEvery
@@ -20,6 +21,7 @@ class HealthIngestionCoordinatorVo2MaxTest {
     fun `ingestWindow ingests and persists Vo2Max records when permission is granted`() =
         runTest {
             val hcRepo = mockk<HealthConnectRepository>(relaxed = true)
+            stubEmptyReads(hcRepo)
             val healthIngestionStore = mockk<HealthIngestionStore>(relaxed = true)
 
             coEvery { hcRepo.hasVo2MaxPermission() } returns true
@@ -33,7 +35,7 @@ class HealthIngestionCoordinatorVo2MaxTest {
                     deviceName = "Pixel Watch",
                 )
             coEvery { hcRepo.readVo2MaxRecords(any(), any()) } returns
-                app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(listOf(domainRecord))
+                ReadOutcome.Available(listOf(domainRecord))
 
             val batchSlot = slot<HealthIngestionBatch>()
             coEvery { healthIngestionStore.persist(capture(batchSlot)) } returns Unit
@@ -60,6 +62,7 @@ class HealthIngestionCoordinatorVo2MaxTest {
     fun `ingestWindow skips Vo2Max records when permission is not granted`() =
         runTest {
             val hcRepo = mockk<HealthConnectRepository>(relaxed = true)
+            stubEmptyReads(hcRepo)
             val healthIngestionStore = mockk<HealthIngestionStore>(relaxed = true)
 
             coEvery { hcRepo.hasVo2MaxPermission() } returns false
@@ -78,4 +81,17 @@ class HealthIngestionCoordinatorVo2MaxTest {
             assertTrue(batchSlot.isCaptured)
             assertTrue(batchSlot.captured.vo2MaxSamples.isEmpty())
         }
+
+    private fun stubEmptyReads(hcRepo: HealthConnectRepository) {
+        coEvery { hcRepo.readSleepSessions(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readExerciseSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readWeightRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBodyFatRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBloodPressureRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readOxygenSaturationRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBodyTemperatureRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readStepsRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
+    }
 }

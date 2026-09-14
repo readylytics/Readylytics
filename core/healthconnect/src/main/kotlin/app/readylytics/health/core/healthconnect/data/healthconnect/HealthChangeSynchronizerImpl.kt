@@ -183,12 +183,6 @@ class HealthChangeSynchronizerImpl
         // it just means that type gets no baseline token (mirrors the read-side degrade pattern).
         override suspend fun captureChangesTokens(): Map<HealthDataType, String> =
             HealthDataType.entries.mapNotNull { dataType ->
-                if (tokenStore.isSuspended(dataType)) {
-                    logD("HealthChangeSynchronizer") {
-                        "Changes token skipped for $dataType: type is suspended"
-                    }
-                    return@mapNotNull null
-                }
                 try {
                     dataType to
                         client.getChangesToken(
@@ -199,7 +193,7 @@ class HealthChangeSynchronizerImpl
                 } catch (e: Exception) {
                     if (e.asHealthConnectSecurityCause() == null) throw e
                     logD("HealthChangeSynchronizer") {
-                        "Changes token skipped for $dataType: permission not granted"
+                        "Changes token skipped for $dataType: permission not granted (${e.message})"
                     }
                     tokenStore.suspendType(dataType)
                     null
