@@ -23,6 +23,7 @@ import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.sync.SelectedSourcePruner
 import app.readylytics.health.core.model.domain.sync.SleepSessionInput
+import app.readylytics.health.core.model.domain.sync.SourcePayload
 import app.readylytics.health.core.model.domain.sync.WeightInput
 import app.readylytics.health.core.model.domain.sync.WorkoutInput
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
@@ -482,11 +483,13 @@ class ResyncDeletionConvergenceTest {
             batch.weights.forEach { weights[it.id] = it }
         }
 
-        override suspend fun persistHeartRateSamples(samples: List<HeartRateInput>) {
-            samples.forEach { heartRateSamples[it.id] = it }
+        override suspend fun replaceHeartRateSources(sources: List<SourcePayload<HeartRateInput>>) {
+            sources.forEach { source ->
+                source.rows.forEach { heartRateSamples[it.id] = it }
+            }
         }
 
-        override suspend fun persistHrvSamples(samples: List<HrvInput>) = Unit
+        override suspend fun replaceHrvSources(sources: List<SourcePayload<HrvInput>>) = Unit
         override suspend fun clearFrozenBaselines(start: LocalDate, endExclusive: LocalDate, zoneId: ZoneId) = Unit
         override suspend fun countHeartRateInRange(startMs: Long, endMs: Long): Int = 0
         override suspend fun countHrvInRange(startMs: Long, endMs: Long): Int = 0

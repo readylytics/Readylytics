@@ -165,10 +165,13 @@ class RoomHealthIngestionStoreReconcileTest {
                     sourceRecordId = "hc-src-1",
                     recordType = "HEART_RATE",
                     createdAtMs = startMs + 5000,
+                    recordStartMs = startMs + 1000,
+                    recordEndExclusiveMs = startMs + 2000,
+                    metadataState = "AUTHORITATIVE",
                 )
 
             coEvery {
-                daos.sourceRecordDao.getByRecordTypeAndRange("HEART_RATE", startMs, endMs)
+                daos.sourceRecordDao.getAuthoritativeSourcesOverlapping("HEART_RATE", startMs, endMs)
             } returns listOf(src1)
 
             // hc-src-1 is deleted in HC
@@ -177,5 +180,59 @@ class RoomHealthIngestionStoreReconcileTest {
             coVerify { daos.heartRateDao.deleteBySourceRecordRef(101L) }
             coVerify { daos.sourceRecordDao.deleteBySourceRecordId("hc-src-1") }
             assertEquals(LocalDate.of(2023, 11, 14), affected?.start)
+        }
+
+    @Test
+    fun `reconcileWindow for HEART_RATE expands affected range to authoritative bounds spanning window boundary`() =
+        runTest {
+            val startMs = 1700000000000L // 2023-11-14 22:13:20 UTC
+            val endMs = 1700086400000L // 2023-11-15 22:13:20 UTC
+
+            // Record starts on previous day (e.g. 2023-11-13) and ends on 2023-11-16
+            val recordStart = startMs - 86400000L // 2023-11-13
+            val recordEnd = endMs + 86400000L // 2023-11-16
+
+            val srcSpanning =
+                HealthSourceRecordEntity(
+                    id = 102L,
+                    sourceRecordId = "hc-src-spanning",
+                    recordType = "HEART_RATE",
+                    createdAtMs = startMs,
+                    recordStartMs = recordStart,
+                    recordEndExclusiveMs = recordEnd,
+                    metadataState = "AUTHORITATIVE",
+                )
+
+            coEvery {
+                daos.sourceRecordDao.getAuthoritativeSourcesOverlapping("HEART_RATE", startMs, endMs)
+            } returns listOf(srcSpanning)
+
+            val affected = store.reconcileWindow(HealthDataType.HEART_RATE, startMs, endMs, emptySet(), zoneId)
+
+            coVerify { daos.heartRateDao.deleteBySourceRecordRef(102L) }
+            coVerify { daos.sourceRecordDao.deleteBySourceRecordId("hc-src-spanning") }
+            assertEquals(LocalDate.of(2023, 11, 13), affected?.start)
+            assertEquals(LocalDate.of(2023, 11, 16), affected?.endInclusive)
+        }
+
+    @Test
+    fun `reconcileWindow for HEART_RATE delegates only to getAuthoritativeSourcesOverlapping`() =
+        runTest {
+            val startMs = 1700000000000L
+            val endMs = 1700086400000L
+
+            coEvery {
+                daos.sourceRecordDao.getAuthoritativeSourcesOverlapping("HEART_RATE", startMs, endMs)
+            } returns emptyList()
+
+            val affected = store.reconcileWindow(HealthDataType.HEART_RATE, startMs, endMs, emptySet(), zoneId)
+
+            assertNull(affected)
+            coVerify(exactly = 1) {
+                daos.sourceRecordDao.getAuthoritativeSourcesOverlapping("HEART_RATE", startMs, endMs)
+            }
+            coVerify(exactly = 0) {
+                daos.heartRateDao.deleteBySourceRecordRef(any())
+            }
         }
 }

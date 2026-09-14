@@ -7,17 +7,7 @@ import androidx.room.Query
 import androidx.room.Transaction
 import app.readylytics.health.core.databaseschema.data.local.entity.HealthSourceRecordEntity
 
-@Dao
-interface SourceRecordDao {
-    @Query("SELECT id FROM health_source_records WHERE sourceRecordId = :sourceRecordId")
-    suspend fun getSourceRef(sourceRecordId: String): Long?
-
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertIgnore(entity: HealthSourceRecordEntity): Long
-
-    @Query("DELETE FROM health_source_records WHERE sourceRecordId = :sourceRecordId")
-    suspend fun deleteBySourceRecordId(sourceRecordId: String): Int
-
+interface SourceRecordMaintenanceDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertAll(entities: List<HealthSourceRecordEntity>)
 
@@ -29,17 +19,6 @@ interface SourceRecordDao {
 
     @Query("DELETE FROM health_source_records")
     suspend fun deleteAll(): Int
-
-    @Query(
-        "SELECT * FROM health_source_records " +
-            "WHERE recordType = :recordType AND createdAtMs >= :startMs AND createdAtMs <= :endMs " +
-            "ORDER BY createdAtMs ASC",
-    )
-    suspend fun getByRecordTypeAndRange(
-        recordType: String,
-        startMs: Long,
-        endMs: Long,
-    ): List<HealthSourceRecordEntity>
 
     @Query("SELECT * FROM health_source_records WHERE id > :afterRef ORDER BY id ASC LIMIT :limit")
     suspend fun pageAfter(afterRef: Long, limit: Int): List<HealthSourceRecordEntity>
@@ -57,6 +36,54 @@ interface SourceRecordDao {
         recordEndExclusiveMs: Long,
         metadataState: String = "CHILD_BOUNDS",
     ): Int
+}
+
+@Dao
+interface SourceRecordDao : SourceRecordMaintenanceDao {
+    @Query("SELECT id FROM health_source_records WHERE sourceRecordId = :sourceRecordId")
+    suspend fun getSourceRef(sourceRecordId: String): Long?
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertIgnore(entity: HealthSourceRecordEntity): Long
+
+    @Query("DELETE FROM health_source_records WHERE sourceRecordId = :sourceRecordId")
+    suspend fun deleteBySourceRecordId(sourceRecordId: String): Int
+
+    @Query("SELECT * FROM health_source_records WHERE sourceRecordId = :sourceRecordId")
+    suspend fun getBySourceRecordId(sourceRecordId: String): HealthSourceRecordEntity?
+
+    @Query(
+        "UPDATE health_source_records " +
+            "SET originPackage = :originPackage, " +
+            "recordStartMs = :recordStartMs, " +
+            "recordEndExclusiveMs = :recordEndExclusiveMs, " +
+            "lastModifiedMs = :lastModifiedMs, " +
+            "metadataState = :metadataState, " +
+            "sourceRevision = :sourceRevision " +
+            "WHERE id = :id",
+    )
+    suspend fun updateAuthoritativeMetadata(
+        id: Long,
+        originPackage: String?,
+        recordStartMs: Long,
+        recordEndExclusiveMs: Long,
+        lastModifiedMs: Long?,
+        metadataState: String,
+        sourceRevision: Long,
+    ): Int
+
+    @Query(
+        "SELECT * FROM health_source_records " +
+            "WHERE recordType = :recordType " +
+            "AND metadataState = 'AUTHORITATIVE' " +
+            "AND recordStartMs < :windowEndMs AND recordEndExclusiveMs > :windowStartMs " +
+            "ORDER BY recordStartMs ASC",
+    )
+    suspend fun getAuthoritativeSourcesOverlapping(
+        recordType: String,
+        windowStartMs: Long,
+        windowEndMs: Long,
+    ): List<HealthSourceRecordEntity>
 }
 
 suspend fun SourceRecordDao.getOrCreateSourceRef(

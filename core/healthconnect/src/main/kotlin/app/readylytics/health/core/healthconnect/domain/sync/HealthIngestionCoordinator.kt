@@ -212,6 +212,7 @@ class HealthIngestionCoordinator
                         timestampMs = it.time.toEpochMilli(),
                         weightKg = it.weightKg,
                         deviceName = it.deviceName,
+                        sourceId = it.id,
                     )
                 }
             val bodyFatInputs =
@@ -221,6 +222,7 @@ class HealthIngestionCoordinator
                         timestampMs = it.time.toEpochMilli(),
                         bodyFatPercent = it.percentage,
                         deviceName = it.deviceName,
+                        sourceId = it.id,
                     )
                 }
 
@@ -246,6 +248,7 @@ class HealthIngestionCoordinator
                         systolicMmHg = it.systolicMmHg,
                         diastolicMmHg = it.diastolicMmHg,
                         deviceName = it.deviceName,
+                        sourceId = it.id,
                     )
                 }
             val spo2Inputs =
@@ -255,6 +258,7 @@ class HealthIngestionCoordinator
                         timestampMs = it.time.toEpochMilli(),
                         percentage = it.percentage,
                         deviceName = it.deviceName,
+                        sourceId = it.id,
                     )
                 }
             val tempInputs =
@@ -264,6 +268,7 @@ class HealthIngestionCoordinator
                         timestampMs = it.time.toEpochMilli(),
                         celsius = it.celsius,
                         deviceName = it.deviceName,
+                        sourceId = it.id,
                     )
                 }
 
@@ -282,6 +287,8 @@ class HealthIngestionCoordinator
             return Triple(filteredBp, filteredSpo2, filteredTemp)
         }
 
+
+
         private suspend fun streamAndPersistHeartSamples(
             params: IngestWindowParams,
             sessionContext: IngestionSessionContext,
@@ -290,54 +297,29 @@ class HealthIngestionCoordinator
             val deviceByType = params.prefs.deviceByDataType
             fun deviceFor(type: HealthDataType): String? = deviceByType[type.name]?.takeIf { it.isNotBlank() }
 
-            val hrDevice = deviceFor(HealthDataType.HEART_RATE)
-            var hrSampleCount = 0
-            val hrIds = mutableSetOf<String>()
-            if (params.hrvStartPageToken == null) {
-                hcRepo.readHeartRateSamplesPaged(
-                    from = params.windowStart,
-                    to = params.windowEnd,
-                    startPageToken = params.hrStartPageToken,
-                ) { page, nextToken ->
-                    logD("HealthSync.Ingest") { "HR page size=${page.size}" }
-                    hrIds.addAll(page.map { it.id })
-                    val hrInputs =
-                        HeartRateMapper.mapToInputs(
-                            page,
-                            sessionContext.sleepInputs,
-                            sessionContext.workoutInputs,
-                        )
-                    val filteredHr = DeviceSourceFilter.filterToDevice(hrInputs, hrDevice) { it.deviceName }
-                    healthIngestionStore.persistHeartRateSamples(filteredHr)
-                    hrSampleCount += filteredHr.size
+            val (hrIds, hrSampleCount) =
+                streamHeartRateSamples(
+                    hcRepo = hcRepo,
+                    healthIngestionStore = healthIngestionStore,
+                    params = params,
+                    sessionContext = sessionContext,
+                    device = deviceFor(HealthDataType.HEART_RATE),
+                ) {
                     pagesIngested++
                     params.onProgress?.invoke(ResyncPhase.INGEST, pagesIngested, 0)
-                    params.onTokenUpdated?.invoke(nextToken, null)
                 }
-            }
 
-            val hrvDevice = deviceFor(HealthDataType.HRV)
-            var hrvSampleCount = 0
-            val hrvIds = mutableSetOf<String>()
-            hcRepo.readHrvSamplesPaged(
-                from = params.windowStart,
-                to = params.windowEnd,
-                startPageToken = params.hrvStartPageToken,
-            ) { page, nextToken ->
-                logD("HealthSync.Ingest") { "HRV page size=${page.size}" }
-                hrvIds.addAll(page.map { it.id })
-                val hrvInputs =
-                    HrvMapper.mapToInputs(
-                        page,
-                        sessionContext.sleepInputs,
-                    )
-                val filteredHrv = DeviceSourceFilter.filterToDevice(hrvInputs, hrvDevice) { it.deviceName }
-                healthIngestionStore.persistHrvSamples(filteredHrv)
-                hrvSampleCount += filteredHrv.size
-                pagesIngested++
-                params.onProgress?.invoke(ResyncPhase.INGEST, pagesIngested, 0)
-                params.onTokenUpdated?.invoke(null, nextToken)
-            }
+            val (hrvIds, hrvSampleCount) =
+                streamHrvSamples(
+                    hcRepo = hcRepo,
+                    healthIngestionStore = healthIngestionStore,
+                    params = params,
+                    sessionContext = sessionContext,
+                    device = deviceFor(HealthDataType.HRV),
+                ) {
+                    pagesIngested++
+                    params.onProgress?.invoke(ResyncPhase.INGEST, pagesIngested, 0)
+                }
 
             logD("HealthIngestionCoordinator") {
                 "Streamed samples: hr=$hrSampleCount hrv=$hrvSampleCount"
@@ -497,3 +479,78 @@ private fun buildBulkBatch(
                 )
             },
     )
+
+private suspend fun streamHeartRateSamples(
+    hcRepo: HealthConnectRepository,
+    healthIngestionStore: HealthIngestionStore,
+    params: IngestWindowParams,
+    sessionContext: IngestionSessionContext,
+    device: String?,
+    onPageDone: () -> Unit,
+): Pair<Set<String>, Int> {
+    val hrIds = mutableSetOf<String>()
+    var hrSampleCount = 0
+    if (params.hrvStartPageToken == null) {
+        hcRepo.readHeartRateSamplesPaged(
+            from = params.windowStart,
+            to = params.windowEnd,
+            startPageToken = params.hrStartPageToken,
+        ) { page, nextToken ->
+            logD("HealthSync.Ingest") { "HR page size=${page.size}" }
+            hrIds.addAll(page.map { it.id })
+            val hrSources =
+                HeartRateMapper.mapToInputs(
+                    page,
+                    sessionContext.sleepInputs,
+                    sessionContext.workoutInputs,
+                )
+            val filteredHr =
+                hrSources.map { source ->
+                    source.copy(
+                        rows = DeviceSourceFilter.filterToDevice(source.rows, device) { it.deviceName },
+                    )
+                }
+            healthIngestionStore.replaceHeartRateSources(filteredHr)
+            hrSampleCount += filteredHr.sumOf { it.rows.size }
+            onPageDone()
+            params.onTokenUpdated?.invoke(nextToken, null)
+        }
+    }
+    return hrIds to hrSampleCount
+}
+
+private suspend fun streamHrvSamples(
+    hcRepo: HealthConnectRepository,
+    healthIngestionStore: HealthIngestionStore,
+    params: IngestWindowParams,
+    sessionContext: IngestionSessionContext,
+    device: String?,
+    onPageDone: () -> Unit,
+): Pair<Set<String>, Int> {
+    val hrvIds = mutableSetOf<String>()
+    var hrvSampleCount = 0
+    hcRepo.readHrvSamplesPaged(
+        from = params.windowStart,
+        to = params.windowEnd,
+        startPageToken = params.hrvStartPageToken,
+    ) { page, nextToken ->
+        logD("HealthSync.Ingest") { "HRV page size=${page.size}" }
+        hrvIds.addAll(page.map { it.id })
+        val hrvSources =
+            HrvMapper.mapToInputs(
+                page,
+                sessionContext.sleepInputs,
+            )
+        val filteredHrv =
+            hrvSources.map { source ->
+                source.copy(
+                    rows = DeviceSourceFilter.filterToDevice(source.rows, device) { it.deviceName },
+                )
+            }
+        healthIngestionStore.replaceHrvSources(filteredHrv)
+        hrvSampleCount += filteredHrv.sumOf { it.rows.size }
+        onPageDone()
+        params.onTokenUpdated?.invoke(null, nextToken)
+    }
+    return hrvIds to hrvSampleCount
+}

@@ -137,14 +137,14 @@ class HealthPipelineBaselineBenchmark {
                     HeartRateMapper.mapToInputs(flatRecords, emptyList(), emptyList())
                 }
             logStageMetric("mapping", mapNanos, 0, 0)
-            assertEquals(5000, mappedInputs.size)
+            assertEquals(5000, mappedInputs.sumOf { it.rows.size })
 
             // Stage 3: Store persistence
             queryCounter.reset()
             countingTxRunner.reset()
             val (_, storeNanos) =
                 measured {
-                    store.persistHeartRateSamples(mappedInputs)
+                    store.replaceHeartRateSources(mappedInputs)
                 }
             logStageMetric("store", storeNanos, countingTxRunner.transactionCount, queryCounter.statementCount)
             assertTrue("Store must execute queries", queryCounter.statementCount > 0)

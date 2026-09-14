@@ -8,6 +8,8 @@ import app.readylytics.health.core.model.domain.sync.HealthIngestionBatch
 import app.readylytics.health.core.model.domain.sync.HeartRateInput
 import app.readylytics.health.core.model.domain.sync.HrvInput
 import app.readylytics.health.core.model.domain.sync.SleepSessionInput
+import app.readylytics.health.core.model.domain.sync.SourceMetadata
+import app.readylytics.health.core.model.domain.sync.SourcePayload
 import app.readylytics.health.core.model.domain.sync.StepRecordInput
 import app.readylytics.health.core.model.domain.sync.WeightInput
 import app.readylytics.health.core.model.domain.sync.WorkoutInput
@@ -91,9 +93,14 @@ class RoomHealthChangeIngestionStoreTest {
 
     @Test
     fun `deleteRecord removes the heart rate record and its source ref`() = runTest {
-        seedStore.persistHeartRateSamples(listOf(
-            HeartRateInput(id = "hc-hr-1_1000", timestampMs = 1000L, beatsPerMinute = 60,
-                recordType = "RESTING", sessionId = null, deviceName = null),
+        seedStore.replaceHeartRateSources(listOf(
+            SourcePayload(
+                SourceMetadata("hc-hr-1", 1000L, 1000L),
+                listOf(
+                    HeartRateInput(id = "hc-hr-1_1000", sourceId = "hc-hr-1", timestampMs = 1000L, beatsPerMinute = 60,
+                        recordType = "RESTING", sessionId = null, deviceName = null),
+                ),
+            ),
         ))
         assertEquals(1, seedStore.countHeartRateInRange(0, 2000))
 
@@ -130,11 +137,21 @@ class RoomHealthChangeIngestionStoreTest {
 
     @Test
     fun `heartRateSamplesForMetrics filters by record type and range`() = runTest {
-        seedStore.persistHeartRateSamples(listOf(
-            HeartRateInput(id = "hc-hr-2_1000", timestampMs = 1000L, beatsPerMinute = 140,
-                recordType = "EXERCISE", sessionId = "w1", deviceName = null),
-            HeartRateInput(id = "hc-hr-3_2000", timestampMs = 2000L, beatsPerMinute = 60,
-                recordType = "RESTING", sessionId = null, deviceName = null),
+        seedStore.replaceHeartRateSources(listOf(
+            SourcePayload(
+                SourceMetadata("hc-hr-2", 1000L, 1000L),
+                listOf(
+                    HeartRateInput(id = "hc-hr-2_1000", sourceId = "hc-hr-2", timestampMs = 1000L, beatsPerMinute = 140,
+                        recordType = "EXERCISE", sessionId = "w1", deviceName = null),
+                ),
+            ),
+            SourcePayload(
+                SourceMetadata("hc-hr-3", 2000L, 2000L),
+                listOf(
+                    HeartRateInput(id = "hc-hr-3_2000", sourceId = "hc-hr-3", timestampMs = 2000L, beatsPerMinute = 60,
+                        recordType = "RESTING", sessionId = null, deviceName = null),
+                ),
+            ),
         ))
 
         val samples = changeStore.heartRateSamplesForMetrics("EXERCISE", 0L, 5000L)
@@ -146,15 +163,30 @@ class RoomHealthChangeIngestionStoreTest {
     @Test
     fun `affectedDatesForRecord returns dates for every heart rate sample sharing the source record id`() =
         runTest {
-            seedStore.persistHeartRateSamples(
+            seedStore.replaceHeartRateSources(
                 listOf(
-                    HeartRateInput(
-                        id = "hc-hr-4_1000", timestampMs = 1_000L, beatsPerMinute = 60,
-                        recordType = "RESTING", sessionId = null, deviceName = null,
-                    ),
-                    HeartRateInput(
-                        id = "hc-hr-4_90000000", timestampMs = 90_000_000L, beatsPerMinute = 61,
-                        recordType = "RESTING", sessionId = null, deviceName = null,
+                    SourcePayload(
+                        SourceMetadata("hc-hr-4", 1_000L, 90_000_000L),
+                        listOf(
+                            HeartRateInput(
+                                id = "hc-hr-4_1000",
+                                sourceId = "hc-hr-4",
+                                timestampMs = 1_000L,
+                                beatsPerMinute = 60,
+                                recordType = "RESTING",
+                                sessionId = null,
+                                deviceName = null,
+                            ),
+                            HeartRateInput(
+                                id = "hc-hr-4_90000000",
+                                sourceId = "hc-hr-4",
+                                timestampMs = 90_000_000L,
+                                beatsPerMinute = 61,
+                                recordType = "RESTING",
+                                sessionId = null,
+                                deviceName = null,
+                            ),
+                        ),
                     ),
                 ),
             )
@@ -167,15 +199,30 @@ class RoomHealthChangeIngestionStoreTest {
     @Test
     fun `affectedDatesForRecord returns dates for every hrv sample sharing the source record id`() =
         runTest {
-            seedStore.persistHrvSamples(
+            seedStore.replaceHrvSources(
                 listOf(
-                    HrvInput(
-                        id = "hc-hrv-1_1000", timestampMs = 1_000L, rmssdMs = 40f,
-                        recordType = "RESTING", sessionId = null, deviceName = null,
-                    ),
-                    HrvInput(
-                        id = "hc-hrv-1_90000000", timestampMs = 90_000_000L, rmssdMs = 41f,
-                        recordType = "RESTING", sessionId = null, deviceName = null,
+                    SourcePayload(
+                        SourceMetadata("hc-hrv-1", 1_000L, 90_000_000L),
+                        listOf(
+                            HrvInput(
+                                id = "hc-hrv-1_1000",
+                                sourceId = "hc-hrv-1",
+                                timestampMs = 1_000L,
+                                rmssdMs = 40f,
+                                recordType = "RESTING",
+                                sessionId = null,
+                                deviceName = null,
+                            ),
+                            HrvInput(
+                                id = "hc-hrv-1_90000000",
+                                sourceId = "hc-hrv-1",
+                                timestampMs = 90_000_000L,
+                                rmssdMs = 41f,
+                                recordType = "RESTING",
+                                sessionId = null,
+                                deviceName = null,
+                            ),
+                        ),
                     ),
                 ),
             )

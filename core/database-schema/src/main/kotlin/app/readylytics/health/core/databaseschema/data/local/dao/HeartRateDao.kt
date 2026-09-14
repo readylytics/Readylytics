@@ -185,10 +185,12 @@ interface HeartRateDao {
             "(sourceRecordRef, timestampMs, beatsPerMinute, recordType, sessionId, deviceName) " +
             "VALUES (:sourceRecordRef, :timestampMs, :beatsPerMinute, :recordType, :sessionId, :deviceName) " +
             "ON CONFLICT(sourceRecordRef, timestampMs) DO UPDATE SET " +
+            "beatsPerMinute = excluded.beatsPerMinute, " +
             "recordType = excluded.recordType, " +
             "sessionId = excluded.sessionId, " +
             "deviceName = excluded.deviceName " +
-            "WHERE (recordType IS NOT excluded.recordType OR " +
+            "WHERE (beatsPerMinute IS NOT excluded.beatsPerMinute OR " +
+            "recordType IS NOT excluded.recordType OR " +
             "sessionId IS NOT excluded.sessionId OR deviceName IS NOT excluded.deviceName)",
     )
     suspend fun conflictTargetedUpsert(
@@ -393,4 +395,24 @@ interface HeartRateDao {
             "GROUP BY sourceRecordRef",
     )
     suspend fun getChildBoundsForRef(sourceRecordRef: Long): RefChildBounds?
+
+    @Query(
+        "SELECT timestampMs FROM heart_rate_records " +
+            "WHERE sourceRecordRef = :sourceRecordRef AND timestampMs > :afterTimestampMs " +
+            "ORDER BY timestampMs ASC LIMIT :limit",
+    )
+    suspend fun getTimestampsBySourceRecordRef(
+        sourceRecordRef: Long,
+        afterTimestampMs: Long,
+        limit: Int,
+    ): List<Long>
+
+    @Query(
+        "DELETE FROM heart_rate_records " +
+            "WHERE sourceRecordRef = :sourceRecordRef AND timestampMs IN (:timestamps)",
+    )
+    suspend fun deleteBySourceRecordRefAndTimestamps(
+        sourceRecordRef: Long,
+        timestamps: List<Long>,
+    ): Int
 }

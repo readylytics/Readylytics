@@ -151,10 +151,12 @@ interface HrvDao {
             "(sourceRecordRef, timestampMs, rmssdMs, recordType, sessionId, deviceName) " +
             "VALUES (:sourceRecordRef, :timestampMs, :rmssdMs, :recordType, :sessionId, :deviceName) " +
             "ON CONFLICT(sourceRecordRef, timestampMs) DO UPDATE SET " +
+            "rmssdMs = excluded.rmssdMs, " +
             "recordType = excluded.recordType, " +
             "sessionId = excluded.sessionId, " +
             "deviceName = excluded.deviceName " +
-            "WHERE (recordType IS NOT excluded.recordType OR " +
+            "WHERE (rmssdMs IS NOT excluded.rmssdMs OR " +
+            "recordType IS NOT excluded.recordType OR " +
             "sessionId IS NOT excluded.sessionId OR deviceName IS NOT excluded.deviceName)",
     )
     suspend fun conflictTargetedUpsert(
@@ -251,4 +253,24 @@ interface HrvDao {
             "GROUP BY sourceRecordRef",
     )
     suspend fun getChildBoundsForRef(sourceRecordRef: Long): RefChildBounds?
+
+    @Query(
+        "SELECT timestampMs FROM hrv_records " +
+            "WHERE sourceRecordRef = :sourceRecordRef AND timestampMs > :afterTimestampMs " +
+            "ORDER BY timestampMs ASC LIMIT :limit",
+    )
+    suspend fun getTimestampsBySourceRecordRef(
+        sourceRecordRef: Long,
+        afterTimestampMs: Long,
+        limit: Int,
+    ): List<Long>
+
+    @Query(
+        "DELETE FROM hrv_records " +
+            "WHERE sourceRecordRef = :sourceRecordRef AND timestampMs IN (:timestamps)",
+    )
+    suspend fun deleteBySourceRecordRefAndTimestamps(
+        sourceRecordRef: Long,
+        timestamps: List<Long>,
+    ): Int
 }

@@ -112,7 +112,11 @@ class HealthChangeSynchronizerRecordSyncTest {
 
             synchronizer.applyPendingChanges()
 
-            coVerify(exactly = 1) { healthIngestionStore.persistHeartRateSamples(match { it.size == 200 }) }
+            coVerify(exactly = 1) {
+                healthIngestionStore.replaceHeartRateSources(
+                    match { it.size == 1 && it[0].rows.size == 200 },
+                )
+            }
         }
 
     @Test
@@ -203,8 +207,11 @@ class HealthChangeSynchronizerRecordSyncTest {
             coVerifyOrder {
                 changeIngestionStore.affectedDatesForRecord(HealthDataType.HEART_RATE, recordId, any())
                 changeIngestionStore.deleteRecord(HealthDataType.HEART_RATE, recordId)
-                healthIngestionStore.persistHeartRateSamples(
-                    match { it.size == 1 && it[0].timestampMs == sampleTime.toEpochMilli() },
+                healthIngestionStore.replaceHeartRateSources(
+                    match {
+                        it.size == 1 && it[0].rows.size == 1 &&
+                            it[0].rows[0].timestampMs == sampleTime.toEpochMilli()
+                    },
                 )
             }
         }

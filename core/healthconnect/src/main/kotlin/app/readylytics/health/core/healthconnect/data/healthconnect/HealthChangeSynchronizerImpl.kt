@@ -296,15 +296,15 @@ class HealthChangeSynchronizerImpl
             // Real session spans overlapping this record's own time range so the sample is tagged
             // SLEEP/EXERCISE immediately instead of RESTING/sessionId=null until the next reconcile
             // pass corrects it (HC-004).
-            val hrInputs = HeartRateMapper.mapToInputs(listOf(domainHr), spans.sleepSessions, spans.workouts)
-            healthIngestionStore.persistHeartRateSamples(hrInputs)
+            val hrSources = HeartRateMapper.mapToInputs(listOf(domainHr), spans.sleepSessions, spans.workouts)
+            healthIngestionStore.replaceHeartRateSources(hrSources)
         }
 
         private suspend fun upsertHrv(record: Record, spans: SessionSpans) {
             if (record !is HeartRateVariabilityRmssdRecord) return
             val domainHrv = record.toDomain()
-            val hrvInputs = HrvMapper.mapToInputs(listOf(domainHrv), spans.sleepSessions)
-            healthIngestionStore.persistHrvSamples(hrvInputs)
+            val hrvSources = HrvMapper.mapToInputs(listOf(domainHrv), spans.sleepSessions)
+            healthIngestionStore.replaceHrvSources(hrvSources)
         }
 
         private suspend fun upsertExercise(record: Record, prefs: UserPreferences) {

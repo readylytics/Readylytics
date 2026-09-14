@@ -10,14 +10,14 @@ interface HealthIngestionStore {
     suspend fun persist(batch: HealthIngestionBatch)
 
     /**
-     * Persists one streamed page of heart-rate samples in its own transaction (HC-001). Used by
-     * [app.readylytics.health.core.healthconnect.domain.sync.HealthIngestionCoordinator]'s streamed HR ingestion so a
-     * Health Connect page never waits for the rest of the window before it's written.
+     * Authoritatively replaces heart-rate samples for each given complete parent source.
      */
-    suspend fun persistHeartRateSamples(samples: List<HeartRateInput>)
+    suspend fun replaceHeartRateSources(sources: List<SourcePayload<HeartRateInput>>)
 
-    /** HRV equivalent of [persistHeartRateSamples]. */
-    suspend fun persistHrvSamples(samples: List<HrvInput>)
+    /**
+     * Authoritatively replaces HRV samples for each given complete parent source.
+     */
+    suspend fun replaceHrvSources(sources: List<SourcePayload<HrvInput>>)
 
     suspend fun clearFrozenBaselines(
         start: LocalDate,
@@ -57,8 +57,8 @@ interface HealthIngestionStore {
 data class HealthIngestionBatch(
     val sleepSessions: List<SleepSessionInput>,
     val sleepStages: List<SleepStageInput>,
-    val heartRateSamples: List<HeartRateInput>,
-    val hrvSamples: List<HrvInput>,
+    val heartRateSamples: List<HeartRateInput> = emptyList(),
+    val hrvSamples: List<HrvInput> = emptyList(),
     val workouts: List<WorkoutInput>,
     val weights: List<WeightInput>,
     val bodyFatSamples: List<BodyFatInput>,
@@ -67,6 +67,8 @@ data class HealthIngestionBatch(
     val bodyTemperatureSamples: List<BodyTemperatureInput>,
     val stepRecords: List<StepRecordInput>,
     val vo2MaxSamples: List<Vo2MaxInput> = emptyList(),
+    val heartRateSources: List<SourcePayload<HeartRateInput>> = emptyList(),
+    val hrvSources: List<SourcePayload<HrvInput>> = emptyList(),
 )
 
 data class SleepSessionInput(
@@ -100,6 +102,7 @@ data class HeartRateInput(
     val recordType: String,
     val sessionId: String?,
     val deviceName: String?,
+    val sourceId: String = id.substringBefore('_'),
 )
 
 data class HrvInput(
@@ -109,6 +112,7 @@ data class HrvInput(
     val recordType: String,
     val sessionId: String?,
     val deviceName: String?,
+    val sourceId: String = id.substringBefore('_'),
 )
 
 data class WorkoutInput(
@@ -137,6 +141,7 @@ data class WeightInput(
     val timestampMs: Long,
     val weightKg: Float,
     val deviceName: String?,
+    val sourceId: String = id.substringBefore('_'),
 )
 
 data class BodyFatInput(
@@ -144,6 +149,7 @@ data class BodyFatInput(
     val timestampMs: Long,
     val bodyFatPercent: Float,
     val deviceName: String?,
+    val sourceId: String = id.substringBefore('_'),
 )
 
 data class BloodPressureInput(
@@ -152,6 +158,7 @@ data class BloodPressureInput(
     val systolicMmHg: Int,
     val diastolicMmHg: Int,
     val deviceName: String?,
+    val sourceId: String = id.substringBefore('_'),
 )
 
 data class OxygenSaturationInput(
@@ -159,6 +166,7 @@ data class OxygenSaturationInput(
     val timestampMs: Long,
     val percentage: Float,
     val deviceName: String?,
+    val sourceId: String = id.substringBefore('_'),
 )
 
 data class BodyTemperatureInput(
@@ -166,6 +174,7 @@ data class BodyTemperatureInput(
     val timestampMs: Long,
     val celsius: Float,
     val deviceName: String?,
+    val sourceId: String = id.substringBefore('_'),
 )
 
 /**

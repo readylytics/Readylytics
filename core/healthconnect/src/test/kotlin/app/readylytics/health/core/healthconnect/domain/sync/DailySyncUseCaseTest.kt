@@ -290,8 +290,8 @@ class DailySyncUseCaseTest {
                 hcRepo.readHrvSamplesPaged(any(), any(), any(), any())
                 hcRepo.readSteps(any(), any())
                 healthIngestionStore.persist(any())
-                healthIngestionStore.persistHeartRateSamples(any())
-                healthIngestionStore.persistHrvSamples(any())
+                healthIngestionStore.replaceHeartRateSources(any())
+                healthIngestionStore.replaceHrvSources(any())
             }
         }
 

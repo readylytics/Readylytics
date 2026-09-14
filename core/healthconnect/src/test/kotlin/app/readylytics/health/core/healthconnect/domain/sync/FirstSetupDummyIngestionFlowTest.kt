@@ -161,8 +161,10 @@ class FirstSetupDummyIngestionFlowTest {
                         deviceName = "Pixel Watch",
                     ),
                 )
-            assertEquals(2, ingestionStore.persistedHeartRateSamples.size)
-            ingestionStore.persistedHeartRateSamples.forEach { assertEquals(expectedHeartRateSamples, it) }
+            assertEquals(2, ingestionStore.persistedHeartRateSources.size)
+            ingestionStore.persistedHeartRateSources.forEach { sources ->
+                assertEquals(expectedHeartRateSamples, sources.flatMap { it.rows })
+            }
 
             val expectedHrvSamples =
                 listOf(
@@ -175,8 +177,10 @@ class FirstSetupDummyIngestionFlowTest {
                         deviceName = "Pixel Watch",
                     ),
                 )
-            assertEquals(2, ingestionStore.persistedHrvSamples.size)
-            ingestionStore.persistedHrvSamples.forEach { assertEquals(expectedHrvSamples, it) }
+            assertEquals(2, ingestionStore.persistedHrvSources.size)
+            ingestionStore.persistedHrvSources.forEach { sources ->
+                assertEquals(expectedHrvSamples, sources.flatMap { it.rows })
+            }
         }
 
     @Test
@@ -193,11 +197,11 @@ class FirstSetupDummyIngestionFlowTest {
             assertEquals(4, ingestionStore.persisted.size)
             assertEquals(1, ingestionStore.persisted.toSet().size)
 
-            assertEquals(4, ingestionStore.persistedHeartRateSamples.size)
-            assertEquals(1, ingestionStore.persistedHeartRateSamples.toSet().size)
+            assertEquals(4, ingestionStore.persistedHeartRateSources.size)
+            assertEquals(1, ingestionStore.persistedHeartRateSources.toSet().size)
 
-            assertEquals(4, ingestionStore.persistedHrvSamples.size)
-            assertEquals(1, ingestionStore.persistedHrvSamples.toSet().size)
+            assertEquals(4, ingestionStore.persistedHrvSources.size)
+            assertEquals(1, ingestionStore.persistedHrvSources.toSet().size)
         }
 
     private fun buildUseCase(
@@ -239,20 +243,20 @@ class FirstSetupDummyIngestionFlowTest {
 
     private class RecordingHealthIngestionStore : HealthIngestionStore {
         val persisted = mutableListOf<HealthIngestionBatch>()
-        val persistedHeartRateSamples = mutableListOf<List<HeartRateInput>>()
-        val persistedHrvSamples = mutableListOf<List<HrvInput>>()
+        val persistedHeartRateSources = mutableListOf<List<SourcePayload<HeartRateInput>>>()
+        val persistedHrvSources = mutableListOf<List<SourcePayload<HrvInput>>>()
         val clearedRanges = mutableListOf<Pair<LocalDate, LocalDate>>()
 
         override suspend fun persist(batch: HealthIngestionBatch) {
             persisted += batch
         }
 
-        override suspend fun persistHeartRateSamples(samples: List<HeartRateInput>) {
-            persistedHeartRateSamples += samples
+        override suspend fun replaceHeartRateSources(sources: List<SourcePayload<HeartRateInput>>) {
+            persistedHeartRateSources += sources
         }
 
-        override suspend fun persistHrvSamples(samples: List<HrvInput>) {
-            persistedHrvSamples += samples
+        override suspend fun replaceHrvSources(sources: List<SourcePayload<HrvInput>>) {
+            persistedHrvSources += sources
         }
 
         override suspend fun clearFrozenBaselines(

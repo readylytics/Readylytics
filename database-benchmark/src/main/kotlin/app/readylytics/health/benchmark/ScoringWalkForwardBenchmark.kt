@@ -8,6 +8,8 @@ import app.readylytics.health.core.database.data.local.RoomTransactionRunner
 import app.readylytics.health.core.database.data.local.SessionLinkReconcilerImpl
 import app.readylytics.health.core.model.domain.heartrate.ZoneThresholds
 import app.readylytics.health.core.model.domain.sync.HeartRateInput
+import app.readylytics.health.core.model.domain.sync.SourceMetadata
+import app.readylytics.health.core.model.domain.sync.SourcePayload
 import app.readylytics.health.databasebenchmark.data.migration.CurrentSchemaBenchmarkFixture
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -68,6 +70,14 @@ class ScoringWalkForwardBenchmark {
                 )
             }
 
+        val preallocatedPayload =
+            listOf(
+                SourcePayload(
+                    source = SourceMetadata("bench_batch", baseMs, baseMs + 5_000 * 1_000L),
+                    rows = preallocatedBatch.map { it.copy(sourceId = "bench_batch") },
+                ),
+            )
+
         val template = fixture.createTemplate("ingest-template", useSqlCipher = true)
         var iteration = 0
 
@@ -77,7 +87,7 @@ class ScoringWalkForwardBenchmark {
                     fixture.copyTemplate(template, "ingest-iter-${iteration++}")
                 }
             val store = ScoringBenchmarkHelper.createRoomHealthIngestionStore(instance.database)
-            runBlocking { store.persistHeartRateSamples(preallocatedBatch) }
+            runBlocking { store.replaceHeartRateSources(preallocatedPayload) }
             runWithTimingDisabled {
                 fixture.delete(instance)
             }

@@ -74,6 +74,10 @@ fun HeartRateRecord.toDomain(): DomainHeartRateRecord =
                     beatsPerMinute = sample.beatsPerMinute.toInt(),
                 )
             },
+        startTime = startTime,
+        endTime = endTime,
+        originPackage = metadata.dataOrigin.packageName,
+        lastModifiedTime = metadata.lastModifiedTime,
     )
 
 fun HeartRateVariabilityRmssdRecord.toDomain(): DomainHrvRecord =
@@ -82,6 +86,8 @@ fun HeartRateVariabilityRmssdRecord.toDomain(): DomainHrvRecord =
         time = time,
         rmssdMs = heartRateVariabilityMillis.toFloat(),
         deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
+        originPackage = metadata.dataOrigin.packageName,
+        lastModifiedTime = metadata.lastModifiedTime,
     )
 
 fun ExerciseSessionRecord.toDomain(): DomainExerciseSessionRecord = toDomain(exerciseRouteResult)

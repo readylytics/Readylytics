@@ -41,7 +41,9 @@ class HeartRateMapperTest {
 
         val result = HeartRateMapper.mapToInputs(listOf(record), emptyList(), emptyList())
 
-        assertEquals(0, result.size)
+        assertEquals(1, result.size)
+        assertEquals("rec_empty", result[0].source.sourceId)
+        assertEquals(0, result[0].rows.size)
     }
 
     @Test
@@ -69,7 +71,9 @@ class HeartRateMapperTest {
         val result = HeartRateMapper.mapToInputs(listOf(recordA, recordB), listOf(sleepSession), emptyList())
 
         assertEquals(2, result.size)
-        val byTs = result.associateBy { it.timestampMs }
+        val rows = result.flatMap { it.rows }
+        assertEquals(2, rows.size)
+        val byTs = rows.associateBy { it.timestampMs }
         assertEquals("SLEEP", byTs[sample1Time.toEpochMilli()]?.recordType)
         assertEquals("SLEEP", byTs[sample2Time.toEpochMilli()]?.recordType)
     }
@@ -89,8 +93,10 @@ class HeartRateMapperTest {
 
         val result = HeartRateMapper.mapToInputs(listOf(record), emptyList(), emptyList())
 
-        assertEquals(2, result.size)
-        val ids = result.map { it.id }.toSet()
+        assertEquals(1, result.size)
+        val rows = result[0].rows
+        assertEquals(2, rows.size)
+        val ids = rows.map { it.id }.toSet()
         assertEquals(setOf("rec_1_${t1.toEpochMilli()}", "rec_1_${t2.toEpochMilli()}"), ids)
     }
 
@@ -108,8 +114,10 @@ class HeartRateMapperTest {
         val result = HeartRateMapper.mapToInputs(listOf(record), listOf(sleepSession), emptyList())
 
         assertEquals(1, result.size)
-        assertEquals("RESTING", result[0].recordType)
-        assertNull(result[0].sessionId)
+        val rows = result[0].rows
+        assertEquals(1, rows.size)
+        assertEquals("RESTING", rows[0].recordType)
+        assertNull(rows[0].sessionId)
     }
 
     @Test
@@ -145,8 +153,10 @@ class HeartRateMapperTest {
         val result = HeartRateMapper.mapToInputs(listOf(record), emptyList(), listOf(workoutSession))
 
         assertEquals(1, result.size)
-        assertEquals("EXERCISE", result[0].recordType)
-        assertEquals("workout_1", result[0].sessionId)
+        val rows = result[0].rows
+        assertEquals(1, rows.size)
+        assertEquals("EXERCISE", rows[0].recordType)
+        assertEquals("workout_1", rows[0].sessionId)
     }
 
     @Test
@@ -184,8 +194,10 @@ class HeartRateMapperTest {
         val result = HeartRateMapper.mapToInputs(listOf(record), listOf(sleepSession), listOf(workoutSession))
 
         assertEquals(1, result.size)
-        assertEquals("SLEEP", result[0].recordType)
-        assertEquals("sleep_1", result[0].sessionId)
+        val rows = result[0].rows
+        assertEquals(1, rows.size)
+        assertEquals("SLEEP", rows[0].recordType)
+        assertEquals("sleep_1", rows[0].sessionId)
     }
 }
 

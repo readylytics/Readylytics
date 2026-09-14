@@ -6,6 +6,8 @@ import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.database.data.local.RoomHealthIngestionStore
 import app.readylytics.health.core.model.domain.model.RecordType
 import app.readylytics.health.core.model.domain.sync.HeartRateInput
+import app.readylytics.health.core.model.domain.sync.SourceMetadata
+import app.readylytics.health.core.model.domain.sync.SourcePayload
 import app.readylytics.health.databasebenchmark.data.migration.CurrentSchemaBenchmarkFixture
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -46,6 +48,16 @@ class HealthDatasetMatrixVerificationTest {
         fixture.cleanUp()
     }
 
+    private fun asSourcePayloads(samples: List<HeartRateInput>): List<SourcePayload<HeartRateInput>> =
+        samples.groupBy { it.id.substringBefore('_') }.map { (sourceId, items) ->
+            val minTs = items.minOf { it.timestampMs }
+            val maxTs = items.maxOf { it.timestampMs }
+            SourcePayload(
+                source = SourceMetadata(sourceId, minTs, maxTs),
+                rows = items.map { it.copy(sourceId = sourceId) },
+            )
+        }
+
     /** Fresh import followed by identical replay twice with deterministic checksums. */
     @Test
     fun freshImportAndIdempotentReplayTwice() =
@@ -69,14 +81,14 @@ class HealthDatasetMatrixVerificationTest {
                 }
 
             // Fresh import (Pass 1)
-            store.persistHeartRateSamples(samples)
+            store.replaceHeartRateSources(asSourcePayloads(samples))
             val countPass1 = db.heartRateDao().count()
             val checksumPass1 = computeHeartRateChecksum(db)
             val sourceChecksumPass1 = computeSourceChecksum(db)
             assertEquals(1_000, countPass1)
 
             // Identical replay (Pass 2)
-            store.persistHeartRateSamples(samples)
+            store.replaceHeartRateSources(asSourcePayloads(samples))
             val countPass2 = db.heartRateDao().count()
             val checksumPass2 = computeHeartRateChecksum(db)
             val sourceChecksumPass2 = computeSourceChecksum(db)
@@ -85,7 +97,7 @@ class HealthDatasetMatrixVerificationTest {
             assertEquals("Replay 1 source checksum must match", sourceChecksumPass1, sourceChecksumPass2)
 
             // Identical replay (Pass 3)
-            store.persistHeartRateSamples(samples)
+            store.replaceHeartRateSources(asSourcePayloads(samples))
             val countPass3 = db.heartRateDao().count()
             val checksumPass3 = computeHeartRateChecksum(db)
             val sourceChecksumPass3 = computeSourceChecksum(db)
@@ -113,12 +125,12 @@ class HealthDatasetMatrixVerificationTest {
                     sessionId = null,
                     deviceName = "fixture-origin-0",
                 )
-            store.persistHeartRateSamples(listOf(original))
+            store.replaceHeartRateSources(asSourcePayloads(listOf(original)))
             assertEquals(1, db.heartRateDao().count())
 
             // Re-persist edited sample with modified BPM and device name
             val edited = original.copy(beatsPerMinute = 95, deviceName = "fixture-origin-1")
-            store.persistHeartRateSamples(listOf(edited))
+            store.replaceHeartRateSources(asSourcePayloads(listOf(edited)))
 
             assertEquals("Row count must remain 1 on edit", 1, db.heartRateDao().count())
             val rows = db.heartRateDao().getByTimeRange(timestampMs, timestampMs + 1)
@@ -158,7 +170,7 @@ class HealthDatasetMatrixVerificationTest {
                     )
                 }
 
-            store.persistHeartRateSamples(parent1Samples + parent2Samples)
+            store.replaceHeartRateSources(asSourcePayloads(parent1Samples + parent2Samples))
             assertEquals(200, db.heartRateDao().count())
 
             // Simulate deletion of parent 1 in provider range by targeted deletion
@@ -171,7 +183,7 @@ class HealthDatasetMatrixVerificationTest {
                 parent2Samples.map {
                     it.copy(timestampMs = it.timestampMs + 2_000L)
                 }
-            store.persistHeartRateSamples(movedP2Samples)
+            store.replaceHeartRateSources(asSourcePayloads(movedP2Samples))
 
             assertTrue("Database must remain consistent after delete and move", db.heartRateDao().count() > 0)
         }
@@ -196,13 +208,13 @@ class HealthDatasetMatrixVerificationTest {
                 }
 
             // Ingest page 1
-            store.persistHeartRateSamples(page1)
+            store.replaceHeartRateSources(asSourcePayloads(page1))
             assertEquals(200, db.heartRateDao().count())
 
             // Interruption occurs before page 2 commits (simulated crash/timeout)
             // Resume: page 1 is re-ingested with page 2
-            store.persistHeartRateSamples(page1)
-            store.persistHeartRateSamples(page2)
+            store.replaceHeartRateSources(asSourcePayloads(page1))
+            store.replaceHeartRateSources(asSourcePayloads(page2))
 
             assertEquals("Resumed sync must contain exactly 400 unique samples", 400, db.heartRateDao().count())
         }
@@ -230,7 +242,7 @@ class HealthDatasetMatrixVerificationTest {
                         deviceName = "fixture-origin-0",
                     )
                 }
-            store.persistHeartRateSamples(sparse10Year)
+            store.replaceHeartRateSources(asSourcePayloads(sparse10Year))
             assertEquals(365, db.heartRateDao().count())
 
             // 30-day dense burst (e.g. 500 samples/day for 3 days in 2026 = 1500 samples)
@@ -251,7 +263,7 @@ class HealthDatasetMatrixVerificationTest {
                         deviceName = "fixture-origin-1",
                     )
                 }
-            store.persistHeartRateSamples(denseBurst)
+            store.replaceHeartRateSources(asSourcePayloads(denseBurst))
             assertEquals(365 + 1500, db.heartRateDao().count())
 
             // Historical sparse data before the burst must remain intact
@@ -279,7 +291,7 @@ class HealthDatasetMatrixVerificationTest {
                     sessionId = null,
                     deviceName = "ancient-device",
                 )
-            store.persistHeartRateSamples(listOf(ancientSample))
+            store.replaceHeartRateSources(asSourcePayloads(listOf(ancientSample)))
             val count = db.heartRateDao().countInRange(elevenYearsAgoMs, elevenYearsAgoMs + 1000L)
             assertEquals("Sample older than resync horizon must be preserved when cleanup is disabled", 1, count)
         }
