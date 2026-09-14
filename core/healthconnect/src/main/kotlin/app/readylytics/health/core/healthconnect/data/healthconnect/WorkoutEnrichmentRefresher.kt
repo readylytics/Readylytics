@@ -104,6 +104,11 @@ class WorkoutEnrichmentRefresher
                     ),
                 )
             } else if (newStart == null && oldStart == null) {
+                // Deletion change from Health Connect only delivers sourceId. If bounds were previously
+                // recorded in health_source_records, use them to invalidate and refresh overlapping workouts.
+                // If bounds are unknown (legacy record predating interval tracking or unmapped delete),
+                // skip total clearance to prevent wiping unassociated historical workouts; full reconciliation
+                // is deferred to historical resync.
                 val existing = changeIngestionStore.getIntervalSource(change.sourceId)
                 if (existing != null) {
                     extents.add(existing.startMs to existing.endExclusiveMs)
