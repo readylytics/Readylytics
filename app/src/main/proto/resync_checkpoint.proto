@@ -29,4 +29,6 @@ message ResyncCheckpointProto {
   // R2-HC-002: Page tokens for resuming streamed sample reads mid-chunk.
   string hr_page_token = 8;
   string hrv_page_token = 9;
+  // WP-06: Types that completed ingest and deletion reconciliation.
+  repeated string completed_types = 10;
 }

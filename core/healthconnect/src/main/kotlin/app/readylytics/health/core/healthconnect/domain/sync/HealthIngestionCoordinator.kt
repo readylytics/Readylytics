@@ -63,7 +63,7 @@ class HealthIngestionCoordinator
             hrvStartPageToken: String? = null,
             onTokenUpdated: (suspend (hrToken: String?, hrvToken: String?) -> Unit)? = null,
             reconcileDeletions: Boolean = RECONCILE_DELETIONS,
-        ): ScoreInvalidation.AffectedRange? {
+        ): IngestionWindowResult {
             return try {
                 ingestWindowWithinBudget(
                     IngestWindowParams(
@@ -86,16 +86,22 @@ class HealthIngestionCoordinator
             }
         }
 
-        private suspend fun ingestWindowWithinBudget(params: IngestWindowParams): ScoreInvalidation.AffectedRange? {
+        private suspend fun ingestWindowWithinBudget(params: IngestWindowParams): IngestionWindowResult {
             return withTimeout(params.windowBudgetMs) {
                 val (rawRecords, sessionContext) =
                     fetchAndPersistBulkRecords(params.windowStart, params.windowEnd, params.prefs)
                 val heartIds = streamAndPersistHeartSamples(params, sessionContext)
-                if (params.reconcileDeletions) {
-                    reconcileDeletions(params, rawRecords, heartIds)
-                } else {
-                    null
-                }
+                val scans = collectCompleteTypeScans(params, rawRecords, heartIds)
+                val affectedRange =
+                    if (params.reconcileDeletions) {
+                        reconcileDeletions(params, scans)
+                    } else {
+                        null
+                    }
+                IngestionWindowResult(
+                    affectedRange = affectedRange,
+                    completedTypes = scans.mapTo(HashSet()) { it.type },
+                )
             }
         }
 
@@ -348,18 +354,13 @@ class HealthIngestionCoordinator
 
         private suspend fun reconcileDeletions(
             params: IngestWindowParams,
-            raw: RawBulkRecords,
-            heartIds: HeartIds,
+            scans: List<CompleteTypeScan>,
         ): ScoreInvalidation.AffectedRange? {
             val zoneId = params.prefs.scoringZone()
-            val startMs = params.windowStart.toEpochMilli()
-            val endMs = params.windowEnd.toEpochMilli() - 1
-
-            val typeToIds = collectReconcilableTypes(params, raw, heartIds)
 
             val results =
-                typeToIds.associate { (type, ids) ->
-                    type to healthIngestionStore.reconcileWindow(type, startMs, endMs, ids, zoneId)
+                scans.associate { scan ->
+                    scan.type to healthIngestionStore.reconcileWindow(scan, zoneId)
                 }
 
             logD(TELEMETRY_TAG) {
@@ -375,60 +376,45 @@ class HealthIngestionCoordinator
             return ScoreInvalidation.merge(results.values)
         }
 
-        private fun collectReconcilableTypes(
+        private fun collectCompleteTypeScans(
             params: IngestWindowParams,
             raw: RawBulkRecords,
             heartIds: HeartIds,
-        ): List<Pair<HealthDataType, Set<String>>> =
-            buildList {
-                if (raw.sleepSessions is ReadOutcome.Available) {
-                    add(HealthDataType.SLEEP to raw.sleepSessions.dataOrEmpty().mapTo(HashSet()) { it.id })
-                }
-                if (raw.exerciseRecords is ReadOutcome.Available) {
-                    add(HealthDataType.EXERCISE to raw.exerciseRecords.dataOrEmpty().mapTo(HashSet()) { it.id })
-                }
-                val hrOutcome = heartIds.hr
-                if (hrOutcome is ReadOutcome.Available &&
-                    params.hrStartPageToken == null &&
-                    params.hrvStartPageToken == null
-                ) {
-                    add(HealthDataType.HEART_RATE to hrOutcome.data)
-                }
-                val hrvOutcome = heartIds.hrv
-                if (hrvOutcome is ReadOutcome.Available && params.hrvStartPageToken == null) {
-                    add(HealthDataType.HRV to hrvOutcome.data)
-                }
-                if (raw.weightRecords is ReadOutcome.Available) {
-                    add(HealthDataType.WEIGHT to raw.weightRecords.dataOrEmpty().mapTo(HashSet()) { it.id })
-                }
-                if (raw.bodyFatRecords is ReadOutcome.Available) {
-                    add(HealthDataType.BODY_FAT to raw.bodyFatRecords.dataOrEmpty().mapTo(HashSet()) { it.id })
-                }
-                if (raw.bloodPressureRecords is ReadOutcome.Available) {
-                    add(
-                        HealthDataType.BLOOD_PRESSURE to
-                            raw.bloodPressureRecords.dataOrEmpty().mapTo(HashSet()) { it.id },
-                    )
-                }
-                if (raw.spo2Records is ReadOutcome.Available) {
-                    add(HealthDataType.OXYGEN_SATURATION to raw.spo2Records.dataOrEmpty().mapTo(HashSet()) { it.id })
-                }
-                if (raw.bodyTemperatureRecords is ReadOutcome.Available) {
-                    add(
-                        HealthDataType.BODY_TEMPERATURE to
-                            raw.bodyTemperatureRecords.dataOrEmpty().mapTo(HashSet()) { it.id },
-                    )
-                }
-                if (raw.stepsRecords is ReadOutcome.Available) {
-                    add(HealthDataType.STEPS to raw.stepsRecords.dataOrEmpty().mapTo(HashSet()) { it.id })
+        ): List<CompleteTypeScan> {
+            val startMs = params.windowStart.toEpochMilli()
+            val endExclusiveMs = params.windowEnd.toEpochMilli()
+            fun deviceFor(type: HealthDataType) = params.prefs.deviceByDataType[type.name].orEmpty()
+
+            fun MutableList<CompleteTypeScan>.addScan(outcome: ReadOutcome<Set<String>>, type: HealthDataType) {
+                if (outcome is ReadOutcome.Available) {
+                    add(CompleteTypeScan(type, startMs, endExclusiveMs, deviceFor(type), outcome.data))
                 }
             }
+
+            return buildList {
+                addScan(raw.sleepSessions.toIds { it.id }, HealthDataType.SLEEP)
+                addScan(raw.exerciseRecords.toIds { it.id }, HealthDataType.EXERCISE)
+                addScan(heartIds.hr, HealthDataType.HEART_RATE)
+                addScan(heartIds.hrv, HealthDataType.HRV)
+                addScan(raw.weightRecords.toIds { it.id }, HealthDataType.WEIGHT)
+                addScan(raw.bodyFatRecords.toIds { it.id }, HealthDataType.BODY_FAT)
+                addScan(raw.bloodPressureRecords.toIds { it.id }, HealthDataType.BLOOD_PRESSURE)
+                addScan(raw.spo2Records.toIds { it.id }, HealthDataType.OXYGEN_SATURATION)
+                addScan(raw.bodyTemperatureRecords.toIds { it.id }, HealthDataType.BODY_TEMPERATURE)
+                addScan(raw.stepsRecords.toIds { it.id }, HealthDataType.STEPS)
+            }
+        }
 
         companion object {
             const val RECONCILE_DELETIONS = true
             private const val TELEMETRY_TAG = "ResyncTelemetry"
         }
     }
+
+data class IngestionWindowResult(
+    val affectedRange: ScoreInvalidation.AffectedRange?,
+    val completedTypes: Set<HealthDataType> = emptySet(),
+)
 
 private data class HeartIds(
     val hr: ReadOutcome<Set<String>>,
@@ -523,9 +509,6 @@ private suspend fun streamHeartRateSamples(
 ): Pair<ReadOutcome<Set<String>>, Int> {
     val hrIds = mutableSetOf<String>()
     var hrSampleCount = 0
-    if (params.hrvStartPageToken != null) {
-        return ReadOutcome.Unsupported to 0
-    }
     val outcome =
         hcRepo.readHeartRateSamplesPaged(
             from = params.windowStart,
@@ -602,3 +585,10 @@ private suspend fun streamHrvSamples(
         }
     return readOutcome to hrvSampleCount
 }
+
+private inline fun <T> ReadOutcome<List<T>>.toIds(crossinline idSelector: (T) -> String): ReadOutcome<Set<String>> =
+    when (this) {
+        is ReadOutcome.Available -> ReadOutcome.Available(data.mapTo(HashSet()) { idSelector(it) })
+        ReadOutcome.Denied -> ReadOutcome.Denied
+        ReadOutcome.Unsupported -> ReadOutcome.Unsupported
+    }

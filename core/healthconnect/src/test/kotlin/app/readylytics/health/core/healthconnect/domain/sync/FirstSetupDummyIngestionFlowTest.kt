@@ -297,10 +297,7 @@ class FirstSetupDummyIngestionFlowTest {
         ) = Unit
 
         override suspend fun reconcileWindow(
-            type: app.readylytics.health.core.model.domain.model.HealthDataType,
-            windowStartMs: Long,
-            windowEndMs: Long,
-            hcIds: Set<String>,
+            scan: app.readylytics.health.core.model.domain.sync.CompleteTypeScan,
             zoneId: ZoneId,
         ): ScoreInvalidation.AffectedRange? = null
     }

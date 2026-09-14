@@ -11,6 +11,7 @@ import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.sync.BloodPressureInput
 import app.readylytics.health.core.model.domain.sync.BodyFatInput
 import app.readylytics.health.core.model.domain.sync.BodyTemperatureInput
+import app.readylytics.health.core.model.domain.sync.CompleteTypeScan
 import app.readylytics.health.core.model.domain.sync.HealthIngestionBatch
 import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
 import app.readylytics.health.core.model.domain.sync.HeartRateInput
@@ -137,19 +138,13 @@ class RoomHealthIngestionStore
         }
 
         override suspend fun reconcileWindow(
-            type: HealthDataType,
-            windowStartMs: Long,
-            windowEndMs: Long,
-            hcIds: Set<String>,
+            scan: CompleteTypeScan,
             zoneId: ZoneId,
         ): ScoreInvalidation.AffectedRange? =
             transactionRunner.runInTransaction {
                 HealthRecordDeletionReconciler.reconcile(
                     daos = daos,
-                    type = type,
-                    windowStartMs = windowStartMs,
-                    windowEndMs = windowEndMs,
-                    hcIds = hcIds,
+                    scan = scan,
                     zoneId = zoneId,
                 )
             }
@@ -280,20 +275,17 @@ internal data class ReconcileContext(
 internal object HealthRecordDeletionReconciler {
     suspend fun reconcile(
         daos: HealthRecordDaos,
-        type: HealthDataType,
-        windowStartMs: Long,
-        windowEndMs: Long,
-        hcIds: Set<String>,
+        scan: CompleteTypeScan,
         zoneId: ZoneId,
     ): ScoreInvalidation.AffectedRange? {
-        val context = ReconcileContext(windowStartMs, windowEndMs, hcIds, zoneId)
-        return when (type) {
+        val context = ReconcileContext(scan.windowStartMs, scan.windowEndExclusiveMs, scan.ids, zoneId)
+        return when (scan.type) {
             HealthDataType.SLEEP -> reconcileSleep(daos, context)
             HealthDataType.EXERCISE -> reconcileExercise(daos, context)
             HealthDataType.HEART_RATE -> reconcileHeartSource(daos, "HEART_RATE", context)
             HealthDataType.HRV -> reconcileHeartSource(daos, "HRV", context)
             HealthDataType.STEPS -> reconcileSteps(daos, context)
-            else -> reconcileVitals(daos, type, context)
+            else -> reconcileVitals(daos, scan.type, context)
         }
     }
 

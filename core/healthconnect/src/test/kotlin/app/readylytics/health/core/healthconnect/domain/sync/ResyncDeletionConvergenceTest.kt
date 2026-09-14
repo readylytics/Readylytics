@@ -16,6 +16,7 @@ import app.readylytics.health.core.model.domain.repository.ScoringRepository
 import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
+import app.readylytics.health.core.model.domain.sync.CompleteTypeScan
 import app.readylytics.health.core.model.domain.sync.HealthIngestionBatch
 import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
 import app.readylytics.health.core.model.domain.sync.HeartRateInput
@@ -434,19 +435,28 @@ class ResyncDeletionConvergenceTest {
                     ),
                 )
 
+            val hrSamplePage1Record =
+                DomainHeartRateRecord(
+                    id = "hr-page-1-sample",
+                    deviceName = "Pixel Watch",
+                    samples = listOf(
+                        DomainHeartRateSample(time = Instant.parse("2026-06-02T12:00:00Z"), beatsPerMinute = 65),
+                    ),
+                )
+
             setupMidstreamHrCheckpoint(startDate, endDate, "token-page-2")
 
             coEvery {
                 hcRepo.readHeartRateSamplesPaged(
                     from = any(),
                     to = any(),
-                    startPageToken = "token-page-2",
+                    startPageToken = null,
                     onPage = any(),
                 )
             } coAnswers {
                 @Suppress("UNCHECKED_CAST")
                 val onPage = it.invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
-                onPage(listOf(hrSamplePage2), null)
+                onPage(listOf(hrSamplePage1Record, hrSamplePage2), null)
                 ReadOutcome.Available(Unit)
             }
 
@@ -582,19 +592,16 @@ class ResyncDeletionConvergenceTest {
         ) = Unit
 
         override suspend fun reconcileWindow(
-            type: HealthDataType,
-            windowStartMs: Long,
-            windowEndMs: Long,
-            hcIds: Set<String>,
+            scan: CompleteTypeScan,
             zoneId: ZoneId,
         ): ScoreInvalidation.AffectedRange? =
-            when (type) {
+            when (scan.type) {
                 HealthDataType.SLEEP ->
                     reconcileItems(
                         map = sleepSessions,
-                        windowStartMs = windowStartMs,
-                        windowEndMs = windowEndMs,
-                        hcIds = hcIds,
+                        windowStartMs = scan.windowStartMs,
+                        windowEndMs = scan.windowEndExclusiveMs,
+                        hcIds = scan.ids,
                         zoneId = zoneId,
                         getStart = { it.startTime },
                         getEnd = { it.endTime },
@@ -602,9 +609,9 @@ class ResyncDeletionConvergenceTest {
                 HealthDataType.EXERCISE ->
                     reconcileItems(
                         map = workouts,
-                        windowStartMs = windowStartMs,
-                        windowEndMs = windowEndMs,
-                        hcIds = hcIds,
+                        windowStartMs = scan.windowStartMs,
+                        windowEndMs = scan.windowEndExclusiveMs,
+                        hcIds = scan.ids,
                         zoneId = zoneId,
                         getStart = { it.startTime },
                         getEnd = { it.endTime },
@@ -612,9 +619,9 @@ class ResyncDeletionConvergenceTest {
                 HealthDataType.WEIGHT ->
                     reconcileItems(
                         map = weights,
-                        windowStartMs = windowStartMs,
-                        windowEndMs = windowEndMs,
-                        hcIds = hcIds,
+                        windowStartMs = scan.windowStartMs,
+                        windowEndMs = scan.windowEndExclusiveMs,
+                        hcIds = scan.ids,
                         zoneId = zoneId,
                         getStart = { it.timestampMs },
                         getEnd = { it.timestampMs },
@@ -622,12 +629,13 @@ class ResyncDeletionConvergenceTest {
                 HealthDataType.HEART_RATE ->
                     reconcileItems(
                         map = heartRateSamples,
-                        windowStartMs = windowStartMs,
-                        windowEndMs = windowEndMs,
-                        hcIds = hcIds,
+                        windowStartMs = scan.windowStartMs,
+                        windowEndMs = scan.windowEndExclusiveMs,
+                        hcIds = scan.ids,
                         zoneId = zoneId,
                         getStart = { it.timestampMs },
                         getEnd = { it.timestampMs },
+                        getItemId = { it.value.sourceId },
                     )
                 else -> null
             }
@@ -640,9 +648,10 @@ class ResyncDeletionConvergenceTest {
             zoneId: ZoneId,
             getStart: (T) -> Long,
             getEnd: (T) -> Long,
+            getItemId: (Map.Entry<String, T>) -> String = { it.key },
         ): ScoreInvalidation.AffectedRange? {
             val inRange = map.entries.filter { getStart(it.value) >= windowStartMs && getEnd(it.value) <= windowEndMs }
-            val toDelete = inRange.filter { it.key !in hcIds }
+            val toDelete = inRange.filter { getItemId(it) !in hcIds }
             if (toDelete.isEmpty()) return null
             toDelete.forEach { map.remove(it.key) }
             val startDay = Instant.ofEpochMilli(toDelete.minOf { getStart(it.value) }).atZone(zoneId).toLocalDate()

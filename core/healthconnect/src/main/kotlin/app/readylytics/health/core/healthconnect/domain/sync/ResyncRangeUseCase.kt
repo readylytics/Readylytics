@@ -139,9 +139,14 @@ class ResyncRangeUseCase
                                 nextDate = startDate,
                                 selectionHash = selectionHash,
                                 baselineChangeTokens = baselineChangeTokens,
+                                completedTypes = if (skipIngestAndPrune) emptySet() else baselineChangeTokens.keys,
                             ),
                         )
                     }
+
+                    var runCompletedTypes =
+                        checkpoint?.completedTypes?.takeIf { it.isNotEmpty() }
+                            ?: if (skipIngestAndPrune) emptySet() else baselineChangeTokens.keys
 
                     val totalDays = (ChronoUnit.DAYS.between(startDate, endDate) + 1).toInt().coerceAtLeast(0)
                     val totalChunks = if (totalDays <= 0) 0 else (totalDays + chunkDays - 1) / chunkDays
@@ -218,15 +223,29 @@ class ResyncRangeUseCase
                         // chunkDays once a window succeeds -- a shrink is a recovery measure for
                         // unusually dense data, not a permanent downgrade.
                         var effectiveChunkDays = checkpoint?.chunkDaysOverride ?: chunkDays
+                        val replayStartToken: String? = null
+                        val isInterruptedIngestChunk =
+                            checkpoint?.phase == ResyncPhase.INGEST && checkpoint.nextDate == chunkStart
+                        val hasInterruptedPageToken =
+                            checkpoint?.hrPageToken != null || checkpoint?.hrvPageToken != null
+                        if (isInterruptedIngestChunk && hasInterruptedPageToken) {
+                            checkpointStore.save(
+                                checkpoint.copy(
+                                    hrPageToken = null,
+                                    hrvPageToken = null,
+                                    completedTypes = runCompletedTypes,
+                                ),
+                            )
+                        }
                         var activeHrToken =
-                            if (checkpoint?.phase == ResyncPhase.INGEST && checkpoint.nextDate == chunkStart) {
-                                checkpoint.hrPageToken
+                            if (isInterruptedIngestChunk && checkpoint.hrPageToken != null) {
+                                replayStartToken
                             } else {
                                 null
                             }
                         var activeHrvToken =
-                            if (checkpoint?.phase == ResyncPhase.INGEST && checkpoint.nextDate == chunkStart) {
-                                checkpoint.hrvPageToken
+                            if (isInterruptedIngestChunk && checkpoint.hrvPageToken != null) {
+                                replayStartToken
                             } else {
                                 null
                             }
@@ -239,7 +258,7 @@ class ResyncRangeUseCase
                             val windowEnd = chunkEndExclusive.atStartOfDay(zoneId).toInstant()
                             val chunkOverride = if (effectiveChunkDays != chunkDays) effectiveChunkDays else null
 
-                            val chunkAffectedRange =
+                            val ingestResult =
                                 try {
                                     retryWithBackoff {
                                         ingestion.ingestionCoordinator.ingestWindow(
@@ -262,6 +281,7 @@ class ResyncRangeUseCase
                                                         chunkDaysOverride = chunkOverride,
                                                         hrPageToken = hrToken,
                                                         hrvPageToken = hrvToken,
+                                                        completedTypes = runCompletedTypes,
                                                     ),
                                                 )
                                             },
@@ -295,10 +315,14 @@ class ResyncRangeUseCase
                                             chunkDaysOverride = effectiveChunkDays,
                                             hrPageToken = null,
                                             hrvPageToken = null,
+                                            completedTypes = runCompletedTypes,
                                         ),
                                     )
                                     continue
                                 }
+
+                            val chunkAffectedRange = ingestResult.affectedRange
+                            runCompletedTypes = runCompletedTypes.intersect(ingestResult.completedTypes)
 
                             if (chunkAffectedRange != null) {
                                 earliestDeletionDate =
@@ -332,6 +356,7 @@ class ResyncRangeUseCase
                                     chunkDaysOverride = null,
                                     hrPageToken = null,
                                     hrvPageToken = null,
+                                    completedTypes = runCompletedTypes,
                                 ),
                             )
                             chunksCompleted++
@@ -394,6 +419,7 @@ class ResyncRangeUseCase
                                 nextDate = startDate,
                                 selectionHash = selectionHash,
                                 baselineChangeTokens = baselineChangeTokens,
+                                completedTypes = runCompletedTypes,
                             ),
                         )
                         val pruneEnd = clock.millis()
@@ -441,6 +467,7 @@ class ResyncRangeUseCase
                                 nextDate = startDate,
                                 selectionHash = selectionHash,
                                 baselineChangeTokens = baselineChangeTokens,
+                                completedTypes = runCompletedTypes,
                             ),
                         )
                         val reconcileEnd = clock.millis()
@@ -597,6 +624,7 @@ class ResyncRangeUseCase
                                 nextDate = chunkEndDay.plusDays(1),
                                 selectionHash = selectionHash,
                                 baselineChangeTokens = baselineChangeTokens,
+                                completedTypes = runCompletedTypes,
                             ),
                         )
                         chunkStartDay = chunkEndDay.plusDays(1)
@@ -611,7 +639,8 @@ class ResyncRangeUseCase
                         // change tokens (that would mark interim HC changes as already processed)
                         // or update lastSyncTimestamp (the foreground sync's catch-up window math
                         // assumes that timestamp means "data was actually re-ingested up to here").
-                        changeSynchronizer.commitTokens(baselineChangeTokens)
+                        val tokensToPromote = baselineChangeTokens.filterKeys { it in runCompletedTypes }
+                        changeSynchronizer.commitTokens(tokensToPromote)
                         settingsRepo.updateLastSyncTimestamp(clock.millis())
                     }
                     checkpointStore.clear()

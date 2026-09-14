@@ -292,6 +292,54 @@ class ResyncCheckpointResumeTest {
         }
 
     @Test
+    fun `resyncRange promotes only completed types and does not promote denied types`() =
+        runTest {
+            val startDate = LocalDate.of(2024, 6, 1)
+            val multiTokens =
+                mapOf(
+                    HealthDataType.SLEEP to "baseline-sleep-token",
+                    HealthDataType.HRV to "baseline-hrv-token",
+                )
+            coEvery { changeSynchronizer.captureChangesTokens() } returns multiTokens
+            coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Denied
+
+            useCase.run(startDate = startDate, endDate = startDate, chunkDays = 30, onProgress = null)
+
+            coVerify {
+                changeSynchronizer.commitTokens(
+                    match { tokens ->
+                        tokens.containsKey(HealthDataType.SLEEP) && !tokens.containsKey(HealthDataType.HRV)
+                    },
+                )
+            }
+        }
+
+    @Test
+    fun `interrupted HR page token in checkpoint is cleared and replayed from beginning on resume`() =
+        runTest {
+            val startDate = LocalDate.of(2024, 6, 1)
+            checkpointStore.value =
+                ResyncCheckpoint(
+                    startDate = startDate,
+                    endDate = startDate,
+                    phase = ResyncPhase.INGEST,
+                    nextDate = startDate,
+                    selectionHash = "",
+                    baselineChangeTokens = baselineTokens,
+                    hrPageToken = "saved-token-2",
+                )
+
+            val tokenSlot = slot<String?>()
+            coEvery {
+                hcRepo.readHeartRateSamplesPaged(any(), any(), captureNullable(tokenSlot), any())
+            } returns ReadOutcome.Available(Unit)
+
+            useCase.run(startDate = startDate, endDate = startDate, chunkDays = 30, onProgress = null)
+
+            assertEquals(null, tokenSlot.captured)
+        }
+
+    @Test
     fun `resyncRange keeps checkpoint and tokens when recompute fails`() =
         runTest {
             val startDate = LocalDate.of(2024, 6, 1)

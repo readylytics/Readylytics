@@ -125,7 +125,7 @@ class PagedIngestResumptionTest {
         }
 
     @Test
-    fun `resuming ingestion with hrStartPageToken passes token to repository and starts from token`() =
+    fun `resuming ingestion with hrStartPageToken clears token and replays from start`() =
         runTest {
             val startDate = LocalDate.of(2024, 6, 1)
             val endDate = LocalDate.of(2024, 6, 2)
@@ -152,11 +152,11 @@ class PagedIngestResumptionTest {
 
             useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
 
-            assertEquals("page-2", capturedStartToken.captured)
+            assertEquals(null, capturedStartToken.captured)
         }
 
     @Test
-    fun `resuming with hrvStartPageToken skips HR stream and resumes HRV stream from token`() =
+    fun `resuming with hrvStartPageToken clears token and replays both streams from start`() =
         runTest {
             val startDate = LocalDate.of(2024, 6, 1)
             val endDate = LocalDate.of(2024, 6, 2)
@@ -184,9 +184,9 @@ class PagedIngestResumptionTest {
 
             useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
 
-            // HR stream must be skipped because HRV was already in progress
-            coVerify(exactly = 0) { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) }
-            assertEquals("hrv-page-2", capturedHrvStartToken.captured)
+            // WP-06: Incomplete scan replays HR stream and replays HRV with null startPageToken
+            coVerify(exactly = 1) { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) }
+            assertEquals(null, capturedHrvStartToken.captured)
         }
 
     @Test

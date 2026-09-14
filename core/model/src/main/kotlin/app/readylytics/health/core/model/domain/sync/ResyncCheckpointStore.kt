@@ -28,6 +28,8 @@ data class ResyncCheckpoint(
     val hrPageToken: String? = null,
     /** R2-HC-002: Next page token for resuming HRV stream in current chunk. Null when at start or finished. */
     val hrvPageToken: String? = null,
+    /** WP-06: Health data types that have successfully completed ingestion and reconciliation. */
+    val completedTypes: Set<app.readylytics.health.core.model.domain.model.HealthDataType> = emptySet(),
 )
 
 interface ResyncCheckpointStore {

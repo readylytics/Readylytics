@@ -79,6 +79,11 @@ internal fun ResyncCheckpointProto.toDomain(): ResyncCheckpoint =
         chunkDaysOverride = chunkDaysOverride.takeIf { it > 0 },
         hrPageToken = hrPageToken.takeIf { it.isNotBlank() },
         hrvPageToken = hrvPageToken.takeIf { it.isNotBlank() },
+        completedTypes =
+            completedTypesList
+                .mapNotNull { name ->
+                    runCatching { HealthDataType.valueOf(name) }.getOrNull()
+                }.toSet(),
     )
 
 internal fun ResyncCheckpoint.toProto(): ResyncCheckpointProto {
@@ -100,5 +105,6 @@ internal fun ResyncCheckpoint.toProto(): ResyncCheckpointProto {
             .setChunkDaysOverride(chunkDaysOverride ?: 0)
     hrPageToken?.let { builder.setHrPageToken(it) }
     hrvPageToken?.let { builder.setHrvPageToken(it) }
+    builder.addAllCompletedTypes(completedTypes.map { it.name })
     return builder.build()
 }

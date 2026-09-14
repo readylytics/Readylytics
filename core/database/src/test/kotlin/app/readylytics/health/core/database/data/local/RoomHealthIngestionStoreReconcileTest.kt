@@ -9,6 +9,7 @@ import app.readylytics.health.core.databaseschema.data.local.entity.HealthSource
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
+import app.readylytics.health.core.model.domain.sync.CompleteTypeScan
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import io.mockk.clearMocks
 import io.mockk.coEvery
@@ -109,7 +110,8 @@ class RoomHealthIngestionStoreReconcileTest {
             coEvery { daos.sleepSessionDao.getBetween(startMs, endMs) } returns listOf(session1, session2)
 
             // Only s2 is in HC; s1 was deleted
-            val affected = store.reconcileWindow(HealthDataType.SLEEP, startMs, endMs, setOf("s2"), zoneId)
+            val scan = CompleteTypeScan(HealthDataType.SLEEP, startMs, endMs, "", setOf("s2"))
+            val affected = store.reconcileWindow(scan, zoneId)
 
             coVerify { daos.sleepStageDao.deleteForSessions(listOf("s1")) }
             coVerify { daos.sleepSessionDao.deleteSessionsNotIn(startMs, endMs, listOf("s2")) }
@@ -147,7 +149,8 @@ class RoomHealthIngestionStoreReconcileTest {
 
             coEvery { daos.sleepSessionDao.getBetween(startMs, endMs) } returns listOf(session1)
 
-            val affected = store.reconcileWindow(HealthDataType.SLEEP, startMs, endMs, setOf("s1"), zoneId)
+            val scan = CompleteTypeScan(HealthDataType.SLEEP, startMs, endMs, "", setOf("s1"))
+            val affected = store.reconcileWindow(scan, zoneId)
 
             assertNull(affected)
             coVerify(exactly = 0) { daos.sleepSessionDao.deleteSessionsNotIn(any(), any(), any()) }
@@ -175,7 +178,8 @@ class RoomHealthIngestionStoreReconcileTest {
             } returns listOf(src1)
 
             // hc-src-1 is deleted in HC
-            val affected = store.reconcileWindow(HealthDataType.HEART_RATE, startMs, endMs, emptySet(), zoneId)
+            val scan = CompleteTypeScan(HealthDataType.HEART_RATE, startMs, endMs, "", emptySet())
+            val affected = store.reconcileWindow(scan, zoneId)
 
             coVerify { daos.heartRateDao.deleteBySourceRecordRef(101L) }
             coVerify { daos.sourceRecordDao.deleteBySourceRecordId("hc-src-1") }
@@ -207,7 +211,8 @@ class RoomHealthIngestionStoreReconcileTest {
                 daos.sourceRecordDao.getAuthoritativeSourcesOverlapping("HEART_RATE", startMs, endMs)
             } returns listOf(srcSpanning)
 
-            val affected = store.reconcileWindow(HealthDataType.HEART_RATE, startMs, endMs, emptySet(), zoneId)
+            val scan = CompleteTypeScan(HealthDataType.HEART_RATE, startMs, endMs, "", emptySet())
+            val affected = store.reconcileWindow(scan, zoneId)
 
             coVerify { daos.heartRateDao.deleteBySourceRecordRef(102L) }
             coVerify { daos.sourceRecordDao.deleteBySourceRecordId("hc-src-spanning") }
@@ -225,7 +230,8 @@ class RoomHealthIngestionStoreReconcileTest {
                 daos.sourceRecordDao.getAuthoritativeSourcesOverlapping("HEART_RATE", startMs, endMs)
             } returns emptyList()
 
-            val affected = store.reconcileWindow(HealthDataType.HEART_RATE, startMs, endMs, emptySet(), zoneId)
+            val scan = CompleteTypeScan(HealthDataType.HEART_RATE, startMs, endMs, "", emptySet())
+            val affected = store.reconcileWindow(scan, zoneId)
 
             assertNull(affected)
             coVerify(exactly = 1) {
