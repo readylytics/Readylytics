@@ -100,6 +100,9 @@ choice described above.
 ## Your controls
 
 You can revoke Health Connect permissions in Android Health Connect settings.
+If permissions are revoked, Readylytics preserves your existing local data and
+suspends synchronization for the revoked types without data loss or blanket deletions.
+When permissions are re-granted, data synchronization resumes safely.
 You can delete local app data through Android system settings. You can also
 delete local backup files from their storage location.
 

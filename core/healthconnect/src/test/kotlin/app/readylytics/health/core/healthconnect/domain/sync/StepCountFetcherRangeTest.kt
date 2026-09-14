@@ -1,7 +1,8 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
-import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.ReadOutcome
+import app.readylytics.health.core.model.domain.sync.*
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
@@ -26,7 +27,8 @@ class StepCountFetcherRangeTest {
         runTest {
             val start = LocalDate.of(2024, 1, 1)
             val end = LocalDate.of(2024, 1, 3)
-            coEvery { hcRepo.readDailyStepTotals(any(), any(), any()) } returns emptyMap()
+            coEvery { hcRepo.readDailyStepTotals(any(), any(), any()) } returns
+                ReadOutcome.Available(emptyMap())
 
             val result = fetcher.fetchRange(start, end, 30, null, zoneId)
 
@@ -42,7 +44,7 @@ class StepCountFetcherRangeTest {
             val start = LocalDate.of(2024, 1, 1)
             val end = LocalDate.of(2024, 1, 3)
             coEvery { hcRepo.readDailyStepTotals(any(), any(), any()) } returns
-                mapOf(start.plusDays(1) to 4_321L)
+                ReadOutcome.Available(mapOf(start.plusDays(1) to 4_321L))
 
             val result = fetcher.fetchRange(start, end, 30, null, zoneId)
 
@@ -63,7 +65,7 @@ class StepCountFetcherRangeTest {
                 val from = firstArg<Instant>()
                 val to = secondArg<Instant>()
                 requestedWindows += from to to
-                mapOf(from.atZone(zoneId).toLocalDate() to 1_000L)
+                ReadOutcome.Available(mapOf(from.atZone(zoneId).toLocalDate() to 1_000L))
             }
 
             val result = fetcher.fetchRange(startDate, endDate, chunkDays, stepsDevice = null, zoneId = zoneId)

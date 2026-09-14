@@ -46,6 +46,13 @@ class HealthChangeSynchronizerImplTest {
             val block = firstArg<suspend () -> Any>()
             block()
         }
+        val allReadPermissions =
+            HealthDataType.entries.flatMap { dataType ->
+                recordClassesFor(dataType).map {
+                    HealthPermission.getReadPermission(it)
+                }
+            }.toSet()
+        coEvery { client.permissionController.getGrantedPermissions() } returns allReadPermissions
 
         coEvery { client.readRecords<Record>(any()) } returns
             mockk {
@@ -106,14 +113,76 @@ class HealthChangeSynchronizerImplTest {
         }
 
     @Test
-    fun `applyPendingChanges returns requiresFullResync on SecurityException`() =
+    fun `applyPendingChanges suspends type and avoids full resync on SecurityException`() =
         runTest {
+            val allPerms =
+                HealthDataType.entries.flatMap { current ->
+                    recordClassesFor(current).map {
+                        HealthPermission.getReadPermission(it)
+                    }
+                }.toSet()
+            coEvery { client.permissionController.getGrantedPermissions() } returns allPerms
             coEvery { tokenStore.get(any()) } returns "token"
             coEvery { client.getChanges(any()) } throws SecurityException("Revoked")
 
             val outcome = synchronizer.applyPendingChanges()
 
-            assertTrue(outcome.requiresFullResync)
+            assertFalse(outcome.requiresFullResync)
+            coVerify(atLeast = 1) { tokenStore.suspendType(any()) }
+        }
+
+    @Test
+    fun `grant sync revoke repeat twice regrant lifecycle suspends type and bootstraps upon regrant`() =
+        runTest {
+            val allPerms =
+                HealthDataType.entries.flatMap { current ->
+                    recordClassesFor(current).map {
+                        HealthPermission.getReadPermission(it)
+                    }
+                }.toSet()
+
+            val stepsPerms =
+                recordClassesFor(HealthDataType.STEPS).map {
+                    HealthPermission.getReadPermission(it)
+                }.toSet()
+
+            val permsWithoutSteps = allPerms - stepsPerms
+
+            // Fake token store state
+            val inMemoryTokens = HealthDataType.entries.associateWith { "token-$it" }.toMutableMap()
+            coEvery { tokenStore.get(any()) } answers { inMemoryTokens[firstArg()] }
+            coEvery { tokenStore.suspendType(any()) } answers { inMemoryTokens.remove(firstArg()) }
+
+            HealthDataType.entries.forEach { current ->
+                coEvery { client.getChanges("token-$current") } returns changesResponse(emptyList())
+            }
+
+            // 1. Grant & sync
+            coEvery { client.permissionController.getGrantedPermissions() } returns allPerms
+            val outcome1 = synchronizer.applyPendingChanges()
+            assertFalse("Initial sync should succeed without full resync", outcome1.requiresFullResync)
+
+            // 2. Revoke STEPS & sync
+            coEvery { client.permissionController.getGrantedPermissions() } returns permsWithoutSteps
+            val outcome2 = synchronizer.applyPendingChanges()
+            assertFalse("Revoked sync should not enter full resync loop", outcome2.requiresFullResync)
+            coVerify(exactly = 1) { tokenStore.suspendType(HealthDataType.STEPS) }
+
+            // 3. Repeat sync (first repeat)
+            val outcome3 = synchronizer.applyPendingChanges()
+            assertFalse("Repeated sync should not request full resync", outcome3.requiresFullResync)
+
+            // 4. Repeat sync (second repeat)
+            val outcome4 = synchronizer.applyPendingChanges()
+            assertFalse("Second repeated sync should not request full resync", outcome4.requiresFullResync)
+
+            // 5. Regrant STEPS
+            coEvery { client.permissionController.getGrantedPermissions() } returns allPerms
+            val outcome5 = synchronizer.applyPendingChanges()
+            assertTrue(
+                "Regrant must request full resync to bootstrap the newly regranted type",
+                outcome5.requiresFullResync,
+            )
         }
 
     @Test

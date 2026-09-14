@@ -60,12 +60,25 @@ class HealthChangeSynchronizerImpl
                 }
 
             for (dataType in HealthDataType.entries) {
+                val typePermissions =
+                    recordClassesFor(dataType).map {
+                        HealthPermission.getReadPermission(it)
+                    }
+                val isGranted = typePermissions.all { it in grantedPermissions }
                 val token = tokenStore.get(dataType)
-                if (token.isNullOrBlank()) {
-                    val outcome = missingTokenOutcome(dataType, grantedPermissions)
-                    if (outcome != null) return outcome
+
+                if (!isGranted) {
+                    if (!token.isNullOrBlank()) {
+                        logD("HealthChangeSynchronizer") { "Permission revoked for $dataType: suspending token" }
+                        tokenStore.suspendType(dataType)
+                    }
                     logD("HealthChangeSynchronizer") { "Skipping $dataType: permission not granted" }
                     continue
+                }
+
+                if (token.isNullOrBlank()) {
+                    logD("HealthChangeSynchronizer") { "Token for $dataType is missing, requesting full resync" }
+                    return HealthChangeSyncOutcome(emptySet(), requiresFullResync = true)
                 }
 
                 applyChangesForType(
@@ -84,20 +97,6 @@ class HealthChangeSynchronizerImpl
                 requiresFullResync = false,
                 nextTokens = nextTokens,
             )
-        }
-
-        private fun missingTokenOutcome(
-            dataType: HealthDataType,
-            grantedPermissions: Set<String>,
-        ): HealthChangeSyncOutcome? {
-            val typePermissions = recordClassesFor(dataType).map {
-                HealthPermission.getReadPermission(it)
-            }
-            if (typePermissions.any { it in grantedPermissions }) {
-                logD("HealthChangeSynchronizer") { "Token for $dataType is missing, requesting full resync" }
-                return HealthChangeSyncOutcome(emptySet(), requiresFullResync = true)
-            }
-            return null
         }
 
         private suspend fun applyChangesForType(
@@ -149,14 +148,18 @@ class HealthChangeSynchronizerImpl
                 throw e
             } catch (e: SecurityException) {
                 logE("HealthChangeSynchronizer", e) {
-                    "SecurityException reading changes for $dataType"
+                    "SecurityException reading changes for $dataType: suspending type"
                 }
-                HealthChangeSyncOutcome(
-                    affectedDates = emptySet(),
-                    requiresFullResync = true,
-                )
+                tokenStore.suspendType(dataType)
+                null
             } catch (e: Exception) {
-                if (isTokenExpiredException(e)) {
+                if (e.asHealthConnectSecurityCause() != null) {
+                    logE("HealthChangeSynchronizer", e) {
+                        "SecurityException reading changes for $dataType: suspending type"
+                    }
+                    tokenStore.suspendType(dataType)
+                    null
+                } else if (isTokenExpiredException(e)) {
                     logD("HealthChangeSynchronizer") {
                         "Change token expired for $dataType"
                     }
@@ -180,6 +183,12 @@ class HealthChangeSynchronizerImpl
         // it just means that type gets no baseline token (mirrors the read-side degrade pattern).
         override suspend fun captureChangesTokens(): Map<HealthDataType, String> =
             HealthDataType.entries.mapNotNull { dataType ->
+                if (tokenStore.isSuspended(dataType)) {
+                    logD("HealthChangeSynchronizer") {
+                        "Changes token skipped for $dataType: type is suspended"
+                    }
+                    return@mapNotNull null
+                }
                 try {
                     dataType to
                         client.getChangesToken(
@@ -192,6 +201,7 @@ class HealthChangeSynchronizerImpl
                     logD("HealthChangeSynchronizer") {
                         "Changes token skipped for $dataType: permission not granted"
                     }
+                    tokenStore.suspendType(dataType)
                     null
                 }
             }.toMap()

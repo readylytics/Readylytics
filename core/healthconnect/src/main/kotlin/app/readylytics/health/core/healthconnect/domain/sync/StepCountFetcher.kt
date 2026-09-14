@@ -1,5 +1,6 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
+import app.readylytics.health.core.model.domain.repository.ReadOutcome
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
 import app.readylytics.health.core.model.domain.sync.mappers.StepsMapper
 import app.readylytics.health.core.model.domain.util.logD
@@ -58,25 +59,38 @@ class StepCountFetcher
                             val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
                             async {
                                 stepsSemaphore.withPermit {
-                                    day to retryWithBackoff { hcRepo.readSteps(dayStart, dayEnd) }
+                                    val outcome = retryWithBackoff { hcRepo.readSteps(dayStart, dayEnd) }
+                                    if (outcome is ReadOutcome.Available) {
+                                        day to outcome.data
+                                    } else {
+                                        null
+                                    }
                                 }
                             }
                         }
-                    stepsMap.putAll(deferredSteps.awaitAll())
+                    deferredSteps.awaitAll().filterNotNull().forEach { (day, count) ->
+                        stepsMap[day] = count
+                    }
                 }
             } else {
                 val oldestTargetDay = today.minusDays((windowDays - 1).toLong())
                 val windowStart = oldestTargetDay.atStartOfDay(zoneId).toInstant()
                 val windowEnd = today.plusDays(1).atStartOfDay(zoneId).toInstant()
-                val stepsRecords = retryWithBackoff { hcRepo.readStepsRecords(windowStart, windowEnd) }
-                val stepEntries =
-                    DeviceSourceFilter.filterToDevice(
-                        StepsMapper.toStepEntries(stepsRecords),
-                        stepsDevice,
-                    ) { it.deviceName }
-                stepsMap.putAll(
-                    StepsMapper.sumByDay(stepEntries, zoneId),
-                )
+                val outcome = retryWithBackoff { hcRepo.readStepsRecords(windowStart, windowEnd) }
+                if (outcome is ReadOutcome.Available) {
+                    for (i in 0 until windowDays) {
+                        val day = today.minusDays(i.toLong())
+                        stepsMap[day] = 0L
+                    }
+                    val stepEntries =
+                        DeviceSourceFilter.filterToDevice(
+                            StepsMapper.toStepEntries(outcome.data),
+                            stepsDevice,
+                        ) { it.deviceName }
+                    stepsMap.putAll(
+                        StepsMapper.sumByDay(stepEntries, zoneId),
+                    )
+                }
             }
             return stepsMap
         }
@@ -92,54 +106,82 @@ class StepCountFetcher
             stepsDevice: String?,
             zoneId: ZoneId,
         ): Map<LocalDate, Long> {
-            val stepsMap = mutableMapOf<LocalDate, Long>()
-            if (startDate.isAfter(endDate)) return stepsMap
-
-            if (stepsDevice == null) {
-                // HC-003: one grouped-by-day aggregate call per chunk instead of one aggregate
-                // call per calendar day -- a 10-year resync issues ~(range/chunkDays) HC calls
-                // instead of ~3,650.
-                var chunkStart = startDate
-                while (!chunkStart.isAfter(endDate)) {
-                    currentCoroutineContext().ensureActive()
-                    val chunkEndExclusive = minOf(chunkStart.plusDays(chunkDays.toLong()), endDate.plusDays(1))
-                    val windowStart = chunkStart.atStartOfDay(zoneId).toInstant()
-                    val windowEnd = chunkEndExclusive.atStartOfDay(zoneId).toInstant()
-                    var day = chunkStart
-                    while (day.isBefore(chunkEndExclusive)) {
-                        stepsMap[day] = 0L
-                        day = day.plusDays(1)
-                    }
-                    stepsMap.putAll(
-                        retryWithBackoff { hcRepo.readDailyStepTotals(windowStart, windowEnd, zoneId) },
-                    )
-                    chunkStart = chunkEndExclusive
-                    yield()
-                }
-                return stepsMap
+            if (startDate.isAfter(endDate)) return emptyMap()
+            return if (stepsDevice == null) {
+                fetchRangeAggregates(startDate, endDate, chunkDays, zoneId)
+            } else {
+                fetchRangeRecords(startDate, endDate, chunkDays, stepsDevice, zoneId)
             }
+        }
 
+        private suspend fun fetchRangeAggregates(
+            startDate: LocalDate,
+            endDate: LocalDate,
+            chunkDays: Int,
+            zoneId: ZoneId,
+        ): Map<LocalDate, Long> {
+            val stepsMap = mutableMapOf<LocalDate, Long>()
+            var chunkStart = startDate
+            while (!chunkStart.isAfter(endDate)) {
+                currentCoroutineContext().ensureActive()
+                val chunkEndExclusive = minOf(chunkStart.plusDays(chunkDays.toLong()), endDate.plusDays(1))
+                val windowStart = chunkStart.atStartOfDay(zoneId).toInstant()
+                val windowEnd = chunkEndExclusive.atStartOfDay(zoneId).toInstant()
+                val outcome = retryWithBackoff { hcRepo.readDailyStepTotals(windowStart, windowEnd, zoneId) }
+                if (outcome is ReadOutcome.Available) {
+                    zeroFillDays(chunkStart, chunkEndExclusive, stepsMap)
+                    stepsMap.putAll(outcome.data)
+                }
+                chunkStart = chunkEndExclusive
+                yield()
+            }
+            return stepsMap
+        }
+
+        private suspend fun fetchRangeRecords(
+            startDate: LocalDate,
+            endDate: LocalDate,
+            chunkDays: Int,
+            stepsDevice: String,
+            zoneId: ZoneId,
+        ): Map<LocalDate, Long> {
+            val stepsMap = mutableMapOf<LocalDate, Long>()
             var chunkStart = startDate
             while (!chunkStart.isAfter(endDate)) {
                 currentCoroutineContext().ensureActive()
                 val chunkEndExclusive = minOf(chunkStart.plusDays(chunkDays.toLong()), endDate.plusDays(1))
                 val stepsWindowStart = chunkStart.atStartOfDay(zoneId).toInstant()
                 val stepsWindowEnd = chunkEndExclusive.atStartOfDay(zoneId).toInstant()
-                val stepsRecords =
+                val outcome =
                     retryWithBackoff {
                         hcRepo.readStepsRecords(stepsWindowStart, stepsWindowEnd)
                     }
-                val stepEntries =
-                    DeviceSourceFilter.filterToDevice(
-                        StepsMapper.toStepEntries(stepsRecords),
-                        stepsDevice,
-                    ) { it.deviceName }
-                stepsMap.putAll(
-                    StepsMapper.sumByDay(stepEntries, zoneId),
-                )
+                if (outcome is ReadOutcome.Available) {
+                    zeroFillDays(chunkStart, chunkEndExclusive, stepsMap)
+                    val stepEntries =
+                        DeviceSourceFilter.filterToDevice(
+                            StepsMapper.toStepEntries(outcome.data),
+                            stepsDevice,
+                        ) { it.deviceName }
+                    stepsMap.putAll(
+                        StepsMapper.sumByDay(stepEntries, zoneId),
+                    )
+                }
                 chunkStart = chunkEndExclusive
                 yield()
             }
             return stepsMap
+        }
+
+        private fun zeroFillDays(
+            start: LocalDate,
+            endExclusive: LocalDate,
+            map: MutableMap<LocalDate, Long>,
+        ) {
+            var day = start
+            while (day.isBefore(endExclusive)) {
+                map[day] = 0L
+                day = day.plusDays(1)
+            }
         }
     }

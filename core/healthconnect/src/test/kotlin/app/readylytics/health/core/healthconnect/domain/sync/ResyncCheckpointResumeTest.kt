@@ -6,6 +6,7 @@ import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.ReadOutcome
 import app.readylytics.health.core.model.domain.repository.ScoringRepository
 import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
@@ -66,6 +67,19 @@ class ResyncCheckpointResumeTest {
         // so the walk-forward actually exercises the 6-arg path.
         coEvery { scoringRepository.fetchWalkForwardFatigueContext(any(), any(), any()) } returns
             WalkForwardFatigueContext(emptyList())
+        coEvery { hcRepo.readSleepSessions(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readExerciseSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readStepsRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readSteps(any(), any()) } returns ReadOutcome.Available(0L)
+        coEvery { hcRepo.readDailyStepTotals(any(), any(), any()) } returns ReadOutcome.Available(emptyMap())
+        coEvery { hcRepo.readWeightRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBodyFatRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBloodPressureRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readOxygenSaturationRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBodyTemperatureRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readVo2MaxRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
         useCase =
             ResyncRangeUseCase(
                 settingsRepo = settingsRepo,
@@ -103,7 +117,9 @@ class ResyncCheckpointResumeTest {
                 )
 
             val sleepFromSlot = slot<Instant>()
-            coEvery { hcRepo.readSleepSessions(capture(sleepFromSlot), any()) } returns emptyList()
+            coEvery {
+                hcRepo.readSleepSessions(capture(sleepFromSlot), any())
+            } returns ReadOutcome.Available(emptyList())
 
             useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
 
@@ -213,7 +229,9 @@ class ResyncCheckpointResumeTest {
                 )
 
             val sleepFromInstants = mutableListOf<Instant>()
-            coEvery { hcRepo.readSleepSessions(capture(sleepFromInstants), any()) } returns emptyList()
+            coEvery {
+                hcRepo.readSleepSessions(capture(sleepFromInstants), any())
+            } returns ReadOutcome.Available(emptyList())
 
             useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
 

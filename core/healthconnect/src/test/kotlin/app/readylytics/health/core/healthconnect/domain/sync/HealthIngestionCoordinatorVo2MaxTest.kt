@@ -32,7 +32,8 @@ class HealthIngestionCoordinatorVo2MaxTest {
                     measurementMethod = 1,
                     deviceName = "Pixel Watch",
                 )
-            coEvery { hcRepo.readVo2MaxRecords(any(), any()) } returns listOf(domainRecord)
+            coEvery { hcRepo.readVo2MaxRecords(any(), any()) } returns
+                app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(listOf(domainRecord))
 
             val batchSlot = slot<HealthIngestionBatch>()
             coEvery { healthIngestionStore.persist(capture(batchSlot)) } returns Unit

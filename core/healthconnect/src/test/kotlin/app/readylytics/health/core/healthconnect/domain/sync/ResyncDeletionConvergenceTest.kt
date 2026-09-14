@@ -10,6 +10,8 @@ import app.readylytics.health.core.model.domain.model.WorkoutRoutePoint
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.PermissionStatus
+import app.readylytics.health.core.model.domain.repository.ReadOutcome
 import app.readylytics.health.core.model.domain.repository.ScoringRepository
 import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
@@ -82,6 +84,19 @@ class ResyncDeletionConvergenceTest {
             WalkForwardBaselineContext(emptyList())
         coEvery { scoringRepository.fetchWalkForwardFatigueContext(any(), any(), any()) } returns
             WalkForwardFatigueContext(emptyList())
+        coEvery { hcRepo.readSleepSessions(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readExerciseSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readStepsRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readSteps(any(), any()) } returns ReadOutcome.Available(0L)
+        coEvery { hcRepo.readDailyStepTotals(any(), any(), any()) } returns ReadOutcome.Available(emptyMap())
+        coEvery { hcRepo.readWeightRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBodyFatRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBloodPressureRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readOxygenSaturationRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBodyTemperatureRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readVo2MaxRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
 
         useCase =
             ResyncRangeUseCase(
@@ -147,15 +162,17 @@ class ResyncDeletionConvergenceTest {
 
             // Health Connect only returns sessionKept
             coEvery { hcRepo.readSleepSessions(any(), any()) } returns
-                listOf(
-                    DomainSleepSessionRecord(
-                        id = sessionKept.id,
-                        startTime = Instant.ofEpochMilli(sessionKept.startTime),
-                        endTime = Instant.ofEpochMilli(sessionKept.endTime),
-                        startZoneOffsetSeconds = 0,
-                        endZoneOffsetSeconds = 0,
-                        deviceName = sessionKept.deviceName ?: "Pixel Watch",
-                        stages = emptyList(),
+                ReadOutcome.Available(
+                    listOf(
+                        DomainSleepSessionRecord(
+                            id = sessionKept.id,
+                            startTime = Instant.ofEpochMilli(sessionKept.startTime),
+                            endTime = Instant.ofEpochMilli(sessionKept.endTime),
+                            startZoneOffsetSeconds = 0,
+                            endZoneOffsetSeconds = 0,
+                            deviceName = sessionKept.deviceName ?: "Pixel Watch",
+                            stages = emptyList(),
+                        ),
                     ),
                 )
 
@@ -192,15 +209,17 @@ class ResyncDeletionConvergenceTest {
             fakeStore.sleepSessions[sessionKept.id] = sessionKept
 
             coEvery { hcRepo.readSleepSessions(any(), any()) } returns
-                listOf(
-                    DomainSleepSessionRecord(
-                        id = sessionKept.id,
-                        startTime = Instant.ofEpochMilli(sessionKept.startTime),
-                        endTime = Instant.ofEpochMilli(sessionKept.endTime),
-                        startZoneOffsetSeconds = 0,
-                        endZoneOffsetSeconds = 0,
-                        deviceName = sessionKept.deviceName ?: "Pixel Watch",
-                        stages = emptyList(),
+                ReadOutcome.Available(
+                    listOf(
+                        DomainSleepSessionRecord(
+                            id = sessionKept.id,
+                            startTime = Instant.ofEpochMilli(sessionKept.startTime),
+                            endTime = Instant.ofEpochMilli(sessionKept.endTime),
+                            startZoneOffsetSeconds = 0,
+                            endZoneOffsetSeconds = 0,
+                            deviceName = sessionKept.deviceName ?: "Pixel Watch",
+                            stages = emptyList(),
+                        ),
                     ),
                 )
 
@@ -257,15 +276,17 @@ class ResyncDeletionConvergenceTest {
 
             // Health Connect only returns in-window session
             coEvery { hcRepo.readSleepSessions(any(), any()) } returns
-                listOf(
-                    DomainSleepSessionRecord(
-                        id = inWindowSession.id,
-                        startTime = Instant.ofEpochMilli(inWindowSession.startTime),
-                        endTime = Instant.ofEpochMilli(inWindowSession.endTime),
-                        startZoneOffsetSeconds = 0,
-                        endZoneOffsetSeconds = 0,
-                        deviceName = inWindowSession.deviceName ?: "Pixel Watch",
-                        stages = emptyList(),
+                ReadOutcome.Available(
+                    listOf(
+                        DomainSleepSessionRecord(
+                            id = inWindowSession.id,
+                            startTime = Instant.ofEpochMilli(inWindowSession.startTime),
+                            endTime = Instant.ofEpochMilli(inWindowSession.endTime),
+                            startZoneOffsetSeconds = 0,
+                            endZoneOffsetSeconds = 0,
+                            deviceName = inWindowSession.deviceName ?: "Pixel Watch",
+                            stages = emptyList(),
+                        ),
                     ),
                 )
 
@@ -301,8 +322,8 @@ class ResyncDeletionConvergenceTest {
                     deviceName = "Pixel Watch",
                 )
 
-            coEvery { hcRepo.readSleepSessions(any(), any()) } returns listOf(session)
-            coEvery { hcRepo.readExerciseSessions(any(), any(), any()) } returns listOf(workout)
+            coEvery { hcRepo.readSleepSessions(any(), any()) } returns ReadOutcome.Available(listOf(session))
+            coEvery { hcRepo.readExerciseSessions(any(), any(), any()) } returns ReadOutcome.Available(listOf(workout))
 
             // Pass 1
             val result1 = useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
@@ -353,7 +374,7 @@ class ResyncDeletionConvergenceTest {
             fakeStore.sleepSessions[session.id] = session
 
             // HC returns nothing, but skipIngestAndPrune is true
-            coEvery { hcRepo.readSleepSessions(any(), any()) } returns emptyList()
+            coEvery { hcRepo.readSleepSessions(any(), any()) } returns ReadOutcome.Available(emptyList())
 
             val result =
                 useCase.run(
@@ -386,7 +407,7 @@ class ResyncDeletionConvergenceTest {
 
             // Weight permission is NOT granted
             coEvery { hcRepo.hasWeightPermission() } returns false
-            coEvery { hcRepo.readWeightRecords(any(), any()) } returns emptyList()
+            coEvery { hcRepo.readWeightRecords(any(), any()) } returns ReadOutcome.Denied
 
             val result = useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
 
@@ -401,42 +422,19 @@ class ResyncDeletionConvergenceTest {
             val startDate = LocalDate.of(2026, 6, 1)
             val endDate = LocalDate.of(2026, 6, 5)
 
-            val hrSamplePage1 =
-                HeartRateInput(
-                    id = "hr-page-1-sample",
-                    timestampMs = Instant.parse("2026-06-02T12:00:00Z").toEpochMilli(),
-                    beatsPerMinute = 65,
-                    recordType = "HEART_RATE",
-                    sessionId = null,
-                    deviceName = "Pixel Watch",
-                )
+            val hrSamplePage1 = createHeartRateInput("hr-page-1-sample", "2026-06-02T12:00:00Z", 65)
             fakeStore.heartRateSamples[hrSamplePage1.id] = hrSamplePage1
 
             val hrSamplePage2 =
                 DomainHeartRateRecord(
                     id = "hr-page-2-record",
                     deviceName = "Pixel Watch",
-                    samples =
-                        listOf(
-                            DomainHeartRateSample(
-                                time = Instant.parse("2026-06-02T13:00:00Z"),
-                                beatsPerMinute = 70,
-                            ),
-                        ),
+                    samples = listOf(
+                        DomainHeartRateSample(time = Instant.parse("2026-06-02T13:00:00Z"), beatsPerMinute = 70),
+                    ),
                 )
 
-            // Setup checkpoint as if page 1 finished and hrPageToken is "token-page-2"
-            checkpointStore.save(
-                ResyncCheckpoint(
-                    startDate = startDate,
-                    endDate = endDate,
-                    phase = ResyncPhase.INGEST,
-                    nextDate = startDate,
-                    selectionHash = "",
-                    baselineChangeTokens = mapOf(HealthDataType.SLEEP to "token-1"),
-                    hrPageToken = "token-page-2",
-                ),
-            )
+            setupMidstreamHrCheckpoint(startDate, endDate, "token-page-2")
 
             coEvery {
                 hcRepo.readHeartRateSamplesPaged(
@@ -449,6 +447,7 @@ class ResyncDeletionConvergenceTest {
                 @Suppress("UNCHECKED_CAST")
                 val onPage = it.invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
                 onPage(listOf(hrSamplePage2), null)
+                ReadOutcome.Available(Unit)
             }
 
             val result = useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
@@ -463,6 +462,83 @@ class ResyncDeletionConvergenceTest {
                 fakeStore.heartRateSamples.values.any { it.beatsPerMinute == 70 },
             )
         }
+
+    @Test
+    fun `midstream denial loses deletion authority even if regranted before reconciliation`() =
+        runTest {
+            val startDate = LocalDate.of(2026, 6, 1)
+            val endDate = LocalDate.of(2026, 6, 5)
+
+            val hrSample1 = createHeartRateInput("hr-sample-existing", "2026-06-02T12:00:00Z", 65)
+            fakeStore.heartRateSamples[hrSample1.id] = hrSample1
+
+            val page1Record =
+                DomainHeartRateRecord(
+                    id = "hr-page-1-record",
+                    deviceName = "Pixel Watch",
+                    samples = listOf(
+                        DomainHeartRateSample(time = Instant.parse("2026-06-02T12:30:00Z"), beatsPerMinute = 70),
+                    ),
+                )
+
+            // Sequence: First page Available, SecurityException before second page (returns Denied),
+            // regrant before reconciliation. Assert no deletion authority from the later grant.
+            coEvery {
+                hcRepo.readHeartRateSamplesPaged(
+                    from = any(),
+                    to = any(),
+                    startPageToken = any(),
+                    onPage = any(),
+                )
+            } coAnswers {
+                @Suppress("UNCHECKED_CAST")
+                val onPage = it.invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
+                onPage(listOf(page1Record), "token-page-2")
+                // Permission regranted before reconciliation pass
+                coEvery { hcRepo.checkPermissions() } returns PermissionStatus.Granted
+                ReadOutcome.Denied
+            }
+
+            val result = useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
+
+            assertTrue("Resync must complete", result.isSuccess)
+            assertNotNull(
+                "Existing HR sample must NOT be deleted without deletion authority",
+                fakeStore.heartRateSamples["hr-sample-existing"],
+            )
+            assertTrue(
+                "First page record must be persisted before midstream denial",
+                fakeStore.heartRateSamples.values.any { it.beatsPerMinute == 70 },
+            )
+        }
+
+    private fun createHeartRateInput(id: String, isoTime: String, bpm: Int) =
+        HeartRateInput(
+            id = id,
+            timestampMs = Instant.parse(isoTime).toEpochMilli(),
+            beatsPerMinute = bpm,
+            recordType = "HEART_RATE",
+            sessionId = null,
+            deviceName = "Pixel Watch",
+        )
+
+    private suspend fun setupMidstreamHrCheckpoint(
+        startDate: LocalDate,
+        endDate: LocalDate,
+        token: String,
+    ) {
+        checkpointStore.save(
+            ResyncCheckpoint(
+                startDate = startDate,
+                endDate = endDate,
+                phase = ResyncPhase.INGEST,
+                nextDate = startDate,
+                selectionHash = "",
+                baselineChangeTokens = mapOf(HealthDataType.SLEEP to "token-1"),
+                hrPageToken = token,
+            ),
+        )
+    }
 
     private class FakeReconcilingHealthIngestionStore : HealthIngestionStore {
         val sleepSessions = mutableMapOf<String, SleepSessionInput>()

@@ -19,4 +19,8 @@ interface HealthChangeTokenStore {
     suspend fun clear(dataType: HealthDataType)
 
     suspend fun clearAll()
+
+    suspend fun suspendType(dataType: HealthDataType)
+
+    suspend fun isSuspended(dataType: HealthDataType): Boolean
 }

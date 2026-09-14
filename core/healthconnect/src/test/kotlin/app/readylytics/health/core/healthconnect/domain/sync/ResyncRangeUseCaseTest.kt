@@ -7,6 +7,7 @@ import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.ReadOutcome
 import app.readylytics.health.core.model.domain.repository.ScoringRepository
 import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
@@ -69,6 +70,19 @@ class ResyncRangeUseCaseTest {
         // so the walk-forward actually exercises the 6-arg path.
         coEvery { scoringRepository.fetchWalkForwardFatigueContext(any(), any(), any()) } returns
             WalkForwardFatigueContext(emptyList())
+        coEvery { hcRepo.readSleepSessions(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readExerciseSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readStepsRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readSteps(any(), any()) } returns ReadOutcome.Available(0L)
+        coEvery { hcRepo.readDailyStepTotals(any(), any(), any()) } returns ReadOutcome.Available(emptyMap())
+        coEvery { hcRepo.readWeightRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBodyFatRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBloodPressureRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readOxygenSaturationRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBodyTemperatureRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readVo2MaxRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
 
         useCase =
             ResyncRangeUseCase(
@@ -99,9 +113,15 @@ class ResyncRangeUseCaseTest {
             val sleepFromSlot = slot<Instant>()
             val hrvFromSlot = slot<Instant>()
             val hrFromSlot = slot<Instant>()
-            coEvery { hcRepo.readSleepSessions(capture(sleepFromSlot), any()) } returns emptyList()
-            coJustRun { hcRepo.readHrvSamplesPaged(capture(hrvFromSlot), any(), any(), any()) }
-            coJustRun { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any(), any()) }
+            coEvery {
+                hcRepo.readSleepSessions(capture(sleepFromSlot), any())
+            } returns ReadOutcome.Available(emptyList())
+            coEvery {
+                hcRepo.readHrvSamplesPaged(capture(hrvFromSlot), any(), any(), any())
+            } returns ReadOutcome.Available(Unit)
+            coEvery {
+                hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any(), any())
+            } returns ReadOutcome.Available(Unit)
             useCase.run(startDate, endDate, chunkDays = 30, onProgress = null)
 
             // The first chunk of resyncRange must reach back one extra day to capture
@@ -126,8 +146,12 @@ class ResyncRangeUseCaseTest {
 
             val hrvFromInstants = mutableListOf<Instant>()
             val hrFromInstants = mutableListOf<Instant>()
-            coJustRun { hcRepo.readHrvSamplesPaged(capture(hrvFromInstants), any(), any(), any()) }
-            coJustRun { hcRepo.readHeartRateSamplesPaged(capture(hrFromInstants), any(), any(), any()) }
+            coEvery {
+                hcRepo.readHrvSamplesPaged(capture(hrvFromInstants), any(), any(), any())
+            } returns ReadOutcome.Available(Unit)
+            coEvery {
+                hcRepo.readHeartRateSamplesPaged(capture(hrFromInstants), any(), any(), any())
+            } returns ReadOutcome.Available(Unit)
             useCase.run(startDate, endDate, chunkDays = chunkDays, onProgress = null)
 
             val secondChunkStart = startDate.plusDays(chunkDays.toLong())
@@ -156,10 +180,18 @@ class ResyncRangeUseCaseTest {
             val workoutToInstants = mutableListOf<Instant>()
             val hrvToInstants = mutableListOf<Instant>()
             val hrToInstants = mutableListOf<Instant>()
-            coEvery { hcRepo.readSleepSessions(any(), capture(sleepToInstants)) } returns emptyList()
-            coEvery { hcRepo.readExerciseSessions(any(), capture(workoutToInstants)) } returns emptyList()
-            coJustRun { hcRepo.readHrvSamplesPaged(any(), capture(hrvToInstants), any(), any()) }
-            coJustRun { hcRepo.readHeartRateSamplesPaged(any(), capture(hrToInstants), any(), any()) }
+            coEvery {
+                hcRepo.readSleepSessions(any(), capture(sleepToInstants))
+            } returns ReadOutcome.Available(emptyList())
+            coEvery {
+                hcRepo.readExerciseSessions(any(), capture(workoutToInstants))
+            } returns ReadOutcome.Available(emptyList())
+            coEvery {
+                hcRepo.readHrvSamplesPaged(any(), capture(hrvToInstants), any(), any())
+            } returns ReadOutcome.Available(Unit)
+            coEvery {
+                hcRepo.readHeartRateSamplesPaged(any(), capture(hrToInstants), any(), any())
+            } returns ReadOutcome.Available(Unit)
             useCase.run(
                 startDate = startDate,
                 endDate = LocalDate.of(2024, 7, 2),
@@ -197,7 +229,7 @@ class ResyncRangeUseCaseTest {
                         cause = RuntimeException("synthetic timeout for test"),
                     )
                 }
-                emptyList()
+                ReadOutcome.Available(emptyList())
             }
 
             val result = useCase.run(startDate, endDate, chunkDays = chunkDays, onProgress = null)
@@ -253,7 +285,7 @@ class ResyncRangeUseCaseTest {
                     ),
                 )
             coEvery { hcRepo.readStepsRecords(any(), any()) } throws RuntimeException("rate limited") andThen
-                emptyList()
+                ReadOutcome.Available(emptyList())
 
             useCase.run(
                 startDate = LocalDate.of(2024, 6, 1),
@@ -279,7 +311,7 @@ class ResyncRangeUseCaseTest {
                         deviceByDataType = mapOf(HealthDataType.STEPS.name to "Watch"),
                     ),
                 )
-            coEvery { hcRepo.readStepsRecords(any(), any()) } returns emptyList()
+            coEvery { hcRepo.readStepsRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
             val date = LocalDate.of(2024, 6, 1)
 
             useCase.run(

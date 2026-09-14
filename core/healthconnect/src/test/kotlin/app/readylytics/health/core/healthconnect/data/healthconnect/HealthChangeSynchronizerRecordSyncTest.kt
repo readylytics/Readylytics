@@ -3,6 +3,7 @@ package app.readylytics.health.core.healthconnect.data.healthconnect
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.changes.DeletionChange
 import androidx.health.connect.client.changes.UpsertionChange
+import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.records.metadata.DataOrigin
 import androidx.health.connect.client.records.metadata.Metadata
@@ -54,6 +55,13 @@ class HealthChangeSynchronizerRecordSyncTest {
                 every { records } returns emptyList()
                 every { pageToken } returns null
             }
+
+        coEvery { client.permissionController.getGrantedPermissions() } returns
+            HealthDataType.entries.flatMap { current ->
+                recordClassesFor(current).map {
+                    HealthPermission.getReadPermission(it)
+                }
+            }.toSet()
 
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
 
