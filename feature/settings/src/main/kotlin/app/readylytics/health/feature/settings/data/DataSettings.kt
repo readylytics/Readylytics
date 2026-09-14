@@ -402,4 +402,5 @@ private fun HealthDataType.labelRes(): Int =
         HealthDataType.HRV -> R.string.data_type_hrv
         HealthDataType.OXYGEN_SATURATION -> R.string.data_type_oxygen_saturation
         HealthDataType.BODY_TEMPERATURE -> R.string.data_type_body_temperature
+        HealthDataType.VO2_MAX -> R.string.data_type_vo2_max
     }

@@ -144,6 +144,7 @@ class RoomHealthIngestionStore
             transactionRunner.runInTransaction {
                 HealthRecordDeletionReconciler.reconcile(
                     daos = daos,
+                    vo2MaxRecordDao = vo2MaxRecordDao,
                     scan = scan,
                     zoneId = zoneId,
                 )
@@ -275,6 +276,7 @@ internal data class ReconcileContext(
 internal object HealthRecordDeletionReconciler {
     suspend fun reconcile(
         daos: HealthRecordDaos,
+        vo2MaxRecordDao: Vo2MaxRecordDao,
         scan: CompleteTypeScan,
         zoneId: ZoneId,
     ): ScoreInvalidation.AffectedRange? {
@@ -285,12 +287,13 @@ internal object HealthRecordDeletionReconciler {
             HealthDataType.HEART_RATE -> reconcileHeartSource(daos, "HEART_RATE", context)
             HealthDataType.HRV -> reconcileHeartSource(daos, "HRV", context)
             HealthDataType.STEPS -> reconcileSteps(daos, context)
-            else -> reconcileVitals(daos, scan.type, context)
+            else -> reconcileVitals(daos, vo2MaxRecordDao, scan.type, context)
         }
     }
 
     private suspend fun reconcileVitals(
         daos: HealthRecordDaos,
+        vo2MaxRecordDao: Vo2MaxRecordDao,
         type: HealthDataType,
         ctx: ReconcileContext,
     ): ScoreInvalidation.AffectedRange? =
@@ -334,6 +337,14 @@ internal object HealthRecordDeletionReconciler {
                     getId = { it.id },
                     getTimestamp = { it.timestampMs },
                     deleteById = { daos.bodyTemperatureRecordDao.deleteById(it) },
+                )
+            HealthDataType.VO2_MAX ->
+                reconcileCompositeMetric(
+                    ctx = ctx,
+                    fetch = { start, end -> vo2MaxRecordDao.getByTimeRange(start, end) },
+                    getId = { it.id },
+                    getTimestamp = { it.timestampMs },
+                    deleteById = { vo2MaxRecordDao.deleteById(it) },
                 )
             else -> null
         }

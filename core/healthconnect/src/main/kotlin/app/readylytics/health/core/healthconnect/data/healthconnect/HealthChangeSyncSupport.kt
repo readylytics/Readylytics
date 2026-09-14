@@ -12,6 +12,7 @@ import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord as HealthConnectWeightRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
@@ -25,6 +26,7 @@ import app.readylytics.health.core.model.domain.sync.OxygenSaturationInput
 import app.readylytics.health.core.model.domain.sync.SleepSessionInput
 import app.readylytics.health.core.model.domain.sync.SleepStageInput
 import app.readylytics.health.core.model.domain.sync.StepRecordInput
+import app.readylytics.health.core.model.domain.sync.Vo2MaxInput
 import app.readylytics.health.core.model.domain.sync.WeightInput
 import app.readylytics.health.core.model.domain.sync.WorkoutInput
 import app.readylytics.health.core.model.domain.util.SessionTotalsResolver
@@ -51,6 +53,7 @@ internal fun recordClassesFor(dataType: HealthDataType): Set<kotlin.reflect.KCla
         HealthDataType.HRV -> setOf(HeartRateVariabilityRmssdRecord::class)
         HealthDataType.OXYGEN_SATURATION -> setOf(OxygenSaturationRecord::class)
         HealthDataType.BODY_TEMPERATURE -> setOf(BodyTemperatureRecord::class)
+        HealthDataType.VO2_MAX -> setOf(Vo2MaxRecord::class)
     }
 
 internal fun isTokenExpiredException(e: Exception): Boolean {
@@ -119,6 +122,7 @@ internal fun getDatesForRecord(
         is HealthConnectBloodPressureRecord -> getDateFor(record.time, zoneId)
         is OxygenSaturationRecord -> getDateFor(record.time, zoneId)
         is BodyTemperatureRecord -> getDateFor(record.time, zoneId)
+        is Vo2MaxRecord -> getDateFor(record.time, zoneId)
         else -> emptySet()
     }
 
@@ -132,11 +136,12 @@ internal fun emptyBatch(
     oxygenSaturationSamples: List<OxygenSaturationInput> = emptyList(),
     bodyTemperatureSamples: List<BodyTemperatureInput> = emptyList(),
     stepRecords: List<StepRecordInput> = emptyList(),
+    vo2MaxSamples: List<Vo2MaxInput> = emptyList(),
 ) = HealthIngestionBatch(
     sleepSessions = sleepSessions, sleepStages = sleepStages, heartRateSamples = emptyList(),
     hrvSamples = emptyList(), workouts = workouts, weights = weights, bodyFatSamples = bodyFatSamples,
     bloodPressureSamples = bloodPressureSamples, oxygenSaturationSamples = oxygenSaturationSamples,
-    bodyTemperatureSamples = bodyTemperatureSamples, stepRecords = stepRecords,
+    bodyTemperatureSamples = bodyTemperatureSamples, stepRecords = stepRecords, vo2MaxSamples = vo2MaxSamples,
 )
 
 /**

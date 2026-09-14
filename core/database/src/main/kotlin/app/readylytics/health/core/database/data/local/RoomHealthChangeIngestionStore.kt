@@ -1,6 +1,7 @@
 package app.readylytics.health.core.database.data.local
 
 import app.readylytics.health.core.databaseschema.data.local.dao.HealthMutationStateDao
+import app.readylytics.health.core.databaseschema.data.local.dao.Vo2MaxRecordDao
 import app.readylytics.health.core.model.data.preferences.scoringZone
 import app.readylytics.health.core.model.domain.model.DomainHeartRateSample
 import app.readylytics.health.core.model.domain.model.HealthDataType
@@ -27,6 +28,7 @@ class RoomHealthChangeIngestionStore
         private val settingsRepo: SettingsRepository? = null,
         private val clock: Clock = Clock.systemDefaultZone(),
         private val transactionRunner: TransactionRunner? = null,
+        private val vo2MaxRecordDao: Vo2MaxRecordDao? = null,
     ) : HealthChangeIngestionStore {
         override suspend fun affectedDatesForRecord(
             type: HealthDataType,
@@ -71,6 +73,12 @@ class RoomHealthChangeIngestionStore
                     daos.stepRecordDao.getById(hcRecordId)?.let {
                         datesBetween(it.startTime, it.endTime, zoneId)
                     } ?: emptySet()
+                HealthDataType.VO2_MAX ->
+                    // VO2 max keeps its raw stable HC id (no timestamp suffix, unlike the
+                    // composite-keyed vitals above), so a direct primary-key lookup resolves
+                    // the pre-delete timestamp for the P2 dirty-range journal.
+                    vo2MaxRecordDao?.getById(hcRecordId)?.let { setOf(dateFor(it.timestampMs, zoneId)) }
+                        ?: emptySet()
             }
 
         override suspend fun deleteRecord(type: HealthDataType, hcRecordId: String) {
@@ -135,6 +143,7 @@ class RoomHealthChangeIngestionStore
                 HealthDataType.BODY_TEMPERATURE ->
                     daos.bodyTemperatureRecordDao.deleteBySourceRecordId(hcRecordId)
                 HealthDataType.STEPS -> daos.stepRecordDao.deleteById(hcRecordId)
+                HealthDataType.VO2_MAX -> vo2MaxRecordDao?.deleteById(hcRecordId)
             }
         }
 

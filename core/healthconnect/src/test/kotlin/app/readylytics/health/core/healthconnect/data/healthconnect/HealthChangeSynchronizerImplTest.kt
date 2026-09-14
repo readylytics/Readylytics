@@ -504,6 +504,7 @@ class HealthChangeSynchronizerImplTest {
         coEvery { tokenStore.get(HealthDataType.OXYGEN_SATURATION) } returns "spo2-token"
         coEvery { tokenStore.get(HealthDataType.BODY_TEMPERATURE) } returns "bodytemp-token"
         coEvery { tokenStore.get(HealthDataType.STEPS) } returns "steps-token"
+        coEvery { tokenStore.get(HealthDataType.VO2_MAX) } returns "vo2max-token"
     }
 
     private fun routeOneChange(
@@ -534,6 +535,7 @@ class HealthChangeSynchronizerImplTest {
             HealthDataType.OXYGEN_SATURATION -> "spo2-token"
             HealthDataType.BODY_TEMPERATURE -> "bodytemp-token"
             HealthDataType.STEPS -> "steps-token"
+            HealthDataType.VO2_MAX -> "vo2max-token"
         }
 
     private fun changesResponse(changes: List<androidx.health.connect.client.changes.Change>) =

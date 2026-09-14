@@ -281,6 +281,7 @@ class HealthChangeSynchronizerImpl
                 HealthDataType.OXYGEN_SATURATION -> upsertOxygenSaturation(record)
                 HealthDataType.BODY_TEMPERATURE -> upsertBodyTemperature(record)
                 HealthDataType.STEPS -> upsertSteps(record)
+                HealthDataType.VO2_MAX -> upsertVo2Max(record)
             }
         }
 
@@ -395,5 +396,19 @@ class HealthChangeSynchronizerImpl
                 deviceName = DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin),
             )
             healthIngestionStore.persist(emptyBatch(stepRecords = listOf(stepInput)))
+        }
+
+        private suspend fun upsertVo2Max(record: Record) {
+            if (record !is Vo2MaxRecord) return
+            val domain = record.toDomain()
+            val vo2Input =
+                Vo2MaxInput(
+                    id = domain.id,
+                    timestampMs = domain.time.toEpochMilli(),
+                    vo2Max = domain.vo2MillilitersPerMinuteKilogram.toFloat(),
+                    measurementMethod = domain.measurementMethod,
+                    deviceName = domain.deviceName,
+                )
+            healthIngestionStore.persist(emptyBatch(vo2MaxSamples = listOf(vo2Input)))
         }
     }

@@ -4,6 +4,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.core.model.domain.model.HealthDataType
+import app.readylytics.health.core.model.domain.sync.CompleteTypeScan
 import app.readylytics.health.core.model.domain.sync.HealthIngestionBatch
 import app.readylytics.health.core.model.domain.sync.HeartRateInput
 import app.readylytics.health.core.model.domain.sync.HrvInput
@@ -11,10 +12,13 @@ import app.readylytics.health.core.model.domain.sync.SleepSessionInput
 import app.readylytics.health.core.model.domain.sync.SourceMetadata
 import app.readylytics.health.core.model.domain.sync.SourcePayload
 import app.readylytics.health.core.model.domain.sync.StepRecordInput
+import app.readylytics.health.core.model.domain.sync.Vo2MaxInput
 import app.readylytics.health.core.model.domain.sync.WeightInput
 import app.readylytics.health.core.model.domain.sync.WorkoutInput
 import kotlinx.coroutines.test.runTest
 import org.junit.After
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -62,7 +66,7 @@ class RoomHealthChangeIngestionStoreTest {
                 transactionRunner = RoomTransactionRunner(database),
                 vo2MaxRecordDao = database.vo2MaxRecordDao(),
             )
-        changeStore = RoomHealthChangeIngestionStore(daos = daos)
+        changeStore = RoomHealthChangeIngestionStore(daos = daos, vo2MaxRecordDao = database.vo2MaxRecordDao())
     }
 
     @After
@@ -296,16 +300,181 @@ class RoomHealthChangeIngestionStoreTest {
             assertEquals(setOf(LocalDate.of(2026, 3, 10), LocalDate.of(2026, 3, 11)), dates)
         }
 
+    @Test
+    fun `affectedDatesForRecord returns the sample's date for VO2_MAX using its raw stable id`() =
+        runTest {
+            val vo2Time = Instant.parse("2026-05-01T12:00:00Z")
+            seedStore.persist(
+                batch(
+                    vo2MaxSamples = listOf(
+                        Vo2MaxInput(
+                            id = "hc-vo2-1",
+                            timestampMs = vo2Time.toEpochMilli(),
+                            vo2Max = 45f,
+                            measurementMethod = 1,
+                            deviceName = "Watch A",
+                        ),
+                    ),
+                ),
+            )
+
+            val dates = changeStore.affectedDatesForRecord(HealthDataType.VO2_MAX, "hc-vo2-1", ZoneId.of("UTC"))
+
+            assertEquals(setOf(LocalDate.of(2026, 5, 1)), dates)
+        }
+
+    @Test
+    fun `deleteRecord removes a VO2_MAX record seeded 45 days ago leaving no stale carry-forward`() =
+        runTest {
+            val today = LocalDate.of(2026, 9, 14)
+            val seededAt = today.minusDays(45).atStartOfDay(ZoneId.of("UTC")).toInstant()
+            seedStore.persist(
+                batch(
+                    vo2MaxSamples = listOf(
+                        Vo2MaxInput(
+                            id = "hc-vo2-old",
+                            timestampMs = seededAt.toEpochMilli(),
+                            vo2Max = 42f,
+                            measurementMethod = null,
+                            deviceName = "Watch A",
+                        ),
+                    ),
+                ),
+            )
+            assertEquals(1, database.vo2MaxRecordDao().getByTimeRange(0, Long.MAX_VALUE).size)
+
+            changeStore.deleteRecord(HealthDataType.VO2_MAX, "hc-vo2-old")
+
+            // Matches a clean DB that never persisted the record -- no stale carry-forward.
+            assertTrue(database.vo2MaxRecordDao().getByTimeRange(0, Long.MAX_VALUE).isEmpty())
+            assertNull(database.vo2MaxRecordDao().getById("hc-vo2-old"))
+        }
+
+    @Test
+    fun `reconcileWindow deletes VO2_MAX records absent from an empty complete scan`() =
+        runTest {
+            val vo2Time = Instant.parse("2026-05-01T12:00:00Z")
+            seedStore.persist(
+                batch(
+                    vo2MaxSamples = listOf(
+                        Vo2MaxInput(
+                            id = "hc-vo2-empty",
+                            timestampMs = vo2Time.toEpochMilli(),
+                            vo2Max = 40f,
+                            measurementMethod = null,
+                            deviceName = null,
+                        ),
+                    ),
+                ),
+            )
+            val dayStart = vo2Time.atZone(ZoneId.of("UTC")).toLocalDate().atStartOfDay(ZoneId.of("UTC")).toInstant()
+            val scan =
+                CompleteTypeScan(
+                    type = HealthDataType.VO2_MAX,
+                    windowStartMs = dayStart.toEpochMilli(),
+                    windowEndExclusiveMs = dayStart.plusSeconds(86_400).toEpochMilli(),
+                    sourceSelectionId = "",
+                    ids = emptySet(),
+                )
+
+            val affected = seedStore.reconcileWindow(scan, ZoneId.of("UTC"))
+
+            assertTrue(database.vo2MaxRecordDao().getByTimeRange(0, Long.MAX_VALUE).isEmpty())
+            assertEquals(LocalDate.of(2026, 5, 1), affected?.start)
+        }
+
+    @Test
+    fun `reconcileWindow with a stable timestamp tie deletes only the id absent from the scan`() =
+        runTest {
+            val sharedTime = Instant.parse("2026-05-01T12:00:00Z")
+            seedStore.persist(
+                batch(
+                    vo2MaxSamples = listOf(
+                        Vo2MaxInput(
+                            id = "hc-vo2-keep",
+                            timestampMs = sharedTime.toEpochMilli(),
+                            vo2Max = 41f,
+                            measurementMethod = null,
+                            deviceName = null,
+                        ),
+                        Vo2MaxInput(
+                            id = "hc-vo2-gone",
+                            timestampMs = sharedTime.toEpochMilli(),
+                            vo2Max = 39f,
+                            measurementMethod = null,
+                            deviceName = null,
+                        ),
+                    ),
+                ),
+            )
+            val dayStart = sharedTime.atZone(ZoneId.of("UTC")).toLocalDate().atStartOfDay(ZoneId.of("UTC")).toInstant()
+            val scan =
+                CompleteTypeScan(
+                    type = HealthDataType.VO2_MAX,
+                    windowStartMs = dayStart.toEpochMilli(),
+                    windowEndExclusiveMs = dayStart.plusSeconds(86_400).toEpochMilli(),
+                    sourceSelectionId = "",
+                    ids = setOf("hc-vo2-keep"),
+                )
+
+            seedStore.reconcileWindow(scan, ZoneId.of("UTC"))
+
+            val remaining = database.vo2MaxRecordDao().getByTimeRange(0, Long.MAX_VALUE)
+            assertEquals(listOf("hc-vo2-keep"), remaining.map { it.id })
+        }
+
+    @Test
+    fun `reconcileWindow for VO2_MAX leaves an unrelated WEIGHT record intact`() =
+        runTest {
+            val sampleTime = Instant.parse("2026-05-01T12:00:00Z")
+            seedStore.persist(
+                batch(
+                    weights = listOf(
+                        WeightInput(
+                            id = "hc-weight-untouched_${sampleTime.toEpochMilli()}",
+                            timestampMs = sampleTime.toEpochMilli(),
+                            weightKg = 70f,
+                            deviceName = null,
+                        ),
+                    ),
+                    vo2MaxSamples = listOf(
+                        Vo2MaxInput(
+                            id = "hc-vo2-deleted",
+                            timestampMs = sampleTime.toEpochMilli(),
+                            vo2Max = 38f,
+                            measurementMethod = null,
+                            deviceName = null,
+                        ),
+                    ),
+                ),
+            )
+            val dayStart = sampleTime.atZone(ZoneId.of("UTC")).toLocalDate().atStartOfDay(ZoneId.of("UTC")).toInstant()
+            val scan =
+                CompleteTypeScan(
+                    type = HealthDataType.VO2_MAX,
+                    windowStartMs = dayStart.toEpochMilli(),
+                    windowEndExclusiveMs = dayStart.plusSeconds(86_400).toEpochMilli(),
+                    sourceSelectionId = "",
+                    ids = emptySet(),
+                )
+
+            seedStore.reconcileWindow(scan, ZoneId.of("UTC"))
+
+            assertTrue(database.vo2MaxRecordDao().getByTimeRange(0, Long.MAX_VALUE).isEmpty())
+            assertEquals(1, database.weightRecordDao().getByTimeRange(0, Long.MAX_VALUE).size)
+        }
+
     private fun batch(
         sleepSessions: List<SleepSessionInput> = emptyList(),
         workouts: List<WorkoutInput> = emptyList(),
         weights: List<WeightInput> = emptyList(),
         stepRecords: List<StepRecordInput> = emptyList(),
+        vo2MaxSamples: List<Vo2MaxInput> = emptyList(),
     ) = HealthIngestionBatch(
         sleepSessions = sleepSessions, sleepStages = emptyList(), heartRateSamples = emptyList(),
         hrvSamples = emptyList(), workouts = workouts, weights = weights, bodyFatSamples = emptyList(),
         bloodPressureSamples = emptyList(), oxygenSaturationSamples = emptyList(),
-        bodyTemperatureSamples = emptyList(), stepRecords = stepRecords,
+        bodyTemperatureSamples = emptyList(), stepRecords = stepRecords, vo2MaxSamples = vo2MaxSamples,
     )
 
     private companion object {

@@ -136,6 +136,11 @@ class HealthIngestionCoordinator
                     .flatMap {
                         SleepDataMapper.mapSleepSessionStages(it)
                     }.filter { it.sessionId in filteredSleepIds }
+            val filteredVo2MaxRecords =
+                DeviceSourceFilter.filterToDevice(
+                    raw.vo2MaxRecords.dataOrEmpty(),
+                    deviceFor(HealthDataType.VO2_MAX),
+                ) { it.deviceName }
 
             healthIngestionStore.persist(
                 buildBulkBatch(
@@ -144,7 +149,7 @@ class HealthIngestionCoordinator
                     filteredWorkouts = filteredWorkouts,
                     vitals = vitals,
                     stepsRecords = raw.stepsRecords.dataOrEmpty(),
-                    vo2MaxRecords = raw.vo2MaxRecords.dataOrEmpty(),
+                    vo2MaxRecords = filteredVo2MaxRecords,
                 ),
             )
 
@@ -402,6 +407,7 @@ class HealthIngestionCoordinator
                 addScan(raw.spo2Records.toIds { it.id }, HealthDataType.OXYGEN_SATURATION)
                 addScan(raw.bodyTemperatureRecords.toIds { it.id }, HealthDataType.BODY_TEMPERATURE)
                 addScan(raw.stepsRecords.toIds { it.id }, HealthDataType.STEPS)
+                addScan(raw.vo2MaxRecords.toIds { it.id }, HealthDataType.VO2_MAX)
             }
         }
 
