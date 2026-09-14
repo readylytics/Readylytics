@@ -209,9 +209,7 @@ private fun PreparedWorkout.toMergedEntity(existing: WorkoutRecordEntity?): Work
             existing?.routeState ?: RouteState.NOT_AVAILABLE,
             route.map { points -> if (points.isNotEmpty()) RouteState.IMPORTED else RouteState.NOT_AVAILABLE },
         )
-    val durationSeconds = (workout.endTime - workout.startTime) / 1000.0
-    val avgSpeedKmh =
-        distanceMeters?.takeIf { durationSeconds > 0.0 }?.let { (it / durationSeconds * 3.6).toFloat() }
+    val avgSpeedKmh = deriveWorkoutAvgSpeedKmh(distanceMeters, workout.startTime, workout.endTime)
     return workout.toEntity().copy(
         modelTrimp = existing?.modelTrimp,
         totalDistanceMeters = distanceMeters,

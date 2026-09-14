@@ -119,12 +119,15 @@ class RoomHealthIngestionStore
             transactionRunner.runInTransaction {
                 val existing = daos.workoutDao.getById(workoutId)
                 if (existing != null) {
+                    val distanceMeters = totalDistanceMeters ?: existing.totalDistanceMeters
+                    val derivedSpeed =
+                        deriveWorkoutAvgSpeedKmh(distanceMeters, existing.startTime, existing.endTime)
                     daos.workoutDao.upsertAll(
                         listOf(
                             existing.copy(
                                 routeState = routeState,
-                                totalDistanceMeters = totalDistanceMeters ?: existing.totalDistanceMeters,
-                                avgSpeedKmh = avgSpeedKmh ?: existing.avgSpeedKmh,
+                                totalDistanceMeters = distanceMeters,
+                                avgSpeedKmh = derivedSpeed ?: avgSpeedKmh ?: existing.avgSpeedKmh,
                                 elevationGainMeters = elevationGainMeters ?: existing.elevationGainMeters,
                             ),
                         ),
@@ -167,10 +170,12 @@ private suspend fun HealthRecordDaos.persistWorkouts(batch: HealthIngestionBatch
         batch.workouts.map { workout ->
             val existing = workoutDao.getById(workout.id)
             val fresh = workout.toEntity()
+            val distanceMeters = fresh.totalDistanceMeters ?: existing?.totalDistanceMeters
+            val avgSpeedKmh = deriveWorkoutAvgSpeedKmh(distanceMeters, workout.startTime, workout.endTime)
             fresh.copy(
                 modelTrimp = existing?.modelTrimp,
-                totalDistanceMeters = fresh.totalDistanceMeters ?: existing?.totalDistanceMeters,
-                avgSpeedKmh = fresh.avgSpeedKmh ?: existing?.avgSpeedKmh,
+                totalDistanceMeters = distanceMeters,
+                avgSpeedKmh = avgSpeedKmh,
                 elevationGainMeters = fresh.elevationGainMeters ?: existing?.elevationGainMeters,
                 routeState =
                     if (workout.routePoints.isEmpty() && existing?.routeState == RouteState.IMPORTED) {

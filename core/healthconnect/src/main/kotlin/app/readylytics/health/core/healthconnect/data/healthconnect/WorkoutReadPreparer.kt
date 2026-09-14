@@ -48,17 +48,25 @@ class WorkoutReadPreparer
             )
 
         /**
-         * `ExerciseRouteResult.NoData` is a genuine, permitted "no route" observation --
-         * [ReadOutcome.Available] of an empty list. Only `ConsentRequired` (or a caught
-         * permission exception) is [ReadOutcome.Denied]: an empty list caused by a consent
-         * failure must never look like an authoritative "no route" removal.
+         * Resolves the true route for this workout. Health Connect's Changes API (`getChanges`)
+         * does not populate routes in `ExerciseSessionRecord` (it always yields `NoData`).
+         * When `record.exerciseRouteResult` is not already `ExerciseRouteResult.Data`, we read
+         * the record authoritatively via `client.readRecord(ExerciseSessionRecord::class, id)`
+         * to obtain the true `exerciseRouteResult` before deciding whether route data is available,
+         * denied, or genuinely absent (H5/WP-09).
          */
-        private fun readRoute(record: ExerciseSessionRecord): ReadOutcome<List<WorkoutRoutePoint>> =
+        private suspend fun readRoute(record: ExerciseSessionRecord): ReadOutcome<List<WorkoutRoutePoint>> =
             try {
-                when (val result = record.exerciseRouteResult) {
+                val routeResult =
+                    if (record.exerciseRouteResult is ExerciseRouteResult.Data) {
+                        record.exerciseRouteResult
+                    } else {
+                        client.readRecord(ExerciseSessionRecord::class, record.metadata.id).record.exerciseRouteResult
+                    }
+                when (routeResult) {
                     is ExerciseRouteResult.Data ->
                         ReadOutcome.Available(
-                            result.exerciseRoute.route
+                            routeResult.exerciseRoute.route
                                 .map { location ->
                                     WorkoutRoutePoint(
                                         workoutId = record.metadata.id,

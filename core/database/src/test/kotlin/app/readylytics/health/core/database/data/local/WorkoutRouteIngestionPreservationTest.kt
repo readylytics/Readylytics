@@ -103,10 +103,25 @@ class WorkoutRouteIngestionPreservationTest {
 
             val refreshed = database.workoutDao().getById(BULK_WORKOUT_ID)!!
             assertEquals(3, database.workoutRoutePointDao().getRoutePoints(BULK_WORKOUT_ID).size)
-            assertEquals(1500f, refreshed.totalDistanceMeters)
+            assertEquals(12_000f, refreshed.totalDistanceMeters)
             assertEquals(12f, refreshed.avgSpeedKmh)
             assertEquals(40f, refreshed.elevationGainMeters)
             assertEquals(RouteState.IMPORTED, refreshed.routeState)
+        }
+
+    @Test
+    fun `bulk refetch re-derives avgSpeed from merged distance and duration`() =
+        runTest {
+            val workout =
+                bulkBaseWorkout().copy(
+                    totalDistanceMeters = 5_000f,
+                    avgSpeedKmh = 99f,
+                )
+            store.persist(batch(workout))
+
+            val refreshed = database.workoutDao().getById(BULK_WORKOUT_ID)!!
+            assertEquals(5_000f, refreshed.totalDistanceMeters)
+            assertEquals(5.0f, refreshed.avgSpeedKmh!!, 0.001f)
         }
 
     @Test
@@ -391,7 +406,7 @@ class WorkoutRouteIngestionPreservationTest {
                         verticalAccuracy = 8f,
                     )
                 },
-            totalDistanceMeters = 1500f,
+            totalDistanceMeters = 12_000f,
             avgSpeedKmh = 12f,
             elevationGainMeters = 40f,
             routeState = RouteState.IMPORTED,

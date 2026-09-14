@@ -417,6 +417,59 @@ class HealthChangeSynchronizerRecordSyncTest {
         }
 
     @Test
+    fun `real WorkoutReadPreparer resolves route and totals outside the writer transaction`() =
+        runTest {
+            // H5/WP-09 acceptance criterion: Exercise enrichment using real WorkoutReadPreparer
+            // executes client.readRecord and client.readRecords strictly outside writer transactions.
+            val realPreparer = WorkoutReadPreparer(client)
+            val realSynchronizer =
+                HealthChangeSynchronizerImpl(
+                    client = client,
+                    tokenStore = tokenStore,
+                    settingsRepo = settingsRepo,
+                    transactionRunner = transactionRunner,
+                    healthIngestionStore = healthIngestionStore,
+                    changeIngestionStore = changeIngestionStore,
+                    workoutReadPreparer = realPreparer,
+                    clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
+                )
+            seedTokens()
+            val exerciseRecordId = "exercise-real-preparer-tx"
+            val exerciseRecord =
+                createMockExerciseRecord(
+                    exerciseRecordId,
+                    Instant.parse("2026-06-01T10:00:00Z"),
+                    Instant.parse("2026-06-01T11:00:00Z"),
+                )
+
+            var readRecordCalled = false
+            var readRecordsCalled = false
+
+            coEvery { client.readRecord(ExerciseSessionRecord::class, exerciseRecordId) } answers {
+                assertFalse("client.readRecord must not run inside a Room transaction", transactionActive)
+                readRecordCalled = true
+                mockk {
+                    every { record } returns exerciseRecord
+                }
+            }
+            coEvery { client.readRecords<Record>(any()) } answers {
+                assertFalse("client.readRecords must not run inside a Room transaction", transactionActive)
+                readRecordsCalled = true
+                mockk {
+                    every { records } returns emptyList()
+                    every { pageToken } returns null
+                }
+            }
+
+            routeOneChange(HealthDataType.EXERCISE, UpsertionChange(exerciseRecord))
+
+            realSynchronizer.applyPendingChanges()
+
+            assertTrue("client.readRecord should have been invoked", readRecordCalled)
+            assertTrue("client.readRecords should have been invoked", readRecordsCalled)
+        }
+
+    @Test
     fun `EXERCISE upsertion never deletes the record it is about to update in place`() =
         runTest {
             // H5/WP-09: deleteRecord(EXERCISE, id) on the upsertion path would both discard the

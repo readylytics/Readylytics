@@ -420,7 +420,7 @@ permission error and returns an empty list, so an ungranted permission silently 
 route-derived value instead of failing the sync pass.
 **Delta-synced EXERCISE reads/writes are split across the writer-transaction boundary (H5/WP-09).**
 `HealthChangeSynchronizerImpl.applyChangesForType` resolves every Health Connect SDK read one
-EXERCISE upsertion needs — route consent (`exerciseRouteResult`) and the two optional interval
+EXERCISE upsertion needs — route consent and points (via `client.readRecord` when not already populated by `getChanges`) and the two optional interval
 totals (`DistanceRecord`/`ElevationGainedRecord`, via the same `SessionTotalsResolver` rule as the
 full path) — through `WorkoutReadPreparer.prepare`, called **before** `transactionRunner.runInTransaction`
 opens. Each read comes back as a `PreparedWorkout(workout, route, distanceMeters, elevationMeters)`,
