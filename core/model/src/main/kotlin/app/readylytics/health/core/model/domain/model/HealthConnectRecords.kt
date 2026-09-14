@@ -88,6 +88,7 @@ data class DomainIntervalTotal(
     val endTime: Instant,
     val value: Double,
     val originPackage: String,
+    val sourceId: String? = null,
 )
 
 data class DomainStepsRecord(

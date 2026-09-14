@@ -30,25 +30,34 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
+import androidx.health.connect.client.records.DistanceRecord
+import androidx.health.connect.client.records.ElevationGainedRecord
+import app.readylytics.health.core.model.domain.sync.IngestionTokenType
+
 /**
  * Stateless support functions for [HealthChangeSynchronizerImpl], split out to keep that file
  * under the file-size target (R2-ARCH-002). None of these need the synchronizer's injected
  * dependencies -- they operate purely on their parameters.
  */
-internal fun recordClassesFor(dataType: HealthDataType): Set<kotlin.reflect.KClass<out Record>> =
-    when (dataType) {
-        HealthDataType.EXERCISE -> setOf(ExerciseSessionRecord::class)
-        HealthDataType.STEPS -> setOf(StepsRecord::class)
-        HealthDataType.BODY_FAT -> setOf(HealthConnectBodyFatRecord::class)
-        HealthDataType.WEIGHT -> setOf(HealthConnectWeightRecord::class)
-        HealthDataType.SLEEP -> setOf(SleepSessionRecord::class)
-        HealthDataType.BLOOD_PRESSURE -> setOf(HealthConnectBloodPressureRecord::class)
-        HealthDataType.HEART_RATE -> setOf(HealthConnectHeartRateRecord::class)
-        HealthDataType.HRV -> setOf(HeartRateVariabilityRmssdRecord::class)
-        HealthDataType.OXYGEN_SATURATION -> setOf(OxygenSaturationRecord::class)
-        HealthDataType.BODY_TEMPERATURE -> setOf(BodyTemperatureRecord::class)
-        HealthDataType.VO2_MAX -> setOf(Vo2MaxRecord::class)
+internal fun recordClassesFor(tokenType: IngestionTokenType): Set<kotlin.reflect.KClass<out Record>> =
+    when (tokenType) {
+        IngestionTokenType.EXERCISE -> setOf(ExerciseSessionRecord::class)
+        IngestionTokenType.STEPS -> setOf(StepsRecord::class)
+        IngestionTokenType.BODY_FAT -> setOf(HealthConnectBodyFatRecord::class)
+        IngestionTokenType.WEIGHT -> setOf(HealthConnectWeightRecord::class)
+        IngestionTokenType.SLEEP -> setOf(SleepSessionRecord::class)
+        IngestionTokenType.BLOOD_PRESSURE -> setOf(HealthConnectBloodPressureRecord::class)
+        IngestionTokenType.HEART_RATE -> setOf(HealthConnectHeartRateRecord::class)
+        IngestionTokenType.HRV -> setOf(HeartRateVariabilityRmssdRecord::class)
+        IngestionTokenType.OXYGEN_SATURATION -> setOf(OxygenSaturationRecord::class)
+        IngestionTokenType.BODY_TEMPERATURE -> setOf(BodyTemperatureRecord::class)
+        IngestionTokenType.VO2_MAX -> setOf(Vo2MaxRecord::class)
+        IngestionTokenType.DISTANCE -> setOf(DistanceRecord::class)
+        IngestionTokenType.ELEVATION_GAINED -> setOf(ElevationGainedRecord::class)
     }
+
+internal fun recordClassesFor(dataType: HealthDataType): Set<kotlin.reflect.KClass<out Record>> =
+    recordClassesFor(IngestionTokenType.fromHealthDataType(dataType))
 
 internal fun isTokenExpiredException(e: Exception): Boolean {
     // The Health Connect client maps ErrorCode.CHANGES_TOKEN_OUTDATED to a RemoteException, so the
@@ -110,6 +119,8 @@ internal fun getDatesForRecord(
         is ExerciseSessionRecord -> getDatesBetween(record.startTime, record.endTime, zoneId)
         is StepsRecord -> getDatesBetween(record.startTime, record.endTime, zoneId)
         is HealthConnectHeartRateRecord -> getDatesBetween(record.startTime, record.endTime, zoneId)
+        is DistanceRecord -> getDatesBetween(record.startTime, record.endTime, zoneId)
+        is ElevationGainedRecord -> getDatesBetween(record.startTime, record.endTime, zoneId)
         is HeartRateVariabilityRmssdRecord -> getDateFor(record.time, zoneId)
         is HealthConnectWeightRecord -> getDateFor(record.time, zoneId)
         is HealthConnectBodyFatRecord -> getDateFor(record.time, zoneId)

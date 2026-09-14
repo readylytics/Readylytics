@@ -15,6 +15,7 @@ import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.sync.HealthChangeIngestionStore
 import app.readylytics.health.core.model.domain.sync.HealthChangeTokenStore
 import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
+import app.readylytics.health.core.model.domain.sync.IntervalKind
 import app.readylytics.health.core.model.domain.sync.SessionSpans
 import io.mockk.*
 import kotlinx.coroutines.flow.flowOf
@@ -36,6 +37,7 @@ class HealthChangeSynchronizerImplTest {
     private val healthIngestionStore = mockk<HealthIngestionStore>(relaxed = true)
     private val changeIngestionStore = mockk<HealthChangeIngestionStore>(relaxed = true)
     private val workoutReadPreparer = mockk<WorkoutReadPreparer>(relaxed = true)
+    private val workoutEnrichmentRefresher = mockk<WorkoutEnrichmentRefresher>(relaxed = true)
 
     private val client = mockk<HealthConnectClient>(relaxed = true)
 
@@ -78,6 +80,7 @@ class HealthChangeSynchronizerImplTest {
                 healthIngestionStore = healthIngestionStore,
                 changeIngestionStore = changeIngestionStore,
                 workoutReadPreparer = workoutReadPreparer,
+                workoutEnrichmentRefresher = workoutEnrichmentRefresher,
                 clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
             )
     }
@@ -493,6 +496,99 @@ class HealthChangeSynchronizerImplTest {
             assertFalse(outcome.requiresFullResync)
             assertTrue(outcome.affectedDates.isNotEmpty())
             assertEquals("next-hr", outcome.nextTokens[HealthDataType.HEART_RATE])
+        }
+
+    @Test
+    fun `applyPendingChanges processes distance changes and commits staged interval token`() =
+        runTest {
+            seedTokens()
+            HealthDataType.entries.forEach { current ->
+                coEvery { client.getChanges(tokenFor(current)) } returns changesResponse(emptyList())
+            }
+
+            val distPermission = HealthPermission.getReadPermission(DistanceRecord::class)
+            coEvery { client.permissionController.getGrantedPermissions() } returns
+                allPermissions() + distPermission
+
+            coEvery { tokenStore.getToken("DISTANCE") } returns "dist-token-1"
+            val distRecord =
+                mockk<DistanceRecord>(relaxed = true) {
+                    every { metadata.id } returns "dist-1"
+                    every { metadata.dataOrigin.packageName } returns "com.strava"
+                    every { startTime } returns Instant.parse("2026-08-31T10:00:00Z")
+                    every { endTime } returns Instant.parse("2026-08-31T11:00:00Z")
+                }
+            val change = UpsertionChange(distRecord)
+            val distResponse =
+                mockk<ChangesResponse>(relaxed = true) {
+                    every { changesTokenExpired } returns false
+                    every { changes } returns listOf(change)
+                    every { nextChangesToken } returns "dist-token-2"
+                    every { hasMore } returns false
+                }
+            coEvery { client.getChanges("dist-token-1") } returns distResponse
+            coEvery {
+                workoutEnrichmentRefresher.refreshForIntervalChanges(any(), any())
+            } returns setOf(LocalDate.parse("2026-08-31"))
+
+            val outcome = synchronizer.applyPendingChanges()
+
+            assertFalse(outcome.requiresFullResync)
+            assertTrue(outcome.affectedDates.contains(LocalDate.parse("2026-08-31")))
+            coVerify(exactly = 1) {
+                workoutEnrichmentRefresher.refreshForIntervalChanges(
+                    match { list ->
+                        list.size == 1 && list[0].sourceId == "dist-1" && list[0].kind == IntervalKind.DISTANCE
+                    },
+                    any(),
+                )
+            }
+
+            synchronizer.commitTokens(outcome.nextTokens)
+            coVerify { tokenStore.putToken("DISTANCE", "dist-token-2", any()) }
+        }
+
+    @Test
+    fun `applyPendingChanges suspends interval token when permission revoked`() =
+        runTest {
+            seedTokens()
+            HealthDataType.entries.forEach { current ->
+                coEvery { client.getChanges(tokenFor(current)) } returns changesResponse(emptyList())
+            }
+
+            // Grant all except DistanceRecord
+            coEvery { client.permissionController.getGrantedPermissions() } returns allPermissions()
+            coEvery { tokenStore.getToken("DISTANCE") } returns "dist-token-old"
+
+            val outcome = synchronizer.applyPendingChanges()
+
+            assertFalse(outcome.requiresFullResync)
+            coVerify { tokenStore.suspendToken("DISTANCE") }
+        }
+
+    @Test
+    fun `applyPendingChanges bootstraps interval token on first authorized run without resync`() =
+        runTest {
+            seedTokens()
+            HealthDataType.entries.forEach { current ->
+                coEvery { client.getChanges(tokenFor(current)) } returns changesResponse(emptyList())
+            }
+
+            val distPermission = HealthPermission.getReadPermission(DistanceRecord::class)
+            coEvery { client.permissionController.getGrantedPermissions() } returns
+                allPermissions() + distPermission
+
+            coEvery { tokenStore.getToken("DISTANCE") } returns null
+            coEvery {
+                client.getChangesToken(match { it.recordTypes.contains(DistanceRecord::class) })
+            } returns "bootstrap-dist-token"
+            coEvery { client.getChanges("bootstrap-dist-token") } returns changesResponse(emptyList())
+
+            val outcome = synchronizer.applyPendingChanges()
+
+            assertFalse(outcome.requiresFullResync)
+            synchronizer.commitTokens(outcome.nextTokens)
+            coVerify { tokenStore.putToken("DISTANCE", "next-token", any()) }
         }
 
     private fun seedTokens() {

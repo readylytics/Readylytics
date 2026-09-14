@@ -42,8 +42,13 @@ class HealthChangeSynchronizerImpl
         private val healthIngestionStore: HealthIngestionStore,
         private val changeIngestionStore: HealthChangeIngestionStore,
         private val workoutReadPreparer: WorkoutReadPreparer,
+        private val workoutEnrichmentRefresher: WorkoutEnrichmentRefresher =
+            WorkoutEnrichmentRefresher(client, changeIngestionStore),
     ) : HealthChangeSynchronizer {
+        private val stagedIntervalTokens = mutableMapOf<String, String>()
+
         override suspend fun applyPendingChanges(): HealthChangeSyncOutcome {
+            stagedIntervalTokens.clear()
             val prefs = settingsRepo.userPreferences.first()
             val zoneId = prefs.scoringZone()
             val deviceByType = prefs.deviceByDataType
@@ -92,6 +97,13 @@ class HealthChangeSynchronizerImpl
                     nextTokens = nextTokens,
                 )?.let { return it }
             }
+
+            // OD-4: Track distance/elevation interval corrections independently
+            syncIntervalChanges(
+                grantedPermissions = grantedPermissions,
+                zoneId = zoneId,
+                affectedDates = affectedDates,
+            )?.let { return it }
 
             return HealthChangeSyncOutcome(
                 affectedDates = affectedDates,
@@ -179,6 +191,12 @@ class HealthChangeSynchronizerImpl
             if (tokens.isNotEmpty()) {
                 tokenStore.putAll(tokens, clock.millis())
             }
+            if (stagedIntervalTokens.isNotEmpty()) {
+                stagedIntervalTokens.forEach { (typeKey, token) ->
+                    tokenStore.putToken(typeKey, token, clock.millis())
+                }
+                stagedIntervalTokens.clear()
+            }
         }
 
         // Optional data types (weight, body fat, BP, SpO2, body temperature, steps) may lack
@@ -202,6 +220,193 @@ class HealthChangeSynchronizerImpl
                     null
                 }
             }.toMap()
+
+        private suspend fun syncIntervalChanges(
+            grantedPermissions: Set<String>,
+            zoneId: ZoneId,
+            affectedDates: MutableSet<LocalDate>,
+        ): HealthChangeSyncOutcome? {
+            for (intervalType in listOf(IngestionTokenType.DISTANCE, IngestionTokenType.ELEVATION_GAINED)) {
+                val outcome = syncSingleIntervalType(intervalType, grantedPermissions, zoneId, affectedDates)
+                if (outcome != null) return outcome
+            }
+            return null
+        }
+
+        private suspend fun syncSingleIntervalType(
+            intervalType: IngestionTokenType,
+            grantedPermissions: Set<String>,
+            zoneId: ZoneId,
+            affectedDates: MutableSet<LocalDate>,
+        ): HealthChangeSyncOutcome? {
+            val typePermissions = recordClassesFor(intervalType).map { HealthPermission.getReadPermission(it) }
+            val isGranted = typePermissions.all { it in grantedPermissions }
+            val storedToken = tokenStore.getToken(intervalType.tokenKey)
+
+            if (!isGranted) {
+                if (!storedToken.isNullOrBlank()) {
+                    logD("HealthChangeSynchronizer") {
+                        "Permission revoked for ${intervalType.tokenKey}: suspending token"
+                    }
+                    tokenStore.suspendToken(intervalType.tokenKey)
+                }
+                logD("HealthChangeSynchronizer") { "Skipping ${intervalType.tokenKey}: permission not granted" }
+                return null
+            }
+
+            val token = storedToken ?: bootstrapIntervalToken(intervalType)
+            return if (token != null) {
+                applyChangesForIntervalType(
+                    tokenType = intervalType,
+                    token = token,
+                    zoneId = zoneId,
+                    affectedDates = affectedDates,
+                    nextIntervalTokens = stagedIntervalTokens,
+                )
+            } else {
+                null
+            }
+        }
+
+        private suspend fun bootstrapIntervalToken(intervalType: IngestionTokenType): String? =
+            try {
+                val initialToken =
+                    client.getChangesToken(
+                        ChangesTokenRequest(recordTypes = recordClassesFor(intervalType)),
+                    )
+                stagedIntervalTokens[intervalType.tokenKey] = initialToken
+                initialToken
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (e.asHealthConnectSecurityCause() != null) {
+                    tokenStore.suspendToken(intervalType.tokenKey)
+                    null
+                } else {
+                    throw e
+                }
+            }
+
+        private suspend fun applyChangesForIntervalType(
+            tokenType: IngestionTokenType,
+            token: String,
+            zoneId: ZoneId,
+            affectedDates: MutableSet<LocalDate>,
+            nextIntervalTokens: MutableMap<String, String>,
+        ): HealthChangeSyncOutcome? =
+            try {
+                var currentToken: String = token
+                var hasMore = true
+                val intervalKind =
+                    when (tokenType) {
+                        IngestionTokenType.DISTANCE -> IntervalKind.DISTANCE
+                        IngestionTokenType.ELEVATION_GAINED -> IntervalKind.ELEVATION_GAINED
+                        else -> error("Unsupported interval type: $tokenType")
+                    }
+                while (hasMore) {
+                    val response = client.getChanges(currentToken)
+                    if (response.changesTokenExpired) {
+                        logD("HealthChangeSynchronizer") {
+                            "Token for ${tokenType.tokenKey} is expired, requesting full resync"
+                        }
+                        return HealthChangeSyncOutcome(
+                            affectedDates = emptySet(),
+                            requiresFullResync = true,
+                        )
+                    }
+
+                    val intervalChanges = response.changes.mapNotNull { toIntervalChange(it, intervalKind) }
+                    if (intervalChanges.isNotEmpty()) {
+                        val dates = workoutEnrichmentRefresher.refreshForIntervalChanges(intervalChanges, zoneId)
+                        affectedDates.addAll(dates)
+                    }
+
+                    currentToken = response.nextChangesToken
+                    nextIntervalTokens[tokenType.tokenKey] = currentToken
+                    hasMore = response.hasMore
+                }
+                null
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: SecurityException) {
+                logE("HealthChangeSynchronizer", e) {
+                    "SecurityException reading changes for ${tokenType.tokenKey}: suspending token"
+                }
+                tokenStore.suspendToken(tokenType.tokenKey)
+                null
+            } catch (e: Exception) {
+                if (e.asHealthConnectSecurityCause() != null) {
+                    logE("HealthChangeSynchronizer", e) {
+                        "SecurityException reading changes for ${tokenType.tokenKey}: suspending token"
+                    }
+                    tokenStore.suspendToken(tokenType.tokenKey)
+                    null
+                } else if (isTokenExpiredException(e)) {
+                    logD("HealthChangeSynchronizer") {
+                        "Change token expired for ${tokenType.tokenKey}"
+                    }
+                    HealthChangeSyncOutcome(
+                        affectedDates = emptySet(),
+                        requiresFullResync = true,
+                    )
+                } else {
+                    throw e
+                }
+            }
+
+        private suspend fun toIntervalChange(
+            change: Change,
+            fallbackKind: IntervalKind,
+        ): IntervalChange? =
+            when (change) {
+                is UpsertionChange -> toIntervalUpsertion(change.record)
+                is DeletionChange -> toIntervalDeletion(change.recordId, fallbackKind)
+                else -> null
+            }
+
+        private suspend fun toIntervalUpsertion(record: Record): IntervalChange? =
+            when (record) {
+                is DistanceRecord -> {
+                    val oldSource = changeIngestionStore.getIntervalSource(record.metadata.id)
+                    IntervalChange(
+                        sourceId = record.metadata.id,
+                        kind = IntervalKind.DISTANCE,
+                        oldStartMs = oldSource?.startMs,
+                        oldEndExclusiveMs = oldSource?.endExclusiveMs,
+                        newStartMs = record.startTime.toEpochMilli(),
+                        newEndExclusiveMs = record.endTime.toEpochMilli(),
+                        originPackage = record.metadata.dataOrigin.packageName,
+                    )
+                }
+                is ElevationGainedRecord -> {
+                    val oldSource = changeIngestionStore.getIntervalSource(record.metadata.id)
+                    IntervalChange(
+                        sourceId = record.metadata.id,
+                        kind = IntervalKind.ELEVATION_GAINED,
+                        oldStartMs = oldSource?.startMs,
+                        oldEndExclusiveMs = oldSource?.endExclusiveMs,
+                        newStartMs = record.startTime.toEpochMilli(),
+                        newEndExclusiveMs = record.endTime.toEpochMilli(),
+                        originPackage = record.metadata.dataOrigin.packageName,
+                    )
+                }
+                else -> null
+            }
+
+        private suspend fun toIntervalDeletion(
+            recordId: String,
+            fallbackKind: IntervalKind,
+        ): IntervalChange {
+            val oldSource = changeIngestionStore.getIntervalSource(recordId)
+            return IntervalChange(
+                sourceId = recordId,
+                kind = fallbackKind,
+                oldStartMs = oldSource?.startMs,
+                oldEndExclusiveMs = oldSource?.endExclusiveMs,
+                newStartMs = null,
+                newEndExclusiveMs = null,
+            )
+        }
 
         private suspend fun processChangesPage(
             dataType: HealthDataType,

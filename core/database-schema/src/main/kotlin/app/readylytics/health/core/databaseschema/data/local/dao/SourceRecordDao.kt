@@ -103,4 +103,41 @@ suspend fun SourceRecordDao.getOrCreateSourceRef(
     return getSourceRef(sourceRecordId) ?: error("Failed to create source ref for $sourceRecordId")
 }
 
+suspend fun SourceRecordDao.upsertIntervalSourceRecord(
+    sourceRecordId: String,
+    recordType: String,
+    startMs: Long,
+    endExclusiveMs: Long,
+    originPackage: String?,
+    lastModifiedMs: Long?,
+) {
+    val existing = getBySourceRecordId(sourceRecordId)
+    if (existing != null) {
+        updateAuthoritativeMetadata(
+            id = existing.id,
+            originPackage = originPackage,
+            recordStartMs = startMs,
+            recordEndExclusiveMs = endExclusiveMs,
+            lastModifiedMs = lastModifiedMs,
+            metadataState = "AUTHORITATIVE",
+            sourceRevision = existing.sourceRevision + 1L,
+        )
+    } else {
+        insertIgnore(
+            HealthSourceRecordEntity(
+                sourceRecordId = sourceRecordId,
+                recordType = recordType,
+                createdAtMs = startMs,
+                originPackage = originPackage,
+                recordStartMs = startMs,
+                recordEndExclusiveMs = endExclusiveMs,
+                lastModifiedMs = lastModifiedMs,
+                metadataState = "AUTHORITATIVE",
+                sourceRevision = 0L,
+            ),
+        )
+    }
+}
+
+
 

@@ -55,6 +55,27 @@ interface HealthChangeIngestionStore {
      * one-element list; a future multi-workout correction batch (H4) calls it with many.
      */
     suspend fun persistPreparedWorkouts(prepared: List<PreparedWorkout>)
+
+    /**
+     * Stored workouts whose time range overlaps `[startMs, endMs]`.
+     */
+    suspend fun workoutsOverlapping(startMs: Long, endMs: Long): List<WorkoutInput>
+
+    /**
+     * Looks up previously stored source metadata for an interval record (DISTANCE or ELEVATION_GAINED).
+     */
+    suspend fun getIntervalSource(sourceId: String): IntervalSourceRecord?
+
+    /**
+     * Atomically persists refreshed workout enrichments, upserts new interval source metadata,
+     * deletes removed interval sources, and journals dirty dates (H4/WP-08).
+     */
+    suspend fun persistIntervalEnrichment(
+        preparedWorkouts: List<PreparedWorkout>,
+        sourceUpserts: List<IntervalSourceRecord>,
+        sourceDeletes: List<String>,
+        dirtyDates: Set<LocalDate>,
+    )
 }
 
 data class SessionSpans(

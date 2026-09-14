@@ -14,6 +14,10 @@ import app.readylytics.health.core.model.domain.sync.SourcePayload
 import app.readylytics.health.core.model.domain.sync.StepRecordInput
 import app.readylytics.health.core.model.domain.sync.Vo2MaxInput
 import app.readylytics.health.core.model.domain.sync.WeightInput
+import app.readylytics.health.core.model.domain.repository.ReadOutcome
+import app.readylytics.health.core.model.domain.sync.IntervalKind
+import app.readylytics.health.core.model.domain.sync.IntervalSourceRecord
+import app.readylytics.health.core.model.domain.sync.PreparedWorkout
 import app.readylytics.health.core.model.domain.sync.WorkoutInput
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -463,6 +467,123 @@ class RoomHealthChangeIngestionStoreTest {
             assertTrue(database.vo2MaxRecordDao().getByTimeRange(0, Long.MAX_VALUE).isEmpty())
             assertEquals(1, database.weightRecordDao().getByTimeRange(0, Long.MAX_VALUE).size)
         }
+
+        @Test
+        fun `workoutsOverlapping returns stored workouts that overlap the range`() =
+            runTest {
+                val w1 =
+                    WorkoutInput(
+                        id = "w1",
+                        startTime = 10_000L,
+                        endTime = 30_000L,
+                        exerciseType = "RUNNING",
+                        durationMinutes = 20,
+                        zone1Minutes = 0f,
+                        zone2Minutes = 0f,
+                        zone3Minutes = 0f,
+                        zone4Minutes = 0f,
+                        zone5Minutes = 0f,
+                        trimp = 0f,
+                        avgHr = 0f,
+                        deviceName = null,
+                    )
+                val w2 =
+                    WorkoutInput(
+                        id = "w2",
+                        startTime = 40_000L,
+                        endTime = 60_000L,
+                        exerciseType = "CYCLING",
+                        durationMinutes = 20,
+                        zone1Minutes = 0f,
+                        zone2Minutes = 0f,
+                        zone3Minutes = 0f,
+                        zone4Minutes = 0f,
+                        zone5Minutes = 0f,
+                        trimp = 0f,
+                        avgHr = 0f,
+                        deviceName = null,
+                    )
+                seedStore.persist(batch(workouts = listOf(w1, w2)))
+
+                // Query overlapping [15, 25) -> should find w1 only
+                val overlapping1 = changeStore.workoutsOverlapping(15_000L, 25_000L)
+                assertEquals(1, overlapping1.size)
+                assertEquals("w1", overlapping1[0].id)
+
+                // Query touching boundary [30, 40) -> neither overlaps half-open
+                val overlappingBoundary = changeStore.workoutsOverlapping(30_000L, 40_000L)
+                assertTrue(overlappingBoundary.isEmpty())
+
+                // Query overlapping [25, 45) -> both w1 and w2 overlap
+                val overlappingBoth = changeStore.workoutsOverlapping(25_000L, 45_000L)
+                assertEquals(2, overlappingBoth.size)
+            }
+
+        @Test
+        fun `persistIntervalEnrichment updates workouts and source metadata atomically`() =
+            runTest {
+                val w1 =
+                    WorkoutInput(
+                        id = "w1",
+                        startTime = 10_000L,
+                        endTime = 30_000L,
+                        exerciseType = "RUNNING",
+                        durationMinutes = 20,
+                        zone1Minutes = 0f,
+                        zone2Minutes = 0f,
+                        zone3Minutes = 0f,
+                        zone4Minutes = 0f,
+                        zone5Minutes = 0f,
+                        trimp = 0f,
+                        avgHr = 0f,
+                        deviceName = null,
+                    )
+                seedStore.persist(batch(workouts = listOf(w1)))
+
+                val prepared =
+                    PreparedWorkout(
+                        workout = w1,
+                        route = ReadOutcome.Denied,
+                        distanceMeters = ReadOutcome.Available(1500f),
+                        elevationMeters = ReadOutcome.Available(50f),
+                    )
+                val sourceRecord =
+                    IntervalSourceRecord(
+                        sourceId = "dist-1",
+                        kind = IntervalKind.DISTANCE,
+                        startMs = 15_000L,
+                        endExclusiveMs = 25_000L,
+                        originPackage = "com.strava",
+                    )
+
+                changeStore.persistIntervalEnrichment(
+                    preparedWorkouts = listOf(prepared),
+                    sourceUpserts = listOf(sourceRecord),
+                    sourceDeletes = emptyList(),
+                    dirtyDates = setOf(LocalDate.parse("2026-08-31")),
+                )
+
+                // Verify workout updated with distance and elevation
+                val updatedWorkout = database.workoutDao().getById("w1")
+                assertEquals(1500f, updatedWorkout?.totalDistanceMeters)
+                assertEquals(50f, updatedWorkout?.elevationGainMeters)
+
+                // Verify source metadata stored and retrievable via getIntervalSource
+                val retrievedSource = changeStore.getIntervalSource("dist-1")
+                assertEquals("dist-1", retrievedSource?.sourceId)
+                assertEquals(IntervalKind.DISTANCE, retrievedSource?.kind)
+                assertEquals(15_000L, retrievedSource?.startMs)
+                assertEquals(25_000L, retrievedSource?.endExclusiveMs)
+
+                // Now test source deletion
+                changeStore.persistIntervalEnrichment(
+                    preparedWorkouts = emptyList(),
+                    sourceUpserts = emptyList(),
+                    sourceDeletes = listOf("dist-1"),
+                    dirtyDates = emptySet(),
+                )
+                assertNull(changeStore.getIntervalSource("dist-1"))
+            }
 
     private fun batch(
         sleepSessions: List<SleepSessionInput> = emptyList(),

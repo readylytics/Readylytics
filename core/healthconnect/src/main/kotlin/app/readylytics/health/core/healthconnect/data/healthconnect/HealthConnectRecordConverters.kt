@@ -130,6 +130,7 @@ internal fun DistanceRecord.toIntervalTotal(): DomainIntervalTotal =
         endTime = endTime,
         value = distance.inMeters,
         originPackage = metadata.dataOrigin.packageName,
+        sourceId = metadata.id,
     )
 
 internal fun ElevationGainedRecord.toIntervalTotal(): DomainIntervalTotal =
@@ -138,6 +139,7 @@ internal fun ElevationGainedRecord.toIntervalTotal(): DomainIntervalTotal =
         endTime = endTime,
         value = elevation.inMeters,
         originPackage = metadata.dataOrigin.packageName,
+        sourceId = metadata.id,
     )
 
 /**
