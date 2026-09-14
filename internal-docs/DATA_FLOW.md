@@ -418,13 +418,26 @@ route-derived fallbacks for sources that write no such records. Both permissions
 (`READ_DISTANCE`, `READ_ELEVATION_GAINED`) are **optional** — `readIntervalTotals` swallows a
 permission error and returns an empty list, so an ungranted permission silently falls back to the
 route-derived value instead of failing the sync pass.
-The changes path (`HealthChangeSynchronizerImpl`) can never carry routes (the Changes API excludes
-them), so those workouts land with `routeState = NOT_AVAILABLE` until a full resync re-reads them.
-Delta-synced sessions DO get distance/elevation enrichment: the EXERCISE upsert branch reads
-`DistanceRecord`/`ElevationGainedRecord` over the session's own window and attributes them via the
-same `SessionTotalsResolver` rule as the full path (`sessionTotalFor`), degrading to null on a
-missing optional permission — so `totalDistanceMeters` no longer depends on which sync pass wrote
-the row.
+**Delta-synced EXERCISE reads/writes are split across the writer-transaction boundary (H5/WP-09).**
+`HealthChangeSynchronizerImpl.applyChangesForType` resolves every Health Connect SDK read one
+EXERCISE upsertion needs — route consent (`exerciseRouteResult`) and the two optional interval
+totals (`DistanceRecord`/`ElevationGainedRecord`, via the same `SessionTotalsResolver` rule as the
+full path) — through `WorkoutReadPreparer.prepare`, called **before** `transactionRunner.runInTransaction`
+opens. Each read comes back as a `PreparedWorkout(workout, route, distanceMeters, elevationMeters)`,
+where `route`/`distanceMeters`/`elevationMeters` are `ReadOutcome<T>` rather than a bare nullable —
+`Available` (including of an empty list/null) is an authoritative observation, `Denied`/`Unsupported`
+means the read didn't happen at all. Only once every page's reads are resolved does the transaction
+open and call `HealthIngestionStore.persistPreparedWorkouts`, which merges each field against the
+already-stored row via `mergeEnrichment(old, read) = read.valueOrPrevious(old)`
+(`core/model/.../domain/sync/PreparedWorkout.kt`): `Available` replaces — an authoritatively empty
+route or null distance/elevation clears whatever was stored — while `Denied`/`Unsupported` preserves
+it untouched (a Denied route read no longer wipes an already-imported polyline). `avgSpeedKmh` is
+always re-derived from the *merged* distance and the workout's own duration, never preserved
+independently. Because the parent workout row is now committed via `WorkoutDao`'s `@Upsert`
+update-in-place rather than a delete-then-reinsert, `processChangesPage` no longer calls
+`changeIngestionStore.deleteRecord(EXERCISE, id)` on the upsertion path — an explicit `DeletionChange`
+still deletes the parent (and cascades `workout_route_points` via FK) through the unchanged P2 dirty-range
+journal path.
 On-demand single workout route sync is provided by `SyncWorkoutRouteUseCase` (`core/model/.../domain/sync/SyncWorkoutRouteUseCase.kt`):
 when route permission is granted or the user opens a workout requiring permission, it reads the session from Health Connect,
 maps route points, and updates the local Room database atomically via `HealthIngestionStore.persistSingleWorkoutRoute`.
@@ -576,7 +589,11 @@ preventing duplicate points across repeated syncs or resync passes. The delete/i
 stored points untouched. For the same reason `totalDistanceMeters`/`avgSpeedKmh`/`elevationGainMeters`
 fall back to the existing row when the fresh input is null, and a stored `routeState = IMPORTED`
 survives a routeless pass. This mirrors `persistSingleWorkoutRoute` and keeps the ingestion
-idempotency contract (a failed pass never destroys prior valid data).
+idempotency contract (a failed pass never destroys prior valid data). This null-coalescing
+`persist`/`persistWorkouts` path is the bulk resync's own multi-workout commit and is unrelated to
+`persistPreparedWorkouts` (H5/WP-09, see above) — the single-workout delta path the Changes API
+sync uses, whose `ReadOutcome`-typed merge distinguishes "denied" from "authoritatively absent"
+where a bare nullable field cannot.
 There is no blanket `deleteAll()` in the sync path — a worker that dies mid-resync leaves prior
 valid data intact, and a retry re-runs the same range cleanly. `DailySummaryDao` additionally
 exposes `updateBaselines()` and `clearFrozenBaselinesBetween(fromMs, toExclusiveMs)` (the only
@@ -836,11 +853,15 @@ independent per-workout values that must not be confused:
   injected into the everyday-HR series), so today's value never depends on the just-issued
   `workoutDao.upsertAll` being visible through the same bucketed read.
 - Idempotent overlap refetches must never demote a previously recomputed workout from `modelTrimp`
-  back to zone `trimp`. Both the bulk window path (`RoomHealthIngestionStore`) and the incremental
-  changes path (`HealthChangeSynchronizerImpl`) preserve `existing?.modelTrimp` and existing route
-  metadata during their stable-ID upsert. When an exercise `UpsertionChange` arrives, its scoring
-  date is reported for walk-forward recompute; `DailySyncUseCase` widens and recomputes the
-  contiguous affected range if the underlying HR samples or session bounds changed.
+  back to zone `trimp`. Both the bulk window path (`RoomHealthIngestionStore.persist`/
+  `persistWorkouts`) and the incremental changes path (`HealthChangeSynchronizerImpl` via
+  `persistPreparedWorkouts`, H5/WP-09) preserve `existing?.modelTrimp` and existing route
+  metadata during their stable-ID upsert — the bulk path via a null-coalesce, the delta path via
+  the stronger `ReadOutcome`-typed `mergeEnrichment` (Denied/Unsupported preserves; the bulk path's
+  bare-nullable coalesce cannot distinguish "denied" from "authoritatively absent"). When an
+  exercise `UpsertionChange` arrives, its scoring date is reported for walk-forward recompute;
+  `DailySyncUseCase` widens and recomputes the contiguous affected range if the underlying HR
+  samples or session bounds changed.
 - A TRIMP-model or -parameter settings change (see 1.2.2) must invalidate every persisted
   historical day, not just a recent window, or the COALESCE transition mixes model-A and model-B
   values inside the same ATL/CTL EMA — this is exactly what `HealthDataRefresh.refreshHistorical()`
@@ -1892,6 +1913,8 @@ defaults when unset).
 | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/util/RouteSimplifier.kt`                                 | Domain — route simplification                       | Douglas-Peucker point reduction for on-device Canvas rendering                           |
 | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/util/RouteDistanceCalculator.kt`                         | Domain — route metrics calculation                  | haversine path distance and cumulative elevation calculations                            |
 | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/sync/SyncWorkoutRouteUseCase.kt`                         | Domain — on-demand workout route sync               | single-workout route retrieval from Health Connect and Room atomic persistence           |
+| `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/sync/PreparedWorkout.kt`                                 | Domain — delta-sync EXERCISE read outcomes (H5/WP-09) | `PreparedWorkout(workout, route, distanceMeters, elevationMeters)`; `mergeEnrichment` (Available replaces, Denied/Unsupported preserves) |
+| `core/healthconnect/src/main/kotlin/app/readylytics/health/core/healthconnect/data/healthconnect/WorkoutReadPreparer.kt`      | Domain — pre-transaction EXERCISE SDK reads (H5/WP-09) | resolves route consent + distance/elevation interval totals into a `PreparedWorkout` before any Room writer transaction opens |
 | `core/database-schema/src/main/kotlin/app/readylytics/health/core/databaseschema/data/local/dao/InsightDismissalDao.kt`               | Storage — insight dismissal DAO                     | observe / dismiss / restore                                                              |
 | `core/database/src/main/kotlin/app/readylytics/health/core/database/data/local/dao/AuditEventDao.kt`              | Storage — local audit DAO                           | append / observe recent metadata events                                                  |
 | `core/database-schema/src/main/kotlin/app/readylytics/health/core/databaseschema/data/local/dao/*.kt`                                 | Storage — DAOs                                      | `@Upsert`, `clearFrozenBaselines`, `deleteBeforeTimestamp`                               |

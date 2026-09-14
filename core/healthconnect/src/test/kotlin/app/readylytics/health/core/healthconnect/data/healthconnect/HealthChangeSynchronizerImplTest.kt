@@ -35,6 +35,7 @@ class HealthChangeSynchronizerImplTest {
     private val transactionRunner = mockk<TransactionRunner>(relaxed = true)
     private val healthIngestionStore = mockk<HealthIngestionStore>(relaxed = true)
     private val changeIngestionStore = mockk<HealthChangeIngestionStore>(relaxed = true)
+    private val workoutReadPreparer = mockk<WorkoutReadPreparer>(relaxed = true)
 
     private val client = mockk<HealthConnectClient>(relaxed = true)
 
@@ -76,6 +77,7 @@ class HealthChangeSynchronizerImplTest {
                 transactionRunner = transactionRunner,
                 healthIngestionStore = healthIngestionStore,
                 changeIngestionStore = changeIngestionStore,
+                workoutReadPreparer = workoutReadPreparer,
                 clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
             )
     }

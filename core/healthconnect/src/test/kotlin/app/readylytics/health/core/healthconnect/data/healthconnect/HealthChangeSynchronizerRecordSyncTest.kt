@@ -12,12 +12,14 @@ import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.model.DomainHeartRateSample
 import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.model.RecordType
+import app.readylytics.health.core.model.domain.model.WorkoutRoutePoint
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.repository.ReadOutcome
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.sync.HealthChangeIngestionStore
 import app.readylytics.health.core.model.domain.sync.HealthChangeTokenStore
-import app.readylytics.health.core.model.domain.sync.HealthIngestionBatch
 import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
+import app.readylytics.health.core.model.domain.sync.PreparedWorkout
 import app.readylytics.health.core.model.domain.sync.SessionSpans
 import io.mockk.*
 import kotlinx.coroutines.flow.flowOf
@@ -38,16 +40,24 @@ class HealthChangeSynchronizerRecordSyncTest {
     private val transactionRunner = mockk<TransactionRunner>(relaxed = true)
     private val healthIngestionStore = mockk<HealthIngestionStore>(relaxed = true)
     private val changeIngestionStore = mockk<HealthChangeIngestionStore>(relaxed = true)
+    private val workoutReadPreparer = mockk<WorkoutReadPreparer>()
 
     private val client = mockk<HealthConnectClient>(relaxed = true)
+
+    /** Set to true only while inside [transactionRunner]'s block, false otherwise. */
+    private var transactionActive = false
 
     private lateinit var synchronizer: HealthChangeSynchronizerImpl
 
     @Before
     fun setup() {
         coEvery { transactionRunner.runInTransaction<Any>(any()) } coAnswers {
-            val block = firstArg<suspend () -> Any>()
-            block()
+            transactionActive = true
+            try {
+                firstArg<suspend () -> Any>().invoke()
+            } finally {
+                transactionActive = false
+            }
         }
 
         coEvery { client.readRecords<Record>(any()) } returns
@@ -69,6 +79,18 @@ class HealthChangeSynchronizerRecordSyncTest {
             SessionSpans(emptyList(), emptyList())
         coEvery { changeIngestionStore.heartRateSamplesForMetrics(any(), any(), any()) } returns emptyList()
 
+        // Default: no enrichment attempted, base workout passed through unchanged. Individual
+        // tests override this to assert on route/distance/elevation propagation or transaction
+        // timing.
+        coEvery { workoutReadPreparer.prepare(any(), any()) } coAnswers {
+            PreparedWorkout(
+                workout = secondArg(),
+                route = ReadOutcome.Denied,
+                distanceMeters = ReadOutcome.Denied,
+                elevationMeters = ReadOutcome.Denied,
+            )
+        }
+
         synchronizer =
             HealthChangeSynchronizerImpl(
                 client = client,
@@ -77,6 +99,7 @@ class HealthChangeSynchronizerRecordSyncTest {
                 transactionRunner = transactionRunner,
                 healthIngestionStore = healthIngestionStore,
                 changeIngestionStore = changeIngestionStore,
+                workoutReadPreparer = workoutReadPreparer,
                 clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
             )
     }
@@ -302,12 +325,13 @@ class HealthChangeSynchronizerRecordSyncTest {
     @Test
     fun `applyPendingChanges forwards freshly computed workout metrics for exercise upsertion`() =
         runTest {
-            // modelTrimp/route-field preservation across re-upserts now lives inside
-            // RoomHealthIngestionStore.persist() (see WorkoutModelTrimpIngestionDeterminismTest in
-            // core:database) -- this class's only remaining job is to compute the fresh
-            // duration/zone/TRIMP/avgHr metrics from already-stored HR and forward them. Stubbing
-            // real, non-empty HR samples (rather than emptyList()) is load-bearing here: with no
-            // samples, WorkoutMapper.mapExerciseSession's own durationMinutes computation alone
+            // modelTrimp preservation and the route/distance/elevation merge against whatever is
+            // already stored now live inside RoomHealthChangeIngestionStore.persistPreparedWorkouts
+            // (H5/WP-09; see WorkoutRouteIngestionPreservationTest in core:database) -- this
+            // class's only remaining job is to compute the fresh duration/zone/TRIMP/avgHr metrics
+            // from already-stored HR and forward them onto the prepared workout. Stubbing real,
+            // non-empty HR samples (rather than emptyList()) is load-bearing here: with no
+            // samples, a durationMinutes-only computation from the record's own span alone
             // would satisfy a durationMinutes-only assertion even if the entire
             // metrics-driven .copy(...) block were deleted.
             seedTokens()
@@ -332,8 +356,8 @@ class HealthChangeSynchronizerRecordSyncTest {
                 )
             } returns hrSamples
 
-            val capturedBatches = mutableListOf<HealthIngestionBatch>()
-            coEvery { healthIngestionStore.persist(capture(capturedBatches)) } returns Unit
+            val capturedBatches = mutableListOf<List<PreparedWorkout>>()
+            coEvery { changeIngestionStore.persistPreparedWorkouts(capture(capturedBatches)) } returns Unit
 
             routeOneChange(HealthDataType.EXERCISE, UpsertionChange(exerciseRecord))
 
@@ -346,7 +370,7 @@ class HealthChangeSynchronizerRecordSyncTest {
                     endTime.toEpochMilli(),
                 )
             }
-            val saved = capturedBatches.flatMap { it.workouts }.firstOrNull { it.id == exerciseRecordId }
+            val saved = capturedBatches.flatten().map { it.workout }.firstOrNull { it.id == exerciseRecordId }
             assertNotNull("Saved workout input should not be null", saved)
             assertEquals(exerciseRecordId, saved?.id)
             assertEquals(60, saved?.durationMinutes)
@@ -357,6 +381,95 @@ class HealthChangeSynchronizerRecordSyncTest {
             assertEquals(30f, saved?.zone3Minutes)
             assertEquals(30f, saved?.zone4Minutes)
             assertEquals(0f, saved?.zone5Minutes)
+        }
+
+    @Test
+    fun `workout enrichment reads happen before the writer transaction opens`() =
+        runTest {
+            // H5/WP-09: the property this whole task exists to establish -- route/distance/
+            // elevation SDK reads must never happen while a Room writer transaction is active.
+            seedTokens()
+            var observedTransactionActiveDuringPrepare = true
+            coEvery { workoutReadPreparer.prepare(any(), any()) } coAnswers {
+                observedTransactionActiveDuringPrepare = transactionActive
+                PreparedWorkout(
+                    workout = secondArg(),
+                    route = ReadOutcome.Denied,
+                    distanceMeters = ReadOutcome.Denied,
+                    elevationMeters = ReadOutcome.Denied,
+                )
+            }
+            val exerciseRecord =
+                createMockExerciseRecord(
+                    "exercise-tx-boundary",
+                    Instant.parse("2026-06-01T10:00:00Z"),
+                    Instant.parse("2026-06-01T11:00:00Z"),
+                )
+            routeOneChange(HealthDataType.EXERCISE, UpsertionChange(exerciseRecord))
+
+            synchronizer.applyPendingChanges()
+
+            coVerify { workoutReadPreparer.prepare(any(), any()) }
+            assertFalse(
+                "route/distance/elevation reads must run outside the writer transaction",
+                observedTransactionActiveDuringPrepare,
+            )
+        }
+
+    @Test
+    fun `EXERCISE upsertion never deletes the record it is about to update in place`() =
+        runTest {
+            // H5/WP-09: deleteRecord(EXERCISE, id) on the upsertion path would both discard the
+            // merge-against-existing semantics and cascade-delete route points a Denied re-read
+            // must preserve -- it must never be called for EXERCISE upsertions.
+            seedTokens()
+            val exerciseRecord =
+                createMockExerciseRecord(
+                    "exercise-no-delete",
+                    Instant.parse("2026-06-01T10:00:00Z"),
+                    Instant.parse("2026-06-01T11:00:00Z"),
+                )
+            routeOneChange(HealthDataType.EXERCISE, UpsertionChange(exerciseRecord))
+
+            synchronizer.applyPendingChanges()
+
+            coVerify(exactly = 0) { changeIngestionStore.deleteRecord(HealthDataType.EXERCISE, any()) }
+            coVerify { changeIngestionStore.persistPreparedWorkouts(any()) }
+        }
+
+    @Test
+    fun `prepared route and interval-total outcomes propagate unchanged to persistPreparedWorkouts`() =
+        runTest {
+            // H5/WP-09: the synchronizer must forward exactly what WorkoutReadPreparer resolved --
+            // it must never coerce a Denied/Unsupported outcome into an empty/null value itself.
+            seedTokens()
+            val preparedRoute = ReadOutcome.Available(emptyList<WorkoutRoutePoint>())
+            coEvery { workoutReadPreparer.prepare(any(), any()) } coAnswers {
+                PreparedWorkout(
+                    workout = secondArg(),
+                    route = preparedRoute,
+                    distanceMeters = ReadOutcome.Denied,
+                    elevationMeters = ReadOutcome.Unsupported,
+                )
+            }
+            val exerciseRecordId = "exercise-outcome-passthrough"
+            val exerciseRecord =
+                createMockExerciseRecord(
+                    exerciseRecordId,
+                    Instant.parse("2026-06-01T10:00:00Z"),
+                    Instant.parse("2026-06-01T11:00:00Z"),
+                )
+            val capturedBatches = mutableListOf<List<PreparedWorkout>>()
+            coEvery { changeIngestionStore.persistPreparedWorkouts(capture(capturedBatches)) } returns Unit
+            routeOneChange(HealthDataType.EXERCISE, UpsertionChange(exerciseRecord))
+
+            synchronizer.applyPendingChanges()
+
+            val saved = capturedBatches.flatten().firstOrNull { it.workout.id == exerciseRecordId }
+            assertNotNull("Prepared workout should have been forwarded", saved)
+            assertEquals(preparedRoute, saved?.route)
+            assertEquals(ReadOutcome.Denied, saved?.distanceMeters)
+            assertEquals(ReadOutcome.Unsupported, saved?.elevationMeters)
         }
 
     private fun createMockExerciseRecord(

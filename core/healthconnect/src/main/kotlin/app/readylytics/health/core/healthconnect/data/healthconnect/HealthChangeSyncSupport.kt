@@ -1,7 +1,6 @@
 package app.readylytics.health.core.healthconnect.data.healthconnect
 
 import android.os.RemoteException
-import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.records.BloodPressureRecord as HealthConnectBloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord as HealthConnectBodyFatRecord
 import androidx.health.connect.client.records.BodyTemperatureRecord
@@ -14,9 +13,6 @@ import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord as HealthConnectWeightRecord
-import androidx.health.connect.client.request.ReadRecordsRequest
-import androidx.health.connect.client.time.TimeRangeFilter
-import app.readylytics.health.core.model.domain.model.DomainIntervalTotal
 import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.sync.BloodPressureInput
 import app.readylytics.health.core.model.domain.sync.BodyFatInput
@@ -29,8 +25,6 @@ import app.readylytics.health.core.model.domain.sync.StepRecordInput
 import app.readylytics.health.core.model.domain.sync.Vo2MaxInput
 import app.readylytics.health.core.model.domain.sync.WeightInput
 import app.readylytics.health.core.model.domain.sync.WorkoutInput
-import app.readylytics.health.core.model.domain.util.SessionTotalsResolver
-import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logW
 import java.time.Instant
 import java.time.LocalDate
@@ -143,45 +137,3 @@ internal fun emptyBatch(
     bloodPressureSamples = bloodPressureSamples, oxygenSaturationSamples = oxygenSaturationSamples,
     bodyTemperatureSamples = bodyTemperatureSamples, stepRecords = stepRecords, vo2MaxSamples = vo2MaxSamples,
 )
-
-/**
- * Same-package attribution of one optional interval record type (distance, elevation) to a
- * delta-synced exercise session -- the per-session equivalent of the bulk
- * `readIntervalTotals` + `SessionTotalsResolver` pass in `HealthConnectRepositoryImpl`.
- * Returns null when the optional permission is missing: enrichment, never a sync failure.
- */
-internal suspend inline fun <reified T : Record> sessionTotalFor(
-    client: HealthConnectClient,
-    session: ExerciseSessionRecord,
-    map: (T) -> DomainIntervalTotal,
-): Double? =
-    try {
-        val totals = mutableListOf<DomainIntervalTotal>()
-        var pageToken: String? = null
-        do {
-            val response =
-                client.readRecords(
-                    ReadRecordsRequest(
-                        recordType = T::class,
-                        timeRangeFilter = TimeRangeFilter.between(session.startTime, session.endTime),
-                        pageToken = pageToken,
-                    ),
-                )
-            totals += response.records.map(map)
-            pageToken = response.pageToken
-        } while (pageToken != null)
-        SessionTotalsResolver.totalFor(
-            sessionStart = session.startTime,
-            sessionEnd = session.endTime,
-            sessionOrigin = session.metadata.dataOrigin.packageName,
-            totals = totals,
-        )
-    } catch (e: kotlinx.coroutines.CancellationException) {
-        throw e
-    } catch (e: Exception) {
-        if (e.asHealthConnectSecurityCause() == null) throw e
-        logD("HealthChangeSynchronizer") {
-            "${T::class.simpleName} permission not granted; session stored without ${T::class.simpleName} total"
-        }
-        null
-    }

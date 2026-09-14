@@ -450,10 +450,10 @@ class HealthConnectRepositoryImpl
                                     }
                                     ExerciseRouteResult.ConsentRequired()
                                 } else {
-                                    app.readylytics.health.core.model.domain.util.logW("HealthConnectRepository", e) {
-                                        "Failed to fetch route for exercise session ${session.metadata.id}"
-                                    }
-                                    ExerciseRouteResult.NoData()
+                                    // A transient/unexpected failure must propagate for retry, never
+                                    // be coerced into "no route" -- that would silently strip route
+                                    // data from a session that genuinely has it (H5/WP-09).
+                                    throw e
                                 }
                             }
                         session.toDomain(

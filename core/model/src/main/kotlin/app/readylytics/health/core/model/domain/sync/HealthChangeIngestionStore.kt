@@ -46,6 +46,15 @@ interface HealthChangeIngestionStore {
         startMs: Long,
         endMs: Long,
     ): List<DomainHeartRateSample>
+
+    /**
+     * Update-in-place commit for a batch of [PreparedWorkout]s (H5/WP-09) -- each workout's
+     * route/distance/elevation/avgSpeed are resolved against its already-stored row via
+     * [mergeEnrichment], so a Denied/Unsupported SDK read preserves the stored value instead of
+     * being coalesced away. A single Health-Connect-changes-page upsert calls this with a
+     * one-element list; a future multi-workout correction batch (H4) calls it with many.
+     */
+    suspend fun persistPreparedWorkouts(prepared: List<PreparedWorkout>)
 }
 
 data class SessionSpans(

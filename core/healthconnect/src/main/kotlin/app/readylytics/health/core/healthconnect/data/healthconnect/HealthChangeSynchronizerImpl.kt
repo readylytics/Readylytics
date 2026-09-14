@@ -41,6 +41,7 @@ class HealthChangeSynchronizerImpl
         private val transactionRunner: TransactionRunner,
         private val healthIngestionStore: HealthIngestionStore,
         private val changeIngestionStore: HealthChangeIngestionStore,
+        private val workoutReadPreparer: WorkoutReadPreparer,
     ) : HealthChangeSynchronizer {
         override suspend fun applyPendingChanges(): HealthChangeSyncOutcome {
             val prefs = settingsRepo.userPreferences.first()
@@ -124,6 +125,7 @@ class HealthChangeSynchronizerImpl
                     }
 
                     val selectedDevice = deviceByType[dataType.name]?.takeIf { it.isNotBlank() }
+                    val preparedWorkouts = preparedWorkoutsFor(dataType, response.changes)
 
                     // Apply this page of changes in a transaction
                     transactionRunner.runInTransaction {
@@ -134,6 +136,7 @@ class HealthChangeSynchronizerImpl
                             selectedDevice = selectedDevice,
                             zoneId = zoneId,
                             prefs = prefs,
+                            preparedWorkouts = preparedWorkouts,
                         )
                     }
 
@@ -207,6 +210,7 @@ class HealthChangeSynchronizerImpl
             selectedDevice: String?,
             zoneId: ZoneId,
             prefs: UserPreferences,
+            preparedWorkouts: Map<String, PreparedWorkout>,
         ) {
             val spans = pageSessionSpans(dataType, changes)
             for (change in changes) {
@@ -217,11 +221,17 @@ class HealthChangeSynchronizerImpl
                         val id = record.metadata.id
 
                         affectedDates.addAll(changeIngestionStore.affectedDatesForRecord(dataType, id, zoneId))
-                        changeIngestionStore.deleteRecord(dataType, id)
+                        // EXERCISE is update-in-place through persistPreparedWorkouts (H5/WP-09):
+                        // deleting first would both discard the coalesce-against-existing merge
+                        // and cascade-delete route points a Denied re-read must preserve. Every
+                        // other type keeps the delete-then-conditionally-reinsert pattern.
+                        if (dataType != HealthDataType.EXERCISE) {
+                            changeIngestionStore.deleteRecord(dataType, id)
+                        }
 
                         if (selectedDevice == null || deviceLabel == selectedDevice) {
                             affectedDates.addAll(getDatesForRecord(record, zoneId))
-                            upsertRecord(dataType, record, prefs, spans)
+                            upsertRecord(dataType, record, prefs, spans, preparedWorkouts)
                         }
                     }
                     is DeletionChange -> {
@@ -232,6 +242,47 @@ class HealthChangeSynchronizerImpl
                 }
             }
         }
+
+        /**
+         * H5/WP-09: every Health Connect SDK read an EXERCISE upsertion needs (route consent,
+         * distance/elevation interval totals) is resolved here, BEFORE the writer transaction
+         * opens -- never inside it. No-op for every other data type.
+         */
+        private suspend fun preparedWorkoutsFor(
+            dataType: HealthDataType,
+            changes: List<Change>,
+        ): Map<String, PreparedWorkout> =
+            if (dataType == HealthDataType.EXERCISE) prepareWorkouts(changes) else emptyMap()
+
+        /**
+         * Resolves every Health Connect SDK read this page's EXERCISE upsertions need (route
+         * consent, distance/elevation interval totals) up front, keyed by HC record id, so
+         * `processChangesPage`'s writer transaction only ever touches already-resolved values.
+         */
+        private suspend fun prepareWorkouts(changes: List<Change>): Map<String, PreparedWorkout> =
+            changes.filterIsInstance<UpsertionChange>()
+                .mapNotNull { it.record as? ExerciseSessionRecord }
+                .associate { record ->
+                    val durationMinutes =
+                        ((record.endTime.toEpochMilli() - record.startTime.toEpochMilli()) / 60_000L).toInt()
+                    val baseWorkout =
+                        WorkoutInput(
+                            id = record.metadata.id,
+                            startTime = record.startTime.toEpochMilli(),
+                            endTime = record.endTime.toEpochMilli(),
+                            exerciseType = record.exerciseType.toString(),
+                            durationMinutes = durationMinutes,
+                            zone1Minutes = 0f,
+                            zone2Minutes = 0f,
+                            zone3Minutes = 0f,
+                            zone4Minutes = 0f,
+                            zone5Minutes = 0f,
+                            trimp = 0f,
+                            avgHr = 0f,
+                            deviceName = DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin),
+                        )
+                    record.metadata.id to workoutReadPreparer.prepare(record, baseWorkout)
+                }
 
         /**
          * R2-HC-003: one `sessionSpansOverlapping` call for the whole page's time range, instead of
@@ -269,12 +320,13 @@ class HealthChangeSynchronizerImpl
             record: Record,
             prefs: UserPreferences,
             spans: SessionSpans,
+            preparedWorkouts: Map<String, PreparedWorkout>,
         ) {
             when (dataType) {
                 HealthDataType.SLEEP -> upsertSleep(record)
                 HealthDataType.HEART_RATE -> upsertHeartRate(record, spans)
                 HealthDataType.HRV -> upsertHrv(record, spans)
-                HealthDataType.EXERCISE -> upsertExercise(record, prefs)
+                HealthDataType.EXERCISE -> upsertExercise(record, prefs, preparedWorkouts)
                 HealthDataType.WEIGHT -> upsertWeight(record)
                 HealthDataType.BODY_FAT -> upsertBodyFat(record)
                 HealthDataType.BLOOD_PRESSURE -> upsertBloodPressure(record)
@@ -312,15 +364,15 @@ class HealthChangeSynchronizerImpl
             healthIngestionStore.replaceHrvSources(hrvSources)
         }
 
-        private suspend fun upsertExercise(record: Record, prefs: UserPreferences) {
+        private suspend fun upsertExercise(
+            record: Record,
+            prefs: UserPreferences,
+            preparedWorkouts: Map<String, PreparedWorkout>,
+        ) {
             if (record !is ExerciseSessionRecord) return
-            val distanceTotal = sessionTotalFor<DistanceRecord>(client, record) { it.toIntervalTotal() }
-            val elevationTotal = sessionTotalFor<ElevationGainedRecord>(client, record) { it.toIntervalTotal() }
-            val domainExercise = record.toDomain(
-                routeResult = record.exerciseRouteResult,
-                totalDistanceMeters = distanceTotal,
-                elevationGainMeters = elevationTotal,
-            )
+            // Prepared by prepareWorkouts() before this page's writer transaction opened
+            // (H5/WP-09) -- every EXERCISE UpsertionChange in this page has an entry.
+            val prepared = preparedWorkouts[record.metadata.id] ?: return
             val thresholds = ZoneThresholds.create(
                 prefs.zone1MinBpm, prefs.zone1MaxBpm, prefs.zone2MaxBpm,
                 prefs.zone3MaxBpm, prefs.zone4MaxBpm,
@@ -337,7 +389,7 @@ class HealthChangeSynchronizerImpl
             val metrics = ZoneThresholds.computeMetrics(
                 record.startTime.toEpochMilli(), record.endTime.toEpochMilli(), hrSamples, thresholds,
             )
-            val workoutInput = WorkoutMapper.mapExerciseSession(domainExercise).copy(
+            val workoutWithMetrics = prepared.workout.copy(
                 durationMinutes = metrics.durationMinutes,
                 zone1Minutes = metrics.zoneMinutes[0],
                 zone2Minutes = metrics.zoneMinutes[1],
@@ -347,9 +399,9 @@ class HealthChangeSynchronizerImpl
                 trimp = metrics.trimp,
                 avgHr = metrics.avgHr,
             )
-            // modelTrimp/route-field preservation across re-upserts is handled inside
-            // RoomHealthIngestionStore.persist() already (mirrors bulk-path behavior).
-            healthIngestionStore.persist(emptyBatch(workouts = listOf(workoutInput)))
+            // modelTrimp preservation and the route/distance/elevation merge against whatever is
+            // already stored both happen inside persistPreparedWorkouts (H5/WP-09).
+            changeIngestionStore.persistPreparedWorkouts(listOf(prepared.copy(workout = workoutWithMetrics)))
         }
 
         private suspend fun upsertWeight(record: Record) {

@@ -2,13 +2,20 @@ package app.readylytics.health.core.database.data.local
 
 import app.readylytics.health.core.databaseschema.data.local.dao.HealthMutationStateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.Vo2MaxRecordDao
+import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.model.data.preferences.scoringZone
 import app.readylytics.health.core.model.domain.model.DomainHeartRateSample
 import app.readylytics.health.core.model.domain.model.HealthDataType
+import app.readylytics.health.core.model.domain.model.RouteState
+import app.readylytics.health.core.model.domain.model.WorkoutRoutePoint
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.repository.ReadOutcome
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
+import app.readylytics.health.core.model.domain.repository.map
 import app.readylytics.health.core.model.domain.sync.HealthChangeIngestionStore
+import app.readylytics.health.core.model.domain.sync.PreparedWorkout
 import app.readylytics.health.core.model.domain.sync.SessionSpans
+import app.readylytics.health.core.model.domain.sync.mergeEnrichment
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import java.time.Clock
@@ -176,4 +183,54 @@ class RoomHealthChangeIngestionStore
 
         private fun dateFor(timestampMs: Long, zoneId: ZoneId): LocalDate =
             Instant.ofEpochMilli(timestampMs).atZone(zoneId).toLocalDate()
+
+        override suspend fun persistPreparedWorkouts(prepared: List<PreparedWorkout>) {
+            if (prepared.isEmpty()) return
+            inTransaction {
+                val entities = prepared.map { it.toMergedEntity(daos.workoutDao.getById(it.workout.id)) }
+                daos.workoutDao.upsertAll(entities)
+                prepared.forEach { applyRoutePoints(daos, it) }
+            }
+        }
     }
+
+/**
+ * Resolves [PreparedWorkout.route]/[PreparedWorkout.distanceMeters]/[PreparedWorkout.elevationMeters]
+ * against [existing] via [mergeEnrichment]: an Available outcome (including an authoritatively
+ * empty/null value) replaces, Denied/Unsupported preserves the stored value. `avgSpeedKmh` is
+ * always re-derived from the *selected* distance and this workout's own duration, and cleared
+ * when that distance is authoritatively absent -- never preserved independently of distance.
+ */
+private fun PreparedWorkout.toMergedEntity(existing: WorkoutRecordEntity?): WorkoutRecordEntity {
+    val distanceMeters = mergeEnrichment(existing?.totalDistanceMeters, this.distanceMeters)
+    val elevationGainMeters = mergeEnrichment(existing?.elevationGainMeters, elevationMeters)
+    val routeState =
+        mergeEnrichment(
+            existing?.routeState ?: RouteState.NOT_AVAILABLE,
+            route.map { points -> if (points.isNotEmpty()) RouteState.IMPORTED else RouteState.NOT_AVAILABLE },
+        )
+    val durationSeconds = (workout.endTime - workout.startTime) / 1000.0
+    val avgSpeedKmh =
+        distanceMeters?.takeIf { durationSeconds > 0.0 }?.let { (it / durationSeconds * 3.6).toFloat() }
+    return workout.toEntity().copy(
+        modelTrimp = existing?.modelTrimp,
+        totalDistanceMeters = distanceMeters,
+        avgSpeedKmh = avgSpeedKmh,
+        elevationGainMeters = elevationGainMeters,
+        routeState = routeState,
+    )
+}
+
+/**
+ * Touches `workout_route_points` only when [PreparedWorkout.route] is [ReadOutcome.Available] --
+ * a Denied/Unsupported read must never delete an already-imported route it merely couldn't
+ * re-read this round (H5/WP-09).
+ */
+private suspend fun applyRoutePoints(daos: HealthRecordDaos, prepared: PreparedWorkout) {
+    val route = prepared.route
+    if (route !is ReadOutcome.Available) return
+    daos.workoutRoutePointDao.deleteForWorkouts(listOf(prepared.workout.id))
+    if (route.data.isNotEmpty()) {
+        daos.workoutRoutePointDao.insertAll(route.data.map(WorkoutRoutePoint::toEntity))
+    }
+}
