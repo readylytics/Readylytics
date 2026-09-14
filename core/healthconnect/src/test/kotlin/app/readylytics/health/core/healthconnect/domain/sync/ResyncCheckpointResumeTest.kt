@@ -315,6 +315,70 @@ class ResyncCheckpointResumeTest {
         }
 
     @Test
+    fun `denied type excluded by an earlier committed chunk is not re-promoted after a later chunk succeeds for it`() =
+        runTest {
+            val startDate = LocalDate.of(2024, 6, 1)
+            val endDate = LocalDate.of(2024, 6, 4)
+            val resumedChunkStart = LocalDate.of(2024, 6, 3)
+            val hrvOnlyTokens = mapOf(HealthDataType.HRV to "baseline-hrv-token")
+
+            // Simulate a checkpoint saved right after chunk 1 (6/1-6/2) committed: HRV was denied
+            // during that chunk, so the chunk-completion intersect narrowed completedTypes down to
+            // genuinely empty. completedTypesRecorded=true because this checkpoint was written by
+            // completedTypes-aware (post-H1) code, not decoded from a legacy/absent-field proto.
+            checkpointStore.value =
+                ResyncCheckpoint(
+                    startDate = startDate,
+                    endDate = endDate,
+                    phase = ResyncPhase.INGEST,
+                    nextDate = resumedChunkStart,
+                    selectionHash = "",
+                    baselineChangeTokens = hrvOnlyTokens,
+                    completedTypes = emptySet(),
+                    completedTypesRecorded = true,
+                )
+
+            // The resumed chunk (6/3-6/4) regrants HRV -- it must NOT resurrect HRV's promotion
+            // eligibility: chunk 1's denial was already committed and is never reprocessed on
+            // resume, so it must permanently exclude HRV for the rest of this run.
+            coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
+
+            useCase.run(startDate = startDate, endDate = endDate, chunkDays = 2, onProgress = null)
+
+            coVerify(exactly = 0) {
+                changeSynchronizer.commitTokens(match { tokens -> tokens.containsKey(HealthDataType.HRV) })
+            }
+        }
+
+    @Test
+    fun `checkpoint without completedTypesRecorded falls back to the permissive baseline candidate set`() =
+        runTest {
+            val startDate = LocalDate.of(2024, 6, 1)
+
+            // A checkpoint decoded from a proto that predates completedTypesRecorded (or predates
+            // completedTypes itself) always decodes that flag to false -- it must be treated as
+            // "completedTypes absent", replaying conservatively via the pre-H1 permissive default,
+            // never as "genuinely narrowed to empty".
+            checkpointStore.value =
+                ResyncCheckpoint(
+                    startDate = startDate,
+                    endDate = startDate,
+                    phase = ResyncPhase.INGEST,
+                    nextDate = startDate,
+                    selectionHash = "",
+                    baselineChangeTokens = baselineTokens,
+                    completedTypes = emptySet(),
+                    completedTypesRecorded = false,
+                )
+
+            useCase.run(startDate = startDate, endDate = startDate, chunkDays = 30, onProgress = null)
+
+            coVerify {
+                changeSynchronizer.commitTokens(match { tokens -> tokens.containsKey(HealthDataType.SLEEP) })
+            }
+        }
+
+    @Test
     fun `interrupted HR page token in checkpoint is cleared and replayed from beginning on resume`() =
         runTest {
             val startDate = LocalDate.of(2024, 6, 1)

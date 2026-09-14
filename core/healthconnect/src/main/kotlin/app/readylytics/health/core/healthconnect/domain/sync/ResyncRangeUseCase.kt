@@ -144,9 +144,22 @@ class ResyncRangeUseCase
                         )
                     }
 
+                    // H1 review fix: `completedTypes.takeIf { it.isNotEmpty() }` used to conflate a
+                    // legacy/absent checkpoint field with a checkpoint that legitimately narrowed
+                    // completedTypes down to empty (e.g. every tracked type was denied in an
+                    // already-committed chunk before a crash) -- both looked "empty" and both reset
+                    // to the permissive baselineChangeTokens.keys, silently re-granting promotion
+                    // eligibility to a type a prior chunk had already excluded. completedTypesRecorded
+                    // (proto-absent => false) makes the two cases unambiguous: only trust a genuinely
+                    // recorded (possibly empty) completedTypes; otherwise fall back like before.
                     var runCompletedTypes =
-                        checkpoint?.completedTypes?.takeIf { it.isNotEmpty() }
-                            ?: if (skipIngestAndPrune) emptySet() else baselineChangeTokens.keys
+                        if (checkpoint != null && checkpoint.completedTypesRecorded) {
+                            checkpoint.completedTypes
+                        } else if (skipIngestAndPrune) {
+                            emptySet()
+                        } else {
+                            baselineChangeTokens.keys
+                        }
 
                     val totalDays = (ChronoUnit.DAYS.between(startDate, endDate) + 1).toInt().coerceAtLeast(0)
                     val totalChunks = if (totalDays <= 0) 0 else (totalDays + chunkDays - 1) / chunkDays
@@ -223,7 +236,6 @@ class ResyncRangeUseCase
                         // chunkDays once a window succeeds -- a shrink is a recovery measure for
                         // unusually dense data, not a permanent downgrade.
                         var effectiveChunkDays = checkpoint?.chunkDaysOverride ?: chunkDays
-                        val replayStartToken: String? = null
                         val isInterruptedIngestChunk =
                             checkpoint?.phase == ResyncPhase.INGEST && checkpoint.nextDate == chunkStart
                         val hasInterruptedPageToken =
@@ -237,18 +249,6 @@ class ResyncRangeUseCase
                                 ),
                             )
                         }
-                        var activeHrToken =
-                            if (isInterruptedIngestChunk && checkpoint.hrPageToken != null) {
-                                replayStartToken
-                            } else {
-                                null
-                            }
-                        var activeHrvToken =
-                            if (isInterruptedIngestChunk && checkpoint.hrvPageToken != null) {
-                                replayStartToken
-                            } else {
-                                null
-                            }
                         while (!chunkStart.isAfter(endDate)) {
                             ensureActive()
                             val chunkEndExclusive =
@@ -261,15 +261,30 @@ class ResyncRangeUseCase
                             val ingestResult =
                                 try {
                                     retryWithBackoff {
+                                        // H1 review fix: hrStartPageToken/hrvStartPageToken are
+                                        // always null here -- never threaded from a saved or
+                                        // in-flight page token -- so every ingestWindow attempt for
+                                        // this chunk (the first attempt, a cross-process
+                                        // checkpoint-restart attempt, AND an in-process
+                                        // retryWithBackoff retry after a transient mid-page
+                                        // failure) replays the whole chunk from its true beginning
+                                        // before a scan can be marked complete. retryWithBackoff
+                                        // reuses this same suspend lambda on retry, so a mid-page
+                                        // token advanced via onTokenUpdated before the failure must
+                                        // never be threaded into the retried call:
+                                        // streamHeartRateSamples/streamHrvSamples start a fresh,
+                                        // empty ID accumulator per invocation, so resuming from a
+                                        // non-null token there would silently yield a partial ID
+                                        // set that still reads as ReadOutcome.Available -- a false
+                                        // "complete" scan that would authorize deleting the earlier,
+                                        // already-persisted pages.
                                         ingestion.ingestionCoordinator.ingestWindow(
                                             windowStart = windowStart,
                                             windowEnd = windowEnd,
                                             prefs = prefs,
-                                            hrStartPageToken = activeHrToken,
-                                            hrvStartPageToken = activeHrvToken,
+                                            hrStartPageToken = null,
+                                            hrvStartPageToken = null,
                                             onTokenUpdated = { hrToken, hrvToken ->
-                                                activeHrToken = hrToken
-                                                activeHrvToken = hrvToken
                                                 checkpointStore.save(
                                                     ResyncCheckpoint(
                                                         startDate = startDate,
@@ -289,8 +304,6 @@ class ResyncRangeUseCase
                                         )
                                     }
                                 } catch (e: HealthConnectWindowTimeoutException) {
-                                    activeHrToken = null
-                                    activeHrvToken = null
                                     if (effectiveChunkDays <= MIN_CHUNK_DAYS) {
                                         logD(TELEMETRY_TAG) {
                                             "[INGESTION] Window $windowStart..$windowEnd timed out even at the " +
@@ -329,8 +342,6 @@ class ResyncRangeUseCase
                                     minOf(earliestDeletionDate ?: chunkAffectedRange.start, chunkAffectedRange.start)
                             }
 
-                            activeHrToken = null
-                            activeHrvToken = null
                             effectiveChunkDays = chunkDays
                             val nextPhase =
                                 if (chunkEndExclusive.isAfter(endDate)) {

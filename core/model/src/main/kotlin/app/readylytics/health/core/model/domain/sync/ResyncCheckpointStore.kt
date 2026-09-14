@@ -30,6 +30,19 @@ data class ResyncCheckpoint(
     val hrvPageToken: String? = null,
     /** WP-06: Health data types that have successfully completed ingestion and reconciliation. */
     val completedTypes: Set<app.readylytics.health.core.model.domain.model.HealthDataType> = emptySet(),
+    /**
+     * H1 review fix: whether [completedTypes] was actually populated by completedTypes-aware
+     * (post-WP-06) code, as opposed to decoded from a checkpoint predating that field (or from a
+     * WP-06 checkpoint that predates this flag). A freshly constructed [ResyncCheckpoint] defaults
+     * to `true` because every in-code construction site in [app.readylytics.health.core.model
+     * .domain.sync] callers always populates [completedTypes] accurately for the current run.
+     * Only the persistence round-trip (proto decode) can observe `false`: proto3 has no scalar
+     * "was this field ever set" signal, so an old serialized checkpoint that never wrote this field
+     * decodes it to the proto default (false) -- exactly distinguishing "legacy/absent" (fall back
+     * to the permissive baseline-tokens default) from "this run genuinely narrowed completedTypes
+     * down to empty" (trust the empty set, never re-promote a type denied earlier in this same run).
+     */
+    val completedTypesRecorded: Boolean = true,
 )
 
 interface ResyncCheckpointStore {

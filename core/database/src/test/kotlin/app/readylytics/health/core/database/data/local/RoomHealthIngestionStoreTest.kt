@@ -3,7 +3,9 @@ package app.readylytics.health.core.database.data.local
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.sync.BloodPressureInput
+import app.readylytics.health.core.model.domain.sync.CompleteTypeScan
 import app.readylytics.health.core.model.domain.sync.HealthIngestionBatch
 import app.readylytics.health.core.model.domain.sync.HeartRateInput
 import app.readylytics.health.core.model.domain.sync.HrvInput
@@ -13,9 +15,11 @@ import app.readylytics.health.core.model.domain.sync.Vo2MaxInput
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.ZoneId
 import kotlin.test.assertEquals
 
 @RunWith(AndroidJUnit4::class)
@@ -309,6 +313,74 @@ class RoomHealthIngestionStoreTest {
             val gen3 = database.sourceRecordDao().getBySourceRecordId(sourceId)?.sourceRevision
             assertEquals(gen1, gen3)
         }
+
+    @Test
+    fun `replaying an interrupted HR chunk preserves unchanged integer refs and only reconciles the truly absent id`() =
+        runTest {
+            // H1 WP-06 Step 1 (Room/provider-level, not the pure-guard/in-memory-fake test): seed
+            // A, B, C against a real Room DB, replay the chunk (re-ingest A and C, as an interrupted
+            // scan restarted from the beginning would), then reconcile against a CompleteTypeScan
+            // whose ids omit B (deleted in Health Connect). Foreign-key/primary-key stability across
+            // the replay is asserted via the real HealthSourceRecordEntity integer id, not a mock.
+            val zoneId = ZoneId.of("UTC")
+            val windowStartMs = START_MS
+            val windowEndMs = START_MS + 100_000L
+            val recordA = heartRateSample("hr-A", 1000L, 60)
+            val recordB = heartRateSample("hr-B", 2000L, 65)
+            val recordC = heartRateSample("hr-C", 3000L, 70)
+
+            // 1. Seed A, B, C (as if a prior, fully-successful chunk had ingested all three).
+            store.replaceHeartRateSources(
+                listOf(
+                    hrPayload("hr-A", listOf(recordA), windowStartMs, windowEndMs),
+                    hrPayload("hr-B", listOf(recordB), windowStartMs, windowEndMs),
+                    hrPayload("hr-C", listOf(recordC), windowStartMs, windowEndMs),
+                ),
+            )
+            assertEquals(3, database.heartRateDao().count())
+            val sourceRefABefore = database.sourceRecordDao().getBySourceRecordId("hr-A")?.id
+            val sourceRefCBefore = database.sourceRecordDao().getBySourceRecordId("hr-C")?.id
+            assertNotNull(sourceRefABefore)
+            assertNotNull(sourceRefCBefore)
+
+            // 2. Replay the chunk from the beginning (H1: an interrupted scan always restarts from
+            // the chunk's true beginning). B is genuinely absent from this replay's HC pages -- it
+            // was deleted in Health Connect -- so only A and C are re-streamed and re-persisted.
+            store.replaceHeartRateSources(
+                listOf(
+                    hrPayload("hr-A", listOf(recordA), windowStartMs, windowEndMs),
+                    hrPayload("hr-C", listOf(recordC), windowStartMs, windowEndMs),
+                ),
+            )
+
+            // 3. Reconcile against the replay's complete scan: ids = {hr-A, hr-C}, hr-B absent.
+            val ids = setOf("hr-A", "hr-C")
+            val scan = CompleteTypeScan(HealthDataType.HEART_RATE, windowStartMs, windowEndMs, "", ids)
+            store.reconcileWindow(scan, zoneId)
+
+            // B's source record and heart-rate row must be gone.
+            assertNull(database.sourceRecordDao().getBySourceRecordId("hr-B"))
+            assertEquals(2, database.heartRateDao().count())
+
+            // A and C's integer source refs (primary keys) must be byte-for-byte unchanged across
+            // the idempotent replay-and-reconcile -- no delete+reinsert, no foreign-key churn.
+            assertEquals(sourceRefABefore, database.sourceRecordDao().getBySourceRecordId("hr-A")?.id)
+            assertEquals(sourceRefCBefore, database.sourceRecordDao().getBySourceRecordId("hr-C")?.id)
+        }
+
+    private fun heartRateSample(
+        sourceId: String,
+        offsetMs: Long,
+        bpm: Int,
+    ) = HeartRateInput(
+        id = "${sourceId}_sample",
+        sourceId = sourceId,
+        timestampMs = START_MS + offsetMs,
+        beatsPerMinute = bpm,
+        recordType = "RESTING",
+        sessionId = null,
+        deviceName = "Watch",
+    )
 
     @Test
     fun `authoritative HRV replacement updates rmssdMs on conflict`() =

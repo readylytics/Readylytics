@@ -84,6 +84,7 @@ internal fun ResyncCheckpointProto.toDomain(): ResyncCheckpoint =
                 .mapNotNull { name ->
                     runCatching { HealthDataType.valueOf(name) }.getOrNull()
                 }.toSet(),
+        completedTypesRecorded = completedTypesRecorded,
     )
 
 internal fun ResyncCheckpoint.toProto(): ResyncCheckpointProto {
@@ -106,5 +107,6 @@ internal fun ResyncCheckpoint.toProto(): ResyncCheckpointProto {
     hrPageToken?.let { builder.setHrPageToken(it) }
     hrvPageToken?.let { builder.setHrvPageToken(it) }
     builder.addAllCompletedTypes(completedTypes.map { it.name })
+    builder.setCompletedTypesRecorded(completedTypesRecorded)
     return builder.build()
 }
