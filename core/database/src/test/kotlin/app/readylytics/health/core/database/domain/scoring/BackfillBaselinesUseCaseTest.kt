@@ -467,7 +467,7 @@ class BackfillBaselinesUseCaseTest {
             val sleepSessionDao = mockk<SleepSessionDao>()
             val minuteBucketDao = mockk<MinuteBucketDao>(relaxed = true)
             val scoringCalculator = mockk<ScoringCalculator>()
-            coEvery { sleepSessionDao.getSince(any()) } returns emptyList()
+            coEvery { sleepSessionDao.getBetween(any(), any()) } returns emptyList()
 
             val scoringHistoryRepository =
                 ScoringHistoryRepositoryImpl(

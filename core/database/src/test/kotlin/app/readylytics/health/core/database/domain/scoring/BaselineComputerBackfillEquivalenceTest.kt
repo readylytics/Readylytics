@@ -21,8 +21,10 @@ import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import kotlin.test.assertEquals
 
 /**
@@ -153,10 +155,65 @@ class BaselineComputerBackfillEquivalenceTest {
         }
     }
 
+    /**
+     * Reproduces exactly what `ComputeHistoricalBaselinesUseCase` did per day and asserts the
+     * batched result for [summary] agrees with the independent, per-day bounded selectors -- not a
+     * second call to the batch helper -- so this proves the live and backfill RHR/HRV paths share
+     * the same membership policy.
+     */
+    private suspend fun assertBackfillMatchesLiveSelectors(
+        summary: DailySummaryEntity,
+        batched: Map<LocalDate, BaselineComputer.BackfillBaseline>,
+    ) {
+        val dayMidnightMs = summary.dateMidnightMs
+        val nextDayMidnightMs = Instant.ofEpochMilli(dayMidnightMs).plus(1, ChronoUnit.DAYS).toEpochMilli()
+
+        val ownSession = sleepSessionDao.getSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
+        val expectedWindows =
+            baselineComputer.computeHrvWindowsBetween(
+                fromMs = dayMidnightMs,
+                toMs = nextDayMidnightMs,
+                zoneId = zone,
+                excludeSessionIds = ownSession?.id?.let(::setOf).orEmpty(),
+            )
+        val expectedRhr =
+            baselineComputer.computeAdaptiveBaselineRhrBpmBetween(
+                fromMs = dayMidnightMs,
+                toMs = nextDayMidnightMs,
+                percentile = percentile,
+                zoneId = zone,
+            )
+        val expectedRhrHistory =
+            baselineComputer.rhrHistoryBetween(
+                fromMs = dayMidnightMs,
+                toMs = nextDayMidnightMs,
+                percentile = percentile,
+                zoneId = zone,
+            )
+        val scoreDay = Instant.ofEpochMilli(dayMidnightMs).atZone(zone).toLocalDate()
+        val actual = batched[scoreDay]
+        requireNotNull(actual) { "missing batched result for day $dayMidnightMs" }
+
+        assertEquals(
+            expectedWindows?.muHistory ?: emptyList(),
+            actual.muHistory,
+            "muHistory mismatch for day $dayMidnightMs",
+        )
+        assertEquals(
+            expectedWindows?.sigmaHistory ?: emptyList(),
+            actual.sigmaHistory,
+            "sigmaHistory mismatch for day $dayMidnightMs",
+        )
+        assertEquals(expectedRhr, actual.rhrBpm, "rhrBpm mismatch for day $dayMidnightMs")
+        assertEquals(expectedRhrHistory, actual.rhrHistory, "rhrHistory mismatch for day $dayMidnightMs")
+    }
+
     @Test
     fun `batched backfill equals per-day methods across a varied 60-day history`() =
         runTest {
-            // Mix of partial early windows, mid-range, and near-end days.
+            // Mix of partial early windows, mid-range, and near-end days. Day 30 sits exactly on
+            // the BASELINE_DAYS boundary relative to day0; days 3/7/8 hit the sparse-HRV/sparse-RHR
+            // branches of the fixture (i%7==3, i%9==4, i%11==0, i%13==0).
             val dayIndices = listOf(0, 1, 3, 7, 8, 15, 30, 40, 56, 59)
             val summaries = dayIndices.map { DailySummaryEntity(dateMidnightMs = dayStartMs(it)) }
 
@@ -168,45 +225,185 @@ class BaselineComputerBackfillEquivalenceTest {
                 )
 
             for (summary in summaries) {
-                val dayMidnightMs = summary.dateMidnightMs
-                val nextDayMidnightMs =
-                    java.time.Instant
-                        .ofEpochMilli(dayMidnightMs)
-                        .plus(1, java.time.temporal.ChronoUnit.DAYS)
-                        .toEpochMilli()
-
-                // Reproduce exactly what ComputeHistoricalBaselinesUseCase did per day.
-                val ownSession = sleepSessionDao.getSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
-                val expectedWindows =
-                    baselineComputer.computeHrvWindowsBetween(
-                        fromMs = dayMidnightMs,
-                        toMs = nextDayMidnightMs,
-                        zoneId = zone,
-                        excludeSessionIds = ownSession?.id?.let(::setOf).orEmpty(),
-                    )
-                val actual =
-                    batched[
-                        summary.dateMidnightMs.let {
-                            java.time.Instant
-                                .ofEpochMilli(
-                                    it,
-                                ).atZone(zone)
-                                .toLocalDate()
-                        },
-                    ]
-                requireNotNull(actual) { "missing batched result for day $dayMidnightMs" }
-
-                assertEquals(
-                    expectedWindows?.muHistory ?: emptyList(),
-                    actual.muHistory,
-                    "muHistory mismatch for day $dayMidnightMs",
-                )
-                assertEquals(
-                    expectedWindows?.sigmaHistory ?: emptyList(),
-                    actual.sigmaHistory,
-                    "sigmaHistory mismatch for day $dayMidnightMs",
-                )
+                assertBackfillMatchesLiveSelectors(summary, batched)
             }
+        }
+
+    /**
+     * Appends [count] extreme, sharply-different future nights (day index [startIndexExclusive] +
+     * 1 .. + [count]) to the shared fixture -- sessions that must never leak into an earlier day's
+     * own RHR baseline just because a batch request also asked for one of these later days.
+     */
+    private fun addExtremeFutureNights(
+        startIndexExclusive: Int,
+        count: Int,
+    ) {
+        val hour = 60 * 60 * 1000L
+        for (offset in 1..count) {
+            val i = startIndexExclusive + offset
+            val id = "future_$i"
+            sessions +=
+                SleepSessionEntity(
+                    id = id,
+                    startTime = dayStartMs(i) + hour,
+                    endTime = dayStartMs(i) + 7 * hour,
+                    durationMinutes = 360,
+                    efficiency = 95f,
+                    deepSleepMinutes = 80,
+                    remSleepMinutes = 90,
+                    lightSleepMinutes = 180,
+                    awakeMinutes = 10,
+                )
+            rmssdById[id] = listOf(15f, 16f, 17f)
+            avgHrById[id] = 150
+            hrProjectionById[id] = (0 until 12).map { 140 + it }
+        }
+    }
+
+    @Test
+    fun `RHR baseline for day D is unaffected by sharply different nights added later in the same batch`() =
+        runTest {
+            val dIndex = 40
+            val dDate = day0.plusDays(dIndex.toLong())
+            val dSummary = DailySummaryEntity(dateMidnightMs = dayStartMs(dIndex))
+
+            // Extreme future nights (D+1..D+20) with wildly different HR/HRV data that must never
+            // leak into D's own baseline no matter what else the caller includes in the same batch.
+            addExtremeFutureNights(dIndex, 20)
+            val futureSummary = DailySummaryEntity(dateMidnightMs = dayStartMs(dIndex + 20))
+
+            val alone =
+                baselineComputer.computeBackfillBaselines(
+                    listOf(DailySummaryMapper.toDomain(dSummary, zone)),
+                    percentile,
+                    zoneId = zone,
+                )
+            val withFuture =
+                baselineComputer.computeBackfillBaselines(
+                    listOf(
+                        DailySummaryMapper.toDomain(dSummary, zone),
+                        DailySummaryMapper.toDomain(futureSummary, zone),
+                    ),
+                    percentile,
+                    zoneId = zone,
+                )
+            val expectedRhr =
+                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(
+                    fromMs = dayStartMs(dIndex),
+                    toMs = dayStartMs(dIndex + 1),
+                    percentile = percentile,
+                    zoneId = zone,
+                )
+            val expectedHistory =
+                baselineComputer.rhrHistoryBetween(
+                    fromMs = dayStartMs(dIndex),
+                    toMs = dayStartMs(dIndex + 1),
+                    percentile = percentile,
+                    zoneId = zone,
+                )
+
+            assertEquals(alone[dDate]?.rhrBpm, withFuture[dDate]?.rhrBpm, "future nights leaked into D's rhrBpm")
+            assertEquals(
+                alone[dDate]?.rhrHistory,
+                withFuture[dDate]?.rhrHistory,
+                "future nights leaked into D's rhrHistory",
+            )
+            assertEquals(expectedRhr, withFuture[dDate]?.rhrBpm, "backfill and live selectors disagree for D")
+            assertEquals(
+                expectedHistory,
+                withFuture[dDate]?.rhrHistory,
+                "backfill and live rhrHistory disagree for D",
+            )
+        }
+
+    @Test
+    fun `RHR baseline across a scoring-zone DST transition is unaffected by future nights in the batch`() =
+        runTest {
+            val berlin = ZoneId.of("Europe/Berlin")
+            // 2026-03-29 is Germany's spring-forward DST transition (02:00 -> 03:00 local).
+            val dDate = LocalDate.of(2026, 4, 5)
+            fun startMs(date: LocalDate) = date.atStartOfDay(berlin).toInstant().toEpochMilli()
+
+            sessions.clear()
+            rmssdById.clear()
+            avgHrById.clear()
+            hrProjectionById.clear()
+
+            val hour = 60 * 60 * 1000L
+            fun addNight(
+                date: LocalDate,
+                id: String,
+                hrvSamples: List<Float>,
+                avgHr: Int,
+                hrSamples: List<Int>,
+            ) {
+                sessions +=
+                    SleepSessionEntity(
+                        id = id,
+                        startTime = startMs(date) + hour,
+                        endTime = startMs(date) + 7 * hour,
+                        durationMinutes = 360,
+                        efficiency = 92f,
+                        deepSleepMinutes = 80,
+                        remSleepMinutes = 90,
+                        lightSleepMinutes = 180,
+                        awakeMinutes = 10,
+                    )
+                rmssdById[id] = hrvSamples
+                avgHrById[id] = avgHr
+                hrProjectionById[id] = hrSamples
+            }
+
+            var day = dDate.minusDays(ScoringConstants.BASELINE_DAYS)
+            while (!day.isAfter(dDate)) {
+                addNight(day, "berlin_$day", listOf(42f, 44f, 46f), 55, (0 until 12).map { 48 + it })
+                day = day.plusDays(1)
+            }
+            // Extreme future nights that must never leak into D's own baseline. Outnumbering the
+            // ~31-night lookback population (not just adding a minority of outliers) is deliberate:
+            // a median is robust to a minority of outliers, so a smaller future set could pass even
+            // with the future-leak bug present.
+            for (offset in 1..40) {
+                val future = dDate.plusDays(offset.toLong())
+                addNight(future, "berlinFuture_$future", listOf(15f, 16f, 17f), 150, (0 until 12).map { 140 + it })
+            }
+
+            val dSummary = DailySummaryEntity(dateMidnightMs = startMs(dDate))
+            val futureSummary = DailySummaryEntity(dateMidnightMs = startMs(dDate.plusDays(40)))
+
+            val alone =
+                baselineComputer.computeBackfillBaselines(
+                    listOf(DailySummaryMapper.toDomain(dSummary, berlin)),
+                    percentile,
+                    zoneId = berlin,
+                )
+            val withFuture =
+                baselineComputer.computeBackfillBaselines(
+                    listOf(
+                        DailySummaryMapper.toDomain(dSummary, berlin),
+                        DailySummaryMapper.toDomain(futureSummary, berlin),
+                    ),
+                    percentile,
+                    zoneId = berlin,
+                )
+            val liveRhr =
+                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(
+                    fromMs = startMs(dDate),
+                    toMs = startMs(dDate.plusDays(1)),
+                    percentile = percentile,
+                    zoneId = berlin,
+                )
+
+            assertEquals(
+                alone[dDate]?.rhrBpm,
+                withFuture[dDate]?.rhrBpm,
+                "future nights leaked across the DST-spanning batch",
+            )
+            assertEquals(
+                liveRhr,
+                withFuture[dDate]?.rhrBpm,
+                "backfill/live RHR disagree across the DST transition",
+            )
         }
 
     @Test
