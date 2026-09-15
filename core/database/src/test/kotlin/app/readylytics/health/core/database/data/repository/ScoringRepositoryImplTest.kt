@@ -150,6 +150,11 @@ class ScoringRepositoryImplTest {
         coEvery { scoringHistoryRepository.getDailySummaryByDate(any(), any()) } returns null
         coEvery { sleepSessionDao.getOverlapping(any(), any()) } returns emptyList()
         coEvery { sleepSessionDao.countSince(any()) } returns 10
+        // Task C2: CalibrationGate's prior-day count now comes from the cumulative
+        // countEligibleSleepDaysThrough port rather than BaselineComputer's HRV window -- mirror
+        // the same validHistoricalDayCount=6 stubbed below (+1 for a day's own session) so these
+        // tests still exercise the calibrated path they were written for.
+        coEvery { scoringHistoryRepository.countEligibleSleepDaysThrough(any(), any()) } returns 6
         coEvery {
             baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any(), any(), any(), null)
         } returns 60f

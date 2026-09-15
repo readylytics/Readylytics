@@ -1096,13 +1096,12 @@ no geometric `mu` is available yet (e.g. very early calibration). The arithmetic
 stored on `DailySummary.hrvBaseline` is never the primary display source.
 
 **Phase model** (`core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/components/Phase.kt` + `PhaseCalculator.kt`) classifies
-each day's `totalValidHrvNights` (baseline-usable session count, computed in
-`ComputeSleepMetricsUseCase`) into one of four phases, each carrying a `ConfidenceLevel`:
-Calibration 0-6 (Not Ready), Early Baseline 7-20 (Low), Maturing 21-59 (Medium), Mature 60+
-(High). The result is persisted per day as `snapshotCalibrationPhase` on
-`DailySummaryEntity`/`DailySummary` for dashboard + About display. This is independent of
-the diagnostic, days-since-install `phaseName` inlined in `AuditTrailFactory` (debug/audit
-trail only, not part of `computeConfigHash`).
+a cumulative maturity count (see §2.4.2, WP-12/OD-2) into one of four phases, each carrying a
+`ConfidenceLevel`: Calibration 0-6 (Not Ready), Early Baseline 7-20 (Low), Maturing 21-59
+(Medium), Mature 60+ (High) — these thresholds are unchanged by WP-12. The result is persisted
+per day as `snapshotCalibrationPhase` on `DailySummaryEntity`/`DailySummary` for dashboard +
+About display. This is independent of the diagnostic, days-since-install `phaseName` inlined in
+`AuditTrailFactory` (debug/audit trail only, not part of `computeConfigHash`).
 
 The historical backfill (`core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/BackfillHistoricalBaselinesUseCase` →
 `ComputeHistoricalBaselinesUseCase`) runs at app start under `HealthSyncUseCase.withSyncLock`
@@ -1196,6 +1195,77 @@ segments marked as coming from the selected source, then resolves by duration, t
 coverage, and stored source identity. If package metadata is not available for a record, the stored
 source/device fallback captured on ingest is used so the overlap choice stays stable across daily
 sync, historical resync, retention-window changes, and restarts.
+
+### 2.4.2 Maturity vs. statistical windows (WP-12, OD-2 gate)
+
+**OD-2, resolved:** calibration/maturity phase and the HRV mu/sigma *statistical* windows
+(`BaselineComputer.computeHrvWindowsBetween`, bounded to `HRV_MU_WINDOW_DAYS`/
+`HRV_SIGMA_WINDOW_DAYS`) are two deliberately different counters that must never be conflated.
+Before this task, `ComputeSleepMetricsUseCase` derived `sessionPhase`/`isCalibrating` from
+`totalValidHrvNights = validHistoricalDayCount + (current-night contribution)`, where
+`validHistoricalDayCount` came from the bounded HRV window. For a **frozen** day this window was
+hardcoded to `0` (frozen baselines skip the live HRV recompute entirely), so replaying a
+long-calibrated, frozen-mature day with no live history loaded silently re-derived
+`sessionPhase = CALIBRATION`/`isCalibrating = true` from `totalValidHrvNights ∈ {0, 1}` — a frozen
+mature user could be mis-reported as still calibrating purely as an artifact of the replay path,
+even though nothing about their actual history changed. `ScoringGoldenSnapshotTest`'s
+`day_with_workouts_and_frozen_snapshot` fixture is the regression lock for this: with a frozen
+`baselineObservationCount = 14` and no `snapshotCalibrationPhase` stamped on the row (a legacy
+frozen snapshot with a count but no persisted phase), the corrected pipeline resolves
+`EARLY_BASELINE`/`isCalibrating = false`, not the previous `CALIBRATION`/`true`.
+
+**Maturity is now its own cumulative, unbounded counter**, independent of any statistical window
+size. `ScoringHistoryRepository.countEligibleSleepDaysThrough(endDay, zoneId)` (impl:
+`ScoringHistoryRepositoryImpl`, `core/database/.../data/repository/`) scans full retained
+sleep-session history through `endDay` inclusive, evaluates each session against the same
+`ScoringCalculator.validateNight` eligibility policy the rest of the pipeline uses, maps each
+eligible session to its canonical score day (the session's wake/end-time local date), dedupes by
+score day (two sessions landing on one day count once), and returns the count of distinct eligible
+score days `<= endDay`. It returns `null` — never a fabricated `0` — when there is no retained
+session data at all through `endDay`: missing/gapped older raw history (e.g. past the retention
+cutoff) is explicit "unknown," not evidence for inventing observations. `countEligibleSleepDaysThroughBatch(endDays, zoneId)`
+is the same computation shared across many requested days from one scan, used by
+`ComputeHistoricalBaselinesUseCase`'s backfill instead of one full-history scan per day.
+
+**`CalibrationState`/`resolveCalibrationState`**
+(`core/scoring/.../domain/scoring/CalibrationState.kt`) is the single resolution point for
+`observationCount`/`phase`/`isCalibrating`:
+- A **frozen** day (`frozenCount != null || frozenPhase != null`, detected from the persisted
+  `baselineObservationCount`/`snapshotCalibrationPhase` themselves — never inferred merely from the
+  presence of a freeze timestamp) always prefers the frozen count over any live recompute: a frozen
+  day's phase was already what the user was scored against, and a live count from a replay with no
+  history loaded must never override it.
+- If a frozen count and a frozen phase are both present but disagree (`PhaseCalculator.calculatePhase(frozenCount) != frozenPhase`),
+  this is corrupted/inconsistent metadata needing repair — never a shortcut to `MATURE` — so both
+  `observationCount` and `phase` resolve to `null` and `isCalibrating` resolves to `true` (the
+  conservative default), queuing a metadata repair rather than trusting either stored value.
+- `isCalibrating` is set exactly once, here, and threaded unchanged into every summary/diagnostics
+  branch: `ComputeSleepMetricsUseCase`'s recovery-flag evaluation and `Diagnostics.isCalibrating`,
+  `SleepBaselineMetrics.resolveCalibrationSnapshots`'s `observationCount`, and
+  `AssembleDailySummaryUseCase.assembleCalibrated` (which now explicitly clears `isCalibrating` —
+  that branch is only reached once `CalibrationGate` has already determined the user is
+  calibrated, so a stale `true` left on the persisted row must never leak through). No branch
+  re-derives or independently diverges from the one resolved `CalibrationState`.
+- Existing phase-boundary thresholds (6/7, 20/21, 29/30, 59/60) and every scoring
+  formula/coefficient are unchanged by this task — `resolveCalibrationState` only changes *which
+  count* is fed into the existing, unmodified `PhaseCalculator.calculatePhase`.
+
+**Threaded through every count consumer:** `CalibrationGate.isCalibrated` (live daily sync and
+morning/workout-recommendation calls) now sources the prior-days count from
+`ScoringHistoryRepository.countEligibleSleepDaysThrough`, not `BaselineComputer`'s bounded HRV
+window. `ComputeSleepMetricsUseCase` only performs a live scan when there is no frozen count/phase
+to trust (`frozenObservationCount == null && frozenPhase == null`); a frozen day never triggers a
+live scan. `ComputeHistoricalBaselinesUseCase`'s backfill sources `baselineObservationCount` from
+the batched cumulative count instead of `windows.muHistory.size`. No caching layer was introduced
+for these counts — `ComputeHistoricalBaselinesUseCase` performs one batched scan per backfill
+invocation (function-local, not persisted), and the live single-day scan re-reads on every call —
+so there is nothing to leak across H6 historical-run generations (`HistoricalRunIdentity.runId`);
+a future cache over this count must be scoped to that run identity the same way H6 scopes its own
+state, rather than inventing a parallel mechanism.
+
+**No new Room schema.** `baselineObservationCount: Int?` and `snapshotCalibrationPhase: String?`
+on `DailySummaryEntity`/`DailySummary` were already nullable before this task and compatibly encode
+"unknown" as `null` — no migration was needed or added.
 
 ### 2.5 Sleep & Load scoring strategies
 

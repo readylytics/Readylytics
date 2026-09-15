@@ -68,7 +68,7 @@ class ScoringRepositoryImpl
         private val dailyTrimpComputer =
             DailyTrimpComputer(dataLoader, useCases.computeDailyTrimp, useCases.assembleEverydayLoadInput)
         private val baseSummaryAssembler = BaseSummaryAssembler(bodyMetricsDataLoader)
-        private val calibrationGate = CalibrationGate(baselineComputer)
+        private val calibrationGate = CalibrationGate(scoringHistoryRepository)
         private val rasTotalsComputer = RasTotalsComputer(seriesLoader)
         private val residualFatigueComputer =
             ResidualFatigueComputer(dataLoader, useCases.computeResidualFatigue)

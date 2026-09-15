@@ -141,6 +141,13 @@ class ScoringRepositoryBiphasicIntegrationTest {
 
             every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
             coEvery { scoringHistoryRepository.getDailySummaryByDate(any(), any()) } returns null
+            // Task C2: CalibrationGate's prior-day count now comes from the cumulative
+            // countEligibleSleepDaysThrough port rather than BaselineComputer's HRV window --
+            // mirror the same validHistoricalDayCount=6 used below (+1 for this day's own
+            // session) so this test still exercises the calibrated path it was written for.
+            coEvery {
+                scoringHistoryRepository.countEligibleSleepDaysThrough(any(), any())
+            } returns 6
             coEvery {
                 baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any(), any(), any(), null)
             } returns 60f

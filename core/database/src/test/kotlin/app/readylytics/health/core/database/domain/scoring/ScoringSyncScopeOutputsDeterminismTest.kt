@@ -591,7 +591,20 @@ class ScoringSyncScopeOutputsDeterminismTest {
                 "hrvSigmaMssd" to { it.hrvSigmaMssd },
                 "restingHeartRate" to { it.restingHeartRate },
                 "nocturnalHrv" to { it.nocturnalHrv },
-                "baselineObservationCount" to { it.baselineObservationCount },
+                // Task C2 (WP-12, OD-2 gate): baselineObservationCount is now the cumulative,
+                // unbounded count of eligible sleep-days scanned from currently retained history
+                // (ScoringHistoryRepository.countEligibleSleepDaysThrough) -- deliberately NOT a
+                // fixed-size statistical window anymore, so it legitimately differs across sync
+                // scopes that retained different amounts of history for the exact same underlying
+                // continuous fixture (a 60-day scope genuinely cannot see the 365-day scope's
+                // older sessions; that is the documented "missing history is unknown, never
+                // fabricated" policy, not non-determinism in scoring). What DOES stay invariant --
+                // and is exactly what would affect scoring -- is the resolved calibration PHASE:
+                // every scope here retains at least 60 eligible days, so all cross the same
+                // MATURE (60+) threshold identically. Deliberately excluded from this matrix; see
+                // `snapshotCalibrationPhase` below for the phase-level invariant this replaces it
+                // with.
+                "snapshotCalibrationPhase" to { it.snapshotCalibrationPhase },
                 "zLnHrv" to { it.zLnHrv },
                 "zRhr" to { it.zRhr },
                 "sRest" to { it.sRest },

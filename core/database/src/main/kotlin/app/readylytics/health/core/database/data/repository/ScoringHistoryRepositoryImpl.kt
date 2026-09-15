@@ -14,6 +14,12 @@ import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.database.data.local.reconstructSampleValues
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
+import app.readylytics.health.core.scoring.domain.scoring.CompositeScoringCalculator
+import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
+import app.readylytics.health.core.scoring.domain.scoring.strategies.LoadScoringStrategy
+import app.readylytics.health.core.scoring.domain.scoring.strategies.RasScoringStrategy
+import app.readylytics.health.core.scoring.domain.scoring.strategies.SleepScoringStrategy
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
@@ -32,6 +38,16 @@ class ScoringHistoryRepositoryImpl
         private val sleepSessionDao: SleepSessionDao,
         private val dailySummaryDao: DailySummaryDao,
         private val minuteBucketDao: MinuteBucketDao,
+        // Task C2: eligibility (validateNight) for countEligibleSleepDaysThrough{,Batch}. Defaulted
+        // to a real (pure, zero-arg-constructible) calculator so the many existing 5-arg call sites
+        // across the test suite keep compiling; production DI always supplies the bound
+        // ScoringCalculator implementation via ScoringBindsModule regardless of this default.
+        private val scoringCalculator: ScoringCalculator =
+            CompositeScoringCalculator(
+                sleepStrategy = SleepScoringStrategy(LoadScoringStrategy()),
+                rasStrategy = RasScoringStrategy(),
+                loadStrategy = LoadScoringStrategy(),
+            ),
     ) : ScoringHistoryRepository {
         override suspend fun getSleepSessionsSince(fromMs: Long): List<SleepSession> =
             sleepSessionDao.getSince(fromMs).map(SleepSessionMapper::toDomain)
@@ -156,5 +172,54 @@ class ScoringHistoryRepositoryImpl
                 rasScalingFactor = rasScalingFactor,
                 baselineObservationCount = baselineObservationCount,
             )
+        }
+
+        override suspend fun countEligibleSleepDaysThrough(
+            endDay: LocalDate,
+            zoneId: ZoneId,
+        ): Int? = countEligibleSleepDaysThroughBatch(listOf(endDay), zoneId)[endDay]
+
+        override suspend fun countEligibleSleepDaysThroughBatch(
+            endDays: List<LocalDate>,
+            zoneId: ZoneId,
+        ): Map<LocalDate, Int?> {
+            // endDays.maxOrNull() is null only when endDays itself is empty, in which case every
+            // associateWith below is a no-op over an empty list regardless of the sessions fetched
+            // -- so the empty-endDays case needs no separate early return.
+            val sessions =
+                endDays
+                    .maxOrNull()
+                    ?.let { maxEndDay ->
+                        val maxEndMs = maxEndDay.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli() - 1
+                        getSleepSessionsBetween(0L, maxEndMs)
+                    }.orEmpty()
+            if (sessions.isEmpty()) return endDays.associateWith { null }
+
+            val sessionIds = sessions.map { it.id }
+            val hrvMap = getSleepRmssdForSessionsMap(sessionIds)
+            val hrMap = getAvgSleepHrForSessions(sessionIds)
+            val eligibleScoreDays =
+                sessions
+                    .filter { session -> isEligibleForBaseline(session, hrvMap, hrMap) }
+                    .map { Instant.ofEpochMilli(it.endTime).atZone(zoneId).toLocalDate() }
+                    .distinct()
+            return endDays.associateWith { endDay -> eligibleScoreDays.count { it <= endDay } }
+        }
+
+        private fun isEligibleForBaseline(
+            session: SleepSession,
+            hrvMap: Map<String, List<Float>>,
+            hrMap: Map<String, Int>,
+        ): Boolean {
+            val samples = hrvMap[session.id].orEmpty()
+            val avgHr = hrMap[session.id]
+            return scoringCalculator
+                .validateNight(
+                    rmssdMs = if (samples.isNotEmpty()) samples.average().toFloat() else null,
+                    rhrBpm = avgHr?.toFloat(),
+                    durationMinutes = session.durationMinutes,
+                    deepMinutes = session.deepSleepMinutes,
+                    remMinutes = session.remSleepMinutes,
+                ).canContributeToBaseline
         }
     }

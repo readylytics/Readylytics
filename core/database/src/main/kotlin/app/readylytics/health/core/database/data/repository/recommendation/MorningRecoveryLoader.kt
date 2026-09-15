@@ -120,13 +120,13 @@ class MorningRecoveryLoader
             val thresholds = emergencyThresholds(context)
             // `ComputeSleepMetricsUseCase` never stamps `isCalibrating` on the summary it returns
             // (it passes the caller's value through), so it has to be resolved here — through the
-            // same gate the daily pipeline uses, bounded at the wake time.
+            // same gate the daily pipeline uses. The gate's cumulative prior-days count is
+            // day-granular (through yesterday), so it needs no wake-time bound; today's own
+            // eligibility is `hasSession` below, not `boundedSessions`.
             val isCalibrating =
                 !calibrationGate.isCalibrated(
                     context = context,
-                    prefetchedSessions = boundedSessions,
                     hasSession = true,
-                    toMs = wakeTimeMs,
                 )
 
             return WorkoutRecommendationInput(

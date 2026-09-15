@@ -7,8 +7,12 @@ import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
+import io.mockk.coEvery
+import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -78,6 +82,96 @@ class ScoringHistoryRepositoryImplTest {
             assertEquals(1, result.size)
             assertEquals(LocalDate.of(1970, 1, 1), result.first().date)
     }
+
+    // ─── countEligibleSleepDaysThrough{,Batch} (Task C2 / OD-2) ────────────────────────────────
+    // Uses real mockk-backed DAOs plus the repository's real (default) ScoringCalculator so
+    // eligibility is exercised via genuine validateNight behavior, not a stubbed boolean.
+
+    private fun testSession(
+        id: String,
+        startTime: Long,
+        durationMinutes: Int = 480,
+    ) = SleepSessionEntity(
+        id = id,
+        startTime = startTime,
+        endTime = startTime + durationMinutes * 60_000L,
+        durationMinutes = durationMinutes,
+        deepSleepMinutes = 60,
+        remSleepMinutes = 60,
+        lightSleepMinutes = (durationMinutes - 120).coerceAtLeast(0),
+        efficiency = 0.9f,
+        awakeMinutes = 10,
+    )
+
+    private fun repositoryWithSessions(
+        sessions: List<SleepSessionEntity>,
+        rmssdBySession: Map<String, List<Float>> = sessions.associate { it.id to listOf(40f) },
+    ): ScoringHistoryRepositoryImpl {
+        val heartRateDao = mockk<HeartRateDao>()
+        val hrvDao = mockk<HrvDao>()
+        val sleepSessionDao = mockk<SleepSessionDao>()
+        val dailySummaryDao = mockk<DailySummaryDao>()
+        val minuteBucketDao = mockk<MinuteBucketDao>(relaxed = true)
+        coEvery { sleepSessionDao.getBetween(any(), any()) } returns sessions
+        coEvery { hrvDao.getSleepRmssdForSessionsMap(any()) } returns rmssdBySession
+        coEvery { heartRateDao.getSleepHrProjectionForSessions(any()) } returns emptyList()
+        return ScoringHistoryRepositoryImpl(heartRateDao, hrvDao, sleepSessionDao, dailySummaryDao, minuteBucketDao)
+    }
+
+    @Test
+    fun `countEligibleSleepDaysThrough returns null when there is no retained session data`() =
+        runTest {
+            val repository = repositoryWithSessions(emptyList())
+
+            assertNull(repository.countEligibleSleepDaysThrough(LocalDate.of(2026, 1, 1), ZoneOffset.UTC))
+        }
+
+    @Test
+    fun `countEligibleSleepDaysThrough dedupes two eligible sessions on the same score day`() =
+        runTest {
+            val day = LocalDate.of(2026, 1, 10)
+            val dayStartMs = day.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+            val sessionA = testSession("a", dayStartMs)
+            val sessionB = testSession("b", dayStartMs + 9 * 3_600_000L, durationMinutes = 300)
+            val repository = repositoryWithSessions(listOf(sessionA, sessionB))
+
+            val result = repository.countEligibleSleepDaysThrough(day, ZoneOffset.UTC)
+
+            assertEquals(1, result)
+        }
+
+    @Test
+    fun `countEligibleSleepDaysThrough excludes a session that fails validateNight`() =
+        runTest {
+            val day = LocalDate.of(2026, 1, 10)
+            val dayStartMs = day.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+            // 100 minutes is below MIN_VALID_SLEEP_DURATION_MINUTES (240) -- not eligible.
+            val tooShort = testSession("short", dayStartMs, durationMinutes = 100)
+            val repository = repositoryWithSessions(listOf(tooShort))
+
+            val result = repository.countEligibleSleepDaysThrough(day, ZoneOffset.UTC)
+
+            assertEquals(0, result)
+        }
+
+    @Test
+    fun `countEligibleSleepDaysThroughBatch returns a cumulative count per requested day`() =
+        runTest {
+            val day1 = LocalDate.of(2026, 1, 1)
+            val day2 = LocalDate.of(2026, 1, 2)
+            val day3 = LocalDate.of(2026, 1, 3)
+            val sessions =
+                listOf(day1, day2, day3).mapIndexed { index, day ->
+                    testSession("s$index", day.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli())
+                }
+            val repository = repositoryWithSessions(sessions)
+
+            val result = repository.countEligibleSleepDaysThroughBatch(listOf(day1, day2, day3), ZoneOffset.UTC)
+
+            assertEquals(1, result[day1])
+            assertEquals(2, result[day2])
+            assertEquals(3, result[day3])
+        }
 
     @Suppress("UNCHECKED_CAST")
     private inline fun <reified T> fakeDao(results: MutableMap<String, Any?> = mutableMapOf()): T =

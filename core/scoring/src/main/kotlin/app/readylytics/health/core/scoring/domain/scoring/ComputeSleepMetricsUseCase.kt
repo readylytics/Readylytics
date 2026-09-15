@@ -14,7 +14,7 @@ import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
-import app.readylytics.health.core.scoring.domain.scoring.components.PhaseCalculator
+import app.readylytics.health.core.scoring.domain.scoring.components.Phase
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayPolicy
 import java.time.Instant
 import java.time.LocalDate
@@ -197,10 +197,30 @@ class ComputeSleepMetricsUseCase
                         prefetchedSessions = prefetchedSessions?.map { it.toSleepSessionData() },
                     )
 
-                val totalValidHrvNights =
-                    validHistoricalDayCount + (if (validation.canContributeToBaseline) 1 else 0)
-                val isCalibrating = totalValidHrvNights < ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION
-                val sessionPhase = PhaseCalculator.calculatePhase(totalValidHrvNights)
+                // Task C2 (WP-12, OD-2 gate): maturity/calibration phase is resolved from the
+                // cumulative, unbounded countEligibleSleepDaysThrough counter -- NOT
+                // validHistoricalDayCount, which stays scoped to the HRV mu/sigma statistical
+                // window (HRV_SIGMA_WINDOW_DAYS) and must not be reused for maturity. A validated
+                // frozen count/phase (persisted on `summary`) always wins over a live recompute;
+                // the live scan only runs when there is no frozen calibration metadata to trust.
+                val frozenObservationCount = summary.baselineObservationCount
+                val frozenPhase =
+                    summary.snapshotCalibrationPhase?.let { name -> runCatching { Phase.valueOf(name) }.getOrNull() }
+                val liveEligibleCount =
+                    if (frozenObservationCount == null && frozenPhase == null) {
+                        collaborators.scoringHistoryRepository
+                            .countEligibleSleepDaysThrough(targetDate.minusDays(1), zoneId)
+                            ?.plus(if (validation.canContributeToBaseline) 1 else 0)
+                    } else {
+                        null
+                    }
+                val calibrationState =
+                    resolveCalibrationState(
+                        liveCount = liveEligibleCount,
+                        frozenCount = frozenObservationCount,
+                        frozenPhase = frozenPhase,
+                    )
+                val isCalibrating = calibrationState.isCalibrating
 
                 val nocturnalScoring =
                     if (currentNocturnalRhr != null) {
@@ -297,7 +317,8 @@ class ComputeSleepMetricsUseCase
                             validHistoricalSessionIds = validHistoricalSessionIds,
                             persistedZLnHrv = nocturnalScoring.persistedZLnHrv,
                             persistedZRhr = nocturnalScoring.persistedZRhr,
-                            sessionPhase = sessionPhase.name,
+                            sessionPhase = calibrationState.phase?.name,
+                            observationCount = calibrationState.observationCount,
                             readinessResult = nocturnalScoring.readinessResult,
                             sRest = nocturnalScoring.sRest,
                             sleepScore = nocturnalScoring.sleepScore,

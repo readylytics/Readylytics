@@ -71,7 +71,6 @@ class FinalSummaryAssembler(
         val isCalibrated =
             calibrationGate.isCalibrated(
                 inputs.context,
-                inputs.baselineContext?.sessions,
                 inputs.session != null,
             )
         val base =

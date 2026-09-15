@@ -131,7 +131,12 @@ class BackfillBaselinesUseCaseTest {
     fun setupSuite1() {
         baselineComputer = mockk()
         loadScoringStrategy = mockk()
-        computeUseCase = ComputeHistoricalBaselinesUseCase(baselineComputer, loadScoringStrategy)
+        // Task C2: baselineObservationCount now comes from this separate cumulative counter
+        // rather than windows.muHistory.size -- relaxed here since this suite doesn't assert on
+        // the observation count (see ComputeHistoricalBaselinesUseCaseTest for that coverage).
+        val scoringHistoryRepository = mockk<ScoringHistoryRepository>(relaxed = true)
+        computeUseCase =
+            ComputeHistoricalBaselinesUseCase(baselineComputer, loadScoringStrategy, scoringHistoryRepository)
     }
 
     // --- no-lookahead (rows older than 30 days are still processed) ---
@@ -626,7 +631,8 @@ class BackfillBaselinesUseCaseTest {
     > {
         val bc = mockk<BaselineComputer>()
         val ls = mockk<LoadScoringStrategy>()
-        return Triple(bc, ls, ComputeHistoricalBaselinesUseCase(bc, ls))
+        val history = mockk<ScoringHistoryRepository>(relaxed = true)
+        return Triple(bc, ls, ComputeHistoricalBaselinesUseCase(bc, ls, history))
     }
 
     @Test
@@ -857,7 +863,8 @@ class BackfillBaselinesUseCaseTest {
             // Verify at the ComputeHistoricalBaselinesUseCase level that baselineCalculatedAtDate is set.
             val bc = mockk<BaselineComputer>()
             val ls = mockk<LoadScoringStrategy>()
-            val compute = ComputeHistoricalBaselinesUseCase(bc, ls)
+            val history = mockk<ScoringHistoryRepository>(relaxed = true)
+            val compute = ComputeHistoricalBaselinesUseCase(bc, ls, history)
 
             stubBackfill(bc, listOf(50f), listOf(50f), 60f)
             coEvery { ls.hrvSigma(any(), any()) } returns 0.18f

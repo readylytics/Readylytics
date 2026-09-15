@@ -15,6 +15,7 @@ import app.readylytics.health.core.model.domain.recommendation.WorkoutRecommenda
 import app.readylytics.health.core.model.domain.recommendation.WorkoutRecommendationState
 import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
 import app.readylytics.health.core.model.domain.repository.FatigueWorkoutInput
+import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.model.domain.repository.SleepSessionData
 import app.readylytics.health.core.model.domain.repository.SleepSessionRepository
 import app.readylytics.health.core.model.domain.repository.WorkoutData
@@ -79,6 +80,7 @@ class MorningRecommendationAssemblerTest {
     private val dailySummaryRepository = mockk<DailySummaryRepository>()
     private val displayMetrics = mockk<GetWorkoutDisplayMetricsUseCase>()
     private val baselineComputer = mockk<BaselineComputer>()
+    private val scoringHistoryRepository = mockk<ScoringHistoryRepository>()
 
     private val morningSession =
         sleepData("main", endMs = wakeMs, durationMinutes = 480)
@@ -242,6 +244,13 @@ class MorningRecommendationAssemblerTest {
                 validHistoricalSessionIds = emptyList(),
                 validHistoricalDayCount = validHistoricalDayCount,
             )
+        // Task C2: CalibrationGate's prior-day count now comes from the cumulative
+        // countEligibleSleepDaysThrough port rather than BaselineComputer's HRV window, so the
+        // same validHistoricalDayCount value must be mirrored here for these tests to still
+        // exercise the calibrating/calibrated boundary they were written for.
+        coEvery {
+            scoringHistoryRepository.countEligibleSleepDaysThrough(endDay = date.minusDays(1), zoneId = zone)
+        } returns validHistoricalDayCount
     }
 
     private fun stubHrv(mean: Float = 55f) {
@@ -301,7 +310,7 @@ class MorningRecommendationAssemblerTest {
                     residualFatigueComputer = fatigueComputer,
                     scoringConfigFactory = ScoringConfigFactory(),
                     baselineComputer = baselineComputer,
-                    calibrationGate = CalibrationGate(baselineComputer),
+                    calibrationGate = CalibrationGate(scoringHistoryRepository),
                 ),
             exampleLoader =
                 WorkoutExampleLoader(
