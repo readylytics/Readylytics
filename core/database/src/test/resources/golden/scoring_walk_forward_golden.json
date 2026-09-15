@@ -6234,6 +6234,10 @@
         "dateMidnightMs": 1724968800000,
         "hrvBaseline": 39,
         "stepCount": 0,
+        "recoveryFlags": "HRV_MISSING",
+        "diagnostics": {
+            "hrvMissing": true
+        },
         "isCalibrating": false,
         "rhrBpm": 51.0,
         "baselineCalculatedAtDate": "2024-08-30",
@@ -6268,6 +6272,10 @@
         "dateMidnightMs": 1725055200000,
         "hrvBaseline": 39,
         "stepCount": 0,
+        "recoveryFlags": "HRV_MISSING",
+        "diagnostics": {
+            "hrvMissing": true
+        },
         "isCalibrating": false,
         "rhrBpm": 51.0,
         "baselineCalculatedAtDate": "2024-08-31",
@@ -6302,6 +6310,10 @@
         "dateMidnightMs": 1725141600000,
         "hrvBaseline": 39,
         "stepCount": 0,
+        "recoveryFlags": "HRV_MISSING",
+        "diagnostics": {
+            "hrvMissing": true
+        },
         "isCalibrating": false,
         "rhrBpm": 51.0,
         "baselineCalculatedAtDate": "2024-09-01",
@@ -6336,6 +6348,10 @@
         "dateMidnightMs": 1725228000000,
         "hrvBaseline": 39,
         "stepCount": 0,
+        "recoveryFlags": "HRV_MISSING",
+        "diagnostics": {
+            "hrvMissing": true
+        },
         "isCalibrating": false,
         "rhrBpm": 51.0,
         "baselineCalculatedAtDate": "2024-09-02",
@@ -6370,6 +6386,10 @@
         "dateMidnightMs": 1725314400000,
         "hrvBaseline": 39,
         "stepCount": 0,
+        "recoveryFlags": "HRV_MISSING",
+        "diagnostics": {
+            "hrvMissing": true
+        },
         "isCalibrating": false,
         "rhrBpm": 51.0,
         "baselineCalculatedAtDate": "2024-09-03",

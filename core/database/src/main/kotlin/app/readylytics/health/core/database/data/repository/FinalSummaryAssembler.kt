@@ -10,6 +10,9 @@ import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineCo
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardVo2MaxContext
+import app.readylytics.health.core.model.domain.scoring.DayAssembly
+import app.readylytics.health.core.model.domain.scoring.DayAssemblyUnavailableReason
+import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.scoring.domain.cardio.MaterkoAdaptedVo2MaxCalculator
 import app.readylytics.health.core.scoring.domain.cardio.UthVo2MaxCalculator
 import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxResolution
@@ -18,6 +21,7 @@ import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
 import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 import app.readylytics.health.core.scoring.domain.scoring.EverydayHrLoadResult
 import app.readylytics.health.core.scoring.domain.scoring.TrainingReadinessProjection
+import kotlinx.coroutines.CancellationException
 import java.util.concurrent.TimeUnit
 
 data class Vo2MaxScoringDependencies(
@@ -58,22 +62,72 @@ class FinalSummaryAssembler(
         val stagedWorkouts: List<WorkoutRecordEntity> = emptyList(),
     )
 
-    suspend fun assemble(inputs: Inputs): DailySummary {
-        val baseSummary =
-            baseSummaryAssembler.buildBaseSummary(
-                inputs.context,
-                inputs.dailyTrimpRaw,
-                inputs.trimpEverydayHr,
-                inputs.rasTotals,
-                inputs.everydayResult,
-                inputs.aggregatedSleep,
-            )
-        val isCalibrated =
-            calibrationGate.isCalibrated(
-                inputs.context,
-                inputs.session != null,
-            )
-        val base =
+    /**
+     * C3 (WP-13): each stage of this pipeline is wrapped so a transient failure anywhere converts
+     * to an explicit [DayAssembly.Unavailable] with a stage-specific reason code instead of a bare
+     * exception -- the caller (`ScoringRepositoryImpl`) must then leave the previous complete day,
+     * its canonical workout values, and its dirty ticket entirely untouched. [CancellationException]
+     * always rethrows: cancellation must propagate as cancellation, never get swallowed into an
+     * "unavailable" result. On success the day is [DayAssembly.Computed] when its required sleep
+     * session was present, or [DayAssembly.Absent] when it was confirmed missing -- both are
+     * genuinely complete, publishable candidates.
+     */
+    suspend fun assemble(inputs: Inputs): DayAssembly {
+        val base = assembleBase(inputs)
+        val isCalibrated = base?.let { calibrationGate.isCalibrated(inputs.context, inputs.session != null) }
+        val summary = base?.let { b -> isCalibrated?.let { resolveScoredSummaryOrNull(b, inputs, it) } }
+        val finalSummary = summary?.let { s -> isCalibrated?.let { finalizeScoredSummaryOrNull(s, inputs, it) } }
+
+        // Single terminal return keeps this within detekt's ReturnCount limit -- each `null` above
+        // was already logged at its own stage by the *OrNull helper that produced it.
+        return when {
+            base == null -> DayAssembly.Unavailable(DayAssemblyUnavailableReason.BASE_ASSEMBLY_FAILED)
+            summary == null -> DayAssembly.Unavailable(DayAssemblyUnavailableReason.READINESS_ASSEMBLY_FAILED)
+            finalSummary == null -> DayAssembly.Unavailable(DayAssemblyUnavailableReason.FINAL_ASSEMBLY_FAILED)
+            inputs.session == null -> DayAssembly.Absent(finalSummary)
+            else -> DayAssembly.Computed(finalSummary)
+        }
+    }
+
+    private suspend fun resolveScoredSummaryOrNull(
+        base: ReadinessBaseInputs,
+        inputs: Inputs,
+        isCalibrated: Boolean,
+    ): DailySummary? =
+        try {
+            resolveScoredSummary(base, inputs, isCalibrated)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logE("FinalSummaryAssembler", e) { "Readiness assembly failed for ${inputs.context.targetDate}" }
+            null
+        }
+
+    private suspend fun finalizeScoredSummaryOrNull(
+        summary: DailySummary,
+        inputs: Inputs,
+        isCalibrated: Boolean,
+    ): DailySummary? =
+        try {
+            finalizeScoredSummary(summary, inputs, isCalibrated)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logE("FinalSummaryAssembler", e) { "Final assembly failed for ${inputs.context.targetDate}" }
+            null
+        }
+
+    private suspend fun assembleBase(inputs: Inputs): ReadinessBaseInputs? =
+        try {
+            val baseSummary =
+                baseSummaryAssembler.buildBaseSummary(
+                    inputs.context,
+                    inputs.dailyTrimpRaw,
+                    inputs.trimpEverydayHr,
+                    inputs.rasTotals,
+                    inputs.everydayResult,
+                    inputs.aggregatedSleep,
+                )
             ReadinessBaseInputs(
                 session = inputs.session,
                 currentSessionIds = inputs.currentSessionIds,
@@ -81,7 +135,18 @@ class FinalSummaryAssembler(
                 avgSpo2 = bodyMetricsDataLoader.loadAvgSpo2(inputs.session),
                 avgBodyTemp = bodyMetricsDataLoader.loadAvgBodyTemp(inputs.session),
             )
-        val summary = resolveScoredSummary(base, inputs, isCalibrated)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logE("FinalSummaryAssembler", e) { "Base summary assembly failed for ${inputs.context.targetDate}" }
+            null
+        }
+
+    private suspend fun finalizeScoredSummary(
+        summary: DailySummary,
+        inputs: Inputs,
+        isCalibrated: Boolean,
+    ): DailySummary {
         val withFatigue =
             summary.copy(
                 residualFatigue =

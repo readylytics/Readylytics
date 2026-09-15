@@ -7,6 +7,8 @@ import app.readylytics.health.core.databaseschema.data.local.dao.HealthMutationS
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
+import app.readylytics.health.core.model.domain.scoring.DayAssembly
+import app.readylytics.health.core.model.domain.scoring.summaryOrNull
 import app.readylytics.health.core.model.domain.sync.DirtyTicket
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
 import java.time.ZoneId
@@ -79,6 +81,33 @@ class DirtySummaryPublisher
             } catch (_: PublishAbortedException) {
                 false
             }
+
+        /**
+         * C3 (WP-13): [DayAssembly]-typed entry point. Only [DayAssembly.Computed] and
+         * [DayAssembly.Absent] may ever reach [publish]'s generation-checked transaction --
+         * [DayAssembly.Unavailable] is rejected here, before any transaction opens, exactly like a
+         * failed publish: the ticket and whatever was previously persisted for this day are left
+         * entirely alone. This does not change [publish]'s own atomicity/generation-check logic; it
+         * only narrows what may call into it.
+         */
+        suspend fun publish(
+            ticket: DirtyTicket,
+            assembly: DayAssembly,
+            zoneId: ZoneId,
+            expectedSourceGeneration: Long,
+            stagedWorkoutUpdates: List<ComputeDailyTrimpUseCase.WorkoutModelTrimpUpdate> = emptyList(),
+            activeSnapshotId: String? = null,
+        ): Boolean {
+            val summary = assembly.summaryOrNull() ?: return false
+            return publish(
+                ticket = ticket,
+                summary = summary,
+                zoneId = zoneId,
+                expectedSourceGeneration = expectedSourceGeneration,
+                stagedWorkoutUpdates = stagedWorkoutUpdates,
+                activeSnapshotId = activeSnapshotId,
+            )
+        }
 
         private class PublishAbortedException : RuntimeException()
     }

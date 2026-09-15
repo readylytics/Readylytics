@@ -15,6 +15,7 @@ import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecor
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.model.ReadinessResult
+import app.readylytics.health.core.model.domain.scoring.DayAssembly
 import app.readylytics.health.core.model.domain.sync.DirtyTicket
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
 import kotlinx.coroutines.runBlocking
@@ -316,6 +317,94 @@ class DirtyMutationRecoveryInstrumentedTest {
             val pending = database.dirtyRangeDao().pending(100)
             assertEquals(1, pending.size)
             assertEquals(day.plusDays(1).toEpochDay(), pending.first().nextEpochDay)
+        }
+
+    // C3 (WP-13): DayAssembly.Unavailable must be rejected before publish(...) ever opens a
+    // transaction -- a real Room-backed proof that this is a genuine no-op (nothing written, old
+    // summary and pending ticket both untouched), not merely a claim proven only by a mock.
+    @Test
+    fun unavailableAssemblyIsRejectedWithoutTouchingSummaryOrTicket() =
+        runBlocking {
+            database.seedDefaultMutationState(1L)
+            val day = LocalDate.of(2026, 2, 1)
+            val dayMs = day.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+            val oldSummary = createTestDailySummary(day, 70f)
+            database.dailySummaryDao().upsert(oldSummary)
+            database.insertTestWorkout("workout-unavailable", dayMs)
+
+            val ticketId = database.insertTestTicket(day = day)
+            val ticket =
+                DirtyTicket(
+                    id = ticketId,
+                    sourceGeneration = 1L,
+                    nextDay = day,
+                    endInclusive = day.plusDays(100),
+                    scoringSnapshotId = "snap-1",
+                )
+            val stagedUpdates =
+                listOf(ComputeDailyTrimpUseCase.WorkoutModelTrimpUpdate("workout-unavailable", 42f))
+
+            val published =
+                publisher.publish(
+                    ticket = ticket,
+                    assembly = DayAssembly.Unavailable("FINAL_ASSEMBLY_FAILED"),
+                    zoneId = ZoneOffset.UTC,
+                    expectedSourceGeneration = 1L,
+                    stagedWorkoutUpdates = stagedUpdates,
+                    activeSnapshotId = "snap-1",
+                )
+            assertFalse(published)
+
+            reopenDatabase()
+            assertEquals(oldSummary, database.dailySummaryDao().getByDate(dayMs))
+            assertNull(database.workoutDao().getById("workout-unavailable")?.modelTrimp)
+            val pending = database.dirtyRangeDao().pending(100)
+            assertEquals(1, pending.size)
+            assertEquals(day.toEpochDay(), pending.first().nextEpochDay)
+        }
+
+    // C3 (WP-13): DayAssembly.Absent must publish and advance the dirty ticket exactly like
+    // Computed -- both are genuinely complete candidates. Real Room-backed proof, not a mock.
+    @Test
+    fun absentAssemblyPublishesAndAdvancesTicketLikeComputed() =
+        runBlocking {
+            database.seedDefaultMutationState(1L)
+            val day = LocalDate.of(2026, 2, 1)
+            val dayMs = day.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+            val oldSummary = createTestDailySummary(day, 70f)
+            database.dailySummaryDao().upsert(oldSummary)
+
+            val ticketId = database.insertTestTicket(day = day)
+            val ticket =
+                DirtyTicket(
+                    id = ticketId,
+                    sourceGeneration = 1L,
+                    nextDay = day,
+                    endInclusive = day.plusDays(100),
+                    scoringSnapshotId = "snap-1",
+                )
+            val absentSummary =
+                DailySummary(
+                    date = day,
+                    sleepScore = null,
+                    readinessResult = ReadinessResult.EMPTY,
+                    isCalibrating = false,
+                )
+
+            val published =
+                publisher.publish(
+                    ticket = ticket,
+                    assembly = DayAssembly.Absent(absentSummary),
+                    zoneId = ZoneOffset.UTC,
+                    expectedSourceGeneration = 1L,
+                )
+            assertTrue(published)
+
+            reopenDatabase()
+            val pending = database.dirtyRangeDao().pending(100)
+            assertEquals(1, pending.size)
+            assertEquals(day.plusDays(1).toEpochDay(), pending.first().nextEpochDay)
+            assertNull(database.dailySummaryDao().getByDate(dayMs)?.sleepScore)
         }
 
     private companion object {

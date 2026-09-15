@@ -646,6 +646,7 @@ The architecture couples health data changes to durable rescoring via two distin
 2. **Atomic Publication Boundary (Scoring & Acknowledgment):**
    - The scoring pipeline reads data under the captured `sourceGeneration` and immutable settings outside of a writer transaction.
    - Workout canonical updates (`modelTrimp`) are staged in memory in `ProcessedWorkoutDay` during computation rather than persisted midway in `DailyTrimpComputer`.
+   - Before any of this reaches a transaction, the day's assembly result must be a genuine candidate — see §1.4.2 (`DayAssembly`, WP-13). `DirtySummaryPublisher.publish(ticket, assembly: DayAssembly, ...)` rejects `Unavailable` before opening a transaction (returns `false`, no DB access at all); only `Computed`/`Absent` reach the transaction below. This narrows what may call into `publish` — it does not change the transaction's own atomicity/generation-check logic.
    - `DirtySummaryPublisher.publish` executes inside a single atomic Room transaction:
      - Re-verifies that live `sourceGeneration == expectedSourceGeneration` and maintenance is idle.
      - Upserts the calculated `DailySummaryEntity`.
@@ -653,6 +654,66 @@ The architecture couples health data changes to durable rescoring via two distin
      - Advances `dirty_ranges.nextEpochDay` by exactly 1 (`dirty_ranges.advance`) using the ticket's original `id`, `sourceGeneration`, and cursor.
      - Deletes only fully completed tickets (`dirty_ranges.deleteCompleted`).
    - If a concurrent mutation arrived during computation (`liveGeneration != expectedSourceGeneration`), the publisher rejects acknowledgment and rolls back the transaction, returning `false`. The unacknowledged dirty range remains intact in SQLite, guaranteeing that the newer revision is recomputed without losing historical invalidation state.
+   - A successful `Absent` publication advances the dirty ticket cursor exactly like `Computed` (both are genuinely complete candidates). A failed publish or an `Unavailable` assembly never advances it. Walk-forward context mutations (`WalkForwardContexts.trimp`/`fatigue`/etc.) are applied by the caller only *after* a successful write — never speculatively before or during the transaction (`ScoringRepositoryImpl.computeAndPersistDailySummary` calls `commitWalkForwardContexts()` strictly after `persistDayAssembly` returns `true`).
+
+### 1.4.2 Assembly Status Gate — `DayAssembly` and `freshDaySummary` (WP-13)
+
+Before C3/WP-13, recomputing a day (e.g. after a source deletion, or a transient failure partway
+through assembly) could publish a `DailySummary` that mixed freshly computed fields with stale
+derived fields silently carried over from a previous generation — e.g. a deleted sleep session's
+score "ghosting through" because nothing in that pass happened to overwrite it. Two mechanisms
+close this gap:
+
+- **`DayAssembly`** (`core/model/.../domain/scoring/DayAssembly.kt`) is the explicit tri-state
+  result of assembling one day, threaded through the whole chain —
+  `FinalSummaryAssembler.assemble` → `ScoringRepositoryImpl.computeDay`/`finalizeAssembly` →
+  `ScoringDayDataLoader.persistDayAssembly` / `DirtySummaryPublisher.publish` — replacing the old
+  `assemble(...) ?: previous` fallback pattern:
+  - `Computed(summary)` — the day's required source input (its sleep session) was present. A full
+    derived candidate, safe to publish and to seed the next day's walk-forward state.
+  - `Absent(summary)` — the required input was **confirmed missing in Room at the captured
+    authoritative generation** (e.g. its only sleep session was deleted). Still a genuinely
+    complete, publishable candidate: independent inputs (steps, vitals, load/TRIMP/RAS) are
+    computed normally, only the sleep-dependent fields are explicitly nulled and flagged
+    no-data (`RecoveryFlag.HRV_MISSING` / `ReadinessResult.diagnostics.hrvMissing`) rather than
+    silently left at whatever a prior generation had. A Health Connect permission *denial* is not
+    a Room absence and must never itself produce `Absent` — HC read failures do not delete local
+    Room rows, so the required-input check is always a Room read (`ScoringDayDataLoader`'s
+    session/summary loads), never an HC call outcome.
+  - `Unavailable(reason)` — assembly could not complete this pass (a transient failure at the
+    base/readiness/final/recommendation assembler boundary, each converting its own exception into
+    a fixed internal reason code — `BASE_ASSEMBLY_FAILED`, `READINESS_ASSEMBLY_FAILED`,
+    `FINAL_ASSEMBLY_FAILED`, `RECOMMENDATION_ASSEMBLY_FAILED` — never raw exception text, which
+    must never leak into a persisted field or user-facing string). The caller leaves the previous
+    complete day, its canonical workout values, and its dirty ticket entirely alone — no partial
+    merge, no "new load with old readiness." `CancellationException` always rethrows rather than
+    degrading to `Unavailable`.
+- **`freshDaySummary(date, previous)`** (`core/scoring/.../domain/scoring/FreshDaySummary.kt`) is
+  the single place a fresh candidate is built from. It carries forward **only** the frozen
+  baseline/calibration snapshot fields that `ResolveDailyBaselinesUseCase`/`ComputeSleepMetricsUseCase`
+  already treat as "this snapshot is still valid, don't recompute it" (guarded by
+  `baselineCalculatedAtDate != null`) — `baselineCalculatedAtDate`, `hrMax`, `snapshotProfile`,
+  `snapshotCalibrationPhase`, `hrvSigmaPrior`, `rasScalingFactor`, `baselineObservationCount`,
+  `hrvMuMssd`, `hrvSigmaMssd`, `rhrBpm`, `rhrSigma` — plus the independent `stepCount` input
+  (immediately overwritten by this pass's own step read where available;
+  `ScoringRepositoryImpl.withStepCount`). **Every derived output** — `sleepScore`,
+  `sleepDurationMinutes`, `nocturnalHrv`, `readinessResult`, `workoutRecommendation`, load/RAS/TRIMP
+  totals, VO2 Max, etc. — comes back at its default (`null`/`ReadinessResult.EMPTY`), because the
+  assembler chain always recomputes those fields in the same pass; a fresh candidate must never let
+  a stale value from a previous generation survive assembly by omission. `BaseSummaryAssembler`
+  calls `freshDaySummary(context.targetDate, context.dailySummary)` as its starting point instead of
+  copying `context.dailySummary` wholesale. `RoomHealthIngestionStore.clearFrozenBaselines` already
+  nulls exactly the copied-field set up front when a mutation invalidates the frozen snapshot, so a
+  source deletion correctly forces full baseline recomputation rather than resurrecting stale
+  metadata.
+- **On absent sleep**, `MorningRecommendationAssembler` independently resolves no candidate morning
+  session and returns an explicit no-sleep `WorkoutRecommendationDecision` (`noSleepInput`) rather
+  than carrying forward a stale recommendation snapshot; valid independent steps/vitals/load data
+  computed earlier in the same pass are left untouched.
+- `Resource`-style availability states used to represent `Unavailable` in domain/UI layers must
+  carry only the fixed reason codes above — never raw exception text — keeping the "no exception
+  text in a persisted field or user-facing string" invariant from §1's ingestion-layer rules
+  consistent all the way through the scoring layer.
 
 ### 1.5 Body Temperature — 14-day baseline, elevated-deviation threshold, and display surfaces
 

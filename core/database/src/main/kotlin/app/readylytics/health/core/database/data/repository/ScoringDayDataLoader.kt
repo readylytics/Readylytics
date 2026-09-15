@@ -22,6 +22,8 @@ import app.readylytics.health.core.model.domain.model.RecordType
 import app.readylytics.health.core.model.domain.model.TimestampedTrimp
 import app.readylytics.health.core.model.domain.repository.FatigueWorkoutInput
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
+import app.readylytics.health.core.model.domain.scoring.DayAssembly
+import app.readylytics.health.core.model.domain.scoring.summaryOrNull
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
 import java.time.ZoneId
 import javax.inject.Inject
@@ -232,6 +234,24 @@ class ScoringDayDataLoader
             } else {
                 persistAction()
             }
+        }
+
+        /**
+         * C3 (WP-13): gates [persistDailySummaryAndWorkouts] on [assembly] having produced a
+         * genuine candidate. [DayAssembly.Unavailable] is a deliberate no-op -- no write happens,
+         * and whatever was previously persisted for this day is left entirely untouched. Returns
+         * whether a write happened, so the caller can tell "no candidate this pass" apart from
+         * "persisted successfully."
+         */
+        suspend fun persistDayAssembly(
+            assembly: DayAssembly,
+            zoneId: ZoneId,
+            workouts: List<WorkoutRecordEntity>,
+            updates: List<ComputeDailyTrimpUseCase.WorkoutModelTrimpUpdate>,
+        ): Boolean {
+            val summary = assembly.summaryOrNull() ?: return false
+            persistDailySummaryAndWorkouts(summary, zoneId, workouts, updates)
+            return true
         }
     }
 

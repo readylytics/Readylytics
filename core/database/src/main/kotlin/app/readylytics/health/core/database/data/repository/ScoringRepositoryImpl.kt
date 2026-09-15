@@ -15,8 +15,12 @@ import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardVo2MaxContext
+import app.readylytics.health.core.model.domain.scoring.DayAssembly
+import app.readylytics.health.core.model.domain.scoring.DayAssemblyUnavailableReason
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
+import app.readylytics.health.core.model.domain.scoring.summaryOrNull
 import app.readylytics.health.core.model.domain.util.logD
+import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.database.data.repository.recommendation.MorningRecommendationAssembler
 import app.readylytics.health.core.database.data.repository.recommendation.MorningRecoveryLoader
 import app.readylytics.health.core.database.data.repository.recommendation.WorkoutExampleLoader
@@ -25,6 +29,7 @@ import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCa
 import app.readylytics.health.core.scoring.domain.scoring.EverydayHrLoadResult
 import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
 import app.readylytics.health.core.scoring.domain.scoring.TrimpDateBucketer
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
@@ -119,12 +124,18 @@ class ScoringRepositoryImpl
             val resolvedPrefs = prefs ?: settingsRepo.userPreferences.first()
             val zoneId = resolvedPrefs.scoringZone()
             val computed = computeDay(targetDate, resolvedPrefs, contexts)
-            dataLoader.persistDailySummaryAndWorkouts(
-                computed.summary.withStepCount(steps),
-                zoneId,
-                computed.workouts,
-                computed.workoutUpdates,
-            )
+            val assembly = computed.assembly.withStepCount(steps)
+            val persisted =
+                dataLoader.persistDayAssembly(assembly, zoneId, computed.workouts, computed.workoutUpdates)
+            if (!persisted) {
+                // C3 (WP-13): Unavailable is a deliberate no-op -- nothing was written, so the
+                // walk-forward context below must not be committed either (see
+                // ComputedDay.commitWalkForwardContexts).
+                throw DayAssemblyUnavailableException(assembly.unavailableReasonOrDefault())
+            }
+            // Walk-forward context mutations are only ever applied after the write above commits
+            // -- never speculatively before or during it.
+            computed.commitWalkForwardContexts()
         }
 
         override suspend fun fetchWalkForwardTrimpContext(
@@ -194,7 +205,14 @@ class ScoringRepositoryImpl
 
         override suspend fun computeDailySummary(targetDate: LocalDate): DailySummary {
             val prefs = settingsRepo.userPreferences.first()
-            return calculationMutex.withLock { computeDay(targetDate, prefs, WalkForwardContexts()).summary }
+            return calculationMutex.withLock {
+                val computed = computeDay(targetDate, prefs, WalkForwardContexts())
+                val summary =
+                    computed.assembly.summaryOrNull()
+                        ?: throw DayAssemblyUnavailableException(computed.assembly.unavailableReasonOrDefault())
+                computed.commitWalkForwardContexts()
+                summary
+            }
         }
 
         // Deliberately does not take calculationMutex, unlike its siblings: holding it would block
@@ -222,6 +240,13 @@ class ScoringRepositoryImpl
                     scoringDayContextResolver.resolveScoringDayContext(targetDate, prefs, contexts.baseline)
                 logD("ScoringRepository") { "RAS CALC START [$targetDate]" }
                 val processed = dailyTrimpComputer.processWorkouts(context)
+                // NOTE: registerCanonicalImpulses cannot be deferred to after a successful commit
+                // like publishTrimpToContext below -- ResidualFatigueComputer.compute's walk-forward
+                // path (advanceAccumulator) consumes THIS day's own impulses out of contexts.fatigue
+                // to compute THIS day's residual-fatigue value, so the mutation must happen before
+                // assembly runs. A failed/Unavailable assembly on this day therefore still leaves the
+                // fatigue accumulator advanced; recovering that would require reworking
+                // WalkForwardFatigueContext's API, out of scope for this task (see task report).
                 contexts.fatigue?.registerCanonicalImpulses(processed.fatigueInputs)
                 val aggregatedSleep =
                     readinessSummaryCoordinator.resolveSleepAggregation(
@@ -235,13 +260,6 @@ class ScoringRepositoryImpl
                 val currentSessionIds = aggregatedSleep?.coreSessionIds ?: session?.let { setOf(it.id) }.orEmpty()
                 val everydayResult =
                     dailyTrimpComputer.resolveEverydayTrimp(context, processed, session, aggregatedSleep)
-                dailyTrimpComputer.publishTrimpToContext(
-                    contexts.trimp,
-                    context.targetDate,
-                    everydayResult.totalEverydayTrimp,
-                    processed.dailyTrimpRaw,
-                    processed.workouts.isNotEmpty(),
-                )
                 val scalingFactor =
                     context.initialBaselines.frozenRasScalingFactor ?: context.scoringConfig.rasScalingFactor
                 val rasTotals =
@@ -262,42 +280,109 @@ class ScoringRepositoryImpl
                         aggregatedSleep = aggregatedSleep,
                         rasTotals = rasTotals,
                     )
-                assembleComputedDay(
-                    inputs = inputs,
-                    processed = processed,
-                    finalSummaryAssembler = finalSummaryAssembler,
-                    morningRecommendationAssembler = morningRecommendationAssembler,
+                val assembly =
+                    finalizeAssembly(
+                        assembly = finalSummaryAssembler.assemble(inputs),
+                        inputs = inputs,
+                        morningRecommendationAssembler = morningRecommendationAssembler,
+                    )
+                ComputedDay(
+                    assembly = assembly,
+                    workouts = processed.workouts,
+                    workoutUpdates = processed.workoutModelTrimpUpdates,
+                    // C3 (WP-13): unlike registerCanonicalImpulses above, publishTrimpToContext's
+                    // write into the shared contexts.trimp map is safely deferrable -- this day's OWN
+                    // computation above already read whatever trimp series it needed independently
+                    // (resolveTrimpSeries re-puts this day's own raw value into its local copy). The
+                    // caller invokes this only after a successful persist, so a failed/Unavailable day
+                    // never speculatively pollutes the shared walk-forward series for later days.
+                    commitWalkForwardContexts = {
+                        dailyTrimpComputer.publishTrimpToContext(
+                            contexts.trimp,
+                            context.targetDate,
+                            everydayResult.totalEverydayTrimp,
+                            processed.dailyTrimpRaw,
+                            processed.workouts.isNotEmpty(),
+                        )
+                    },
                 )
             }
     }
 
-private suspend fun assembleComputedDay(
+/**
+ * C3 (WP-13): applies telemetry and the morning recommendation on top of [assembly] only when it
+ * carries a genuine candidate ([DayAssembly.Computed]/[DayAssembly.Absent]); [DayAssembly.Unavailable]
+ * passes through untouched. A thrown failure while applying the recommendation converts to
+ * [DayAssembly.Unavailable] with its own reason code, same as every other assembler boundary --
+ * `assemble(...)` returning `null` (see [applyRecommendation]) is a distinct, legitimate "keep the
+ * previous guidance" outcome, not a failure.
+ */
+private suspend fun finalizeAssembly(
+    assembly: DayAssembly,
     inputs: FinalSummaryAssembler.Inputs,
-    processed: DailyTrimpComputer.ProcessedWorkoutDay,
-    finalSummaryAssembler: FinalSummaryAssembler,
     morningRecommendationAssembler: MorningRecommendationAssembler,
-): ComputedDay {
-    val finalSummary = finalSummaryAssembler.assemble(inputs)
-    ScoringTelemetry.logTelemetry(
-        inputs.context.scoringConfig,
-        inputs.context.prefs,
-        inputs.rasTotals.last6DaysRasWorkoutOnly,
-        finalSummary.totalRasWorkoutOnly,
-    )
+): DayAssembly {
+    val summary = assembly.summaryOrNull()
+    if (summary != null) {
+        ScoringTelemetry.logTelemetry(
+            inputs.context.scoringConfig,
+            inputs.context.prefs,
+            inputs.rasTotals.last6DaysRasWorkoutOnly,
+            summary.totalRasWorkoutOnly,
+        )
+    }
     val summaryWithRecommendation =
-        morningRecommendationAssembler.applyRecommendation(inputs.context, finalSummary)
-    return ComputedDay(
-        summary = summaryWithRecommendation,
-        workouts = processed.workouts,
-        workoutUpdates = processed.workoutModelTrimpUpdates,
-    )
+        summary?.let { applyRecommendationOrNull(it, inputs, morningRecommendationAssembler) }
+
+    // Single terminal return keeps this within detekt's ReturnCount limit.
+    return when {
+        summary == null -> assembly
+        summaryWithRecommendation == null ->
+            DayAssembly.Unavailable(DayAssemblyUnavailableReason.RECOMMENDATION_ASSEMBLY_FAILED)
+        assembly is DayAssembly.Absent -> DayAssembly.Absent(summaryWithRecommendation)
+        else -> DayAssembly.Computed(summaryWithRecommendation)
+    }
 }
 
+private suspend fun applyRecommendationOrNull(
+    summary: DailySummary,
+    inputs: FinalSummaryAssembler.Inputs,
+    morningRecommendationAssembler: MorningRecommendationAssembler,
+): DailySummary? =
+    try {
+        morningRecommendationAssembler.applyRecommendation(inputs.context, summary)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        logE("ScoringRepository", e) { "Recommendation assembly failed for ${inputs.context.targetDate}" }
+        null
+    }
+
 private data class ComputedDay(
-    val summary: DailySummary,
+    val assembly: DayAssembly,
     val workouts: List<WorkoutRecordEntity>,
     val workoutUpdates: List<ComputeDailyTrimpUseCase.WorkoutModelTrimpUpdate>,
+    /**
+     * Applies this day's mutations to the shared walk-forward contexts (`contexts.trimp`).
+     * Callers must only invoke this AFTER a successful persist (or, for the non-persisting
+     * `computeDailySummary` path, after confirming a genuine candidate) -- never speculatively.
+     */
+    val commitWalkForwardContexts: () -> Unit,
 )
+
+/** Thrown when a [DayAssembly.Unavailable] reaches a caller that requires a genuine candidate. */
+internal class DayAssemblyUnavailableException(reason: String) :
+    IllegalStateException("Day assembly unavailable: $reason")
+
+private fun DayAssembly.unavailableReasonOrDefault(): String =
+    (this as? DayAssembly.Unavailable)?.reason ?: DayAssemblyUnavailableReason.FINAL_ASSEMBLY_FAILED
+
+private fun DayAssembly.withStepCount(steps: Long?): DayAssembly =
+    when (this) {
+        is DayAssembly.Computed -> copy(summary = summary.withStepCount(steps))
+        is DayAssembly.Absent -> copy(summary = summary.withStepCount(steps))
+        is DayAssembly.Unavailable -> this
+    }
 
 /**
  * Anchored to the wake time, entirely independent of the TRIMP/readiness pipeline that produced
@@ -314,7 +399,15 @@ private suspend fun MorningRecommendationAssembler.applyRecommendation(
     finalSummary: DailySummary,
 ): DailySummary {
     val previous = context.dailySummary?.workoutRecommendation
-    val recommendation = assemble(context, previous = previous) ?: previous
+    val recommendation =
+        when (val fresh = assemble(context, previous = previous)) {
+            // Unavailable this pass (recovery inputs couldn't be computed): preserve whatever
+            // guidance a previous run already computed for this day, rather than erasing it.
+            null -> previous
+            // Computed: a fresh snapshot, which may itself explicitly encode "no sleep this
+            // morning" -- see MorningRecommendationAssembler.noSleepInput.
+            else -> fresh
+        }
     return finalSummary.copy(workoutRecommendation = recommendation)
 }
 

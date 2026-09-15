@@ -3,6 +3,7 @@ package app.readylytics.health.core.database.data.repository
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.database.data.mapper.SleepSessionMapper
 import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.model.RecoveryFlag
 import app.readylytics.health.core.model.domain.model.getOrNull
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
@@ -143,7 +144,7 @@ class ReadinessSummaryCoordinator
                     avgBodyTemp = base.avgBodyTemp,
                     calibHrvBaseline = calibHrvBaseline,
                     rhrBaselineValue = rhrBaselineValue,
-                )
+                ).withAbsentSleepDiagnostics()
             }
             val hrvValues = if (base.currentSessionIds.size <= 1) {
                 scoringHistoryRepository.getSleepRmssdForSession(base.session.id)
@@ -298,9 +299,28 @@ class ReadinessSummaryCoordinator
                     ),
                 ).getOrNull() ?: withHrvBaseline
             } else {
-                withHrvBaseline
+                // C3 (WP-13): the day's only sleep session is confirmed absent -- explicitly flag
+                // it as no-data rather than silently leaving withHrvBaseline's sleep fields at
+                // whatever freshDaySummary left them (null). Independent inputs already folded
+                // into withHrvBaseline (load, steps, vitals) are untouched.
+                withHrvBaseline.withAbsentSleepDiagnostics()
             }
         }
+
+        /**
+         * Explicitly flags a day whose required source input (its sleep session) was confirmed
+         * absent, reusing the existing [RecoveryFlag.HRV_MISSING] vocabulary (already surfaced to
+         * the user via the RECOVERY_HRV_MISSING insight and AI-recommendation glossary) rather than
+         * leaving sleep-related diagnostics silently null with no explanation.
+         */
+        private fun DailySummary.withAbsentSleepDiagnostics(): DailySummary =
+            copy(
+                readinessResult =
+                    readinessResult.copy(
+                        recoveryFlags = readinessResult.recoveryFlags + RecoveryFlag.HRV_MISSING,
+                        diagnostics = readinessResult.diagnostics.copy(hrvMissing = true),
+                    ),
+            )
     }
 
 data class ReadinessBaseInputs(

@@ -26,6 +26,7 @@ import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.Vo2MaxEstimationMethod
 import app.readylytics.health.core.model.domain.preferences.Vo2MaxSourceMode
 import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.repository.FatigueWorkoutInput
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
@@ -709,4 +710,3 @@ class ScoringRepositoryImplTest {
             assertEquals(45f, context.vo2MaxByTimestampMs[midnightAfterEnd])
         }
 }
-
