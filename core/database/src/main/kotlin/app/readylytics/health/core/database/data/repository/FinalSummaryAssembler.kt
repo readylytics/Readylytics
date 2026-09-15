@@ -74,20 +74,33 @@ class FinalSummaryAssembler(
      */
     suspend fun assemble(inputs: Inputs): DayAssembly {
         val base = assembleBase(inputs)
-        val isCalibrated = base?.let { calibrationGate.isCalibrated(inputs.context, inputs.session != null) }
+        val isCalibrated = base?.let { isCalibratedOrNull(inputs, inputs.session != null) }
         val summary = base?.let { b -> isCalibrated?.let { resolveScoredSummaryOrNull(b, inputs, it) } }
         val finalSummary = summary?.let { s -> isCalibrated?.let { finalizeScoredSummaryOrNull(s, inputs, it) } }
 
         // Single terminal return keeps this within detekt's ReturnCount limit -- each `null` above
-        // was already logged at its own stage by the *OrNull helper that produced it.
+        // was already logged at its own stage by the *OrNull helper that produced it. `base != null`
+        // is implied once we reach the `isCalibrated == null` branch, so that case unambiguously
+        // means the calibration gate itself failed, not that base assembly never ran.
         return when {
             base == null -> DayAssembly.Unavailable(DayAssemblyUnavailableReason.BASE_ASSEMBLY_FAILED)
+            isCalibrated == null -> DayAssembly.Unavailable(DayAssemblyUnavailableReason.CALIBRATION_GATE_FAILED)
             summary == null -> DayAssembly.Unavailable(DayAssemblyUnavailableReason.READINESS_ASSEMBLY_FAILED)
             finalSummary == null -> DayAssembly.Unavailable(DayAssemblyUnavailableReason.FINAL_ASSEMBLY_FAILED)
             inputs.session == null -> DayAssembly.Absent(finalSummary)
             else -> DayAssembly.Computed(finalSummary)
         }
     }
+
+    private suspend fun isCalibratedOrNull(inputs: Inputs, hasSession: Boolean): Boolean? =
+        try {
+            calibrationGate.isCalibrated(inputs.context, hasSession)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logE("FinalSummaryAssembler", e) { "Calibration gate failed for ${inputs.context.targetDate}" }
+            null
+        }
 
     private suspend fun resolveScoredSummaryOrNull(
         base: ReadinessBaseInputs,

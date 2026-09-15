@@ -16,6 +16,7 @@ import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.model.ReadinessResult
 import app.readylytics.health.core.model.domain.scoring.DayAssembly
+import app.readylytics.health.core.model.domain.scoring.toPublishableOrNull
 import app.readylytics.health.core.model.domain.sync.DirtyTicket
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
 import kotlinx.coroutines.runBlocking
@@ -319,9 +320,12 @@ class DirtyMutationRecoveryInstrumentedTest {
             assertEquals(day.plusDays(1).toEpochDay(), pending.first().nextEpochDay)
         }
 
-    // C3 (WP-13): DayAssembly.Unavailable must be rejected before publish(...) ever opens a
-    // transaction -- a real Room-backed proof that this is a genuine no-op (nothing written, old
-    // summary and pending ticket both untouched), not merely a claim proven only by a mock.
+    // C3 fix round 1: DayAssembly.Unavailable can no longer even be offered to publish(...) --
+    // PublishableDayAssembly has no case for it, so toPublishableOrNull() is the only conversion
+    // path and returns null here at compile-checked call time. This test proves both halves: the
+    // conversion really does yield null (so a real caller, mirrored below, never reaches
+    // publish(...) at all), and the database stays untouched -- a real Room-backed proof, not
+    // merely a claim proven only by a mock.
     @Test
     fun unavailableAssemblyIsRejectedWithoutTouchingSummaryOrTicket() =
         runBlocking {
@@ -344,15 +348,19 @@ class DirtyMutationRecoveryInstrumentedTest {
             val stagedUpdates =
                 listOf(ComputeDailyTrimpUseCase.WorkoutModelTrimpUpdate("workout-unavailable", 42f))
 
+            val publishable = DayAssembly.Unavailable("FINAL_ASSEMBLY_FAILED").toPublishableOrNull()
+            assertNull(publishable)
             val published =
-                publisher.publish(
-                    ticket = ticket,
-                    assembly = DayAssembly.Unavailable("FINAL_ASSEMBLY_FAILED"),
-                    zoneId = ZoneOffset.UTC,
-                    expectedSourceGeneration = 1L,
-                    stagedWorkoutUpdates = stagedUpdates,
-                    activeSnapshotId = "snap-1",
-                )
+                publishable?.let {
+                    publisher.publish(
+                        ticket = ticket,
+                        assembly = it,
+                        zoneId = ZoneOffset.UTC,
+                        expectedSourceGeneration = 1L,
+                        stagedWorkoutUpdates = stagedUpdates,
+                        activeSnapshotId = "snap-1",
+                    )
+                } ?: false
             assertFalse(published)
 
             reopenDatabase()
@@ -391,10 +399,11 @@ class DirtyMutationRecoveryInstrumentedTest {
                     isCalibrating = false,
                 )
 
+            val publishable = checkNotNull(DayAssembly.Absent(absentSummary).toPublishableOrNull())
             val published =
                 publisher.publish(
                     ticket = ticket,
-                    assembly = DayAssembly.Absent(absentSummary),
+                    assembly = publishable,
                     zoneId = ZoneOffset.UTC,
                     expectedSourceGeneration = 1L,
                 )

@@ -333,6 +333,26 @@ class ScoringRepositoryImplAssemblyStatusTest {
             assertUnavailableLeavesOldStateUntouched(today, zoneId)
         }
 
+    // C3 fix round 1 (finding 3): CalibrationGate.isCalibrated performs a real Room read
+    // (countEligibleSleepDaysThrough) between the wrapped base/readiness stages. Before this fix
+    // it was called unwrapped, so a thrown exception here would propagate raw instead of degrading
+    // to DayAssembly.Unavailable like every other stage -- this proves it now does, leaving prior
+    // state untouched exactly like the other stage failures below.
+    @Test
+    fun `calibration gate failure leaves old summary and canonical workouts untouched`() =
+        runTest {
+            val today = LocalDate.now()
+            val zoneId = ZoneId.of("UTC")
+            setUpCanonicalWorkout(today, zoneId)
+            // Default setup() has getDailySummaryByDate return null, so isCalibrated has no frozen
+            // snapshot to trust and must fall through to the DB read below.
+            coEvery {
+                scoringHistoryRepository.countEligibleSleepDaysThrough(any(), any())
+            } throws RuntimeException("simulated calibration-gate failure")
+
+            assertUnavailableLeavesOldStateUntouched(today, zoneId)
+        }
+
     @Test
     fun `readiness assembly failure leaves old summary and canonical workouts untouched`() =
         runTest {

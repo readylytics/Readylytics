@@ -646,7 +646,7 @@ The architecture couples health data changes to durable rescoring via two distin
 2. **Atomic Publication Boundary (Scoring & Acknowledgment):**
    - The scoring pipeline reads data under the captured `sourceGeneration` and immutable settings outside of a writer transaction.
    - Workout canonical updates (`modelTrimp`) are staged in memory in `ProcessedWorkoutDay` during computation rather than persisted midway in `DailyTrimpComputer`.
-   - Before any of this reaches a transaction, the day's assembly result must be a genuine candidate — see §1.4.2 (`DayAssembly`, WP-13). `DirtySummaryPublisher.publish(ticket, assembly: DayAssembly, ...)` rejects `Unavailable` before opening a transaction (returns `false`, no DB access at all); only `Computed`/`Absent` reach the transaction below. This narrows what may call into `publish` — it does not change the transaction's own atomicity/generation-check logic.
+   - Before any of this reaches a transaction, the day's assembly result must be a genuine candidate — see §1.4.2 (`DayAssembly`, WP-13). `DirtySummaryPublisher.publish(ticket, assembly: PublishableDayAssembly, ...)` only accepts `PublishableDayAssembly` — the `Computed`/`Absent`-only subset of `DayAssembly` with no case for `Unavailable` — so an unavailable assembly cannot be passed into the transaction below at all; this is a compile-time guarantee (`DayAssembly.toPublishableOrNull()` returns `null` for `Unavailable`), not a runtime check inside `publish`. This narrows what may call into `publish` — it does not change the transaction's own atomicity/generation-check logic.
    - `DirtySummaryPublisher.publish` executes inside a single atomic Room transaction:
      - Re-verifies that live `sourceGeneration == expectedSourceGeneration` and maintenance is idle.
      - Upserts the calculated `DailySummaryEntity`.
@@ -654,7 +654,7 @@ The architecture couples health data changes to durable rescoring via two distin
      - Advances `dirty_ranges.nextEpochDay` by exactly 1 (`dirty_ranges.advance`) using the ticket's original `id`, `sourceGeneration`, and cursor.
      - Deletes only fully completed tickets (`dirty_ranges.deleteCompleted`).
    - If a concurrent mutation arrived during computation (`liveGeneration != expectedSourceGeneration`), the publisher rejects acknowledgment and rolls back the transaction, returning `false`. The unacknowledged dirty range remains intact in SQLite, guaranteeing that the newer revision is recomputed without losing historical invalidation state.
-   - A successful `Absent` publication advances the dirty ticket cursor exactly like `Computed` (both are genuinely complete candidates). A failed publish or an `Unavailable` assembly never advances it. Walk-forward context mutations (`WalkForwardContexts.trimp`/`fatigue`/etc.) are applied by the caller only *after* a successful write — never speculatively before or during the transaction (`ScoringRepositoryImpl.computeAndPersistDailySummary` calls `commitWalkForwardContexts()` strictly after `persistDayAssembly` returns `true`).
+   - A successful `Absent` publication advances the dirty ticket cursor exactly like `Computed` (both are genuinely complete candidates). A failed publish or an `Unavailable` assembly never advances it. Of the four walk-forward contexts, only `WalkForwardContexts.trimp` is mutated per-day by this pipeline (`DailyTrimpComputer.publishTrimpToContext`), and that mutation is applied by the caller only *after* a successful write — never speculatively before or during the transaction (`ScoringRepositoryImpl.computeAndPersistDailySummary` calls `commitWalkForwardContexts()` strictly after `persistDayAssembly` returns `true`). `baseline` and `vo2Max` are populated once up front per walk-forward run (`fetchWalkForwardBaselineContext`/`fetchWalkForwardVo2MaxContext`) and are never mutated per-day, so "deferred until after commit" doesn't apply to them either way. **Known exception:** `WalkForwardContexts.fatigue`'s `registerCanonicalImpulses` (called from `ScoringRepositoryImpl.computeDay`, before assembly runs) is *not* deferred — `ResidualFatigueComputer.compute`'s walk-forward path consumes this same day's impulses out of `contexts.fatigue` to compute this day's own residual-fatigue value, so the mutation must happen before assembly, not after. A failed/`Unavailable` assembly on that day therefore still leaves the fatigue accumulator advanced. This is pre-existing behavior, unchanged by C3/WP-13, and reworking `WalkForwardFatigueContext`'s API to close it is out of scope for this task.
 
 ### 1.4.2 Assembly Status Gate — `DayAssembly` and `freshDaySummary` (WP-13)
 
@@ -681,9 +681,10 @@ close this gap:
     Room rows, so the required-input check is always a Room read (`ScoringDayDataLoader`'s
     session/summary loads), never an HC call outcome.
   - `Unavailable(reason)` — assembly could not complete this pass (a transient failure at the
-    base/readiness/final/recommendation assembler boundary, each converting its own exception into
-    a fixed internal reason code — `BASE_ASSEMBLY_FAILED`, `READINESS_ASSEMBLY_FAILED`,
-    `FINAL_ASSEMBLY_FAILED`, `RECOMMENDATION_ASSEMBLY_FAILED` — never raw exception text, which
+    base/calibration-gate/readiness/final/recommendation assembler boundary, each converting its
+    own exception into a fixed internal reason code — `BASE_ASSEMBLY_FAILED`,
+    `CALIBRATION_GATE_FAILED`, `READINESS_ASSEMBLY_FAILED`, `FINAL_ASSEMBLY_FAILED`,
+    `RECOMMENDATION_ASSEMBLY_FAILED` — never raw exception text, which
     must never leak into a persisted field or user-facing string). The caller leaves the previous
     complete day, its canonical workout values, and its dirty ticket entirely alone — no partial
     merge, no "new load with old readiness." `CancellationException` always rethrows rather than

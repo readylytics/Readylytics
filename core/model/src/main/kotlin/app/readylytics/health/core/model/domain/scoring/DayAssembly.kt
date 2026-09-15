@@ -40,6 +40,7 @@ sealed interface DayAssembly {
 /** Fixed, internal-only reason codes for [DayAssembly.Unavailable]. */
 object DayAssemblyUnavailableReason {
     const val BASE_ASSEMBLY_FAILED = "BASE_ASSEMBLY_FAILED"
+    const val CALIBRATION_GATE_FAILED = "CALIBRATION_GATE_FAILED"
     const val READINESS_ASSEMBLY_FAILED = "READINESS_ASSEMBLY_FAILED"
     const val FINAL_ASSEMBLY_FAILED = "FINAL_ASSEMBLY_FAILED"
     const val RECOMMENDATION_ASSEMBLY_FAILED = "RECOMMENDATION_ASSEMBLY_FAILED"
@@ -53,5 +54,35 @@ fun DayAssembly.summaryOrNull(): DailySummary? =
     when (this) {
         is DayAssembly.Computed -> summary
         is DayAssembly.Absent -> summary
+        is DayAssembly.Unavailable -> null
+    }
+
+/**
+ * The subset of [DayAssembly] that is a genuine, complete candidate -- the only shape
+ * `DirtySummaryPublisher.publish`'s generation-checked transaction may ever receive. Mirrors
+ * [DayAssembly.Computed]/[DayAssembly.Absent] field-for-field; there is deliberately no case
+ * corresponding to [DayAssembly.Unavailable], so a caller holding a [PublishableDayAssembly] value
+ * cannot pass an unavailable assembly into publication by construction -- the exclusion is a
+ * compile-time guarantee, not a runtime check. Build one from a [DayAssembly] via
+ * [DayAssembly.toPublishableOrNull].
+ */
+sealed interface PublishableDayAssembly {
+    val summary: DailySummary
+
+    data class Computed(override val summary: DailySummary) : PublishableDayAssembly
+
+    data class Absent(override val summary: DailySummary) : PublishableDayAssembly
+}
+
+/**
+ * Narrows [DayAssembly] to the publishable subset ([PublishableDayAssembly]), or `null` for
+ * [DayAssembly.Unavailable] -- the one place a caller must decide what to do with a non-candidate
+ * assembly, since [DayAssembly.Unavailable] cannot be represented as a [PublishableDayAssembly] at
+ * all.
+ */
+fun DayAssembly.toPublishableOrNull(): PublishableDayAssembly? =
+    when (this) {
+        is DayAssembly.Computed -> PublishableDayAssembly.Computed(summary)
+        is DayAssembly.Absent -> PublishableDayAssembly.Absent(summary)
         is DayAssembly.Unavailable -> null
     }
