@@ -1,5 +1,6 @@
 package app.readylytics.health.core.scoring.domain.scoring.sleep
 
+import app.readylytics.health.core.scoring.domain.scoring.sleep.CoreRecoveryInput
 import app.readylytics.health.core.scoring.domain.scoring.sleep.CurrentNightHrvResolver
 import app.readylytics.health.core.scoring.domain.scoring.sleep.HrCoverageValidator
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepNadirAnalyzer
@@ -272,7 +273,7 @@ class SleepNadirAnalyzerTest {
                 scoringCalculator.isLateNadir(2000L, 1000L, 480)
             } returns true
 
-            val result = analyzer.analyze(session, historical, minHrTimestamp = 2000L)
+            val result = analyzer.analyze(coreOf(session, historical), minHrTimestamp = 2000L)
 
             assertTrue(result.isLateNadir)
             assertFalse(result.isTimezoneJump)
@@ -295,7 +296,7 @@ class SleepNadirAnalyzerTest {
                 scoringCalculator.isLateNadir(2000L, 1000L, 480)
             } returns true
 
-            val result = analyzer.analyze(session, historical, minHrTimestamp = 2000L)
+            val result = analyzer.analyze(coreOf(session, historical), minHrTimestamp = 2000L)
 
             assertFalse(result.isLateNadir)
             assertTrue(result.isTimezoneJump)
@@ -308,12 +309,30 @@ class SleepNadirAnalyzerTest {
 
             coEvery { heartRateDao.getMinHrTimestamp("1") } returns null
 
-            val result = analyzer.analyze(session, emptyList(), minHrTimestamp = null)
+            val result = analyzer.analyze(coreOf(session, emptyList()), minHrTimestamp = null)
 
             assertFalse(result.isLateNadir)
             assertFalse(result.isTimezoneJump)
         }
 }
+
+/**
+ * WP-14/C4: mirrors the pre-C4 "most recent historical session" offset lookup this test suite
+ * exercised, expressed as [CoreRecoveryInput] -- [session] becomes its own single-segment core, and
+ * [historical]'s latest-ending entry (if any) supplies [CoreRecoveryInput.previousCoreEndZoneOffsetSeconds].
+ */
+private fun coreOf(
+    session: SleepSessionEntity,
+    historical: List<SleepSessionEntity>,
+): CoreRecoveryInput =
+    CoreRecoveryInput.fromSingleSession(
+        sessionId = session.id,
+        startTimeMs = session.startTime,
+        endTimeMs = session.endTime,
+        coreSleepDurationMinutes = session.durationMinutes,
+        endZoneOffsetSeconds = session.endZoneOffsetSeconds,
+        previousCoreEndZoneOffsetSeconds = historical.maxByOrNull { it.endTime }?.endZoneOffsetSeconds,
+    )
 
 class HrCoverageValidatorTest {
     private val validator = HrCoverageValidator()

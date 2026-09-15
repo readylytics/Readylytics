@@ -92,7 +92,6 @@ class ComputeSleepMetricsUseCase
                 val rhrValues = baselineWindow.rhrValues
                 val muHrvHistory = baselineWindow.muHrvHistory
                 val sigmaHrvHistory = baselineWindow.sigmaHrvHistory
-                val historicalSessions = baselineWindow.historicalSessions
                 val validHistoricalSessionIds = baselineWindow.validHistoricalSessionIds
                 val validHistoricalDayCount = baselineWindow.validHistoricalDayCount
                 val frozenHrvMu = baselineWindow.frozenHrvMu
@@ -190,7 +189,7 @@ class ComputeSleepMetricsUseCase
 
                 val sleepModifiers =
                     collaborators.sleepModifierResolver.resolve(
-                        sessionId = session.id,
+                        coreSessionIds = request.core.sessionIds,
                         targetDate = targetDate,
                         prefs = prefs,
                         stagesSuspicious = stagesSuspicious,
@@ -227,7 +226,7 @@ class ComputeSleepMetricsUseCase
                         computeNocturnalScores(
                             NocturnalScoringInput(
                                 session = session,
-                                historicalSessions = historicalSessions,
+                                core = request.core,
                                 minHrTimestamp = minHrTimestamp,
                                 sessionHrvSamples = sessionHrvSamples,
                                 currentHrvMean = currentHrvMean,
@@ -339,8 +338,7 @@ class ComputeSleepMetricsUseCase
         private suspend fun computeNocturnalScores(input: NocturnalScoringInput): NocturnalScoringResult {
             val nadirCtx =
                 collaborators.nadirAnalyzer.analyze(
-                    input.session,
-                    input.historicalSessions,
+                    input.core,
                     input.minHrTimestamp,
                 )
             val zScores = computeZScores(input)
@@ -561,7 +559,6 @@ class ComputeSleepMetricsUseCase
                     rhrValues = emptyList(),
                     muHrvHistory = emptyList(),
                     sigmaHrvHistory = emptyList(),
-                    historicalSessions = emptyList(),
                     validHistoricalSessionIds = emptyList(),
                     validHistoricalDayCount = 0,
                     frozenHrvMu = summary.hrvMuMssd,
@@ -596,7 +593,6 @@ class ComputeSleepMetricsUseCase
                     rhrValues = rhrValues,
                     muHrvHistory = hrvWindows.muHistory,
                     sigmaHrvHistory = hrvWindows.sigmaHistory,
-                    historicalSessions = hrvWindows.historicalSessions,
                     validHistoricalSessionIds = hrvWindows.validHistoricalSessionIds,
                     validHistoricalDayCount = hrvWindows.validHistoricalDayCount,
                     frozenHrvMu = null,

@@ -536,7 +536,7 @@ per-bucket (min/avg/max or percentile) replay values are unchanged.
 | Entity                         | Table                       | Primary key                            | Notable columns                                                                                                                                           |
 | :----------------------------- | :-------------------------- | :------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `SleepSessionEntity`           | `sleep_sessions`            | `id: String` (HC id)                   | start/end time, deep/REM/light/awake min, efficiency, `deviceName`                                                                                        |
-| `SleepStageEntity`             | `sleep_stages`              | `id: Long` (auto)                      | `sessionId` (FK), `(sessionId, startTime)` unique — cleared per-session before re-upsert; queried chronologically via `SleepStageDao.getStagesForSession` and exposed via `SleepSessionRepository.getSessionStages` for fragmentation analysis |
+| `SleepStageEntity`             | `sleep_stages`              | `id: Long` (auto)                      | `sessionId` (FK), `(sessionId, startTime)` unique — cleared per-session before re-upsert; queried chronologically via `SleepStageDao.getStagesForSession`/the bounded multi-ID `getStagesForSessions(sessionIds)`, exposed via `SleepSessionRepository.getSessionStages` (single-ID and `List<String>` overloads) for fragmentation analysis |
 | `HeartRateRecordEntity`        | `heart_rate_records`        | `rowId: Long` (auto)                   | `sourceRecordRef` (FK → `health_source_records.id`), `(sourceRecordRef, timestampMs)` unique; `timestampMs`, `recordType`, `sessionId`, `deviceName` |
 | `HrvRecordEntity`              | `hrv_records`               | `rowId: Long` (auto)                   | `sourceRecordRef` (FK → `health_source_records.id`), `(sourceRecordRef, timestampMs)` unique; RMSSD ms, `timestampMs`, `recordType`, `sessionId`     |
 | `HealthSourceRecordEntity`     | `health_source_records`     | `id: Long` (auto)                      | `sourceRecordId` (base UUID, unique), `recordType`, `createdAtMs`, `originPackage`, `recordStartMs`, `recordEndExclusiveMs`, `lastModifiedMs`, `metadataState` (UNKNOWN, CHILD_BOUNDS, AUTHORITATIVE), `sourceRevision` — normalized source identity and provenance |
@@ -1250,13 +1250,56 @@ The aggregate contract is:
 - non-core segments become `SupplementalSleepBlock`s
 - total duration is `core + supplemental`
 - stage totals are `core stage totals + architecture-eligible supplemental stage totals`
-- HRV / RHR / restoration inputs use the core window only through the derived `scoringSession`
+- HRV / RHR / duration / architecture inputs use the core *window* (start/end) but the whole-day,
+  nap-inclusive duration/stage totals through the derived `scoringSession` — see `CoreRecoveryInput`
+  below for the narrower set of inputs that must never see the nap
 
 `canonicalizeOverlaps(...)` makes overlap resolution deterministic before aggregation. It prefers
 segments marked as coming from the selected source, then resolves by duration, tracked-stage
 coverage, and stored source identity. If package metadata is not available for a record, the stored
 source/device fallback captured on ingest is used so the overlap choice stays stable across daily
 sync, historical resync, retention-window changes, and restarts.
+
+**WP-14/C4 — `CoreRecoveryInput` isolates recovery-timing/fragmentation from the nap-inclusive
+session.** `scoringSession` (above) is a synthetic row: its `startTime`/`endTime` are the core
+window's, but its `durationMinutes`/architecture fields are nap-inclusive
+(`aggregate.totalDurationMinutes`/`aggregate.architectureTotals`) — correct for duration/architecture
+scoring, but wrong for nadir-timing and fragmentation, which must reflect only the core (overnight)
+sleep. `CoreRecoveryInput` (`core/scoring/.../domain/scoring/sleep/CoreRecoveryInput.kt`) is the
+explicit value object that keeps these separate: `sessionIds` (the core cluster's own canonical
+segment IDs), `window` (`aggregate.recoveryWindow`, i.e. `coreCluster.recoveryWindow` — core-only
+start/end/`coreSleepDurationMinutes`), `endZoneOffsetSeconds` (the core cluster's chronologically-last
+segment's offset), and `previousCoreEndZoneOffsetSeconds`. `ReadinessSummaryCoordinator.resolveSleepAggregation`
+builds it via `CoreRecoveryInput.from(aggregate, previousCoreEndZoneOffsetSeconds)` — strictly from
+`aggregate.coreCluster.segments`/`aggregate.recoveryWindow`, never from `scoringSession` — and carries
+it on `SleepAggregationContext`/`ReadinessBaseInputs`/`SleepMetricsRequest.core` through to:
+- `SleepNadirAnalyzer.analyze(core, minHrTimestamp)` — passes `core.window.startTimeMs`/
+  `core.window.coreSleepDurationMinutes` into the unchanged `ScoringCalculator.isLateNadir` formula,
+  and compares `core.endZoneOffsetSeconds` against `core.previousCoreEndZoneOffsetSeconds` for the
+  timezone-jump check — never the nap-inclusive `session.durationMinutes` and never an arbitrary
+  "most recent session" that could itself be a nap.
+- `SleepModifierResolver.resolve(coreSessionIds, ...)` — fetches stages for *every* core-cluster
+  segment ID in one call (`SleepSessionRepository.getSessionStages(sessionIds: List<String>)` →
+  `SleepStageDao.getStagesForSessions`), deduplicates by `(sessionId, stageType, startTime, endTime)`,
+  and orders by `(startTime, endTime, sessionId)` before `SleepFragmentationCalculator.compute` runs —
+  so a merged core spanning more than one segment is fragmented as one continuous night, and a
+  supplemental nap's stages are never counted.
+
+**Previous-core offset, independent of baseline gating.** `previousCoreEndZoneOffsetSeconds` is
+resolved inside `resolveSleepAggregation` itself, from the same `SleepDayAggregator.aggregate(...)`
+call already made over the fetched window: the nearest prior day's `coreCluster` (never a
+`supplementalBlock`) ending at/before the current core's start, ties broken by the cluster's own
+`stableSessionTieBreakId`. This is deliberately **not** sourced from
+`ComputeSleepMetricsUseCase.resolveBaselineWindow`'s `historicalSessions` — that list is hardcoded
+empty on a **frozen** day (frozen baselines skip the live HRV/RHR recompute entirely), which would
+otherwise silently disable travel-day (timezone-jump) suppression on every frozen replay. Because the
+lookup only ever reads a prior day's `coreCluster`, a same-day-or-later nap can never be mistaken for
+the previous core — the pre-C4 bug picked whichever historical *session* had the latest end time,
+which could be an afternoon nap rather than the actual previous overnight core.
+`MorningRecoveryLoader`'s already wake-time-bounded morning-anchored path has no core/nap cluster
+context of its own, so it builds a degenerate single-session `CoreRecoveryInput` via
+`CoreRecoveryInput.fromSingleSession(...)`, preserving its pre-existing "most recent prior session"
+offset lookup unchanged.
 
 ### 2.4.2 Maturity vs. statistical windows (WP-12, OD-2 gate)
 
@@ -1349,11 +1392,11 @@ on `DailySummaryEntity`/`DailySummary` were already nullable before this task an
 | :--------------------------- | :-------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------- |
 | `SleepScoringStrategy`       | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/strategies/SleepScoringStrategy.kt` | Sleep score = **Duration 40% + Architecture 20% + Restoration 25% + Fragmentation 15%** (default Balanced profile; selectable profiles). Continuous logistic curves for duration and efficiency, configurable oversleep dead zone (`hypersomniaOnsetRatio`), and schedule regularity penalty-only multiplier (0.92–1.00). |
 | `SleepFragmentationCalculator` | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/sleep/SleepFragmentationCalculator.kt` | Pure Kotlin. Calculates Wake After Sleep Onset (`wasoMinutes`, wakefulness strictly between sleep onset and final awakening) and discrete awakening count (awake segments ≥90s) with adult grace allowance (20 min WASO / 2 awakenings). |
-| `SleepModifierResolver`      | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/sleep/SleepModifierResolver.kt` | Assembles `SleepModifiers` (`fragmentation` and `regularityScore`). Fetches stages via `SleepSessionRepository.getSessionStages(sessionId)` (`SleepStageDao.getStagesForSession`) and live regularity via `CircadianConsistencyRepository.scoreFor(targetDate)`. Suppresses fragmentation when stages are missing or suspicious while retaining regularity. |
+| `SleepModifierResolver`      | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/sleep/SleepModifierResolver.kt` | Assembles `SleepModifiers` (`fragmentation` and `regularityScore`). Fetches stages for every core-cluster segment ID via `SleepSessionRepository.getSessionStages(sessionIds: List<String>)` (`SleepStageDao.getStagesForSessions`), deduplicates/orders them (§2.4.1, WP-14/C4), and reads live regularity via `CircadianConsistencyRepository.scoreFor(targetDate)`. Suppresses fragmentation when stages are missing or suspicious while retaining regularity. |
 | `LoadScoringStrategy`        | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/strategies/LoadScoringStrategy.kt`  | Load score from the **Strain Ratio** (ATL/CTL): `sr ≤ 1.3 → 100`, `sr > 1.3 → 100·exp(−2.5·(sr−1.3)²)`. Feeds the readiness composite (0.4 restoration + 0.3 sleep + 0.3 load). Delegates recovery flag evaluation to `RecoveryFlagEvaluator`. Only `ILLNESS_ONSET` (cap 50) caps the readiness number and requires two consecutive nights; strong recovery, workout-impact, and rest-day flags are informational only and do not cap the score. |
 | `RecoveryFlagEvaluator`      | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/components/RecoveryFlagEvaluator.kt` | Evaluates daily `RecoveryFlag` set (`CALIBRATING`, `HRV_MISSING`, `SUSPICIOUS_STAGE_RATIO`, `NADIR_DELAYED`, `ILLNESS_ONSET`, `STRONG_RECOVERY_SIGNAL`, `WORKOUT_IMPACT`, `REST_DAY_SUCCESS`, `REST_DAY_NO_IMPACT`). Suppresses HRV-comparison insights when HRV is missing. |
 | `RasScoringStrategy`         | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/strategies/RasScoringStrategy.kt`   | **CTL (42-day)** and **ATL (7-day)** exponential moving averages of daily TRIMP.                                            |
-| `ComputeSleepMetricsUseCase` | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/ComputeSleepMetricsUseCase.kt`      | Consumes the `SleepDayAggregate` / core-isolated `scoringSession` from `ScoringRepositoryImpl.resolveSleepAggregation(...)`, then assembles sleep/readiness metrics for the day from the strategies + baselines + modifiers. Delegating Z-score calculations to `BaselineZScoreComputer` and restoration scoring to `RestorationScoreAssembler`. |
+| `ComputeSleepMetricsUseCase` | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/ComputeSleepMetricsUseCase.kt`      | Consumes the nap-inclusive `scoringSession` (duration/architecture) and the core-only `CoreRecoveryInput` (`SleepMetricsRequest.core`; nadir-timing/fragmentation, §2.4.1 WP-14/C4) from `ReadinessSummaryCoordinator.resolveSleepAggregation(...)`, then assembles sleep/readiness metrics for the day from the strategies + baselines + modifiers. Delegating Z-score calculations to `BaselineZScoreComputer` and restoration scoring to `RestorationScoreAssembler`. |
 | `BaselineZScoreComputer`     | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/BaselineZScoreComputer.kt`         | Pure collaborator for `ComputeSleepMetricsUseCase`. Computes HRV and RHR Z-scores, and nocturnal RHR delta BPM against active or frozen baselines. |
 | `RestorationScoreAssembler`  | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/RestorationScoreAssembler.kt`      | Pure collaborator for `ComputeSleepMetricsUseCase`. Assembles restoration score `sRest` with saturation bounds and late-nadir penalty. |
 | `CircadianConsistencyRepository` | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/CircadianConsistencyRepository.kt` | Live bed/wake-time consistency score. The allowed deviation **threshold** resolves through the single `CircadianThresholdDefaults.resolveThreshold(profile, override)` (Athlete 20 / Active 30 / Sedentary 45 min; override wins). The encrypted `circadianThresholdOverride` is the user knob; a legacy non-default flat `consistencyThresholdMinutes` is honored as an override for back-compat. `Ready` presentation status delegates to the shared `core:model` circadian-status classifier; `Calibrating` and `MissingData` keep their dedicated statuses. The former per-profile strategy classes are deleted — there is now one resolver. Exposes `scoreFor(targetDate)` as a direct scoring input for the sleep regularity multiplier. |
@@ -1760,9 +1803,12 @@ passes the caller's value straight through), so the loader resolves it through t
 the daily pipeline uses, with `toMs = wakeTime`. A frozen day short-circuits to calibrated in both paths —
 the freeze stamp is only ever written for a day that already passed this gate.
 
-Beyond `rhrBaselineValue` and `forceLiveBaselines`, no new request fields were needed; `dayEndMs`,
+Beyond `rhrBaselineValue` and `forceLiveBaselines`, no *bounding* fields were needed; `dayEndMs`,
 `currentSessionIds` and `prefetchedSessions` already existed for ordinary daily scoring, which continues to
-pass next-day midnight, the aggregated core cluster, and the walk-forward prefetch.
+pass next-day midnight, the aggregated core cluster, and the walk-forward prefetch. (`SleepMetricsRequest`
+did later gain `core: CoreRecoveryInput` for WP-14/C4 — see §2.4.1 — but this loader satisfies it with a
+degenerate single-session `CoreRecoveryInput.fromSingleSession(...)` rather than a new bounding regime: this
+path has no core/nap cluster context of its own, so `session` is treated as its own core.)
 
 The remaining inputs: HRV deviation bounds are `EmergencyFlagThresholds.illnessZHrvThreshold` /
 `.strongRecoveryZHrvThreshold` from the **frozen** profile (`DailySummary.snapshotProfile`, rebuilt

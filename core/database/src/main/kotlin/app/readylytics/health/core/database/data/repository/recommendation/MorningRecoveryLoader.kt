@@ -18,6 +18,7 @@ import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUse
 import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
 import app.readylytics.health.core.scoring.domain.scoring.SleepMetricsRequest
 import app.readylytics.health.core.scoring.domain.scoring.components.EmergencyFlagThresholds
+import app.readylytics.health.core.scoring.domain.scoring.sleep.CoreRecoveryInput
 import app.readylytics.health.core.scoring.domain.scoring.sleep.CurrentNightHrvResolver
 import java.time.Instant
 import java.time.LocalDate
@@ -166,9 +167,30 @@ class MorningRecoveryLoader
         ): DailySummary? {
             val wakeTimeMs = session.endTime
             val baseSummary = context.dailySummary ?: DailySummary(date = context.targetDate)
+            // This morning-anchored path has no core/nap cluster context of its own -- [session] is
+            // already the single, wake-time-bounded record the caller resolved, so it is treated as
+            // its own (single-segment) core. [boundedSessions] mirrors the pre-C4 "most recent prior
+            // session" lookup this path always used (it is already excluded via `it.id != session.id`
+            // rather than being scoped to a canonical core cluster, unlike the daily pipeline's
+            // `ReadinessSummaryCoordinator.findPreviousCoreEndZoneOffsetSeconds`).
+            val previousCoreEndZoneOffsetSeconds =
+                boundedSessions
+                    .filter { it.id != session.id }
+                    .maxByOrNull { it.endTime }
+                    ?.endZoneOffsetSeconds
+            val core =
+                CoreRecoveryInput.fromSingleSession(
+                    sessionId = session.id,
+                    startTimeMs = session.startTime,
+                    endTimeMs = session.endTime,
+                    coreSleepDurationMinutes = session.durationMinutes,
+                    endZoneOffsetSeconds = session.endZoneOffsetSeconds,
+                    previousCoreEndZoneOffsetSeconds = previousCoreEndZoneOffsetSeconds,
+                )
             val request =
                 SleepMetricsRequest(
                     session = session,
+                    core = core,
                     dayMidnight = Instant.ofEpochMilli(context.dayMidnightMs),
                     targetDate = context.targetDate,
                     prefs = context.prefs,

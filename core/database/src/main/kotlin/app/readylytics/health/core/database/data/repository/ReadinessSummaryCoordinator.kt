@@ -19,6 +19,8 @@ import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesU
 import app.readylytics.health.core.scoring.domain.scoring.ScoringConfig
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.scoring.domain.scoring.TrimpDateBucketer
+import app.readylytics.health.core.scoring.domain.scoring.sleep.CoreRecoveryInput
+import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepCluster
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayAggregate
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayAggregator
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayPolicy
@@ -59,12 +61,15 @@ class ReadinessSummaryCoordinator
                     supplementalArchitectureCoveragePercent = prefs.supplementalArchitectureCoveragePercent,
                     scoringZoneId = zoneId,
                 )
-            val aggregate =
-                SleepDayAggregator.aggregateForScoreDay(
-                    scoreDay = targetDate,
+            // Aggregated once over the whole fetched window (not per-day via aggregateForScoreDay)
+            // so the same pass also yields yesterday's/earlier days' core clusters, needed below to
+            // resolve the previous-core offset independently of any baseline-window statistics.
+            val aggregationResult =
+                SleepDayAggregator.aggregate(
                     segments = sessions.map(::toSleepDaySegment),
                     policy = policy,
-                ) ?: return null
+                )
+            val aggregate = aggregationResult.aggregates.firstOrNull { it.scoreDay == targetDate } ?: return null
 
             val coreSessionIds = aggregate.coreCluster.segments.map { it.stableId }.toSet()
             val coreSessions = sessions.filter { it.id in coreSessionIds }
@@ -90,12 +95,16 @@ class ReadinessSummaryCoordinator
                         add(LongInterval(it.segment.startTimeMs, it.segment.endTimeMs))
                     }
                 }
+            val previousCoreEndZoneOffsetSeconds =
+                findPreviousCoreEndZoneOffsetSeconds(aggregationResult.aggregates, aggregate)
+            val coreRecoveryInput = CoreRecoveryInput.from(aggregate, previousCoreEndZoneOffsetSeconds)
 
             return SleepAggregationContext(
                 aggregate = aggregate,
                 scoringSession = scoringSession,
                 coreSessionIds = coreSessionIds,
                 allSleepIntervals = allSleepIntervals,
+                coreRecoveryInput = coreRecoveryInput,
             )
         }
 
@@ -285,6 +294,7 @@ class ReadinessSummaryCoordinator
                 computeSleepMetricsUseCase(
                     SleepMetricsRequest(
                         session = SleepSessionMapper.toDomain(base.session),
+                        core = base.coreRecoveryInput ?: fallbackCoreRecoveryInput(base.session),
                         dayMidnight = context.targetDate.atStartOfDay(context.zoneId).toInstant(),
                         targetDate = context.targetDate,
                         prefs = context.prefs,
@@ -323,12 +333,63 @@ class ReadinessSummaryCoordinator
             )
     }
 
+/**
+ * WP-14/C4: [ReadinessBaseInputs.coreRecoveryInput] is only ever null when
+ * [ReadinessSummaryCoordinator.resolveSleepAggregation] itself returned null and the caller fell
+ * back to a single raw session ([ScoringDayDataLoader.loadSessionEndingInRange]) with no
+ * aggregation context at all -- there is no core/nap distinction to make in that case, so this
+ * treats the raw session as its own (single-segment) core, with no previous-core offset evidence
+ * available. Kept as a file-level function (rather than a member) to keep
+ * [ReadinessSummaryCoordinator]'s own method count under detekt's `TooManyFunctions` threshold.
+ */
+private fun fallbackCoreRecoveryInput(session: SleepSessionEntity): CoreRecoveryInput =
+    CoreRecoveryInput.fromSingleSession(
+        sessionId = session.id,
+        startTimeMs = session.startTime,
+        endTimeMs = session.endTime,
+        coreSleepDurationMinutes = session.durationMinutes,
+        endZoneOffsetSeconds = session.endZoneOffsetSeconds,
+        previousCoreEndZoneOffsetSeconds = null,
+    )
+
+/**
+ * WP-14/C4: the nearest PRIOR canonical core ending at/before [current]'s core start, resolved
+ * purely from clusters already produced by [SleepDayAggregator] over the same fetched window --
+ * deliberately independent of `ComputeSleepMetricsUseCase`'s frozen-baseline gate (which on a
+ * frozen replay short-circuits the HRV/RHR history window to empty) so travel-day suppression
+ * keeps working on frozen days too. Only ever reads [SleepDayAggregate.coreCluster] from a
+ * strictly earlier [SleepDayAggregate.scoreDay] -- never [SleepDayAggregate.supplementalBlocks] --
+ * so a same-day-or-later nap can never be mistaken for the previous core. Ties (equal end time)
+ * break on the cluster's own stable tie-break ID for determinism.
+ */
+private fun findPreviousCoreEndZoneOffsetSeconds(
+    aggregates: List<SleepDayAggregate>,
+    current: SleepDayAggregate,
+): Int? {
+    val previousCore =
+        aggregates
+            .asSequence()
+            .filter { it.scoreDay < current.scoreDay }
+            .map { it.coreCluster }
+            .filter { it.endTimeMs <= current.coreCluster.startTimeMs }
+            .maxWithOrNull(compareBy({ it.endTimeMs }, { it.stableSessionTieBreakId }))
+            ?: return null
+    return latestSegmentEndOffset(previousCore)
+}
+
+private fun latestSegmentEndOffset(cluster: SleepCluster): Int? =
+    cluster.segments
+        .sortedWith(compareBy({ it.endTimeMs }, { it.stableId }))
+        .lastOrNull()
+        ?.endZoneOffsetSeconds
+
 data class ReadinessBaseInputs(
     val session: SleepSessionEntity?,
     val currentSessionIds: Set<String>,
     val baseSummary: DailySummary,
     val avgSpo2: Float?,
     val avgBodyTemp: Float?,
+    val coreRecoveryInput: CoreRecoveryInput? = null,
 )
 
 data class CalibratedScoringContext(
@@ -350,4 +411,5 @@ data class SleepAggregationContext(
     val scoringSession: SleepSessionEntity,
     val coreSessionIds: Set<String>,
     val allSleepIntervals: List<LongInterval>,
+    val coreRecoveryInput: CoreRecoveryInput,
 )

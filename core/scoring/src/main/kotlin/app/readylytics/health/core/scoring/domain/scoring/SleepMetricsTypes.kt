@@ -7,6 +7,7 @@ import app.readylytics.health.core.model.domain.model.SleepSession
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.model.domain.security.EncryptionManager
+import app.readylytics.health.core.scoring.domain.scoring.sleep.CoreRecoveryInput
 import app.readylytics.health.core.scoring.domain.scoring.sleep.CurrentNightHrvResolver
 import app.readylytics.health.core.scoring.domain.scoring.sleep.HrCoverageValidator
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepModifierResolver
@@ -60,6 +61,12 @@ data class SleepMetricsCollaborators
  */
 data class SleepMetricsRequest(
     val session: SleepSession,
+    /**
+     * WP-14/C4: the core (overnight) cluster's own IDs/window/offset evidence, distinct from
+     * [session]'s whole-day, nap-inclusive duration/architecture. Recovery-timing/fragmentation
+     * scoring must derive exclusively from this, never from [session].
+     */
+    val core: CoreRecoveryInput,
     val dayMidnight: Instant,
     val targetDate: LocalDate,
     val prefs: UserPreferences,
@@ -76,7 +83,7 @@ data class SleepMetricsRequest(
 
 internal data class NocturnalScoringInput(
     val session: SleepSession,
-    val historicalSessions: List<SleepSession>,
+    val core: CoreRecoveryInput,
     val minHrTimestamp: Long?,
     val sessionHrvSamples: List<Float>,
     val currentHrvMean: Float,
@@ -128,7 +135,6 @@ internal data class BaselineWindowResult(
     val rhrValues: List<Int>,
     val muHrvHistory: List<Float>,
     val sigmaHrvHistory: List<Float>,
-    val historicalSessions: List<SleepSession>,
     val validHistoricalSessionIds: List<String>,
     val validHistoricalDayCount: Int,
     val frozenHrvMu: Float?,

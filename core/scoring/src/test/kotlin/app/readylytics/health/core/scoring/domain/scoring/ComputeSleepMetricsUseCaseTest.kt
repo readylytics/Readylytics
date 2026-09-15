@@ -15,6 +15,7 @@ import app.readylytics.health.core.model.domain.repository.ScoringHistoryReposit
 import app.readylytics.health.core.scoring.domain.scoring.components.Phase
 import app.readylytics.health.core.scoring.domain.scoring.sleep.CurrentNightHrvResolver
 import app.readylytics.health.core.scoring.domain.scoring.sleep.HrCoverageValidator
+import app.readylytics.health.core.scoring.domain.scoring.sleep.CoreRecoveryInput
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepModifierResolver
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepModifiers
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepNadirAnalyzer
@@ -357,6 +358,7 @@ private fun calibrationRequest(
     val dayMidnight = targetDate.atStartOfDay(zoneId).toInstant()
     return SleepMetricsRequest(
         session = calibrationSession(),
+        core = testCoreRecoveryInput(calibrationSession()),
         dayMidnight = dayMidnight,
         targetDate = targetDate,
         prefs = UserPreferences(scoringZoneId = zoneId.id),
@@ -407,6 +409,7 @@ private fun testComputeSleepMetricsUseCase(
 private fun cancellationTestRequest(): SleepMetricsRequest =
     SleepMetricsRequest(
         session = cancelledSession(),
+        core = testCoreRecoveryInput(cancelledSession()),
         dayMidnight = Instant.ofEpochMilli(0),
         targetDate = LocalDate.of(2026, 5, 31),
         prefs = UserPreferences(),
@@ -431,4 +434,14 @@ private fun cancelledSession() =
         remSleepMinutes = 120,
         lightSleepMinutes = 270,
         awakeMinutes = 20,
+    )
+
+private fun testCoreRecoveryInput(session: SleepSession): CoreRecoveryInput =
+    CoreRecoveryInput.fromSingleSession(
+        sessionId = session.id,
+        startTimeMs = session.startTime,
+        endTimeMs = session.endTime,
+        coreSleepDurationMinutes = session.durationMinutes,
+        endZoneOffsetSeconds = session.endZoneOffsetSeconds,
+        previousCoreEndZoneOffsetSeconds = null,
     )
