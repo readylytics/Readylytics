@@ -1245,7 +1245,16 @@ is the same computation shared across many requested days from one scan, used by
   `AssembleDailySummaryUseCase.assembleCalibrated` (which now explicitly clears `isCalibrating` —
   that branch is only reached once `CalibrationGate` has already determined the user is
   calibrated, so a stale `true` left on the persisted row must never leak through). No branch
-  re-derives or independently diverges from the one resolved `CalibrationState`.
+  re-implements the mismatch/resolution logic itself — every consumer, including the gate below,
+  calls this one function rather than re-deriving phase/calibration from raw counts on its own.
+  `CalibrationGate.isCalibrated` is the one caller that may still short-circuit *without* calling
+  the resolver: a frozen row with no `baselineObservationCount`/`snapshotCalibrationPhase` at all
+  (pre-C2 legacy data, nothing to check) is trusted from the freeze timestamp alone, exactly as
+  before. Once either field is present, the gate consults `resolveCalibrationState` itself
+  (`liveCount = null`) before trusting the row, so a genuinely mismatched frozen row is routed the
+  same way `ComputeSleepMetricsUseCase` would treat it (falls through to the live eligible-day
+  count instead of the calibrated branch) rather than the two call sites disagreeing on the same
+  row.
 - Existing phase-boundary thresholds (6/7, 20/21, 29/30, 59/60) and every scoring
   formula/coefficient are unchanged by this task — `resolveCalibrationState` only changes *which
   count* is fed into the existing, unmodified `PhaseCalculator.calculatePhase`.
@@ -1253,9 +1262,14 @@ is the same computation shared across many requested days from one scan, used by
 **Threaded through every count consumer:** `CalibrationGate.isCalibrated` (live daily sync and
 morning/workout-recommendation calls) now sources the prior-days count from
 `ScoringHistoryRepository.countEligibleSleepDaysThrough`, not `BaselineComputer`'s bounded HRV
-window. `ComputeSleepMetricsUseCase` only performs a live scan when there is no frozen count/phase
-to trust (`frozenObservationCount == null && frozenPhase == null`); a frozen day never triggers a
-live scan. `ComputeHistoricalBaselinesUseCase`'s backfill sources `baselineObservationCount` from
+window, for its live-scan fallback. Before trusting a frozen row outright, the gate also validates
+any present `baselineObservationCount`/`snapshotCalibrationPhase` pair through
+`resolveCalibrationState` (`liveCount = null`); only a row with neither field set (legacy, nothing
+to validate) or a row `resolveCalibrationState` confirms non-calibrating is short-circuited to
+`true` — a row with present-but-mismatched metadata falls through to the same live-scan path a
+non-frozen day takes. `ComputeSleepMetricsUseCase` only performs a live scan when there is no
+frozen count/phase to trust (`frozenObservationCount == null && frozenPhase == null`); a frozen day
+never triggers a live scan there. `ComputeHistoricalBaselinesUseCase`'s backfill sources `baselineObservationCount` from
 the batched cumulative count instead of `windows.muHistory.size`. No caching layer was introduced
 for these counts — `ComputeHistoricalBaselinesUseCase` performs one batched scan per backfill
 invocation (function-local, not persisted), and the live single-day scan re-reads on every call —
@@ -2081,7 +2095,7 @@ defaults when unset).
 | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/CircadianWakeBaseline.kt` | Processing — habitual bed/wake times (pure) | shared ≥180-min / ≥3-session baseline selection + median, used by the circadian score and the morning anchor (§2.11.1) |
 | `core/database/src/main/kotlin/app/readylytics/health/core/database/data/repository/recommendation/MorningRecommendationAssembler.kt` | Processing — morning snapshot | anchor selection → bounded recovery inputs → evaluator → example selection (§2.11.1) |
 | `core/database/src/main/kotlin/app/readylytics/health/core/database/data/repository/recommendation/MorningRecoveryLoader.kt` | Processing — bounded recovery inputs | re-runs `ComputeSleepMetricsUseCase` bounded at the wake time (`forceLiveBaselines`, wake-bounded RHR baseline, `CalibrationGate` at wake); frozen-profile HRV bounds; `computeAt` fatigue (§2.11.2) |
-| `core/database/src/main/kotlin/app/readylytics/health/core/database/data/repository/CalibrationGate.kt` | Processing — calibration gate | frozen ⇒ calibrated, else live valid-night count; optional `toMs` for the morning anchor (§2.4, §2.11.2) |
+| `core/database/src/main/kotlin/app/readylytics/health/core/database/data/repository/CalibrationGate.kt` | Processing — calibration gate | frozen + `resolveCalibrationState`-validated (or no count/phase metadata to validate) ⇒ calibrated, else live valid-night count; optional `toMs` for the morning anchor (§2.4, §2.11.2) |
 | `core/database/src/main/kotlin/app/readylytics/health/core/database/data/repository/recommendation/WorkoutExampleLoader.kt` | Processing — example candidates | 30-day pre-wake window, pre-narrowed rows, one summary prefetch, fresh display metrics per load (§2.11.3) |
 | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/repository/WalkForwardFatigueContext.kt` | Processing — walk-forward accumulator | prefetched impulse series + running accumulated fatigue (WP-27) |
 | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/repository/WalkForwardVo2MaxContext.kt` | Processing — walk-forward VO2 Max lookup | prefetched wearable VO2 Max readings (`TreeMap<Long, Float>`), `floorEntry`-based per-day lookup (§2.6) |
