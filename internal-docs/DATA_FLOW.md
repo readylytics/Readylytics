@@ -1287,19 +1287,27 @@ it on `SleepAggregationContext`/`ReadinessBaseInputs`/`SleepMetricsRequest.core`
 
 **Previous-core offset, independent of baseline gating.** `previousCoreEndZoneOffsetSeconds` is
 resolved inside `resolveSleepAggregation` itself, from the same `SleepDayAggregator.aggregate(...)`
-call already made over the fetched window: the nearest prior day's `coreCluster` (never a
-`supplementalBlock`) ending at/before the current core's start, ties broken by the cluster's own
-`stableSessionTieBreakId`. This is deliberately **not** sourced from
+call already made over the fetched window, via the shared
+`findPreviousCoreEndZoneOffsetSeconds(aggregates, currentScoreDay, currentCoreStartTimeMs)`
+(`core/scoring/.../domain/scoring/sleep/PreviousCoreOffsetLookup.kt`): the nearest prior day's
+`coreCluster` (never a `supplementalBlock`) ending at/before the current core's start, ties broken by
+the cluster's own `stableSessionTieBreakId`. This is deliberately **not** sourced from
 `ComputeSleepMetricsUseCase.resolveBaselineWindow`'s `historicalSessions` — that list is hardcoded
 empty on a **frozen** day (frozen baselines skip the live HRV/RHR recompute entirely), which would
 otherwise silently disable travel-day (timezone-jump) suppression on every frozen replay. Because the
 lookup only ever reads a prior day's `coreCluster`, a same-day-or-later nap can never be mistaken for
 the previous core — the pre-C4 bug picked whichever historical *session* had the latest end time,
 which could be an afternoon nap rather than the actual previous overnight core.
-`MorningRecoveryLoader`'s already wake-time-bounded morning-anchored path has no core/nap cluster
-context of its own, so it builds a degenerate single-session `CoreRecoveryInput` via
-`CoreRecoveryInput.fromSingleSession(...)`, preserving its pre-existing "most recent prior session"
-offset lookup unchanged.
+
+**Fix round 1 — `MorningRecoveryLoader` shares the same scoping.** The morning-anchored path builds a
+degenerate single-session `CoreRecoveryInput` via `CoreRecoveryInput.fromSingleSession(...)` for
+*this* core (it has no cluster context of its own — `session` is already the single, wake-time-bounded
+record the caller resolved), but its `previousCoreEndZoneOffsetSeconds` now goes through the identical
+canonical-core scoping as the daily pipeline rather than a raw "most recent session" scan: it
+re-aggregates its own wake-time-bounded `boundedSessions` through `SleepDayAggregator.aggregate(...)`
+purely to classify which of them are canonical cores versus naps, then calls the same shared
+`findPreviousCoreEndZoneOffsetSeconds`. A same-day-or-later nap can therefore no longer be mistaken
+for the previous night's core on this path either.
 
 ### 2.4.2 Maturity vs. statistical windows (WP-12, OD-2 gate)
 

@@ -20,11 +20,11 @@ import app.readylytics.health.core.scoring.domain.scoring.ScoringConfig
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.scoring.domain.scoring.TrimpDateBucketer
 import app.readylytics.health.core.scoring.domain.scoring.sleep.CoreRecoveryInput
-import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepCluster
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayAggregate
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayAggregator
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayPolicy
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDaySegment
+import app.readylytics.health.core.scoring.domain.scoring.sleep.findPreviousCoreEndZoneOffsetSeconds
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
@@ -96,7 +96,11 @@ class ReadinessSummaryCoordinator
                     }
                 }
             val previousCoreEndZoneOffsetSeconds =
-                findPreviousCoreEndZoneOffsetSeconds(aggregationResult.aggregates, aggregate)
+                findPreviousCoreEndZoneOffsetSeconds(
+                    aggregationResult.aggregates,
+                    aggregate.scoreDay,
+                    aggregate.coreCluster.startTimeMs,
+                )
             val coreRecoveryInput = CoreRecoveryInput.from(aggregate, previousCoreEndZoneOffsetSeconds)
 
             return SleepAggregationContext(
@@ -351,37 +355,6 @@ private fun fallbackCoreRecoveryInput(session: SleepSessionEntity): CoreRecovery
         endZoneOffsetSeconds = session.endZoneOffsetSeconds,
         previousCoreEndZoneOffsetSeconds = null,
     )
-
-/**
- * WP-14/C4: the nearest PRIOR canonical core ending at/before [current]'s core start, resolved
- * purely from clusters already produced by [SleepDayAggregator] over the same fetched window --
- * deliberately independent of `ComputeSleepMetricsUseCase`'s frozen-baseline gate (which on a
- * frozen replay short-circuits the HRV/RHR history window to empty) so travel-day suppression
- * keeps working on frozen days too. Only ever reads [SleepDayAggregate.coreCluster] from a
- * strictly earlier [SleepDayAggregate.scoreDay] -- never [SleepDayAggregate.supplementalBlocks] --
- * so a same-day-or-later nap can never be mistaken for the previous core. Ties (equal end time)
- * break on the cluster's own stable tie-break ID for determinism.
- */
-private fun findPreviousCoreEndZoneOffsetSeconds(
-    aggregates: List<SleepDayAggregate>,
-    current: SleepDayAggregate,
-): Int? {
-    val previousCore =
-        aggregates
-            .asSequence()
-            .filter { it.scoreDay < current.scoreDay }
-            .map { it.coreCluster }
-            .filter { it.endTimeMs <= current.coreCluster.startTimeMs }
-            .maxWithOrNull(compareBy({ it.endTimeMs }, { it.stableSessionTieBreakId }))
-            ?: return null
-    return latestSegmentEndOffset(previousCore)
-}
-
-private fun latestSegmentEndOffset(cluster: SleepCluster): Int? =
-    cluster.segments
-        .sortedWith(compareBy({ it.endTimeMs }, { it.stableId }))
-        .lastOrNull()
-        ?.endZoneOffsetSeconds
 
 data class ReadinessBaseInputs(
     val session: SleepSessionEntity?,

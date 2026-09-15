@@ -715,6 +715,33 @@ class MorningRecommendationAssemblerTest {
         }
 
     @Test
+    fun `previous-core offset lookup skips a later nap and uses the earlier core`() =
+        runTest {
+            val captured = slot<SleepMetricsRequest>()
+            stubSleepMetrics(request = captured)
+            stubHrv()
+            stubWorkouts(emptyList())
+            stubFatigue(listOf(seedWorkout))
+
+            // The night before, a genuine 8h core, stamped with a distinct travel offset.
+            val previousCore =
+                sleepData("previous-core", endMs = wakeMs - DAY_MS, durationMinutes = 480)
+                    .copy(endZoneOffsetSeconds = 3_600)
+            // An evening nap the same calendar day as previousCore but chronologically LATER --
+            // exactly the "later nap ranks as most recent" failure mode this test guards against
+            // (WP-14/C4 fix round 1). A short nap never outranks the 8h core as that day's canonical
+            // cluster, so it must never be picked as the previous-core offset evidence.
+            val laterNap =
+                sleepData("later-nap", endMs = wakeMs - DAY_MS + 12 * HOUR_MS, durationMinutes = 60)
+                    .copy(endZoneOffsetSeconds = 0)
+            stubSessions(priorNights.drop(1) + previousCore + laterNap + morningSession)
+
+            assembler().assembleSnapshot(context())
+
+            assertEquals(3_600, captured.captured.core.previousCoreEndZoneOffsetSeconds)
+        }
+
+    @Test
     fun `an operational read failure propagates instead of reporting no data`() =
         runTest {
             coEvery { sleepSessionRepository.getInRange(any(), any()) } throws IllegalStateException("db closed")
