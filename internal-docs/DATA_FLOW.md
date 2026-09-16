@@ -54,7 +54,7 @@ Paths below are rooted at the project root. Module prefixes are explicit, for ex
                │   columns in place, near-no-op on identical re-ingest; others: @Upsert on stable id
                ▼
 ┌──────────────────────────────┐
-│  HealthDatabase (SQLite v20) │   20 entities — single source of truth
+│  HealthDatabase (SQLite v21) │   20 entities — single source of truth
 └──────────────┬───────────────┘
                │ raw DAO reads (local; no further HC calls)
                ▼
@@ -270,7 +270,7 @@ so re-ingestion is idempotent, but entity construction itself happens one layer 
 | `OxygenSaturationDataMapper` | `core/healthconnect/src/main/kotlin/app/readylytics/health/core/healthconnect/data/mapper/OxygenSaturationDataMapper.kt` | `DomainOxygenSaturationRecord` → `OxygenSaturationRecordEntity` (%).                                                                               |
 | `BodyTemperatureDataMapper`  | `core/healthconnect/src/main/kotlin/app/readylytics/health/core/healthconnect/data/mapper/BodyTemperatureDataMapper.kt`  | `DomainBodyTemperatureRecord` → `BodyTemperatureRecordEntity` (°C). Ingested through `HealthIngestionCoordinator` exactly like the other optional-permission metrics — same upsert/idempotency contract, no special-casing. |
 
-### 1.4 Room storage — `HealthDatabase` (`@Database(version = 20)`)
+### 1.4 Room storage — `HealthDatabase` (`@Database(version = 21)`)
 
 Defined in `core/database/src/main/kotlin/app/readylytics/health/core/database/data/local/HealthDatabase.kt`;
 entities in `core/database-schema/src/main/kotlin/app/readylytics/health/core/databaseschema/data/local/entity/`, DAOs in
@@ -404,7 +404,10 @@ Version 20 (`Migration19To20`) bumps the schema for the Work Package 04/05 inges
 - Adds `dirty_ranges` table (`id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, sourceGeneration INTEGER NOT NULL, startEpochDay INTEGER NOT NULL, endEpochDayInclusive INTEGER NOT NULL, nextEpochDay INTEGER NOT NULL, reason TEXT NOT NULL, scoringSnapshotId TEXT NOT NULL` with index `index_dirty_ranges_sourceGeneration_id` on `(sourceGeneration, id)`). The `DirtyRangeEntity` constructor enforces the invariants `startEpochDay <= endEpochDayInclusive` and `startEpochDay <= nextEpochDay <= endEpochDayInclusive + 1`.
 - Adds `health_mutation_state` table (`id INTEGER PRIMARY KEY NOT NULL, sourceGeneration INTEGER NOT NULL DEFAULT 0, maintenanceOperationId TEXT, maintenancePhase TEXT, backfillAfterSourceRef INTEGER NOT NULL DEFAULT 0`), initialized with singleton row `(1, 0, NULL, NULL, 0)` during migration and on initial database creation.
 - Introduces `SourceMetadataBackfill` (`core/database/src/main/kotlin/app/readylytics/health/core/database/data/local/SourceMetadataBackfill.kt`): an incremental, resumable worker step that keyset-paginates `health_source_records` after `backfillAfterSourceRef` in 500-item chunks. For `HEART_RATE` and `HRV` records whose `metadataState` is `UNKNOWN`, it queries child sample bounds (`minTimestampMs`, `maxTimestampMs + 1` with checked overflow protection) from `heart_rate_records` and `hrv_records`, updating the source record bounds and transitioning `metadataState` to `CHILD_BOUNDS`.
-The current Room schema version = 20.
+Version 21 (`Migration20To21`) bumps the schema for canonical workout TRIMP inputs and results (WP-15, OD-3 gate):
+- Adds 4 nullable provenance and quality metadata columns to `workout_records`: `modelTrimpQuality TEXT`, `modelTrimpSourceRevision INTEGER`, `modelTrimpSnapshotId TEXT`, `modelTrimpAlgorithmRevision INTEGER`.
+- Eliminates legacy `COALESCE(modelTrimp, trimp)` fallback across all queries (`getTrimpPoints`, `getCanonicalFatigueInputsThrough`, `getCanonicalFatigueSeed`); `modelTrimp IS NOT NULL` is strictly required.
+The current Room schema version = 21.
 
 **Workout distance and elevation come from separate records, not the session.** An
 `ExerciseSessionRecord` carries no distance — the recording app writes `DistanceRecord` and
@@ -543,7 +546,7 @@ per-bucket (min/avg/max or percentile) replay values are unchanged.
 | `DirtyRangeEntity`             | `dirty_ranges`              | `id: Long` (auto)                      | `sourceGeneration`, `startEpochDay`, `endEpochDayInclusive`, `nextEpochDay`, `reason`, `scoringSnapshotId`; indexed by `(sourceGeneration, id)` |
 | `HealthMutationStateEntity`    | `health_mutation_state`     | `id: Int` (singleton 1)                | `sourceGeneration`, `maintenanceOperationId`, `maintenancePhase`, `backfillAfterSourceRef`                                                                |
 | `HrMinuteBucketEntity`         | `hr_minute_buckets`         | `(bucketStartMs, recordType, sessionId, deviceName)` | 1-minute warm-tier aggregates: `minBpm`/`maxBpm`/`avgBpm`/`sampleCount`; `sessionId` is `""` for no-session minutes; `deviceName` (default `""`); plus a p5/p25/p50/p75/p95 percentile sketch (nullable — `null` for buckets rolled up before the v15 migration) |
-| `WorkoutRecordEntity`          | `workout_records`           | `id: String` (HC id)                   | zone1–5 min, TRIMP, avg HR, `startTime`, `deviceName`, `modelTrimp`; route-derived display metrics `totalDistanceMeters`/`avgSpeedKmh`/`elevationGainMeters` (nullable) and `routeState` (IMPORTED/PERMISSION_REQUIRED/NOT_AVAILABLE) — display/insight fields, never scoring inputs |
+| `WorkoutRecordEntity`          | `workout_records`           | `id: String` (HC id)                   | zone1–5 min, TRIMP, avg HR, `startTime`, `deviceName`, `modelTrimp`, `modelTrimpQuality`, `modelTrimpSourceRevision`, `modelTrimpSnapshotId`, `modelTrimpAlgorithmRevision`; route-derived display metrics `totalDistanceMeters`/`avgSpeedKmh`/`elevationGainMeters` (nullable) and `routeState` (IMPORTED/PERMISSION_REQUIRED/NOT_AVAILABLE) — display/insight fields, never scoring inputs |
 | `WorkoutRoutePointEntity`      | `workout_route_points`      | `id: Long` (auto)                      | `workoutId` (FK → `workout_records.id`, cascade delete), lat/lon/altitude, `timestampMs`, horizontal/vertical accuracy; `(workoutId, timestampMs)` indexed. Upserted alongside each workout ingest; replaced by `OnConflictStrategy.REPLACE` on identical `(workoutId, timestampMs)` — idempotent under chunked refetch |
 | `WeightRecordEntity`           | `weight_records`            | `id: String` (composite)               | kg, `timestampMs`, `deviceName`                                                                                                                           |
 | `BodyFatRecordEntity`          | `body_fat_records`          | `id: String` (composite)               | %, `timestampMs`, `deviceName`                                                                                                                            |
@@ -561,14 +564,14 @@ result detail. They do not store health samples, backup contents, passwords, enc
 Health Connect payloads.
 
 **Staged Restore Design:**
-Restore is staged and pre-validated. Before any database modifications occur, `RestoreInventoryValidator` executes a read-only streaming inventory and count validation pass: it verifies the archive JSON structure, rejects duplicate top-level keys, validates that declared row counts are non-negative and exactly match observed decoded record counts, and enforces minimum required tables via `BackupInventoryPolicy.requiredTables(version)` (core tables for v5–9; vitals, sources, and buckets added in v10; workout routes added in v11; VO2 Max added in v19; schema v20 maintains table parity as dirty work is regenerated).
+Restore is staged and pre-validated. Before any database modifications occur, `RestoreInventoryValidator` executes a read-only streaming inventory and count validation pass: it verifies the archive JSON structure, rejects duplicate top-level keys, validates that declared row counts are non-negative and exactly match observed decoded record counts, and enforces minimum required tables via `BackupInventoryPolicy.requiredTables(version)` (core tables for v5–9; vitals, sources, and buckets added in v10; workout routes added in v11; VO2 Max added in v19; schema v20 maintains table parity as dirty work is regenerated; schema v21 adds workout TRIMP metadata).
 
 Database replacement is atomic within a Room transaction:
 1. **Child-Before-Parent Clearing:** All health tables are cleared in strict child-before-parent order: routes (`workout_route_points`), sleep stages (`sleep_stages`), HR/HRV (`heart_rate_records`, `hrv_records`), warm minute buckets (`hr_minute_buckets`), vitals/steps/VO2 (`weight_records`, `body_fat_records`, `blood_pressure_records`, `oxygen_saturation_records`, `body_temperature_records`, `step_records`, `vo2_max_records`), daily summaries (`daily_summaries`), sleep/workout parents (`sleep_sessions`, `workouts`), and health source records (`health_source_records`). Ephemeral dirty ranges (`dirty_ranges`) are wiped and regenerated on restore, and mutation state (`health_mutation_state`) is reset to singleton initial state with `sourceGeneration` loaded from the manifest. Device-local state (`insight_dismissals` and `audit_events`) is retained under documented app ownership and never cleared during restore.
 2. **Stable Parent-Before-Child Streaming:** Records stream from the backup archive in stable relational order independently of JSON field ordering via two passes (Pass 1: parent entities `health_source_records`, `workouts`, `sleep_sessions`, plus `preferences`; Pass 2: child entities `heart_rate_records`, `hrv_records`, `workout_route_points`, and remaining vitals tables).
 3. **Transaction Verification:** Before commit, `LocalRestoreManager` verifies that actual inserted database counts match observed counts and executes `PRAGMA foreign_key_check`. Any foreign key or count violation throws and rolls back all database modifications, leaving pre-existing data completely intact.
 
-Preferences and layout configurations (dashboard cards, vitals layout, and sleep tab layout configurations via `SleepLayoutRepository`) are restored only after the database transaction commits because Room and DataStore cannot share a transaction. If preferences restoration fails, the app returns an explicit partial-success result requiring restart and instructs the user to rerun restore. Backup manifests v5 through current v20 restore into current entities.
+Preferences and layout configurations (dashboard cards, vitals layout, and sleep tab layout configurations via `SleepLayoutRepository`) are restored only after the database transaction commits because Room and DataStore cannot share a transaction. If preferences restoration fails, the app returns an explicit partial-success result requiring restart and instructs the user to rerun restore. Backup manifests v5 through current v21 restore into current entities.
 For legacy v5/v6 payloads, legacy HR/HRV composite IDs normalize to `(sourceRecordId, timestampMs)` by removing only an exact trailing `_<timestampMs>` suffix. As of v10, backups carry `health_source_records` and `hr_minute_buckets`; HR/HRV rows serialize the integer `sourceRecordRef` directly, and restore re-decodes older schema-7–9 `sourceRecordId`-format rows back into `sourceRecordRef` via `SourceRecordDao.getOrCreateSourceRef`.
 Immediately after database commit, `LocalRestoreManager` checks whether restored `daily_summaries` rows carry a recognized recommendation payload and schedules a recompute-only backfill if incomplete. In addition, `RestoreDatabaseOperations.regenerateRestoredDirtyWork` regenerates a dirty range spanning all retained dates from the earliest to the latest summary date, ensuring recalculation runs cleanly over restored history.
 
@@ -914,36 +917,36 @@ independent per-workout values that must not be confused:
   zone-minutes data (per-workout detail screens) and is never fed into ATL/CTL.
 - `modelTrimp` — the user-selected-model TRIMP (Banister/Cheng/iTRIMP per `prefs.trimpModel`),
   written onto the entity by `ScoringRepositoryImpl.computeDailySummary`'s per-workout loop (the
-  same value `ComputeWorkoutTrimpUseCase.execute` already produced for `dailyTrimpRaw`). Nullable
-  additive column (v5→v6); a row keeps `modelTrimp = null` until the next walk-forward recompute
-  touches it. `SessionLinkReconcilerImpl.recomputeWorkouts` cannot populate it (no RHR
-  baseline/hrMax/gender available at that call site) and intentionally leaves it null.
-- Backup restore accepts historical rows whose timestamps may be equal or reversed. When such a
-  row has no in-range HR samples, `ComputeWorkoutTrimpUseCase` returns canonical `0f` for
-  `endTime <= startTime`; it never returns the row's nonzero Edwards-style `trimp`. The daily pass
-  persists `modelTrimp = 0f`, closing the startup backfill gate without publishing a fatigue
-  impulse or relabeling Edwards data as selected-model TRIMP.
+  same value `CanonicalWorkoutResolver.resolve` / `ComputeWorkoutTrimpUseCase.execute` produced for `dailyTrimpRaw`).
+  Alongside `modelTrimp`, schema version 21 records four provenance and quality metadata columns:
+  `modelTrimpQuality` (`WorkoutHrQuality`: `RAW`, `WARM_APPROXIMATE`, `VALIDATED_PRIOR`, `UNAVAILABLE`),
+  `modelTrimpSourceRevision` (source table revision), `modelTrimpSnapshotId` (SHA-256 of scoring settings/hrMax snapshot),
+  and `modelTrimpAlgorithmRevision` (`SettingsDefaults.CURRENT_SCORING_VERSION`).
+  A row keeps `modelTrimp = null` until the walk-forward recompute touches it. `SessionLinkReconcilerImpl.recomputeWorkouts`
+  cannot populate it (no RHR baseline/hrMax/gender available at that call site) and intentionally leaves it null.
+- Zero-duration workouts (`endTime <= startTime`) produce a canonical finite `0f` result under existing formula rules.
+- **OD-3 Gate (Missing HR policy):** Missing HR samples with no matching valid prior yields `trimp = null` and
+  `WorkoutHrQuality.UNAVAILABLE` (never 0 or legacy zone TRIMP). Days with unresolved canonical contribution (`dailyTrimpRaw == null`)
+  become `DayAssembly.Unavailable(DayAssemblyUnavailableReason.WORKOUT_LOAD_UNAVAILABLE)`, leaving prior published summary and
+  dirty state intact under C3. Prior reuse is strictly allowed only when all 3 revision keys match
+  (`sourceRevision`, `scoringSnapshotId`, `algorithmRevision`).
 - `WorkoutDao.getTrimpPoints` (which feeds the workout-only ATL/CTL series in
-  `ScoringRepositoryImpl.computeDailySummary`) reads `COALESCE(modelTrimp, trimp)` — rows already
-  touched by a walk-forward recompute contribute their model TRIMP; untouched historical rows fall
-  back to zone TRIMP until backfilled. `computeDailySummary` also injects the current day's
+  `ScoringRepositoryImpl.computeDailySummary`), `getCanonicalFatigueInputsThrough`, and `getCanonicalFatigueSeed`
+  read `modelTrimp` directly (`WHERE modelTrimp IS NOT NULL`). Legacy `COALESCE(modelTrimp, trimp)` has been removed across all queries:
+  untouched rows with null `modelTrimp` never fall back to zone TRIMP. `computeDailySummary` also injects the current day's
   freshly computed `dailyTrimpRaw` directly into that series (mirroring how `trimpEverydayHr` is
   injected into the everyday-HR series), so today's value never depends on the just-issued
   `workoutDao.upsertAll` being visible through the same bucketed read.
 - Idempotent overlap refetches must never demote a previously recomputed workout from `modelTrimp`
   back to zone `trimp`. Both the bulk window path (`RoomHealthIngestionStore.persist`/
   `persistWorkouts`) and the incremental changes path (`HealthChangeSynchronizerImpl` via
-  `persistPreparedWorkouts`, H5/WP-09) preserve `existing?.modelTrimp` and existing route
-  metadata during their stable-ID upsert — the bulk path via a null-coalesce, the delta path via
-  the stronger `ReadOutcome`-typed `mergeEnrichment` (Denied/Unsupported preserves; the bulk path's
-  bare-nullable coalesce cannot distinguish "denied" from "authoritatively absent"). When an
-  exercise `UpsertionChange` arrives, its scoring date is reported for walk-forward recompute;
-  `DailySyncUseCase` widens and recomputes the contiguous affected range if the underlying HR
-  samples or session bounds changed.
-- A TRIMP-model or -parameter settings change (see 1.2.2) must invalidate every persisted
-  historical day, not just a recent window, or the COALESCE transition mixes model-A and model-B
-  values inside the same ATL/CTL EMA — this is exactly what `HealthDataRefresh.refreshHistorical()`
-  exists to prevent.
+  `persistPreparedWorkouts`, H5/WP-09) preserve `existing?.modelTrimp` and the 4 metadata columns
+  (`modelTrimpQuality`, `modelTrimpSourceRevision`, `modelTrimpSnapshotId`, `modelTrimpAlgorithmRevision`)
+  as well as existing route metadata during their stable-ID upsert. When an exercise `UpsertionChange` arrives,
+  its scoring date is reported for walk-forward recompute; `DailySyncUseCase` widens and recomputes the contiguous
+  affected range if the underlying HR samples or session bounds changed.
+- A TRIMP-model or -parameter settings change (see 1.2.2) invalidates every persisted historical day via dirty ranges,
+  recomputing them under the new snapshot identity so that differing model values do not mix inside the same ATL/CTL EMA.
 
 **Banister multiplier normalization — profile-independent TRIMP magnitude.** The Banister multiplier is a
 pure magnitude scaler on TRIMP output, so profile-dependent defaults made TRIMP values non-comparable
@@ -2147,7 +2150,7 @@ defaults when unset).
 | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/model/VitalStatusClassifiers.kt`      | Domain — canonical steps/heart-rate status seams     | `StepsStatusClassifier` and `HeartRateStatusClassifier` classify display statuses         |
 | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/service/HealthMetricsService.kt`     | Domain — canonical BP status seam and facade         | delegates BMI/body-fat assessments; owns blood-pressure assessment and component chart-band metadata derived from the same thresholds |
 | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/calculation/HealthMetricsCalculator.kt` | Domain — facade (delegates)                     | `assessBmi()`/`assessBodyFatPercent()` → `BodyCompositionAssessment`; `assessBloodPressure()` → `HealthMetricsService` |
-| `core/database/src/main/kotlin/app/readylytics/health/core/database/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v20)                             | 20 entities; pre-bridge Room migration chain ends at v6; external migration owns v7; Room owns v7→v20 |
+| `core/database/src/main/kotlin/app/readylytics/health/core/database/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v21)                             | 20 entities; pre-bridge Room migration chain ends at v6; external migration owns v7; Room owns v7→v21 |
 | `app/src/main/kotlin/app/readylytics/health/data/migration/DatabaseReadinessGate.kt`                                            | Storage — pre-Room readiness guard                  | missing or v7..`DATABASE_VERSION` ready; v5/v6 or resumable metadata require external migration |
 | `app/src/main/kotlin/app/readylytics/health/data/migration/V7DatabaseMigrator.kt`                                               | Storage — resumable external v7 migration           | preflight; 10k keyset copy/checkpoint; per-index transactions; validated atomic cutover  |
 | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/migration/DatabaseMigrationModels.kt`                                 | Domain — migration contracts                        | readiness inspector/state; phase/progress/result models                                  |
@@ -2156,6 +2159,7 @@ defaults when unset).
 | `core/database/src/main/kotlin/app/readylytics/health/core/database/data/mapper/WorkoutRecommendationCodec.kt`                        | Storage — recommendation snapshot codec             | `encode`/`decode` `WorkoutRecommendationSnapshot` ↔ TEXT; rejects unknown version/invariants as null (§2.11.5) |
 | `core/database/src/main/kotlin/app/readylytics/health/core/database/data/local/migration/Migration18To19.kt`                          | Storage — schema v18→v19 migration                  | additive nullable `daily_summaries.workoutRecommendationJson` column                     |
 | `core/database/src/main/kotlin/app/readylytics/health/core/database/data/local/migration/Migration19To20.kt`                          | Storage — schema v19→v20 migration                  | additive source provenance columns, `dirty_ranges`, `health_mutation_state`             |
+| `core/database/src/main/kotlin/app/readylytics/health/core/database/data/local/migration/Migration20To21.kt`                          | Storage — schema v20→v21 migration                  | additive nullable workout model TRIMP revision and quality metadata columns             |
 | `core/database/src/main/kotlin/app/readylytics/health/core/database/data/local/SourceMetadataBackfill.kt`                             | Storage — resumable metadata backfill               | keyset-paginated backfill of `health_source_records` bounds from child samples            |
 | `core/database-schema/src/main/kotlin/app/readylytics/health/core/databaseschema/data/local/entity/InsightDismissalEntity.kt`         | Storage — insight dismissal                         | dateMidnightMs + type                                                                    |
 | `core/database/src/main/kotlin/app/readylytics/health/core/database/data/local/entity/AuditEventEntity.kt`                       | Storage — local audit events                        | metadata-only backup/restore/key-lifecycle events                                        |

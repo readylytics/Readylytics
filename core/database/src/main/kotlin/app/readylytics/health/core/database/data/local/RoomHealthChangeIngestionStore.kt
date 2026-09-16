@@ -239,6 +239,10 @@ private fun PreparedWorkout.toMergedEntity(existing: WorkoutRecordEntity?): Work
     val avgSpeedKmh = deriveWorkoutAvgSpeedKmh(distanceMeters, workout.startTime, workout.endTime)
     return workout.toEntity().copy(
         modelTrimp = existing?.modelTrimp,
+        modelTrimpSourceRevision = existing?.modelTrimpSourceRevision,
+        modelTrimpSnapshotId = existing?.modelTrimpSnapshotId,
+        modelTrimpAlgorithmRevision = existing?.modelTrimpAlgorithmRevision,
+        modelTrimpQuality = existing?.modelTrimpQuality,
         totalDistanceMeters = distanceMeters,
         avgSpeedKmh = avgSpeedKmh,
         elevationGainMeters = elevationGainMeters,

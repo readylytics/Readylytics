@@ -115,6 +115,16 @@ class ScoringRepositoryImpl
                 ),
             )
 
+        private val dayAssembler =
+            DayAssembler(
+                readinessSummaryCoordinator,
+                dataLoader,
+                dailyTrimpComputer,
+                rasTotalsComputer,
+                finalSummaryAssembler,
+                morningRecommendationAssembler,
+            )
+
         override suspend fun computeAndPersistDailySummary(
             targetDate: LocalDate,
             steps: Long?,
@@ -240,74 +250,102 @@ class ScoringRepositoryImpl
                     scoringDayContextResolver.resolveScoringDayContext(targetDate, prefs, contexts.baseline)
                 logD("ScoringRepository") { "RAS CALC START [$targetDate]" }
                 val processed = dailyTrimpComputer.processWorkouts(context)
-                // NOTE: registerCanonicalImpulses cannot be deferred to after a successful commit
-                // like publishTrimpToContext below -- ResidualFatigueComputer.compute's walk-forward
-                // path (advanceAccumulator) consumes THIS day's own impulses out of contexts.fatigue
-                // to compute THIS day's residual-fatigue value, so the mutation must happen before
-                // assembly runs. A failed/Unavailable assembly on this day therefore still leaves the
-                // fatigue accumulator advanced; recovering that would require reworking
-                // WalkForwardFatigueContext's API, out of scope for this task (see task report).
-                contexts.fatigue?.registerCanonicalImpulses(processed.fatigueInputs)
-                val aggregatedSleep =
-                    readinessSummaryCoordinator.resolveSleepAggregation(
-                        context.targetDate,
-                        context.zoneId,
-                        context.prefs,
+                val dailyTrimpRaw = processed.dailyTrimpRaw
+                if (dailyTrimpRaw == null) {
+                    ComputedDay(
+                        assembly = DayAssembly.Unavailable(DayAssemblyUnavailableReason.WORKOUT_LOAD_UNAVAILABLE),
+                        workouts = processed.workouts,
+                        workoutUpdates = processed.workoutModelTrimpUpdates,
+                        commitWalkForwardContexts = {},
                     )
-                val session =
-                    aggregatedSleep?.scoringSession
-                        ?: dataLoader.loadSessionEndingInRange(context.dayMidnightMs, context.nextDayMidnightMs)
-                val currentSessionIds = aggregatedSleep?.coreSessionIds ?: session?.let { setOf(it.id) }.orEmpty()
-                val everydayResult =
-                    dailyTrimpComputer.resolveEverydayTrimp(context, processed, session, aggregatedSleep)
-                val scalingFactor =
-                    context.initialBaselines.frozenRasScalingFactor ?: context.scoringConfig.rasScalingFactor
-                val rasTotals =
-                    rasTotalsComputer.compute(
-                        processed.dailyTrimpRaw,
-                        everydayResult.totalEverydayTrimp,
-                        scalingFactor,
-                        context.targetDate,
-                        context.zoneId,
-                    )
-                val inputs =
-                    contexts.buildFinalSummaryInputs(
-                        context = context,
-                        session = session,
-                        currentSessionIds = currentSessionIds,
-                        processed = processed,
-                        everydayResult = everydayResult,
-                        aggregatedSleep = aggregatedSleep,
-                        rasTotals = rasTotals,
-                    )
-                val assembly =
-                    finalizeAssembly(
-                        assembly = finalSummaryAssembler.assemble(inputs),
-                        inputs = inputs,
-                        morningRecommendationAssembler = morningRecommendationAssembler,
-                    )
-                ComputedDay(
-                    assembly = assembly,
-                    workouts = processed.workouts,
-                    workoutUpdates = processed.workoutModelTrimpUpdates,
-                    // C3 (WP-13): unlike registerCanonicalImpulses above, publishTrimpToContext's
-                    // write into the shared contexts.trimp map is safely deferrable -- this day's OWN
-                    // computation above already read whatever trimp series it needed independently
-                    // (resolveTrimpSeries re-puts this day's own raw value into its local copy). The
-                    // caller invokes this only after a successful persist, so a failed/Unavailable day
-                    // never speculatively pollutes the shared walk-forward series for later days.
-                    commitWalkForwardContexts = {
-                        dailyTrimpComputer.publishTrimpToContext(
-                            contexts.trimp,
-                            context.targetDate,
-                            everydayResult.totalEverydayTrimp,
-                            processed.dailyTrimpRaw,
-                            processed.workouts.isNotEmpty(),
-                        )
-                    },
-                )
+                } else {
+                    dayAssembler.assemble(context, contexts, processed, dailyTrimpRaw)
+                }
             }
     }
+
+private class DayAssembler(
+    private val readinessSummaryCoordinator: ReadinessSummaryCoordinator,
+    private val dataLoader: ScoringDayDataLoader,
+    private val dailyTrimpComputer: DailyTrimpComputer,
+    private val rasTotalsComputer: RasTotalsComputer,
+    private val finalSummaryAssembler: FinalSummaryAssembler,
+    private val morningRecommendationAssembler: MorningRecommendationAssembler,
+) {
+    suspend fun assemble(
+        context: ScoringDayContext,
+        contexts: WalkForwardContexts,
+        processed: DailyTrimpComputer.ProcessedWorkoutDay,
+        dailyTrimpRaw: Float,
+    ): ComputedDay {
+        // NOTE: registerCanonicalImpulses cannot be deferred to after a successful commit
+        // like publishTrimpToContext below -- ResidualFatigueComputer.compute's walk-forward
+        // path (advanceAccumulator) consumes THIS day's own impulses out of contexts.fatigue
+        // to compute THIS day's residual-fatigue value, so the mutation must happen before
+        // assembly runs. A failed/Unavailable assembly on this day therefore still leaves the
+        // fatigue accumulator advanced; recovering that would require reworking
+        // WalkForwardFatigueContext's API, out of scope for this task (see task report).
+        contexts.fatigue?.registerCanonicalImpulses(processed.fatigueInputs)
+        val aggregatedSleep =
+            readinessSummaryCoordinator.resolveSleepAggregation(
+                context.targetDate,
+                context.zoneId,
+                context.prefs,
+            )
+        val session =
+            aggregatedSleep?.scoringSession
+                ?: dataLoader.loadSessionEndingInRange(context.dayMidnightMs, context.nextDayMidnightMs)
+        val currentSessionIds = aggregatedSleep?.coreSessionIds ?: session?.let { setOf(it.id) }.orEmpty()
+        val everydayResult =
+            dailyTrimpComputer.resolveEverydayTrimp(context, processed, session, aggregatedSleep)
+        val scalingFactor =
+            context.initialBaselines.frozenRasScalingFactor ?: context.scoringConfig.rasScalingFactor
+        val rasTotals =
+            rasTotalsComputer.compute(
+                dailyTrimpRaw,
+                everydayResult.totalEverydayTrimp,
+                scalingFactor,
+                context.targetDate,
+                context.zoneId,
+            )
+        val inputs =
+            contexts.buildFinalSummaryInputs(
+                context = context,
+                session = session,
+                currentSessionIds = currentSessionIds,
+                processed = processed,
+                everydayResult = everydayResult,
+                aggregatedSleep = aggregatedSleep,
+                rasTotals = rasTotals,
+            )
+        val assembly =
+            finalizeAssembly(
+                assembly = finalSummaryAssembler.assemble(inputs),
+                inputs = inputs,
+                morningRecommendationAssembler = morningRecommendationAssembler,
+            )
+        return ComputedDay(
+            assembly = assembly,
+            workouts = processed.workouts,
+            workoutUpdates = processed.workoutModelTrimpUpdates,
+            // C3 (WP-13): unlike registerCanonicalImpulses above, publishTrimpToContext's
+            // write into the shared contexts.trimp map is safely deferrable -- this day's OWN
+            // computation above already read whatever trimp series it needed independently
+            // (resolveTrimpSeries re-puts this day's own raw value into its local copy). The
+            // caller invokes this only after a successful persist, so a failed/Unavailable day
+            // never speculatively pollutes the shared walk-forward series for later days.
+            commitWalkForwardContexts = {
+                dailyTrimpComputer.publishTrimpToContext(
+                    contexts.trimp,
+                    context.targetDate,
+                    everydayResult.totalEverydayTrimp,
+                    dailyTrimpRaw,
+                    processed.workouts.isNotEmpty(),
+                )
+            },
+        )
+    }
+}
 
 /**
  * C3 (WP-13): applies telemetry and the morning recommendation on top of [assembly] only when it
@@ -432,7 +470,7 @@ private fun WalkForwardContexts.buildFinalSummaryInputs(
         context = context,
         session = session,
         currentSessionIds = currentSessionIds,
-        dailyTrimpRaw = processed.dailyTrimpRaw,
+        dailyTrimpRaw = processed.dailyTrimpRaw!!,
         trimpEverydayHr = everydayResult.totalEverydayTrimp,
         rasTotals = rasTotals,
         everydayResult = everydayResult,

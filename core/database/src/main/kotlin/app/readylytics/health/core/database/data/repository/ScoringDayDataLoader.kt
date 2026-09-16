@@ -23,6 +23,7 @@ import app.readylytics.health.core.model.domain.model.TimestampedTrimp
 import app.readylytics.health.core.model.domain.repository.FatigueWorkoutInput
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.scoring.DayAssembly
+import app.readylytics.health.core.model.domain.scoring.WorkoutHrQuality
 import app.readylytics.health.core.model.domain.scoring.summaryOrNull
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
 import java.time.ZoneId
@@ -60,16 +61,32 @@ class ScoringDayDataLoader
         private suspend fun fetchExerciseHrInRange(startMs: Long, endMs: Long): List<HeartRateRecordEntity> =
             heartRateDao.getByTypeAndTimeRange(RecordType.EXERCISE.name, startMs, endMs)
 
+        data class LoadedWorkoutSamples(
+            val samples: List<HeartRateRecordEntity>,
+            val quality: WorkoutHrQuality,
+        )
+
         // from exerciseSamplesForWorkout L655-673
+        suspend fun loadWorkoutSamplesWithQuality(
+            workout: WorkoutRecordEntity,
+            hotSamples: List<HeartRateRecordEntity>,
+        ): LoadedWorkoutSamples {
+            val hot = hotSamples.filter { it.timestampMs in workout.startTime..workout.endTime }
+            val warm = fetchWorkoutSamplesFromBuckets(workout)
+            val quality =
+                when {
+                    warm.isNotEmpty() -> WorkoutHrQuality.WARM_APPROXIMATE
+                    hot.isNotEmpty() -> WorkoutHrQuality.RAW
+                    else -> WorkoutHrQuality.UNAVAILABLE
+                }
+            val samples = if (warm.isEmpty()) hot else (hot + warm).sortedBy { it.timestampMs }
+            return LoadedWorkoutSamples(samples = samples, quality = quality)
+        }
+
         suspend fun loadWorkoutSamples(
             workout: WorkoutRecordEntity,
             hotSamples: List<HeartRateRecordEntity>,
-        ): List<HeartRateRecordEntity> {
-            val hot = hotSamples.filter { it.timestampMs in workout.startTime..workout.endTime }
-            val warm = fetchWorkoutSamplesFromBuckets(workout)
-            if (warm.isEmpty()) return hot
-            return (hot + warm).sortedBy { it.timestampMs }
-        }
+        ): List<HeartRateRecordEntity> = loadWorkoutSamplesWithQuality(workout, hotSamples).samples
 
         private suspend fun fetchWorkoutSamplesFromBuckets(
             workout: WorkoutRecordEntity,
@@ -100,8 +117,19 @@ class ScoringDayDataLoader
             updates: List<ComputeDailyTrimpUseCase.WorkoutModelTrimpUpdate>,
         ) {
             if (updates.isEmpty()) return
-            val updateMap = updates.associate { it.workoutId to it.modelTrimp }
-            workoutDao.upsertAll(workouts.filter { it.id in updateMap }.map { it.copy(modelTrimp = updateMap[it.id]) })
+            val updateMap = updates.associateBy { it.workoutId }
+            workoutDao.upsertAll(
+                workouts.filter { it.id in updateMap }.map { workout ->
+                    val update = updateMap.getValue(workout.id)
+                    workout.copy(
+                        modelTrimp = update.modelTrimp,
+                        modelTrimpQuality = update.quality.name,
+                        modelTrimpSourceRevision = update.sourceRevision,
+                        modelTrimpSnapshotId = update.scoringSnapshotId,
+                        modelTrimpAlgorithmRevision = update.algorithmRevision,
+                    )
+                },
+            )
         }
 
         // from mergedMinuteBuckets L631-653

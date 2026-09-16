@@ -174,6 +174,10 @@ private suspend fun HealthRecordDaos.persistWorkouts(batch: HealthIngestionBatch
             val avgSpeedKmh = deriveWorkoutAvgSpeedKmh(distanceMeters, workout.startTime, workout.endTime)
             fresh.copy(
                 modelTrimp = existing?.modelTrimp,
+                modelTrimpSourceRevision = existing?.modelTrimpSourceRevision,
+                modelTrimpSnapshotId = existing?.modelTrimpSnapshotId,
+                modelTrimpAlgorithmRevision = existing?.modelTrimpAlgorithmRevision,
+                modelTrimpQuality = existing?.modelTrimpQuality,
                 totalDistanceMeters = distanceMeters,
                 avgSpeedKmh = avgSpeedKmh,
                 elevationGainMeters = fresh.elevationGainMeters ?: existing?.elevationGainMeters,

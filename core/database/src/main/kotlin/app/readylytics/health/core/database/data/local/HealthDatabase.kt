@@ -118,6 +118,6 @@ abstract class HealthDatabase : RoomDatabase() {
     abstract fun healthMutationStateDao(): HealthMutationStateDao
 
     companion object {
-        const val DATABASE_VERSION = 20
+        const val DATABASE_VERSION = 21
     }
 }

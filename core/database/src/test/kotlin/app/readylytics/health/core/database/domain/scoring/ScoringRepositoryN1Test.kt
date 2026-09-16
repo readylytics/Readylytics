@@ -32,7 +32,9 @@ import app.readylytics.health.core.databaseschema.data.local.dao.Vo2MaxRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
+import app.readylytics.health.core.model.domain.model.RecordType
 import app.readylytics.health.core.model.data.preferences.Gender
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
@@ -483,6 +485,18 @@ class ScoringRepositoryN1Test {
                     avgHr = 150f,
                 )
             coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns listOf(workout)
+            coEvery {
+                heartRateDao.getByTypeAndTimeRange(RecordType.EXERCISE.name, any(), any())
+            } returns
+                listOf(
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 1L,
+                        timestampMs = todayMidnight + 4_000_000L,
+                        beatsPerMinute = 150,
+                        recordType = RecordType.EXERCISE.name,
+                        sessionId = "single-trimp",
+                    ),
+                )
 
             repo.computeAndPersistDailySummary(today)
 

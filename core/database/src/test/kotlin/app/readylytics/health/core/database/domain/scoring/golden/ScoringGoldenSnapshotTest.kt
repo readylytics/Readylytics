@@ -14,7 +14,11 @@ import app.readylytics.health.core.databaseschema.data.local.entity.SleepStageEn
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
 import app.readylytics.health.core.model.domain.preferences.PhysiologyProfile
+import app.readylytics.health.core.model.domain.preferences.SettingsDefaults
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.scoring.WorkoutHrQuality
+import app.readylytics.health.core.model.domain.sync.HistoricalRunIdentity
+import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
 import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoader
 import app.readylytics.health.core.database.data.repository.MorningRecommendationDependencies
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
@@ -38,6 +42,7 @@ import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUse
 import app.readylytics.health.core.scoring.domain.scoring.SleepMetricsCollaborators
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
+import kotlinx.coroutines.flow.first
 import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
 import app.readylytics.health.core.scoring.domain.scoring.sleep.CurrentNightHrvResolver
 import app.readylytics.health.core.scoring.domain.scoring.sleep.HrCoverageValidator
@@ -428,6 +433,9 @@ class ScoringGoldenSnapshotTest {
             val caseName = "day_with_no_sleep_session"
             seedCalibratedHistory()
 
+            val prefs = settingsRepo.userPreferences.first()
+            val hrMax = HeartRateFormulas.resolveMaxHeartRate(prefs)
+            val expectedSnapshotId = HistoricalRunIdentity.computeSnapshotId(prefs, hrMax)
             val workout =
                 WorkoutRecordEntity(
                     id = "workout_case3",
@@ -442,6 +450,11 @@ class ScoringGoldenSnapshotTest {
                     zone5Minutes = 0f,
                     trimp = 35f,
                     avgHr = 130f,
+                    modelTrimp = 0.0f,
+                    modelTrimpQuality = WorkoutHrQuality.RAW.name,
+                    modelTrimpSourceRevision = 0L,
+                    modelTrimpSnapshotId = expectedSnapshotId,
+                    modelTrimpAlgorithmRevision = SettingsDefaults.CURRENT_SCORING_VERSION,
                 )
             db.workoutDao().upsertAll(listOf(workout))
 

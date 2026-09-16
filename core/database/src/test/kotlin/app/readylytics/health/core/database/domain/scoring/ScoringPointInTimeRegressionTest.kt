@@ -20,7 +20,9 @@ import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
 
 import app.readylytics.health.core.databaseschema.data.local.dao.*
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
+import app.readylytics.health.core.model.domain.model.RecordType
 import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
 import app.readylytics.health.core.model.data.preferences.Gender
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
@@ -185,6 +187,18 @@ class ScoringPointInTimeRegressionTest {
                 avgHr = 130f,
             )
         coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns listOf(workout)
+        coEvery {
+            heartRateDao.getByTypeAndTimeRange(RecordType.EXERCISE.name, any(), any())
+        } returns
+            listOf(
+                HeartRateRecordEntity(
+                    sourceRecordRef = 1L,
+                    timestampMs = dayMidnightMs + 1800000L,
+                    beatsPerMinute = 130,
+                    recordType = RecordType.EXERCISE.name,
+                    sessionId = "w1",
+                ),
+            )
         coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
         return workout
     }
@@ -209,7 +223,7 @@ class ScoringPointInTimeRegressionTest {
         maxHeartRate = 170,
         rasScalingFactor = 0.15f,
         rhrBaselineOverride = 72f,
-        gender = Gender.FEMALE,
+        gender = Gender.MALE,
     )
 
     @Test

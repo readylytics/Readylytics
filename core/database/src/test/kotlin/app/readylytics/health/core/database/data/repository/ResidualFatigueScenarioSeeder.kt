@@ -213,7 +213,12 @@ internal class ResidualFatigueScenarioSeeder(
     private fun seedScenarioSleepSessions(records: ScenarioRecords, seedEverydayAndHrv: Boolean) {
         var d = historyStartDate
         while (!d.isAfter(LocalDate.of(2026, 6, 6))) {
-            val sleepStart = epoch(d, 23, 0)
+            val sleepStart =
+                if (d == LocalDate.of(2026, 5, 22)) {
+                    epoch(d.plusDays(1), 1, 0)
+                } else {
+                    epoch(d, 23, 0)
+                }
             val sleepId = "sleep-$d"
             addScenarioSleepSession(records, d, sleepId, sleepStart)
             addScenarioSleepHeartRate(records, sleepId, sleepStart)

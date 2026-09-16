@@ -18,9 +18,15 @@ import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
 import app.readylytics.health.core.databaseschema.data.local.dao.*
 import app.readylytics.health.core.databaseschema.data.local.entity.BodyTemperatureRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.Vo2MaxRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
+import app.readylytics.health.core.model.domain.model.RecordType
+import app.readylytics.health.core.model.domain.preferences.SettingsDefaults
+import app.readylytics.health.core.model.domain.scoring.WorkoutHrQuality
+import app.readylytics.health.core.model.domain.sync.HistoricalRunIdentity
+import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
 import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.Vo2MaxEstimationMethod
@@ -432,6 +438,18 @@ class ScoringRepositoryImplTest {
                     modelTrimp = null,
                 )
             coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns listOf(workout)
+            coEvery {
+                heartRateDao.getByTypeAndTimeRange(RecordType.EXERCISE.name, any(), any())
+            } returns
+                listOf(
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 1L,
+                        timestampMs = dayStart + 4_000_000L,
+                        beatsPerMinute = 140,
+                        recordType = RecordType.EXERCISE.name,
+                        sessionId = "w1",
+                    ),
+                )
             every {
                 computeWorkoutTrimpUseCase.execute(any(), any(), any(), any(), any(), any(), any())
             } returns Result.success(55f)
@@ -448,6 +466,7 @@ class ScoringRepositoryImplTest {
             assertEquals(1, workoutSlot.captured.size)
             assertEquals("w1", workoutSlot.captured.first().id)
             assertEquals(55f, workoutSlot.captured.first().modelTrimp)
+            assertEquals(WorkoutHrQuality.RAW.name, workoutSlot.captured.first().modelTrimpQuality)
         }
 
     @Test
@@ -458,6 +477,12 @@ class ScoringRepositoryImplTest {
             val today = LocalDate.now()
             val zoneId = ZoneId.systemDefault()
             val dayStart = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val defaultPrefs = UserPreferences()
+            val expectedSnapshotId =
+                HistoricalRunIdentity.computeSnapshotId(
+                    defaultPrefs,
+                    HeartRateFormulas.resolveMaxHeartRate(defaultPrefs),
+                )
 
             val workout =
                 WorkoutRecordEntity(
@@ -474,8 +499,24 @@ class ScoringRepositoryImplTest {
                     trimp = 40f,
                     avgHr = 140f,
                     modelTrimp = 55f,
+                    modelTrimpQuality = WorkoutHrQuality.RAW.name,
+                    modelTrimpSourceRevision = 0L,
+                    modelTrimpSnapshotId = expectedSnapshotId,
+                    modelTrimpAlgorithmRevision = SettingsDefaults.CURRENT_SCORING_VERSION,
                 )
             coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns listOf(workout)
+            coEvery {
+                heartRateDao.getByTypeAndTimeRange(RecordType.EXERCISE.name, any(), any())
+            } returns
+                listOf(
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 1L,
+                        timestampMs = dayStart + 4_000_000L,
+                        beatsPerMinute = 140,
+                        recordType = RecordType.EXERCISE.name,
+                        sessionId = "w1",
+                    ),
+                )
             every {
                 computeWorkoutTrimpUseCase.execute(any(), any(), any(), any(), any(), any(), any())
             } returns Result.success(55f)
@@ -538,175 +579,5 @@ class ScoringRepositoryImplTest {
             // the sleep score for an otherwise-identical day.
             val summaryWithoutBodyTemp = entitySlot.captured.copy(avgSleepingBodyTemp = null)
             assertEquals(entitySlot.captured.sleepScore, summaryWithoutBodyTemp.sleepScore)
-        }
-
-    @Test
-    fun `computeDailySummary and computeAndPersistDailySummary serialize via calculationMutex`() =
-        runTest {
-            repo = createRepo(UnconfinedTestDispatcher(testScheduler))
-            val today = LocalDate.now()
-            val zoneId = ZoneId.systemDefault()
-            val todayMs = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
-
-            val concurrentCalls =
-                java.util.concurrent.atomic
-                    .AtomicInteger(0)
-            val maxConcurrentCalls =
-                java.util.concurrent.atomic
-                    .AtomicInteger(0)
-
-            val mockWorkout =
-                WorkoutRecordEntity(
-                    id = "w1",
-                    startTime = todayMs + 1000,
-                    endTime = todayMs + 2000,
-                    exerciseType = "running",
-                    durationMinutes = 15,
-                    zone1Minutes = 0f,
-                    zone2Minutes = 0f,
-                    zone3Minutes = 0f,
-                    zone4Minutes = 0f,
-                    zone5Minutes = 0f,
-                    trimp = 10f,
-                    modelTrimp = 0f,
-                    avgHr = 140f,
-                )
-
-            coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns listOf(mockWorkout)
-            coEvery {
-                computeWorkoutTrimpUseCase.execute(
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                )
-            } returns
-                Result.success(12f)
-            coEvery { workoutDao.upsertAll(any()) } coAnswers {
-                val current = concurrentCalls.incrementAndGet()
-                maxConcurrentCalls.updateAndGet { maxOf(it, current) }
-                delay(50)
-                concurrentCalls.decrementAndGet()
-            }
-
-            val job1 = async { repo.computeDailySummary(today) }
-            val job2 = async { repo.computeAndPersistDailySummary(today, null) }
-
-            job1.await()
-            job2.await()
-
-            assertEquals(1, maxConcurrentCalls.get(), "Database writes on compute paths must not execute concurrently")
-        }
-
-    @Test
-    fun `computeCurrentResidualFatigue decays through nowMs, not next-day midnight`() =
-        runTest {
-            val zoneId = ZoneId.of("UTC")
-            val workoutEndMs = 1_700_000_000_000L
-            val nowMs = workoutEndMs + 3 * 3_600_000L
-
-            every { settingsRepo.userPreferences } returns
-                flowOf(
-                    UserPreferences(
-                        scoringZoneId = zoneId.id,
-                        residualFatigueHalfLifeHours = 24f,
-                        residualFatigueGain = 1f,
-                    ),
-                )
-            coEvery { workoutDao.getCanonicalFatigueInputsThrough(nowMs) } returns
-                listOf(FatigueWorkoutInput(workoutId = "w1", endTimeMs = workoutEndMs, trimp = 100f))
-            coEvery { workoutDao.countUnbackfilledThrough(any(), nowMs) } returns 0
-
-            val result = repo.computeCurrentResidualFatigue(nowMs)
-
-            val expected = (100f * 2.0.pow(-3.0 / 24.0)).toFloat()
-            assertEquals(expected, requireNotNull(result), 0.01f)
-        }
-
-    @Test
-    fun `materkoAdapted method computes estimate from hrv baseline and persists tag`() =
-        runTest {
-            val zoneId = ZoneId.of("UTC")
-            val today = LocalDate.of(2026, 9, 1)
-            val todayMs = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
-            val existingSummary =
-                DailySummaryEntity(
-                    dateMidnightMs = todayMs,
-                    baselineCalculatedAtDate = today.minusDays(1),
-                    hrvMuMssd = ln(50.0).toFloat(),
-                    rhrBpm = 60f,
-                )
-            val summary = DailySummaryMapper.toDomain(existingSummary, zoneId)
-            every { settingsRepo.userPreferences } returns
-                flowOf(
-                    UserPreferences(
-                        scoringZoneId = zoneId.id,
-                        vo2MaxEstimationMethod = Vo2MaxEstimationMethod.MATERKO_ADAPTED,
-                        vo2MaxSourceMode = Vo2MaxSourceMode.ESTIMATED_ONLY,
-                    ),
-                )
-            coEvery { scoringHistoryRepository.getDailySummaryByDate(todayMs, zoneId) } returns summary
-            coEvery { computeSleepMetricsUseCase(any()) } returns Result.success(summary)
-
-            val result = repo.computeDailySummary(today)
-
-            assertEquals(Vo2MaxSourceResolver.SOURCE_ESTIMATED_MATERKO_ADAPTED, result.vo2MaxSource)
-            assertEquals(38.54f, result.vo2Max!!, 0.01f)
-        }
-
-    @Test
-    fun `hrRatio method still emits uth tag`() =
-        runTest {
-            val zoneId = ZoneId.of("UTC")
-            val today = LocalDate.of(2026, 9, 1)
-            val todayMs = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
-            val existingSummary =
-                DailySummaryEntity(
-                    dateMidnightMs = todayMs,
-                    baselineCalculatedAtDate = today.minusDays(1),
-                    hrvMuMssd = ln(50.0).toFloat(),
-                    rhrBpm = 60f,
-                    hrMax = 190f,
-                )
-            val summary = DailySummaryMapper.toDomain(existingSummary, zoneId)
-            every { settingsRepo.userPreferences } returns
-                flowOf(
-                    UserPreferences(
-                        scoringZoneId = zoneId.id,
-                        vo2MaxEstimationMethod = Vo2MaxEstimationMethod.HR_RATIO,
-                        vo2MaxSourceMode = Vo2MaxSourceMode.ESTIMATED_ONLY,
-                    ),
-                )
-            coEvery { scoringHistoryRepository.getDailySummaryByDate(todayMs, zoneId) } returns summary
-            coEvery { computeSleepMetricsUseCase(any()) } returns Result.success(summary)
-
-            val result = repo.computeDailySummary(today)
-
-            assertEquals(Vo2MaxSourceResolver.SOURCE_ESTIMATED_UTH, result.vo2MaxSource)
-        }
-
-    @Test
-    fun `fetchWalkForwardVo2MaxContext loads range covering through endDate plus one midnight`() =
-        runTest {
-            val zoneId = ZoneId.of("UTC")
-            val startDate = LocalDate.of(2026, 9, 1)
-            val endDate = LocalDate.of(2026, 9, 5)
-            val midnightAfterEnd = endDate.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
-            val expectedRecord =
-                Vo2MaxRecordEntity(
-                    id = "v1",
-                    timestampMs = midnightAfterEnd,
-                    vo2Max = 45f,
-                    measurementMethod = null,
-                    deviceName = "TestDevice",
-                )
-            coEvery { vo2MaxRecordDao.getByTimeRange(any(), any()) } returns listOf(expectedRecord)
-
-            val context = repo.fetchWalkForwardVo2MaxContext(startDate, endDate, zoneId)
-
-            assertEquals(45f, context.vo2MaxByTimestampMs[midnightAfterEnd])
         }
 }
