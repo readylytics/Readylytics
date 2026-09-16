@@ -3,8 +3,11 @@ package app.readylytics.health.data.backup
 import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 import app.readylytics.health.core.model.domain.sync.HistoricalRunIdentity
+import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
 import app.readylytics.health.data.preferences.SettingsRepository
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import net.lingala.zip4j.io.outputstream.ZipOutputStream
 import net.lingala.zip4j.model.ZipParameters
 import net.lingala.zip4j.model.enums.AesKeyStrength
@@ -40,10 +43,7 @@ class BackupSnapshotExporter
                     val layouts = captureLayouts()
                     val capturedPreferences = buildUserPreferencesBackup(prefs, layouts)
 
-                    val hrMax =
-                        app.readylytics.health.core.scoring.domain.util.HeartRateFormulas.resolveMaxHeartRate(
-                            prefs,
-                        )
+                    val hrMax = HeartRateFormulas.resolveMaxHeartRate(prefs)
                     val scoringSnapshotId = HistoricalRunIdentity.computeSnapshotId(prefs, hrMax)
                     val exportedAtEpochMs = System.currentTimeMillis()
 
@@ -76,7 +76,11 @@ class BackupSnapshotExporter
                     snapshotIdentity = identity
                 } catch (e: Throwable) {
                     target.delete()
-                    healthDatabase.healthMutationStateDao().setMaintenance(null, null)
+                    withContext(NonCancellable) {
+                        runCatching {
+                            healthDatabase.healthMutationStateDao().setMaintenance(null, null)
+                        }
+                    }
                     throw e
                 }
             }

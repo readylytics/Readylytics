@@ -24,6 +24,7 @@ import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepositor
 import app.readylytics.health.data.preferences.SettingsRepository
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -333,6 +334,44 @@ class BackupSnapshotConsistencyTest {
             // Maintenance state must be reset so subsequent mutations are not blocked
             val currentState = db.healthMutationStateDao().current()
             assertNull("Maintenance operation ID must be cleared after failure", currentState.maintenanceOperationId)
+
+            // Subsequent mutation must succeed
+            val nextMutationResult =
+                coordinator.withMutation {
+                    db.healthMutationStateDao().incrementGeneration()
+                    db.healthMutationStateDao().current().sourceGeneration
+                }
+            assertEquals(11L, nextMutationResult)
+        }
+
+    @Test
+    fun exportCancellationCleansUpIncompleteStagingAndResetsMaintenanceState() =
+        runBlocking(Dispatchers.Default) {
+            seedGenerationAData()
+
+            val targetZip = File(stagingDir, "cancelled_snapshot.zip")
+            val password = "password123".toCharArray()
+
+            var caughtException: Throwable? = null
+            try {
+                exporter.captureEncrypted(targetZip, password) { table: String ->
+                    if (table == "healthSourceRecords") {
+                        throw CancellationException("Simulated coroutine cancellation mid-stream")
+                    }
+                }
+            } catch (e: Throwable) {
+                caughtException = e
+            }
+
+            assertTrue("Should have caught CancellationException", caughtException is CancellationException)
+            assertFalse("Incomplete staging file must be deleted on cancellation", targetZip.exists())
+
+            // Maintenance state must be reset even on cancellation
+            val currentState = db.healthMutationStateDao().current()
+            assertNull(
+                "Maintenance operation ID must be cleared after cancellation",
+                currentState.maintenanceOperationId,
+            )
 
             // Subsequent mutation must succeed
             val nextMutationResult =
