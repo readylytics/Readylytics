@@ -71,47 +71,68 @@ class LocalBackupSerializationRegressionTest {
                 .allowMainThreadQueries()
                 .build()
 
+        kotlinx.coroutines.runBlocking {
+            db.healthMutationStateDao().upsert(
+                app.readylytics.health.core.databaseschema.data.local.entity.HealthMutationStateEntity(
+                    id = 1,
+                    sourceGeneration = 0,
+                    backfillAfterSourceRef = 0,
+                ),
+            )
+        }
+
+        val coordinator =
+            app.readylytics.health.core.database.data.local.HealthMutationCoordinatorImpl(
+                db.healthMutationStateDao(),
+            )
         val encryptionManager =
             mockk<EncryptionManager>(relaxed = true).apply {
                 every { decrypt(any()) } returns "test_password"
             }
-        val backupStreamWriter =
-            BackupStreamWriter(
+        val layoutRepos = createLayoutRepos()
+        val backupStreamWriter = BackupStreamWriter(db)
+        val exporter =
+            BackupSnapshotExporter(
                 db,
+                coordinator,
                 settingsRepo(),
-                RestoreLayoutRepositories(
-                    mockk<CardConfigurationRepository>(relaxed = true).apply {
-                        every { dashboardCardConfigurations() } returns flowOf(emptyList())
-                    },
-                    mockk<VitalsLayoutRepository>(relaxed = true).apply {
-                        every { vitalsCardConfigurations() } returns flowOf(emptyList())
-                        every { vitalsChartConfigurations() } returns flowOf(emptyList())
-                    },
-                    mockk<SleepLayoutRepository>(relaxed = true).apply {
-                        every { sleepTopCardConfigurations() } returns flowOf(emptyList())
-                        every { sleepChartConfigurations() } returns flowOf(emptyList())
-                        every { sleepMetricCardConfigurations() } returns flowOf(emptyList())
-                    },
-                    mockk<WorkoutsLayoutRepository>(relaxed = true).apply {
-                        every { workoutCardConfigurations() } returns flowOf(emptyList())
-                        every { workoutChartConfigurations() } returns flowOf(emptyList())
-                        every { workoutHistoryConfigurations() } returns flowOf(emptyList())
-                    },
-                    mockk<WorkoutDetailLayoutRepository>(relaxed = true).apply {
-                        every { allLayouts() } returns flowOf(emptyMap())
-                    },
-                ),
+                layoutRepos,
+                backupStreamWriter,
             )
         manager =
             LocalBackupManager(
                 context,
                 settingsRepo(),
-                backupStreamWriter,
+                exporter,
                 encryptionManager,
                 RecordingAuditTrailRepository(),
                 Dispatchers.Unconfined,
             )
     }
+
+    private fun createLayoutRepos(): RestoreLayoutRepositories =
+        RestoreLayoutRepositories(
+            mockk<CardConfigurationRepository>(relaxed = true).apply {
+                every { dashboardCardConfigurations() } returns flowOf(emptyList())
+            },
+            mockk<VitalsLayoutRepository>(relaxed = true).apply {
+                every { vitalsCardConfigurations() } returns flowOf(emptyList())
+                every { vitalsChartConfigurations() } returns flowOf(emptyList())
+            },
+            mockk<SleepLayoutRepository>(relaxed = true).apply {
+                every { sleepTopCardConfigurations() } returns flowOf(emptyList())
+                every { sleepChartConfigurations() } returns flowOf(emptyList())
+                every { sleepMetricCardConfigurations() } returns flowOf(emptyList())
+            },
+            mockk<WorkoutsLayoutRepository>(relaxed = true).apply {
+                every { workoutCardConfigurations() } returns flowOf(emptyList())
+                every { workoutChartConfigurations() } returns flowOf(emptyList())
+                every { workoutHistoryConfigurations() } returns flowOf(emptyList())
+            },
+            mockk<WorkoutDetailLayoutRepository>(relaxed = true).apply {
+                every { allLayouts() } returns flowOf(emptyMap())
+            },
+        )
 
     private fun settingsRepo(): SettingsRepository =
         mockk<SettingsRepository>().apply {

@@ -27,6 +27,7 @@ class RestoreInventoryValidator
             var schemaVersion: Int? = null
             var exportedAt: String? = null
             var sourceGeneration: Long? = null
+            var scoringSnapshotId: String? = null
             val declaredCounts = mutableMapOf<String, Long>()
             val observedCounts = mutableMapOf<String, Long>()
             val encounteredKeys = mutableSetOf<String>()
@@ -49,6 +50,9 @@ class RestoreInventoryValidator
                     "sourceGeneration" -> {
                         sourceGeneration = reader.nextLong()
                     }
+                    "scoringSnapshotId" -> {
+                        scoringSnapshotId = reader.nextString()
+                    }
                     "rowCounts" -> {
                         readRowCounts(reader, declaredCounts)
                     }
@@ -65,24 +69,40 @@ class RestoreInventoryValidator
             }
             reader.endObject()
 
+            val manifest =
+                buildManifest(
+                    schemaVersion = schemaVersion,
+                    exportedAt = exportedAt,
+                    sourceGeneration = sourceGeneration,
+                    scoringSnapshotId = scoringSnapshotId,
+                    declaredCounts = declaredCounts,
+                )
+            require("rowCounts" in encounteredKeys) { "BACKUP_REQUIRED_COUNT_MISSING: Missing rowCounts" }
+
+            val required = BackupInventoryPolicy.requiredTables(manifest.schemaVersion)
+            BackupInventoryPolicy.validateInventory(required, declaredCounts, observedCounts)
+
+            return ValidatedBackupInventory(manifest, declaredCounts, observedCounts)
+        }
+
+        private fun buildManifest(
+            schemaVersion: Int?,
+            exportedAt: String?,
+            sourceGeneration: Long?,
+            scoringSnapshotId: String?,
+            declaredCounts: Map<String, Long>,
+        ): BackupManifest {
             val version =
                 requireNotNull(schemaVersion) {
                     "BACKUP_REQUIRED_TABLE_MISSING: Missing schemaVersion"
                 }
-            val exported = exportedAt ?: ""
-            require("rowCounts" in encounteredKeys) { "BACKUP_REQUIRED_COUNT_MISSING: Missing rowCounts" }
-
-            val required = BackupInventoryPolicy.requiredTables(version)
-            BackupInventoryPolicy.validateInventory(required, declaredCounts, observedCounts)
-
-            val manifest =
-                BackupManifest(
-                    schemaVersion = version,
-                    exportedAt = exported,
-                    rowCounts = declaredCounts.mapValues { it.value.toInt() },
-                    sourceGeneration = sourceGeneration ?: 0L,
-                )
-            return ValidatedBackupInventory(manifest, declaredCounts, observedCounts)
+            return BackupManifest(
+                schemaVersion = version,
+                exportedAt = exportedAt ?: "",
+                rowCounts = declaredCounts.mapValues { it.value.toInt() },
+                sourceGeneration = sourceGeneration ?: 0L,
+                scoringSnapshotId = scoringSnapshotId ?: "",
+            )
         }
 
         private fun readArrayCount(reader: JsonReader): Long? {

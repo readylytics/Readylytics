@@ -132,6 +132,18 @@ class LocalBackupManagerTest {
         customStoreFactory: BackupStoreFactory = DefaultBackupStoreFactory(context),
         customWriter: BackupStreamWriter? = null,
     ): LocalBackupManager {
+        kotlinx.coroutines.runBlocking {
+            db.healthMutationStateDao().upsert(
+                app.readylytics.health.core.databaseschema.data.local.entity.HealthMutationStateEntity(
+                    id = 1,
+                    sourceGeneration = 0,
+                    backfillAfterSourceRef = 0,
+                ),
+            )
+        }
+        val coordinator =
+            app.readylytics.health.core.database.data.local
+                .HealthMutationCoordinatorImpl(db.healthMutationStateDao())
         val layoutRepos =
             RestoreLayoutRepositories(
                 cardConfigRepo,
@@ -140,11 +152,19 @@ class LocalBackupManagerTest {
                 workoutsLayoutRepo,
                 workoutDetailLayoutRepo,
             )
-        val backupStreamWriter = customWriter ?: BackupStreamWriter(db, customSettingsRepo, layoutRepos)
+        val backupStreamWriter = customWriter ?: BackupStreamWriter(db)
+        val exporter =
+            BackupSnapshotExporter(
+                db,
+                coordinator,
+                customSettingsRepo,
+                layoutRepos,
+                backupStreamWriter,
+            )
         return LocalBackupManager(
             context,
             customSettingsRepo,
-            backupStreamWriter,
+            exporter,
             encryptionManager,
             auditTrailRepository,
             Dispatchers.Unconfined,

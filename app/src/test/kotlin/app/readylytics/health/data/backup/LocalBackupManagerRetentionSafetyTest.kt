@@ -123,6 +123,18 @@ class LocalBackupManagerRetentionSafetyTest {
         customStoreFactory: BackupStoreFactory = DefaultBackupStoreFactory(context),
         customWriter: BackupStreamWriter? = null,
     ): LocalBackupManager {
+        kotlinx.coroutines.runBlocking {
+            db.healthMutationStateDao().upsert(
+                app.readylytics.health.core.databaseschema.data.local.entity.HealthMutationStateEntity(
+                    id = 1,
+                    sourceGeneration = 0,
+                    backfillAfterSourceRef = 0,
+                ),
+            )
+        }
+        val coordinator =
+            app.readylytics.health.core.database.data.local
+                .HealthMutationCoordinatorImpl(db.healthMutationStateDao())
         val layoutRepos =
             RestoreLayoutRepositories(
                 cardConfigRepo,
@@ -131,11 +143,19 @@ class LocalBackupManagerRetentionSafetyTest {
                 workoutsLayoutRepo,
                 workoutDetailLayoutRepo,
             )
-        val backupStreamWriter = customWriter ?: BackupStreamWriter(db, customSettingsRepo, layoutRepos)
+        val backupStreamWriter = customWriter ?: BackupStreamWriter(db)
+        val exporter =
+            BackupSnapshotExporter(
+                db,
+                coordinator,
+                customSettingsRepo,
+                layoutRepos,
+                backupStreamWriter,
+            )
         return LocalBackupManager(
             context,
             customSettingsRepo,
-            backupStreamWriter,
+            exporter,
             encryptionManager,
             auditTrailRepository,
             Dispatchers.Unconfined,
@@ -301,7 +321,7 @@ class LocalBackupManagerRetentionSafetyTest {
         runTest {
             val (backupStore, storeFactory) = mockStore()
             val failingWriter = mockk<BackupStreamWriter>()
-            coEvery { failingWriter.writeJsonStreaming(any()) } throws IOException("disk full")
+            coEvery { failingWriter.writeJsonStreaming(any(), any(), any()) } throws IOException("disk full")
             val failingManager = buildManager(customStoreFactory = storeFactory, customWriter = failingWriter)
 
             val result = failingManager.createBackup()
@@ -356,7 +376,7 @@ class LocalBackupManagerRetentionSafetyTest {
             val initialBytes = seededFile.readBytes()
             val initialList = backupDir.listFiles()?.map { it.name }
             val failingWriter = mockk<BackupStreamWriter>()
-            coEvery { failingWriter.writeJsonStreaming(any()) } throws IOException("disk error")
+            coEvery { failingWriter.writeJsonStreaming(any(), any(), any()) } throws IOException("disk error")
             val failingManager = buildManager(customWriter = failingWriter)
 
             val result = failingManager.createBackup()
@@ -387,7 +407,7 @@ class LocalBackupManagerRetentionSafetyTest {
                             )
                     }
                 val failingWriter = mockk<BackupStreamWriter>()
-                coEvery { failingWriter.writeJsonStreaming(any()) } throws IOException("disk error")
+                coEvery { failingWriter.writeJsonStreaming(any(), any(), any()) } throws IOException("disk error")
                 val failingManager = buildManager(customSettingsRepo = customSettingsRepo, customWriter = failingWriter)
 
                 val result = failingManager.createBackup()

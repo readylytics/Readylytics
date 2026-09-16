@@ -36,7 +36,7 @@ class LocalBackupManager
     constructor(
         @param:ApplicationContext private val context: Context,
         private val settingsRepository: SettingsRepository,
-        private val backupStreamWriter: BackupStreamWriter,
+        private val backupSnapshotExporter: BackupSnapshotExporter,
         private val encryptionManager: EncryptionManager,
         private val auditTrailRepository: AuditTrailRepository,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
@@ -47,7 +47,6 @@ class LocalBackupManager
 
         suspend fun createBackup(): Result<File?> =
             withContext(ioDispatcher) {
-                var tempJsonFile: File? = null
                 var tempZipFile: File? = null
                 var tempVerifyZipFile: File? = null
                 try {
@@ -59,29 +58,21 @@ class LocalBackupManager
                         Instant.now().atZone(ZoneId.systemDefault()).format(FILENAME_FORMATTER)
                     val opId = UUID.randomUUID().toString()
                     val stagingDir = File(context.cacheDir, CachePrune.BACKUP_STAGING_DIR).apply { mkdirs() }
-                    val jsonFilename = "backup_${timestamp}_$opId.json"
                     val tempZipFilename = "backup_${timestamp}_$opId.zip"
                     val publishedZipFilename = "backup_$timestamp.zip"
 
-                    // 1. Write JSON to a temporary file in backup-staging
-                    val jsonFile = File(stagingDir, jsonFilename)
-                    tempJsonFile = jsonFile
-                    FileOutputStream(jsonFile).use { fos ->
-                        backupStreamWriter.writeJsonStreaming(fos)
-                    }
-
-                    // 2. Fetch and decrypt backup password
+                    // 1. Fetch and decrypt backup password
                     val password =
                         prefs.backupPasswordHash?.let { hash ->
                             encryptionManager.decrypt(hash)
                         } ?: error("Backup password not set")
 
-                    // 3. Create ZIP file in staging
+                    // 2. Stream encrypted snapshot directly to staging (no plaintext JSON on disk)
                     val zipFile = File(stagingDir, tempZipFilename)
                     tempZipFile = zipFile
-                    createZip(jsonFile, zipFile, password)
+                    backupSnapshotExporter.captureEncrypted(zipFile, password.toCharArray())
 
-                    // 4. Publish to store and verify read-back
+                    // 3. Publish to store and verify read-back
                     val verifyFile = File(stagingDir, "verify_${timestamp}_$opId.zip")
                     tempVerifyZipFile = verifyFile
                     publishAndVerify(
@@ -93,7 +84,7 @@ class LocalBackupManager
                         customUri = customUri,
                     )
 
-                    // 6. Prune old backups from the selected store only after verified publication
+                    // 4. Prune old backups from the selected store only after verified publication
                     store.prune(RETENTION_PERIOD_MS)
 
                     val finalFile = if (customUri != null) null else File(defaultBackupDir, publishedZipFilename)
@@ -115,7 +106,6 @@ class LocalBackupManager
                     logE("LocalBackupManager", e) { "createBackup failed" }
                     Result.failure(e)
                 } finally {
-                    tempJsonFile?.delete()
                     tempZipFile?.delete()
                     tempVerifyZipFile?.delete()
                 }
@@ -242,24 +232,6 @@ class LocalBackupManager
                 sink.putNextEntry(params)
                 source.getInputStream(header).use { it.copyTo(sink) }
                 sink.closeEntry()
-            }
-        }
-
-        private fun createZip(
-            inputFile: File,
-            zipFile: File,
-            password: String?,
-        ) {
-            ZipFile(zipFile, password?.toCharArray()).use { zip ->
-                val parameters =
-                    ZipParameters().apply {
-                        if (password != null) {
-                            isEncryptFiles = true
-                            encryptionMethod = EncryptionMethod.AES
-                            aesKeyStrength = AesKeyStrength.KEY_STRENGTH_256
-                        }
-                    }
-                zip.addFile(inputFile, parameters)
             }
         }
 
