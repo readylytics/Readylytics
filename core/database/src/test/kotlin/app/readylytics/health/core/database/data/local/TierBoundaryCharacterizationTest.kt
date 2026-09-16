@@ -3,6 +3,7 @@ package app.readylytics.health.core.database.data.local
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
+import app.readylytics.health.core.database.data.repository.ScoringHeartRateDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.core.databaseschema.data.local.dao.getOrCreateSourceRef
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
@@ -96,17 +97,9 @@ class TierBoundaryCharacterizationTest {
             )
         val hot = seedStraddlingWorkoutAndRollUp(workout)
         val loader =
-            ScoringDayDataLoader(
-                workoutDao = database.workoutDao(),
-                sleepSessionDao = database.sleepSessionDao(),
-                dailySummaryDao = database.dailySummaryDao(),
+            ScoringHeartRateDataLoader(
                 heartRateDao = database.heartRateDao(),
                 minuteBucketDao = database.minuteBucketDao(),
-                weightRecordDao = database.weightRecordDao(),
-                bodyFatRecordDao = database.bodyFatRecordDao(),
-                bloodPressureRecordDao = database.bloodPressureRecordDao(),
-                oxygenSaturationRecordDao = database.oxygenSaturationRecordDao(),
-                bodyTemperatureRecordDao = database.bodyTemperatureRecordDao(),
             )
         val hotSamples = runBlocking { loader.loadExerciseHrSamples(listOf(workout)) }
         val result = runBlocking { loader.loadWorkoutSamples(workout, hotSamples) }

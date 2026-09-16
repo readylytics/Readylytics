@@ -22,6 +22,7 @@ import java.time.LocalDate
 
 class DailyTrimpComputer(
     private val dataLoader: ScoringDayDataLoader,
+    private val heartRateDataLoader: ScoringHeartRateDataLoader,
     private val computeDailyTrimpUseCase: ComputeDailyTrimpUseCase,
     private val assembleEverydayLoadInputUseCase: AssembleEverydayLoadInputUseCase,
 ) {
@@ -34,7 +35,7 @@ class DailyTrimpComputer(
 
     suspend fun processWorkouts(context: ScoringDayContext): ProcessedWorkoutDay {
         val workouts = dataLoader.loadWorkouts(context.dayMidnightMs, context.nextDayMidnightMs)
-        val allDayExerciseHrSamples = dataLoader.loadExerciseHrSamples(workouts)
+        val allDayExerciseHrSamples = heartRateDataLoader.loadExerciseHrSamples(workouts)
         val identity = resolveScoringIdentity(context)
         val workoutInputs = buildWorkoutInputs(workouts, allDayExerciseHrSamples)
 
@@ -83,7 +84,7 @@ class DailyTrimpComputer(
         allDayExerciseHrSamples: List<HeartRateRecordEntity>,
     ): List<ComputeDailyTrimpUseCase.WorkoutInput> =
         workouts.map { workout ->
-            val loadedSamples = dataLoader.loadWorkoutSamplesWithQuality(workout, allDayExerciseHrSamples)
+            val loadedSamples = heartRateDataLoader.loadWorkoutSamplesWithQuality(workout, allDayExerciseHrSamples)
             ComputeDailyTrimpUseCase.WorkoutInput(
                 id = workout.id,
                 startTime = workout.startTime,
@@ -115,7 +116,8 @@ class DailyTrimpComputer(
         aggregatedSleep: SleepAggregationContext?,
         dailyTrimpRaw: Float,
     ): EverydayHrLoadResult {
-        val everydayHrBuckets = dataLoader.loadMergedMinuteBuckets(context.dayMidnightMs, context.nextDayMidnightMs)
+        val everydayHrBuckets =
+            heartRateDataLoader.loadMergedMinuteBuckets(context.dayMidnightMs, context.nextDayMidnightMs)
         val sleepIntervalsMs =
             aggregatedSleep?.allSleepIntervals
                 ?: if (session != null) {

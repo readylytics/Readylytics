@@ -23,6 +23,7 @@ import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoade
 import app.readylytics.health.core.database.data.repository.MorningRecommendationDependencies
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
+import app.readylytics.health.core.database.data.repository.ScoringHeartRateDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringSeriesLoader
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
@@ -118,17 +119,15 @@ class ScoringGoldenSnapshotTest {
                     ),
             )
 
-        val dataLoader = ScoringDayDataLoader(
-            db.workoutDao(), db.sleepSessionDao(), db.dailySummaryDao(), db.heartRateDao(),
-            db.minuteBucketDao(), db.weightRecordDao(), db.bodyFatRecordDao(),
-            db.bloodPressureRecordDao(), db.oxygenSaturationRecordDao(), db.bodyTemperatureRecordDao(),
-        )
+        val dataLoader =
+            ScoringDayDataLoader(db.workoutDao(), db.sleepSessionDao(), db.dailySummaryDao())
         val bodyMetricsDataLoader = BodyMetricsDataLoader(
             db.weightRecordDao(), db.bodyFatRecordDao(), db.bloodPressureRecordDao(),
             db.oxygenSaturationRecordDao(), db.bodyTemperatureRecordDao(),
             db.vo2MaxRecordDao(),
         )
         val seriesLoader = ScoringSeriesLoader(db.workoutDao(), db.dailySummaryDao())
+        val heartRateDataLoader = ScoringHeartRateDataLoader(db.heartRateDao(), db.minuteBucketDao())
         val buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator)
         val resolveDailyBaselinesUseCase = ResolveDailyBaselinesUseCase(baselineComputer)
         val assembleDailySummaryUseCase = AssembleDailySummaryUseCase()
@@ -149,6 +148,7 @@ class ScoringGoldenSnapshotTest {
                 dataLoader,
                 bodyMetricsDataLoader,
                 seriesLoader,
+                heartRateDataLoader,
             ),
             settingsRepo = settingsRepository,
             baselineComputer = baselineComputer,

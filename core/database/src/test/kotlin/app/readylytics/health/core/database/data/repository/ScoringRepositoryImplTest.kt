@@ -79,19 +79,7 @@ class ScoringRepositoryImplTest {
     private val vo2MaxRecordDao = mockk<Vo2MaxRecordDao>(relaxed = true)
     private val sleepPercentileRhrCalculator = mockk<SleepPercentileRhrCalculator>(relaxed = true)
     private val scoringHistoryRepository = mockk<ScoringHistoryRepository>(relaxed = true)
-    private val dataLoader =
-        ScoringDayDataLoader(
-            workoutDao,
-            sleepSessionDao,
-            dailySummaryDao,
-            heartRateDao,
-            minuteBucketDao,
-            weightRecordDao,
-            bodyFatRecordDao,
-            bloodPressureRecordDao,
-            oxygenSaturationRecordDao,
-            bodyTemperatureRecordDao,
-        )
+    private val dataLoader = ScoringDayDataLoader(workoutDao, sleepSessionDao, dailySummaryDao)
     private val bodyMetricsDataLoader =
         BodyMetricsDataLoader(
             weightRecordDao,
@@ -102,6 +90,7 @@ class ScoringRepositoryImplTest {
             vo2MaxRecordDao,
         )
     private val seriesLoader = ScoringSeriesLoader(workoutDao, dailySummaryDao)
+    private val heartRateDataLoader = ScoringHeartRateDataLoader(heartRateDao, minuteBucketDao)
 
     private lateinit var repo: ScoringRepositoryImpl
 
@@ -122,6 +111,7 @@ class ScoringRepositoryImplTest {
                 dataLoader,
                 bodyMetricsDataLoader,
                 seriesLoader,
+                heartRateDataLoader,
             ),
             settingsRepo,
             baselineComputer,

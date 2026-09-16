@@ -26,17 +26,9 @@ class ScoringDayDataLoaderExerciseHrTest {
     private val heartRateDao = mockk<HeartRateDao>()
 
     private val loader =
-        ScoringDayDataLoader(
-            workoutDao = mockk<WorkoutDao>(relaxed = true),
-            sleepSessionDao = mockk<SleepSessionDao>(relaxed = true),
-            dailySummaryDao = mockk<DailySummaryDao>(relaxed = true),
+        ScoringHeartRateDataLoader(
             heartRateDao = heartRateDao,
             minuteBucketDao = mockk(relaxed = true),
-            weightRecordDao = mockk<WeightRecordDao>(relaxed = true),
-            bodyFatRecordDao = mockk<BodyFatRecordDao>(relaxed = true),
-            bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true),
-            oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true),
-            bodyTemperatureRecordDao = mockk<BodyTemperatureRecordDao>(relaxed = true),
         )
 
     @Test

@@ -12,6 +12,7 @@ import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoor
 import app.readylytics.health.core.database.data.repository.ScoringDataLoaders
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringDayUseCases
+import app.readylytics.health.core.database.data.repository.ScoringHeartRateDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.core.database.data.repository.ScoringSeriesLoader
@@ -120,13 +121,6 @@ object ScoringBenchmarkHelper {
                 workoutDao = db.workoutDao(),
                 sleepSessionDao = db.sleepSessionDao(),
                 dailySummaryDao = db.dailySummaryDao(),
-                heartRateDao = db.heartRateDao(),
-                minuteBucketDao = db.minuteBucketDao(),
-                weightRecordDao = db.weightRecordDao(),
-                bodyFatRecordDao = db.bodyFatRecordDao(),
-                bloodPressureRecordDao = db.bloodPressureRecordDao(),
-                oxygenSaturationRecordDao = db.oxygenSaturationRecordDao(),
-                bodyTemperatureRecordDao = db.bodyTemperatureRecordDao(),
             )
         val bodyMetricsDataLoader =
             BodyMetricsDataLoader(
@@ -174,6 +168,7 @@ object ScoringBenchmarkHelper {
                     day = dataLoader,
                     bodyMetrics = bodyMetricsDataLoader,
                     series = seriesLoader,
+                    heartRate = ScoringHeartRateDataLoader(database.heartRateDao(), database.minuteBucketDao()),
                 ),
             settingsRepo = settingsRepo,
             baselineComputer = baselineComputer,

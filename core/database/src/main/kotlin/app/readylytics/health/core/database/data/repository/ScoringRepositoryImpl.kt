@@ -63,6 +63,7 @@ class ScoringRepositoryImpl
         private val dataLoader = loaders.day
         private val bodyMetricsDataLoader = loaders.bodyMetrics
         private val seriesLoader = loaders.series
+        private val heartRateDataLoader = loaders.heartRate
 
         private val scoringDayContextResolver =
             ScoringDayContextResolver(
@@ -71,7 +72,12 @@ class ScoringRepositoryImpl
                 scoringHistoryRepository,
             )
         private val dailyTrimpComputer =
-            DailyTrimpComputer(dataLoader, useCases.computeDailyTrimp, useCases.assembleEverydayLoadInput)
+            DailyTrimpComputer(
+                dataLoader,
+                heartRateDataLoader,
+                useCases.computeDailyTrimp,
+                useCases.assembleEverydayLoadInput,
+            )
         private val baseSummaryAssembler = BaseSummaryAssembler(bodyMetricsDataLoader)
         private val calibrationGate = CalibrationGate(scoringHistoryRepository)
         private val rasTotalsComputer = RasTotalsComputer(seriesLoader)
@@ -250,6 +256,14 @@ class ScoringRepositoryImpl
                     scoringDayContextResolver.resolveScoringDayContext(targetDate, prefs, contexts.baseline)
                 logD("ScoringRepository") { "RAS CALC START [$targetDate]" }
                 val processed = dailyTrimpComputer.processWorkouts(context)
+                // NOTE: registerCanonicalImpulses cannot be deferred to after a successful commit
+                // like publishTrimpToContext below -- ResidualFatigueComputer.compute's walk-forward
+                // path (advanceAccumulator) consumes THIS day's own impulses out of contexts.fatigue
+                // to compute THIS day's residual-fatigue value, so the mutation must happen before
+                // assembly runs. A failed/Unavailable assembly on this day therefore still leaves the
+                // fatigue accumulator advanced; recovering that would require reworking
+                // WalkForwardFatigueContext's API, out of scope for this task (see task report).
+                contexts.fatigue?.registerCanonicalImpulses(processed.fatigueInputs)
                 val dailyTrimpRaw = processed.dailyTrimpRaw
                 if (dailyTrimpRaw == null) {
                     ComputedDay(
@@ -278,14 +292,6 @@ private class DayAssembler(
         processed: DailyTrimpComputer.ProcessedWorkoutDay,
         dailyTrimpRaw: Float,
     ): ComputedDay {
-        // NOTE: registerCanonicalImpulses cannot be deferred to after a successful commit
-        // like publishTrimpToContext below -- ResidualFatigueComputer.compute's walk-forward
-        // path (advanceAccumulator) consumes THIS day's own impulses out of contexts.fatigue
-        // to compute THIS day's residual-fatigue value, so the mutation must happen before
-        // assembly runs. A failed/Unavailable assembly on this day therefore still leaves the
-        // fatigue accumulator advanced; recovering that would require reworking
-        // WalkForwardFatigueContext's API, out of scope for this task (see task report).
-        contexts.fatigue?.registerCanonicalImpulses(processed.fatigueInputs)
         val aggregatedSleep =
             readinessSummaryCoordinator.resolveSleepAggregation(
                 context.targetDate,

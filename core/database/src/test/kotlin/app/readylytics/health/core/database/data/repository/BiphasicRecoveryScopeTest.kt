@@ -1,14 +1,7 @@
 package app.readylytics.health.core.database.data.repository
 
-import app.readylytics.health.core.databaseschema.data.local.dao.BloodPressureRecordDao
-import app.readylytics.health.core.databaseschema.data.local.dao.BodyFatRecordDao
-import app.readylytics.health.core.databaseschema.data.local.dao.BodyTemperatureRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.DailySummaryDao
-import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
-import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
-import app.readylytics.health.core.databaseschema.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
-import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.model.data.preferences.UserPreferences
@@ -40,31 +33,12 @@ class BiphasicRecoveryScopeTest {
     private val workoutDao = mockk<WorkoutDao>(relaxed = true)
     private val sleepSessionDao = mockk<SleepSessionDao>(relaxed = true)
     private val dailySummaryDao = mockk<DailySummaryDao>(relaxed = true)
-    private val heartRateDao = mockk<HeartRateDao>(relaxed = true)
-    private val minuteBucketDao = mockk<MinuteBucketDao>(relaxed = true)
-    private val weightRecordDao = mockk<WeightRecordDao>(relaxed = true)
-    private val bodyFatRecordDao = mockk<BodyFatRecordDao>(relaxed = true)
-    private val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
-    private val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
-    private val bodyTemperatureRecordDao = mockk<BodyTemperatureRecordDao>(relaxed = true)
     private val scoringHistoryRepository = mockk<ScoringHistoryRepository>(relaxed = true)
     private val baselineComputer = mockk<BaselineComputer>(relaxed = true)
     private val scoringCalculator = mockk<ScoringCalculator>(relaxed = true)
     private val computeSleepMetricsUseCase = mockk<ComputeSleepMetricsUseCase>(relaxed = true)
 
-    private val dataLoader =
-        ScoringDayDataLoader(
-            workoutDao,
-            sleepSessionDao,
-            dailySummaryDao,
-            heartRateDao,
-            minuteBucketDao,
-            weightRecordDao,
-            bodyFatRecordDao,
-            bloodPressureRecordDao,
-            oxygenSaturationRecordDao,
-            bodyTemperatureRecordDao,
-        )
+    private val dataLoader = ScoringDayDataLoader(workoutDao, sleepSessionDao, dailySummaryDao)
     private val seriesLoader = ScoringSeriesLoader(workoutDao, dailySummaryDao)
 
     private val coordinator =

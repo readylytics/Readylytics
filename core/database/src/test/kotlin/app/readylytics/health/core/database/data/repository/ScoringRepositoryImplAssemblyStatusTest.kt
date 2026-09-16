@@ -28,6 +28,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.Vo2MaxRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
 import app.readylytics.health.core.model.data.preferences.UserPreferences
@@ -39,8 +40,12 @@ import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.recommendation.WorkoutRecommendationDecision
 import app.readylytics.health.core.model.domain.recommendation.WorkoutRecommendationSnapshot
 import app.readylytics.health.core.model.domain.recommendation.WorkoutRecommendationState
+import app.readylytics.health.core.model.domain.repository.FatigueWorkoutInput
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.model.domain.repository.SleepSessionRepository
+import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
+import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
+import app.readylytics.health.core.model.domain.scoring.DayAssemblyUnavailableReason
 import io.mockk.CapturingSlot
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -89,19 +94,7 @@ class ScoringRepositoryImplAssemblyStatusTest {
     private val bodyTemperatureRecordDao = mockk<BodyTemperatureRecordDao>(relaxed = true)
     private val vo2MaxRecordDao = mockk<Vo2MaxRecordDao>(relaxed = true)
     private val scoringHistoryRepository = mockk<ScoringHistoryRepository>(relaxed = true)
-    private val dataLoader =
-        ScoringDayDataLoader(
-            workoutDao,
-            sleepSessionDao,
-            dailySummaryDao,
-            heartRateDao,
-            minuteBucketDao,
-            weightRecordDao,
-            bodyFatRecordDao,
-            bloodPressureRecordDao,
-            oxygenSaturationRecordDao,
-            bodyTemperatureRecordDao,
-        )
+    private val dataLoader = ScoringDayDataLoader(workoutDao, sleepSessionDao, dailySummaryDao)
     private val bodyMetricsDataLoader =
         BodyMetricsDataLoader(
             weightRecordDao,
@@ -112,6 +105,7 @@ class ScoringRepositoryImplAssemblyStatusTest {
             vo2MaxRecordDao,
         )
     private val seriesLoader = ScoringSeriesLoader(workoutDao, dailySummaryDao)
+    private val heartRateDataLoader = ScoringHeartRateDataLoader(heartRateDao, minuteBucketDao)
 
     private lateinit var repo: ScoringRepositoryImpl
 
@@ -135,6 +129,7 @@ class ScoringRepositoryImplAssemblyStatusTest {
                 dataLoader,
                 bodyMetricsDataLoader,
                 seriesLoader,
+                heartRateDataLoader,
             ),
             settingsRepo,
             baselineComputer,
@@ -398,5 +393,71 @@ class ScoringRepositoryImplAssemblyStatusTest {
             repo = createRepo(UnconfinedTestDispatcher(), failingSleepSessionRepository)
 
             assertUnavailableLeavesOldStateUntouched(today, zoneId)
+        }
+
+    private fun createWorkoutEntity(id: String, startMs: Long, endMs: Long): WorkoutRecordEntity =
+        WorkoutRecordEntity(
+            id = id,
+            startTime = startMs,
+            endTime = endMs,
+            exerciseType = "RUNNING",
+            durationMinutes = 30,
+            zone1Minutes = 0f,
+            zone2Minutes = 0f,
+            zone3Minutes = 0f,
+            zone4Minutes = 0f,
+            zone5Minutes = 0f,
+            trimp = 0f,
+            avgHr = 0f,
+        )
+
+    @Test
+    fun `workout load unavailable registers valid canonical impulses into walk forward fatigue context`() =
+        runTest {
+            val today = LocalDate.of(2026, 4, 15)
+            val zoneId = ZoneId.of("UTC")
+            val dayStart = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val w1 = createWorkoutEntity("valid-w1", dayStart + 3_600_000L, dayStart + 5_400_000L)
+            val w2 = createWorkoutEntity("missing-hr-w2", dayStart + 7_200_000L, dayStart + 9_000_000L)
+            coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns listOf(w1, w2)
+            coEvery { heartRateDao.getByTypeAndTimeRange(any(), any(), any()) } returns
+                listOf(
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 0L,
+                        timestampMs = w1.startTime + 60_000L,
+                        beatsPerMinute = 140,
+                        recordType = "EXERCISE",
+                        sessionId = w1.id,
+                    ),
+                )
+
+            every {
+                computeWorkoutTrimpUseCase.execute(any(), any(), any(), any(), any(), any(), any())
+            } returns Result.success(55f)
+
+            val fatigueContext = WalkForwardFatigueContext(seedInputs = emptyList())
+            val contexts = WalkForwardContexts(fatigue = fatigueContext)
+
+            val exception =
+                assertFailsWith<DayAssemblyUnavailableException> {
+                    repo.computeAndPersistDailySummary(
+                        today,
+                        steps = null,
+                        prefs = UserPreferences(scoringZoneId = zoneId.id),
+                        contexts = contexts,
+                    )
+                }
+            assertEquals(
+                "Day assembly unavailable: ${DayAssemblyUnavailableReason.WORKOUT_LOAD_UNAVAILABLE}",
+                exception.message,
+            )
+
+            coVerify(exactly = 0) { dailySummaryDao.upsert(any()) }
+            coVerify(exactly = 0) { workoutDao.upsertAll(any()) }
+
+            val registeredImpulses = fatigueContext.takeImpulsesThrough(Long.MAX_VALUE)
+            assertEquals(1, registeredImpulses.size)
+            assertEquals("valid-w1", registeredImpulses.first().workoutId)
+            assertEquals(55f, registeredImpulses.first().trimp)
         }
 }
