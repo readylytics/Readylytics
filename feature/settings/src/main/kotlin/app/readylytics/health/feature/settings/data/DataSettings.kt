@@ -303,6 +303,18 @@ fun DataSourceSettingsSection(viewModel: DataSourceSettingsViewModel = hiltViewM
                                 ),
                         enabled = hasDevices || selected != null,
                     )
+                    if (type == HealthDataType.STEPS && selected != null) {
+                        Text(
+                            text = stringResource(R.string.data_sources_steps_selected_attribution_note),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier =
+                                Modifier.padding(
+                                    horizontal = MaterialTheme.spacing.medium,
+                                    vertical = MaterialTheme.spacing.extraSmall,
+                                ),
+                        )
+                    }
                 }
             }
 

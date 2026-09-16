@@ -1,5 +1,6 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
+import app.readylytics.health.core.model.domain.model.DomainStepsRecord
 import app.readylytics.health.core.model.domain.repository.ReadOutcome
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
 import app.readylytics.health.core.model.domain.sync.mappers.StepsMapper
@@ -48,50 +49,68 @@ class StepCountFetcher
             stepsDevice: String?,
         ): Map<LocalDate, Long> {
             logD("StepCountFetcher") { "Bulk fetching steps for $windowDays days..." }
-            val stepsMap = mutableMapOf<LocalDate, Long>()
-            if (stepsDevice == null) {
-                val stepsSemaphore = Semaphore(STEPS_FETCH_CONCURRENCY)
-                coroutineScope {
-                    val deferredSteps =
-                        (0 until windowDays).map { i ->
-                            val day = today.minusDays(i.toLong())
-                            val dayStart = day.atStartOfDay(zoneId).toInstant()
-                            val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
-                            async {
-                                stepsSemaphore.withPermit {
-                                    val outcome = retryWithBackoff { hcRepo.readSteps(dayStart, dayEnd) }
-                                    if (outcome is ReadOutcome.Available) {
-                                        day to outcome.data
-                                    } else {
-                                        null
-                                    }
-                                }
-                            }
-                        }
-                    deferredSteps.awaitAll().filterNotNull().forEach { (day, count) ->
-                        stepsMap[day] = count
-                    }
-                }
+            return if (stepsDevice == null) {
+                fetchWindowAggregates(today, windowDays, zoneId)
             } else {
-                val oldestTargetDay = today.minusDays((windowDays - 1).toLong())
-                val windowStart = oldestTargetDay.atStartOfDay(zoneId).toInstant()
-                val windowEnd = today.plusDays(1).atStartOfDay(zoneId).toInstant()
-                val outcome = retryWithBackoff { hcRepo.readStepsRecords(windowStart, windowEnd) }
-                if (outcome is ReadOutcome.Available) {
-                    for (i in 0 until windowDays) {
+                fetchWindowRecords(today, windowDays, zoneId, stepsDevice)
+            }
+        }
+
+        private suspend fun fetchWindowAggregates(
+            today: LocalDate,
+            windowDays: Int,
+            zoneId: ZoneId,
+        ): Map<LocalDate, Long> {
+            val stepsSemaphore = Semaphore(STEPS_FETCH_CONCURRENCY)
+            return coroutineScope {
+                val deferredSteps =
+                    (0 until windowDays).map { i ->
                         val day = today.minusDays(i.toLong())
-                        stepsMap[day] = 0L
+                        async { fetchDaySteps(day, zoneId, stepsSemaphore) }
                     }
-                    val stepEntries =
-                        DeviceSourceFilter.filterToDevice(
-                            StepsMapper.toStepEntries(outcome.data),
-                            stepsDevice,
-                        ) { it.deviceName }
-                    stepsMap.putAll(
-                        StepsMapper.sumByDay(stepEntries, zoneId),
-                    )
+                deferredSteps.awaitAll().filterNotNull().toMap()
+            }
+        }
+
+        private suspend fun fetchDaySteps(
+            day: LocalDate,
+            zoneId: ZoneId,
+            semaphore: Semaphore,
+        ): Pair<LocalDate, Long>? {
+            val dayStart = day.atStartOfDay(zoneId).toInstant()
+            val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
+            return semaphore.withPermit {
+                val outcome = retryWithBackoff { hcRepo.readSteps(dayStart, dayEnd) }
+                if (outcome is ReadOutcome.Available) {
+                    day to outcome.data
+                } else {
+                    null
                 }
             }
+        }
+
+        private suspend fun fetchWindowRecords(
+            today: LocalDate,
+            windowDays: Int,
+            zoneId: ZoneId,
+            stepsDevice: String,
+        ): Map<LocalDate, Long> {
+            val oldestTargetDay = today.minusDays((windowDays - 1).toLong())
+            val windowStart = oldestTargetDay.atStartOfDay(zoneId).toInstant()
+            val windowEnd = today.plusDays(1).atStartOfDay(zoneId).toInstant()
+            val outcome = retryWithBackoff { hcRepo.readStepsRecords(windowStart, windowEnd) }
+            if (outcome !is ReadOutcome.Available) return emptyMap()
+
+            val stepsMap = mutableMapOf<LocalDate, Long>()
+            for (i in 0 until windowDays) {
+                stepsMap[today.minusDays(i.toLong())] = 0L
+            }
+            val stepEntries =
+                DeviceSourceFilter.filterToDevice(
+                    StepsMapper.toStepEntries(outcome.data),
+                    stepsDevice,
+                ) { it.deviceName }
+            assignDailyTotals(StepsMapper.sumByDay(stepEntries, zoneId), stepsMap)
             return stepsMap
         }
 
@@ -145,32 +164,58 @@ class StepCountFetcher
             stepsDevice: String,
             zoneId: ZoneId,
         ): Map<LocalDate, Long> {
-            val stepsMap = mutableMapOf<LocalDate, Long>()
+            val allEntries = mutableListOf<StepsMapper.StepEntry>()
+            val seenRecordIds = mutableSetOf<String>()
             var chunkStart = startDate
+            var hasAnySuccess = false
             while (!chunkStart.isAfter(endDate)) {
                 currentCoroutineContext().ensureActive()
                 val chunkEndExclusive = minOf(chunkStart.plusDays(chunkDays.toLong()), endDate.plusDays(1))
                 val stepsWindowStart = chunkStart.atStartOfDay(zoneId).toInstant()
                 val stepsWindowEnd = chunkEndExclusive.atStartOfDay(zoneId).toInstant()
-                val outcome =
-                    retryWithBackoff {
-                        hcRepo.readStepsRecords(stepsWindowStart, stepsWindowEnd)
-                    }
-                if (outcome is ReadOutcome.Available) {
-                    zeroFillDays(chunkStart, chunkEndExclusive, stepsMap)
-                    val stepEntries =
-                        DeviceSourceFilter.filterToDevice(
-                            StepsMapper.toStepEntries(outcome.data),
-                            stepsDevice,
-                        ) { it.deviceName }
-                    stepsMap.putAll(
-                        StepsMapper.sumByDay(stepEntries, zoneId),
-                    )
+                val outcome = retryWithBackoff { hcRepo.readStepsRecords(stepsWindowStart, stepsWindowEnd) }
+                if (processRecordsOutcome(outcome, stepsDevice, seenRecordIds, allEntries)) {
+                    hasAnySuccess = true
                 }
                 chunkStart = chunkEndExclusive
                 yield()
             }
+            if (!hasAnySuccess) return emptyMap()
+            val stepsMap = mutableMapOf<LocalDate, Long>()
+            zeroFillDays(startDate, endDate.plusDays(1), stepsMap)
+            assignDailyTotals(StepsMapper.sumByDay(allEntries, zoneId), stepsMap)
             return stepsMap
+        }
+
+        private fun processRecordsOutcome(
+            outcome: ReadOutcome<List<DomainStepsRecord>>,
+            stepsDevice: String,
+            seenRecordIds: MutableSet<String>,
+            allEntries: MutableList<StepsMapper.StepEntry>,
+        ): Boolean {
+            if (outcome !is ReadOutcome.Available) return false
+            val filtered =
+                DeviceSourceFilter.filterToDevice(
+                    StepsMapper.toStepEntries(outcome.data),
+                    stepsDevice,
+                ) { it.deviceName }
+            for (entry in filtered) {
+                if (seenRecordIds.add(entry.id)) {
+                    allEntries.add(entry)
+                }
+            }
+            return true
+        }
+
+        private fun assignDailyTotals(
+            dailyTotals: Map<LocalDate, Long>,
+            targetMap: MutableMap<LocalDate, Long>,
+        ) {
+            for ((day, count) in dailyTotals) {
+                if (day in targetMap) {
+                    targetMap[day] = count
+                }
+            }
         }
 
         private fun zeroFillDays(

@@ -10,6 +10,7 @@ import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineCo
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardVo2MaxContext
+import app.readylytics.health.core.model.domain.repository.Vo2MaxKey
 import app.readylytics.health.core.model.domain.scoring.DayAssembly
 import app.readylytics.health.core.model.domain.scoring.DayAssemblyUnavailableReason
 import app.readylytics.health.core.model.domain.util.logE
@@ -258,12 +259,12 @@ class FinalSummaryAssembler(
         val context = inputs.vo2MaxContext
         return if (context != null) {
             context.vo2MaxByTimestampMs
-                .floorEntry(inputs.context.nextDayMidnightMs)
-                ?.takeIf { it.key >= wearableLookbackMs }
+                .lowerEntry(Vo2MaxKey(inputs.context.nextDayMidnightMs, ""))
+                ?.takeIf { it.key.timestampMs >= wearableLookbackMs }
                 ?.value
         } else {
             bodyMetricsDataLoader
-                .loadLatestVo2Max(inputs.context.nextDayMidnightMs, wearableLookbackMs)
+                .loadLatestVo2Max(wearableLookbackMs, inputs.context.nextDayMidnightMs)
                 ?.vo2Max
         }
     }

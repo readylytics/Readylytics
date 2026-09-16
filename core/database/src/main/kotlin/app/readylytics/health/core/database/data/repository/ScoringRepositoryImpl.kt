@@ -15,6 +15,7 @@ import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardVo2MaxContext
+import app.readylytics.health.core.model.domain.repository.Vo2MaxKey
 import app.readylytics.health.core.model.domain.scoring.DayAssembly
 import app.readylytics.health.core.model.domain.scoring.DayAssemblyUnavailableReason
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
@@ -212,9 +213,9 @@ class ScoringRepositoryImpl
                     .toInstant()
                     .toEpochMilli()
             val toMs = endDate.plusDays(2).atStartOfDay(zoneId).toInstant().toEpochMilli()
-            val vo2MaxByTimestampMs = TreeMap<Long, Float>()
+            val vo2MaxByTimestampMs = TreeMap<Vo2MaxKey, Float>()
             bodyMetricsDataLoader.loadVo2MaxRange(fromMs, toMs).forEach {
-                vo2MaxByTimestampMs[it.timestampMs] = it.vo2Max
+                vo2MaxByTimestampMs[Vo2MaxKey(it.timestampMs, it.id)] = it.vo2Max
             }
             return WalkForwardVo2MaxContext(vo2MaxByTimestampMs)
         }

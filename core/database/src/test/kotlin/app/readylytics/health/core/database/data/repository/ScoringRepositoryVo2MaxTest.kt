@@ -21,6 +21,7 @@ import app.readylytics.health.core.model.domain.preferences.Vo2MaxEstimationMeth
 import app.readylytics.health.core.model.domain.preferences.Vo2MaxSourceMode
 import app.readylytics.health.core.model.domain.repository.FatigueWorkoutInput
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
+import app.readylytics.health.core.model.domain.repository.Vo2MaxKey
 import app.readylytics.health.core.scoring.domain.cardio.UthVo2MaxCalculator
 import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxSourceResolver
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
@@ -234,6 +235,6 @@ class ScoringRepositoryVo2MaxTest {
 
             val context = repo.fetchWalkForwardVo2MaxContext(startDate, endDate, zoneId)
 
-            assertEquals(45f, context.vo2MaxByTimestampMs[midnightAfterEnd])
+            assertEquals(45f, context.vo2MaxByTimestampMs[Vo2MaxKey(midnightAfterEnd, "v1")])
         }
 }

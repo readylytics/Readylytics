@@ -115,4 +115,59 @@ class StepCountFetcherTest {
 
             assertTrue(result.isEmpty())
         }
+
+    @Test
+    fun `fetchWindow with selected device clips records starting outside requested window`() =
+        runTest {
+            val insideWindowRecord =
+                DomainStepsRecord(
+                    id = "step-inside",
+                    startTime = today.atStartOfDay(zoneId).plusHours(2).toInstant(),
+                    endTime = today.atStartOfDay(zoneId).plusHours(3).toInstant(),
+                    count = 3000L,
+                    deviceName = "Pixel Watch",
+                )
+            val outsideWindowRecord =
+                DomainStepsRecord(
+                    id = "step-outside",
+                    startTime = today.minusDays(2).atStartOfDay(zoneId).plusHours(23).toInstant(),
+                    endTime = today.minusDays(1).atStartOfDay(zoneId).plusHours(1).toInstant(),
+                    count = 2000L,
+                    deviceName = "Pixel Watch",
+                )
+            coEvery { hcRepo.readStepsRecords(any(), any()) } returns
+                ReadOutcome.Available(listOf(insideWindowRecord, outsideWindowRecord))
+
+            val result = fetcher.fetchWindow(today, windowDays = 2, zoneId = zoneId, stepsDevice = "Pixel Watch")
+
+            assertEquals(2, result.size)
+            assertEquals(3000L, result[today])
+            assertEquals(0L, result[today.minusDays(1)])
+            assertFalse(result.containsKey(today.minusDays(2)))
+        }
+
+    @Test
+    fun `fetchRange with selected device deduplicates across chunk boundaries and clips to range`() =
+        runTest {
+            val start = LocalDate.of(2026, 9, 1)
+            val end = LocalDate.of(2026, 9, 2)
+            // Straddling record that might be returned in multiple chunks
+            val straddlingRecord =
+                DomainStepsRecord(
+                    id = "step-straddle",
+                    startTime = start.atStartOfDay(zoneId).plusHours(12).toInstant(),
+                    endTime = start.plusDays(1).atStartOfDay(zoneId).plusHours(2).toInstant(),
+                    count = 1500L,
+                    deviceName = "Pixel Watch",
+                )
+            // Returned in both chunk 1 and chunk 2
+            coEvery { hcRepo.readStepsRecords(any(), any()) } returns
+                ReadOutcome.Available(listOf(straddlingRecord))
+
+            val result = fetcher.fetchRange(start, end, chunkDays = 1, stepsDevice = "Pixel Watch", zoneId = zoneId)
+
+            assertEquals(2, result.size)
+            assertEquals(1500L, result[start])
+            assertEquals(0L, result[end])
+        }
 }

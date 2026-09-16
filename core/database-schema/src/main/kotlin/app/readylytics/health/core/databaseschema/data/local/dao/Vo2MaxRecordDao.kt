@@ -26,10 +26,10 @@ interface Vo2MaxRecordDao {
     suspend fun getLatestUpTo(maxTimestampMs: Long): Vo2MaxRecordEntity?
 
     @Query(
-        "SELECT * FROM vo2_max_records WHERE timestampMs >= :minTimestampMs AND timestampMs <= :maxTimestampMs " +
-            "ORDER BY timestampMs DESC LIMIT 1",
+        "SELECT * FROM vo2_max_records WHERE timestampMs >= :minTimestampMs AND timestampMs < :endExclusiveMs " +
+            "ORDER BY timestampMs DESC, id DESC LIMIT 1",
     )
-    suspend fun getLatestInWindow(minTimestampMs: Long, maxTimestampMs: Long): Vo2MaxRecordEntity?
+    suspend fun getLatestInRange(minTimestampMs: Long, endExclusiveMs: Long): Vo2MaxRecordEntity?
 
     @Query("DELETE FROM vo2_max_records WHERE timestampMs < :cutoffMs")
     suspend fun deleteBefore(cutoffMs: Long): Int
