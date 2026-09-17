@@ -70,6 +70,7 @@ class BackupRotationService
                         if (oldHash != null && oldPassword == null) {
                             val ex = IllegalStateException("Cannot decrypt current backup password")
                             recordAuditEvent(AuditEvent.Type.KEY_ROTATION_FAILED, ex::class.simpleName)
+                            _operationState.value = BackupOperationState(phase = BackupOperationPhase.IDLE)
                             return@withLock Result.failure(ex)
                         }
 
@@ -92,8 +93,10 @@ class BackupRotationService
                             prefs.backupDirectoryUri,
                         )
                     } catch (e: CancellationException) {
+                        _operationState.value = BackupOperationState(phase = BackupOperationPhase.IDLE)
                         throw e
                     } catch (e: Throwable) {
+                        _operationState.value = BackupOperationState(phase = BackupOperationPhase.IDLE)
                         logE("BackupRotationService", e) { "rotatePassword failed" }
                         recordAuditEvent(AuditEvent.Type.KEY_ROTATION_FAILED, e::class.simpleName)
                         Result.failure(e)
@@ -240,13 +243,20 @@ class BackupRotationService
             e: Throwable,
         ) {
             withContext(NonCancellable) {
-                runCatching {
-                    if (data.phase < BackupOperationPhase.CREDENTIAL_COMMITTED) {
-                        executeRollback(store, data.entries)
+                val currentData = journal.read() ?: data
+                try {
+                    if (currentData.phase < BackupOperationPhase.CREDENTIAL_COMMITTED) {
+                        executeRollback(store, currentData.entries)
                         stagingDir.deleteRecursively()
                         journal.delete()
                     }
                     recordAuditEvent(AuditEvent.Type.KEY_ROTATION_FAILED, e::class.simpleName)
+                } finally {
+                    if (currentData.phase < BackupOperationPhase.CREDENTIAL_COMMITTED) {
+                        _operationState.value = BackupOperationState(phase = BackupOperationPhase.IDLE)
+                    } else {
+                        _operationState.value = BackupOperationState(phase = BackupOperationPhase.COMPLETE)
+                    }
                 }
             }
         }

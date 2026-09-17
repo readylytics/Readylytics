@@ -349,6 +349,63 @@ class LocalBackupManagerReencryptTest {
         }
 
     @Test
+    fun rotatePassword_partialBatchPublishFailureRollsBackAllPublishedArchivesAndResetsState() =
+        runTest {
+            val fakeStore = FakeBackupStore(failPublishOnNth = 2)
+            val orig1 = createValidZipBytes("old_password")
+            val orig2 = createValidZipBytes("old_password")
+            fakeStore.files["backup_2026-05-15_100000.zip"] = orig1
+            fakeStore.files["backup_2026-05-16_100000.zip"] = orig2
+
+            val rotService = buildRotationService(customStoreFactory = simpleStoreFactory(fakeStore))
+            val testManager =
+                buildManager(
+                    customBackupSettings = backupSettings,
+                    customStoreFactory = simpleStoreFactory(fakeStore),
+                    rotationService = rotService,
+                )
+
+            val result = testManager.rotatePassword("new_password")
+            assertTrue(result.isFailure, "Rotation must fail when 2nd archive publish fails")
+
+            // Exactly the 2 original files remain; any published archive from the first step was rolled back
+            assertEquals(2, fakeStore.files.size)
+            assertTrue(fakeStore.files.containsKey("backup_2026-05-15_100000.zip"))
+            assertTrue(fakeStore.files.containsKey("backup_2026-05-16_100000.zip"))
+
+            // Original files are readable with old password, fail with new password
+            assertZipReadableWithPassword(fakeStore.files["backup_2026-05-15_100000.zip"]!!, "old_password")
+            assertZipFailsWithPassword(fakeStore.files["backup_2026-05-15_100000.zip"]!!, "new_password")
+            assertZipReadableWithPassword(fakeStore.files["backup_2026-05-16_100000.zip"]!!, "old_password")
+            assertZipFailsWithPassword(fakeStore.files["backup_2026-05-16_100000.zip"]!!, "new_password")
+
+            // Password hash was NOT committed
+            coVerify(exactly = 0) { backupSettings.updateBackupPasswordHash(any()) }
+
+            // Lifecycle state is reset to IDLE, not stuck in mid-flight phase
+            assertEquals(BackupOperationPhase.IDLE, rotService.operationState.value.phase)
+        }
+
+    @Test
+    fun rotatePassword_singleArchiveFailureResetsStateToIdle() =
+        runTest {
+            val fakeStore = FakeBackupStore(failPublish = true)
+            fakeStore.files["backup_2026-05-15_100000.zip"] = createValidZipBytes("old_password")
+
+            val rotService = buildRotationService(customStoreFactory = simpleStoreFactory(fakeStore))
+            val testManager =
+                buildManager(
+                    customBackupSettings = backupSettings,
+                    customStoreFactory = simpleStoreFactory(fakeStore),
+                    rotationService = rotService,
+                )
+
+            val result = testManager.rotatePassword("new_password")
+            assertTrue(result.isFailure)
+            assertEquals(BackupOperationPhase.IDLE, rotService.operationState.value.phase)
+        }
+
+    @Test
     fun crashRecovery_beforeCredentialCommitted_cleansUpPublishedAndPreservesOriginal() =
         runTest {
             val fakeStore = FakeBackupStore()
@@ -470,8 +527,10 @@ class LocalBackupManagerReencryptTest {
         var files: MutableMap<String, ByteArray> = mutableMapOf(),
         var failPublish: Boolean = false,
         var partialPublish: Boolean = false,
+        var failPublishOnNth: Int? = null,
     ) : BackupStore {
         var lastPublishedSourceLength: Long = -1
+        var publishCount: Int = 0
 
         override suspend fun list(): List<BackupFileInfo> =
             files.map { (name, bytes) ->
@@ -501,8 +560,13 @@ class LocalBackupManagerReencryptTest {
             name: String,
         ): BackupLocation {
             lastPublishedSourceLength = source.length()
+            publishCount++
             if (failPublish) throw IOException("Disk full / rename failed")
             if (partialPublish) throw IOException("SAF stream closed mid-write")
+            val failNth = failPublishOnNth
+            if (failNth != null && publishCount >= failNth) {
+                throw IOException("Disk full on publish #$publishCount")
+            }
             files[name] = source.readBytes()
             return BackupLocation("fake://$name")
         }
