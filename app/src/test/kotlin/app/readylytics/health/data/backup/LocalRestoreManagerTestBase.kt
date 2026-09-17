@@ -43,6 +43,9 @@ abstract class LocalRestoreManagerTestBase {
     protected lateinit var workerScheduler: WorkerScheduler
     protected lateinit var auditTrailRepository: FakeAuditTrailRepository
     protected lateinit var manager: LocalRestoreManager
+    protected lateinit var restoreMaintenanceCoordinator: RestoreMaintenanceCoordinator
+    protected lateinit var restoreJournal: RestoreOperationJournal
+    protected lateinit var mutationCoordinator: app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 
     @Before
     fun setUp() {
@@ -53,6 +56,23 @@ abstract class LocalRestoreManagerTestBase {
                 .allowMainThreadQueries()
                 .build()
 
+        setupMocks()
+        val restoreDbOps = RestoreDatabaseOperations(db, RestoreBatchLoader(db, RestoreVitalsLoader(db)))
+        restoreMaintenanceCoordinator = buildRestoreMaintenanceCoordinator()
+        manager =
+            LocalRestoreManager(
+                context = context,
+                settingsRepository = settingsRepo,
+                restoreDatabaseOperations = restoreDbOps,
+                encryptionManager = encryptionManager,
+                auditTrailRepository = auditTrailRepository,
+                inventoryValidator = RestoreInventoryValidator(),
+                ioDispatcher = Dispatchers.Unconfined,
+                restoreMaintenanceCoordinator = restoreMaintenanceCoordinator,
+            )
+    }
+
+    private fun setupMocks() {
         settingsRepo = mockk<SettingsRepository>(relaxed = true)
         coEvery { settingsRepo.userPreferences } returns
             flowOf(
@@ -61,7 +81,18 @@ abstract class LocalRestoreManagerTestBase {
                 },
             )
         encryptionManager = mockk<EncryptionManager>(relaxed = true)
-        every { encryptionManager.encrypt("restored_password") } returns "encrypted_restored_password"
+        every { encryptionManager.encrypt(any()) } answers {
+            val str = firstArg<String>()
+            if (str == "restored_password") "encrypted_restored_password" else "enc_$str"
+        }
+        every { encryptionManager.decrypt(any()) } answers {
+            val str = firstArg<String>()
+            when {
+                str == "encrypted_restored_password" -> "restored_password"
+                str.startsWith("enc_") -> str.removePrefix("enc_")
+                else -> str
+            }
+        }
         cardConfigRepo = mockk<CardConfigurationRepository>(relaxed = true)
         vitalsLayoutRepo = mockk<VitalsLayoutRepository>(relaxed = true)
         sleepLayoutRepo = mockk<SleepLayoutRepository>(relaxed = true)
@@ -69,33 +100,40 @@ abstract class LocalRestoreManagerTestBase {
         workoutDetailLayoutRepo = mockk<WorkoutDetailLayoutRepository>(relaxed = true)
         workerScheduler = mockk<WorkerScheduler>(relaxed = true)
         auditTrailRepository = FakeAuditTrailRepository()
-        manager =
-            LocalRestoreManager(
-                context,
+    }
+
+    private fun buildRestoreMaintenanceCoordinator(): RestoreMaintenanceCoordinator {
+        val prefsApplier =
+            RestorePreferencesApplier(
                 settingsRepo,
-                RestoreDatabaseOperations(db, RestoreBatchLoader(db, RestoreVitalsLoader(db))),
-                RestorePreferencesApplier(
-                    settingsRepo,
-                    RestoreLayoutRepositories(
-                        cardConfigRepo,
-                        vitalsLayoutRepo,
-                        sleepLayoutRepo,
-                        workoutsLayoutRepo,
-                        workoutDetailLayoutRepo,
-                    ),
-                    workerScheduler,
-                    encryptionManager,
+                RestoreLayoutRepositories(
+                    cardConfigRepo,
+                    vitalsLayoutRepo,
+                    sleepLayoutRepo,
+                    workoutsLayoutRepo,
+                    workoutDetailLayoutRepo,
                 ),
+                workerScheduler,
                 encryptionManager,
-                auditTrailRepository,
-                RestoreRecommendationCoverageChecker(db, settingsRepo, workerScheduler),
-                RestoreInventoryValidator(),
-                Dispatchers.Unconfined,
             )
+        mutationCoordinator =
+            app.readylytics.health.core.database.data.local
+                .HealthMutationCoordinatorImpl(db.healthMutationStateDao())
+        restoreJournal = RestoreOperationJournal(context, encryptionManager)
+        val coverageChecker = RestoreRecommendationCoverageChecker(db, settingsRepo, workerScheduler)
+        return RestoreMaintenanceCoordinator(
+            healthMutationCoordinator = mutationCoordinator,
+            healthDatabase = db,
+            journal = restoreJournal,
+            restorePrefsApplier = prefsApplier,
+            encryptionManager = encryptionManager,
+            recommendationCoverageChecker = coverageChecker,
+        )
     }
 
     @After
     fun tearDown() {
+        restoreJournal.delete()
         db.close()
     }
 

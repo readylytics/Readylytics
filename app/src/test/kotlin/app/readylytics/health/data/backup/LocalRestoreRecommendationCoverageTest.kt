@@ -248,11 +248,10 @@ class LocalRestoreRecommendationCoverageTest : LocalRestoreManagerTestBase() {
         }
 
     @Test
-    fun applyRestore_stillSchedulesRecomputeWhenPreferencesRestoreFails() =
+    fun applyRestore_doesNotScheduleRecomputeWhenPreferencesRestoreFails() =
         runTest {
-            // Task 5 fix round 1 (Minor #2): the caller's original intent -- still check/schedule
-            // even when preferences restore itself fails, since the database data already
-            // committed and is fully valid -- must survive the reordering fix.
+            // Task R3: When preferences restore fails, maintenance remains active and
+            // recompute must NOT be scheduled with stale preferences.
             val json = createValidBackupJson()
             val summariesJson =
                 JSONArray().apply {
@@ -265,14 +264,14 @@ class LocalRestoreRecommendationCoverageTest : LocalRestoreManagerTestBase() {
                 }
             json.put("dailySummaries", summariesJson)
             json.getJSONObject("rowCounts").put("dailySummaries", summariesJson.length())
-            val zipFile = createBackupZipFile("prefs_fail_still_recomputes_backup.zip", json)
+            val zipFile = createBackupZipFile("prefs_fail_no_recompute_backup.zip", json)
 
             coEvery { settingsRepo.batchUpdate(any()) } throws RuntimeException("prefs fail")
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
             assertTrue(result is RestoreResult.PartialSuccessRequiresRestart)
-            coVerify(exactly = 1) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
+            coVerify(exactly = 0) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
             zipFile.delete()
         }
 }

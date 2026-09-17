@@ -82,28 +82,44 @@ class RestoreRollbackInstrumentedTest {
                 override fun observeRecent(limit: Int): Flow<List<AuditEvent>> = flowOf(emptyList())
             }
 
+        val restoreDbOps = RestoreDatabaseOperations(db, RestoreBatchLoader(db, RestoreVitalsLoader(db)))
+        val prefsApplier =
+            RestorePreferencesApplier(
+                settingsRepo,
+                RestoreLayoutRepositories(
+                    cardConfigRepo,
+                    vitalsLayoutRepo,
+                    sleepLayoutRepo,
+                    workoutsLayoutRepo,
+                    workoutDetailLayoutRepo,
+                ),
+                workerScheduler,
+                encryptionManager,
+            )
+        val mutationCoordinator =
+            app.readylytics.health.core.database.data.local
+                .HealthMutationCoordinatorImpl(db.healthMutationStateDao())
+        val restoreJournal = RestoreOperationJournal(context, encryptionManager)
+        val coverageChecker = RestoreRecommendationCoverageChecker(db, settingsRepo, workerScheduler)
+        val coordinator =
+            RestoreMaintenanceCoordinator(
+                healthMutationCoordinator = mutationCoordinator,
+                healthDatabase = db,
+                journal = restoreJournal,
+                restorePrefsApplier = prefsApplier,
+                encryptionManager = encryptionManager,
+                recommendationCoverageChecker = coverageChecker,
+            )
         manager =
             LocalRestoreManager(
-                context,
-                settingsRepo,
-                RestoreDatabaseOperations(db, RestoreBatchLoader(db, RestoreVitalsLoader(db))),
-                RestorePreferencesApplier(
-                    settingsRepo,
-                    RestoreLayoutRepositories(
-                        cardConfigRepo,
-                        vitalsLayoutRepo,
-                        sleepLayoutRepo,
-                        workoutsLayoutRepo,
-                        workoutDetailLayoutRepo,
-                    ),
-                    workerScheduler,
-                    encryptionManager,
-                ),
-                encryptionManager,
-                auditTrailRepo,
-                RestoreRecommendationCoverageChecker(db, settingsRepo, workerScheduler),
-                RestoreInventoryValidator(),
-                Dispatchers.Unconfined,
+                context = context,
+                settingsRepository = settingsRepo,
+                restoreDatabaseOperations = restoreDbOps,
+                encryptionManager = encryptionManager,
+                auditTrailRepository = auditTrailRepo,
+                inventoryValidator = RestoreInventoryValidator(),
+                ioDispatcher = Dispatchers.Unconfined,
+                restoreMaintenanceCoordinator = coordinator,
             )
     }
 

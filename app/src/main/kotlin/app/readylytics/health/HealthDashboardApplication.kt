@@ -27,6 +27,7 @@ import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.core.scoring.domain.scoring.BackfillHistoricalBaselinesUseCase
 import app.readylytics.health.crashreport.CachePrune
 import app.readylytics.health.crashreport.CrashReportHandler
+import app.readylytics.health.data.backup.RestoreMaintenanceCoordinator
 import app.readylytics.health.data.preferences.PhysiologyPreferences
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.di.ReleaseLogSink
@@ -68,6 +69,9 @@ class HealthDashboardApplication :
 
     @Inject
     lateinit var dirtyRangeStore: Lazy<DirtyRangeStore>
+
+    @Inject
+    lateinit var restoreMaintenanceCoordinator: Lazy<RestoreMaintenanceCoordinator>
 
     @Inject
     lateinit var databaseMigrationController: DatabaseMigrationController
@@ -135,6 +139,7 @@ class HealthDashboardApplication :
                 workoutTrimpBackfillStatus = workoutTrimpBackfillStatus,
                 context = this,
                 dirtyRangeStore = dirtyRangeStore,
+                restoreMaintenanceCoordinator = restoreMaintenanceCoordinator,
             )
         val startupCoordinator = DatabaseReadyStartupCoordinator(startupInitializer)
         val preferencesPrewarmer = PreferencesPrewarmer(settingsRepo)

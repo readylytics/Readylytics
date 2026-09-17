@@ -6,7 +6,6 @@ import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.core.model.domain.audit.AuditEvent
 import app.readylytics.health.core.model.domain.audit.AuditTrailRepository
 import app.readylytics.health.core.model.domain.backup.RestoreResult
-import app.readylytics.health.core.model.domain.backup.RestoreStage
 import app.readylytics.health.core.model.domain.backup.WrongBackupPasswordException
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.security.EncryptionManager
@@ -29,12 +28,11 @@ class LocalRestoreManager
         @param:ApplicationContext private val context: Context,
         private val settingsRepository: SettingsRepository,
         private val restoreDatabaseOperations: RestoreDatabaseOperations,
-        private val restorePrefsApplier: RestorePreferencesApplier,
         private val encryptionManager: EncryptionManager,
         private val auditTrailRepository: AuditTrailRepository,
-        private val recommendationCoverageChecker: RestoreRecommendationCoverageChecker,
         private val inventoryValidator: RestoreInventoryValidator,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+        private val restoreMaintenanceCoordinator: RestoreMaintenanceCoordinator,
     ) {
         suspend fun validate(
             backupUri: Uri,
@@ -130,32 +128,34 @@ class LocalRestoreManager
                     inventoryValidator.validate(inputStream)
                 }
 
-            val prefsBackup =
-                restoreDatabaseOperations.executeDatabaseRestore(
-                    zipFile = zipFile,
-                    header = header,
-                    validated = validated,
+            val prefsBackup = restoreDatabaseOperations.extractPreferences(zipFile, header)
+            val result =
+                restoreMaintenanceCoordinator.restore(
+                    archiveLocation = tempZipFile.absolutePath,
+                    validatedManifest = validated.manifest,
+                    prefsBackup = prefsBackup,
+                    providedPassword = providedPassword,
+                    executeDatabaseReplacement = { operationId ->
+                        restoreDatabaseOperations.executeDatabaseRestore(
+                            zipFile = zipFile,
+                            header = header,
+                            validated = validated,
+                            operationId = operationId,
+                        )
+                    },
                 )
-
-            if (prefsBackup != null) {
-                try {
-                    restorePrefsApplier.restorePreferences(prefsBackup, providedPassword)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Throwable) {
-                    logAudit(AuditEvent.Type.RESTORE_FAILED, "prefs_failed: ${e::class.simpleName}")
-                    recommendationCoverageChecker.scheduleRecomputeIfIncomplete()
-                    return RestoreResult.PartialSuccessRequiresRestart(
-                        failedStage = RestoreStage.PREFERENCES,
-                        cause = e,
-                    )
+            when (result) {
+                is RestoreResult.SuccessRequiresRestart, is RestoreResult.Success -> {
+                    logAudit(AuditEvent.Type.RESTORE_COMPLETED, "success_requires_restart")
+                }
+                is RestoreResult.PartialSuccessRequiresRestart -> {
+                    logAudit(AuditEvent.Type.RESTORE_FAILED, "prefs_failed: ${result.cause::class.simpleName}")
+                }
+                is RestoreResult.Failure -> {
+                    logAudit(AuditEvent.Type.RESTORE_FAILED, result.cause::class.simpleName)
                 }
             }
-
-            recommendationCoverageChecker.scheduleRecomputeIfIncomplete()
-
-            logAudit(AuditEvent.Type.RESTORE_COMPLETED, "success_requires_restart")
-            return RestoreResult.SuccessRequiresRestart
+            return result
         }
 
         private suspend fun logAudit(

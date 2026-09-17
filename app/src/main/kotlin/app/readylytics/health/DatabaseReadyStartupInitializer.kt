@@ -13,6 +13,7 @@ import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.core.scoring.domain.scoring.BackfillHistoricalBaselinesUseCase
 import app.readylytics.health.crashreport.CachePrune
+import app.readylytics.health.data.backup.RestoreMaintenanceCoordinator
 import app.readylytics.health.data.preferences.PhysiologyPreferences
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.domain.migration.DatabaseMigrationUiState
@@ -34,6 +35,7 @@ internal class DatabaseReadyStartupInitializer(
     private val workoutTrimpBackfillStatus: Lazy<WorkoutTrimpBackfillStatus>,
     private val context: Context? = null,
     private val dirtyRangeStore: Lazy<DirtyRangeStore>? = null,
+    private val restoreMaintenanceCoordinator: Lazy<RestoreMaintenanceCoordinator>? = null,
 ) {
     private val initialized = AtomicBoolean(false)
 
@@ -45,6 +47,18 @@ internal class DatabaseReadyStartupInitializer(
             if (context != null) {
                 runNonFatal("Orphan backup staging cleanup") {
                     CachePrune.pruneBackupStaging(context)
+                }
+            }
+
+            if (restoreMaintenanceCoordinator != null) {
+                val recoveryCoordinator = restoreMaintenanceCoordinator.get()
+                val recovered =
+                    runNonFatal("Restore recovery") {
+                        recoveryCoordinator.recoverInterruptedRestoreOnStartup()
+                    }
+                if (!recovered && recoveryCoordinator.isMaintenancePending()) {
+                    initialized.set(false)
+                    return StartupInitializationResult.RETRYABLE_FAILURE
                 }
             }
 
@@ -70,23 +84,7 @@ internal class DatabaseReadyStartupInitializer(
                 }
             }
 
-            val backupSchedule = settings.backupSchedule.first()
-            val backgroundSyncEnabled = settings.backgroundSyncEnabled.first()
-            val periodicSyncMinutes =
-                if (backgroundSyncEnabled) {
-                    settings.backgroundSyncIntervalMinutes.first()
-                } else {
-                    null
-                }
-            workerScheduler.scheduleBackupWorker(backupSchedule)
-            workerScheduler.scheduleBirthdayWorker()
-            workerScheduler.scheduleDataCleanupWorker()
-            workerScheduler.scheduleDataRollupWorker()
-            if (periodicSyncMinutes != null) {
-                workerScheduler.schedulePeriodicSync(periodicSyncMinutes.toLong())
-            } else {
-                workerScheduler.cancelPeriodicSync()
-            }
+            scheduleStartupWorkers(settings)
             StartupInitializationResult.COMPLETE
         } catch (e: CancellationException) {
             initialized.set(false)
@@ -95,6 +93,26 @@ internal class DatabaseReadyStartupInitializer(
             initialized.set(false)
             logE(TAG, e) { "Database-ready startup initialization failed" }
             StartupInitializationResult.RETRYABLE_FAILURE
+        }
+    }
+
+    private suspend fun scheduleStartupWorkers(settings: SettingsRepository) {
+        val backupSchedule = settings.backupSchedule.first()
+        val backgroundSyncEnabled = settings.backgroundSyncEnabled.first()
+        val periodicSyncMinutes =
+            if (backgroundSyncEnabled) {
+                settings.backgroundSyncIntervalMinutes.first()
+            } else {
+                null
+            }
+        workerScheduler.scheduleBackupWorker(backupSchedule)
+        workerScheduler.scheduleBirthdayWorker()
+        workerScheduler.scheduleDataCleanupWorker()
+        workerScheduler.scheduleDataRollupWorker()
+        if (periodicSyncMinutes != null) {
+            workerScheduler.schedulePeriodicSync(periodicSyncMinutes.toLong())
+        } else {
+            workerScheduler.cancelPeriodicSync()
         }
     }
 

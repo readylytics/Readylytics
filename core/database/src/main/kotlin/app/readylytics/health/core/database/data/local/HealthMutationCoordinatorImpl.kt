@@ -17,7 +17,7 @@ class HealthMutationCoordinatorImpl
 
         override suspend fun <T> withMutation(block: suspend () -> T): T =
             mutex.withLock {
-                check(stateDao.current().maintenanceOperationId == null) { "MAINTENANCE_PENDING" }
+                check(stateDao.getOrCreate().maintenanceOperationId == null) { "MAINTENANCE_PENDING" }
                 block()
             }
 
@@ -26,7 +26,7 @@ class HealthMutationCoordinatorImpl
             block: suspend () -> T,
         ): T =
             mutex.withLock {
-                val current = stateDao.current()
+                val current = stateDao.getOrCreate()
                 val existingOp = current.maintenanceOperationId
                 check(existingOp == null || existingOp == operationId) {
                     "MAINTENANCE_PENDING: $existingOp"
@@ -37,5 +37,10 @@ class HealthMutationCoordinatorImpl
                 val result = block()
                 stateDao.setMaintenance(null, null)
                 result
+            }
+
+        override suspend fun isMaintenancePending(): Boolean =
+            mutex.withLock {
+                stateDao.get()?.maintenanceOperationId != null
             }
     }

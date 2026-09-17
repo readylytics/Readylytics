@@ -9,6 +9,7 @@ import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.repository.WorkoutTrimpBackfillStatus
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.core.scoring.domain.scoring.BackfillHistoricalBaselinesUseCase
+import app.readylytics.health.data.backup.RestoreMaintenanceCoordinator
 import app.readylytics.health.data.preferences.PhysiologyPreferences
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.domain.migration.DatabaseMigrationUiState
@@ -30,6 +31,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -298,7 +300,38 @@ class DatabaseReadyStartupInitializerTest {
             }
         }
 
-    private fun createInitializer(context: Context? = null): DatabaseReadyStartupInitializer {
+    @Test
+    fun `ready startup recovers interrupted restore before backfill`() =
+        runTest {
+            val restoreCoordinator = mockk<RestoreMaintenanceCoordinator>()
+            coEvery { restoreCoordinator.recoverInterruptedRestoreOnStartup() } returns true
+            coEvery { restoreCoordinator.isMaintenancePending() } returns false
+
+            every { healthSyncLazy.get() } returns healthSyncUseCase
+            every { backfillLazy.get() } returns backfill
+            every { settingsRepository.backupSchedule } returns flowOf(BackupSchedule.DAILY)
+            every { settingsRepository.backgroundSyncEnabled } returns flowOf(false)
+            coEvery { healthSyncUseCase.withSyncLock<Int>(any()) } coAnswers {
+                firstArg<suspend () -> Int>().invoke()
+            }
+            coEvery { backfill.execute() } returns 0
+
+            val initializer =
+                createInitializer(
+                    restoreMaintenanceCoordinator = Lazy { restoreCoordinator },
+                )
+
+            val result = initializer.initializeIfReady(DatabaseReadiness.Ready)
+            assertEquals(StartupInitializationResult.COMPLETE, result)
+
+            coVerify(exactly = 1) { restoreCoordinator.recoverInterruptedRestoreOnStartup() }
+            coVerify(exactly = 1) { backfill.execute() }
+        }
+
+    private fun createInitializer(
+        context: Context? = null,
+        restoreMaintenanceCoordinator: Lazy<RestoreMaintenanceCoordinator>? = null,
+    ): DatabaseReadyStartupInitializer {
         every { settingsRepositoryLazy.get() } returns settingsRepository
         every { physiologyPreferencesLazy.get() } returns physiologyPreferences
         every { settingsRepository.userPreferences } returns
@@ -320,6 +353,7 @@ class DatabaseReadyStartupInitializerTest {
                     }
                 },
             context = context,
+            restoreMaintenanceCoordinator = restoreMaintenanceCoordinator,
         )
     }
 }

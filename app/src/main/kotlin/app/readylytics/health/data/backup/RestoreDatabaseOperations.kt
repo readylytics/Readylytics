@@ -26,6 +26,7 @@ class RestoreDatabaseOperations
             zipFile: ZipFile,
             header: FileHeader,
             validated: ValidatedBackupInventory,
+            operationId: String? = null,
         ): UserPreferencesBackup? {
             var prefsBackup: UserPreferencesBackup? = null
             healthDatabase.withTransaction {
@@ -55,13 +56,13 @@ class RestoreDatabaseOperations
                 // Foreign key validation check before committing transaction
                 checkForeignKeys()
 
-                // Initialize mutation state without live lock
+                // Initialize mutation state with maintenance marker
                 healthDatabase.healthMutationStateDao().upsert(
                     HealthMutationStateEntity(
                         id = 1,
                         sourceGeneration = validated.manifest.sourceGeneration,
-                        maintenanceOperationId = null,
-                        maintenancePhase = null,
+                        maintenanceOperationId = operationId,
+                        maintenancePhase = if (operationId != null) "DATABASE_COMMITTED" else null,
                         backfillAfterSourceRef = 0,
                     ),
                 )
@@ -71,6 +72,26 @@ class RestoreDatabaseOperations
             }
             return prefsBackup
         }
+
+        fun extractPreferences(
+            zipFile: ZipFile,
+            header: FileHeader,
+        ): UserPreferencesBackup? =
+            zipFile.getInputStream(header).use { inputStream ->
+                val reader = JsonReader(InputStreamReader(inputStream, Charsets.UTF_8))
+                reader.beginObject()
+                var prefs: UserPreferencesBackup? = null
+                while (reader.hasNext()) {
+                    val key = reader.nextName()
+                    if (key == "preferences") {
+                        prefs = json.decodeFromString<UserPreferencesBackup>(readNextObjectAsString(json, reader))
+                        break
+                    } else {
+                        reader.skipValue()
+                    }
+                }
+                prefs
+            }
 
         private suspend fun clearDatabaseTablesChildBeforeParent() {
             healthDatabase.dirtyRangeDao().deleteAll()
