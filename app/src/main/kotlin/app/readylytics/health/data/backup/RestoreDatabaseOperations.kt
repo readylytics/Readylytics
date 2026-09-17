@@ -99,6 +99,8 @@ class RestoreDatabaseOperations
             healthDatabase.sleepStageDao().deleteAll()
             healthDatabase.heartRateDao().deleteAll()
             healthDatabase.hrvDao().deleteAll()
+            healthDatabase.minuteCoverageDao().deleteCoverageInRange(Long.MIN_VALUE, Long.MAX_VALUE)
+            healthDatabase.minuteCoverageDao().deleteContributionsInRange(Long.MIN_VALUE, Long.MAX_VALUE)
             healthDatabase.minuteBucketMaintenanceDao().deleteAll()
             healthDatabase.weightRecordDao().deleteAll()
             healthDatabase.bodyFatRecordDao().deleteAll()
@@ -163,7 +165,9 @@ class RestoreDatabaseOperations
                 mapOf<String, suspend (JsonReader) -> Unit>(
                     "heartRateRecords" to { batchLoader.restoreHeartRateRecords(it, schemaVersion) },
                     "hrvRecords" to { batchLoader.restoreHrvRecords(it, schemaVersion) },
-                    "hrMinuteBuckets" to { batchLoader.restoreHrMinuteBuckets(it) },
+                    "hrMinuteBuckets" to { batchLoader.restoreHrMinuteBuckets(it, schemaVersion) },
+                    "minuteCoverage" to { batchLoader.restoreMinuteCoverage(it) },
+                    "hrSourceMinuteContributions" to { batchLoader.restoreHrSourceMinuteContributions(it) },
                     "dailySummaries" to { batchLoader.restoreDailySummaries(it) },
                     "workoutRoutePoints" to { batchLoader.restoreWorkoutRoutePoints(it) },
                     "weightRecords" to { batchLoader.vitalsLoader.restoreWeightRecords(it) },
@@ -205,6 +209,8 @@ class RestoreDatabaseOperations
                 "heartRateRecords" -> healthDatabase.heartRateDao().count()
                 "hrvRecords" -> healthDatabase.hrvDao().count()
                 "hrMinuteBuckets" -> healthDatabase.minuteBucketMaintenanceDao().count()
+                "minuteCoverage" -> healthDatabase.minuteCoverageDao().countCoverage().toInt()
+                "hrSourceMinuteContributions" -> healthDatabase.minuteCoverageDao().countContributions().toInt()
                 "workouts" -> healthDatabase.workoutDao().count()
                 "workoutRoutePoints" -> healthDatabase.workoutRoutePointDao().count()
                 "dailySummaries" -> healthDatabase.dailySummaryDao().count()

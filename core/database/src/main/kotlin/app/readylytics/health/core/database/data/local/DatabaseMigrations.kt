@@ -218,5 +218,6 @@ object DatabaseMigrations {
             MIGRATION_18_19,
             MIGRATION_19_20,
             Migration20To21,
+            app.readylytics.health.core.database.data.local.migration.Migration21To22,
         )
 }

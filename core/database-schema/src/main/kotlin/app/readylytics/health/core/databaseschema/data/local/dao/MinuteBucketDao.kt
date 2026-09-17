@@ -53,4 +53,7 @@ interface MinuteBucketDao {
             "ORDER BY bucketStartMs ASC",
     )
     suspend fun getBucketsInTimeRange(startMs: Long, endMs: Long): List<HrMinuteBucketEntity>
+
+    @Query("DELETE FROM hr_minute_buckets WHERE bucketStartMs >= :startMs AND bucketStartMs < :endMs")
+    suspend fun deleteInRange(startMs: Long, endMs: Long)
 }

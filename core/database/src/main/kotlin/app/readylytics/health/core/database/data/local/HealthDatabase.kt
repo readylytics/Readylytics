@@ -67,6 +67,10 @@ import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRoute
         Vo2MaxRecordEntity::class,
         DirtyRangeEntity::class,
         HealthMutationStateEntity::class,
+        app.readylytics.health.core.databaseschema.data.local.entity.MinuteCoverageEntity::class,
+        app.readylytics.health.core.databaseschema.data.local.entity.HrSourceMinuteContributionEntity::class,
+        app.readylytics.health.core.databaseschema.data.local.entity.StagedSourceMetadataEntity::class,
+        app.readylytics.health.core.databaseschema.data.local.entity.StagedHeartRateEntity::class,
     ],
     version = HealthDatabase.DATABASE_VERSION,
 )
@@ -117,7 +121,13 @@ abstract class HealthDatabase : RoomDatabase() {
 
     abstract fun healthMutationStateDao(): HealthMutationStateDao
 
+    abstract fun minuteCoverageDao(): 
+        app.readylytics.health.core.databaseschema.data.local.dao.MinuteCoverageDao
+
+    abstract fun heartRateRefreshStagingDao(): 
+        app.readylytics.health.core.databaseschema.data.local.dao.HeartRateRefreshStagingDao
+
     companion object {
-        const val DATABASE_VERSION = 21
+        const val DATABASE_VERSION = 22
     }
 }

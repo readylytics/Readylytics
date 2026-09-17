@@ -29,6 +29,10 @@ object BackupInventoryPolicy {
         }
         if (version >= 11) add("workoutRoutePoints")
         if (version >= 19) add("vo2MaxRecords")
+        if (version >= 22) {
+            add("minuteCoverage")
+            add("hrSourceMinuteContributions")
+        }
     }
 
     fun validateInventory(

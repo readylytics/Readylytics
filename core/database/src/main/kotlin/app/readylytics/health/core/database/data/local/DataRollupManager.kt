@@ -8,6 +8,10 @@ import app.readylytics.health.core.databaseschema.data.local.entity.DirtyRangeEn
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
+import app.readylytics.health.core.databaseschema.data.local.dao.MinuteCoverageDao
+import app.readylytics.health.core.databaseschema.data.local.entity.MinuteCoverageEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HrSourceMinuteContributionEntity
+import app.readylytics.health.core.model.domain.sync.BpmHistogram
 import app.readylytics.health.core.model.domain.sync.completeMinuteCutoff
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -49,6 +53,7 @@ class DataRollupManager
     @Inject
     constructor(
         private val minuteBucketDao: MinuteBucketDao,
+        private val minuteCoverageDao: MinuteCoverageDao,
         private val heartRateDao: HeartRateDao,
         private val transactionRunner: TransactionRunner,
         private val coordinator: HealthMutationCoordinator? = null,
@@ -94,13 +99,24 @@ class DataRollupManager
                 val rawSamples = heartRateDao.getPlausibleSamplesInRangeForRollup(fromMs, toMs)
                 val chunkRange =
                     if (rawSamples.isNotEmpty()) {
-                        minuteBucketDao.upsertBuckets(rawSamples.aggregateIntoMinuteBuckets())
+                        val currentGen = if (healthMutationStateDao != null) {
+                            healthMutationStateDao.incrementGeneration()
+                            healthMutationStateDao.current().sourceGeneration
+                        } else {
+                            0L
+                        }
+
+                        val buckets = rawSamples.aggregateIntoMinuteBuckets().map { it.copy(generation = currentGen) }
+                        minuteBucketDao.upsertBuckets(buckets)
+
+                        val (coverages, contributions) = computeCoveragesAndContributions(rawSamples, currentGen)
+                        coverages.forEach { minuteCoverageDao.insertCoverage(it) }
+                        minuteCoverageDao.insertContributions(contributions)
+
                         val minMs = rawSamples.minOf { it.timestampMs }
                         val maxMs = rawSamples.maxOf { it.timestampMs }
 
                         if (dirtyRangeDao != null && healthMutationStateDao != null) {
-                            healthMutationStateDao.incrementGeneration()
-                            val currentGen = healthMutationStateDao.current().sourceGeneration
                             val startDate = Instant.ofEpochMilli(minMs).atZone(ZoneOffset.UTC).toLocalDate()
                             val maxDate = Instant.ofEpochMilli(maxMs).atZone(ZoneOffset.UTC).toLocalDate()
                             val today = LocalDate.now(ZoneOffset.UTC)
@@ -113,7 +129,7 @@ class DataRollupManager
                                     nextEpochDay = startDate.toEpochDay(),
                                     reason = "HOT_TIER_ROLLUP",
                                     scoringSnapshotId = "ACTIVE",
-                                ),
+                                )
                             )
                         }
 
@@ -127,6 +143,42 @@ class DataRollupManager
                 heartRateDao.deleteInRange(fromMs, toMs)
                 chunkRange
             }
+
+        private fun computeCoveragesAndContributions(
+            rawSamples: List<app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity>,
+            currentGen: Long,
+        ): Pair<List<MinuteCoverageEntity>, List<HrSourceMinuteContributionEntity>> {
+            val coverages = mutableListOf<MinuteCoverageEntity>()
+            val contributions = mutableListOf<HrSourceMinuteContributionEntity>()
+
+            rawSamples.groupBy { completeMinuteCutoff(it.timestampMs) }.forEach { (bucketStartMs, samplesForMinute) ->
+                coverages.add(
+                    MinuteCoverageEntity(
+                        bucketStartMs = bucketStartMs,
+                        visibleGeneration = currentGen,
+                        tier = "WARM",
+                        quality = "SOURCE_BACKED",
+                        sourceSelectionId = null
+                    )
+                )
+
+                samplesForMinute.groupBy { it.sourceRecordRef }.forEach { (sourceRef, sourceSamples) ->
+                    val histogram = BpmHistogram(sourceSamples.groupingBy { it.beatsPerMinute }.eachCount())
+                    contributions.add(
+                        HrSourceMinuteContributionEntity(
+                            sourceRecordRef = sourceRef,
+                            bucketStartMs = bucketStartMs,
+                            generation = currentGen,
+                            firstSampleMs = sourceSamples.minOf { it.timestampMs },
+                            lastSampleMs = sourceSamples.maxOf { it.timestampMs },
+                            deviceName = sourceSamples.firstOrNull { !it.deviceName.isNullOrBlank() }?.deviceName ?: "",
+                            bpmHistogram = histogram.encode()
+                        )
+                    )
+                }
+            }
+            return Pair(coverages, contributions)
+        }
 
         private fun mergeRanges(
             a: ScoreInvalidation.AffectedRange?,

@@ -8,7 +8,9 @@ import app.readylytics.health.core.databaseschema.data.local.entity.DailySummary
 import app.readylytics.health.core.databaseschema.data.local.entity.HealthSourceRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrMinuteBucketEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HrSourceMinuteContributionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.MinuteCoverageEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.OxygenSaturationRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.StepRecordEntity
@@ -29,6 +31,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
+@Suppress("TooManyFunctions") // Backing up 15+ tables requires many serialization handlers
 class BackupStreamWriter
     @Inject
     constructor(
@@ -90,6 +93,9 @@ class BackupStreamWriter
                         "healthSourceRecords" to async { healthDatabase.sourceRecordDao().count() },
                         "hrMinuteBuckets" to async { healthDatabase.minuteBucketMaintenanceDao().count() },
                         "vo2MaxRecords" to async { healthDatabase.vo2MaxRecordDao().count() },
+                        "minuteCoverage" to async { healthDatabase.minuteCoverageDao().countCoverage() },
+                        "hrSourceMinuteContributions" to
+                            async { healthDatabase.minuteCoverageDao().countContributions() },
                     )
                 counts.associate { (key, deferred) -> key to deferred.await() }
             }
@@ -186,6 +192,35 @@ class BackupStreamWriter
                     mbAfterSessionId = it.sessionId
                     mbAfterDeviceName = it.deviceName
                 },
+                pageHook = pageHook,
+            )
+            writer.write(",\n")
+
+            writeCoverageAndContributions(writer, pageHook)
+        }
+
+        private suspend fun writeCoverageAndContributions(
+            writer: BufferedWriter,
+            pageHook: (suspend (tableName: String) -> Unit)?,
+        ) {
+            val minuteCoverageDao = healthDatabase.minuteCoverageDao()
+
+            var covAfterTs = Long.MIN_VALUE
+            writeTable<MinuteCoverageEntity>(
+                writer,
+                "minuteCoverage",
+                page = { minuteCoverageDao.pageCoverageAfter(covAfterTs, 500) },
+                advance = { covAfterTs = it.bucketStartMs },
+                pageHook = pageHook,
+            )
+            writer.write(",\n")
+
+            var contribAfterTs = Long.MIN_VALUE
+            writeTable<HrSourceMinuteContributionEntity>(
+                writer,
+                "hrSourceMinuteContributions",
+                page = { minuteCoverageDao.pageContributionsAfter(contribAfterTs, 500) },
+                advance = { contribAfterTs = it.bucketStartMs },
                 pageHook = pageHook,
             )
             writer.write(",\n")

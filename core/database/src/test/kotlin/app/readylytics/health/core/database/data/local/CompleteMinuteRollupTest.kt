@@ -27,6 +27,7 @@ class CompleteMinuteRollupTest {
         ).allowMainThreadQueries().build()
         rollupManager = DataRollupManager(
             minuteBucketDao = database.minuteBucketDao(),
+            minuteCoverageDao = database.minuteCoverageDao(),
             heartRateDao = database.heartRateDao(),
             transactionRunner = RoomTransactionRunner(database),
         )
