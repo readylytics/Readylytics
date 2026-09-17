@@ -435,6 +435,12 @@ have locally — no network request is made to produce it. If you use encrypted 
 stored recommendations (and the examples they reference) are included like any other computed data.
 No cloud feature or telemetry was introduced to support this.
 
+Heart-rate history older than 90 days is kept as one-minute summaries rather than individual
+samples. Each summarised minute now also records which device or app it came from, and that
+coverage information is included in encrypted local backups so a restore reproduces the same
+history. Summaries created before this existed stay marked as approximate and are only replaced
+by a complete re-import, never silently overwritten. All of it stays on your device.
+
 _Implemented in: `ComputeWorkoutRecommendationUseCase.kt`, `MorningRecommendationAssembler.kt`,
 `SelectWorkoutRecommendationExamples.kt`_
 

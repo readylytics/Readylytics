@@ -112,7 +112,12 @@ to any value between 180 days and 3 years (1095 days). State retention
 applies to every imported health-record table. If you turn retention
 limiting off, Readylytics keeps history up to a 10-year (3650-day) ceiling
 rather than indefinitely. Backups contain only records present in the local
-database at backup time.
+database at backup time. Since heart-rate history older than 90 days is stored as
+one-minute summaries rather than individual samples, an encrypted local backup now also
+includes the per-minute coverage records that say which device or app each summarised
+minute came from, so a restore reproduces the same history. This is the same on-device
+health data you already had; no new data is collected and nothing is uploaded. Files
+staged for an in-progress data refresh are working state and are not included in backups.
 
 To protect your privacy and prevent decryption or data corruption issues on new devices (since cryptographic keys are hardware-bound and do not transfer), all local app data—including databases, preferences, encryption keys, and local backup files—is explicitly excluded from standard Android Auto Backup (cloud backup) and device-to-device transfers.
 
