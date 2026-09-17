@@ -8,6 +8,7 @@ import app.readylytics.health.core.databaseschema.data.local.entity.DirtyRangeEn
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
+import app.readylytics.health.core.model.domain.sync.completeMinuteCutoff
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.yield
@@ -71,7 +72,7 @@ class DataRollupManager
 
         private suspend fun doRollupExpiredHotTier(cutoffMs: Long): ScoreInvalidation.AffectedRange? {
             var touched: ScoreInvalidation.AffectedRange? = null
-            val completeCutoff = app.readylytics.health.core.model.domain.sync.completeMinuteCutoff(cutoffMs)
+            val completeCutoff = completeMinuteCutoff(cutoffMs)
             var cursorMs = heartRateDao.getEarliestTimestampMs() ?: completeCutoff
             
             while (cursorMs < completeCutoff) {
