@@ -18,9 +18,6 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import net.lingala.zip4j.ZipFile
-import net.lingala.zip4j.model.ZipParameters
-import net.lingala.zip4j.model.enums.AesKeyStrength
-import net.lingala.zip4j.model.enums.EncryptionMethod
 import java.io.File
 import java.io.FileOutputStream
 import java.time.Instant
@@ -42,6 +39,7 @@ class LocalBackupManager
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
         private val backupStoreFactory: BackupStoreFactory = DefaultBackupStoreFactory(context),
         private val inventoryValidator: RestoreInventoryValidator = RestoreInventoryValidator(),
+        private val backupRotationService: BackupRotationService? = null,
     ) {
         private val defaultBackupDir = File(context.filesDir, "backups")
 
@@ -125,115 +123,8 @@ class LocalBackupManager
                 }
             }
 
-        suspend fun reencryptBackups(
-            oldPassword: String?,
-            newPassword: String?,
-        ): Result<Unit> =
-            withContext(ioDispatcher) {
-                try {
-                    val prefs = settingsRepository.userPreferences.first()
-                    val customUri = prefs.backupDirectoryUri?.toUri()
-                    val store = backupStoreFactory.create(customUri)
-                    val backups = store.list()
-                    val tempDir = File(context.cacheDir, "reencrypt_temp")
-                    tempDir.mkdirs()
-
-                    try {
-                        backups.forEach { info ->
-                            reencryptOneBackup(store, info, tempDir, oldPassword, newPassword)
-                        }
-                    } finally {
-                        tempDir.deleteRecursively()
-                    }
-                    auditTrailRepository.appendBestEffort(
-                        "LocalBackupManager",
-                        AuditEvent(
-                            type = AuditEvent.Type.KEY_ROTATED,
-                            occurredAt = Instant.now(),
-                            detail = null,
-                        ),
-                    )
-                    Result.success(Unit)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    // The audit trail records only the exception class name; the message and
-                    // stack are what actually identify a provider-specific SAF failure.
-                    logE("LocalBackupManager", e) { "reencryptBackups failed" }
-                    auditTrailRepository.appendBestEffort(
-                        "LocalBackupManager",
-                        AuditEvent(
-                            type = AuditEvent.Type.KEY_ROTATION_FAILED,
-                            occurredAt = Instant.now(),
-                            detail = e::class.simpleName,
-                        ),
-                    )
-                    Result.failure(e)
-                }
-            }
-
-        private suspend fun reencryptOneBackup(
-            store: BackupStore,
-            info: BackupFileInfo,
-            tempDir: File,
-            oldPassword: String?,
-            newPassword: String?,
-        ) {
-            val tempZip = File(tempDir, info.name)
-            val newZipPath = File(tempDir, "reencrypt_new_${System.currentTimeMillis()}.zip")
-
-            // 1. Copy source to temp zip
-            store.read(info.location).use { input ->
-                tempZip.outputStream().use { output -> input.copyTo(output) }
-            }
-
-            // 2. Stream entries directly to new zip with new password (no plaintext JSON on disk)
-            ZipFile(tempZip, oldPassword?.toCharArray()).use { source ->
-                streamZipEntries(source, newZipPath, newPassword)
-            }
-
-            // 3. Publish re-encrypted archive atomically
-            store.publish(newZipPath, info.name)
-
-            // 4. Cleanup temp zip files
-            tempZip.delete()
-            newZipPath.delete()
-        }
-
-        private fun streamZipEntries(
-            source: ZipFile,
-            newZipPath: File,
-            newPassword: String?,
-        ) {
-            net.lingala.zip4j.io.outputstream
-                .ZipOutputStream(
-                    newZipPath.outputStream(),
-                    newPassword?.toCharArray(),
-                ).use { sink ->
-                    writeSourceEntriesToSink(source, sink, newPassword)
-                }
-        }
-
-        private fun writeSourceEntriesToSink(
-            source: ZipFile,
-            sink: net.lingala.zip4j.io.outputstream.ZipOutputStream,
-            newPassword: String?,
-        ) {
-            source.fileHeaders.forEach { header ->
-                val params =
-                    ZipParameters().apply {
-                        fileNameInZip = header.fileName
-                        if (newPassword != null) {
-                            isEncryptFiles = true
-                            encryptionMethod = EncryptionMethod.AES
-                            aesKeyStrength = AesKeyStrength.KEY_STRENGTH_256
-                        }
-                    }
-                sink.putNextEntry(params)
-                source.getInputStream(header).use { it.copyTo(sink) }
-                sink.closeEntry()
-            }
-        }
+        suspend fun rotatePassword(newPassword: String): Result<Unit> =
+            backupRotationService?.rotatePassword(newPassword) ?: Result.success(Unit)
 
         suspend fun listBackups(): List<BackupFileInfo> =
             withContext(ioDispatcher) {
