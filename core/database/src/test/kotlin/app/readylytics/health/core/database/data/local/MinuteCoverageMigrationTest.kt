@@ -37,7 +37,10 @@ class MinuteCoverageMigrationTest {
     @Test
     fun migrate21To22_preservesLegacyWarmBucketsAndChecksFk() {
         helper.createDatabase(TEST_DATABASE, 21).apply {
-            execSQL("INSERT INTO health_source_records (id, sourceRecordId, recordType, createdAtMs, metadataState, sourceRevision) VALUES (1, 'src-1', 'HEART_RATE', 0, 'UNKNOWN', 0)")
+            execSQL(
+                "INSERT INTO health_source_records (id, sourceRecordId, recordType, createdAtMs, metadataState, sourceRevision) " +
+                "VALUES (1, 'src-1', 'HEART_RATE', 0, 'UNKNOWN', 0)"
+            )
             
             // Seed a raw heart rate record (for a raw-only minute and mixed minute)
             execSQL(
@@ -47,13 +50,13 @@ class MinuteCoverageMigrationTest {
             // Seed legacy warm buckets
             // bucketStartMs 0 is warm-only
             execSQL(
-                "INSERT INTO hr_minute_buckets (bucketStartMs, bucketEndMs, minBpm, maxBpm, avgBpm, sampleCount, recordType, sessionId, deviceName) " +
-                    "VALUES (0, 60000, 50, 70, 60.0, 10, 'RESTING', '', '')",
+                "INSERT INTO hr_minute_buckets (bucketStartMs, bucketEndMs, minBpm, maxBpm, avgBpm, sampleCount, recordType, " +
+                "sessionId, deviceName) VALUES (0, 60000, 50, 70, 60.0, 10, 'RESTING', '', '')",
             )
             // bucketStartMs 60000 is warm, let's say mixed with raw (not physically enforced, just logically)
             execSQL(
-                "INSERT INTO hr_minute_buckets (bucketStartMs, bucketEndMs, minBpm, maxBpm, avgBpm, sampleCount, recordType, sessionId, deviceName) " +
-                    "VALUES (60000, 120000, 55, 75, 65.0, 15, 'RESTING', '', '')",
+                "INSERT INTO hr_minute_buckets (bucketStartMs, bucketEndMs, minBpm, maxBpm, avgBpm, sampleCount, recordType, " +
+                "sessionId, deviceName) VALUES (60000, 120000, 55, 75, 65.0, 15, 'RESTING', '', '')",
             )
             close()
         }
