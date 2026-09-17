@@ -121,7 +121,7 @@ class SleepPercentileRhrCalculatorTest {
                     mockSession(id = "1", endTime = 10000L),
                     mockSession(id = "2", endTime = 9000L),
                 ).map(SleepSessionMapper::toEntity)
-            coEvery { heartRateDao.getSleepHrProjectionForSessions(any()) } returns
+            coEvery { heartRateDao.getVisibleSleepHrProjectionForSessions(any()) } returns
                 listOf(
                     SleepHrSample(sessionId = "1", beatsPerMinute = 55),
                     SleepHrSample(sessionId = "1", beatsPerMinute = 60),
@@ -143,7 +143,7 @@ class SleepPercentileRhrCalculatorTest {
 
             coEvery { sleepSessionDao.getBetween(any(), any()) } returns
                 listOf(session).map(SleepSessionMapper::toEntity)
-            coEvery { heartRateDao.getSleepHrProjectionForSessions(any()) } returns emptyList()
+            coEvery { heartRateDao.getVisibleSleepHrProjectionForSessions(any()) } returns emptyList()
 
             val result = collector.collect(session, dayMidnight)
 
@@ -163,7 +163,7 @@ class SleepPercentileRhrCalculatorTest {
                     mockSession(id = "1", endTime = 10000L),
                     mockSession(id = "2", endTime = 9000L),
                 ).map(SleepSessionMapper::toEntity)
-            coEvery { heartRateDao.getSleepHrProjectionForSessions(any()) } returns
+            coEvery { heartRateDao.getVisibleSleepHrProjectionForSessions(any()) } returns
                 listOf(
                     SleepHrSample(sessionId = "2", beatsPerMinute = 50),
                 )
@@ -188,7 +188,7 @@ class SleepPercentileRhrCalculatorTest {
                 (0..9).map { i ->
                     SleepHrSample(sessionId = "1", beatsPerMinute = 50 + i)
                 }
-            coEvery { heartRateDao.getSleepHrProjectionForSessions(any()) } returns records
+            coEvery { heartRateDao.getVisibleSleepHrProjectionForSessions(any()) } returns records
 
             // Test default percentile = 5.
             // S = 10. index = ((5 / 100.0) * (10 - 1)).toInt() = (0.05 * 9).toInt() = 0.
@@ -221,7 +221,7 @@ class SleepPercentileRhrCalculatorTest {
             // Minimal DB: only target session
             coEvery { sleepSessionDao.getBetween(any(), any()) } returns
                 listOf(session).map(SleepSessionMapper::toEntity)
-            coEvery { heartRateDao.getSleepHrProjectionForSessions(listOf("target")) } returns targetHrSamples
+            coEvery { heartRateDao.getVisibleSleepHrProjectionForSessions(listOf("target")) } returns targetHrSamples
 
             val resultMinimal = collector.collect(session, dayMidnight)
 
@@ -233,7 +233,8 @@ class SleepPercentileRhrCalculatorTest {
                 }
             coEvery { sleepSessionDao.getBetween(any(), any()) } returns
                 (extraSessions + session).map(SleepSessionMapper::toEntity)
-            coEvery { heartRateDao.getSleepHrProjectionForSessions(any()) } returns (targetHrSamples + extraHrSamples)
+            coEvery { heartRateDao.getVisibleSleepHrProjectionForSessions(any()) } returns
+                (targetHrSamples + extraHrSamples)
 
             val resultFull = collector.collect(session, dayMidnight)
 

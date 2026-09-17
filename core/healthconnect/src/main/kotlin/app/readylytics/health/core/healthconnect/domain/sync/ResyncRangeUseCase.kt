@@ -373,6 +373,23 @@ class ResyncRangeUseCase
             )
         }
 
+        /**
+         * Phase 3 of the four resumable phases: one session-link reconcile over the **complete**
+         * range, after all ingest and prune. Chunk-independent by construction -- the reconciler
+         * sees the full session list, so a session straddling an ingest-chunk boundary resolves the
+         * same way regardless of how the range happened to be chunked.
+         *
+         * **WP-17 Step 4:** this is also where warm-tier minutes get re-keyed. A warm minute stores
+         * its session link inside its primary key, so `SessionLinkReconciler` re-derives every
+         * `SOURCE_BACKED` minute's projection from stable per-source evidence and republishes the
+         * ones whose assignment changed, and retires minutes whose evidence a Health Connect
+         * deletion removed. That makes this phase the convergence point for rolled-up-source
+         * deletions too: the recompute-only resync a deletion's dirty range schedules runs with
+         * `skipIngestAndPrune = true`, whose checkpoint starts at [ResyncPhase.RECONCILE], so the
+         * relink always runs before the days that depend on it are recomputed. `runReconciliation`
+         * is false only when a killed run is resuming *inside* the recompute phase, i.e. after this
+         * pass already committed.
+         */
         private suspend fun executeReconciliation(
             plan: ResyncExecutionPlan,
             runCompletedTypes: Set<HealthDataType>,

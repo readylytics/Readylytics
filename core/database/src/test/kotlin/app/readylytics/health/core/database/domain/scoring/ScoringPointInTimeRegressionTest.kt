@@ -179,7 +179,7 @@ class ScoringPointInTimeRegressionTest {
             )
         coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns listOf(workout)
         coEvery {
-            heartRateDao.getByTypeAndTimeRange(RecordType.EXERCISE.name, any(), any())
+            heartRateDao.getVisibleByTypeAndTimeRange(RecordType.EXERCISE.name, any(), any())
         } returns
             listOf(
                 HeartRateRecordEntity(
@@ -190,7 +190,7 @@ class ScoringPointInTimeRegressionTest {
                     sessionId = "w1",
                 ),
             )
-        coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
+        coEvery { heartRateDao.getVisibleByTimeRange(any(), any()) } returns emptyList()
         return workout
     }
 
@@ -291,7 +291,7 @@ class ScoringPointInTimeRegressionTest {
             coEvery { sleepSessionDao.countSince(any()) } returns 10
             coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns null
             coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns emptyList()
-            coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { heartRateDao.getVisibleByTimeRange(any(), any()) } returns emptyList()
 
             setupPreferences(athletePrefs())
 
@@ -347,7 +347,7 @@ class ScoringPointInTimeRegressionTest {
                 coEvery { sleepSessionDao.countSince(any()) } returns 10
                 coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns null
                 coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns emptyList()
-                coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
+                coEvery { heartRateDao.getVisibleByTimeRange(any(), any()) } returns emptyList()
                 coEvery { workoutDao.getTrimpPoints(any(), any()) } returns
                     listOf(TimestampedTrimp(historicalMidnightMs, 30f))
                 coEvery { dailySummaryDao.getEverydayTrimpPoints(any(), any()) } returns
@@ -400,7 +400,7 @@ class ScoringPointInTimeRegressionTest {
             coEvery { sleepSessionDao.countSince(any()) } returns 10
             coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns null
             coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns emptyList()
-            coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { heartRateDao.getVisibleByTimeRange(any(), any()) } returns emptyList()
             coEvery { dailySummaryDao.getEverydayTrimpPoints(any(), any()) } returns emptyList()
 
             listOf(LocalDate.of(2025, 3, 31), LocalDate.of(2025, 10, 27)).forEach { targetDate ->

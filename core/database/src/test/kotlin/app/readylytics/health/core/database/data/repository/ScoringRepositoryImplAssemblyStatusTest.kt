@@ -420,7 +420,7 @@ class ScoringRepositoryImplAssemblyStatusTest {
             val w1 = createWorkoutEntity("valid-w1", dayStart + 3_600_000L, dayStart + 5_400_000L)
             val w2 = createWorkoutEntity("missing-hr-w2", dayStart + 7_200_000L, dayStart + 9_000_000L)
             coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns listOf(w1, w2)
-            coEvery { heartRateDao.getByTypeAndTimeRange(any(), any(), any()) } returns
+            coEvery { heartRateDao.getVisibleByTypeAndTimeRange(any(), any(), any()) } returns
                 listOf(
                     HeartRateRecordEntity(
                         sourceRecordRef = 0L,

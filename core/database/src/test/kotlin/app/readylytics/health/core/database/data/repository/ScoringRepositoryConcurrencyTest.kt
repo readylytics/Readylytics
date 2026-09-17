@@ -172,7 +172,7 @@ class ScoringRepositoryConcurrencyTest {
             val maxConcurrentCalls = AtomicInteger(0)
 
             coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns listOf(mockWorkoutRecord(todayMs))
-            coEvery { heartRateDao.getByTypeAndTimeRange(RecordType.EXERCISE.name, any(), any()) } returns
+            coEvery { heartRateDao.getVisibleByTypeAndTimeRange(RecordType.EXERCISE.name, any(), any()) } returns
                 listOf(mockHrSample(todayMs))
             coEvery { computeSleepMetricsUseCase(any()) } returns
                 Result.success(DailySummaryMapper.toDomain(DailySummaryEntity(0L), zoneId))

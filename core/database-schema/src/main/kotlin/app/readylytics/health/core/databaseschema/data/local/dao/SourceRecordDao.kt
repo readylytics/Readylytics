@@ -54,11 +54,14 @@ interface SourceRecordDao : SourceRecordMaintenanceDao {
      * converging. Per Step 4, only that source's own contribution rows are removed -- no other
      * source's evidence is subtracted and no minute is blanket-deleted.
      *
-     * Known gap (tracked for T3): the already-visible `hr_minute_buckets` projections and the
-     * `minute_coverage` row of the affected minutes are NOT regenerated here, because a
-     * contribution does not carry the bucket's `recordType`/`sessionId` and therefore cannot be
-     * re-projected on its own. That matches the pre-WP-17 behaviour (a deleted HR source already
-     * left its warm buckets in place) and is covered by the dirty work the ingestion path appends.
+     * The already-visible `hr_minute_buckets` projections and the `minute_coverage` rows of the
+     * affected minutes are deliberately NOT regenerated here: a contribution carries no
+     * `recordType`/`sessionId`, so one deleted contribution cannot be re-projected in isolation.
+     * **T3 closes that gap in the reconcile pass instead of here.** `WarmTierRelinker` (run once
+     * over the full range from `SessionLinkReconciler.reconcile`) rebuilds every affected minute
+     * from whatever contributions *remain*, and retires a minute whose evidence is gone entirely
+     * -- so a deletion converges on the next reconcile, which is exactly what the dirty work the
+     * ingestion path appends schedules.
      */
     @Transaction
     suspend fun deleteBySourceRecordId(sourceRecordId: String): Int {

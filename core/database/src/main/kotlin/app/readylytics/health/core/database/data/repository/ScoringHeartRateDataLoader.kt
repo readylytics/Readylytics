@@ -1,6 +1,6 @@
 package app.readylytics.health.core.database.data.repository
 
-import app.readylytics.health.core.database.data.local.reconstructTimestampedSamples
+import app.readylytics.health.core.database.data.local.AuthoritativeHeartRateReader
 import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
@@ -16,27 +16,50 @@ data class LoadedWorkoutSamples(
     val quality: WorkoutHrQuality,
 )
 
+/**
+ * Scoring-side heart-rate loader for workout metrics and the everyday-HR load calculator.
+ *
+ * WP-17 Step 3: every read here goes through [AuthoritativeHeartRateReader], so the hot and warm
+ * contributions it concatenates are guaranteed to describe disjoint minutes. Before that, a minute
+ * quarantined by the OD-1 legacy rule (raw rows deliberately retained below the hot/warm cutoff
+ * alongside a `LEGACY_*` coverage row) would have been counted twice -- once as raw samples and
+ * again as its warm projection -- inflating both the per-minute mean and the TRIMP that minute
+ * contributes. The merge below is retained as a defensive weighted identity; with the coverage
+ * predicate applied it reduces to a plain union.
+ */
 @Singleton
 class ScoringHeartRateDataLoader
     @Inject
     constructor(
-        private val heartRateDao: HeartRateDao,
-        private val minuteBucketDao: MinuteBucketDao,
+        private val authoritativeReader: AuthoritativeHeartRateReader,
     ) {
+        /**
+         * Fixture convenience: assembles the reader from the two DAOs a Room-backed test already
+         * has, so the many existing call sites across the test suite keep compiling without each
+         * one re-deriving the collaborator graph. Production DI always uses the `@Inject`
+         * constructor above and injects the shared singleton. Same rationale as
+         * `ScoringHistoryRepositoryImpl`'s defaulted `scoringCalculator`.
+         */
+        constructor(
+            heartRateDao: HeartRateDao,
+            minuteBucketDao: MinuteBucketDao,
+        ) : this(AuthoritativeHeartRateReader(heartRateDao, minuteBucketDao))
+
         suspend fun loadExerciseHrSamples(workouts: List<WorkoutRecordEntity>): List<HeartRateRecordEntity> {
             if (workouts.isEmpty()) return emptyList()
-            return fetchExerciseHrInRange(workouts.minOf { it.startTime }, workouts.maxOf { it.endTime })
+            return authoritativeReader.rawByTypeInRange(
+                RecordType.EXERCISE.name,
+                workouts.minOf { it.startTime },
+                workouts.maxOf { it.endTime },
+            )
         }
-
-        private suspend fun fetchExerciseHrInRange(startMs: Long, endMs: Long): List<HeartRateRecordEntity> =
-            heartRateDao.getByTypeAndTimeRange(RecordType.EXERCISE.name, startMs, endMs)
 
         suspend fun loadWorkoutSamplesWithQuality(
             workout: WorkoutRecordEntity,
             hotSamples: List<HeartRateRecordEntity>,
         ): LoadedWorkoutSamples {
             val hot = hotSamples.filter { it.timestampMs in workout.startTime..workout.endTime }
-            val warm = fetchWorkoutSamplesFromBuckets(workout)
+            val warm = authoritativeReader.warmSessionSamples(RecordType.EXERCISE.name, workout.id)
             val quality =
                 when {
                     warm.isNotEmpty() -> WorkoutHrQuality.WARM_APPROXIMATE
@@ -52,63 +75,6 @@ class ScoringHeartRateDataLoader
             hotSamples: List<HeartRateRecordEntity>,
         ): List<HeartRateRecordEntity> = loadWorkoutSamplesWithQuality(workout, hotSamples).samples
 
-        private suspend fun fetchWorkoutSamplesFromBuckets(
-            workout: WorkoutRecordEntity,
-        ): List<HeartRateRecordEntity> {
-            val samples =
-                minuteBucketDao
-                    .getBucketsForSession("EXERCISE", workout.id)
-                    .reconstructTimestampedSamples()
-            if (samples.isEmpty) return emptyList()
-            return buildList(samples.size) {
-                samples.forEachIndexed { _, timestampMs, bpm ->
-                    add(
-                        HeartRateRecordEntity(
-                            sourceRecordRef = 0L,
-                            timestampMs = timestampMs,
-                            beatsPerMinute = bpm,
-                            recordType = RecordType.EXERCISE.name,
-                            sessionId = workout.id,
-                        ),
-                    )
-                }
-            }
-        }
-
-        suspend fun loadMergedMinuteBuckets(dayStartMs: Long, dayEndMs: Long): List<HrMinuteBucketRow> {
-            val hot = queryHotMinuteBuckets(dayStartMs, dayEndMs)
-            val warm = queryWarmMinuteBuckets(dayStartMs, dayEndMs)
-            return when {
-                warm.isEmpty() -> hot
-                hot.isEmpty() -> warm
-                else -> mergeMinuteBuckets(hot, warm)
-            }
-        }
-
-        private suspend fun queryHotMinuteBuckets(dayStartMs: Long, dayEndMs: Long): List<HrMinuteBucketRow> =
-            heartRateDao.getMinuteBuckets(dayStartMs, dayEndMs)
-
-        private suspend fun queryWarmMinuteBuckets(dayStartMs: Long, dayEndMs: Long): List<HrMinuteBucketRow> =
-            minuteBucketDao.getMinuteBuckets(dayStartMs, dayEndMs)
+        suspend fun loadMergedMinuteBuckets(dayStartMs: Long, dayEndMs: Long): List<HrMinuteBucketRow> =
+            authoritativeReader.minuteBuckets(dayStartMs, dayEndMs)
     }
-
-private fun mergeMinuteBuckets(
-    hot: List<HrMinuteBucketRow>,
-    warm: List<HrMinuteBucketRow>,
-): List<HrMinuteBucketRow> {
-    val acc = LinkedHashMap<Int, Pair<Double, Int>>()
-    fun add(row: HrMinuteBucketRow) {
-        val prev = acc[row.bucketIndex]
-        acc[row.bucketIndex] =
-            if (prev == null) {
-                row.avgBpm * row.sampleCount to row.sampleCount
-            } else {
-                (prev.first + row.avgBpm * row.sampleCount) to (prev.second + row.sampleCount)
-            }
-    }
-    hot.forEach(::add)
-    warm.forEach(::add)
-    return acc.entries
-        .sortedBy { it.key }
-        .map { (idx, value) -> HrMinuteBucketRow(idx, value.first / value.second, value.second) }
-}

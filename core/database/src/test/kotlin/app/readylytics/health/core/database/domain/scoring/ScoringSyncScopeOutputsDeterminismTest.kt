@@ -332,7 +332,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
                 .minByOrNull { it.endTime }
         }
 
-        coEvery { heartRateDao.getByTimeRange(any(), any()) } coAnswers {
+        coEvery { heartRateDao.getVisibleByTimeRange(any(), any()) } coAnswers {
             val fromMs = firstArg<Long>()
             val toMs = secondArg<Long>()
             scopedHeartRateRecords
@@ -347,7 +347,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
                     ?: return@associateWith 0
             }
         }
-        coEvery { heartRateDao.getSleepHrProjectionForSessions(any()) } coAnswers {
+        coEvery { heartRateDao.getVisibleSleepHrProjectionForSessions(any()) } coAnswers {
             firstArg<List<String>>()
                 .flatMap { sessionId ->
                     scopedHrSamples[sessionId]
@@ -355,7 +355,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
                         .map { bpm -> SleepHrSample(sessionId = sessionId, beatsPerMinute = bpm) }
                 }.sortedWith(compareBy<SleepHrSample> { it.sessionId }.thenBy { it.beatsPerMinute })
         }
-        coEvery { heartRateDao.getSleepHrSamplesForSession(any()) } coAnswers {
+        coEvery { heartRateDao.getVisibleSleepHrSamplesForSession(any()) } coAnswers {
             scopedHrSamples[firstArg<String>()].orEmpty()
         }
         coEvery { heartRateDao.getAvgSleepHr(any()) } coAnswers {

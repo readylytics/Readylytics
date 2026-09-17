@@ -1,4 +1,5 @@
 package app.readylytics.health.core.database.domain.scoring.golden
+import app.readylytics.health.core.database.data.local.AuthoritativeHeartRateReader
 import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
 import androidx.room.Room
@@ -134,6 +135,8 @@ class GoldenFixtureWalkForwardTest {
                     heartRateDao = db.heartRateDao(),
                     hrvDao = db.hrvDao(),
                     transactionRunner = RoomTransactionRunner(db),
+                    authoritativeReader =
+                        AuthoritativeHeartRateReader(db.heartRateDao(), db.minuteBucketDao()),
                 )
             val reconcileStartMs =
                 startDate

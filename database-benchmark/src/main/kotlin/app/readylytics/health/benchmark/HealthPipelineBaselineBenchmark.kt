@@ -7,6 +7,7 @@ import androidx.benchmark.junit4.measureRepeated
 import androidx.room.RoomDatabase
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.readylytics.health.core.database.data.local.AuthoritativeHeartRateReader
 import app.readylytics.health.core.database.data.local.DataRollupManager
 import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.database.data.local.MinuteCoveragePublisher
@@ -169,6 +170,8 @@ class HealthPipelineBaselineBenchmark {
                     heartRateDao = db.heartRateDao(),
                     hrvDao = db.hrvDao(),
                     transactionRunner = countingTxRunner,
+                    authoritativeReader =
+                        AuthoritativeHeartRateReader(db.heartRateDao(), db.minuteBucketDao()),
                 )
 
             queryCounter.reset()

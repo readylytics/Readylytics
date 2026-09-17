@@ -25,7 +25,15 @@ class ScoringHistoryRepositoryImplTest {
     private val hrvDao = fakeDao<HrvDao>()
     private val sleepSessionDao = fakeDao<SleepSessionDao>()
     private val dailySummaryDao = fakeDao<DailySummaryDao>(dailySummaryResults)
-    private val minuteBucketDao = fakeDao<MinuteBucketDao>()
+    // The reflection fake returns null for anything unmapped, so the warm-tier reads the
+    // authoritative reader always performs need an explicit empty answer.
+    private val minuteBucketResults =
+        mutableMapOf<String, Any?>(
+            "getVisibleBucketsInTimeRange" to emptyList<Any>(),
+            "getVisibleBucketsForSession" to emptyList<Any>(),
+            "getVisibleMinuteBuckets" to emptyList<Any>(),
+        )
+    private val minuteBucketDao = fakeDao<MinuteBucketDao>(minuteBucketResults)
     private val repository =
         ScoringHistoryRepositoryImpl(
             heartRateDao = heartRateDao,
@@ -46,7 +54,8 @@ class ScoringHistoryRepositoryImplTest {
                     recordType = "SLEEP",
                     sessionId = "s1",
                 )
-            heartRateResults["getByTimeRange"] = listOf(entity)
+            // WP-17 Step 3: the repository now selects through AuthoritativeHeartRateReader.
+            heartRateResults["getVisibleByTimeRange"] = listOf(entity)
 
             val result = repository.getHeartRateRecordsByTimeRange(0L, 1_000L)
 
@@ -114,7 +123,7 @@ class ScoringHistoryRepositoryImplTest {
         val minuteBucketDao = mockk<MinuteBucketDao>(relaxed = true)
         coEvery { sleepSessionDao.getBetween(any(), any()) } returns sessions
         coEvery { hrvDao.getSleepRmssdForSessionsMap(any()) } returns rmssdBySession
-        coEvery { heartRateDao.getSleepHrProjectionForSessions(any()) } returns emptyList()
+        coEvery { heartRateDao.getVisibleSleepHrProjectionForSessions(any()) } returns emptyList()
         return ScoringHistoryRepositoryImpl(heartRateDao, hrvDao, sleepSessionDao, dailySummaryDao, minuteBucketDao)
     }
 

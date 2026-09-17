@@ -21,6 +21,16 @@ import kotlinx.coroutines.yield
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Post-ingestion session-link reconcile, run **once per sync/resync over the complete range** so
+ * the result cannot depend on ingest chunk alignment.
+ *
+ * WP-17 Step 4 adds a third relink phase between the raw passes and the workout recompute: warm
+ * minutes carry their session link *inside* their primary key, so they must be re-keyed rather than
+ * re-tagged. [WarmTierRelinker] owns that rewrite. The workout recompute then reads through
+ * [AuthoritativeHeartRateReader], so a workout whose HR has already rolled up into the warm tier is
+ * recomputed from the relinked warm projection instead of from a raw range that no longer holds it.
+ */
 @Singleton
 class SessionLinkReconcilerImpl
     @Inject
@@ -30,6 +40,10 @@ class SessionLinkReconcilerImpl
         private val heartRateDao: HeartRateDao,
         private val hrvDao: HrvDao,
         private val transactionRunner: TransactionRunner,
+        private val authoritativeReader: AuthoritativeHeartRateReader,
+        // Absent only in fixtures that have no warm tier at all; production DI always binds it
+        // (same optional-collaborator shape DataRollupManager/MinuteCoveragePublisher already use).
+        private val warmTierRelinker: WarmTierRelinker? = null,
     ) : SessionLinkReconciler {
         override suspend fun reconcile(
             startMs: Long,
@@ -47,6 +61,10 @@ class SessionLinkReconcilerImpl
 
             relinkHeartRate(startMs, endMs, sleepSpans, workoutSpans)
             relinkHrv(startMs, endMs, sleepSpans)
+            // Must run before the workout recompute: recomputeWorkouts reads the warm projection
+            // through the authoritative reader, so it has to see the re-keyed buckets, not the
+            // previous pass's. Runs once over the same complete range, from stable evidence.
+            warmTierRelinker?.relink(startMs, endMs, sleepSpans, workoutSpans)
             recomputeWorkouts(workoutSpans, zoneThresholds)
         }
 
@@ -147,19 +165,22 @@ class SessionLinkReconcilerImpl
 
                 val batchStartMs = batch.minOf { it.startTime }
                 val batchEndMs = batch.maxOf { it.endTime }
-                val hrSamplesMapped =
-                    heartRateDao
-                        .getByTypeAndTimeRange(RecordType.EXERCISE.name, batchStartMs, batchEndMs)
-                        .map { sample ->
-                            DomainHeartRateSample(
-                                time = Instant.ofEpochMilli(sample.timestampMs),
-                                beatsPerMinute = sample.beatsPerMinute,
-                            )
-                        }
+                // WP-17 Step 3: raw rows of minutes already served by the warm tier are excluded
+                // here, and each workout's own warm slices are added below -- so a workout
+                // straddling the hot/warm cutoff contributes each of its minutes exactly once.
+                val rawInBatch =
+                    authoritativeReader
+                        .rawByTypeInRange(RecordType.EXERCISE.name, batchStartMs, batchEndMs)
+                        .map { it.toDomainSample() }
 
                 val updated =
                     batch.mapNotNull { span ->
                         val existing = existingById[span.id] ?: return@mapNotNull null
+                        val warm =
+                            authoritativeReader
+                                .warmSessionSamples(RecordType.EXERCISE.name, span.id)
+                                .map { it.toDomainSample() }
+                        val hrSamplesMapped = if (warm.isEmpty()) rawInBatch else rawInBatch + warm
                         val metrics =
                             ZoneThresholds.computeMetrics(
                                 existing.startTime,
@@ -192,6 +213,12 @@ class SessionLinkReconcilerImpl
             private const val WORKOUT_BATCH_SIZE = 20
         }
     }
+
+private fun HeartRateRecordEntity.toDomainSample(): DomainHeartRateSample =
+    DomainHeartRateSample(
+        time = Instant.ofEpochMilli(timestampMs),
+        beatsPerMinute = beatsPerMinute,
+    )
 
 private fun HeartRateRecordEntity.relinkedOrNull(link: SampleLink): HeartRateRecordEntity? =
     if (recordType != link.recordType || sessionId != link.sessionId) {

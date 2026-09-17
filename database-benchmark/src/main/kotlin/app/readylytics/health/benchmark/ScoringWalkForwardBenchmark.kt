@@ -4,6 +4,7 @@ import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.readylytics.health.core.database.data.local.AuthoritativeHeartRateReader
 import app.readylytics.health.core.database.data.local.RoomTransactionRunner
 import app.readylytics.health.core.database.data.local.SessionLinkReconcilerImpl
 import app.readylytics.health.core.model.domain.heartrate.ZoneThresholds
@@ -126,6 +127,11 @@ class ScoringWalkForwardBenchmark {
                     heartRateDao = instance.database.heartRateDao(),
                     hrvDao = instance.database.hrvDao(),
                     transactionRunner = RoomTransactionRunner(instance.database),
+                    authoritativeReader =
+                        AuthoritativeHeartRateReader(
+                            instance.database.heartRateDao(),
+                            instance.database.minuteBucketDao(),
+                        ),
                 )
             runBlocking { reconciler.reconcile(startMs, endMs, zoneThresholds) }
             runWithTimingDisabled {

@@ -65,11 +65,11 @@ class ScoringDayDataLoaderExerciseHrTest {
                         avgHr = 0f,
                     ),
                 )
-            coEvery { heartRateDao.getByTypeAndTimeRange("EXERCISE", 1_000L, 9_000L) } returns emptyList()
+            coEvery { heartRateDao.getVisibleByTypeAndTimeRange("EXERCISE", 1_000L, 9_000L) } returns emptyList()
 
             loader.loadExerciseHrSamples(workouts)
 
-            coVerify(exactly = 1) { heartRateDao.getByTypeAndTimeRange("EXERCISE", 1_000L, 9_000L) }
-            coVerify(exactly = 0) { heartRateDao.getByTimeRange(any(), any()) }
+            coVerify(exactly = 1) { heartRateDao.getVisibleByTypeAndTimeRange("EXERCISE", 1_000L, 9_000L) }
+            coVerify(exactly = 0) { heartRateDao.getVisibleByTimeRange(any(), any()) }
         }
 }

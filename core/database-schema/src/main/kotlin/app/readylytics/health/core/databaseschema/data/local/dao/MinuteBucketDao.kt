@@ -67,4 +67,97 @@ interface MinuteBucketDao {
      */
     @Query("DELETE FROM hr_minute_buckets WHERE bucketStartMs IN (:bucketStartMs)")
     suspend fun deleteBucketsForMinutes(bucketStartMs: List<Long>)
+
+    // ---------------------------------------------------------------------------------------------
+    // WP-17 Step 3: warm-side tier-visibility predicate -- the exact mirror of the raw-side
+    // predicate on `HeartRateDao.getVisible*`. Together they guarantee that for any minute a reader
+    // sees either its raw rows or its warm bucket slices, never both, and within the warm tier only
+    // ONE generation (`minute_coverage.visibleGeneration`), never a superseded one.
+    //
+    // A bucket is visible when either:
+    //  * its minute has a committed `WARM`/`LEGACY_WARM` coverage row AND the bucket's own
+    //    `generation` equals that row's `visibleGeneration` (a `HOT` coverage row therefore hides
+    //    every warm projection of that minute, and a superseded generation stays invisible even if
+    //    a crash left its rows behind); or
+    //  * its minute has NO coverage row at all AND no raw row either. That is the
+    //    "missing metadata permits warm-only compatibility" case from the T2 policy: migration
+    //    21->22 and old-archive restore both backfill `LEGACY_WARM` coverage for every pre-existing
+    //    bucket, so this branch is defence-in-depth for a bucket that somehow has no ledger entry.
+    //    When such a minute has raw rows too, the overlap is explicitly unresolved under the T2
+    //    policy and is resolved in favour of the raw tier here (never summed or concatenated), so
+    //    the raw-side predicate -- which lets coverage-less minutes through -- stays authoritative.
+    // ---------------------------------------------------------------------------------------------
+
+    /** Tier-authoritative equivalent of [getMinuteBuckets] (same weighted-average semantics). */
+    @Query(
+        "SELECT (b.bucketStartMs - :dayStartMs) / 60000 AS bucketIndex, " +
+            "SUM(b.avgBpm * b.sampleCount) / SUM(b.sampleCount) AS avgBpm, " +
+            "SUM(b.sampleCount) AS sampleCount " +
+            "FROM hr_minute_buckets b " +
+            "LEFT JOIN minute_coverage c ON c.bucketStartMs = b.bucketStartMs " +
+            "WHERE b.bucketStartMs >= :dayStartMs AND b.bucketEndMs <= :dayEndMs " +
+            "AND b.avgBpm BETWEEN 30 AND 230 " +
+            "AND ((c.tier IN ('WARM', 'LEGACY_WARM') AND c.visibleGeneration = b.generation) " +
+            "OR (c.bucketStartMs IS NULL AND NOT EXISTS (" +
+            "SELECT 1 FROM heart_rate_records h WHERE h.timestampMs >= b.bucketStartMs " +
+            "AND h.timestampMs < b.bucketStartMs + 60000))) " +
+            "GROUP BY bucketIndex " +
+            "ORDER BY bucketIndex ASC",
+    )
+    suspend fun getVisibleMinuteBuckets(
+        dayStartMs: Long,
+        dayEndMs: Long,
+    ): List<HrMinuteBucketRow>
+
+    /** Tier-authoritative equivalent of [getBucketsForSession]. */
+    @Query(
+        "SELECT b.* FROM hr_minute_buckets b " +
+            "LEFT JOIN minute_coverage c ON c.bucketStartMs = b.bucketStartMs " +
+            "WHERE b.recordType = :recordType AND b.sessionId = :sessionId " +
+            "AND ((c.tier IN ('WARM', 'LEGACY_WARM') AND c.visibleGeneration = b.generation) " +
+            "OR (c.bucketStartMs IS NULL AND NOT EXISTS (" +
+            "SELECT 1 FROM heart_rate_records h WHERE h.timestampMs >= b.bucketStartMs " +
+            "AND h.timestampMs < b.bucketStartMs + 60000))) " +
+            "ORDER BY b.bucketStartMs ASC",
+    )
+    suspend fun getVisibleBucketsForSession(
+        recordType: String,
+        sessionId: String,
+    ): List<HrMinuteBucketEntity>
+
+    /** Tier-authoritative equivalent of [getBucketsInTimeRange] (same overlap semantics). */
+    @Query(
+        "SELECT b.* FROM hr_minute_buckets b " +
+            "LEFT JOIN minute_coverage c ON c.bucketStartMs = b.bucketStartMs " +
+            "WHERE b.bucketStartMs <= :endMs AND b.bucketEndMs >= :startMs " +
+            "AND ((c.tier IN ('WARM', 'LEGACY_WARM') AND c.visibleGeneration = b.generation) " +
+            "OR (c.bucketStartMs IS NULL AND NOT EXISTS (" +
+            "SELECT 1 FROM heart_rate_records h WHERE h.timestampMs >= b.bucketStartMs " +
+            "AND h.timestampMs < b.bucketStartMs + 60000))) " +
+            "ORDER BY b.bucketStartMs ASC",
+    )
+    suspend fun getVisibleBucketsInTimeRange(
+        startMs: Long,
+        endMs: Long,
+    ): List<HrMinuteBucketEntity>
+
+    /**
+     * Visible bucket slices of exactly the minutes in `[startMs, endMs)`, keyed on
+     * `bucketStartMs` rather than on overlap -- the form the full-range relink pass compares its
+     * freshly derived projection against, so a boundary minute is never pulled in twice.
+     */
+    @Query(
+        "SELECT b.* FROM hr_minute_buckets b " +
+            "LEFT JOIN minute_coverage c ON c.bucketStartMs = b.bucketStartMs " +
+            "WHERE b.bucketStartMs >= :startMs AND b.bucketStartMs < :endMs " +
+            "AND ((c.tier IN ('WARM', 'LEGACY_WARM') AND c.visibleGeneration = b.generation) " +
+            "OR (c.bucketStartMs IS NULL AND NOT EXISTS (" +
+            "SELECT 1 FROM heart_rate_records h WHERE h.timestampMs >= b.bucketStartMs " +
+            "AND h.timestampMs < b.bucketStartMs + 60000))) " +
+            "ORDER BY b.bucketStartMs ASC, b.recordType ASC, b.sessionId ASC, b.deviceName ASC",
+    )
+    suspend fun getVisibleBucketsInMinuteRange(
+        startMs: Long,
+        endMs: Long,
+    ): List<HrMinuteBucketEntity>
 }

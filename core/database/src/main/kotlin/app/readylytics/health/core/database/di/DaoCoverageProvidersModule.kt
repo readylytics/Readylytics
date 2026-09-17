@@ -4,6 +4,7 @@ import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateRefreshStagingDao
 import app.readylytics.health.core.databaseschema.data.local.dao.MinuteCoverageDao
 import app.readylytics.health.core.databaseschema.data.local.dao.MinuteCoverageMaintenanceDao
+import app.readylytics.health.core.databaseschema.data.local.dao.MinuteCoverageSelectionDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -23,6 +24,10 @@ object DaoCoverageProvidersModule {
     @Provides
     fun provideMinuteCoverageMaintenanceDao(db: HealthDatabase): MinuteCoverageMaintenanceDao =
         db.minuteCoverageMaintenanceDao()
+
+    @Provides
+    fun provideMinuteCoverageSelectionDao(db: HealthDatabase): MinuteCoverageSelectionDao =
+        db.minuteCoverageSelectionDao()
 
     @Provides
     fun provideHeartRateRefreshStagingDao(db: HealthDatabase): HeartRateRefreshStagingDao =

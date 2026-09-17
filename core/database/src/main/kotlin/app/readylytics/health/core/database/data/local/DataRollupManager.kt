@@ -49,6 +49,11 @@ import javax.inject.Singleton
  * concatenating legacy and source-backed rows. Their raw samples stay in place as quarantine
  * evidence, which is also why the day-chunk loop advances on `max(dayEnd, nextEarliest)` rather
  * than trusting deletion to move the cursor forward.
+ *
+ * **WP-17 Step 3:** because of that quarantine, a legacy minute can carry raw rows *and* a warm
+ * projection at the same time. Readers must therefore never concatenate the two -- they select one
+ * tier per minute through [AuthoritativeHeartRateReader], which owns the `minute_coverage`
+ * visibility predicate. The gap this KDoc previously deferred to T3 is closed there.
  */
 @Singleton
 class DataRollupManager

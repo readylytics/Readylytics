@@ -429,7 +429,7 @@ class ScoringRepositoryImplTest {
                 )
             coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns listOf(workout)
             coEvery {
-                heartRateDao.getByTypeAndTimeRange(RecordType.EXERCISE.name, any(), any())
+                heartRateDao.getVisibleByTypeAndTimeRange(RecordType.EXERCISE.name, any(), any())
             } returns
                 listOf(
                     HeartRateRecordEntity(
@@ -496,7 +496,7 @@ class ScoringRepositoryImplTest {
                 )
             coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns listOf(workout)
             coEvery {
-                heartRateDao.getByTypeAndTimeRange(RecordType.EXERCISE.name, any(), any())
+                heartRateDao.getVisibleByTypeAndTimeRange(RecordType.EXERCISE.name, any(), any())
             } returns
                 listOf(
                     HeartRateRecordEntity(

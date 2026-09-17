@@ -18,6 +18,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
 import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketMaintenanceDao
 import app.readylytics.health.core.databaseschema.data.local.dao.MinuteCoverageDao
 import app.readylytics.health.core.databaseschema.data.local.dao.MinuteCoverageMaintenanceDao
+import app.readylytics.health.core.databaseschema.data.local.dao.MinuteCoverageSelectionDao
 import app.readylytics.health.core.databaseschema.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepStageDao
@@ -131,6 +132,8 @@ abstract class HealthDatabase : RoomDatabase() {
     abstract fun minuteCoverageDao(): MinuteCoverageDao
 
     abstract fun minuteCoverageMaintenanceDao(): MinuteCoverageMaintenanceDao
+
+    abstract fun minuteCoverageSelectionDao(): MinuteCoverageSelectionDao
 
     abstract fun heartRateRefreshStagingDao(): HeartRateRefreshStagingDao
 

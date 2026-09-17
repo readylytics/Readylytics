@@ -131,7 +131,7 @@ class BaselineComputerBackfillEquivalenceTest {
             val ids = firstArg<List<String>>()
             ids.mapNotNull { id -> avgHrById[id]?.let { id to it } }.toMap()
         }
-        coEvery { heartRateDao.getSleepHrProjectionForSessions(any()) } answers {
+        coEvery { heartRateDao.getVisibleSleepHrProjectionForSessions(any()) } answers {
             val ids = firstArg<List<String>>()
             // Real query: ORDER BY sessionId, beatsPerMinute ASC. Per-session ascending sort is what
             // the percentile index depends on; both paths groupBy sessionId.

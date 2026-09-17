@@ -230,7 +230,7 @@ class ScoringRepositoryBiphasicIntegrationTest {
                 )
             coEvery { dailySummaryDao.getByDates(any()) } returns emptyList()
             coEvery { oxygenSaturationRecordDao.getByTimeRange(any(), any()) } returns emptyList()
-            coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { heartRateDao.getVisibleByTimeRange(any(), any()) } returns emptyList()
             coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns emptyList()
 
             val sessionSlot = slot<SleepMetricsRequest>()

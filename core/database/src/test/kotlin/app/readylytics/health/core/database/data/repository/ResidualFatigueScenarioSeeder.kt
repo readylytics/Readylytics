@@ -1,5 +1,6 @@
 package app.readylytics.health.core.database.data.repository
 
+import app.readylytics.health.core.database.data.local.AuthoritativeHeartRateReader
 import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.database.data.local.RoomTransactionRunner
 import app.readylytics.health.core.database.data.local.SessionLinkReconcilerImpl
@@ -48,6 +49,8 @@ internal class ResidualFatigueScenarioSeeder(
             heartRateDao = database.heartRateDao(),
             hrvDao = database.hrvDao(),
             transactionRunner = RoomTransactionRunner(database),
+            authoritativeReader =
+                AuthoritativeHeartRateReader(database.heartRateDao(), database.minuteBucketDao()),
         )
         val zoneThresholds = ZoneThresholds.create(90, 110, 130, 150, 170)
         reconciler.reconcile(
