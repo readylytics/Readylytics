@@ -2,6 +2,7 @@ package app.readylytics.health.core.database.data.local
 
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrMinuteBucketEntity
+import app.readylytics.health.core.model.domain.sync.completeMinuteCutoff
 import app.readylytics.health.core.scoring.domain.util.percentile
 
 /**
@@ -15,7 +16,10 @@ import app.readylytics.health.core.scoring.domain.util.percentile
 internal fun List<HeartRateRecordEntity>.aggregateIntoMinuteBuckets(): List<HrMinuteBucketEntity> =
     groupBy {
         BucketKey(
-            bucketStartMs = (it.timestampMs / MINUTE_MS) * MINUTE_MS,
+            // WP-17: the same minute key `minute_coverage`/contributions are grouped by --
+            // `completeMinuteCutoff` (floorDiv), not truncating division, so a pre-1970 timestamp
+            // cannot land in a different bucket here than in the coverage ledger.
+            bucketStartMs = completeMinuteCutoff(it.timestampMs),
             recordType = it.recordType,
             sessionId = it.sessionId ?: "",
             deviceName = it.deviceName ?: "",

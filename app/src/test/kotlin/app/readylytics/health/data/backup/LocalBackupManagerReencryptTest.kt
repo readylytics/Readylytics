@@ -170,7 +170,13 @@ class LocalBackupManagerReencryptTest {
                 workoutDetailLayoutRepo,
             )
         val exporter =
-            BackupSnapshotExporter(db, coordinator, customSettingsRepo, layoutRepos, BackupStreamWriter(db))
+            BackupSnapshotExporter(
+                db,
+                coordinator,
+                customSettingsRepo,
+                layoutRepos,
+                BackupStreamWriter(db, CoverageBackupWriter(db)),
+            )
         val rotService =
             rotationService ?: buildRotationService(
                 customSettingsRepo = customSettingsRepo,

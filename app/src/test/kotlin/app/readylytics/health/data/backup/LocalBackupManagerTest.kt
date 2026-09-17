@@ -152,7 +152,7 @@ class LocalBackupManagerTest {
                 workoutsLayoutRepo,
                 workoutDetailLayoutRepo,
             )
-        val backupStreamWriter = customWriter ?: BackupStreamWriter(db)
+        val backupStreamWriter = customWriter ?: BackupStreamWriter(db, CoverageBackupWriter(db))
         val exporter =
             BackupSnapshotExporter(
                 db,

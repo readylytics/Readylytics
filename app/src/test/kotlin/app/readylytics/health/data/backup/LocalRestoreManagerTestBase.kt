@@ -57,7 +57,8 @@ abstract class LocalRestoreManagerTestBase {
                 .build()
 
         setupMocks()
-        val restoreDbOps = RestoreDatabaseOperations(db, RestoreBatchLoader(db, RestoreVitalsLoader(db)))
+        val restoreDbOps =
+            RestoreDatabaseOperations(db, RestoreBatchLoader(db, RestoreVitalsLoader(db), CoverageRestoreLoader(db)))
         restoreMaintenanceCoordinator = buildRestoreMaintenanceCoordinator()
         manager =
             LocalRestoreManager(

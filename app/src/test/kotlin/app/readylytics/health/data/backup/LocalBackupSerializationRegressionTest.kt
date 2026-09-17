@@ -90,7 +90,7 @@ class LocalBackupSerializationRegressionTest {
                 every { decrypt(any()) } returns "test_password"
             }
         val layoutRepos = createLayoutRepos()
-        val backupStreamWriter = BackupStreamWriter(db)
+        val backupStreamWriter = BackupStreamWriter(db, CoverageBackupWriter(db))
         val exporter =
             BackupSnapshotExporter(
                 db,

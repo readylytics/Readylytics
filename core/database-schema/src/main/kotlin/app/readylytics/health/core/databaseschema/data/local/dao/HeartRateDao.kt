@@ -371,6 +371,31 @@ interface HeartRateDao {
         toMs: Long,
     ): List<HeartRateRecordEntity>
 
+    /**
+     * WP-17/OD-1 rollup deletion: removes every raw row in `[fromMs, toMs)` whose minute was just
+     * published, i.e. all of them EXCEPT the minutes whose visible coverage is still the pre-v22
+     * approximate projection (`quality = 'LEGACY_UNKNOWN'`). Those minutes are left as raw
+     * quarantine evidence pending an authorized complete refresh, because an ordinary rollup may
+     * neither overwrite their legacy coverage nor concatenate source-backed buckets into them.
+     *
+     * The predicate is one set-based statement (no bind-variable list) so a day-chunk with up to
+     * 1440 quarantined minutes still deletes in a single statement. The minute key truncates with
+     * integer division rather than `Math.floorDiv`, matching `minute_coverage.bucketStartMs` for
+     * every non-negative epoch; rollup cutoffs are always post-1970.
+     */
+    @Query(
+        "DELETE FROM heart_rate_records " +
+            "WHERE timestampMs >= :fromMs AND timestampMs < :toMs " +
+            "AND (timestampMs / 60000) * 60000 NOT IN (" +
+            "  SELECT bucketStartMs FROM minute_coverage " +
+            "  WHERE bucketStartMs >= :fromMs AND bucketStartMs < :toMs " +
+            "  AND quality = 'LEGACY_UNKNOWN')",
+    )
+    suspend fun deleteConsumedSamplesInRange(
+        fromMs: Long,
+        toMs: Long,
+    )
+
     // R2-DB-004: anchors DataRollupManager's day-chunk loop to wherever raw data actually starts,
     // and (re-queried after each chunk) to the next day containing data.
     @Query("SELECT MIN(timestampMs) FROM heart_rate_records")

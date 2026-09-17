@@ -26,8 +26,8 @@ class CompleteMinuteRollupTest {
             HealthDatabase::class.java,
         ).allowMainThreadQueries().build()
         rollupManager = DataRollupManager(
-            minuteBucketDao = database.minuteBucketDao(),
             minuteCoverageDao = database.minuteCoverageDao(),
+            publisher = MinuteCoveragePublisher(database.minuteBucketDao(), database.minuteCoverageDao()),
             heartRateDao = database.heartRateDao(),
             transactionRunner = RoomTransactionRunner(database),
         )
@@ -56,7 +56,7 @@ class CompleteMinuteRollupTest {
             )
         )
 
-        // Mid-minute cutoff (90,000ms). Cutoff becomes 60,000ms. 
+        // Mid-minute cutoff (90,000ms). Cutoff becomes 60,000ms.
         // We have samples at 65_000, 95_000, 120_000. All >= 60,000.
         // So no bucket created.
         val touched1 = rollupManager.rollupExpiredHotTier(90_000L)

@@ -56,4 +56,15 @@ interface MinuteBucketDao {
 
     @Query("DELETE FROM hr_minute_buckets WHERE bucketStartMs >= :startMs AND bucketStartMs < :endMs")
     suspend fun deleteInRange(startMs: Long, endMs: Long)
+
+    /**
+     * WP-17: drops every visible bucket slice of exactly the listed minutes. `upsertBuckets` only
+     * replaces rows whose full `(bucketStartMs, recordType, sessionId, deviceName)` key matches, so
+     * re-publishing a minute whose previous generation had a different session/device slice would
+     * otherwise leave that stale slice behind at the old `generation` -- one minute carrying a mix
+     * of generations. Publication calls this for the minutes it is about to republish, inside the
+     * same transaction as the upsert.
+     */
+    @Query("DELETE FROM hr_minute_buckets WHERE bucketStartMs IN (:bucketStartMs)")
+    suspend fun deleteBucketsForMinutes(bucketStartMs: List<Long>)
 }

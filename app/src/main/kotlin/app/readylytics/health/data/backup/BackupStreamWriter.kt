@@ -8,9 +8,7 @@ import app.readylytics.health.core.databaseschema.data.local.entity.DailySummary
 import app.readylytics.health.core.databaseschema.data.local.entity.HealthSourceRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrMinuteBucketEntity
-import app.readylytics.health.core.databaseschema.data.local.entity.HrSourceMinuteContributionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity
-import app.readylytics.health.core.databaseschema.data.local.entity.MinuteCoverageEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.OxygenSaturationRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.StepRecordEntity
@@ -20,8 +18,6 @@ import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecor
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRoutePointEntity
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.BufferedWriter
@@ -31,11 +27,11 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-@Suppress("TooManyFunctions") // Backing up 15+ tables requires many serialization handlers
 class BackupStreamWriter
     @Inject
     constructor(
         private val healthDatabase: HealthDatabase,
+        private val coverageBackupWriter: CoverageBackupWriter,
     ) {
         private val json = Json { encodeDefaults = true }
 
@@ -93,9 +89,10 @@ class BackupStreamWriter
                         "healthSourceRecords" to async { healthDatabase.sourceRecordDao().count() },
                         "hrMinuteBuckets" to async { healthDatabase.minuteBucketMaintenanceDao().count() },
                         "vo2MaxRecords" to async { healthDatabase.vo2MaxRecordDao().count() },
-                        "minuteCoverage" to async { healthDatabase.minuteCoverageDao().countCoverage() },
+                        "minuteCoverage" to
+                            async { healthDatabase.minuteCoverageMaintenanceDao().countCoverage() },
                         "hrSourceMinuteContributions" to
-                            async { healthDatabase.minuteCoverageDao().countContributions() },
+                            async { healthDatabase.minuteCoverageMaintenanceDao().countContributions() },
                     )
                 counts.associate { (key, deferred) -> key to deferred.await() }
             }
@@ -196,34 +193,7 @@ class BackupStreamWriter
             )
             writer.write(",\n")
 
-            writeCoverageAndContributions(writer, pageHook)
-        }
-
-        private suspend fun writeCoverageAndContributions(
-            writer: BufferedWriter,
-            pageHook: (suspend (tableName: String) -> Unit)?,
-        ) {
-            val minuteCoverageDao = healthDatabase.minuteCoverageDao()
-
-            var covAfterTs = Long.MIN_VALUE
-            writeTable<MinuteCoverageEntity>(
-                writer,
-                "minuteCoverage",
-                page = { minuteCoverageDao.pageCoverageAfter(covAfterTs, 500) },
-                advance = { covAfterTs = it.bucketStartMs },
-                pageHook = pageHook,
-            )
-            writer.write(",\n")
-
-            var contribAfterTs = Long.MIN_VALUE
-            writeTable<HrSourceMinuteContributionEntity>(
-                writer,
-                "hrSourceMinuteContributions",
-                page = { minuteCoverageDao.pageContributionsAfter(contribAfterTs, 500) },
-                advance = { contribAfterTs = it.bucketStartMs },
-                pageHook = pageHook,
-            )
-            writer.write(",\n")
+            coverageBackupWriter.write(writer, pageHook)
         }
 
         private suspend fun writeActivityTables(
@@ -398,21 +368,5 @@ class BackupStreamWriter
             page: () -> List<T>,
             advance: (T) -> Unit,
             noinline pageHook: (suspend (tableName: String) -> Unit)? = null,
-        ) {
-            writer.write("  \"$name\": [\n")
-            var first = true
-            while (true) {
-                currentCoroutineContext().ensureActive()
-                val chunk = page()
-                if (chunk.isEmpty()) break
-                for (item in chunk) {
-                    if (!first) writer.write(",\n")
-                    writer.write("    ${json.encodeToString(item)}")
-                    first = false
-                    advance(item)
-                }
-                pageHook?.invoke(name)
-            }
-            writer.write("\n  ]")
-        }
+        ) = writer.writeBackupTable(json, name, page, advance, pageHook)
     }

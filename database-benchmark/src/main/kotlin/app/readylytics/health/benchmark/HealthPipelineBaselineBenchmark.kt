@@ -9,6 +9,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.core.database.data.local.DataRollupManager
 import app.readylytics.health.core.database.data.local.HealthDatabase
+import app.readylytics.health.core.database.data.local.MinuteCoveragePublisher
 import app.readylytics.health.core.database.data.local.RoomHealthIngestionStore
 import app.readylytics.health.core.database.data.local.RoomTransactionRunner
 import app.readylytics.health.core.database.data.local.SessionLinkReconcilerImpl
@@ -189,7 +190,13 @@ class HealthPipelineBaselineBenchmark {
             logStageMetric("scoring", scoringNanos, countingTxRunner.transactionCount, queryCounter.statementCount)
 
             // Stage 6: Rollup
-            val rollupManager = DataRollupManager(db.minuteBucketDao(), db.heartRateDao(), countingTxRunner)
+            val rollupManager =
+                DataRollupManager(
+                    minuteCoverageDao = db.minuteCoverageDao(),
+                    heartRateDao = db.heartRateDao(),
+                    publisher = MinuteCoveragePublisher(db.minuteBucketDao(), db.minuteCoverageDao()),
+                    transactionRunner = countingTxRunner,
+                )
             val cutoffMs =
                 targetDate
                     .minusDays(7)

@@ -13,6 +13,7 @@ import app.readylytics.health.core.database.data.local.migration.MIGRATION_17_18
 import app.readylytics.health.core.database.data.local.migration.MIGRATION_18_19
 import app.readylytics.health.core.database.data.local.migration.MIGRATION_19_20
 import app.readylytics.health.core.database.data.local.migration.Migration20To21
+import app.readylytics.health.core.database.data.local.migration.Migration21To22
 import app.readylytics.health.core.database.data.local.migration.MIGRATION_9_10
 
 private val CREATE_DAILY_SUMMARIES_V2_TABLE_SQL =
@@ -218,6 +219,6 @@ object DatabaseMigrations {
             MIGRATION_18_19,
             MIGRATION_19_20,
             Migration20To21,
-            app.readylytics.health.core.database.data.local.migration.Migration21To22,
+            Migration21To22,
         )
 }

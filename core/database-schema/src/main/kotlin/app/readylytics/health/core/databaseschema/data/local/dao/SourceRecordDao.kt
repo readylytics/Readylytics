@@ -46,8 +46,34 @@ interface SourceRecordDao : SourceRecordMaintenanceDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertIgnore(entity: HealthSourceRecordEntity): Long
 
+    /**
+     * WP-17/OD-1 delta-delete handling. `hr_minute_buckets` children cascade, but
+     * `hr_source_minute_contributions` references this table with `ON DELETE RESTRICT`, so a
+     * Health-Connect deletion of a source whose minutes were already rolled up would otherwise
+     * raise `SQLiteConstraintException` and abort the whole ingestion transaction instead of
+     * converging. Per Step 4, only that source's own contribution rows are removed -- no other
+     * source's evidence is subtracted and no minute is blanket-deleted.
+     *
+     * Known gap (tracked for T3): the already-visible `hr_minute_buckets` projections and the
+     * `minute_coverage` row of the affected minutes are NOT regenerated here, because a
+     * contribution does not carry the bucket's `recordType`/`sessionId` and therefore cannot be
+     * re-projected on its own. That matches the pre-WP-17 behaviour (a deleted HR source already
+     * left its warm buckets in place) and is covered by the dirty work the ingestion path appends.
+     */
+    @Transaction
+    suspend fun deleteBySourceRecordId(sourceRecordId: String): Int {
+        deleteContributionsOfSourceRecordId(sourceRecordId)
+        return deleteSourceRecordRow(sourceRecordId)
+    }
+
+    @Query(
+        "DELETE FROM hr_source_minute_contributions WHERE sourceRecordRef IN (" +
+            "SELECT id FROM health_source_records WHERE sourceRecordId = :sourceRecordId)",
+    )
+    suspend fun deleteContributionsOfSourceRecordId(sourceRecordId: String): Int
+
     @Query("DELETE FROM health_source_records WHERE sourceRecordId = :sourceRecordId")
-    suspend fun deleteBySourceRecordId(sourceRecordId: String): Int
+    suspend fun deleteSourceRecordRow(sourceRecordId: String): Int
 
     @Query("SELECT * FROM health_source_records WHERE sourceRecordId = :sourceRecordId")
     suspend fun getBySourceRecordId(sourceRecordId: String): HealthSourceRecordEntity?

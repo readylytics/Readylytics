@@ -234,8 +234,8 @@ class TierBoundaryCharacterizationTest {
     private fun rollUp(cutoffMs: Long) {
         runBlocking {
             DataRollupManager(
-                minuteBucketDao = database.minuteBucketDao(),
                 minuteCoverageDao = database.minuteCoverageDao(),
+                publisher = MinuteCoveragePublisher(database.minuteBucketDao(), database.minuteCoverageDao()),
                 heartRateDao = database.heartRateDao(),
                 transactionRunner = RoomTransactionRunner(database),
             ).rollupExpiredHotTier(cutoffMs)

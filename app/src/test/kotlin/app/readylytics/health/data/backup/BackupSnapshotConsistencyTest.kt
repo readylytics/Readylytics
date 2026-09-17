@@ -107,7 +107,7 @@ class BackupSnapshotConsistencyTest {
             }
 
         layoutRepositories = mockLayoutRepositories()
-        backupStreamWriter = BackupStreamWriter(db)
+        backupStreamWriter = BackupStreamWriter(db, CoverageBackupWriter(db))
         exporter =
             BackupSnapshotExporter(
                 db,

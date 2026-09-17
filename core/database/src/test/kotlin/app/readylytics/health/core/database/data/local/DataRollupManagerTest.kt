@@ -31,8 +31,8 @@ class DataRollupManagerTest {
                 .build()
         rollupManager =
             DataRollupManager(
-                minuteBucketDao = database.minuteBucketDao(),
                 minuteCoverageDao = database.minuteCoverageDao(),
+                publisher = MinuteCoveragePublisher(database.minuteBucketDao(), database.minuteCoverageDao()),
                 heartRateDao = database.heartRateDao(),
                 transactionRunner = RoomTransactionRunner(database),
             )
@@ -186,8 +186,8 @@ class DataRollupManagerTest {
 
             val manager =
                 DataRollupManager(
-                    minuteBucketDao = database.minuteBucketDao(),
                     minuteCoverageDao = database.minuteCoverageDao(),
+                    publisher = MinuteCoveragePublisher(database.minuteBucketDao(), database.minuteCoverageDao()),
                     heartRateDao = database.heartRateDao(),
                     transactionRunner = countingRunner,
                 )
@@ -232,8 +232,8 @@ class DataRollupManagerTest {
 
             val crashingManager =
                 DataRollupManager(
-                    minuteBucketDao = database.minuteBucketDao(),
                     minuteCoverageDao = database.minuteCoverageDao(),
+                    publisher = MinuteCoveragePublisher(database.minuteBucketDao(), database.minuteCoverageDao()),
                     heartRateDao = database.heartRateDao(),
                     transactionRunner = failingRunner,
                 )
