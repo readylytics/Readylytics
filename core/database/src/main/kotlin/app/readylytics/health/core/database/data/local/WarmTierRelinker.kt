@@ -192,6 +192,12 @@ class WarmTierRelinker
             if (minutes.isEmpty()) return 0
             minutes.chunked(MINUTE_KEY_CHUNK).forEach { chunk ->
                 minuteBucketDao.deleteBucketsForMinutes(chunk)
+                // Contributions too: `getEvidencelessSourceBackedMinutes` only proves nothing
+                // remains at the minute's *visible* generation, so a superseded generation's rows
+                // can still be sitting in `hr_source_minute_contributions`. Dropping the coverage
+                // row without them would orphan those rows permanently -- nothing else ever
+                // revisits a minute that has no coverage.
+                minuteCoverageDao.deleteContributionsForMinutes(chunk)
                 selectionDao.deleteCoverageForMinutes(chunk)
             }
             return minutes.size
@@ -239,8 +245,11 @@ class WarmTierRelinker
                     deriveBuckets(contributions, minuteSpans, bucketStartMs)
                 }
             return when {
-                // OD-1: unusable lineage is preserved as-is, never replaced by a guess.
-                derived == null -> MinuteOutcome.Unreadable
+                // OD-1: unusable lineage is preserved as-is, never replaced by a guess. An *empty*
+                // derivation counts as unusable too: publishing it would delete the minute's slices
+                // while re-upserting its coverage, leaving a permanently invisible minute that the
+                // next pass reads back as `Unchanged`. Preserve and count instead.
+                derived.isNullOrEmpty() -> MinuteOutcome.Unreadable
                 derived.sortedWith(BUCKET_ORDER) == existing.sortedWith(BUCKET_ORDER) -> MinuteOutcome.Unchanged
                 else -> MinuteOutcome.Changed(derived)
             }

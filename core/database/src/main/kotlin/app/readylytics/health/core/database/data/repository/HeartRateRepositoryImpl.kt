@@ -42,11 +42,15 @@ class HeartRateRepositoryImpl
             endTimeMs: Long,
         ): Int? = authoritativeReader.minBpmInRange(startTimeMs, endTimeMs)
 
+        // WP-17 Step 3: the whole range, both tiers -- `mergedSamples()`, never `rawSamples` alone.
+        // A minute whose coverage resolves to the warm tier has no visible raw rows by design, so
+        // reading only the raw side would return nothing for it (workout HR would silently lose
+        // every rolled-up or quarantined minute).
         override suspend fun getByTimeRange(
             startTimeMs: Long,
             endTimeMs: Long,
         ): List<HeartRateRecordData> =
-            authoritativeReader.rangeIn(startTimeMs, endTimeMs).rawSamples.map { mapToDomain(it) }
+            authoritativeReader.rangeIn(startTimeMs, endTimeMs).mergedSamples().map { mapToDomain(it) }
 
         override fun observeSleepHrTimelineForSession(sessionId: String): Flow<List<HeartRateRecordData>> =
             heartRateDao.observeSleepHrTimelineForSession(sessionId).map { list -> list.map { mapToDomain(it) } }
@@ -64,7 +68,7 @@ class HeartRateRepositoryImpl
             endMs: Long,
         ): Flow<List<HeartRateRecordData>> =
             authoritativeReader.observeRange(startMs, endMs).map { range ->
-                range.rawSamples.map { mapToDomain(it) }
+                range.mergedSamples().map { mapToDomain(it) }
             }
 
         override fun observeAggregateByTimeRange(

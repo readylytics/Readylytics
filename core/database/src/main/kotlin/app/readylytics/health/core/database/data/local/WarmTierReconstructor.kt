@@ -1,5 +1,6 @@
 package app.readylytics.health.core.database.data.local
 
+import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrMinuteBucketEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrSourceMinuteContributionEntity
 import kotlin.math.round
@@ -73,6 +74,43 @@ private fun BpmHistogram.ascendingValues(): List<Int> =
     bins.entries
         .sortedBy { it.key }
         .flatMap { (bpm, binCount) -> List(binCount) { bpm } }
+
+/**
+ * WP-17 Step 3: one warm-tier selection rendered as raw-shaped rows, each row keeping **its own
+ * bucket's** `recordType`/`sessionId`/`deviceName`.
+ *
+ * This is what lets a caller that previously read raw rows only (`HeartRateDao.getVisibleByTimeRange`)
+ * serve a minute the coverage ledger resolved to the warm tier without losing the downstream
+ * filters it applies: `ComputeSleepMetricsUseCase` selects
+ * `recordType == SLEEP && sessionId in currentSessionIds`, so a flattened stream that dropped the
+ * per-bucket key (the way the chart path's `RECONSTRUCTED`/`null` labelling deliberately does)
+ * would silently filter to nothing. `hr_minute_buckets`'s primary key *contains* both columns, so
+ * the key is always available here.
+ *
+ * `sourceRecordRef = 0` marks a reconstructed row -- it references no `health_source_records` row
+ * and is never persisted. A bucket's empty `sessionId` maps back to `null`, matching the raw-row
+ * convention for "no session".
+ */
+internal fun List<HrMinuteBucketEntity>.reconstructAsRecords(): List<HeartRateRecordEntity> {
+    if (isEmpty()) return emptyList()
+    val records = ArrayList<HeartRateRecordEntity>(sumOf { it.sampleCount })
+    for (bucket in this) {
+        // Per bucket, so each reconstructed row carries that slice's own key. The single-element
+        // list keeps the timestamp spread identical to reconstructTimestampedSamples()'s.
+        listOf(bucket).reconstructTimestampedSamples().forEachIndexed { _, timestampMs, bpm ->
+            records +=
+                HeartRateRecordEntity(
+                    sourceRecordRef = 0L,
+                    timestampMs = timestampMs,
+                    beatsPerMinute = bpm,
+                    recordType = bucket.recordType,
+                    sessionId = bucket.sessionId.ifEmpty { null },
+                    deviceName = bucket.deviceName.ifEmpty { null },
+                )
+        }
+    }
+    return records
+}
 
 internal fun List<HrMinuteBucketEntity>.reconstructSampleValues(): IntArray {
     val totalCount = sumOf { it.sampleCount }

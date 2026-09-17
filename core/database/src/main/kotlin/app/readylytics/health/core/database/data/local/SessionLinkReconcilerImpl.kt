@@ -15,6 +15,7 @@ import app.readylytics.health.core.model.domain.sync.link.SampleLink
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkSweep
 import app.readylytics.health.core.model.domain.sync.link.SessionSpan
+import app.readylytics.health.core.model.domain.util.logI
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.yield
@@ -64,7 +65,20 @@ class SessionLinkReconcilerImpl
             // Must run before the workout recompute: recomputeWorkouts reads the warm projection
             // through the authoritative reader, so it has to see the re-keyed buckets, not the
             // previous pass's. Runs once over the same complete range, from stable evidence.
-            warmTierRelinker?.relink(startMs, endMs, sleepSpans, workoutSpans)
+            warmTierRelinker?.relink(startMs, endMs, sleepSpans, workoutSpans)?.let { outcome ->
+                // WP-17 Steps 4/5 require the legacy/unresolved minutes to be measurably flagged on
+                // a real device, not only in tests. This is the only production observation point
+                // for the relink's counts, so it logs unconditionally (once per reconcile, not per
+                // minute): `unresolvedLegacy` is how much history is still the pre-v22 approximation
+                // that no in-app action can repair, and `unresolvedEvidence` is a corrupt-histogram
+                // signal that would otherwise be invisible outside WarmTierRelinkTest.
+                logI(RECONCILE_TAG) {
+                    "Warm relink over [$startMs, $endMs]: inspected=${outcome.inspected} " +
+                        "republished=${outcome.republished} retired=${outcome.retired} " +
+                        "unresolvedLegacy=${outcome.unresolvedLegacy} " +
+                        "unresolvedEvidence=${outcome.unresolvedEvidence}"
+                }
+            }
             recomputeWorkouts(workoutSpans, zoneThresholds)
         }
 
@@ -211,6 +225,7 @@ class SessionLinkReconcilerImpl
 
         private companion object {
             private const val WORKOUT_BATCH_SIZE = 20
+            private const val RECONCILE_TAG = "SessionLinkReconciler"
         }
     }
 

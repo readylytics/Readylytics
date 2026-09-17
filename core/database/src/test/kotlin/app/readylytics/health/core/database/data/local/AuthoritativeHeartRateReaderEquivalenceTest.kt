@@ -238,6 +238,135 @@ class AuthoritativeHeartRateReaderEquivalenceTest {
             assertEquals(50, reader.minBpmInRange(0L, 2 * MINUTE_MS - 1))
         }
 
+    // Review round 1 / C1. The reader correctly hides a quarantined minute's raw rows, but the two
+    // repository methods that only read `rawSamples` then returned NOTHING for that minute -- strictly
+    // lossier than not applying the predicate at all, and score-affecting via
+    // ComputeSleepMetricsUseCase -> HrCoverageValidator.isValid (false on an empty list). Exercised
+    // through the repository APIs, not the reader, because that is where the loss happened.
+    @Test
+    fun `repository APIs serve a quarantined minute from the warm tier instead of dropping it`() =
+        runBlocking {
+            val ref = seedSource("src-a")
+            seedLegacyMinute(bucketStartMs = 0L, sampleCount = 10, avgBpm = 60.0)
+            database.heartRateDao().upsertAll(listOf(hr(ref, 1_000L, 200)))
+            rollupManager.rollupExpiredHotTier(MINUTE_MS)
+
+            // Preconditions: the raw row survived the rollup and is invisible to the raw side.
+            assertEquals(1, database.heartRateDao().countInRange(0L, MINUTE_MS - 1))
+            assertTrue(reader.rangeIn(0L, MINUTE_MS - 1).rawSamples.isEmpty())
+
+            val repository = HeartRateRepositoryImpl(database.heartRateDao(), database.hrvDao(), reader)
+            val merged = repository.getByTimeRange(0L, MINUTE_MS - 1)
+            assertEquals("the minute's warm evidence must be served, not dropped", 10, merged.size)
+            assertEquals(60.0, merged.map { it.beatsPerMinute }.average(), TOLERANCE)
+            assertTrue("the quarantined raw sample must stay hidden", merged.none { it.beatsPerMinute == 200 })
+
+            val scoringHistory =
+                ScoringHistoryRepositoryImpl(
+                    heartRateDao = database.heartRateDao(),
+                    hrvDao = database.hrvDao(),
+                    sleepSessionDao = database.sleepSessionDao(),
+                    dailySummaryDao = database.dailySummaryDao(),
+                    authoritativeReader = reader,
+                )
+            val forScoring = scoringHistory.getHeartRateRecordsByTimeRange(0L, MINUTE_MS - 1)
+            assertEquals(10, forScoring.size)
+            assertEquals(60.0, forScoring.map { it.beatsPerMinute }.average(), TOLERANCE)
+        }
+
+    // The merged rows must keep each bucket's own key, or ComputeSleepMetricsUseCase's
+    // `recordType == SLEEP && sessionId in currentSessionIds` filter would silently select nothing.
+    @Test
+    fun `merged warm rows keep their own record type and session id`() =
+        runBlocking {
+            val ref = seedSource("src-a")
+            database.sleepSessionDao().upsertAll(listOf(sleepSession("sleep-1", 0L, 2 * MINUTE_MS - 1)))
+            database.heartRateDao().upsertAll(
+                listOf(
+                    sleepHr(ref, 1_000L, 50, "sleep-1"),
+                    sleepHr(ref, 2_000L, 54, "sleep-1"),
+                    sleepHr(ref, 65_000L, 58, "sleep-1"),
+                ),
+            )
+            // Minute 0 rolls up; minute 1 stays raw. Both must arrive keyed to the sleep session.
+            rollupManager.rollupExpiredHotTier(MINUTE_MS)
+
+            val scoringHistory =
+                ScoringHistoryRepositoryImpl(
+                    heartRateDao = database.heartRateDao(),
+                    hrvDao = database.hrvDao(),
+                    sleepSessionDao = database.sleepSessionDao(),
+                    dailySummaryDao = database.dailySummaryDao(),
+                    authoritativeReader = reader,
+                )
+            val records = scoringHistory.getHeartRateRecordsByTimeRange(0L, 2 * MINUTE_MS - 1)
+            assertEquals(3, records.size)
+            assertEquals(setOf("SLEEP"), records.map { it.recordType }.toSet())
+            assertEquals(setOf("sleep-1"), records.map { it.sessionId }.toSet())
+            // The filter ComputeSleepMetricsUseCase actually applies must keep all three.
+            assertEquals(
+                3,
+                records.count { it.recordType == "SLEEP" && it.sessionId in setOf("sleep-1") },
+            )
+        }
+
+    // Review round 1 / I2: coverage committed at a generation with no bucket slice (a partially
+    // applied restore) used to fail BOTH predicates -- raw suppressed because coverage exists, warm
+    // hidden because the generation does not match. The minute must degrade to its raw evidence.
+    @Test
+    fun `coverage with no bucket slice at its visible generation falls back to raw`() =
+        runBlocking {
+            val ref = seedSource("src-a")
+            database.heartRateDao().upsertAll(listOf(hr(ref, 1_000L, 60), hr(ref, 2_000L, 62)))
+            rollupManager.rollupExpiredHotTier(MINUTE_MS)
+            // Precondition: warm is authoritative and raw is hidden.
+            assertTrue(reader.rangeIn(0L, MINUTE_MS - 1).rawSamples.isEmpty())
+            // Re-insert the raw rows the rollup consumed, then simulate a restore that landed the
+            // coverage row but not the projection it points at.
+            database.heartRateDao().upsertAll(listOf(hr(ref, 1_000L, 60), hr(ref, 2_000L, 62)))
+            database.minuteBucketDao().deleteBucketsForMinutes(listOf(0L))
+
+            val range = reader.rangeIn(0L, MINUTE_MS - 1)
+            assertTrue("the warm side has nothing to serve", range.warmBuckets.isEmpty())
+            assertEquals("the minute must not vanish from both tiers", 2, range.rawSamples.size)
+            assertEquals(listOf(60, 62), range.rawSamples.map { it.beatsPerMinute })
+            // And through every other predicate mirror, not just the range read.
+            val projection = reader.minuteBuckets(0L, MINUTE_MS)
+            assertEquals(2, projection.single().sampleCount)
+            assertEquals(61.0, projection.single().avgBpm, TOLERANCE)
+            assertEquals(60, reader.minBpmInRange(0L, MINUTE_MS - 1))
+        }
+
+    /**
+     * Review round 1 / I3: the DAO comment claims the coverage join is a rowid seek and the warm
+     * fallback subquery is index-covered. This asserts it against real SQLite instead of asserting
+     * it in prose. The SQL below mirrors `HeartRateDao.getVisibleByTimeRange`; if that query's shape
+     * changes, this plan changes with it and the test fails loudly.
+     */
+    @Test
+    fun `the visibility predicates are index-driven`() {
+        val plan =
+            queryPlan(
+                "SELECT h.* FROM heart_rate_records h " +
+                    "LEFT JOIN minute_coverage c ON c.bucketStartMs = " +
+                    "((h.timestampMs / 60000) - (CASE WHEN h.timestampMs % 60000 < 0 THEN 1 ELSE 0 END)) * 60000 " +
+                    "WHERE h.timestampMs >= 0 AND h.timestampMs <= 60000 " +
+                    "AND (c.bucketStartMs IS NULL OR c.tier = 'HOT' " +
+                    "OR (c.tier IN ('WARM', 'LEGACY_WARM') AND NOT EXISTS (" +
+                    "SELECT 1 FROM hr_minute_buckets b2 WHERE b2.bucketStartMs = c.bucketStartMs " +
+                    "AND b2.generation = c.visibleGeneration))) " +
+                    "ORDER BY h.timestampMs ASC, h.sourceRecordRef ASC",
+            )
+        println("WP-17 T3 EXPLAIN QUERY PLAN for the raw-side visibility predicate: $plan")
+        assertTrue("plan must not scan heart_rate_records: $plan", plan.none { it.scansTable("heart_rate_records") })
+        assertTrue("plan must not scan minute_coverage: $plan", plan.none { it.scansTable("minute_coverage") })
+        assertTrue("plan must not scan hr_minute_buckets: $plan", plan.none { it.scansTable("hr_minute_buckets") })
+        assertTrue(
+            "the coverage join must be a rowid seek: $plan",
+            plan.any { it.contains("minute_coverage") && it.contains("USING INTEGER PRIMARY KEY") },
+        )
+    }
+
     @Test
     fun `legacy minutes are reported as unresolved rather than silently repaired`() =
         runBlocking {
@@ -273,12 +402,26 @@ class AuthoritativeHeartRateReaderEquivalenceTest {
         val scoringLoader = ScoringHeartRateDataLoader(reader)
         assertEquals(fromReader, scoringLoader.loadMergedMinuteBuckets(0L, endExclusiveMs))
 
-        // The chart/repository consumer must see the same raw multiset the reader selected.
+        // The chart/repository consumer must serve the WHOLE range, not just its raw half. Compared
+        // against the independent reference above rather than against the reader's own expression:
+        // `getByTimeRange` delegates to the reader, so asserting equality with
+        // `reader.rangeIn(...).rawSamples` would be tautological AND would have rubber-stamped the
+        // bug where a warm-covered minute contributed nothing at all.
         val repository = HeartRateRepositoryImpl(database.heartRateDao(), database.hrvDao(), reader)
+        val fromRepository = repository.getByTimeRange(0L, endExclusiveMs - 1)
         assertEquals(
-            reader.rangeIn(0L, endExclusiveMs - 1).rawSamples.map { it.beatsPerMinute },
-            repository.getByTimeRange(0L, endExclusiveMs - 1).map { it.beatsPerMinute },
+            "repository dropped samples the reference accounts for",
+            reference.sumOf { it.sampleCount },
+            fromRepository.count { it.beatsPerMinute in PLAUSIBLE },
         )
+        if (reference.isNotEmpty()) {
+            assertEquals(
+                "repository mean disagrees with the reference beyond warm reconstruction error",
+                reference.sumOf { it.avgBpm * it.sampleCount } / reference.sumOf { it.sampleCount },
+                fromRepository.filter { it.beatsPerMinute in PLAUSIBLE }.map { it.beatsPerMinute }.average(),
+                RECONSTRUCTION_TOLERANCE,
+            )
+        }
     }
 
     private suspend fun assertMinuteProjection(
@@ -354,6 +497,18 @@ class AuthoritativeHeartRateReaderEquivalenceTest {
         if (buckets.isEmpty()) return null
         val count = buckets.sumOf { it.sampleCount }
         return HrMinuteBucketRow(index, buckets.sumOf { it.avgBpm * it.sampleCount } / count, count)
+    }
+
+    /** Every `detail` row SQLite reports for [sql], via real `EXPLAIN QUERY PLAN`. */
+    private fun queryPlan(sql: String): List<String> {
+        val details = mutableListOf<String>()
+        database.openHelper.writableDatabase.query("EXPLAIN QUERY PLAN $sql").use { cursor ->
+            val detailIndex = cursor.getColumnIndexOrThrow("detail")
+            while (cursor.moveToNext()) {
+                details += cursor.getString(detailIndex)
+            }
+        }
+        return details
     }
 
     private suspend fun seedSource(id: String): Long =
@@ -439,7 +594,24 @@ class AuthoritativeHeartRateReaderEquivalenceTest {
         /** Documented numerical-accumulation tolerance for Float/Double results (Step 1). */
         const val TOLERANCE = 1e-4
 
+        /**
+         * Separate, larger bound for a mean taken over *reconstructed* warm points. Counts are
+         * conserved exactly, but a warm point's value comes from the 7-anchor percentile sketch, not
+         * from the histogram, so the reconstructed mean carries the documented warm-tier
+         * reconstruction error rather than mere accumulation noise (measured on this fixture: 0.5
+         * bpm at worst). Deliberately not conflated with [TOLERANCE].
+         */
+        const val RECONSTRUCTION_TOLERANCE = 2.0
+
         val PLAUSIBLE = 30..230
         val PLAUSIBLE_AVG = 30.0..230.0
     }
 }
+
+/**
+ * True when this `EXPLAIN QUERY PLAN` detail row is a full table scan of [table]. Accepts both the
+ * modern `SCAN <table>` wording and the older `SCAN TABLE <table>`; an index-driven `SEARCH`, or a
+ * `SCAN ... USING ... INDEX`, is not a table scan.
+ */
+private fun String.scansTable(table: String): Boolean =
+    Regex("""\bSCAN (TABLE )?\Q$table\E\b""").containsMatchIn(this) && !contains("USING")

@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.readylytics.health.core.databaseschema.data.local.dao.getOrCreateSourceRef
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrMinuteBucketEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HrSourceMinuteContributionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.MinuteCoverageEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
@@ -178,6 +179,77 @@ class WarmTierRelinkTest {
                 database.minuteCoverageDao().getCoverageInRange(0L, 5 * MINUTE_MS).isEmpty(),
             )
             assertTrue(reader.rangeIn(0L, RANGE_END_INCLUSIVE).warmBuckets.isEmpty())
+        }
+
+    // Review round 1 / M8: retirement used to drop coverage and buckets but only the contributions
+    // that happened to cascade with the deleted source, so a *superseded* generation's row belonging
+    // to a source that still exists was orphaned forever -- nothing revisits a minute with no coverage.
+    @Test
+    fun `retiring a minute leaves no orphaned contributions at any generation`() =
+        runBlocking {
+            seedRolledUpHistory(sleepEndMs = ORIGINAL_SLEEP_END)
+            val visibleGeneration =
+                database.minuteCoverageDao().getCoverageInRange(0L, MINUTE_MS).single().visibleGeneration
+            // A second, still-live source whose contribution sits at a superseded generation, i.e. a
+            // row the visible-generation cleanup in `publish` never sees.
+            val otherRef = database.sourceRecordDao().getOrCreateSourceRef("src-b", "HEART_RATE", 0L)
+            database.minuteCoverageDao().upsertContributions(
+                listOf(
+                    HrSourceMinuteContributionEntity(
+                        sourceRecordRef = otherRef,
+                        bucketStartMs = 0L,
+                        generation = visibleGeneration - 1,
+                        firstSampleMs = 1_000L,
+                        lastSampleMs = 58_000L,
+                        deviceName = "other-device",
+                        bpmHistogram = BpmHistogram(mapOf(60 to 2)).encode(),
+                    ),
+                ),
+            )
+
+            database.sourceRecordDao().deleteBySourceRecordId(SOURCE_ID)
+            val outcome = relinker.relink(0L, RANGE_END_INCLUSIVE, sleepSpans(ORIGINAL_SLEEP_END), emptyList())
+
+            assertEquals(5, outcome.retired)
+            assertTrue(
+                "a retired minute must leave no contribution row at any generation",
+                database.minuteCoverageDao().getContributionsForMinute(0L).isEmpty(),
+            )
+        }
+
+    // Review round 1 / M6: an empty derivation used to be published as `Changed(emptyList())`, which
+    // deletes the minute's slices while re-upserting its coverage -- a permanently invisible minute
+    // with live coverage that the next pass reads back as `Unchanged`. It must be preserved and counted.
+    @Test
+    fun `a minute whose evidence accounts for no samples is preserved and counted`() =
+        runBlocking {
+            seedRolledUpHistory(sleepEndMs = ORIGINAL_SLEEP_END)
+            val before = bucketsAt(0L)
+            assertTrue("fixture precondition: minute 0 has a visible projection", before.isNotEmpty())
+            val visibleGeneration =
+                database.minuteCoverageDao().getCoverageInRange(0L, MINUTE_MS).single().visibleGeneration
+            // Replace minute 0's evidence with a readable but zero-count histogram, so the derivation
+            // resolves no samples at all while the stored projection still claims some.
+            val existing =
+                database
+                    .minuteCoverageDao()
+                    .getContributionsForMinute(0L)
+                    .single { it.generation == visibleGeneration }
+            // "v1:" is a *valid* encoding of an empty histogram -- readable, but zero samples -- so
+            // this exercises the empty-derivation path rather than the malformed-payload one.
+            database.minuteCoverageDao().upsertContributions(
+                listOf(existing.copy(bpmHistogram = BpmHistogram(emptyMap()).encode())),
+            )
+
+            val outcome = relinker.relink(0L, RANGE_END_INCLUSIVE, sleepSpans(MOVED_SLEEP_END), emptyList())
+
+            assertEquals("the minute must be counted as unresolved", 1, outcome.unresolvedEvidence)
+            assertEquals("and left exactly as it was", before, bucketsAt(0L))
+            assertEquals(
+                "its coverage must still point at a projection that exists",
+                setOf(visibleGeneration),
+                bucketsAt(0L).map { it.generation }.toSet(),
+            )
         }
 
     @Test
@@ -409,13 +481,21 @@ class WarmTierRelinkTest {
             .minuteBucketDao()
             .getVisibleBucketsInMinuteRange(bucketStartMs, bucketStartMs + MINUTE_MS)
 
+    /**
+     * Exactly one generation per covered minute -- and at least one. Review round 1 / I2: tolerating
+     * an empty generation set would pass a minute that has live coverage but no visible projection
+     * at all, which is silent data loss rather than a mixed-generation defect. A minute that genuinely
+     * has no projection left must have had its coverage row retired with its buckets, so it does not
+     * appear in this loop at all.
+     */
     private suspend fun assertOneGenerationPerMinute() {
         database.minuteCoverageDao().getCoverageInRange(0L, 11 * MINUTE_MS).forEach { coverage ->
             val generations =
                 bucketsAt(coverage.bucketStartMs).map { it.generation }.toSet()
-            assertTrue(
-                "minute ${coverage.bucketStartMs} carries mixed generations: $generations",
-                generations.isEmpty() || generations == setOf(coverage.visibleGeneration),
+            assertEquals(
+                "minute ${coverage.bucketStartMs} must be backed by exactly its visible generation",
+                setOf(coverage.visibleGeneration),
+                generations,
             )
         }
     }

@@ -86,6 +86,13 @@ interface MinuteBucketDao {
     //    When such a minute has raw rows too, the overlap is explicitly unresolved under the T2
     //    policy and is resolved in favour of the raw tier here (never summed or concatenated), so
     //    the raw-side predicate -- which lets coverage-less minutes through -- stays authoritative.
+    //
+    // The two predicates are a TOTAL partition of the minute space, not merely a disjoint pair. The
+    // one hole -- coverage committed as `WARM`/`LEGACY_WARM` at a generation that has no bucket
+    // slice, e.g. a partially applied restore -- is closed on the RAW side: `HeartRateDao`'s
+    // predicate carries a matching `NOT EXISTS (... hr_minute_buckets b2 ...)` fallback that serves
+    // that minute's raw evidence rather than letting it vanish from both readers. See that comment
+    // block; do not weaken either half without the other.
     // ---------------------------------------------------------------------------------------------
 
     /** Tier-authoritative equivalent of [getMinuteBuckets] (same weighted-average semantics). */

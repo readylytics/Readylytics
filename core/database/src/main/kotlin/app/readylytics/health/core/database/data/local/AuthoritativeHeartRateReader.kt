@@ -30,6 +30,31 @@ data class AuthoritativeHrRange(
         get() = if (warmBuckets.isEmpty()) HeartRateResolution.RAW else HeartRateResolution.RECONSTRUCTED
 
     internal fun warmSamples(): TimestampedSamples = warmBuckets.reconstructTimestampedSamples()
+
+    /**
+     * The **whole** range as raw-shaped rows: [rawSamples] plus every visible warm bucket
+     * reconstructed into synthetic rows that keep that bucket's own `recordType`/`sessionId`/
+     * `deviceName` (see [reconstructAsRecords]), ordered ascending by timestamp. The sort is stable,
+     * so raw rows keep their `(timestampMs, sourceRecordRef)` order among themselves.
+     *
+     * **Any consumer that means "every sample in this window" must use this, not [rawSamples]
+     * alone.** For a minute the coverage ledger resolves to the warm tier, [rawSamples] is empty
+     * *by design* -- the OD-1 quarantine leaves the raw rows physically present but invisible -- so
+     * reading only [rawSamples] returns nothing at all for that minute rather than its
+     * authoritative evidence. That is strictly lossier than not applying the predicate, and on a
+     * scoring path (`ComputeSleepMetricsUseCase` -> `HrCoverageValidator.isValid`, which fails an
+     * empty list) it silently withholds a night's score.
+     *
+     * Warm buckets are not clipped to the exact `[startMs, endMs]` window: a bucket overlapping the
+     * window contributes all of its reconstructed points, because a minute is the smallest
+     * warm-tier granularity there is. Same established convention as `toSeries()`.
+     */
+    internal fun mergedSamples(): List<HeartRateRecordEntity> =
+        if (warmBuckets.isEmpty()) {
+            rawSamples
+        } else {
+            (rawSamples + warmBuckets.reconstructAsRecords()).sortedBy { it.timestampMs }
+        }
 }
 
 /**
@@ -195,6 +220,12 @@ class AuthoritativeHeartRateReader
          * Lowest plausible BPM visible in `[startMs, endMs]`. The warm side takes each visible
          * bucket's stored `minBpm` rather than a reconstructed value, so the answer is the true
          * minimum of the original samples that minute contained, not an interpolation of it.
+         *
+         * The warm side keeps the bucket-overlap semantics every other warm read in this class uses
+         * (a minute is the smallest warm granularity), so the minimum may come from up to 59s
+         * outside the window while the raw side is strictly inside it. Deliberate: clipping would
+         * mean discarding a partially overlapping minute's only stored minimum, which is a worse
+         * answer than one that is at most one minute wide.
          */
         suspend fun minBpmInRange(
             startMs: Long,

@@ -192,9 +192,24 @@ interface HeartRateDao {
     // minute for a negative remainder. That makes a pre-1970 timestamp land in the same bucket here
     // as in `minute_coverage`/`hr_minute_buckets`.
     //
+    // Last-resort fallback (WP-17 review round 1, I2): a minute whose coverage says
+    // `WARM`/`LEGACY_WARM` at generation G but which has NO bucket slice at G -- a partially applied
+    // restore, or any future writer that commits coverage without its projection -- would otherwise
+    // fail BOTH predicates and vanish from every reader: raw suppressed because coverage exists and
+    // is not `HOT`, warm hidden because the generation does not match, and MinuteBucketDao's
+    // coverage-less `NOT EXISTS` branch cannot fire because coverage *does* exist. The
+    // `NOT EXISTS (... b2 ...)` term below degrades that minute to showing its raw evidence instead,
+    // which makes the two predicates a total partition of the minute space rather than one that is
+    // total only given today's writers. It can never double-count: it is reachable only when the
+    // warm side has nothing visible for that minute at all. SQLite short-circuits the `OR` chain, so
+    // the correlated subquery is evaluated only for a raw row whose minute is warm-covered.
+    //
     // `minute_coverage.bucketStartMs` is a single-column INTEGER primary key, i.e. a SQLite rowid
-    // alias, so the join is a rowid seek per raw row and needs no extra index -- confirmed with
-    // `EXPLAIN QUERY PLAN` (see AuthoritativeHeartRateReaderTest). The raw side is driven by the
+    // alias, so the join is a rowid seek per raw row and needs no extra index; `hr_minute_buckets`
+    // has an existing `(bucketStartMs, bucketEndMs)` index that covers the fallback subquery. Both
+    // claims are asserted against real SQLite by
+    // `AuthoritativeHeartRateReaderEquivalenceTest.the visibility predicates are index-driven`,
+    // which dumps `EXPLAIN QUERY PLAN` and fails on a table scan. The raw side is driven by the
     // existing `index_hr_v10_timestamp` / `index_hr_v10_type_timestamp` range scans, unchanged.
     // ---------------------------------------------------------------------------------------------
 
@@ -204,7 +219,10 @@ interface HeartRateDao {
             "LEFT JOIN minute_coverage c ON c.bucketStartMs = " +
             "((h.timestampMs / 60000) - (CASE WHEN h.timestampMs % 60000 < 0 THEN 1 ELSE 0 END)) * 60000 " +
             "WHERE h.timestampMs >= :startMs AND h.timestampMs <= :endMs " +
-            "AND (c.bucketStartMs IS NULL OR c.tier = 'HOT') " +
+            "AND (c.bucketStartMs IS NULL OR c.tier = 'HOT' " +
+            "OR (c.tier IN ('WARM', 'LEGACY_WARM') AND NOT EXISTS (" +
+            "SELECT 1 FROM hr_minute_buckets b2 WHERE b2.bucketStartMs = c.bucketStartMs " +
+            "AND b2.generation = c.visibleGeneration))) " +
             "ORDER BY h.timestampMs ASC, h.sourceRecordRef ASC",
     )
     suspend fun getVisibleByTimeRange(
@@ -219,7 +237,10 @@ interface HeartRateDao {
             "((h.timestampMs / 60000) - (CASE WHEN h.timestampMs % 60000 < 0 THEN 1 ELSE 0 END)) * 60000 " +
             "WHERE h.recordType = :recordType " +
             "AND h.timestampMs >= :startMs AND h.timestampMs <= :endMs " +
-            "AND (c.bucketStartMs IS NULL OR c.tier = 'HOT') " +
+            "AND (c.bucketStartMs IS NULL OR c.tier = 'HOT' " +
+            "OR (c.tier IN ('WARM', 'LEGACY_WARM') AND NOT EXISTS (" +
+            "SELECT 1 FROM hr_minute_buckets b2 WHERE b2.bucketStartMs = c.bucketStartMs " +
+            "AND b2.generation = c.visibleGeneration))) " +
             "ORDER BY h.timestampMs ASC, h.sourceRecordRef ASC",
     )
     suspend fun getVisibleByTypeAndTimeRange(
@@ -234,7 +255,10 @@ interface HeartRateDao {
             "LEFT JOIN minute_coverage c ON c.bucketStartMs = " +
             "((h.timestampMs / 60000) - (CASE WHEN h.timestampMs % 60000 < 0 THEN 1 ELSE 0 END)) * 60000 " +
             "WHERE h.timestampMs >= :startMs AND h.timestampMs < :endMs " +
-            "AND (c.bucketStartMs IS NULL OR c.tier = 'HOT') " +
+            "AND (c.bucketStartMs IS NULL OR c.tier = 'HOT' " +
+            "OR (c.tier IN ('WARM', 'LEGACY_WARM') AND NOT EXISTS (" +
+            "SELECT 1 FROM hr_minute_buckets b2 WHERE b2.bucketStartMs = c.bucketStartMs " +
+            "AND b2.generation = c.visibleGeneration))) " +
             "ORDER BY h.timestampMs ASC, h.sourceRecordRef ASC",
     )
     fun _observeVisibleByTimeRange(
@@ -256,7 +280,10 @@ interface HeartRateDao {
             "((h.timestampMs / 60000) - (CASE WHEN h.timestampMs % 60000 < 0 THEN 1 ELSE 0 END)) * 60000 " +
             "WHERE h.timestampMs >= :dayStartMs AND h.timestampMs < :dayEndMs " +
             "AND h.beatsPerMinute BETWEEN 30 AND 230 " +
-            "AND (c.bucketStartMs IS NULL OR c.tier = 'HOT') " +
+            "AND (c.bucketStartMs IS NULL OR c.tier = 'HOT' " +
+            "OR (c.tier IN ('WARM', 'LEGACY_WARM') AND NOT EXISTS (" +
+            "SELECT 1 FROM hr_minute_buckets b2 WHERE b2.bucketStartMs = c.bucketStartMs " +
+            "AND b2.generation = c.visibleGeneration))) " +
             "GROUP BY bucketIndex " +
             "ORDER BY bucketIndex ASC",
     )
@@ -273,7 +300,10 @@ interface HeartRateDao {
             "((h.timestampMs / 60000) - (CASE WHEN h.timestampMs % 60000 < 0 THEN 1 ELSE 0 END)) * 60000 " +
             "WHERE h.sessionId IN (:sessionIds) AND h.recordType = 'SLEEP' " +
             "AND h.beatsPerMinute BETWEEN 30 AND 230 " +
-            "AND (c.bucketStartMs IS NULL OR c.tier = 'HOT') " +
+            "AND (c.bucketStartMs IS NULL OR c.tier = 'HOT' " +
+            "OR (c.tier IN ('WARM', 'LEGACY_WARM') AND NOT EXISTS (" +
+            "SELECT 1 FROM hr_minute_buckets b2 WHERE b2.bucketStartMs = c.bucketStartMs " +
+            "AND b2.generation = c.visibleGeneration))) " +
             "ORDER BY h.sessionId ASC, h.beatsPerMinute ASC, h.timestampMs ASC, h.sourceRecordRef ASC",
     )
     suspend fun getVisibleSleepHrProjectionForSessions(sessionIds: List<String>): List<SleepHrSample>
@@ -285,7 +315,10 @@ interface HeartRateDao {
             "((h.timestampMs / 60000) - (CASE WHEN h.timestampMs % 60000 < 0 THEN 1 ELSE 0 END)) * 60000 " +
             "WHERE h.sessionId = :sessionId AND h.recordType = 'SLEEP' " +
             "AND h.beatsPerMinute BETWEEN 30 AND 230 " +
-            "AND (c.bucketStartMs IS NULL OR c.tier = 'HOT') " +
+            "AND (c.bucketStartMs IS NULL OR c.tier = 'HOT' " +
+            "OR (c.tier IN ('WARM', 'LEGACY_WARM') AND NOT EXISTS (" +
+            "SELECT 1 FROM hr_minute_buckets b2 WHERE b2.bucketStartMs = c.bucketStartMs " +
+            "AND b2.generation = c.visibleGeneration))) " +
             "ORDER BY h.beatsPerMinute ASC, h.timestampMs ASC, h.sourceRecordRef ASC",
     )
     suspend fun getVisibleSleepHrSamplesForSession(sessionId: String): List<Int>
@@ -297,7 +330,10 @@ interface HeartRateDao {
             "((h.timestampMs / 60000) - (CASE WHEN h.timestampMs % 60000 < 0 THEN 1 ELSE 0 END)) * 60000 " +
             "WHERE h.timestampMs >= :startTimeMs AND h.timestampMs <= :endTimeMs " +
             "AND h.beatsPerMinute BETWEEN 30 AND 230 " +
-            "AND (c.bucketStartMs IS NULL OR c.tier = 'HOT')",
+            "AND (c.bucketStartMs IS NULL OR c.tier = 'HOT' " +
+            "OR (c.tier IN ('WARM', 'LEGACY_WARM') AND NOT EXISTS (" +
+            "SELECT 1 FROM hr_minute_buckets b2 WHERE b2.bucketStartMs = c.bucketStartMs " +
+            "AND b2.generation = c.visibleGeneration)))",
     )
     suspend fun getVisibleMinHrInRange(
         startTimeMs: Long,

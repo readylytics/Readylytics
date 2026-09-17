@@ -133,13 +133,19 @@ class ScoringHistoryRepositoryImpl
             dailySummaryDao.upsertAll(summaries.map { DailySummaryMapper.toEntity(it, zoneId) })
         }
 
+        // WP-17 Step 3: the whole range, both tiers. `mergedSamples()` reconstructs each visible
+        // warm bucket into rows carrying that bucket's own recordType/sessionId, so
+        // ComputeSleepMetricsUseCase's `recordType == SLEEP && sessionId in currentSessionIds`
+        // filter still selects the right samples -- and so HrCoverageValidator.isValid (which
+        // returns false on an empty list) is not handed an empty night for a range whose minutes
+        // have rolled up or been OD-1-quarantined.
         override suspend fun getHeartRateRecordsByTimeRange(
             startMs: Long,
             endMs: Long,
         ): List<HeartRateRecord> =
             authoritativeReader
                 .rangeIn(startMs, endMs)
-                .rawSamples
+                .mergedSamples()
                 .map(HeartRateRecordMapper::toDomain)
 
         override suspend fun getPreciseHrMax(dateMidnightMs: Long): Double? =
