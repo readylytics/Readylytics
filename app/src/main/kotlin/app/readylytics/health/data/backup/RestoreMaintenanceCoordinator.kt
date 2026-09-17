@@ -185,6 +185,5 @@ class RestoreMaintenanceCoordinator
                 }
             }
 
-        suspend fun isMaintenancePending(): Boolean =
-            healthDatabase.healthMutationStateDao().get()?.maintenanceOperationId != null
+        suspend fun isMaintenancePending(): Boolean = healthMutationCoordinator.isMaintenancePending()
     }
