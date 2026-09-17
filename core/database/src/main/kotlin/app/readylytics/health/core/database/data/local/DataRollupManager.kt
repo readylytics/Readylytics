@@ -71,14 +71,16 @@ class DataRollupManager
 
         private suspend fun doRollupExpiredHotTier(cutoffMs: Long): ScoreInvalidation.AffectedRange? {
             var touched: ScoreInvalidation.AffectedRange? = null
-            var cursorMs = heartRateDao.getEarliestTimestampMs() ?: return touched
-            while (cursorMs < cutoffMs) {
+            val completeCutoff = app.readylytics.health.core.model.domain.sync.completeMinuteCutoff(cutoffMs)
+            var cursorMs = heartRateDao.getEarliestTimestampMs() ?: completeCutoff
+            
+            while (cursorMs < completeCutoff) {
                 currentCoroutineContext().ensureActive()
-                val dayStart = (cursorMs / DAY_MS) * DAY_MS
-                val dayEnd = minOf(dayStart + DAY_MS, cutoffMs)
+                val dayStart = Math.floorDiv(cursorMs, DAY_MS) * DAY_MS
+                val dayEnd = minOf(dayStart + DAY_MS, completeCutoff)
                 touched = mergeRanges(touched, rollupDayChunk(dayStart, dayEnd))
                 yield()
-                cursorMs = heartRateDao.getEarliestTimestampMs() ?: cutoffMs
+                cursorMs = heartRateDao.getEarliestTimestampMs() ?: completeCutoff
             }
             return touched
         }
