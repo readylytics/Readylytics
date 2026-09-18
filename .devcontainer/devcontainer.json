@@ -1,0 +1,55 @@
+{
+  "name": "Readylytics Dev Container",
+  "description": "Android development with Kotlin, Gradle, Android SDK, and AI coding tools",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "..",
+    "cacheFrom": [
+      "ghcr.io/readylytics/readylytics:devcontainer"
+    ]
+  },
+  "runArgs": ["--rm"],
+  "remoteUser": "vscode",
+  "containerEnv": {
+    "JAVA_HOME": "/usr/lib/jvm/java-17-openjdk-amd64",
+    "ANDROID_HOME": "/home/vscode/android-sdk",
+    "ANDROID_SDK_ROOT": "/home/vscode/android-sdk",
+    "GRADLE_USER_HOME": "/home/vscode/.gradle"
+  },
+  "mounts": [
+    "source=readylytics-gradle-cache,target=/home/vscode/.gradle,type=volume",
+    "source=readylytics-android-sdk,target=/home/vscode/android-sdk,type=volume",
+    "source=readylytics-claude-config,target=/home/vscode/.claude,type=volume",
+    "source=readylytics-npm-cache,target=/home/vscode/.npm,type=volume"
+  ],
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "postStartCommand": "bash .devcontainer/post-start.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "charliermarsh.ruff",
+        "eamodio.gitlens",
+        "Kotlin.language",
+        "ms-android-tools.logcat",
+        "ms-vscode.makefile-tools"
+      ],
+      "settings": {
+        "java.home": "${containerEnv:JAVA_HOME}",
+        "android.sdkPath": "${containerEnv:ANDROID_HOME}",
+        "[kotlin]": {
+          "editor.formatOnSave": true,
+          "editor.defaultFormatter": "Kotlin.language"
+        }
+      }
+    }
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/docker-from-docker:1": {}
+  },
+  "forwardPorts": [],
+  "remoteEnv": {
+    "PATH": "/usr/local/bin:/usr/bin:/bin:/sbin:${PATH}"
+  }
+}
