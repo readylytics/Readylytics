@@ -8,8 +8,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import app.readylytics.health.core.model.domain.repository.WorkoutData
+import app.readylytics.health.core.model.domain.workouts.detail.ExerciseTypeMapper
 import app.readylytics.health.core.ui.common.DateFormatUtils
-import app.readylytics.health.feature.workouts.R
 import java.time.Instant
 import java.time.ZoneId
 
@@ -18,7 +18,7 @@ fun WorkoutDetailHeader(
     workout: WorkoutData,
     modifier: Modifier = Modifier,
 ) {
-    val type = remember(workout.exerciseType) { exerciseTypeToDisplayName(workout.exerciseType).trim() }
+    val exerciseType = remember(workout.exerciseType) { ExerciseTypeMapper.fromRaw(workout.exerciseType) }
 
     val (start, end, date) =
         remember(workout.startTime, workout.endTime) {
@@ -36,10 +36,11 @@ fun WorkoutDetailHeader(
 
     if (!hasHeaderContent) return
 
-    val displayType = type.ifBlank { stringResource(R.string.workout_header_type_fallback) }
-
     Column(modifier) {
-        Text(text = displayType, style = MaterialTheme.typography.headlineMedium)
+        Text(
+            text = stringResource(exerciseType.displayNameResId),
+            style = MaterialTheme.typography.headlineMedium,
+        )
         Text(
             text = date,
             style = MaterialTheme.typography.bodyMedium,
