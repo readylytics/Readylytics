@@ -133,7 +133,7 @@ class RestoreRollbackInstrumentedTest {
     }
 
     @Test
-    fun applyRestore_missingFkRollsBackAndPreservesPreExistingData() =
+    fun applyRestore_missingFkRollsBackAndPreservesPreExistingData(): Unit =
         runBlocking {
             // Seed initial data directly into Room
             val initial =
