@@ -82,7 +82,11 @@ class RestoreRollbackInstrumentedTest {
                 override fun observeRecent(limit: Int): Flow<List<AuditEvent>> = flowOf(emptyList())
             }
 
-        val restoreDbOps = RestoreDatabaseOperations(db, RestoreBatchLoader(db, RestoreVitalsLoader(db)))
+        val restoreDbOps =
+            RestoreDatabaseOperations(
+                db,
+                RestoreBatchLoader(db, RestoreVitalsLoader(db), CoverageRestoreLoader(db)),
+            )
         val prefsApplier =
             RestorePreferencesApplier(
                 settingsRepo,
