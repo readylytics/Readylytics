@@ -2023,6 +2023,10 @@ Key behaviors:
   (frequency, avg TRIMP, avg duration, preferred weekdays) and computes rest-day average, rest-day
   gap, and current training streak. Workout day boundaries resolve in the user's configured
   scoring zone (`preferences.scoringZone()`), matching every other date-boundary computation.
+- Exercise types reach the formatter as the raw Health Connect numeric id Room stores (`"2"`), so
+  Sections D and G render them through `ExerciseTypeMapper.fromRaw(...).canonicalName` ("Badminton").
+  The same `ExerciseType` table backs `WorkoutLayoutTypeMapper` and the localized per-type labels in
+  `feature/workouts`; it is the only exercise-type id table in the codebase.
 - The formatter is pure Kotlin; unavailable values render as "insufficient data", never fabricated.
   UI copy on the card itself is localized via `feature/dashboard` resources; the prompt text itself
   is stable English to stay machine-parseable and comparable with the template docs.
