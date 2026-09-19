@@ -35,8 +35,8 @@ object ExerciseTypeMapper {
     fun fromRaw(raw: String): ExerciseType {
         val trimmed = raw.trim()
         if (trimmed.isEmpty()) return ExerciseType.OTHER_WORKOUT
-        trimmed.toIntOrNull()?.let { id -> return BY_ID[id] ?: ExerciseType.OTHER_WORKOUT }
-        return BY_NAME[normalize(trimmed)] ?: ExerciseType.OTHER_WORKOUT
+        val byId = trimmed.toIntOrNull()?.let { id -> BY_ID[id] ?: ExerciseType.OTHER_WORKOUT }
+        return byId ?: BY_NAME[normalize(trimmed)] ?: ExerciseType.OTHER_WORKOUT
     }
 
     private fun normalize(value: String): String =
