@@ -41,8 +41,14 @@ internal class DatabaseReadyStartupInitializer(
 
     suspend fun initializeIfReady(readiness: DatabaseReadiness): StartupInitializationResult {
         if (readiness != DatabaseReadiness.Ready) return StartupInitializationResult.NOT_READY
-        if (!initialized.compareAndSet(false, true)) return StartupInitializationResult.COMPLETE
+        return if (initialized.compareAndSet(false, true)) {
+            initializeDatabase()
+        } else {
+            StartupInitializationResult.COMPLETE
+        }
+    }
 
+    private suspend fun initializeDatabase(): StartupInitializationResult {
         return try {
             if (context != null) {
                 runNonFatal("Orphan backup staging cleanup") {
@@ -52,11 +58,10 @@ internal class DatabaseReadyStartupInitializer(
 
             if (restoreMaintenanceCoordinator != null) {
                 val recoveryCoordinator = restoreMaintenanceCoordinator.get()
-                val recovered =
-                    runNonFatal("Restore recovery") {
-                        recoveryCoordinator.recoverInterruptedRestoreOnStartup()
-                    }
-                if (!recovered && recoveryCoordinator.isMaintenancePending()) {
+                runNonFatal("Restore recovery") {
+                    recoveryCoordinator.recoverInterruptedRestoreOnStartup()
+                }
+                if (recoveryCoordinator.isMaintenancePending()) {
                     initialized.set(false)
                     return StartupInitializationResult.RETRYABLE_FAILURE
                 }
@@ -202,13 +207,11 @@ internal class DatabaseReadyStartupCoordinator(
         readiness: DatabaseReadiness,
     ) {
         var result = initializer.initializeIfReady(readiness)
-        if (result != StartupInitializationResult.RETRYABLE_FAILURE) return
-
-        for (retryDelayMillis in retryDelaysMillis) {
-            waitBeforeRetry(retryDelayMillis)
-            if (states.value.readiness != DatabaseReadiness.Ready) return
+        val retryDelays = retryDelaysMillis.iterator()
+        while (result == StartupInitializationResult.RETRYABLE_FAILURE && retryDelays.hasNext()) {
+            waitBeforeRetry(retryDelays.next())
+            if (states.value.readiness != DatabaseReadiness.Ready) break
             result = initializer.initializeIfReady(DatabaseReadiness.Ready)
-            if (result != StartupInitializationResult.RETRYABLE_FAILURE) return
         }
     }
 

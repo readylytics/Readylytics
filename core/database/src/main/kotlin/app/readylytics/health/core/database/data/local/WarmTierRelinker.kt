@@ -350,6 +350,15 @@ private fun uniformLinkOrNull(
     bucketStartMs: Long,
     minuteSpans: ChunkSpans,
 ): SampleLink? {
+    val endMs = bucketStartMs + MINUTE_MS - 1
+    val hasInteriorBoundary =
+        (minuteSpans.sleep + minuteSpans.workout).any {
+            it.startTime > bucketStartMs &&
+                it.startTime <= endMs ||
+                it.endTime >= bucketStartMs &&
+                it.endTime < endMs
+        }
+    if (hasInteriorBoundary) return null
     val atStart = minuteSpans.resolve(bucketStartMs)
     val atEnd = minuteSpans.resolve(bucketStartMs + MINUTE_MS - 1)
     return atStart.takeIf { it == atEnd }

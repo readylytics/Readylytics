@@ -60,7 +60,15 @@ class GetWorkoutDisplayMetricsUseCase
             val scoringSnapshotId = HistoricalRunIdentity.computeSnapshotId(prefs, frozenHrMax)
             val identity =
                 WorkoutScoringIdentity(
-                    sourceRevision = workout.modelTrimpSourceRevision ?: 0L,
+                    sourceRevision =
+                        WorkoutInputRevision.compute(
+                            workout.id,
+                            workout.startTime,
+                            workout.endTime,
+                            workout.exerciseType,
+                            workout.deviceName,
+                            hrSamples,
+                        ),
                     scoringSnapshotId = scoringSnapshotId,
                     algorithmRevision = SettingsDefaults.CURRENT_SCORING_VERSION,
                 )

@@ -3,15 +3,21 @@ package app.readylytics.health.core.databaseschema.data.local.dao
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Transaction
 import app.readylytics.health.core.databaseschema.data.local.entity.DirtyRangeEntity
 
 @Dao
-interface DirtyRangeDao {
+interface DirtyRangeDao : DirtyRangeRetentionQueries {
     @Insert
     suspend fun insert(row: DirtyRangeEntity): Long
 
     @Query("SELECT * FROM dirty_ranges ORDER BY id LIMIT :limit")
     suspend fun pending(limit: Int): List<DirtyRangeEntity>
+
+    @Query(
+        "SELECT * FROM dirty_ranges WHERE nextEpochDay = :epochDay AND endEpochDayInclusive >= :epochDay ORDER BY id",
+    )
+    suspend fun pendingForDay(epochDay: Long): List<DirtyRangeEntity>
 
     @Query(
         "UPDATE dirty_ranges SET nextEpochDay = :nextDay " +
@@ -33,6 +39,12 @@ interface DirtyRangeDao {
         generation: Long,
     ): Int
 
+    @Transaction
+    suspend fun discardBefore(cutoffDay: Long) {
+        deleteExpired(cutoffDay)
+        trimExpiredPrefixes(cutoffDay)
+    }
+
     @Query("SELECT COUNT(*) FROM dirty_ranges")
     suspend fun count(): Int
 
@@ -48,4 +60,13 @@ interface DirtyRangeDao {
 
     @Query("DELETE FROM dirty_ranges")
     suspend fun deleteAll(): Int
+}
+
+/** Retention removes expired work without acknowledging any retained day. */
+interface DirtyRangeRetentionQueries {
+    @Query("DELETE FROM dirty_ranges WHERE endEpochDayInclusive < :cutoffDay")
+    suspend fun deleteExpired(cutoffDay: Long)
+
+    @Query("UPDATE dirty_ranges SET nextEpochDay = :cutoffDay WHERE nextEpochDay < :cutoffDay")
+    suspend fun trimExpiredPrefixes(cutoffDay: Long)
 }

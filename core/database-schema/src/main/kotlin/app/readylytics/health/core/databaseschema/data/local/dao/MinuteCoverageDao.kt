@@ -57,6 +57,15 @@ interface MinuteCoverageDao {
     )
     suspend fun getContributionsForMinute(bucketStartMs: Long): List<HrSourceMinuteContributionEntity>
 
+    @Query(
+        "SELECT ct.* FROM hr_source_minute_contributions ct " +
+            "JOIN minute_coverage c ON c.bucketStartMs = ct.bucketStartMs " +
+            "AND c.visibleGeneration = ct.generation " +
+            "WHERE ct.sourceRecordRef = :sourceRef AND c.quality = 'SOURCE_BACKED' " +
+            "AND c.tier = 'WARM' ORDER BY ct.bucketStartMs",
+    )
+    suspend fun getVisibleContributionsForSource(sourceRef: Long): List<HrSourceMinuteContributionEntity>
+
     @Query("DELETE FROM minute_coverage WHERE bucketStartMs >= :startMs AND bucketStartMs < :endMs")
     suspend fun deleteCoverageInRange(
         startMs: Long,

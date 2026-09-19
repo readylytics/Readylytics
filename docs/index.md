@@ -31,6 +31,11 @@ title: Readylytics
     control over your information.
   </p>
   <p>
+    Local backup recovery preserves verified archives for the saved password and completes
+    interrupted restores before sync resumes. Retention cleanup removes expired heart-rate
+    summaries together with their per-minute coverage and source evidence.
+  </p>
+  <p>
     Readylytics is fully open source and transparent, published under the
     <a href="https://github.com/gregorlauritz/MyHealthStatus">Apache License 2.0</a>.
     Every metric, score, and calculation can be reviewed by the community,

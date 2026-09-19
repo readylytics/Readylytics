@@ -13,10 +13,12 @@ object HistoricalRunResolver {
     fun resolve(
         existing: HistoricalRunIdentity?,
         requested: HistoricalRunIdentity,
-    ): HistoricalRunIdentity =
-        if (isCompatible(existing, requested)) existing!! else requested
+    ): HistoricalRunIdentity = if (isCompatible(existing, requested)) existing!! else requested
 
-    private fun isCompatible(existing: HistoricalRunIdentity?, requested: HistoricalRunIdentity): Boolean =
+    private fun isCompatible(
+        existing: HistoricalRunIdentity?,
+        requested: HistoricalRunIdentity,
+    ): Boolean =
         existing != null &&
             existing.protocolVersion == HistoricalRunIdentity.CURRENT_PROTOCOL_VERSION &&
             existing.protocolVersion == requested.protocolVersion &&
@@ -51,21 +53,17 @@ object HistoricalRunResolver {
      * branch in [remapCheckpointForNewSettings] instead of forcing every phase back to a full
      * restart (see [affectedSourceTypes]).
      */
-    private fun canPreservePhases(oldRun: HistoricalRunIdentity, newRun: HistoricalRunIdentity): Boolean =
+    private fun canPreservePhases(
+        oldRun: HistoricalRunIdentity,
+        newRun: HistoricalRunIdentity,
+    ): Boolean =
         oldRun.protocolVersion == newRun.protocolVersion &&
             oldRun.mode == newRun.mode &&
             oldRun.startEpochDay == newRun.startEpochDay &&
             oldRun.endEpochDayInclusive == newRun.endEpochDayInclusive &&
             oldRun.zoneId == newRun.zoneId
 
-    /**
-     * WP-10 review fix: narrows settings-change invalidation to exactly one of three outcomes,
-     * checked in priority order: HR-zone/link-policy changes always win (they can silently corrupt
-     * already-reconciled session links, so they must invalidate reconcile+recompute regardless of
-     * what else changed); a source-selection change with no HR-zone/link-policy change next; any
-     * other scoring-only change last. A `null` decode (legacy/incompatible snapshot) is treated as
-     * the most conservative case (HR-zone branch) since neither narrower diff can be computed safely.
-     */
+    /** Choose the earliest invalidated phase so combined settings changes cannot skip ingestion. */
     private fun remapCheckpointForNewSettings(
         checkpoint: ResyncCheckpoint,
         runIdentity: HistoricalRunIdentity,
@@ -83,8 +81,9 @@ object HistoricalRunResolver {
             }
 
         return when {
+            affectedTypes.isNotEmpty() || oldSnapshot == null || newSnapshot == null ->
+                remapForSourceSelectionRestart(checkpoint, runIdentity, runStartDate)
             hrZonesChanged -> remapForReconcileRestart(checkpoint, runIdentity, runStartDate)
-            affectedTypes.isNotEmpty() -> remapForSourceSelectionRestart(checkpoint, runIdentity, runStartDate)
             else -> remapForRecomputeRestart(checkpoint, runIdentity)
         }
     }
@@ -119,7 +118,7 @@ object HistoricalRunResolver {
         )
 
     /**
-     * WP-10 review fix: a device/source-selection change alone -- no HR-zone/link-policy change --
+     * WP-10 review fix: a device/source-selection change, including simultaneous HR-zone changes,
      * invalidates only the INGEST phase (and whatever naturally follows it: PRUNE, then RECONCILE,
      * then RECOMPUTE), rather than collapsing into the same full-restart-from-scratch path a
      * protocol-version or date-range mismatch takes. The run is rewound to [ResyncPhase.INGEST] at
@@ -182,7 +181,10 @@ object HistoricalRunResolver {
      * `UserPreferences.deviceByDataType`, never the primary-device fallback, so a primary-device-only
      * change has no effect on what gets ingested/pruned and correctly yields an empty set here.
      */
-    private fun affectedSourceTypes(old: ScoringRunSnapshot, new: ScoringRunSnapshot): Set<HealthDataType> {
+    private fun affectedSourceTypes(
+        old: ScoringRunSnapshot,
+        new: ScoringRunSnapshot,
+    ): Set<HealthDataType> {
         val oldSelection = old.sourceSelection
         val newSelection = new.sourceSelection
         val changedKeys = (oldSelection.keys + newSelection.keys).filter { oldSelection[it] != newSelection[it] }

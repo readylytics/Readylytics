@@ -15,7 +15,6 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 
 class HistoricalRunResolverTest {
-
     private fun createRun(
         runId: String = "test-run",
         mode: String = HistoricalRunIdentity.MODE_FULL_INGEST,
@@ -27,17 +26,18 @@ class HistoricalRunResolverTest {
         protocolVersion: Int = HistoricalRunIdentity.CURRENT_PROTOCOL_VERSION,
         startedAtEpochMs: Long = 1000L,
     ): HistoricalRunIdentity {
-        val base = HistoricalRunIdentity.create(
-            runId = runId,
-            mode = mode,
-            startDate = startDate,
-            endDate = endDate,
-            zoneId = zoneId,
-            prefs = prefs,
-            resolvedHrMax = 187.0f,
-            algorithmRevision = algorithmRevision,
-            startedAtEpochMs = startedAtEpochMs,
-        )
+        val base =
+            HistoricalRunIdentity.create(
+                runId = runId,
+                mode = mode,
+                startDate = startDate,
+                endDate = endDate,
+                zoneId = zoneId,
+                prefs = prefs,
+                resolvedHrMax = 187.0f,
+                algorithmRevision = algorithmRevision,
+                startedAtEpochMs = startedAtEpochMs,
+            )
         return if (protocolVersion != HistoricalRunIdentity.CURRENT_PROTOCOL_VERSION) {
             base.copy(protocolVersion = protocolVersion)
         } else {
@@ -63,40 +63,44 @@ class HistoricalRunResolverTest {
         val startDate = LocalDate.of(2026, 3, 1)
         val endBeforeDst = LocalDate.of(2026, 3, 28)
 
-        val savedRun = createRun(
-            runId = "run-dst-test",
-            startDate = startDate,
-            endDate = endBeforeDst,
-            zoneId = berlin,
-        )
+        val savedRun =
+            createRun(
+                runId = "run-dst-test",
+                startDate = startDate,
+                endDate = endBeforeDst,
+                zoneId = berlin,
+            )
 
         // Advance through DST transition (2026-03-29 02:00 -> 03:00 CEST) and midnight to 2026-03-30
         val nextDayInstant = ZonedDateTime.of(2026, 3, 30, 8, 0, 0, 0, berlin).toInstant()
-        val requestForTomorrow = createRun(
-            runId = "run-new-attempt",
-            startDate = startDate,
-            endDate = LocalDate.of(2026, 3, 30),
-            zoneId = berlin,
-            startedAtEpochMs = nextDayInstant.toEpochMilli(),
-        )
+        val requestForTomorrow =
+            createRun(
+                runId = "run-new-attempt",
+                startDate = startDate,
+                endDate = LocalDate.of(2026, 3, 30),
+                zoneId = berlin,
+                startedAtEpochMs = nextDayInstant.toEpochMilli(),
+            )
 
-        val phases = listOf(
-            ResyncPhase.INGEST,
-            ResyncPhase.PRUNE,
-            ResyncPhase.RECONCILE,
-            ResyncPhase.RECOMPUTE,
-        )
+        val phases =
+            listOf(
+                ResyncPhase.INGEST,
+                ResyncPhase.PRUNE,
+                ResyncPhase.RECONCILE,
+                ResyncPhase.RECOMPUTE,
+            )
 
         for (phase in phases) {
-            val checkpoint = ResyncCheckpoint(
-                startDate = startDate,
-                endDate = endBeforeDst,
-                phase = phase,
-                nextDate = startDate.plusDays(5),
-                selectionHash = "test-hash",
-                baselineChangeTokens = emptyMap(),
-                runIdentity = savedRun,
-            )
+            val checkpoint =
+                ResyncCheckpoint(
+                    startDate = startDate,
+                    endDate = endBeforeDst,
+                    phase = phase,
+                    nextDate = startDate.plusDays(5),
+                    selectionHash = "test-hash",
+                    baselineChangeTokens = emptyMap(),
+                    runIdentity = savedRun,
+                )
             val resolved = HistoricalRunResolver.resolve(checkpoint.runIdentity, requestForTomorrow)
             assertEquals("Phase $phase should preserve savedRun", savedRun, resolved)
         }
@@ -185,20 +189,21 @@ class HistoricalRunResolverTest {
         val basePrefs = UserPreferences()
         val baseIdentity = basePrefs.scoringCheckpointIdentity()
 
-        val changedPrefs = listOf(
-            basePrefs.copy(goalSleepHours = 9.0f),
-            basePrefs.copy(hrvBaselineOverride = 45f),
-            basePrefs.copy(rhrBaselineOverride = 60f),
-            basePrefs.copy(maxHeartRate = 195),
-            basePrefs.copy(autoCalculateMaxHr = false),
-            basePrefs.copy(zone1MinBpm = 100),
-            basePrefs.copy(zone1MaxBpm = 120),
-            basePrefs.copy(zone2MaxBpm = 140),
-            basePrefs.copy(zone3MaxBpm = 160),
-            basePrefs.copy(zone4MaxBpm = 180),
-            basePrefs.copy(age = 40),
-            basePrefs.copy(residualFatigueGain = 2.0f),
-        )
+        val changedPrefs =
+            listOf(
+                basePrefs.copy(goalSleepHours = 9.0f),
+                basePrefs.copy(hrvBaselineOverride = 45f),
+                basePrefs.copy(rhrBaselineOverride = 60f),
+                basePrefs.copy(maxHeartRate = 195),
+                basePrefs.copy(autoCalculateMaxHr = false),
+                basePrefs.copy(zone1MinBpm = 100),
+                basePrefs.copy(zone1MaxBpm = 120),
+                basePrefs.copy(zone2MaxBpm = 140),
+                basePrefs.copy(zone3MaxBpm = 160),
+                basePrefs.copy(zone4MaxBpm = 180),
+                basePrefs.copy(age = 40),
+                basePrefs.copy(residualFatigueGain = 2.0f),
+            )
 
         for (changed in changedPrefs) {
             assertNotEquals(
@@ -348,6 +353,34 @@ class HistoricalRunResolverTest {
         // baseline via changeSynchronizer.captureChangesTokens(), losing this continuity.
         assertEquals(preservedCompletedTypes, resolved?.completedTypes)
         assertEquals(preservedTokens, resolved?.baselineChangeTokens)
+    }
+
+    @Test
+    fun `source selection and zones changing together restart ingestion from every phase`() {
+        val start = LocalDate.of(2026, 3, 1)
+        val old = createRun(prefs = UserPreferences(deviceByDataType = mapOf("HEART_RATE" to "watch-a")))
+        val next =
+            createRun(
+                prefs = UserPreferences(deviceByDataType = mapOf("HEART_RATE" to "watch-b"), zone3MaxBpm = 170),
+            )
+        ResyncPhase.entries.forEach { phase ->
+            val checkpoint =
+                ResyncCheckpoint(
+                    startDate = start,
+                    endDate = LocalDate.of(2026, 3, 28),
+                    phase = phase,
+                    nextDate = start.plusDays(10),
+                    selectionHash = old.scoringSnapshotId,
+                    runIdentity = old,
+                    hrPageToken = "stale-page",
+                    chunkDaysOverride = 5,
+                )
+            val resolved = HistoricalRunResolver.resolveEffectiveCheckpoint(checkpoint, next, false, false, start)
+            assertEquals("phase $phase", ResyncPhase.INGEST, resolved?.phase)
+            assertEquals(start, resolved?.nextDate)
+            assertEquals(null, resolved?.hrPageToken)
+            assertEquals(null, resolved?.chunkDaysOverride)
+        }
     }
 
     @Test

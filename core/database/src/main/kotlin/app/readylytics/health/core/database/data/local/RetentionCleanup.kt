@@ -82,7 +82,10 @@ class RetentionCleanup
             )
         }
 
-        private suspend fun recordDirtyRange(cutoffMs: Long, earliestMs: Long?) {
+        private suspend fun recordDirtyRange(
+            cutoffMs: Long,
+            earliestMs: Long?,
+        ) {
             if (dirtyRangeDao == null || healthMutationStateDao == null) return
             val effectiveEarliest = earliestMs ?: (cutoffMs - DAY_MS)
             val scoringZone = resolveScoringZone()
@@ -116,6 +119,8 @@ class RetentionCleanup
         private suspend fun deleteLowVolumeTables(cutoffMs: Long): Int =
             daos.sleepSessionDao.deleteBeforeTimestamp(cutoffMs) +
                 daos.minuteBucketMaintenanceDao.deleteBeforeTimestamp(cutoffMs) +
+                daos.minuteBucketMaintenanceDao.deleteContributionsBeforeTimestamp(cutoffMs) +
+                daos.minuteBucketMaintenanceDao.deleteCoverageBeforeTimestamp(cutoffMs) +
                 daos.workoutDao.deleteBeforeTimestamp(cutoffMs) +
                 dailySummaryDao.deleteBeforeTimestamp(cutoffMs) +
                 daos.weightRecordDao.deleteBeforeTimestamp(cutoffMs) +

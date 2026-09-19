@@ -55,47 +55,44 @@ class RestoreMaintenanceCoordinator
                     providedPassword?.takeIf { it.isNotBlank() }?.let { encryptionManager.encrypt(it) }
 
                 try {
-                    healthMutationCoordinator.withMaintenance(operationId) {
-                        val journalData =
-                            RestoreJournalData(
-                                protocolVersion = 1,
-                                operationId = operationId,
-                                archiveLocation = archiveLocation,
-                                restoredGeneration = validatedManifest.sourceGeneration,
-                                phase = RestorePhase.VALIDATED,
-                                preferencesJson = prefsJson,
-                                encryptedPassword = encryptedPassword,
-                            )
-                        journal.write(journalData)
+                    healthMutationCoordinator
+                        .withMaintenance(operationId) {
+                            val journalData =
+                                RestoreJournalData(
+                                    protocolVersion = 1,
+                                    operationId = operationId,
+                                    archiveLocation = archiveLocation,
+                                    restoredGeneration = validatedManifest.sourceGeneration,
+                                    phase = RestorePhase.VALIDATED,
+                                    preferencesJson = prefsJson,
+                                    encryptedPassword = encryptedPassword,
+                                )
+                            journal.write(journalData)
 
-                        executeDatabaseReplacement(operationId)
-                        val databaseCommittedData = journalData.copy(phase = RestorePhase.DATABASE_COMMITTED)
-                        journal.write(databaseCommittedData)
+                            executeDatabaseReplacement(operationId)
+                            val databaseCommittedData = journalData.copy(phase = RestorePhase.DATABASE_COMMITTED)
+                            journal.write(databaseCommittedData)
 
-                        if (prefsBackup != null) {
-                            try {
-                                restorePrefsApplier.restorePreferences(prefsBackup, providedPassword)
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (e: Throwable) {
-                                logE("RestoreMaintenanceCoordinator", e) { "Preferences application failed" }
-                                throw RestorePartialSuccessException(e)
-                            }
+                            applyPreferences(prefsBackup, providedPassword)
+                            val prefsCommittedData =
+                                databaseCommittedData.copy(
+                                    phase = RestorePhase.PREFERENCES_COMMITTED,
+                                )
+                            journal.write(prefsCommittedData)
+
+                            val cachesResetData = prefsCommittedData.copy(phase = RestorePhase.CACHES_RESET)
+                            journal.write(cachesResetData)
+                            tokenStore?.clearAll()
+                            checkpointStore?.clear()
+
+                            recommendationCoverageChecker.scheduleRecomputeIfIncomplete()
+                            journal.write(cachesResetData.copy(phase = RestorePhase.COMPLETE))
+
+                            RestoreResult.SuccessRequiresRestart
+                        }.also {
+                            // The COMPLETE journal must outlive the database maintenance marker.
+                            journal.delete()
                         }
-                        val prefsCommittedData = databaseCommittedData.copy(phase = RestorePhase.PREFERENCES_COMMITTED)
-                        journal.write(prefsCommittedData)
-
-                        val cachesResetData = prefsCommittedData.copy(phase = RestorePhase.CACHES_RESET)
-                        journal.write(cachesResetData)
-                        tokenStore?.clearAll()
-                        checkpointStore?.clear()
-
-                        recommendationCoverageChecker.scheduleRecomputeIfIncomplete()
-                        journal.write(cachesResetData.copy(phase = RestorePhase.COMPLETE))
-
-                        journal.delete()
-                        RestoreResult.SuccessRequiresRestart
-                    }
                 } catch (e: RestorePartialSuccessException) {
                     RestoreResult.PartialSuccessRequiresRestart(
                         failedStage = RestoreStage.PREFERENCES,
@@ -110,6 +107,22 @@ class RestoreMaintenanceCoordinator
                     RestoreResult.Failure(cause = e)
                 }
             }
+
+        private suspend fun applyPreferences(
+            prefsBackup: UserPreferencesBackup?,
+            providedPassword: String?,
+        ) {
+            if (prefsBackup != null) {
+                try {
+                    restorePrefsApplier.restorePreferences(prefsBackup, providedPassword)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Throwable) {
+                    logE("RestoreMaintenanceCoordinator", e) { "Preferences application failed" }
+                    throw RestorePartialSuccessException(e)
+                }
+            }
+        }
 
         private suspend fun cleanupIfUncommitted(operationId: String) {
             withContext(NonCancellable) {
@@ -147,6 +160,7 @@ class RestoreMaintenanceCoordinator
                     }
                     try {
                         healthMutationCoordinator.withMaintenance(journalData.operationId) {
+                            if (journalData.phase == RestorePhase.COMPLETE) return@withMaintenance
                             val prefs =
                                 journalData.preferencesJson?.let {
                                     runCatching { json.decodeFromString<UserPreferencesBackup>(it) }.getOrNull()
@@ -167,8 +181,8 @@ class RestoreMaintenanceCoordinator
                             checkpointStore?.clear()
                             recommendationCoverageChecker.scheduleRecomputeIfIncomplete()
                             journal.write(cachesResetData.copy(phase = RestorePhase.COMPLETE))
-                            journal.delete()
                         }
+                        journal.delete()
                         true
                     } catch (e: CancellationException) {
                         throw e

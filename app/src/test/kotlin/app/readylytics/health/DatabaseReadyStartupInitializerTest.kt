@@ -328,6 +328,35 @@ class DatabaseReadyStartupInitializerTest {
             coVerify(exactly = 1) { backfill.execute() }
         }
 
+    @Test
+    fun `failed restore recovery keeps startup retryable until maintenance is released`() =
+        runTest {
+            val restoreCoordinator = mockk<RestoreMaintenanceCoordinator>()
+            coEvery { restoreCoordinator.recoverInterruptedRestoreOnStartup() } returns false
+            coEvery { restoreCoordinator.isMaintenancePending() } returns true
+            every { healthSyncLazy.get() } returns healthSyncUseCase
+            every { backfillLazy.get() } returns backfill
+            every { settingsRepository.backupSchedule } returns flowOf(BackupSchedule.DAILY)
+            every { settingsRepository.backgroundSyncEnabled } returns flowOf(false)
+            coEvery { healthSyncUseCase.withSyncLock<Int>(any()) } coAnswers {
+                firstArg<suspend () -> Int>().invoke()
+            }
+            coEvery { backfill.execute() } returns 0
+            val initializer = createInitializer(restoreMaintenanceCoordinator = Lazy { restoreCoordinator })
+
+            assertEquals(
+                StartupInitializationResult.RETRYABLE_FAILURE,
+                initializer.initializeIfReady(DatabaseReadiness.Ready),
+            )
+            coVerify(exactly = 0) { backfill.execute() }
+            verify(exactly = 0) { workerScheduler.scheduleBackupWorker(any()) }
+
+            coEvery { restoreCoordinator.recoverInterruptedRestoreOnStartup() } returns true
+            coEvery { restoreCoordinator.isMaintenancePending() } returns false
+            assertEquals(StartupInitializationResult.COMPLETE, initializer.initializeIfReady(DatabaseReadiness.Ready))
+            coVerify(exactly = 1) { backfill.execute() }
+        }
+
     private fun createInitializer(
         context: Context? = null,
         restoreMaintenanceCoordinator: Lazy<RestoreMaintenanceCoordinator>? = null,

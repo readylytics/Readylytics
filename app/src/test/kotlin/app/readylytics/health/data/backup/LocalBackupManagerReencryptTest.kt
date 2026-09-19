@@ -29,8 +29,10 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.spyk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
@@ -457,6 +459,77 @@ class LocalBackupManagerReencryptTest {
                 "files in store: ${fakeStore.files.keys}",
             )
             assertTrue(!fakeStore.files.containsKey("backup_published.zip"))
+        }
+
+    @Test
+    fun credentialCommitJournalFailure_preservesArchivesForSavedPassword() =
+        runTest {
+            val fakeStore = FakeBackupStore()
+            fakeStore.files["backup_original.zip"] = createValidZipBytes("old_password")
+            val preferences =
+                MutableStateFlow(
+                    app.readylytics.health.core.model.domain.preferences.UserPreferences(
+                        backupPasswordHash = "hashed_password",
+                    ),
+                )
+            every { settingsRepo.userPreferences } returns preferences
+            coEvery { backupSettings.updateBackupPasswordHash(any()) } answers {
+                preferences.value = preferences.value.copy(backupPasswordHash = firstArg())
+            }
+            val journal = spyk(BackupOperationJournal(context, encryptionManager))
+            every { journal.write(match { it.phase == BackupOperationPhase.CREDENTIAL_COMMITTED }, any()) } throws
+                IOException("Journal write interrupted after credential commit")
+            val service =
+                buildRotationService(customStoreFactory = simpleStoreFactory(fakeStore), customJournal = journal)
+
+            assertTrue(service.rotatePassword("new_password").isFailure)
+
+            assertEquals("enc_new_password", preferences.value.backupPasswordHash)
+            val published = fakeStore.files.filterKeys { it != "backup_original.zip" }
+            assertEquals(1, published.size)
+            assertZipReadableWithPassword(published.values.single(), "new_password")
+            assertEquals(BackupOperationPhase.VERIFIED, journal.read()!!.phase)
+        }
+
+    @Test
+    fun crashRecovery_verifiedJournalWithCommittedCredential_keepsMatchingArchives() =
+        runTest {
+            val fakeStore = FakeBackupStore(failPublish = true)
+            fakeStore.files["backup_original.zip"] = createValidZipBytes("old_password")
+            fakeStore.files["backup_published.zip"] = createValidZipBytes("new_password")
+            every { settingsRepo.userPreferences } returns
+                flowOf(
+                    app.readylytics.health.core.model.domain.preferences.UserPreferences(
+                        backupPasswordHash = "enc_new_password",
+                    ),
+                )
+            val journal = BackupOperationJournal(context, encryptionManager)
+            journal.write(
+                RotationJournalData(
+                    operationId = "credential_gap",
+                    directoryUri = null,
+                    phase = BackupOperationPhase.VERIFIED,
+                    encryptedOldPassword = "hashed_password",
+                    encryptedNewPassword = "enc_new_password",
+                    targetPasswordHash = "enc_new_password",
+                    entries =
+                        listOf(
+                            ArchiveRotationEntry(
+                                "fake://backup_original.zip",
+                                publishedLocation = "fake://backup_published.zip",
+                                verified = true,
+                            ),
+                        ),
+                    selectedGeneration = 1,
+                ),
+            )
+            val service =
+                buildRotationService(customStoreFactory = simpleStoreFactory(fakeStore), customJournal = journal)
+
+            assertTrue(service.rotatePassword("third_password").isFailure)
+
+            assertEquals(setOf("backup_published.zip"), fakeStore.files.keys)
+            assertZipReadableWithPassword(fakeStore.files.values.single(), "new_password")
         }
 
     private fun simpleStoreFactory(store: BackupStore) =

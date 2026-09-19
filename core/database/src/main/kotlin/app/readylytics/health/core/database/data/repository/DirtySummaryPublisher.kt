@@ -5,11 +5,13 @@ import app.readylytics.health.core.databaseschema.data.local.dao.DailySummaryDao
 import app.readylytics.health.core.databaseschema.data.local.dao.DirtyRangeDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HealthMutationStateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
+import app.readylytics.health.core.databaseschema.data.local.entity.DirtyRangeEntity
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.scoring.PublishableDayAssembly
 import app.readylytics.health.core.model.domain.sync.DirtyTicket
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
+import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -24,6 +26,51 @@ class DirtySummaryPublisher
         private val dailySummaryDao: DailySummaryDao,
         private val workoutDao: WorkoutDao,
     ) {
+        data class DayPublication(
+            val day: LocalDate,
+            val sourceGeneration: Long,
+            val tickets: List<DirtyRangeEntity>,
+        )
+
+        /** Capture before reading any scoring inputs, including days without pending tickets. */
+        suspend fun captureDay(day: LocalDate): DayPublication =
+            transactionRunner.runInTransaction {
+                val state = healthMutationStateDao.getOrCreate()
+                check(state.maintenanceOperationId == null) { "MAINTENANCE_PENDING" }
+                DayPublication(day, state.sourceGeneration, dirtyRangeDao.pendingForDay(day.toEpochDay()))
+            }
+
+        /** Publication and every captured acknowledgment commit or roll back together. */
+        suspend fun publishDay(
+            publication: DayPublication,
+            write: suspend () -> Unit,
+        ): Boolean =
+            try {
+                transactionRunner.runInTransaction {
+                    val state = healthMutationStateDao.current()
+                    if (state.maintenanceOperationId != null ||
+                        state.sourceGeneration != publication.sourceGeneration
+                    ) {
+                        throw PublishAbortedException()
+                    }
+                    publication.tickets.forEach { ticket ->
+                        val updated =
+                            dirtyRangeDao.advance(
+                                ticket.id,
+                                ticket.sourceGeneration,
+                                publication.day.toEpochDay(),
+                                publication.day.plusDays(1).toEpochDay(),
+                            )
+                        if (updated != 1) throw PublishAbortedException()
+                        dirtyRangeDao.deleteCompleted(ticket.id, ticket.sourceGeneration)
+                    }
+                    write()
+                    true
+                }
+            } catch (_: PublishAbortedException) {
+                false
+            }
+
         suspend fun publish(
             ticket: DirtyTicket,
             summary: DailySummary,
@@ -59,8 +106,17 @@ class DirtySummaryPublisher
 
                     if (stagedWorkoutUpdates.isNotEmpty()) {
                         val updateMap = stagedWorkoutUpdates.associate { it.workoutId to it.modelTrimp }
-                        val dayStartMs = summary.date.atStartOfDay(zoneId).toInstant().toEpochMilli()
-                        val nextDayMs = summary.date.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
+                        val dayStartMs =
+                            summary.date
+                                .atStartOfDay(zoneId)
+                                .toInstant()
+                                .toEpochMilli()
+                        val nextDayMs =
+                            summary.date
+                                .plusDays(1)
+                                .atStartOfDay(zoneId)
+                                .toInstant()
+                                .toEpochMilli()
                         val workouts = workoutDao.getWorkoutsInRange(dayStartMs, nextDayMs)
                         val matching = workouts.filter { it.id in updateMap }
                         if (matching.isNotEmpty()) {

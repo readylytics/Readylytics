@@ -1,60 +1,25 @@
 package app.readylytics.health.core.database.domain.scoring.golden
-import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.core.database.data.local.HealthDatabase
+import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
+import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HealthSourceRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
-import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
-import app.readylytics.health.core.databaseschema.data.local.entity.SleepStageEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
-import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
 import app.readylytics.health.core.model.domain.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.domain.preferences.SettingsDefaults
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.scoring.WorkoutHrQuality
 import app.readylytics.health.core.model.domain.sync.HistoricalRunIdentity
+import app.readylytics.health.core.scoring.domain.scoring.WorkoutInputRevision
 import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
-import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoader
-import app.readylytics.health.core.database.data.repository.MorningRecommendationDependencies
-import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
-import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
-import app.readylytics.health.core.database.data.repository.ScoringHeartRateDataLoader
-import app.readylytics.health.core.database.data.repository.ScoringSeriesLoader
-import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
-import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
-import app.readylytics.health.core.database.data.repository.SleepSessionRepositoryImpl
-import app.readylytics.health.core.model.domain.preferences.SettingsRepository
-import app.readylytics.health.core.scoring.domain.cardio.UthVo2MaxCalculator
-import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxSourceResolver
-import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
-import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
-import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
-import app.readylytics.health.core.scoring.domain.scoring.BuildLoadSeriesUseCase
-import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
-import app.readylytics.health.core.scoring.domain.scoring.CompositeScoringCalculator
-import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
-import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase
-import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUseCase
-import app.readylytics.health.core.scoring.domain.scoring.SleepMetricsCollaborators
-import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
-import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
-import kotlinx.coroutines.flow.first
-import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
-import app.readylytics.health.core.scoring.domain.scoring.sleep.CurrentNightHrvResolver
-import app.readylytics.health.core.scoring.domain.scoring.sleep.HrCoverageValidator
-import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepModifierResolver
-import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepNadirAnalyzer
-import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepPercentileRhrCalculator
-import app.readylytics.health.core.scoring.domain.scoring.strategies.LoadScoringStrategy
-import app.readylytics.health.core.scoring.domain.scoring.strategies.RasScoringStrategy
-import app.readylytics.health.core.scoring.domain.scoring.strategies.SleepScoringStrategy
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
@@ -65,8 +30,6 @@ import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import app.readylytics.health.core.database.data.repository.ScoringDayUseCases
-import app.readylytics.health.core.database.data.repository.ScoringDataLoaders
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(AndroidJUnit4::class)
@@ -78,105 +41,7 @@ class ScoringGoldenSnapshotTest {
     private lateinit var db: HealthDatabase
     private lateinit var settingsRepo: FakeSettingsRepository
     private lateinit var repo: ScoringRepositoryImpl
-
-    private fun createRepository(settingsRepository: SettingsRepository): ScoringRepositoryImpl {
-        val scoringHistoryRepository =
-            ScoringHistoryRepositoryImpl(
-                db.heartRateDao(),
-                db.hrvDao(),
-                db.sleepSessionDao(),
-                db.dailySummaryDao(),
-                db.minuteBucketDao(),
-            )
-        val loadScoringStrategy = LoadScoringStrategy()
-        val scoringCalculator =
-            CompositeScoringCalculator(
-                sleepStrategy = SleepScoringStrategy(loadScoringStrategy),
-                rasStrategy = RasScoringStrategy(),
-                loadStrategy = loadScoringStrategy,
-            )
-        val baselineComputer = BaselineComputer(scoringHistoryRepository, scoringCalculator)
-        val scoringConfigFactory = ScoringConfigFactory()
-        val sleepSessionRepository = SleepSessionRepositoryImpl(db.sleepSessionDao(), db.sleepStageDao())
-        val settingsRepo = FakeSettingsRepository(UserPreferences())
-        val circadianConsistencyRepository =
-            CircadianConsistencyRepository(sleepSessionRepository, settingsRepo, FakeEncryptionManager())
-        val sleepModifierResolver = SleepModifierResolver(sleepSessionRepository, circadianConsistencyRepository)
-        val computeSleepMetricsUseCase =
-            ComputeSleepMetricsUseCase(
-                collaborators =
-                    SleepMetricsCollaborators(
-                        baselineComputer = baselineComputer,
-                        scoringHistoryRepository = scoringHistoryRepository,
-                        scoringCalculator = scoringCalculator,
-                        scoringConfigFactory = scoringConfigFactory,
-                        encryptionManager = FakeEncryptionManager(),
-                        hrvResolver = CurrentNightHrvResolver(scoringHistoryRepository),
-                        sleepPercentileRhrCalculator = SleepPercentileRhrCalculator(scoringHistoryRepository),
-                        nadirAnalyzer = SleepNadirAnalyzer(scoringCalculator),
-                        coverageValidator = HrCoverageValidator(),
-                        sleepModifierResolver = sleepModifierResolver,
-                    ),
-            )
-
-        val dataLoader =
-            ScoringDayDataLoader(db.workoutDao(), db.sleepSessionDao(), db.dailySummaryDao())
-        val bodyMetricsDataLoader = BodyMetricsDataLoader(
-            db.weightRecordDao(), db.bodyFatRecordDao(), db.bloodPressureRecordDao(),
-            db.oxygenSaturationRecordDao(), db.bodyTemperatureRecordDao(),
-            db.vo2MaxRecordDao(),
-        )
-        val seriesLoader = ScoringSeriesLoader(db.workoutDao(), db.dailySummaryDao())
-        val heartRateDataLoader = ScoringHeartRateDataLoader(db.heartRateDao(), db.minuteBucketDao())
-        val buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator)
-        val resolveDailyBaselinesUseCase = ResolveDailyBaselinesUseCase(baselineComputer)
-        val assembleDailySummaryUseCase = AssembleDailySummaryUseCase()
-        val readinessSummaryCoordinator =
-            ReadinessSummaryCoordinator(
-                dataLoader = dataLoader,
-                seriesLoader = seriesLoader,
-                scoringHistoryRepository = scoringHistoryRepository,
-                baselineComputer = baselineComputer,
-                buildLoadSeriesUseCase = buildLoadSeriesUseCase,
-                computeSleepMetricsUseCase = computeSleepMetricsUseCase,
-                resolveDailyBaselinesUseCase = resolveDailyBaselinesUseCase,
-                assembleDailySummaryUseCase = assembleDailySummaryUseCase,
-            )
-
-        return ScoringRepositoryImpl(
-            loaders = ScoringDataLoaders(
-                dataLoader,
-                bodyMetricsDataLoader,
-                seriesLoader,
-                heartRateDataLoader,
-            ),
-            settingsRepo = settingsRepository,
-            baselineComputer = baselineComputer,
-            scoringConfigFactory = scoringConfigFactory,
-            useCases =
-                ScoringDayUseCases(
-                    ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
-                    ComputeResidualFatigueUseCase(),
-                    resolveDailyBaselinesUseCase,
-                    AssembleEverydayLoadInputUseCase(),
-                        ComputeTrainingReadinessUseCase(scoringCalculator),
-                    UthVo2MaxCalculator(),
-                    Vo2MaxSourceResolver(),
-                ),
-            scoringHistoryRepository = scoringHistoryRepository,
-            readinessSummaryCoordinator = readinessSummaryCoordinator,
-            defaultDispatcher = UnconfinedTestDispatcher(),
-            recommendationDependencies =
-                MorningRecommendationDependencies(
-                    sleepSessionRepository = io.mockk.mockk(relaxed = true),
-                    computeSleepMetricsUseCase = io.mockk.mockk(relaxed = true),
-                    hrvResolver = io.mockk.mockk(relaxed = true),
-                    workoutRepository = io.mockk.mockk(relaxed = true),
-                    dailySummaryRepository = io.mockk.mockk(relaxed = true),
-                    getWorkoutDisplayMetricsUseCase = io.mockk.mockk(relaxed = true),
-                ),
-        )
-    }
+    private lateinit var sleepFixtures: GoldenSleepFixtures
 
     @Before
     fun setUp() {
@@ -186,10 +51,17 @@ class ScoringGoldenSnapshotTest {
                 .allowMainThreadQueries()
                 .build()
 
+        sleepFixtures = GoldenSleepFixtures(db, targetDate, zoneId)
+
         val defaultPrefs =
             UserPreferences(
                 scoringZoneId = zoneId.id,
-                installDate = targetDate.minusDays(60).atStartOfDay(zoneId).toInstant().toEpochMilli(),
+                installDate =
+                    targetDate
+                        .minusDays(60)
+                        .atStartOfDay(zoneId)
+                        .toInstant()
+                        .toEpochMilli(),
                 physiologyProfile = PhysiologyProfile.ACTIVE,
                 maxHeartRate = 190,
                 age = 32,
@@ -197,7 +69,7 @@ class ScoringGoldenSnapshotTest {
                 rasScalingFactor = 0.2f,
             )
         settingsRepo = FakeSettingsRepository(defaultPrefs)
-        repo = createRepository(settingsRepo)
+        repo = GoldenScoringRepositoryFactory(db).create(settingsRepo)
     }
 
     @After
@@ -205,71 +77,11 @@ class ScoringGoldenSnapshotTest {
         db.close()
     }
 
-    private suspend fun seedCalibratedHistory(days: Int = 14) {
-        val sleepSessions = mutableListOf<SleepSessionEntity>()
-        val hrSamples = mutableListOf<HeartRateRecordEntity>()
-        val hrvSamples = mutableListOf<HrvRecordEntity>()
-        val sourceRecords = mutableListOf<HealthSourceRecordEntity>()
-
-        for (i in 1..days) {
-            val date = targetDate.minusDays(i.toLong())
-            val startMs = date.atTime(23, 0).atZone(zoneId).toInstant().toEpochMilli()
-            val endMs = date.plusDays(1).atTime(7, 0).atZone(zoneId).toInstant().toEpochMilli()
-            val sessionId = "hist_sleep_$i"
-            val sourceRef = i.toLong()
-
-            sourceRecords +=
-                HealthSourceRecordEntity(
-                    id = sourceRef,
-                    sourceRecordId = "hist_source_$i",
-                    recordType = "HEART_RATE",
-                    createdAtMs = 0L,
-                )
-            sleepSessions +=
-                SleepSessionEntity(
-                    id = sessionId,
-                    startTime = startMs,
-                    endTime = endMs,
-                    durationMinutes = 480,
-                    efficiency = 90f,
-                    deepSleepMinutes = 90,
-                    remSleepMinutes = 90,
-                    lightSleepMinutes = 270,
-                    awakeMinutes = 30,
-                    deviceName = "Pixel",
-                )
-            for (step in 0..48) {
-                hrSamples +=
-                    HeartRateRecordEntity(
-                        sourceRecordRef = sourceRef,
-                        timestampMs = startMs + step * 10 * 60_000L,
-                        beatsPerMinute = 52 + (step % 6),
-                        recordType = "SLEEP",
-                        sessionId = sessionId,
-                        deviceName = "Pixel",
-                    )
-            }
-            hrvSamples +=
-                HrvRecordEntity(
-                    sourceRecordRef = sourceRef,
-                    timestampMs = startMs + 3600_000L,
-                    rmssdMs = 55f + (i % 5),
-                    recordType = "SLEEP",
-                    sessionId = sessionId,
-                    deviceName = "Pixel",
-                )
-        }
-        db.sourceRecordDao().insertAll(sourceRecords)
-        db.sleepSessionDao().upsertAll(sleepSessions)
-        db.heartRateDao().upsertAll(hrSamples)
-        db.hrvDao().upsertAll(hrvSamples)
-    }
-
     @Test
     fun `case 1 - day with workouts and frozen snapshot`() =
         runTest {
             val caseName = "day_with_workouts_and_frozen_snapshot"
-            seedCalibratedHistory()
+            sleepFixtures.seedCalibratedHistory()
 
             val frozenSnapshot =
                 DailySummaryEntity(
@@ -333,10 +145,21 @@ class ScoringGoldenSnapshotTest {
     fun `case 2 - day with sleep spanning midnight`() =
         runTest {
             val caseName = "day_with_sleep_spanning_midnight"
-            seedCalibratedHistory()
+            sleepFixtures.seedCalibratedHistory()
 
-            val sleepStart = targetDate.minusDays(1).atTime(22, 30).atZone(zoneId).toInstant().toEpochMilli()
-            val sleepEnd = targetDate.atTime(6, 45).atZone(zoneId).toInstant().toEpochMilli()
+            val sleepStart =
+                targetDate
+                    .minusDays(1)
+                    .atTime(22, 30)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val sleepEnd =
+                targetDate
+                    .atTime(6, 45)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
             val sessionId = "sleep_case2"
 
             db.sleepSessionDao().upsertAll(
@@ -355,74 +178,9 @@ class ScoringGoldenSnapshotTest {
                     ),
                 ),
             )
-            db.sleepStageDao().upsertAll(
-                listOf(
-                    SleepStageEntity(
-                        sessionId = sessionId,
-                        startTime = sleepStart,
-                        endTime = sleepStart + 90 * 60000L,
-                        stageType = "LIGHT",
-                        durationMinutes = 90,
-                    ),
-                    SleepStageEntity(
-                        sessionId = sessionId,
-                        startTime = sleepStart + 90 * 60000L,
-                        endTime = sleepStart + 195 * 60000L,
-                        stageType = "DEEP",
-                        durationMinutes = 105,
-                    ),
-                    SleepStageEntity(
-                        sessionId = sessionId,
-                        startTime = sleepStart + 195 * 60000L,
-                        endTime = sleepStart + 290 * 60000L,
-                        stageType = "REM",
-                        durationMinutes = 95,
-                    ),
-                    SleepStageEntity(
-                        sessionId = sessionId,
-                        startTime = sleepStart + 290 * 60000L,
-                        endTime = sleepEnd,
-                        stageType = "LIGHT",
-                        durationMinutes = 115,
-                    ),
-                ),
-            )
+            sleepFixtures.seedMidnightSleepStages(sessionId, sleepStart, sleepEnd)
 
-            val sourceRef = 2000L
-            db.sourceRecordDao().insertAll(
-                listOf(
-                    HealthSourceRecordEntity(
-                        id = sourceRef,
-                        sourceRecordId = "case2_sleep_source",
-                        recordType = "HEART_RATE",
-                        createdAtMs = 0L,
-                    ),
-                ),
-            )
-            val hrSamples =
-                (0..49).map { step ->
-                    HeartRateRecordEntity(
-                        sourceRecordRef = sourceRef,
-                        timestampMs = sleepStart + step * 10 * 60_000L,
-                        beatsPerMinute = 50 + (step % 5),
-                        recordType = "SLEEP",
-                        sessionId = sessionId,
-                        deviceName = "Pixel",
-                    )
-                }
-            db.heartRateDao().upsertAll(hrSamples)
-            db.hrvDao().upsertAll(
-                listOf(
-                    HrvRecordEntity(
-                        sourceRecordRef = sourceRef,
-                        timestampMs = sleepStart + 2 * 3600_000L,
-                        rmssdMs = 62f,
-                        recordType = "SLEEP",
-                        sessionId = sessionId,
-                        deviceName = "Pixel",
-                    ),
-                ),
-            )
+            sleepFixtures.seedMidnightSleepHr(sessionId, sleepStart)
 
             assertMatchesGolden(caseName)
         }
@@ -431,7 +189,7 @@ class ScoringGoldenSnapshotTest {
     fun `case 3 - day with no sleep session`() =
         runTest {
             val caseName = "day_with_no_sleep_session"
-            seedCalibratedHistory()
+            sleepFixtures.seedCalibratedHistory()
 
             val prefs = settingsRepo.userPreferences.first()
             val hrMax = HeartRateFormulas.resolveMaxHeartRate(prefs)
@@ -452,7 +210,16 @@ class ScoringGoldenSnapshotTest {
                     avgHr = 130f,
                     modelTrimp = 0.0f,
                     modelTrimpQuality = WorkoutHrQuality.RAW.name,
-                    modelTrimpSourceRevision = 0L,
+                    // This fixture supplies a validated prior with matching current input identity.
+                    modelTrimpSourceRevision =
+                        WorkoutInputRevision.compute(
+                            "workout_case3",
+                            targetMidnightMs + 8 * 3600_000L,
+                            targetMidnightMs + 9 * 3600_000L,
+                            "CYCLING",
+                            null,
+                            emptyList(),
+                        ),
                     modelTrimpSnapshotId = expectedSnapshotId,
                     modelTrimpAlgorithmRevision = SettingsDefaults.CURRENT_SCORING_VERSION,
                 )
@@ -466,10 +233,21 @@ class ScoringGoldenSnapshotTest {
         runTest {
             val caseName = "day_with_early_return_uncalibrated"
             // Only 2 historical days (< 7 MIN_SESSIONS_FOR_CALIBRATION)
-            seedCalibratedHistory(days = 2)
+            sleepFixtures.seedCalibratedHistory(days = 2)
 
-            val sleepStart = targetDate.minusDays(1).atTime(23, 0).atZone(zoneId).toInstant().toEpochMilli()
-            val sleepEnd = targetDate.atTime(7, 0).atZone(zoneId).toInstant().toEpochMilli()
+            val sleepStart =
+                targetDate
+                    .minusDays(1)
+                    .atTime(23, 0)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val sleepEnd =
+                targetDate
+                    .atTime(7, 0)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
             val sessionId = "sleep_uncalib"
             db.sleepSessionDao().upsertAll(
                 listOf(
@@ -495,12 +273,17 @@ class ScoringGoldenSnapshotTest {
     fun `case 5 - day with hrmax from prefs vs snapshot`() =
         runTest {
             val caseName = "day_with_hrmax_from_prefs_vs_snapshot"
-            seedCalibratedHistory()
+            sleepFixtures.seedCalibratedHistory()
 
             val customPrefs =
                 UserPreferences(
                     scoringZoneId = zoneId.id,
-                    installDate = targetDate.minusDays(60).atStartOfDay(zoneId).toInstant().toEpochMilli(),
+                    installDate =
+                        targetDate
+                            .minusDays(60)
+                            .atStartOfDay(zoneId)
+                            .toInstant()
+                            .toEpochMilli(),
                     physiologyProfile = PhysiologyProfile.ATHLETE,
                     maxHeartRate = 198,
                     age = 28,
@@ -508,10 +291,21 @@ class ScoringGoldenSnapshotTest {
                     rasScalingFactor = 0.18f,
                 )
             settingsRepo = FakeSettingsRepository(customPrefs)
-            repo = createRepository(settingsRepo)
+            repo = GoldenScoringRepositoryFactory(db).create(settingsRepo)
 
-            val sleepStart = targetDate.minusDays(1).atTime(23, 0).atZone(zoneId).toInstant().toEpochMilli()
-            val sleepEnd = targetDate.atTime(7, 0).atZone(zoneId).toInstant().toEpochMilli()
+            val sleepStart =
+                targetDate
+                    .minusDays(1)
+                    .atTime(23, 0)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val sleepEnd =
+                targetDate
+                    .atTime(7, 0)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
             val sessionId = "sleep_case5"
             db.sleepSessionDao().upsertAll(
                 listOf(
@@ -537,10 +331,21 @@ class ScoringGoldenSnapshotTest {
     fun `case 6 - day with nap and supplemental sleep`() =
         runTest {
             val caseName = "day_with_nap_and_supplemental_sleep"
-            seedCalibratedHistory()
+            sleepFixtures.seedCalibratedHistory()
 
-            val coreStart = targetDate.minusDays(1).atTime(23, 30).atZone(zoneId).toInstant().toEpochMilli()
-            val coreEnd = targetDate.atTime(6, 30).atZone(zoneId).toInstant().toEpochMilli()
+            val coreStart =
+                targetDate
+                    .minusDays(1)
+                    .atTime(23, 30)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val coreEnd =
+                targetDate
+                    .atTime(6, 30)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
             val coreSession =
                 SleepSessionEntity(
                     id = "core_sleep_case6",
@@ -554,8 +359,18 @@ class ScoringGoldenSnapshotTest {
                     awakeMinutes = 30,
                     deviceName = "Pixel",
                 )
-            val napStart = targetDate.atTime(13, 0).atZone(zoneId).toInstant().toEpochMilli()
-            val napEnd = targetDate.atTime(14, 0).atZone(zoneId).toInstant().toEpochMilli()
+            val napStart =
+                targetDate
+                    .atTime(13, 0)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val napEnd =
+                targetDate
+                    .atTime(14, 0)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
             val napSession =
                 SleepSessionEntity(
                     id = "nap_sleep_case6",

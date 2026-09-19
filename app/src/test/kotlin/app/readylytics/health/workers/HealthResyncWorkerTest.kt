@@ -2,9 +2,13 @@ package app.readylytics.health.workers
 
 import android.content.Context
 import android.content.pm.ServiceInfo
+import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
+import app.readylytics.health.core.database.data.local.HealthDatabase
+import app.readylytics.health.core.database.data.local.RoomDirtyRangeStore
+import app.readylytics.health.core.databaseschema.data.local.entity.HealthMutationStateEntity
 import app.readylytics.health.core.healthconnect.domain.sync.ForegroundSyncController
 import app.readylytics.health.core.healthconnect.domain.sync.FullHistoricalResyncUseCase
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
@@ -26,6 +30,8 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.time.LocalDate
+import java.time.ZoneOffset
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -156,6 +162,50 @@ class HealthResyncWorkerTest {
 
             assertEquals(java.time.LocalDate.of(2026, 9, 2), rangeSlot.captured?.start)
             assertEquals(java.time.LocalDate.of(2026, 9, 8), rangeSlot.captured?.endInclusive)
+        }
+
+    @Test
+    fun `worker trims expired dirty work before choosing the pending ticket range`() =
+        runBlocking {
+            val database =
+                Room
+                    .inMemoryDatabaseBuilder(
+                        context,
+                        HealthDatabase::class.java,
+                    ).allowMainThreadQueries()
+                    .build()
+            try {
+                database.healthMutationStateDao().upsert(HealthMutationStateEntity(id = 1, sourceGeneration = 7))
+                val store = RoomDirtyRangeStore(database.dirtyRangeDao(), database.healthMutationStateDao())
+                val cutoff = LocalDate.now(ZoneOffset.UTC).minusDays(30)
+                repeat(105) { store.append(cutoff.minusDays(10), cutoff.minusDays(1), "EXPIRED", "snapshot") }
+                val retainedId = store.append(cutoff.minusDays(4), cutoff.plusDays(2), "OVERLAP", "snapshot")
+                coEvery { settingsRepository.userPreferences } returns
+                    MutableStateFlow(
+                        UserPreferences(retentionDaysEnabled = true, retentionDays = 30, scoringZoneId = "UTC"),
+                    )
+                every { workerParams.inputData } returns
+                    androidx.work.Data
+                        .Builder()
+                        .putBoolean(HealthResyncWorker.KEY_RECOMPUTE_ONLY, true)
+                        .build()
+                val range = slot<ScoreInvalidation.AffectedRange?>()
+                coEvery { useCase.execute(any(), captureNullable(range), any(), any()) } returns
+                    app.readylytics.health.core.model.domain.model.Result
+                        .Success(Unit)
+
+                assertEquals(
+                    androidx.work.ListenableWorker.Result
+                        .success(),
+                    createWorker(store).doWork(),
+                )
+
+                assertEquals(ScoreInvalidation.AffectedRange(cutoff, cutoff.plusDays(2)), range.captured)
+                assertEquals(listOf(retainedId), store.pending(100).map { it.id })
+                assertEquals(cutoff, store.pending(100).single().nextDay)
+            } finally {
+                database.close()
+            }
         }
 
     @Test
@@ -479,7 +529,7 @@ class HealthResyncWorkerTest {
             coEvery { useCase.execute(any(), any(), any(), any()) } returns
                 app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
-            coEvery { settingsRepository.userPreferences } throws
+            coEvery { settingsRepository.updateScoringVersion(any()) } throws
                 RuntimeException("datastore io failure")
             val result = createWorker().doWork()
             assertEquals(

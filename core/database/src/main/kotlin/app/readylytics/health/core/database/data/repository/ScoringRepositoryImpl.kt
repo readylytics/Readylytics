@@ -1,5 +1,8 @@
 package app.readylytics.health.core.database.data.repository
 
+import app.readylytics.health.core.database.data.repository.recommendation.MorningRecommendationAssembler
+import app.readylytics.health.core.database.data.repository.recommendation.MorningRecoveryLoader
+import app.readylytics.health.core.database.data.repository.recommendation.WorkoutExampleLoader
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.model.data.preferences.scoringZone
@@ -10,21 +13,18 @@ import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.model.domain.repository.ScoringRepository
+import app.readylytics.health.core.model.domain.repository.Vo2MaxKey
 import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardVo2MaxContext
-import app.readylytics.health.core.model.domain.repository.Vo2MaxKey
 import app.readylytics.health.core.model.domain.scoring.DayAssembly
 import app.readylytics.health.core.model.domain.scoring.DayAssemblyUnavailableReason
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.model.domain.scoring.summaryOrNull
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
-import app.readylytics.health.core.database.data.repository.recommendation.MorningRecommendationAssembler
-import app.readylytics.health.core.database.data.repository.recommendation.MorningRecoveryLoader
-import app.readylytics.health.core.database.data.repository.recommendation.WorkoutExampleLoader
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.EverydayHrLoadResult
@@ -140,10 +140,11 @@ class ScoringRepositoryImpl
         ) = calculationMutex.withLock {
             val resolvedPrefs = prefs ?: settingsRepo.userPreferences.first()
             val zoneId = resolvedPrefs.scoringZone()
+            val publication = dataLoader.captureDayPublication(targetDate)
             val computed = computeDay(targetDate, resolvedPrefs, contexts)
             val assembly = computed.assembly.withStepCount(steps)
             val persisted =
-                dataLoader.persistDayAssembly(assembly, zoneId, computed.workouts, computed.workoutUpdates)
+                dataLoader.persistDayAssembly(assembly, zoneId, computed.workouts, computed.workoutUpdates, publication)
             if (!persisted) {
                 // C3 (WP-13): Unavailable is a deliberate no-op -- nothing was written, so the
                 // walk-forward context below must not be committed either (see
@@ -161,11 +162,17 @@ class ScoringRepositoryImpl
             zoneId: ZoneId,
         ): WalkForwardTrimpContext {
             val fromMs =
-                startDate.minusDays(ScoringConstants.CHRONIC_DAYS * 2)
+                startDate
+                    .minusDays(ScoringConstants.CHRONIC_DAYS * 2)
                     .atStartOfDay(zoneId)
                     .toInstant()
                     .toEpochMilli()
-            val toMs = endDate.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val toMs =
+                endDate
+                    .plusDays(1)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
             return WalkForwardTrimpContext(
                 dailyTrimpByDate =
                     TreeMap(
@@ -208,11 +215,17 @@ class ScoringRepositoryImpl
             zoneId: ZoneId,
         ): WalkForwardVo2MaxContext {
             val fromMs =
-                startDate.minusDays(VO2_MAX_LOOKBACK_DAYS)
+                startDate
+                    .minusDays(VO2_MAX_LOOKBACK_DAYS)
                     .atStartOfDay(zoneId)
                     .toInstant()
                     .toEpochMilli()
-            val toMs = endDate.plusDays(2).atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val toMs =
+                endDate
+                    .plusDays(2)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
             val vo2MaxByTimestampMs = TreeMap<Vo2MaxKey, Float>()
             bodyMetricsDataLoader.loadVo2MaxRange(fromMs, toMs).forEach {
                 vo2MaxByTimestampMs[Vo2MaxKey(it.timestampMs, it.id)] = it.vo2Max
@@ -416,8 +429,9 @@ private data class ComputedDay(
 )
 
 /** Thrown when a [DayAssembly.Unavailable] reaches a caller that requires a genuine candidate. */
-internal class DayAssemblyUnavailableException(reason: String) :
-    IllegalStateException("Day assembly unavailable: $reason")
+internal class DayAssemblyUnavailableException(
+    reason: String,
+) : IllegalStateException("Day assembly unavailable: $reason")
 
 private fun DayAssembly.unavailableReasonOrDefault(): String =
     (this as? DayAssembly.Unavailable)?.reason ?: DayAssemblyUnavailableReason.FINAL_ASSEMBLY_FAILED

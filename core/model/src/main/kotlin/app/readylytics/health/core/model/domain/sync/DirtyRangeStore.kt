@@ -17,5 +17,8 @@ data class DirtyTicket(
 }
 
 interface DirtyRangeStore {
+    /** Drop work outside the retained scoring window, preserving every retained day. */
+    suspend fun discardBefore(retentionStart: LocalDate) = Unit
+
     suspend fun pending(limit: Int = 100): List<DirtyTicket>
 }

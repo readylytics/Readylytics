@@ -9,6 +9,7 @@ import app.readylytics.health.core.model.domain.backup.RestoreResult
 import app.readylytics.health.core.model.domain.backup.RestoreStage
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspector
+import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 import app.readylytics.health.workers.HealthResyncWorker
 import dagger.Lazy
 import io.mockk.coEvery
@@ -207,6 +208,90 @@ class RestoreMaintenanceRecoveryTest : LocalRestoreManagerTestBase() {
             assertNull(dbState.maintenancePhase)
             assertFalse(mutationCoordinator.isMaintenancePending())
         }
+
+    @Test
+    fun completedRestore_keepsJournalWhenMaintenanceReleaseIsInterrupted() =
+        runTest {
+            val interruptedCoordinator = coordinatorWithInterruptedRelease()
+            val result =
+                interruptedCoordinator.restore(
+                    archiveLocation = "restore.zip",
+                    validatedManifest = BackupManifest(22, "2026-09-17T00:00:00Z", emptyMap()),
+                    prefsBackup = null,
+                    providedPassword = null,
+                ) { operationId ->
+                    db.healthMutationStateDao().setMaintenance(operationId, "DATABASE_COMMITTED")
+                }
+
+            assertTrue(result is RestoreResult.Failure)
+            assertTrue(mutationCoordinator.isMaintenancePending())
+            assertEquals(RestorePhase.COMPLETE, restoreJournal.read()?.phase)
+            assertTrue(restoreMaintenanceCoordinator.recoverInterruptedRestoreOnStartup())
+            assertFalse(mutationCoordinator.isMaintenancePending())
+            assertNull(restoreJournal.read())
+            assertFalse(restoreMaintenanceCoordinator.recoverInterruptedRestoreOnStartup())
+        }
+
+    @Test
+    fun completedRecovery_keepsJournalWhenMaintenanceReleaseIsInterrupted() =
+        runTest {
+            writeCompletedJournal()
+            db.healthMutationStateDao().setMaintenance("completed_restore", "DATABASE_COMMITTED")
+
+            assertFalse(coordinatorWithInterruptedRelease().recoverInterruptedRestoreOnStartup())
+
+            assertEquals(RestorePhase.COMPLETE, restoreJournal.read()?.phase)
+            assertTrue(mutationCoordinator.isMaintenancePending())
+            assertTrue(restoreMaintenanceCoordinator.recoverInterruptedRestoreOnStartup())
+            assertFalse(mutationCoordinator.isMaintenancePending())
+            assertNull(restoreJournal.read())
+        }
+
+    @Test
+    fun completedJournalAfterMaintenanceRelease_isRecoveredIdempotently() =
+        runTest {
+            writeCompletedJournal()
+
+            assertTrue(restoreMaintenanceCoordinator.recoverInterruptedRestoreOnStartup())
+            assertFalse(mutationCoordinator.isMaintenancePending())
+            assertNull(restoreJournal.read())
+            assertFalse(restoreMaintenanceCoordinator.recoverInterruptedRestoreOnStartup())
+        }
+
+    private fun writeCompletedJournal() {
+        restoreJournal.write(
+            RestoreJournalData(
+                operationId = "completed_restore",
+                archiveLocation = "restore.zip",
+                restoredGeneration = 2,
+                phase = RestorePhase.COMPLETE,
+                preferencesJson = null,
+                encryptedPassword = null,
+            ),
+        )
+    }
+
+    private fun coordinatorWithInterruptedRelease(): RestoreMaintenanceCoordinator {
+        val interrupted =
+            object : HealthMutationCoordinator by mutationCoordinator {
+                override suspend fun <T> withMaintenance(
+                    operationId: String,
+                    block: suspend () -> T,
+                ): T =
+                    mutationCoordinator.withMaintenance(operationId) {
+                        block()
+                        error("Interrupted before maintenance marker release")
+                    }
+            }
+        return RestoreMaintenanceCoordinator(
+            healthMutationCoordinator = interrupted,
+            healthDatabase = db,
+            journal = restoreJournal,
+            restorePrefsApplier = mockk(relaxed = true),
+            encryptionManager = encryptionManager,
+            recommendationCoverageChecker = mockk(relaxed = true),
+        )
+    }
 
     @Test
     fun healthResyncWorker_retriesWhenMaintenanceIsPending() =

@@ -52,6 +52,7 @@ class SelectedSourcePrunerImpl
                 HealthDataType.HEART_RATE -> {
                     daos.heartRateDao.deleteRecordsNotMatchingDevice(fromMs, toMs, deviceName)
                     daos.minuteBucketMaintenanceDao.deleteBucketsNotMatchingDevice(fromMs, toMs, deviceName)
+                    daos.minuteBucketMaintenanceDao.deleteContributionsNotMatchingDevice(fromMs, toMs, deviceName)
                 }
                 HealthDataType.HRV ->
                     daos.hrvDao.deleteRecordsNotMatchingDevice(fromMs, toMs, deviceName)
@@ -74,7 +75,8 @@ class SelectedSourcePrunerImpl
                     // No bulk "not matching device" query exists on this DAO (kept small to
                     // stay under detekt's TooManyFunctions threshold) -- reuses the same
                     // getByTimeRange/deleteById pair the deletion reconciler already relies on.
-                    vo2MaxRecordDao?.getByTimeRange(fromMs, toMs)
+                    vo2MaxRecordDao
+                        ?.getByTimeRange(fromMs, toMs)
                         ?.filter { it.deviceName != deviceName }
                         ?.forEach { vo2MaxRecordDao.deleteById(it.id) }
             }

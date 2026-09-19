@@ -435,10 +435,17 @@ have locally — no network request is made to produce it. If you use encrypted 
 stored recommendations (and the examples they reference) are included like any other computed data.
 No cloud feature or telemetry was introduced to support this.
 
+Local backup recovery retains verified archives matching the saved password after an interrupted
+password change. Restore recovery finishes before sync resumes and retains its recovery record
+until maintenance is released.
+
 Heart-rate history older than 90 days is kept as one-minute summaries rather than individual
 samples. Each summarised minute now also records which device or app it came from, and that
 coverage information is included in encrypted local backups so a restore reproduces the same
-history. Every minute is read from exactly one of the two stores — the raw samples or its
+history. Refreshing a source replaces its evidence in these source-backed summaries while
+preserving other sources; device selection removes discarded sources before rebuilding.
+Expired summaries, coverage and source evidence are removed together by retention cleanup.
+Every minute is read from exactly one of the two stores — the raw samples or its
 summary, never both added together — so a minute can never be counted twice. When a sleep
 session or workout is later corrected, the summaries it covers are re-derived from that stored
 per-device record rather than from the previous result, so repeating the correction always lands

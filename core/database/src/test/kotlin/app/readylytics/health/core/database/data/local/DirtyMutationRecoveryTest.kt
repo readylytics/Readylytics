@@ -145,7 +145,14 @@ class DirtyMutationRecoveryTest {
 
             changeStore.deleteRecord(HealthDataType.HEART_RATE, "source-hr-42")
             assertEquals(1, database.dirtyRangeDao().pending(100).size)
-            assertEquals(pending.id, database.dirtyRangeDao().pending(100).first().id)
+            assertEquals(
+                pending.id,
+                database
+                    .dirtyRangeDao()
+                    .pending(100)
+                    .first()
+                    .id,
+            )
             assertEquals(1L, database.healthMutationStateDao().current().sourceGeneration)
         }
 
@@ -230,7 +237,14 @@ class DirtyMutationRecoveryTest {
 
             reopenDatabase()
             assertEquals(1, database.dirtyRangeDao().pending(100).size)
-            assertEquals(day.toEpochDay(), database.dirtyRangeDao().pending(100).first().nextEpochDay)
+            assertEquals(
+                day.toEpochDay(),
+                database
+                    .dirtyRangeDao()
+                    .pending(100)
+                    .first()
+                    .nextEpochDay,
+            )
             assertEquals(oldSummary, database.dailySummaryDao().getByDate(dayMs))
             assertNull(database.workoutDao().getById("workout-adv-fail")?.modelTrimp)
         }
@@ -318,6 +332,163 @@ class DirtyMutationRecoveryTest {
             assertEquals(1, pending.size)
             assertEquals(day.plusDays(1).toEpochDay(), pending.first().nextEpochDay)
         }
+
+    @Test
+    fun productionDayPublicationAcknowledgesEveryMatchingTicket() =
+        runBlocking {
+            database.seedDefaultMutationState(1L)
+            val day = LocalDate.of(2026, 2, 1)
+            repeat(105) { database.insertTestTicket(day, endInclusive = day) }
+            val loader =
+                app.readylytics.health.core.database.data.repository.ScoringDayDataLoader(
+                    database.workoutDao(),
+                    database.sleepSessionDao(),
+                    database.dailySummaryDao(),
+                    transactionRunner,
+                    publisher,
+                )
+            val summary = DailySummaryMapper.toDomain(createTestDailySummary(day, 95f), ZoneOffset.UTC)
+            assertTrue(
+                loader.persistDayAssembly(
+                    app.readylytics.health.core.model.domain.scoring.DayAssembly
+                        .Computed(summary),
+                    ZoneOffset.UTC,
+                    emptyList(),
+                    emptyList(),
+                    loader.captureDayPublication(day),
+                ),
+            )
+            reopenDatabase()
+            assertEquals(0, database.dirtyRangeDao().count())
+            assertEquals(
+                95f,
+                database
+                    .dailySummaryDao()
+                    .getByDate(
+                        day.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
+                    )?.sleepScore,
+            )
+        }
+
+    @Test
+    fun productionPublicationRejectsInputsChangedDuringComputation() =
+        runBlocking {
+            database.seedDefaultMutationState(1L)
+            val day = LocalDate.of(2026, 2, 1)
+            val old = createTestDailySummary(day, 70f)
+            database.dailySummaryDao().upsert(old)
+            database.insertTestTicket(day, endInclusive = day)
+            val loader = productionLoader()
+            val publication = loader.captureDayPublication(day)
+            database.healthMutationStateDao().incrementGeneration()
+            val summary = DailySummaryMapper.toDomain(old.copy(sleepScore = 95f), ZoneOffset.UTC)
+
+            assertFalse(
+                loader.persistDayAssembly(
+                    app.readylytics.health.core.model.domain.scoring.DayAssembly
+                        .Computed(summary),
+                    ZoneOffset.UTC,
+                    emptyList(),
+                    emptyList(),
+                    publication,
+                ),
+            )
+            assertEquals(old, database.dailySummaryDao().getByDate(old.dateMidnightMs))
+            assertEquals(
+                day.toEpochDay(),
+                database
+                    .dirtyRangeDao()
+                    .pending(100)
+                    .single()
+                    .nextEpochDay,
+            )
+        }
+
+    @Test
+    fun unavailableProductionDayLeavesTicketPending() =
+        runBlocking {
+            database.seedDefaultMutationState(1L)
+            val day = LocalDate.of(2026, 2, 1)
+            database.insertTestTicket(day, endInclusive = day)
+            val loader = productionLoader()
+            assertFalse(
+                loader.persistDayAssembly(
+                    app.readylytics.health.core.model.domain.scoring.DayAssembly
+                        .Unavailable("TEST_FAILURE"),
+                    ZoneOffset.UTC,
+                    emptyList(),
+                    emptyList(),
+                    loader.captureDayPublication(day),
+                ),
+            )
+            assertEquals(
+                day.toEpochDay(),
+                database
+                    .dirtyRangeDao()
+                    .pending(100)
+                    .single()
+                    .nextEpochDay,
+            )
+        }
+
+    @Test
+    fun productionPublicationRollsBackTicketAndSummaryWhenWorkoutWriteFails() =
+        runBlocking {
+            database.seedDefaultMutationState(1L)
+            val day = LocalDate.of(2026, 2, 1)
+            val old = createTestDailySummary(day, 70f)
+            database.dailySummaryDao().upsert(old)
+            database.insertTestTicket(day, endInclusive = day)
+            val workout = database.insertTestWorkout("rollback-workout", old.dateMidnightMs)
+            val failedWorkoutDao =
+                object : app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao by database.workoutDao() {
+                    override suspend fun upsertAll(records: List<WorkoutRecordEntity>) {
+                        error("write failed")
+                    }
+                }
+            val loader =
+                app.readylytics.health.core.database.data.repository.ScoringDayDataLoader(
+                    failedWorkoutDao,
+                    database.sleepSessionDao(),
+                    database.dailySummaryDao(),
+                    transactionRunner,
+                    publisher,
+                )
+            val publication = loader.captureDayPublication(day)
+            val summary = DailySummaryMapper.toDomain(old.copy(sleepScore = 95f), ZoneOffset.UTC)
+            assertThrows(IllegalStateException::class.java) {
+                runBlocking {
+                    loader.persistDayAssembly(
+                        app.readylytics.health.core.model.domain.scoring.DayAssembly
+                            .Computed(summary),
+                        ZoneOffset.UTC,
+                        listOf(workout),
+                        listOf(ComputeDailyTrimpUseCase.WorkoutModelTrimpUpdate(workout.id, 42f)),
+                        publication,
+                    )
+                }
+            }
+            reopenDatabase()
+            assertEquals(old, database.dailySummaryDao().getByDate(old.dateMidnightMs))
+            assertEquals(
+                day.toEpochDay(),
+                database
+                    .dirtyRangeDao()
+                    .pending(100)
+                    .single()
+                    .nextEpochDay,
+            )
+            assertNull(database.workoutDao().getById(workout.id)?.modelTrimp)
+        }
+
+    private fun productionLoader() =
+        app.readylytics.health.core.database.data.repository.ScoringDayDataLoader(
+            database.workoutDao(),
+            database.sleepSessionDao(),
+            database.dailySummaryDao(),
+            transactionRunner,
+            publisher,
+        )
 
     private companion object {
         const val DB_NAME = "dirty-mutation-recovery-robolectric.db"

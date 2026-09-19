@@ -244,15 +244,16 @@ class BackupRotationService
         ) {
             withContext(NonCancellable) {
                 val currentData = journal.read() ?: data
+                val credentialCommitted = isCredentialCommitted(currentData)
                 try {
-                    if (currentData.phase < BackupOperationPhase.CREDENTIAL_COMMITTED) {
+                    if (!credentialCommitted) {
                         executeRollback(store, currentData.entries)
                         stagingDir.deleteRecursively()
                         journal.delete()
                     }
                     recordAuditEvent(AuditEvent.Type.KEY_ROTATION_FAILED, e::class.simpleName)
                 } finally {
-                    if (currentData.phase < BackupOperationPhase.CREDENTIAL_COMMITTED) {
+                    if (!credentialCommitted) {
                         _operationState.value = BackupOperationState(phase = BackupOperationPhase.IDLE)
                     } else {
                         _operationState.value = BackupOperationState(phase = BackupOperationPhase.COMPLETE)
@@ -263,13 +264,21 @@ class BackupRotationService
 
         private suspend fun recoverPreviousJournalIfAny(store: BackupStore) {
             val previous = journal.read() ?: return
-            if (previous.phase == BackupOperationPhase.CREDENTIAL_COMMITTED) {
+            if (isCredentialCommitted(previous)) {
                 executeCleanup(store, previous.entries)
             } else {
                 executeRollback(store, previous.entries)
             }
             journal.delete()
         }
+
+        // Preferences and the journal commit separately; VERIFIED may already own the saved password.
+        private suspend fun isCredentialCommitted(data: RotationJournalData): Boolean =
+            data.phase >= BackupOperationPhase.CREDENTIAL_COMMITTED ||
+                (
+                    data.phase == BackupOperationPhase.VERIFIED &&
+                        userPreferencesReader.userPreferences.first().backupPasswordHash == data.targetPasswordHash
+                )
 
         private suspend fun executeCleanup(
             store: BackupStore,

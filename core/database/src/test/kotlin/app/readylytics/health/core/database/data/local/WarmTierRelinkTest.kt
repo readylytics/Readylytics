@@ -89,6 +89,27 @@ class WarmTierRelinkTest {
     }
 
     @Test
+    fun `session wholly inside a minute bypasses the uniform fast path`() =
+        runBlocking {
+            seedRolledUpHistory(sleepEndMs = ORIGINAL_SLEEP_END)
+            val minute = 4 * MINUTE_MS
+            val before = bucketsAt(minute)
+            assertEquals(setOf("RESTING"), before.map { it.recordType }.toSet())
+
+            relinker.relink(
+                minute,
+                minute + MINUTE_MS - 1,
+                emptyList(),
+                listOf(SessionSpan("short-workout", minute + 10_000L, minute + 50_000L)),
+            )
+
+            val after = bucketsAt(minute)
+            assertEquals(setOf("RESTING", "EXERCISE"), after.map { it.recordType }.toSet())
+            assertEquals(before.sumOf { it.sampleCount }, after.sumOf { it.sampleCount })
+            assertEquals(2, after.single { it.sessionId == "short-workout" }.sampleCount)
+        }
+
+    @Test
     fun `relink re-keys warm minutes when a session boundary moves`() =
         runBlocking {
             seedRolledUpHistory(sleepEndMs = ORIGINAL_SLEEP_END)
@@ -189,7 +210,11 @@ class WarmTierRelinkTest {
         runBlocking {
             seedRolledUpHistory(sleepEndMs = ORIGINAL_SLEEP_END)
             val visibleGeneration =
-                database.minuteCoverageDao().getCoverageInRange(0L, MINUTE_MS).single().visibleGeneration
+                database
+                    .minuteCoverageDao()
+                    .getCoverageInRange(0L, MINUTE_MS)
+                    .single()
+                    .visibleGeneration
             // A second, still-live source whose contribution sits at a superseded generation, i.e. a
             // row the visible-generation cleanup in `publish` never sees.
             val otherRef = database.sourceRecordDao().getOrCreateSourceRef("src-b", "HEART_RATE", 0L)
@@ -227,7 +252,11 @@ class WarmTierRelinkTest {
             val before = bucketsAt(0L)
             assertTrue("fixture precondition: minute 0 has a visible projection", before.isNotEmpty())
             val visibleGeneration =
-                database.minuteCoverageDao().getCoverageInRange(0L, MINUTE_MS).single().visibleGeneration
+                database
+                    .minuteCoverageDao()
+                    .getCoverageInRange(0L, MINUTE_MS)
+                    .single()
+                    .visibleGeneration
             // Replace minute 0's evidence with a readable but zero-count histogram, so the derivation
             // resolves no samples at all while the stored projection still claims some.
             val existing =

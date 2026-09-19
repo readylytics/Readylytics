@@ -12,6 +12,7 @@ import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.scoring.DayAssembly
 import app.readylytics.health.core.model.domain.scoring.summaryOrNull
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
+import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -24,40 +25,28 @@ class ScoringDayDataLoader
         private val sleepSessionDao: SleepSessionDao,
         private val dailySummaryDao: DailySummaryDao,
         private val transactionRunner: TransactionRunner? = null,
+        private val dirtySummaryPublisher: DirtySummaryPublisher? = null,
     ) {
+        suspend fun captureDayPublication(day: LocalDate): DirtySummaryPublisher.DayPublication? =
+            dirtySummaryPublisher?.captureDay(day)
 
         // from processWorkouts L298
-        suspend fun loadWorkouts(dayMidnightMs: Long, nextDayMidnightMs: Long): List<WorkoutRecordEntity> =
-            workoutDao.getWorkoutsInRange(dayMidnightMs, nextDayMidnightMs)
-
-        // from processWorkouts L325-328
-        suspend fun persistModelTrimp(
-            workouts: List<WorkoutRecordEntity>,
-            updates: List<ComputeDailyTrimpUseCase.WorkoutModelTrimpUpdate>,
-        ) {
-            if (updates.isEmpty()) return
-            val updateMap = updates.associateBy { it.workoutId }
-            workoutDao.upsertAll(
-                workouts.filter { it.id in updateMap }.map { workout ->
-                    val update = updateMap.getValue(workout.id)
-                    workout.copy(
-                        modelTrimp = update.modelTrimp,
-                        modelTrimpQuality = update.quality.name,
-                        modelTrimpSourceRevision = update.sourceRevision,
-                        modelTrimpSnapshotId = update.scoringSnapshotId,
-                        modelTrimpAlgorithmRevision = update.algorithmRevision,
-                    )
-                },
-            )
-        }
+        suspend fun loadWorkouts(
+            dayMidnightMs: Long,
+            nextDayMidnightMs: Long,
+        ): List<WorkoutRecordEntity> = workoutDao.getWorkoutsInRange(dayMidnightMs, nextDayMidnightMs)
 
         // from resolveSleepAggregation L682
-        suspend fun loadOverlappingSessions(fetchStartMs: Long, fetchEndMs: Long): List<SleepSessionEntity> =
-            sleepSessionDao.getOverlapping(fetchStartMs, fetchEndMs)
+        suspend fun loadOverlappingSessions(
+            fetchStartMs: Long,
+            fetchEndMs: Long,
+        ): List<SleepSessionEntity> = sleepSessionDao.getOverlapping(fetchStartMs, fetchEndMs)
 
         // from computeDailySummary L197
-        suspend fun loadSessionEndingInRange(dayMidnightMs: Long, nextDayMidnightMs: Long): SleepSessionEntity? =
-            sleepSessionDao.getSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
+        suspend fun loadSessionEndingInRange(
+            dayMidnightMs: Long,
+            nextDayMidnightMs: Long,
+        ): SleepSessionEntity? = sleepSessionDao.getSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
 
         // from single-day residual-fatigue fallback
         suspend fun loadCanonicalFatigueInputsThrough(evaluationTimeMs: Long): List<FatigueWorkoutInput> =
@@ -78,7 +67,10 @@ class ScoringDayDataLoader
         ): Int = workoutDao.countUnbackfilledThrough(retentionStartMs, evaluationTimeMs)
 
         // from persist L626
-        suspend fun persistDailySummary(summary: DailySummary, zoneId: ZoneId) {
+        suspend fun persistDailySummary(
+            summary: DailySummary,
+            zoneId: ZoneId,
+        ) {
             dailySummaryDao.upsert(DailySummaryMapper.toEntity(summary, zoneId))
         }
 
@@ -93,17 +85,44 @@ class ScoringDayDataLoader
             zoneId: ZoneId,
             workouts: List<WorkoutRecordEntity>,
             updates: List<ComputeDailyTrimpUseCase.WorkoutModelTrimpUpdate>,
+            publication: DirtySummaryPublisher.DayPublication? = null,
         ): Boolean {
             val summary = assembly.summaryOrNull() ?: return false
             val persistAction: suspend () -> Unit = {
                 persistDailySummary(summary, zoneId)
-                persistModelTrimp(workouts, updates)
+                workoutDao.persistModelTrimp(workouts, updates)
             }
-            if (transactionRunner != null) {
-                transactionRunner.runInTransaction { persistAction() }
+            return if (dirtySummaryPublisher != null) {
+                val captured = requireNotNull(publication) { "Capture publication before computing the day" }
+                require(captured.day == summary.date)
+                dirtySummaryPublisher.publishDay(captured, persistAction)
             } else {
-                persistAction()
+                if (transactionRunner != null) {
+                    transactionRunner.runInTransaction { persistAction() }
+                } else {
+                    persistAction()
+                }
+                true
             }
-            return true
         }
     }
+
+private suspend fun WorkoutDao.persistModelTrimp(
+    workouts: List<WorkoutRecordEntity>,
+    updates: List<ComputeDailyTrimpUseCase.WorkoutModelTrimpUpdate>,
+) {
+    if (updates.isEmpty()) return
+    val updateMap = updates.associateBy { it.workoutId }
+    upsertAll(
+        workouts.filter { it.id in updateMap }.map { workout ->
+            val update = updateMap.getValue(workout.id)
+            workout.copy(
+                modelTrimp = update.modelTrimp,
+                modelTrimpQuality = update.quality.name,
+                modelTrimpSourceRevision = update.sourceRevision,
+                modelTrimpSnapshotId = update.scoringSnapshotId,
+                modelTrimpAlgorithmRevision = update.algorithmRevision,
+            )
+        },
+    )
+}

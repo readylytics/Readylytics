@@ -117,28 +117,10 @@ class HealthResyncWorker
         ): Result {
             val recomputeOnly = inputData.getBoolean(KEY_RECOMPUTE_ONLY, false)
             val runId = inputData.getString(KEY_RUN_ID)
-            val rangeOverride =
-                inputData.getLong(KEY_RECOMPUTE_START_EPOCH_DAY, -1L).takeIf { it >= 0 }?.let { startEpochDay ->
-                    val endEpochDay = inputData.getLong(KEY_RECOMPUTE_END_EPOCH_DAY, startEpochDay)
-                    ScoreInvalidation.AffectedRange(
-                        start = LocalDate.ofEpochDay(startEpochDay),
-                        endInclusive = LocalDate.ofEpochDay(endEpochDay),
-                    )
-                } ?: run {
-                    if (recomputeOnly) {
-                        val pending = runCatching { dirtyRangeStore.get().pending(100) }.getOrDefault(emptyList())
-                        if (pending.isNotEmpty()) {
-                            ScoreInvalidation.AffectedRange(
-                                start = pending.minOf { it.nextDay },
-                                endInclusive = pending.maxOf { it.endInclusive },
-                            )
-                        } else {
-                            null
-                        }
-                    } else {
-                        null
-                    }
-                }
+            val prefs = settingsRepository.get().userPreferences.first()
+            val retentionStart = RetentionBounds.resolveResyncStartDate(prefs, LocalDate.now(prefs.scoringZone()))
+            dirtyRangeStore.get().discardBefore(retentionStart)
+            val rangeOverride = resolveRecomputeRange(recomputeOnly)
             val result =
                 resyncUseCase.execute(
                     recomputeOnly = recomputeOnly,
@@ -164,6 +146,23 @@ class HealthResyncWorker
             } else {
                 // Transient HC/IO failure: let WorkManager retry with its backoff policy.
                 Result.retry()
+            }
+        }
+
+        private suspend fun resolveRecomputeRange(recomputeOnly: Boolean): ScoreInvalidation.AffectedRange? {
+            val explicitStart = inputData.getLong(KEY_RECOMPUTE_START_EPOCH_DAY, -1L)
+            if (explicitStart >= 0) {
+                val end = inputData.getLong(KEY_RECOMPUTE_END_EPOCH_DAY, explicitStart)
+                return ScoreInvalidation.AffectedRange(LocalDate.ofEpochDay(explicitStart), LocalDate.ofEpochDay(end))
+            }
+            val pending = if (recomputeOnly) dirtyRangeStore.get().pending(100) else emptyList()
+            return pending.takeIf { it.isNotEmpty() }?.let {
+                ScoreInvalidation.AffectedRange(
+                    it.minOf { ticket ->
+                        ticket.nextDay
+                    },
+                    it.maxOf { ticket -> ticket.endInclusive },
+                )
             }
         }
 

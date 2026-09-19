@@ -13,6 +13,7 @@ import app.readylytics.health.core.model.domain.sync.HeartRateInput
 import app.readylytics.health.core.model.domain.sync.HrvInput
 import app.readylytics.health.core.model.domain.sync.SourceMetadata
 import app.readylytics.health.core.model.domain.sync.SourcePayload
+import app.readylytics.health.core.model.domain.sync.completeMinuteCutoff
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import java.time.Clock
@@ -32,6 +33,7 @@ class SourcePayloadWriter
         private val healthMutationStateDao: HealthMutationStateDao? = null,
         private val settingsRepo: SettingsRepository? = null,
         private val clock: Clock = Clock.systemDefaultZone(),
+        private val warmRefresh: SourceHeartRateRefresh? = null,
     ) {
         suspend fun replaceHeartRateSources(sources: List<SourcePayload<HeartRateInput>>) {
             if (sources.isEmpty()) return
@@ -57,9 +59,13 @@ class SourcePayloadWriter
 
             val (existingSource, sourceRef) = resolveOrCreateSource(source)
             val oldTimestamps = daos.heartRateDao.readTimestampsKeyset(sourceRef)
+            val warmContributions = warmRefresh?.contributionsFor(sourceRef).orEmpty()
+            val warmMinutes = warmContributions.map { it.bucketStartMs }.toSet()
+            val expectedRawRows = newRows.filter { completeMinuteCutoff(it.timestampMs) !in warmMinutes }
 
             if (!isMetadataChanged(existingSource, source) &&
-                areHeartRateRowsIdentical(daos.heartRateDao, sourceRef, oldTimestamps, newRows)
+                warmContributions.matchesHeartRatePayload(newRows) &&
+                areHeartRateRowsIdentical(daos.heartRateDao, sourceRef, oldTimestamps, expectedRawRows)
             ) {
                 return
             }
@@ -71,11 +77,12 @@ class SourcePayloadWriter
             updateSourceMetadata(sourceRef, existingSource, source)
 
             recordDirtyRange(
-                oldTimestamps = oldTimestamps,
+                oldTimestamps = oldTimestamps + warmContributions.flatMap { listOf(it.firstSampleMs, it.lastSampleMs) },
                 newTimestamps = newRows.map { it.timestampMs },
                 startMs = source.startMs,
                 endExclusiveMs = source.endExclusiveMs,
             )
+            warmRefresh?.publish(sourceRef, warmContributions, newRows)
         }
 
         private suspend fun replaceSingleHrvSource(payload: SourcePayload<HrvInput>) {
@@ -105,9 +112,7 @@ class SourcePayloadWriter
             )
         }
 
-        private suspend fun resolveOrCreateSource(
-            source: SourceMetadata,
-        ): Pair<HealthSourceRecordEntity?, Long> {
+        private suspend fun resolveOrCreateSource(source: SourceMetadata): Pair<HealthSourceRecordEntity?, Long> {
             val existingSource = daos.sourceRecordDao.getBySourceRecordId(source.sourceId)
             val sourceRef =
                 if (existingSource != null) {
@@ -279,11 +284,13 @@ private fun isMetadataChanged(
     source: SourceMetadata,
 ): Boolean {
     if (existing == null) return true
-    val boundsMatch = existing.recordStartMs == source.startMs &&
-        existing.recordEndExclusiveMs == source.endExclusiveMs
-    val detailsMatch = existing.originPackage == source.originPackage &&
-        existing.lastModifiedMs == source.lastModifiedMs &&
-        existing.metadataState == METADATA_STATE_AUTHORITATIVE
+    val boundsMatch =
+        existing.recordStartMs == source.startMs &&
+            existing.recordEndExclusiveMs == source.endExclusiveMs
+    val detailsMatch =
+        existing.originPackage == source.originPackage &&
+            existing.lastModifiedMs == source.lastModifiedMs &&
+            existing.metadataState == METADATA_STATE_AUTHORITATIVE
     return !(boundsMatch && detailsMatch)
 }
 
@@ -335,8 +342,9 @@ private suspend fun areHeartRateRowsIdentical(
     oldTimestamps: List<Long>,
     newRows: List<HeartRateInput>,
 ): Boolean {
-    val timestampsMatch = oldTimestamps.size == newRows.size &&
-        oldTimestamps == newRows.map { it.timestampMs }.sorted()
+    val timestampsMatch =
+        oldTimestamps.size == newRows.size &&
+            oldTimestamps == newRows.map { it.timestampMs }.sorted()
     if (!timestampsMatch) return false
 
     return if (newRows.isEmpty()) {
@@ -344,9 +352,10 @@ private suspend fun areHeartRateRowsIdentical(
     } else {
         val oldRecords = dao.getBySourceRecordRef(sourceRef)
         val resolvedNew = newRows.associateBy { it.timestampMs }
-        oldRecords.size == resolvedNew.size && oldRecords.all { old ->
-            resolvedNew[old.timestampMs]?.let { old.matchesPayload(it) } == true
-        }
+        oldRecords.size == resolvedNew.size &&
+            oldRecords.all { old ->
+                resolvedNew[old.timestampMs]?.let { old.matchesPayload(it) } == true
+            }
     }
 }
 
@@ -356,8 +365,9 @@ private suspend fun areHrvRowsIdentical(
     oldTimestamps: List<Long>,
     newRows: List<HrvInput>,
 ): Boolean {
-    val timestampsMatch = oldTimestamps.size == newRows.size &&
-        oldTimestamps == newRows.map { it.timestampMs }.sorted()
+    val timestampsMatch =
+        oldTimestamps.size == newRows.size &&
+            oldTimestamps == newRows.map { it.timestampMs }.sorted()
     if (!timestampsMatch) return false
 
     return if (newRows.isEmpty()) {
@@ -365,8 +375,9 @@ private suspend fun areHrvRowsIdentical(
     } else {
         val oldRecords = dao.getBySourceRecordRef(sourceRef)
         val resolvedNew = newRows.associateBy { it.timestampMs }
-        oldRecords.size == resolvedNew.size && oldRecords.all { old ->
-            resolvedNew[old.timestampMs]?.let { old.matchesPayload(it) } == true
-        }
+        oldRecords.size == resolvedNew.size &&
+            oldRecords.all { old ->
+                resolvedNew[old.timestampMs]?.let { old.matchesPayload(it) } == true
+            }
     }
 }

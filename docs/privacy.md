@@ -53,6 +53,9 @@ feature. These backup files are controlled by you and remain local to your
 device or the storage location you choose. Prior valid backups are retained
 until any replacement archive is fully published and verified; temporary
 plaintext staging files in private app cache are cleaned up on process startup.
+If password rotation is interrupted after saving the new credential, recovery retains the
+verified archives encrypted with that credential. Interrupted restores keep recovery state
+until local maintenance is released; startup retries unfinished recovery before admitting sync.
 
 Local encryption keys are stored through Android Keystore. On devices that support StrongBox,
 Readylytics attempts to use StrongBox-backed key protection and falls back to standard Keystore
@@ -118,6 +121,9 @@ includes the per-minute coverage records that say which device or app each summa
 minute came from, so a restore reproduces the same history. This is the same on-device
 health data you already had; no new data is collected and nothing is uploaded. Files
 staged for an in-progress data refresh are working state and are not included in backups.
+Retention cleanup removes expired minute coverage and per-source heart-rate evidence together
+with their summaries. Changing the selected heart-rate device also removes discarded devices'
+contributions from the affected range before rebuilding summaries.
 
 To protect your privacy and prevent decryption or data corruption issues on new devices (since cryptographic keys are hardware-bound and do not transfer), all local app data—including databases, preferences, encryption keys, and local backup files—is explicitly excluded from standard Android Auto Backup (cloud backup) and device-to-device transfers.
 

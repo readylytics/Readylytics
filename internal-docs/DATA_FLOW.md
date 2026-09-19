@@ -275,7 +275,12 @@ so re-ingestion is idempotent, but entity construction itself happens one layer 
 | `OxygenSaturationDataMapper` | `core/healthconnect/src/main/kotlin/app/readylytics/health/core/healthconnect/data/mapper/OxygenSaturationDataMapper.kt` | `DomainOxygenSaturationRecord` → `OxygenSaturationRecordEntity` (%).                                                                               |
 | `BodyTemperatureDataMapper`  | `core/healthconnect/src/main/kotlin/app/readylytics/health/core/healthconnect/data/mapper/BodyTemperatureDataMapper.kt`  | `DomainBodyTemperatureRecord` → `BodyTemperatureRecordEntity` (°C). Ingested through `HealthIngestionCoordinator` exactly like the other optional-permission metrics — same upsert/idempotency contract, no special-casing. |
 
-### 1.4 Room storage — `HealthDatabase` (`@Database(version = 21)`)
+When resuming a historical checkpoint after settings changes, `HistoricalRunResolver` chooses the
+earliest invalidated phase. A device-selection change restarts ingestion even when HR zones also
+changed; stale paging tokens and chunk overrides are cleared. Unknown snapshot versions likewise
+restart ingestion conservatively.
+
+### 1.4 Room storage — `HealthDatabase` (`@Database(version = 22)`)
 
 Defined in `core/database/src/main/kotlin/app/readylytics/health/core/database/data/local/HealthDatabase.kt`;
 entities in `core/database-schema/src/main/kotlin/app/readylytics/health/core/databaseschema/data/local/entity/`, DAOs in
@@ -523,9 +528,10 @@ skipped by the restore reader's `else -> skipValue()` branch.
   via `HeartRateRepository.observeSleepHrvTimelineForSession(sessionId)` → `SleepViewModel` and is never
   used by the scoring pipeline.
 - **Cold tier:** the permanent `daily_summaries` (computed cache). `RetentionCleanup` prunes raw
-  HR/HRV and warm buckets older than the stored-scoring-zone boundary from
+  HR/HRV, warm buckets, minute coverage and source contributions older than the stored-scoring-zone boundary from
   `RetentionBounds.resolveRetentionCutoffMs(prefs)`; retention
-  semantics are otherwise unchanged (a storage optimization, not a new user-facing data contract).
+  semantics are otherwise unchanged. Coverage and contributions (including superseded generations)
+  are deleted in the same cleanup transaction using the buckets' exclusive end-time cutoff.
 
 **Determinism across tiers.** Reconstructing samples from a warm-tier bucket is not bit-identical
 to the original raw stream — this is an accepted, measured tradeoff (R2-DB-004), not a bug.
@@ -571,6 +577,14 @@ c.visibleGeneration)` last-resort fallback, so such a minute degrades to showing
 rather than vanishing from both readers. It can never double-count: it is reachable only when the
 warm side has nothing visible for that minute at all.
 
+**Refreshing source-backed warm minutes.** `SourcePayloadWriter` uses `SourceHeartRateRefresh`
+inside the source replacement transaction to replace the refreshed source's contributions and
+rebuild each affected warm minute, retaining the other sources' evidence. It publishes buckets,
+contributions and coverage at the new source generation before consuming the refreshed raw rows.
+Moved or empty source payloads remove that source's previous warm evidence as well. A retry with
+identical metadata and measured contributions is a no-op. Legacy unknown minutes retain their
+existing quarantine policy: a single-source payload cannot prove complete interval coverage.
+
 **Reading a range means reading both tiers.** `AuthoritativeHrRange.rawSamples` is *empty by design*
 for any minute the ledger resolves to the warm tier, so a consumer that wants "every sample in this
 window" must use `AuthoritativeHrRange.mergedSamples()` (or, for charts, `toSeries()`), never
@@ -597,7 +611,10 @@ re-aggregates through the rollup's own `MinuteBucketAggregator` — then republi
 whose projection actually changed, through `MinuteCoveragePublisher`'s
 supersede-then-insert-then-switch transaction. Because the derivation always reads the stored
 evidence and never the previous pass's buckets, a repeated pass cannot drift: an unchanged session
-list leaves every bucket byte-identical and publishes nothing. The minute keeps its
+list leaves every bucket byte-identical and publishes nothing. The uniform-minute shortcut is
+rejected whenever an interior session boundary may change ownership, even if both endpoints are
+resting. Selected-source pruning deletes other devices' contributions as well as raw rows and
+buckets before reconciliation, so the warm rebuild cannot resurrect discarded devices. The minute keeps its
 `visibleGeneration` — a generation identifies the *evidence* set, which a relink does not change.
 Two residual approximations are deliberate and measured: (1) warm timestamps are reconstructed, so
 a session boundary falling strictly inside a minute can put at most one sample on the wrong side of
@@ -670,7 +687,7 @@ Local backup generation produces a fully encrypted, point-in-time snapshot with 
 **Password Rotation & Verified Archive Publication (WP-16 / SEC-002):**
 Password rotation is an atomic, service-owned lifecycle coordinated by `BackupRotationService`:
 1. **Service-Owned Lifecycle & Observation:** `BackupService.rotatePassword(newPassword)` owns the complete rotation procedure. The UI (`LocalBackupViewModel`) delegates exclusively to `rotatePassword` and never writes password hashes unconditionally. `BackupService` exposes structured lifecycle progress via `StateFlow<BackupOperationState>` across phases: `IDLE`, `PREPARING`, `STAGED`, `PUBLISHING`, `VERIFIED`, `CREDENTIAL_COMMITTED`, `CLEANUP`, and `COMPLETE`.
-2. **Crash-Resilient Encrypted Operation Journal:** Across process death or app termination, rotation is tracked in `BackupOperationJournal` (`filesDir/backup_rotation_journal.enc`), encrypted via `EncryptionManager`. The journal persists protocol version, directory identity, lifecycle phase, encrypted old/new passwords, target password hash, archive rotation entries (`ArchiveRotationEntry`), and generation timestamp. Startup and re-entry passes inspect the journal: interruptions before `CREDENTIAL_COMMITTED` roll back by deleting staged and newly published archives; interruptions after `CREDENTIAL_COMMITTED` finalize by pruning old archives.
+2. **Crash-Resilient Encrypted Operation Journal:** Across process death or app termination, rotation is tracked in `BackupOperationJournal` (`filesDir/backup_rotation_journal.enc`), encrypted via `EncryptionManager`. The journal persists protocol version, directory identity, lifecycle phase, encrypted old/new passwords, target password hash, archive rotation entries (`ArchiveRotationEntry`), and generation timestamp. Startup and re-entry passes inspect both journal and saved credential. A `VERIFIED` journal whose target password hash already matches the saved credential is treated as committed, closing the DataStore-to-journal crash window. Uncommitted operations roll back staged and newly published archives; committed operations retain the new archives and finalize by pruning old archives.
 3. **Collision-Safe Publication (`publishNew`):** `BackupStore.publishNew(source: File, name: String): BackupLocation` (implemented in both `FileBackupStore` and `SafBackupStore`) publishes each replacement archive to a unique collision-safe location without assuming rename atomicity. In `FileBackupStore`, the file is copied to a `.tmp` file before atomic rename to destination. In `SafBackupStore`, the document is created with a unique timestamped name and streamed directly.
 4. **Verified Archive Publication:** `VerifiedArchivePublisher` performs an immediate post-publication read-back from the target store (`store.read(location)`) and validates archive integrity and JSON counts using `RestoreInventoryValidator` under the new password. If validation fails or the archive cannot be decrypted, the published file is deleted immediately and rotation rolls back.
 5. **Atomic Credential Commit & Safe Cleanup:** Old archives are never deleted until all replacements are staged, published, and verified. Only after every archive verifies does `BackupSettings.updateBackupPasswordHash(newHash)` commit the new password hash to DataStore. Old archives are then deleted in the `CLEANUP` phase. On any failure prior to credential commit, rollback deletes published and staged files, leaving pre-existing archives intact and decryptable with the original password.
@@ -689,7 +706,7 @@ Room SQLite database and DataStore preferences are separate atomic resources. To
 2. **Atomic Database Replacement:** In a single Room transaction (`RestoreDatabaseOperations`), all health tables are cleared child-before-parent, populated via stable parent-before-child streaming, verified for row counts and foreign keys (`PRAGMA foreign_key_check`), and committed with `HealthMutationStateEntity` recording `sourceGeneration`, `maintenanceOperationId`, and `maintenancePhase = "DATABASE_COMMITTED"`. Dirty work spanning all restored retained dates is regenerated (`DirtyRangeEntity`). The journal advances to `DATABASE_COMMITTED`.
 3. **Preferences & Layout Application:** DataStore preferences (`SettingsRepository`) and layout configurations (`CardConfigurationRepository`, `VitalsLayoutRepository`, `SleepLayoutRepository`, `WorkoutsLayoutRepository`, `WorkoutDetailLayoutRepository`) are applied by `RestorePreferencesApplier`. Legacy archives lacking modern preference keys receive safe defaults. If preference application fails, a `RestorePartialSuccessException` propagates out, keeping `maintenanceOperationId` and `maintenancePhase = "DATABASE_COMMITTED"` active in SQLite, while the journal remains at `DATABASE_COMMITTED`. Crucially, `RestoreRecommendationCoverageChecker` is NOT scheduled prematurely on preference failure.
 4. **Caches & Tokens Reset:** Upon successful preference commit (`PREFERENCES_COMMITTED`), the coordinator transitions to `CACHES_RESET`: it resets differential Health Connect Changes API tokens (`HealthChangeTokenStore.clearAll()`), clears any existing resync checkpoint (`ResyncCheckpointStore.clear()`), and schedules recommendation coverage recomputation (`RestoreRecommendationCoverageChecker.scheduleRecomputeIfIncomplete()`).
-5. **Completion & Release:** The journal records `COMPLETE` and is deleted, and the P2 maintenance gate is cleanly released in `HealthMutationStateEntity` (`setMaintenance(null, null)`).
+5. **Completion & Release:** The journal records `COMPLETE`, then the P2 maintenance gate is released in `HealthMutationStateEntity` (`setMaintenance(null, null)`), and only then is the journal deleted. Recovery of `COMPLETE` is idempotent with either a pending or already-cleared marker and does not replay completed preference restoration. Startup checks maintenance after recovery even when recovery returns `false`, remaining retryable until the marker clears.
 6. **Startup Recovery:** On application launch, `DatabaseReadyStartupInitializer` runs `RestoreMaintenanceCoordinator.recoverInterruptedRestoreOnStartup()` before historical baseline backfill or background workers are admitted. If an interrupted restore is detected at `DATABASE_COMMITTED` (either in SQLite or journal), preferences and layouts are replayed from the encrypted journal, tokens and checkpoints are reset, recompute is scheduled, and maintenance is released. If an interruption occurred prior to database commit (`VALIDATED`), the orphaned journal and maintenance marker are cleared, leaving the original database and preferences intact. Concurrent workers (`HealthResyncWorker`, etc.) inspect `HealthMutationCoordinator.isMaintenancePending()` and retry rather than computing against incomplete state.
 
 For legacy v5/v6 payloads, legacy HR/HRV composite IDs normalize to `(sourceRecordId, timestampMs)` by removing only an exact trailing `_<timestampMs>` suffix. As of v10, backups carry `health_source_records` and `hr_minute_buckets`; HR/HRV rows serialize the integer `sourceRecordRef` directly, and restore re-decodes older schema-7–9 `sourceRecordId`-format rows back into `sourceRecordRef` via `SourceRecordDao.getOrCreateSourceRef`.
@@ -767,15 +784,19 @@ The architecture couples health data changes to durable rescoring via two distin
    - WorkManager enqueue never precedes the database commit. If process death or crash occurs before enqueue, `DatabaseReadyStartupInitializer` queries `dirtyRangeStore.pending(100)` at startup and enqueues a recompute-only pass, closing the crash gap.
 
 2. **Atomic Publication Boundary (Scoring & Acknowledgment):**
-   - The scoring pipeline reads data under the captured `sourceGeneration` and immutable settings outside of a writer transaction.
-   - Workout canonical updates (`modelTrimp`) are staged in memory in `ProcessedWorkoutDay` during computation rather than persisted midway in `DailyTrimpComputer`.
-   - Before any of this reaches a transaction, the day's assembly result must be a genuine candidate — see §1.4.2 (`DayAssembly`, WP-13). `DirtySummaryPublisher.publish(ticket, assembly: PublishableDayAssembly, ...)` only accepts `PublishableDayAssembly` — the `Computed`/`Absent`-only subset of `DayAssembly` with no case for `Unavailable` — so an unavailable assembly cannot be passed into the transaction below at all; this is a compile-time guarantee (`DayAssembly.toPublishableOrNull()` returns `null` for `Unavailable`), not a runtime check inside `publish`. This narrows what may call into `publish` — it does not change the transaction's own atomicity/generation-check logic.
-   - `DirtySummaryPublisher.publish` executes inside a single atomic Room transaction:
-     - Re-verifies that live `sourceGeneration == expectedSourceGeneration` and maintenance is idle.
-     - Upserts the calculated `DailySummaryEntity`.
-     - Applies staged canonical workout updates in the same transaction.
-     - Advances `dirty_ranges.nextEpochDay` by exactly 1 (`dirty_ranges.advance`) using the ticket's original `id`, `sourceGeneration`, and cursor.
-     - Deletes only fully completed tickets (`dirty_ranges.deleteCompleted`).
+   - `ScoringRepositoryImpl.computeAndPersistDailySummary` captures the source generation and every
+     dirty ticket whose next day matches the target date through `ScoringDayDataLoader.captureDayPublication`
+     before reading scoring inputs. This per-day query is not limited to the worker's 100-ticket scheduling batch.
+   - Workout canonical updates and their provenance metadata are staged in memory in `ProcessedWorkoutDay`.
+   - `ScoringDayDataLoader.persistDayAssembly` rejects `Unavailable` results without writing. For a
+     `Computed` or `Absent` result it calls `DirtySummaryPublisher.publishDay` with the captured publication.
+   - A single Room transaction checks that source generation is unchanged and maintenance is idle,
+     writes the daily summary and canonical workout metadata, advances every captured ticket using
+     its original ID/generation/cursor, and deletes completed tickets. A failed cursor check or write
+     rolls the entire transaction back. The typed single-ticket publisher remains available for direct callers.
+   - Before selecting work, the resync worker discards wholly expired dirty tickets and trims expired
+     prefixes to the shared retention boundary. This prevents aged tickets outside the permitted
+     recompute window from occupying the scheduling batch indefinitely.
    - If a concurrent mutation arrived during computation (`liveGeneration != expectedSourceGeneration`), the publisher rejects acknowledgment and rolls back the transaction, returning `false`. The unacknowledged dirty range remains intact in SQLite, guaranteeing that the newer revision is recomputed without losing historical invalidation state.
    - A successful `Absent` publication advances the dirty ticket cursor exactly like `Computed` (both are genuinely complete candidates). A failed publish or an `Unavailable` assembly never advances it. Of the four walk-forward contexts, only `WalkForwardContexts.trimp` is mutated per-day by this pipeline (`DailyTrimpComputer.publishTrimpToContext`), and that mutation is applied by the caller only *after* a successful write — never speculatively before or during the transaction (`ScoringRepositoryImpl.computeAndPersistDailySummary` calls `commitWalkForwardContexts()` strictly after `persistDayAssembly` returns `true`). `baseline` and `vo2Max` are populated once up front per walk-forward run (`fetchWalkForwardBaselineContext`/`fetchWalkForwardVo2MaxContext`) and are never mutated per-day, so "deferred until after commit" doesn't apply to them either way. **Known exception:** `WalkForwardContexts.fatigue`'s `registerCanonicalImpulses` (called from `ScoringRepositoryImpl.computeDay`, before assembly runs) is *not* deferred — `ResidualFatigueComputer.compute`'s walk-forward path consumes this same day's impulses out of `contexts.fatigue` to compute this day's own residual-fatigue value, so the mutation must happen before assembly, not after. A failed/`Unavailable` assembly on that day therefore still leaves the fatigue accumulator advanced. This is pre-existing behavior, unchanged by C3/WP-13, and reworking `WalkForwardFatigueContext`'s API to close it is out of scope for this task.
 
@@ -1036,11 +1057,11 @@ independent per-workout values that must not be confused:
   from `zone1Minutes..zone5Minutes` (Edwards-style, no HR-reserve/sex/model inputs). This is UI-only
   zone-minutes data (per-workout detail screens) and is never fed into ATL/CTL.
 - `modelTrimp` — the user-selected-model TRIMP (Banister/Cheng/iTRIMP per `prefs.trimpModel`),
-  written onto the entity by `ScoringRepositoryImpl.computeDailySummary`'s per-workout loop (the
+  written onto the entity by `ScoringRepositoryImpl.computeAndPersistDailySummary`'s publication transaction (the
   same value `CanonicalWorkoutResolver.resolve` / `ComputeWorkoutTrimpUseCase.execute` produced for `dailyTrimpRaw`).
   Alongside `modelTrimp`, schema version 21 records four provenance and quality metadata columns:
   `modelTrimpQuality` (`WorkoutHrQuality`: `RAW`, `WARM_APPROXIMATE`, `VALIDATED_PRIOR`, `UNAVAILABLE`),
-  `modelTrimpSourceRevision` (source table revision), `modelTrimpSnapshotId` (SHA-256 of scoring settings/hrMax snapshot),
+  `modelTrimpSourceRevision` (independent fingerprint of current workout and authoritative HR inputs), `modelTrimpSnapshotId` (SHA-256 of scoring settings/hrMax snapshot),
   and `modelTrimpAlgorithmRevision` (`SettingsDefaults.CURRENT_SCORING_VERSION`).
   A row keeps `modelTrimp = null` until the walk-forward recompute touches it. `SessionLinkReconcilerImpl.recomputeWorkouts`
   cannot populate it (no RHR baseline/hrMax/gender available at that call site) and intentionally leaves it null.
@@ -1049,7 +1070,10 @@ independent per-workout values that must not be confused:
   `WorkoutHrQuality.UNAVAILABLE` (never 0 or legacy zone TRIMP). Days with unresolved canonical contribution (`dailyTrimpRaw == null`)
   become `DayAssembly.Unavailable(DayAssemblyUnavailableReason.WORKOUT_LOAD_UNAVAILABLE)`, leaving prior published summary and
   dirty state intact under C3. Prior reuse is strictly allowed only when all 3 revision keys match
-  (`sourceRevision`, `scoringSnapshotId`, `algorithmRevision`).
+  (`sourceRevision`, `scoringSnapshotId`, `algorithmRevision`). Both daily scoring and display derive
+  the current input fingerprint through pure-Kotlin `WorkoutInputRevision` from workout identity,
+  time bounds, type, device and sorted in-window HR timestamp/BPM samples; they never validate the
+  cached revision against itself. HR deletion and workout edits therefore invalidate old canonical values.
 - `WorkoutDao.getTrimpPoints` (which feeds the workout-only ATL/CTL series in
   `ScoringRepositoryImpl.computeDailySummary`), `getCanonicalFatigueInputsThrough`, and `getCanonicalFatigueSeed`
   read `modelTrimp` directly (`WHERE modelTrimp IS NOT NULL`). Legacy `COALESCE(modelTrimp, trimp)` has been removed across all queries:

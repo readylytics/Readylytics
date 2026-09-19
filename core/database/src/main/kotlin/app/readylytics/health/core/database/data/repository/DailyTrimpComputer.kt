@@ -15,6 +15,7 @@ import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCa
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.EverydayHrLoadResult
 import app.readylytics.health.core.scoring.domain.scoring.LongInterval
+import app.readylytics.health.core.scoring.domain.scoring.WorkoutInputRevision
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.time.Instant
@@ -85,6 +86,13 @@ class DailyTrimpComputer(
     ): List<ComputeDailyTrimpUseCase.WorkoutInput> =
         workouts.map { workout ->
             val loadedSamples = heartRateDataLoader.loadWorkoutSamplesWithQuality(workout, allDayExerciseHrSamples)
+            val samples =
+                loadedSamples.samples.map { sample ->
+                    ComputeWorkoutTrimpUseCase.HeartRateSample(
+                        Instant.ofEpochMilli(sample.timestampMs),
+                        sample.beatsPerMinute,
+                    )
+                }
             ComputeDailyTrimpUseCase.WorkoutInput(
                 id = workout.id,
                 startTime = workout.startTime,
@@ -97,15 +105,17 @@ class DailyTrimpComputer(
                 currentSourceRevision = workout.modelTrimpSourceRevision,
                 currentScoringSnapshotId = workout.modelTrimpSnapshotId,
                 currentAlgorithmRevision = workout.modelTrimpAlgorithmRevision,
-                samples =
-                    loadedSamples.samples.map { sample ->
-                        ComputeWorkoutTrimpUseCase.HeartRateSample(
-                            Instant.ofEpochMilli(sample.timestampMs),
-                            sample.beatsPerMinute,
-                        )
-                    },
+                samples = samples,
                 quality = loadedSamples.quality,
-                sourceRevision = workout.modelTrimpSourceRevision ?: 0L,
+                sourceRevision =
+                    WorkoutInputRevision.compute(
+                        workout.id,
+                        workout.startTime,
+                        workout.endTime,
+                        workout.exerciseType,
+                        workout.deviceName,
+                        samples,
+                    ),
             )
         }
 
