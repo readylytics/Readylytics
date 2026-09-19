@@ -24,7 +24,7 @@ class CachePruneTest {
             val canonicalDiagnostic = File(diagnosticDir, "readylytics_diagnostics.txt").apply { writeText("diag") }
             File(diagnosticDir, "readylytics_diagnostics_old.txt").apply { writeText("stale") }
 
-            val crashDir = File(cacheDir, "crash_reports").apply { mkdirs() }
+            val crashDir = File(cacheDir, "crash_reports_v2").apply { mkdirs() }
             val canonicalCrash = File(crashDir, "latest_crash.txt").apply { writeText("crash") }
             File(crashDir, "latest_crash_old.txt").apply { writeText("stale") }
 
@@ -52,7 +52,59 @@ class CachePruneTest {
             CachePrune.pruneCacheDirectories(mockContextWithCacheDir(cacheDir))
             assertFalse(File(cacheDir, "diagnostic_logs").exists())
             assertFalse(File(cacheDir, "crash_reports").exists())
+            assertFalse(File(cacheDir, "crash_reports_v2").exists())
+            assertFalse(File(cacheDir, "logs").exists())
             assertFalse(File(cacheDir, "logcat_capture").exists())
+        } finally {
+            cacheDir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `pruneCacheDirectories retires legacy slots while preserving unrelated files`() {
+        val cacheDir = Files.createTempDirectory("cache").toFile()
+        try {
+            val legacyLogs = File(cacheDir, "logs").apply { mkdirs() }
+            val legacyLogFile = File(legacyLogs, "prod_logs.txt").apply { writeText("unsafe-log") }
+            val legacyCrash = File(cacheDir, "crash_reports").apply { mkdirs() }
+            val legacyCrashFile = File(legacyCrash, "latest_crash.txt").apply { writeText("unsafe-crash") }
+
+            val unrelatedDir = File(cacheDir, "unrelated_dir").apply { mkdirs() }
+            val unrelatedFile = File(unrelatedDir, "preserved.txt").apply { writeText("keep-me") }
+            val unrelatedRootFile = File(cacheDir, "unrelated_root.txt").apply { writeText("keep-root") }
+
+            CachePrune.pruneCacheDirectories(mockContextWithCacheDir(cacheDir))
+
+            assertFalse(legacyLogFile.exists())
+            assertFalse(legacyLogs.exists())
+            assertFalse(legacyCrashFile.exists())
+            assertFalse(legacyCrash.exists())
+
+            assertTrue(unrelatedFile.exists())
+            kotlin.test.assertEquals("keep-me", unrelatedFile.readText())
+            assertTrue(unrelatedRootFile.exists())
+            kotlin.test.assertEquals("keep-root", unrelatedRootFile.readText())
+        } finally {
+            cacheDir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `pruneCacheDirectories removes orphan staging and legacy json files`() {
+        val cacheDir = Files.createTempDirectory("cache").toFile()
+        try {
+            val stagingDir = File(cacheDir, "backup-staging").apply { mkdirs() }
+            val orphanStagingJson = File(stagingDir, "backup_2026-09-11_100000_uuid1.json").apply { writeText("{}") }
+            val orphanStagingZip = File(stagingDir, "backup_2026-09-11_100000_uuid1.zip").apply { writeText("zip") }
+            val legacyJson = File(cacheDir, "backup_2026-09-10_100000.json").apply { writeText("{}") }
+            val unrelatedFile = File(cacheDir, "other_file.txt").apply { writeText("keep-me") }
+
+            CachePrune.pruneCacheDirectories(mockContextWithCacheDir(cacheDir))
+
+            assertFalse(orphanStagingJson.exists(), "Staging JSON file should be pruned")
+            assertFalse(orphanStagingZip.exists(), "Staging ZIP file should be pruned")
+            assertFalse(legacyJson.exists(), "Legacy root backup JSON should be pruned")
+            assertTrue(unrelatedFile.exists(), "Unrelated cache file should be preserved")
         } finally {
             cacheDir.deleteRecursively()
         }

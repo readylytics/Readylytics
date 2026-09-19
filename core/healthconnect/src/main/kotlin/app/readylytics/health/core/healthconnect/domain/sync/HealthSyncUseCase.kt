@@ -31,6 +31,7 @@ class HealthSyncUseCase
         private val resyncRangeUseCase: ResyncRangeUseCase,
         private val settingsRepo: SettingsRepository,
         private val clock: Clock,
+        private val coordinator: HealthMutationCoordinator = NoOpHealthMutationCoordinator,
     ) {
         private val syncMutex = Mutex()
 
@@ -40,7 +41,12 @@ class HealthSyncUseCase
          * baseline backfill (SCORE-003), which reads/writes `daily_summaries` rows a concurrent
          * walk-forward recompute could be mid-write on.
          */
-        suspend fun <T> withSyncLock(block: suspend () -> T): T = syncMutex.withLock { block() }
+        suspend fun <T> withSyncLock(block: suspend () -> T): T =
+            syncMutex.withLock {
+                coordinator.withMutation {
+                    block()
+                }
+            }
 
         /**
          * Runs the foreground sync / recalculation over a recent [windowDays] window.
@@ -61,27 +67,31 @@ class HealthSyncUseCase
             onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)? = null,
         ): Result<Unit> =
             syncMutex.withLock {
-                dailySyncUseCase.run(windowDays, onProgress)
+                coordinator.withMutation {
+                    dailySyncUseCase.run(windowDays, onProgress)
+                }
             }
 
         suspend fun catchUpSync(
             onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)? = null,
         ): Result<Unit> =
             syncMutex.withLock {
-                val prefs = settingsRepo.userPreferences.first()
-                if (prefs.lastSyncTimestamp > 0L) {
-                    logD("HealthSyncUseCase") {
-                        "Catch-up sync skipped: lastSyncTimestamp is already set (${prefs.lastSyncTimestamp})"
+                coordinator.withMutation {
+                    val prefs = settingsRepo.userPreferences.first()
+                    if (prefs.lastSyncTimestamp > 0L) {
+                        logD("HealthSyncUseCase") {
+                            "Catch-up sync skipped: lastSyncTimestamp is already set (${prefs.lastSyncTimestamp})"
+                        }
+                        return@withMutation Result.success(Unit)
                     }
-                    return@withLock Result.success(Unit)
+                    val historicalWindow = RetentionBounds.resolveHistoricalWindow(prefs, clock.instant())
+                    resyncRangeUseCase.run(
+                        startDate = historicalWindow.startDate,
+                        endDate = historicalWindow.endDate,
+                        chunkDays = 30,
+                        onProgress = onProgress,
+                    )
                 }
-                val historicalWindow = RetentionBounds.resolveHistoricalWindow(prefs, clock.instant())
-                resyncRangeUseCase.run(
-                    startDate = historicalWindow.startDate,
-                    endDate = historicalWindow.endDate,
-                    chunkDays = 30,
-                    onProgress = onProgress,
-                )
             }
 
         /**
@@ -96,9 +106,18 @@ class HealthSyncUseCase
             endDate: LocalDate,
             chunkDays: Int = 30,
             onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)? = null,
+            requestedRunId: String? = null,
         ): Result<Unit> =
             syncMutex.withLock {
-                resyncRangeUseCase.run(startDate, endDate, chunkDays, onProgress)
+                coordinator.withMutation {
+                    resyncRangeUseCase.run(
+                        startDate = startDate,
+                        endDate = endDate,
+                        chunkDays = chunkDays,
+                        onProgress = onProgress,
+                        requestedRunId = requestedRunId,
+                    )
+                }
             }
 
         /**
@@ -113,14 +132,24 @@ class HealthSyncUseCase
             startDate: LocalDate,
             endDate: LocalDate,
             onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)? = null,
+            requestedRunId: String? = null,
         ): Result<Unit> =
             syncMutex.withLock {
-                resyncRangeUseCase.run(
-                    startDate = startDate,
-                    endDate = endDate,
-                    chunkDays = 30,
-                    onProgress = onProgress,
-                    skipIngestAndPrune = true,
-                )
+                coordinator.withMutation {
+                    resyncRangeUseCase.run(
+                        startDate = startDate,
+                        endDate = endDate,
+                        chunkDays = 30,
+                        onProgress = onProgress,
+                        skipIngestAndPrune = true,
+                        requestedRunId = requestedRunId,
+                    )
+                }
             }
     }
+
+private object NoOpHealthMutationCoordinator : HealthMutationCoordinator {
+    override suspend fun <T> withMutation(block: suspend () -> T): T = block()
+
+    override suspend fun <T> withMaintenance(operationId: String, block: suspend () -> T): T = block()
+}

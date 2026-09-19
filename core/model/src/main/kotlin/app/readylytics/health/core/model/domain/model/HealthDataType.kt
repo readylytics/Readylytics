@@ -32,4 +32,5 @@ enum class HealthDataType(
     HRV("Heart rate variability", HealthDataCategory.VITALS),
     OXYGEN_SATURATION("Oxygen saturation", HealthDataCategory.VITALS),
     BODY_TEMPERATURE("Body temperature", HealthDataCategory.VITALS),
+    VO2_MAX("VO2 max", HealthDataCategory.VITALS),
 }

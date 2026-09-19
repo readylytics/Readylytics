@@ -17,9 +17,9 @@ import app.readylytics.health.core.model.domain.sync.OxygenSaturationInput
 import app.readylytics.health.core.model.domain.sync.Vo2MaxInput
 import app.readylytics.health.core.model.domain.sync.WeightInput
 
-internal fun HeartRateInput.toEntity(sourceRefByBaseId: Map<String, Long>) =
+internal fun HeartRateInput.toEntity(sourceRecordRef: Long) =
     HeartRateRecordEntity(
-        sourceRecordRef = sourceRefByBaseId.getValue(id.substringBefore('_')),
+        sourceRecordRef = sourceRecordRef,
         timestampMs = timestampMs,
         beatsPerMinute = beatsPerMinute,
         recordType = recordType,
@@ -27,15 +27,21 @@ internal fun HeartRateInput.toEntity(sourceRefByBaseId: Map<String, Long>) =
         deviceName = deviceName,
     )
 
-internal fun HrvInput.toEntity(sourceRefByBaseId: Map<String, Long>) =
+internal fun HeartRateInput.toEntity(sourceRefByBaseId: Map<String, Long>) =
+    toEntity(sourceRefByBaseId.getValue(sourceId))
+
+internal fun HrvInput.toEntity(sourceRecordRef: Long) =
     HrvRecordEntity(
-        sourceRecordRef = sourceRefByBaseId.getValue(id.substringBefore('_')),
+        sourceRecordRef = sourceRecordRef,
         timestampMs = timestampMs,
         rmssdMs = rmssdMs,
         recordType = recordType,
         sessionId = sessionId,
         deviceName = deviceName,
     )
+
+internal fun HrvInput.toEntity(sourceRefByBaseId: Map<String, Long>) =
+    toEntity(sourceRefByBaseId.getValue(sourceId))
 
 internal fun WeightInput.toEntity() =
     WeightRecordEntity(

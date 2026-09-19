@@ -6,6 +6,7 @@ import app.readylytics.health.core.scoring.domain.scoring.ComputeHistoricalBasel
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.preferences.scoringZone
+import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayPolicy
 import app.readylytics.health.core.scoring.domain.scoring.strategies.LoadScoringStrategy
 import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
@@ -18,6 +19,7 @@ class ComputeHistoricalBaselinesUseCase
     constructor(
         private val baselineComputer: BaselineComputer,
         private val loadScoringStrategy: LoadScoringStrategy,
+        private val scoringHistoryRepository: ScoringHistoryRepository,
     ) {
     suspend fun computeHistoricalBaselines(
         allDailySummaries: List<DailySummary>,
@@ -51,6 +53,16 @@ class ComputeHistoricalBaselinesUseCase
                 sleepDayPolicy = sleepDayPolicy,
             )
 
+        // Task C2 (WP-12, OD-2 gate): the persisted baselineObservationCount is the cumulative,
+        // unbounded maturity counter -- NOT windows.muHistory.size, which is capped at
+        // HRV_MU_WINDOW_DAYS (7) and belongs to the HRV statistical window only. One batched scan
+        // covers every day in this backfill instead of one full-history scan per day.
+        val eligibleDayCounts =
+            scoringHistoryRepository.countEligibleSleepDaysThroughBatch(
+                allDailySummaries.map { it.date },
+                sleepDayPolicy.scoringZoneId,
+            )
+
         return allDailySummaries.mapNotNull { summary ->
             val windows = baselines[summary.date] ?: return@mapNotNull null
             if (windows.muHistory.isEmpty()) return@mapNotNull null
@@ -76,7 +88,7 @@ class ComputeHistoricalBaselinesUseCase
                 rasScalingFactor = rasScalingFactor,
                 hrvSigmaPrior = sigmaPrior,
                 baselineCalculatedAtDate = summary.date,
-                baselineObservationCount = windows.muHistory.size,
+                baselineObservationCount = eligibleDayCounts[summary.date],
             )
         }
     }

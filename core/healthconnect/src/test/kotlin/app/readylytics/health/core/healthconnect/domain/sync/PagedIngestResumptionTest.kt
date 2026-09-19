@@ -8,6 +8,7 @@ import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
 import app.readylytics.health.core.model.domain.repository.HealthConnectWindowTimeoutException
+import app.readylytics.health.core.model.domain.repository.ReadOutcome
 import app.readylytics.health.core.model.domain.repository.ScoringRepository
 import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
@@ -62,6 +63,21 @@ class PagedIngestResumptionTest {
             WalkForwardBaselineContext(emptyList())
         coEvery { scoringRepository.fetchWalkForwardFatigueContext(any(), any(), any()) } returns
             WalkForwardFatigueContext(emptyList())
+        coEvery { hcRepo.readSleepSessions(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readExerciseSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readStepsRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readWeightRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBodyFatRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBloodPressureRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readOxygenSaturationRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBodyTemperatureRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readVo2MaxRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readDailyStepTotals(any(), any(), any()) } returns ReadOutcome.Available(emptyMap())
+        coEvery { hcRepo.readSteps(any(), any()) } returns ReadOutcome.Available(0L)
+        coEvery { hcRepo.readHeartRateSamples(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readHrvSamples(any(), any()) } returns ReadOutcome.Available(emptyList())
 
         useCase =
             ResyncRangeUseCase(
@@ -98,6 +114,7 @@ class PagedIngestResumptionTest {
                 callback(listOf(mockk(relaxed = true)), "page-2")
                 callback(listOf(mockk(relaxed = true)), "page-3")
                 callback(listOf(mockk(relaxed = true)), null)
+                app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(Unit)
             }
 
             useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
@@ -108,7 +125,7 @@ class PagedIngestResumptionTest {
         }
 
     @Test
-    fun `resuming ingestion with hrStartPageToken passes token to repository and starts from token`() =
+    fun `resuming ingestion with hrStartPageToken clears token and replays from start`() =
         runTest {
             val startDate = LocalDate.of(2024, 6, 1)
             val endDate = LocalDate.of(2024, 6, 2)
@@ -130,15 +147,16 @@ class PagedIngestResumptionTest {
             } coAnswers {
                 val callback = it.invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
                 callback(listOf(mockk(relaxed = true)), null)
+                app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(Unit)
             }
 
             useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
 
-            assertEquals("page-2", capturedStartToken.captured)
+            assertEquals(null, capturedStartToken.captured)
         }
 
     @Test
-    fun `resuming with hrvStartPageToken skips HR stream and resumes HRV stream from token`() =
+    fun `resuming with hrvStartPageToken clears token and replays both streams from start`() =
         runTest {
             val startDate = LocalDate.of(2024, 6, 1)
             val endDate = LocalDate.of(2024, 6, 2)
@@ -161,13 +179,14 @@ class PagedIngestResumptionTest {
             } coAnswers {
                 val callback = it.invocation.args[3] as suspend (List<DomainHrvRecord>, String?) -> Unit
                 callback(listOf(mockk(relaxed = true)), null)
+                app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(Unit)
             }
 
             useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
 
-            // HR stream must be skipped because HRV was already in progress
-            coVerify(exactly = 0) { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) }
-            assertEquals("hrv-page-2", capturedHrvStartToken.captured)
+            // WP-06: Incomplete scan replays HR stream and replays HRV with null startPageToken
+            coVerify(exactly = 1) { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) }
+            assertEquals(null, capturedHrvStartToken.captured)
         }
 
     @Test
@@ -191,7 +210,7 @@ class PagedIngestResumptionTest {
                         RuntimeException("timeout"),
                     )
                 }
-                emptyList()
+                app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(emptyList())
             }
 
             useCase.run(startDate = startDate, endDate = endDate, chunkDays = 10, onProgress = null)
@@ -226,11 +245,13 @@ class PagedIngestResumptionTest {
                 val callback = it.invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
                 callback(listOf(mockk(relaxed = true)), "hr-token-1")
                 callback(listOf(mockk(relaxed = true)), null)
+                app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(Unit)
             }
             coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } coAnswers {
                 val callback = it.invocation.args[3] as suspend (List<DomainHrvRecord>, String?) -> Unit
                 callback(listOf(mockk(relaxed = true)), "hrv-token-1")
                 callback(listOf(mockk(relaxed = true)), null)
+                app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(Unit)
             }
 
             val tokenEvents = mutableListOf<Pair<String?, String?>>()

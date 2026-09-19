@@ -71,7 +71,7 @@ class HealthResyncWorkerScoringVersionTest {
             // Arrange: prefs.scoringVersion = 3 (stale relative to CURRENT_SCORING_VERSION = 4)
             coEvery { settingsRepository.userPreferences } returns
                 MutableStateFlow(UserPreferences(scoringVersion = 3))
-            coEvery { useCase.execute(any(), any(), any()) } returns Result.Success(Unit)
+            coEvery { useCase.execute(any(), any(), any(), any()) } returns Result.Success(Unit)
 
             // Act
             val result = createWorker().doWork()
@@ -93,7 +93,7 @@ class HealthResyncWorkerScoringVersionTest {
             // Arrange: prefs.scoringVersion = CURRENT_SCORING_VERSION = 3
             coEvery { settingsRepository.userPreferences } returns
                 MutableStateFlow(UserPreferences(scoringVersion = SettingsDefaults.CURRENT_SCORING_VERSION))
-            coEvery { useCase.execute(any(), any(), any()) } returns Result.Success(Unit)
+            coEvery { useCase.execute(any(), any(), any(), any()) } returns Result.Success(Unit)
 
             // Act
             val result = createWorker().doWork()
@@ -113,7 +113,7 @@ class HealthResyncWorkerScoringVersionTest {
             // Arrange: prefs.scoringVersion = 2
             coEvery { settingsRepository.userPreferences } returns
                 MutableStateFlow(UserPreferences(scoringVersion = 2))
-            coEvery { useCase.execute(any(), any(), any()) } returns Result.Failure("error", "resync failed")
+            coEvery { useCase.execute(any(), any(), any(), any()) } returns Result.Failure("error", "resync failed")
 
             // Act
             val result = createWorker().doWork()
@@ -145,7 +145,7 @@ class HealthResyncWorkerScoringVersionTest {
                     ).build()
             coEvery { settingsRepository.userPreferences } returns
                 MutableStateFlow(UserPreferences(scoringVersion = 3))
-            coEvery { useCase.execute(any(), any(), any()) } returns Result.Success(Unit)
+            coEvery { useCase.execute(any(), any(), any(), any()) } returns Result.Success(Unit)
 
             val result = createWorker().doWork()
 
@@ -169,7 +169,7 @@ class HealthResyncWorkerScoringVersionTest {
                 Data.Builder().putBoolean(HealthResyncWorker.KEY_RECOMPUTE_ONLY, true).build()
             coEvery { settingsRepository.userPreferences } returns
                 MutableStateFlow(UserPreferences(scoringVersion = 3))
-            coEvery { useCase.execute(any(), any(), any()) } returns Result.Success(Unit)
+            coEvery { useCase.execute(any(), any(), any(), any()) } returns Result.Success(Unit)
 
             val result = createWorker().doWork()
 
@@ -197,7 +197,7 @@ class HealthResyncWorkerScoringVersionTest {
                     .putLong(HealthResyncWorker.KEY_RECOMPUTE_END_EPOCH_DAY, today.toEpochDay())
                     .build()
             coEvery { settingsRepository.userPreferences } returns MutableStateFlow(prefs)
-            coEvery { useCase.execute(any(), any(), any()) } returns Result.Success(Unit)
+            coEvery { useCase.execute(any(), any(), any(), any()) } returns Result.Success(Unit)
 
             val result = createWorker().doWork()
 
@@ -229,7 +229,7 @@ class HealthResyncWorkerScoringVersionTest {
                     ).build()
             coEvery { settingsRepository.userPreferences } returns
                 MutableStateFlow(UserPreferences(scoringVersion = 3))
-            coEvery { useCase.execute(any(), any(), any()) } returns Result.Failure("error", "resync failed")
+            coEvery { useCase.execute(any(), any(), any(), any()) } returns Result.Failure("error", "resync failed")
 
             val failedResult = createWorker().doWork()
 
@@ -243,7 +243,7 @@ class HealthResyncWorkerScoringVersionTest {
             // Retry: a fresh worker instance, unbounded recompute-only, now succeeds.
             every { workerParams.inputData } returns
                 Data.Builder().putBoolean(HealthResyncWorker.KEY_RECOMPUTE_ONLY, true).build()
-            coEvery { useCase.execute(any(), any(), any()) } returns Result.Success(Unit)
+            coEvery { useCase.execute(any(), any(), any(), any()) } returns Result.Success(Unit)
 
             val retriedResult = createWorker().doWork()
 
@@ -267,7 +267,7 @@ class HealthResyncWorkerScoringVersionTest {
                         trainingReadinessLoadBalanceWeight = 0.82f,
                     ),
                 )
-            coEvery { useCase.execute(any(), any(), any()) } returns Result.Success(Unit)
+            coEvery { useCase.execute(any(), any(), any(), any()) } returns Result.Success(Unit)
 
             createWorker().doWork()
 
@@ -294,7 +294,7 @@ class HealthResyncWorkerScoringVersionTest {
                         lastAppliedTrainingReadinessLoadBalanceWeight = applied.loadBalanceWeight,
                     ),
                 )
-            coEvery { useCase.execute(any(), any(), any()) } returns Result.Success(Unit)
+            coEvery { useCase.execute(any(), any(), any(), any()) } returns Result.Success(Unit)
 
             createWorker().doWork()
 

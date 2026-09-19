@@ -435,6 +435,28 @@ have locally — no network request is made to produce it. If you use encrypted 
 stored recommendations (and the examples they reference) are included like any other computed data.
 No cloud feature or telemetry was introduced to support this.
 
+Local backup recovery retains verified archives matching the saved password after an interrupted
+password change. Restore recovery finishes before sync resumes and retains its recovery record
+until maintenance is released.
+
+Heart-rate history older than 90 days is kept as one-minute summaries rather than individual
+samples. Each summarised minute now also records which device or app it came from, and that
+coverage information is included in encrypted local backups so a restore reproduces the same
+history. Refreshing a source replaces its evidence in these source-backed summaries while
+preserving other sources; device selection removes discarded sources before rebuilding.
+Expired summaries, coverage and source evidence are removed together by retention cleanup.
+Every minute is read from exactly one of the two stores — the raw samples or its
+summary, never both added together — so a minute can never be counted twice. When a sleep
+session or workout is later corrected, the summaries it covers are re-derived from that stored
+per-device record rather than from the previous result, so repeating the correction always lands
+on the same answer; the only residual difference is that a session boundary falling part-way
+through a minute can place at most one summarised sample on the wrong side of it. Summaries
+created before this existed have no per-device record to re-derive from, so they stay marked as
+approximate and are left exactly as they are — never silently overwritten or presented as
+corrected. There is currently no way to repair them: "Resync Health Connect data" re-reads your
+history but does not replace those older summaries, and no other in-app action does either. All of
+it stays on your device.
+
 _Implemented in: `ComputeWorkoutRecommendationUseCase.kt`, `MorningRecommendationAssembler.kt`,
 `SelectWorkoutRecommendationExamples.kt`_
 
@@ -534,7 +556,7 @@ Your scores are computed against a stored scoring timezone, so the same underlyi
 
 6. **This app does not diagnose anything.** If you suspect sleep apnea, a heart condition, an infection, an injury, or any other health concern, see a clinician. Physiological metrics such as HRV, sleep staging, and resting heart rate are non-specific and can be influenced by numerous behavioral, environmental, pharmacological, and measurement-related factors.
 
-7. **Heart-rate history older than 90 days is stored as a compact per-minute summary (min/max/average plus a five-point percentile sketch) rather than every raw sample.** Scores computed from that history are a very close approximation, not bit-identical to what the same night would have scored while still within the 90-day raw window.
+7. **Heart-rate history older than 90 days is stored as a compact per-minute summary (min/max/average plus a five-point percentile sketch) rather than every raw sample.** Scores computed from that history are a very close approximation, not bit-identical to what the same night would have scored while still within the 90-day raw window. Each minute is read from either the raw samples or its summary, never both, so nothing is double-counted; and when a session is corrected the summaries are re-derived from the stored per-device record, so the correction is repeatable. Summaries created before that record existed cannot be re-derived at all — they stay marked approximate and are left untouched. No in-app action repairs them today: "Resync Health Connect data" does not replace them, so that part of your history stays approximate.
 
 8. **The Workout Recommendation is not a safe, optimal, or validated training prescription.** It is a qualitative Rest/Easy/Push-harder signal derived from the same recovery-adjacent HRV, sleep, and fatigue thresholds used elsewhere in this app — not a strength or endurance program, not a numeric load target, and not medical or training advice. Treat it the same way you would treat any other single-day score: informative, not authoritative.
 

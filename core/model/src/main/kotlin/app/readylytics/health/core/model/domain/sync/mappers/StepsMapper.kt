@@ -15,7 +15,9 @@ import java.time.ZoneId
  */
 object StepsMapper {
     data class StepEntry(
+        val id: String,
         val startTimeMs: Long,
+        val endTimeMs: Long,
         val deviceName: String,
         val count: Long,
     )
@@ -23,7 +25,9 @@ object StepsMapper {
     fun toStepEntries(records: List<DomainStepsRecord>): List<StepEntry> =
         records.map { record ->
             StepEntry(
+                id = record.id,
                 startTimeMs = record.startTime.toEpochMilli(),
+                endTimeMs = record.endTime.toEpochMilli(),
                 deviceName = record.deviceName,
                 count = record.count,
             )
@@ -34,6 +38,7 @@ object StepsMapper {
         zoneId: ZoneId,
     ): Map<LocalDate, Long> =
         entries
+            .distinctBy { it.id }
             .groupBy { Instant.ofEpochMilli(it.startTimeMs).atZone(zoneId).toLocalDate() }
             .mapValues { (_, dayEntries) -> dayEntries.sumOf { it.count } }
 }

@@ -65,19 +65,7 @@ class ScoringRepositoryBiphasicIntegrationTest {
     private val vo2MaxRecordDao = mockk<Vo2MaxRecordDao>(relaxed = true)
     private val scoringHistoryRepository = mockk<ScoringHistoryRepository>(relaxed = true)
 
-    private val dataLoader =
-        ScoringDayDataLoader(
-            workoutDao,
-            sleepSessionDao,
-            dailySummaryDao,
-            heartRateDao,
-            minuteBucketDao,
-            weightRecordDao,
-            bodyFatRecordDao,
-            bloodPressureRecordDao,
-            oxygenSaturationRecordDao,
-            bodyTemperatureRecordDao,
-        )
+    private val dataLoader = ScoringDayDataLoader(workoutDao, sleepSessionDao, dailySummaryDao)
     private val bodyMetricsDataLoader =
         BodyMetricsDataLoader(
             weightRecordDao,
@@ -88,6 +76,7 @@ class ScoringRepositoryBiphasicIntegrationTest {
             vo2MaxRecordDao,
         )
     private val seriesLoader = ScoringSeriesLoader(workoutDao, dailySummaryDao)
+    private val heartRateDataLoader = ScoringHeartRateDataLoader(heartRateDao, minuteBucketDao)
 
     private val readinessSummaryCoordinator =
         ReadinessSummaryCoordinator(
@@ -107,6 +96,7 @@ class ScoringRepositoryBiphasicIntegrationTest {
                 dataLoader,
                 bodyMetricsDataLoader,
                 seriesLoader,
+                heartRateDataLoader,
             ),
             settingsRepo,
             baselineComputer,
@@ -141,6 +131,13 @@ class ScoringRepositoryBiphasicIntegrationTest {
 
             every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
             coEvery { scoringHistoryRepository.getDailySummaryByDate(any(), any()) } returns null
+            // Task C2: CalibrationGate's prior-day count now comes from the cumulative
+            // countEligibleSleepDaysThrough port rather than BaselineComputer's HRV window --
+            // mirror the same validHistoricalDayCount=6 used below (+1 for this day's own
+            // session) so this test still exercises the calibrated path it was written for.
+            coEvery {
+                scoringHistoryRepository.countEligibleSleepDaysThrough(any(), any())
+            } returns 6
             coEvery {
                 baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any(), any(), any(), null)
             } returns 60f
@@ -233,7 +230,7 @@ class ScoringRepositoryBiphasicIntegrationTest {
                 )
             coEvery { dailySummaryDao.getByDates(any()) } returns emptyList()
             coEvery { oxygenSaturationRecordDao.getByTimeRange(any(), any()) } returns emptyList()
-            coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { heartRateDao.getVisibleByTimeRange(any(), any()) } returns emptyList()
             coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns emptyList()
 
             val sessionSlot = slot<SleepMetricsRequest>()

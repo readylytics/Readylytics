@@ -2,6 +2,7 @@ package app.readylytics.health.core.database.data.local
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import app.readylytics.health.core.databaseschema.data.local.dao.getOrCreateSourceRef
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -30,7 +31,8 @@ class DataRollupManagerTest {
                 .build()
         rollupManager =
             DataRollupManager(
-                minuteBucketDao = database.minuteBucketDao(),
+                minuteCoverageDao = database.minuteCoverageDao(),
+                publisher = MinuteCoveragePublisher(database.minuteBucketDao(), database.minuteCoverageDao()),
                 heartRateDao = database.heartRateDao(),
                 transactionRunner = RoomTransactionRunner(database),
             )
@@ -184,7 +186,8 @@ class DataRollupManagerTest {
 
             val manager =
                 DataRollupManager(
-                    minuteBucketDao = database.minuteBucketDao(),
+                    minuteCoverageDao = database.minuteCoverageDao(),
+                    publisher = MinuteCoveragePublisher(database.minuteBucketDao(), database.minuteCoverageDao()),
                     heartRateDao = database.heartRateDao(),
                     transactionRunner = countingRunner,
                 )
@@ -229,7 +232,8 @@ class DataRollupManagerTest {
 
             val crashingManager =
                 DataRollupManager(
-                    minuteBucketDao = database.minuteBucketDao(),
+                    minuteCoverageDao = database.minuteCoverageDao(),
+                    publisher = MinuteCoveragePublisher(database.minuteBucketDao(), database.minuteCoverageDao()),
                     heartRateDao = database.heartRateDao(),
                     transactionRunner = failingRunner,
                 )

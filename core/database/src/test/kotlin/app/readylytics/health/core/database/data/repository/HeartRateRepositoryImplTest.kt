@@ -35,11 +35,11 @@ class HeartRateRepositoryImplTest {
     @Test
     fun `getRecoveryWindowSamples returns hot-tier samples with RAW resolution when present`() =
         runTest {
-            coEvery { heartRateDao.getByTimeRange(1_000L, 5_000L) } returns
+            coEvery { heartRateDao.getVisibleByTimeRange(1_000L, 5_000L) } returns
                 listOf(
                     heartRateEntityFixture(timestampMs = 2_000L, beatsPerMinute = 70),
                 )
-            coEvery { minuteBucketDao.getBucketsInTimeRange(1_000L, 5_000L) } returns emptyList()
+            coEvery { minuteBucketDao.getVisibleBucketsInTimeRange(1_000L, 5_000L) } returns emptyList()
 
             val series = repository.getRecoveryWindowSamples(1_000L, 5_000L)
 
@@ -50,8 +50,8 @@ class HeartRateRepositoryImplTest {
     @Test
     fun `getRecoveryWindowSamples falls back to reconstructed warm-tier samples when hot tier is empty`() =
         runTest {
-            coEvery { heartRateDao.getByTimeRange(1_000L, 5_000L) } returns emptyList()
-            coEvery { minuteBucketDao.getBucketsInTimeRange(1_000L, 5_000L) } returns
+            coEvery { heartRateDao.getVisibleByTimeRange(1_000L, 5_000L) } returns emptyList()
+            coEvery { minuteBucketDao.getVisibleBucketsInTimeRange(1_000L, 5_000L) } returns
                 listOf(
                     minuteBucketFixture(
                         bucketStartMs = 1_000L,
@@ -72,11 +72,11 @@ class HeartRateRepositoryImplTest {
     @Test
     fun `getRecoveryWindowSamples merges both tiers and sorts by timestamp when both are non-empty`() =
         runTest {
-            coEvery { heartRateDao.getByTimeRange(1_000L, 5_000L) } returns
+            coEvery { heartRateDao.getVisibleByTimeRange(1_000L, 5_000L) } returns
                 listOf(
                     heartRateEntityFixture(timestampMs = 4_000L, beatsPerMinute = 80),
                 )
-            coEvery { minuteBucketDao.getBucketsInTimeRange(1_000L, 5_000L) } returns
+            coEvery { minuteBucketDao.getVisibleBucketsInTimeRange(1_000L, 5_000L) } returns
                 listOf(
                     minuteBucketFixture(
                         bucketStartMs = 1_000L,
@@ -102,13 +102,13 @@ class HeartRateRepositoryImplTest {
             // (RetentionBounds.resolveHotTierCutoffMs) is a continuous instant, not day-aligned, so a
             // single calendar day routinely straddles both tiers. Hot being non-empty must not short-
             // circuit the warm-tier read -- both tiers have to be merged whenever warm is non-empty.
-            every { heartRateDao.observeByTimeRange(1_000L, 5_000L) } returns
+            every { heartRateDao.observeVisibleByTimeRange(1_000L, 5_000L) } returns
                 flowOf(
                     listOf(
                         heartRateEntityFixture(timestampMs = 4_000L, beatsPerMinute = 80),
                     ),
                 )
-            coEvery { minuteBucketDao.getBucketsInTimeRange(1_000L, 5_000L) } returns
+            coEvery { minuteBucketDao.getVisibleBucketsInTimeRange(1_000L, 5_000L) } returns
                 listOf(
                     minuteBucketFixture(
                         bucketStartMs = 1_000L,

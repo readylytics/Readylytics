@@ -23,6 +23,7 @@ data class SleepStageData(
     val startTime: Long,
     val endTime: Long,
     val durationMinutes: Int,
+    val sessionId: String? = null,
 ) {
     fun getStartOffsetMinutes(sessionStartTime: Long): Int = ((startTime - sessionStartTime) / 60_000L).toInt()
 }
@@ -50,6 +51,12 @@ interface SleepSessionRepository {
     fun observeSessionStages(sessionId: String): Flow<List<SleepStageData>>
 
     suspend fun getSessionStages(sessionId: String): List<SleepStageData>
+
+    /**
+     * WP-14/C4: bounded multi-ID counterpart of [getSessionStages], for fetching exactly a core
+     * cluster's canonical segment IDs' stages in one query (deduplicated/ordered by the caller).
+     */
+    suspend fun getSessionStages(sessionIds: List<String>): List<SleepStageData>
 
     fun observeFirstSessionEndingInRange(
         fromMs: Long,

@@ -1,5 +1,6 @@
 package app.readylytics.health.core.database.data.repository
 
+import app.readylytics.health.core.database.data.local.AuthoritativeHeartRateReader
 import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.database.data.local.RoomTransactionRunner
 import app.readylytics.health.core.database.data.local.SessionLinkReconcilerImpl
@@ -23,6 +24,7 @@ internal class ResidualFatigueScenarioSeeder(
         val heartRates: MutableList<HeartRateRecordEntity> = mutableListOf(),
         val hrvs: MutableList<HrvRecordEntity> = mutableListOf(),
         val sleepSessions: MutableList<SleepSessionEntity> = mutableListOf(),
+        var nextSourceRef: Long = 1000L,
     )
 
     suspend fun seedDeterministicScenario(database: HealthDatabase, seedEverydayAndHrv: Boolean = false) {
@@ -47,6 +49,8 @@ internal class ResidualFatigueScenarioSeeder(
             heartRateDao = database.heartRateDao(),
             hrvDao = database.hrvDao(),
             transactionRunner = RoomTransactionRunner(database),
+            authoritativeReader =
+                AuthoritativeHeartRateReader(database.heartRateDao(), database.minuteBucketDao()),
         )
         val zoneThresholds = ZoneThresholds.create(90, 110, 130, 150, 170)
         reconciler.reconcile(
@@ -186,9 +190,8 @@ internal class ResidualFatigueScenarioSeeder(
             ),
         )
         var t = startEpochMs
-        var ref = 1000L + records.workouts.size * 100L
         while (t < endEpochMs) {
-            val currentRef = ++ref
+            val currentRef = ++records.nextSourceRef
             records.sourceRecords.add(
                 HealthSourceRecordEntity(
                     id = currentRef,
@@ -213,7 +216,12 @@ internal class ResidualFatigueScenarioSeeder(
     private fun seedScenarioSleepSessions(records: ScenarioRecords, seedEverydayAndHrv: Boolean) {
         var d = historyStartDate
         while (!d.isAfter(LocalDate.of(2026, 6, 6))) {
-            val sleepStart = epoch(d, 23, 0)
+            val sleepStart =
+                if (d == LocalDate.of(2026, 5, 22)) {
+                    epoch(d.plusDays(1), 1, 0)
+                } else {
+                    epoch(d, 23, 0)
+                }
             val sleepId = "sleep-$d"
             addScenarioSleepSession(records, d, sleepId, sleepStart)
             addScenarioSleepHeartRate(records, sleepId, sleepStart)

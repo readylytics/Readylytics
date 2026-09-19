@@ -164,4 +164,57 @@ class SafBackupStoreTest {
             assertFalse(oldFile.exists())
             assertTrue(recentFile.exists())
         }
+
+    @Test
+    fun publishNew_createsTargetAndPreservesSource() =
+        runTest {
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            val backupDir = tempFolder.newFolder("saf_backups_publish_new")
+            val store = SafBackupStore(context, Uri.fromFile(backupDir))
+
+            val source =
+                tempFolder.newFile("source_saf_new.zip").apply {
+                    writeText("saf publish new content")
+                }
+            val targetName = "backup_2026_01_03.zip"
+
+            val location = store.publishNew(source, targetName)
+
+            assertTrue(source.exists(), "Source file should be preserved after publishNew")
+            val target = File(backupDir, targetName)
+            assertTrue(target.exists(), "Target file must exist in SAF directory")
+            assertEquals("saf publish new content", target.readText())
+            assertEquals("saf publish new content", store.read(location).bufferedReader().readText())
+        }
+
+    @Test
+    fun publishNew_emptySource_throwsIllegalStateException() =
+        runTest {
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            val backupDir = tempFolder.newFolder("saf_backups_empty_publish_new")
+            val store = SafBackupStore(context, Uri.fromFile(backupDir))
+
+            val emptySource = tempFolder.newFile("empty_saf_new.zip")
+
+            assertFailsWith<IllegalStateException> {
+                store.publishNew(emptySource, "backup_empty.zip")
+            }
+        }
+
+    @Test
+    fun publishNew_existingTarget_throwsIllegalStateException() =
+        runTest {
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            val backupDir = tempFolder.newFolder("saf_backups_existing_publish_new")
+            val store = SafBackupStore(context, Uri.fromFile(backupDir))
+
+            val targetName = "backup_saf_exists.zip"
+            File(backupDir, targetName).writeText("existing saf content")
+
+            val source = tempFolder.newFile("source_saf_exists.zip").apply { writeText("new") }
+
+            assertFailsWith<IllegalStateException> {
+                store.publishNew(source, targetName)
+            }
+        }
 }

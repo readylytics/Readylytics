@@ -24,6 +24,15 @@ interface RhrBaselineProvider {
     suspend fun getRhrBaseline(dayMidnight: Instant): Float
 }
 
+/**
+ * Precise/rounded RHR baseline lookups for one target [LocalDate] at a time.
+ *
+ * Resolution order: persisted per-day baseline -> user override -> live recompute via
+ * [BaselineComputer.rhrHistory] + [BaselineComputer.resolveBaselineRhrBpm]. WP-11: the
+ * live-recompute fallback is bounded to the target date's scoring-zone day end (never
+ * [java.time.Clock.systemDefaultZone] or the device's system zone), so a lookup for a past date
+ * never reads sessions dated after it.
+ */
 @Singleton
 class AdaptiveRhrBaselineProvider
     @Inject

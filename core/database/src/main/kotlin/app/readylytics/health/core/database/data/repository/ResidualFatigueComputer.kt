@@ -1,6 +1,8 @@
 package app.readylytics.health.core.database.data.repository
 
+import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.repository.FatigueWorkoutInput
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.scoring.ResidualFatigueConfig
 import app.readylytics.health.core.model.domain.util.RetentionBounds
@@ -72,11 +74,20 @@ class ResidualFatigueComputer(
     suspend fun compute(
         context: ScoringDayContext,
         fatigueContext: WalkForwardFatigueContext?,
+        stagedFatigueInputs: List<FatigueWorkoutInput> = emptyList(),
+        stagedWorkouts: List<WorkoutRecordEntity> = emptyList(),
     ): Float? {
         val config = clampedConfig(context.prefs)
         val evalMs = context.nextDayMidnightMs
         return when (fatigueContext) {
-            null -> computeSingleDayFallback(evalMs, config, context.prefs)
+            null ->
+                computeSingleDayFallback(
+                    evalMs = evalMs,
+                    config = config,
+                    prefs = context.prefs,
+                    stagedFatigueInputs = stagedFatigueInputs,
+                    stagedWorkouts = stagedWorkouts,
+                )
             else -> computeWalkForward(fatigueContext, evalMs, config)
         }
     }
@@ -119,17 +130,32 @@ class ResidualFatigueComputer(
         evalMs: Long,
         config: ResidualFatigueConfig,
         prefs: UserPreferences,
+        stagedFatigueInputs: List<FatigueWorkoutInput> = emptyList(),
+        stagedWorkouts: List<WorkoutRecordEntity> = emptyList(),
     ): Float? {
-        val unbackfilled =
+        val retentionStart = retentionStartMs(prefs)
+        val unbackfilledInDb =
             dataLoader.loadUnbackfilledCountThrough(
-                retentionStartMs = retentionStartMs(prefs),
+                retentionStartMs = retentionStart,
                 evaluationTimeMs = evalMs,
             )
+        val stagedUnbackfilledInDb =
+            stagedWorkouts.count {
+                it.modelTrimp == null && it.startTime >= retentionStart && it.endTime <= evalMs
+            }
+        val unbackfilled = (unbackfilledInDb - stagedUnbackfilledInDb).coerceAtLeast(0)
         if (unbackfilled > 0) return null
-        val workouts = dataLoader.loadCanonicalFatigueInputsThrough(evalMs)
+
+        val stagedIds = stagedFatigueInputs.map { it.workoutId }.toSet()
+        val workoutsFromDb =
+            dataLoader.loadCanonicalFatigueInputsThrough(evalMs).filterNot { it.workoutId in stagedIds }
+        val allWorkouts =
+            (workoutsFromDb + stagedFatigueInputs.filter { it.trimp > 0 })
+                .sortedWith(compareBy({ it.endTimeMs }, { it.workoutId }))
+
         return computeResidualFatigueUseCase.compute(
             evalMs,
-            workouts.map { ComputeResidualFatigueUseCase.FatigueWorkoutInput(it.endTimeMs, it.trimp) },
+            allWorkouts.map { ComputeResidualFatigueUseCase.FatigueWorkoutInput(it.endTimeMs, it.trimp) },
             config,
         )
     }

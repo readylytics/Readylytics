@@ -12,6 +12,7 @@ import app.readylytics.health.core.model.domain.repository.HealthConnectPermissi
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import dagger.Lazy
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -104,7 +105,7 @@ class PeriodicHealthSyncWorkerTest {
 
             val result = createWorker().doWork()
 
-            verify(exactly = 1) { workerScheduler.scheduleResyncWorker() }
+            coVerify(exactly = 1) { workerScheduler.scheduleResyncWorker() }
             verify(exactly = 1) { foregroundSyncController.onBackgroundRecalcFinished(false) }
             assertEquals(ListenableWorker.Result.success(), result)
         }
@@ -121,13 +122,29 @@ class PeriodicHealthSyncWorkerTest {
             verify(exactly = 0) { foregroundSyncControllerLazy.get() }
         }
 
-    private fun createWorker() =
-        PeriodicHealthSyncWorker(
-            appContext = context,
-            params = workerParams,
-            healthSyncUseCase = healthSyncUseCaseLazy,
-            foregroundSyncController = foregroundSyncControllerLazy,
-            workerScheduler = workerScheduler,
-            databaseReadinessGate = databaseReadinessGate,
-        )
+    @Test
+    fun `doWork retries when maintenance is pending`() =
+        runBlocking {
+            val coordinator = mockk<app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator>()
+            io.mockk.coEvery { coordinator.isMaintenancePending() } returns true
+
+            val worker = createWorker(coordinator)
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.retry(), result)
+            verify(exactly = 0) { healthSyncUseCaseLazy.get() }
+            verify(exactly = 0) { foregroundSyncControllerLazy.get() }
+        }
+
+    private fun createWorker(
+        coordinator: app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator? = null,
+    ) = PeriodicHealthSyncWorker(
+        appContext = context,
+        params = workerParams,
+        healthSyncUseCase = healthSyncUseCaseLazy,
+        foregroundSyncController = foregroundSyncControllerLazy,
+        workerScheduler = workerScheduler,
+        databaseReadinessGate = databaseReadinessGate,
+        healthMutationCoordinator = coordinator?.let { Lazy { it } },
+    )
 }

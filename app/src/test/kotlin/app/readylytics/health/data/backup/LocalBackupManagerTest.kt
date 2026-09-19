@@ -1,7 +1,6 @@
 package app.readylytics.health.data.backup
 
 import android.content.Context
-import android.net.Uri
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.readylytics.health.core.database.data.local.HealthDatabase
@@ -47,7 +46,6 @@ import java.io.File
 import java.nio.charset.StandardCharsets
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -132,7 +130,20 @@ class LocalBackupManagerTest {
     private fun buildManager(
         customSettingsRepo: SettingsRepository = settingsRepo,
         customStoreFactory: BackupStoreFactory = DefaultBackupStoreFactory(context),
+        customWriter: BackupStreamWriter? = null,
     ): LocalBackupManager {
+        kotlinx.coroutines.runBlocking {
+            db.healthMutationStateDao().upsert(
+                app.readylytics.health.core.databaseschema.data.local.entity.HealthMutationStateEntity(
+                    id = 1,
+                    sourceGeneration = 0,
+                    backfillAfterSourceRef = 0,
+                ),
+            )
+        }
+        val coordinator =
+            app.readylytics.health.core.database.data.local
+                .HealthMutationCoordinatorImpl(db.healthMutationStateDao())
         val layoutRepos =
             RestoreLayoutRepositories(
                 cardConfigRepo,
@@ -141,11 +152,19 @@ class LocalBackupManagerTest {
                 workoutsLayoutRepo,
                 workoutDetailLayoutRepo,
             )
-        val backupStreamWriter = BackupStreamWriter(db, customSettingsRepo, layoutRepos)
+        val backupStreamWriter = customWriter ?: BackupStreamWriter(db, CoverageBackupWriter(db))
+        val exporter =
+            BackupSnapshotExporter(
+                db,
+                coordinator,
+                customSettingsRepo,
+                layoutRepos,
+                backupStreamWriter,
+            )
         return LocalBackupManager(
             context,
             customSettingsRepo,
-            backupStreamWriter,
+            exporter,
             encryptionManager,
             auditTrailRepository,
             Dispatchers.Unconfined,
@@ -527,98 +546,6 @@ class LocalBackupManagerTest {
             assertEquals(0, rowCounts.getInt("bloodPressureRecords"))
             assertEquals(0, rowCounts.getInt("oxygenSaturationRecords"))
             assertEquals(0, rowCounts.getInt("bodyTemperatureRecords"))
-        }
-
-    @Test
-    fun createBackup_prunesFilesOlderThan7Days() =
-        runTest {
-            backupDir.mkdirs()
-
-            val now = System.currentTimeMillis()
-            val eightDaysAgo = now - (8L * 24 * 60 * 60 * 1000)
-            val oneDayAgo = now - (1L * 24 * 60 * 60 * 1000)
-
-            val staleFile1 = File(backupDir, "backup_2026-05-08_100000.zip")
-            val staleFile2 = File(backupDir, "backup_2026-05-07_100000.zip")
-            val recentFile = File(backupDir, "backup_2026-05-15_100000.zip")
-
-            staleFile1.writeText("{}")
-            staleFile2.writeText("{}")
-            recentFile.writeText("{}")
-
-            staleFile1.setLastModified(eightDaysAgo)
-            staleFile2.setLastModified(eightDaysAgo)
-            recentFile.setLastModified(oneDayAgo)
-
-            val result = manager.createBackup()
-            assertTrue(result.isSuccess)
-
-            assertTrue(!staleFile1.exists(), "Stale file 1 should be deleted")
-            assertTrue(!staleFile2.exists(), "Stale file 2 should be deleted")
-            assertTrue(recentFile.exists(), "Recent file should be retained")
-        }
-
-    @Test
-    fun createBackup_prunesSafFilesOlderThan7Days() =
-        runTest {
-            val safDir = File(context.cacheDir, "saf_backups")
-            safDir.mkdirs()
-            val safUri = Uri.fromFile(safDir)
-
-            val customSettingsRepo =
-                mockk<SettingsRepository>().apply {
-                    every { userPreferences } returns
-                        flowOf(
-                            app.readylytics.health.core.model.data.preferences.UserPreferences(
-                                backupDirectoryUri = safUri.toString(),
-                            ),
-                        )
-                }
-            val safManager = buildManager(customSettingsRepo = customSettingsRepo)
-
-            val now = System.currentTimeMillis()
-            val eightDaysAgo = now - (8L * 24 * 60 * 60 * 1000)
-            val oneDayAgo = now - (1L * 24 * 60 * 60 * 1000)
-
-            val staleFile = File(safDir, "backup_2026-05-08_100000.zip")
-            val recentFile = File(safDir, "backup_2026-05-15_100000.zip")
-
-            staleFile.writeText("{}")
-            recentFile.writeText("{}")
-
-            staleFile.setLastModified(eightDaysAgo)
-            recentFile.setLastModified(oneDayAgo)
-
-            safManager.createBackup()
-
-            assertTrue(!staleFile.exists(), "Stale SAF file should be deleted")
-            assertTrue(recentFile.exists(), "Recent SAF file should be retained")
-
-            safDir.deleteRecursively()
-        }
-
-    @Test
-    fun createBackup_missingPassword_removesPlaintextTempJson() =
-        runTest {
-            val customSettingsRepo =
-                mockk<SettingsRepository>().apply {
-                    every { userPreferences } returns
-                        flowOf(
-                            app.readylytics.health.core.model.data.preferences.UserPreferences(
-                                backupPasswordHash = null,
-                            ),
-                        )
-                }
-            val noPassManager = buildManager(customSettingsRepo = customSettingsRepo)
-
-            val result = noPassManager.createBackup()
-
-            assertTrue(result.isFailure)
-            val leakedJson =
-                context.cacheDir
-                    .listFiles { file -> file.name.startsWith("backup_") && file.name.endsWith(".json") }
-                    .orEmpty()
-            assertFalse(leakedJson.any(), "Plaintext backup JSON temp files must be removed after failure")
         }
 
     internal class FakeAuditTrailRepository : AuditTrailRepository {

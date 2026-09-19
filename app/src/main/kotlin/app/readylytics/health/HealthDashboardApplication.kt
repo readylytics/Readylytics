@@ -16,6 +16,7 @@ import app.readylytics.health.core.healthconnect.domain.sync.HealthSyncUseCase
 import app.readylytics.health.core.model.di.ApplicationScope
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.repository.WorkoutTrimpBackfillStatus
+import app.readylytics.health.core.model.domain.sync.DirtyRangeStore
 import app.readylytics.health.core.model.domain.util.DomainLogSink
 import app.readylytics.health.core.model.domain.util.DomainLogger
 import app.readylytics.health.core.model.domain.util.LogContext
@@ -24,7 +25,9 @@ import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.core.scoring.domain.scoring.BackfillHistoricalBaselinesUseCase
+import app.readylytics.health.crashreport.CachePrune
 import app.readylytics.health.crashreport.CrashReportHandler
+import app.readylytics.health.data.backup.RestoreMaintenanceCoordinator
 import app.readylytics.health.data.preferences.PhysiologyPreferences
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.di.ReleaseLogSink
@@ -65,6 +68,12 @@ class HealthDashboardApplication :
     lateinit var healthSyncUseCase: Lazy<HealthSyncUseCase>
 
     @Inject
+    lateinit var dirtyRangeStore: Lazy<DirtyRangeStore>
+
+    @Inject
+    lateinit var restoreMaintenanceCoordinator: Lazy<RestoreMaintenanceCoordinator>
+
+    @Inject
     lateinit var databaseMigrationController: DatabaseMigrationController
 
     @Inject
@@ -87,6 +96,7 @@ class HealthDashboardApplication :
 
     override fun onCreate() {
         super.onCreate()
+        CachePrune.pruneCacheDirectories(this)
         val crashReportHandler = CrashReportHandler(applicationContext, Thread.getDefaultUncaughtExceptionHandler())
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             if (sqlCipherKeyManager.get().isKeyCorrupted.value) {
@@ -127,6 +137,9 @@ class HealthDashboardApplication :
                 physiologyPreferences = physiologyPreferences,
                 workerScheduler = workerScheduler,
                 workoutTrimpBackfillStatus = workoutTrimpBackfillStatus,
+                context = this,
+                dirtyRangeStore = dirtyRangeStore,
+                restoreMaintenanceCoordinator = restoreMaintenanceCoordinator,
             )
         val startupCoordinator = DatabaseReadyStartupCoordinator(startupInitializer)
         val preferencesPrewarmer = PreferencesPrewarmer(settingsRepo)

@@ -12,8 +12,14 @@ import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao
 import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
-import app.readylytics.health.core.database.data.local.reconstructSampleValues
+import app.readylytics.health.core.database.data.local.AuthoritativeHeartRateReader
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
+import app.readylytics.health.core.scoring.domain.scoring.CompositeScoringCalculator
+import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
+import app.readylytics.health.core.scoring.domain.scoring.strategies.LoadScoringStrategy
+import app.readylytics.health.core.scoring.domain.scoring.strategies.RasScoringStrategy
+import app.readylytics.health.core.scoring.domain.scoring.strategies.SleepScoringStrategy
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
@@ -31,8 +37,43 @@ class ScoringHistoryRepositoryImpl
         private val hrvDao: HrvDao,
         private val sleepSessionDao: SleepSessionDao,
         private val dailySummaryDao: DailySummaryDao,
-        private val minuteBucketDao: MinuteBucketDao,
+        private val authoritativeReader: AuthoritativeHeartRateReader,
+        // Task C2: eligibility (validateNight) for countEligibleSleepDaysThrough{,Batch}. Defaulted
+        // to a real (pure, zero-arg-constructible) calculator so the many existing 5-arg call sites
+        // across the test suite keep compiling; production DI always supplies the bound
+        // ScoringCalculator implementation via ScoringBindsModule regardless of this default.
+        private val scoringCalculator: ScoringCalculator =
+            CompositeScoringCalculator(
+                sleepStrategy = SleepScoringStrategy(LoadScoringStrategy()),
+                rasStrategy = RasScoringStrategy(),
+                loadStrategy = LoadScoringStrategy(),
+            ),
     ) : ScoringHistoryRepository {
+        /**
+         * Fixture convenience (see `ScoringHeartRateDataLoader`'s secondary constructor for the
+         * rationale): assembles the reader from the DAOs a Room-backed test already has.
+         */
+        constructor(
+            heartRateDao: HeartRateDao,
+            hrvDao: HrvDao,
+            sleepSessionDao: SleepSessionDao,
+            dailySummaryDao: DailySummaryDao,
+            minuteBucketDao: MinuteBucketDao,
+            scoringCalculator: ScoringCalculator =
+                CompositeScoringCalculator(
+                    sleepStrategy = SleepScoringStrategy(LoadScoringStrategy()),
+                    rasStrategy = RasScoringStrategy(),
+                    loadStrategy = LoadScoringStrategy(),
+                ),
+        ) : this(
+            heartRateDao = heartRateDao,
+            hrvDao = hrvDao,
+            sleepSessionDao = sleepSessionDao,
+            dailySummaryDao = dailySummaryDao,
+            authoritativeReader = AuthoritativeHeartRateReader(heartRateDao, minuteBucketDao),
+            scoringCalculator = scoringCalculator,
+        )
+
         override suspend fun getSleepSessionsSince(fromMs: Long): List<SleepSession> =
             sleepSessionDao.getSince(fromMs).map(SleepSessionMapper::toDomain)
 
@@ -41,21 +82,15 @@ class ScoringHistoryRepositoryImpl
             toMs: Long,
         ): List<SleepSession> = sleepSessionDao.getBetween(fromMs, toMs).map(SleepSessionMapper::toDomain)
 
-        override suspend fun getSleepHrProjectionForSessions(sessionIds: List<String>): List<SleepHrSample> {
-            val hot =
-                heartRateDao.getSleepHrProjectionForSessions(sessionIds).map {
-                    SleepHrSample(sessionId = it.sessionId, beatsPerMinute = it.beatsPerMinute)
-                }
-            val warmSamples =
-                sessionIds.flatMap { sessionId ->
-                    minuteBucketDao
-                        .getBucketsForSession("SLEEP", sessionId)
-                        .reconstructSampleValues()
-                        .map { SleepHrSample(sessionId = sessionId, beatsPerMinute = it) }
-                }
-            if (warmSamples.isEmpty()) return hot
-            return (hot + warmSamples).sortedWith(compareBy({ it.sessionId }, { it.beatsPerMinute }))
-        }
+        // WP-17 Step 3: both tiers are selected by the one coverage predicate in
+        // AuthoritativeHeartRateReader, so a minute quarantined by OD-1 contributes its warm
+        // projection only -- never its quarantined raw rows as well. This projection feeds the
+        // per-session sleep mean AND the baseline eligibility count, so both now agree on sample
+        // count and weighted mean with every other reader.
+        override suspend fun getSleepHrProjectionForSessions(sessionIds: List<String>): List<SleepHrSample> =
+            authoritativeReader.sleepProjectionForSessions(sessionIds).map {
+                SleepHrSample(sessionId = it.sessionId, beatsPerMinute = it.beatsPerMinute)
+            }
 
         override suspend fun getAvgSleepHrForSessions(sessionIds: List<String>): Map<String, Int> =
             getSleepHrProjectionForSessions(sessionIds)
@@ -64,12 +99,8 @@ class ScoringHistoryRepositoryImpl
 
         override suspend fun getMinHrTimestamp(sessionId: String): Long? = heartRateDao.getMinHrTimestamp(sessionId)
 
-        override suspend fun getSleepHrSamplesForSession(sessionId: String): List<Int> {
-            val hot = heartRateDao.getSleepHrSamplesForSession(sessionId)
-            val warmBuckets = minuteBucketDao.getBucketsForSession("SLEEP", sessionId)
-            if (warmBuckets.isEmpty()) return hot
-            return (hot + warmBuckets.reconstructSampleValues().toList()).sorted()
-        }
+        override suspend fun getSleepHrSamplesForSession(sessionId: String): List<Int> =
+            authoritativeReader.sleepSamplesForSession(sessionId)
 
         override suspend fun getSleepRmssdForSessionsMap(sessionIds: List<String>): Map<String, List<Float>> =
             hrvDao.getSleepRmssdForSessionsMap(sessionIds)
@@ -102,10 +133,20 @@ class ScoringHistoryRepositoryImpl
             dailySummaryDao.upsertAll(summaries.map { DailySummaryMapper.toEntity(it, zoneId) })
         }
 
+        // WP-17 Step 3: the whole range, both tiers. `mergedSamples()` reconstructs each visible
+        // warm bucket into rows carrying that bucket's own recordType/sessionId, so
+        // ComputeSleepMetricsUseCase's `recordType == SLEEP && sessionId in currentSessionIds`
+        // filter still selects the right samples -- and so HrCoverageValidator.isValid (which
+        // returns false on an empty list) is not handed an empty night for a range whose minutes
+        // have rolled up or been OD-1-quarantined.
         override suspend fun getHeartRateRecordsByTimeRange(
             startMs: Long,
             endMs: Long,
-        ): List<HeartRateRecord> = heartRateDao.getByTimeRange(startMs, endMs).map(HeartRateRecordMapper::toDomain)
+        ): List<HeartRateRecord> =
+            authoritativeReader
+                .rangeIn(startMs, endMs)
+                .mergedSamples()
+                .map(HeartRateRecordMapper::toDomain)
 
         override suspend fun getPreciseHrMax(dateMidnightMs: Long): Double? =
             dailySummaryDao.getPreciseHrMax(dateMidnightMs)
@@ -156,5 +197,54 @@ class ScoringHistoryRepositoryImpl
                 rasScalingFactor = rasScalingFactor,
                 baselineObservationCount = baselineObservationCount,
             )
+        }
+
+        override suspend fun countEligibleSleepDaysThrough(
+            endDay: LocalDate,
+            zoneId: ZoneId,
+        ): Int? = countEligibleSleepDaysThroughBatch(listOf(endDay), zoneId)[endDay]
+
+        override suspend fun countEligibleSleepDaysThroughBatch(
+            endDays: List<LocalDate>,
+            zoneId: ZoneId,
+        ): Map<LocalDate, Int?> {
+            // endDays.maxOrNull() is null only when endDays itself is empty, in which case every
+            // associateWith below is a no-op over an empty list regardless of the sessions fetched
+            // -- so the empty-endDays case needs no separate early return.
+            val sessions =
+                endDays
+                    .maxOrNull()
+                    ?.let { maxEndDay ->
+                        val maxEndMs = maxEndDay.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli() - 1
+                        getSleepSessionsBetween(0L, maxEndMs)
+                    }.orEmpty()
+            if (sessions.isEmpty()) return endDays.associateWith { null }
+
+            val sessionIds = sessions.map { it.id }
+            val hrvMap = getSleepRmssdForSessionsMap(sessionIds)
+            val hrMap = getAvgSleepHrForSessions(sessionIds)
+            val eligibleScoreDays =
+                sessions
+                    .filter { session -> isEligibleForBaseline(session, hrvMap, hrMap) }
+                    .map { Instant.ofEpochMilli(it.endTime).atZone(zoneId).toLocalDate() }
+                    .distinct()
+            return endDays.associateWith { endDay -> eligibleScoreDays.count { it <= endDay } }
+        }
+
+        private fun isEligibleForBaseline(
+            session: SleepSession,
+            hrvMap: Map<String, List<Float>>,
+            hrMap: Map<String, Int>,
+        ): Boolean {
+            val samples = hrvMap[session.id].orEmpty()
+            val avgHr = hrMap[session.id]
+            return scoringCalculator
+                .validateNight(
+                    rmssdMs = if (samples.isNotEmpty()) samples.average().toFloat() else null,
+                    rhrBpm = avgHr?.toFloat(),
+                    durationMinutes = session.durationMinutes,
+                    deepMinutes = session.deepSleepMinutes,
+                    remMinutes = session.remSleepMinutes,
+                ).canContributeToBaseline
         }
     }

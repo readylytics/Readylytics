@@ -5,6 +5,7 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import app.readylytics.health.core.database.data.local.DataRollupManager
+import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.util.RetentionBounds
 import app.readylytics.health.core.model.domain.util.logE
@@ -35,9 +36,13 @@ class DataRollupWorker
         private val rollupManager: Lazy<DataRollupManager>,
         private val workerScheduler: Lazy<WorkerScheduler>,
         private val clock: Clock,
+        private val healthMutationCoordinator: Lazy<HealthMutationCoordinator>? = null,
     ) : CoroutineWorker(context, params) {
-        override suspend fun doWork(): Result =
-            try {
+        override suspend fun doWork(): Result {
+            if (healthMutationCoordinator?.get()?.isMaintenancePending() == true) {
+                return Result.retry()
+            }
+            return try {
                 val touched =
                     rollupManager.get().rollupExpiredHotTier(RetentionBounds.resolveHotTierCutoffMs(clock.instant()))
                 if (touched != null) {
@@ -55,4 +60,5 @@ class DataRollupWorker
                 logE("DataRollupWorker", e) { "Data rollup failed" }
                 Result.retry()
             }
+        }
     }

@@ -22,6 +22,11 @@ data class WorkoutData(
     val avgSpeedKmh: Float? = null,
     val elevationGainMeters: Float? = null,
     val routeState: String = RouteState.NOT_AVAILABLE,
+    val modelTrimp: Float? = null,
+    val modelTrimpSourceRevision: Long? = null,
+    val modelTrimpSnapshotId: String? = null,
+    val modelTrimpAlgorithmRevision: Int? = null,
+    val modelTrimpQuality: String? = null,
 )
 
 interface WorkoutRepository {

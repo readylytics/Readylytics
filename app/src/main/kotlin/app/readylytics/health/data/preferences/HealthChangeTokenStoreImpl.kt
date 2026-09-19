@@ -37,45 +37,64 @@ class HealthChangeTokenStoreImpl
     constructor(
         private val dataStore: DataStore<HealthChangeTokensProto>,
     ) : HealthChangeTokenStore {
-        override suspend fun get(dataType: HealthDataType): String? {
-            val proto = dataStore.data.first()
-            return proto.tokensMap[dataType.name]?.takeIf { it.isNotEmpty() }
-        }
+        override suspend fun get(dataType: HealthDataType): String? = getToken(dataType.name)
 
         override suspend fun put(
             dataType: HealthDataType,
             token: String,
             syncedAtMs: Long,
-        ) {
-            dataStore.updateData { current ->
-                current
-                    .toBuilder()
-                    .putTokens(dataType.name, token)
-                    .putLastSuccessTimestampsMs(dataType.name, syncedAtMs)
-                    .build()
-            }
-        }
+        ) = putToken(dataType.name, token, syncedAtMs)
 
         override suspend fun putAll(
             tokens: Map<HealthDataType, String>,
             syncedAtMs: Long,
         ) {
+            dataStore.updateTokens(tokens.mapKeys { it.key.name }, syncedAtMs)
+        }
+
+        override suspend fun suspendType(dataType: HealthDataType) = suspendToken(dataType.name)
+
+        override suspend fun isSuspended(dataType: HealthDataType): Boolean = isTokenSuspended(dataType.name)
+
+        override suspend fun getToken(tokenKey: String): String? {
+            val proto = dataStore.data.first()
+            return proto.tokensMap[tokenKey]?.takeIf { it.isNotEmpty() }
+        }
+
+        override suspend fun isTokenSuspended(tokenKey: String): Boolean {
+            val proto = dataStore.data.first()
+            return proto.suspendedTypesList.contains(tokenKey)
+        }
+
+        override suspend fun suspendToken(tokenKey: String) {
             dataStore.updateData { current ->
-                current
-                    .toBuilder()
-                    .putAllTokens(tokens.mapKeys { (dataType, _) -> dataType.name })
-                    .putAllLastSuccessTimestampsMs(
-                        tokens.keys.associate { dataType -> dataType.name to syncedAtMs },
-                    ).build()
+                val builder =
+                    current
+                        .toBuilder()
+                        .removeTokens(tokenKey)
+                        .removeLastSuccessTimestampsMs(tokenKey)
+                if (!current.suspendedTypesList.contains(tokenKey)) {
+                    builder.addSuspendedTypes(tokenKey)
+                }
+                builder.build()
             }
         }
 
-        override suspend fun clear(dataType: HealthDataType) {
+        override suspend fun putToken(
+            tokenKey: String,
+            token: String,
+            syncedAtMs: Long,
+        ) {
             dataStore.updateData { current ->
-                current
-                    .toBuilder()
-                    .removeTokens(dataType.name)
-                    .removeLastSuccessTimestampsMs(dataType.name)
+                val builder =
+                    current
+                        .toBuilder()
+                        .putTokens(tokenKey, token)
+                        .putLastSuccessTimestampsMs(tokenKey, syncedAtMs)
+                val remainingSuspended = current.suspendedTypesList.filter { it != tokenKey }
+                builder
+                    .clearSuspendedTypes()
+                    .addAllSuspendedTypes(remainingSuspended)
                     .build()
             }
         }
@@ -86,3 +105,25 @@ class HealthChangeTokenStoreImpl
             }
         }
     }
+
+private suspend fun DataStore<HealthChangeTokensProto>.updateTokens(
+    tokens: Map<String, String>,
+    syncedAtMs: Long,
+) {
+    updateData { current ->
+        val builder = current.toBuilder()
+        for (suspended in current.suspendedTypesList) {
+            builder.removeTokens(suspended)
+            builder.removeLastSuccessTimestampsMs(suspended)
+        }
+        val tokenNames = tokens.keys.toSet()
+        builder
+            .putAllTokens(tokens)
+            .putAllLastSuccessTimestampsMs(
+                tokens.keys.associateWith { syncedAtMs },
+            )
+        val remainingSuspended = current.suspendedTypesList.filter { it !in tokenNames }
+        builder.clearSuspendedTypes().addAllSuspendedTypes(remainingSuspended)
+        builder.build()
+    }
+}

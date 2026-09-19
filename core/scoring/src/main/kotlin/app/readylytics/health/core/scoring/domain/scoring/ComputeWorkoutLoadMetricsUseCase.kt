@@ -1,14 +1,8 @@
 package app.readylytics.health.core.scoring.domain.scoring
 
-import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutLoadMetricsUseCase
-import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
-import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
-import app.readylytics.health.core.scoring.domain.scoring.WorkoutLoadClassifier
-
 import app.readylytics.health.core.model.domain.display.MetricFormatter
-import app.readylytics.health.core.model.domain.model.getOrNull
-import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.WorkoutData
+import app.readylytics.health.core.model.domain.scoring.CanonicalWorkoutResult
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logW
 import java.time.LocalDate
@@ -18,29 +12,26 @@ import kotlin.math.max
 class ComputeWorkoutLoadMetricsUseCase
     @Inject
     constructor(
-        private val computeWorkoutTrimpUseCase: ComputeWorkoutTrimpUseCase,
         private val scoringCalculator: ScoringCalculator,
         private val workoutLoadClassifier: WorkoutLoadClassifier,
     ) {
         fun execute(
             workout: WorkoutData,
             workoutDate: LocalDate,
-            samples: List<ComputeWorkoutTrimpUseCase.HeartRateSample>,
-            prefs: UserPreferences,
-            restingHrBaseline: Float?,
+            canonicalResult: CanonicalWorkoutResult,
             trimpByDate: Map<LocalDate, Float>,
         ): WorkoutLoadMetrics {
-            val computedTrimp =
-                computeWorkoutTrimpUseCase
-                    .execute(
-                        workoutStartTime = workout.startTime,
-                        workoutEndTime = workout.endTime,
-                        workoutAvgHr = workout.avgHr,
-                        samples = samples,
-                        prefs = prefs,
-                        restingHrBaseline = restingHrBaseline,
-                    ).getOrNull()
-                    ?: workout.trimp
+            val computedTrimp = canonicalResult.trimp
+            if (computedTrimp == null || !computedTrimp.isFinite() || computedTrimp < 0f) {
+                return WorkoutLoadMetrics(
+                    preciseTrimp = null,
+                    roundedTrimp = null,
+                    preciseGainedStrain = null,
+                    roundedGainedStrain = null,
+                    gainedStrainDisplay = "—",
+                    classification = null,
+                )
+            }
 
             val originalDayTrimp = trimpByDate[workoutDate] ?: 0f
             val trimpWithoutWorkout = (originalDayTrimp - computedTrimp).coerceAtLeast(0f)
@@ -103,10 +94,10 @@ class ComputeWorkoutLoadMetricsUseCase
         }
 
         data class WorkoutLoadMetrics(
-            val preciseTrimp: Float,
-            val roundedTrimp: Int,
-            val preciseGainedStrain: Float,
-            val roundedGainedStrain: Float,
+            val preciseTrimp: Float?,
+            val roundedTrimp: Int?,
+            val preciseGainedStrain: Float?,
+            val roundedGainedStrain: Float?,
             val gainedStrainDisplay: String,
             val classification: WorkoutLoadClassification?,
         )
