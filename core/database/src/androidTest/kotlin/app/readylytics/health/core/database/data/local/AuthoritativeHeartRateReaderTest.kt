@@ -91,17 +91,7 @@ class AuthoritativeHeartRateReaderTest {
                     hr(ref, minuteStart + 59_000L, 62),
                 ),
             )
-            database.minuteCoverageDao().upsertCoverage(
-                listOf(
-                    MinuteCoverageEntity(
-                        bucketStartMs = minuteStart,
-                        visibleGeneration = 0L,
-                        tier = "LEGACY_WARM",
-                        quality = QUALITY_LEGACY_UNKNOWN,
-                        sourceSelectionId = null,
-                    ),
-                ),
-            )
+            seedLegacyMinute(minuteStart)
 
             // Both raw rows belong to the covered minute, so the raw side must hide both.
             assertTrue(reader.rangeIn(minuteStart, minuteStart + MINUTE_MS - 1).rawSamples.isEmpty())

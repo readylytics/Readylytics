@@ -141,7 +141,10 @@ class DirtyRangeMigrationInstrumentedTest {
 
         // 6. Keyset backfill test: interrupt after 1 batch, restart, and compare with uninterrupted backfill
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val roomDb = Room.databaseBuilder(context, HealthDatabase::class.java, TEST_DATABASE).build()
+        val roomDb =
+            Room.databaseBuilder(context, HealthDatabase::class.java, TEST_DATABASE)
+                .addMigrations(*DatabaseMigrations.all)
+                .build()
         try {
             val backfill =
                 SourceMetadataBackfill(
@@ -199,7 +202,10 @@ class DirtyRangeMigrationInstrumentedTest {
         val db2 = helper.runMigrationsAndValidate(TEST_DATABASE_2, 20, true, *DatabaseMigrations.all)
         db2.close()
 
-        val roomDb2 = Room.databaseBuilder(context, HealthDatabase::class.java, TEST_DATABASE_2).build()
+        val roomDb2 =
+            Room.databaseBuilder(context, HealthDatabase::class.java, TEST_DATABASE_2)
+                .addMigrations(*DatabaseMigrations.all)
+                .build()
         try {
             val backfill2 =
                 SourceMetadataBackfill(

@@ -394,7 +394,7 @@ class DatabaseMigrationInstrumentedTest {
         helper.createDatabase(TEST_DATABASE, 19).apply {
             execSQL(
                 "INSERT INTO health_source_records (id, sourceRecordId, recordType, createdAtMs) " +
-                    "VALUES (42, 'src-42', 'HEART_RATE', 1_000L)",
+                    "VALUES (42, 'src-42', 'HEART_RATE', 1000)",
             )
             close()
         }
