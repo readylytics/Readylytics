@@ -1,10 +1,4 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Test-only Health Connect write permissions. GrantPermissionRule grants permissions to
-         the target app, so these must live in the debug app APK rather than the test APK. -->
-    <uses-permission android:name="android.permission.health.WRITE_HEART_RATE" />
-    <uses-permission android:name="android.permission.health.WRITE_RESTING_HEART_RATE" />
-    <uses-permission android:name="android.permission.health.WRITE_HEART_RATE_VARIABILITY" />
-
     <application>
         <!-- Test-only: two separate OS processes used by
              SqlCipherKeyManagerCrossProcessRaceTest (app/src/androidTest) to reproduce the real
