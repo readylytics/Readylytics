@@ -2,6 +2,7 @@ package app.readylytics.health.core.scoring.domain.airecommendation
 
 import app.readylytics.health.core.model.domain.display.MetricFormatter
 import app.readylytics.health.core.model.domain.repository.WorkoutData
+import app.readylytics.health.core.model.domain.workouts.detail.ExerciseTypeMapper
 import java.util.Locale
 
 /**
@@ -110,7 +111,7 @@ object DailyPromptFormatter {
         data.yesterdayWorkouts.forEach { workoutBlock ->
             val workout = workoutBlock.workout
             appendLine(
-                "- Type: ${workout.exerciseType}, duration ${workout.durationMinutes} min, avg HR " +
+                "- Type: ${exerciseTypeLabel(workout.exerciseType)}, duration ${workout.durationMinutes} min, avg HR " +
                     "${workout.avgHr.toInt()} bpm",
             )
             appendLine(
@@ -185,7 +186,7 @@ object DailyPromptFormatter {
         appendLine("- Total workouts in window: ${pattern.totalWorkoutsInWindow}")
         pattern.exerciseTypeBreakdown.forEach { typePattern ->
             appendLine(
-                "- ${typePattern.exerciseType}: ${number(typePattern.frequencyPerWeek)}/week, " +
+                "- ${exerciseTypeLabel(typePattern.exerciseType)}: ${number(typePattern.frequencyPerWeek)}/week, " +
                     "avg TRIMP ${trimpOrUnavailable(typePattern.averageTrimp)}, " +
                     "avg duration ${numberOrUnavailable(typePattern.averageDurationMinutes)} min, " +
                     "typically on ${typePattern.preferredDaysOfWeek.joinToString(", ")}",
@@ -196,6 +197,13 @@ object DailyPromptFormatter {
         appendLine("- Current consecutive training-day streak: ${pattern.currentConsecutiveTrainingDayStreak}")
         appendLine()
     }
+
+    /**
+     * Stored exercise types are raw Health Connect numeric ids, which are meaningless to the
+     * advisor model. Emit the English canonical name instead (`"2"` -> `"Badminton"`).
+     */
+    private fun exerciseTypeLabel(rawExerciseType: String): String =
+        ExerciseTypeMapper.fromRaw(rawExerciseType).canonicalName
 
     private fun orUnavailable(value: String?): String = value ?: INSUFFICIENT_DATA
 

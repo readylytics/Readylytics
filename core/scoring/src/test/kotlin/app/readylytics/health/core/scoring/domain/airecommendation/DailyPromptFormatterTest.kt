@@ -17,6 +17,10 @@ class DailyPromptFormatterTest {
             assertTrue("Missing $header", text.contains(header))
         }
         assertTrue(text.contains("Run"))
+        // Stored exercise types are raw Health Connect ids; the prompt must name the activity
+        // rather than hand the model "Type: 2".
+        assertTrue("Prompt leaked a raw exercise id", text.contains("Type: Badminton"))
+        assertTrue("Prompt leaked a raw exercise id", !text.contains("Type: 2"))
         assertTrue(text.contains("OVERREACHING"))
         assertTrue(text.contains("Monday, Wednesday"))
         assertTrue(text.contains("78"))
@@ -294,7 +298,7 @@ class DailyPromptFormatterTest {
                 LocalDate.of(2026, 8, 8).atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli(),
             endTime =
                 LocalDate.of(2026, 8, 8).atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli() + 3_600_000L,
-            exerciseType = "Run",
+            exerciseType = "2",
             durationMinutes = 45,
             zone1Minutes = 10f,
             zone2Minutes = 15f,
