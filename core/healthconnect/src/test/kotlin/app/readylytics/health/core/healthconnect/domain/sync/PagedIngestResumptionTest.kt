@@ -4,8 +4,11 @@ import app.readylytics.health.core.database.domain.sync.DailyRecomputeSupport
 import app.readylytics.health.core.model.domain.model.DomainHeartRateRecord
 import app.readylytics.health.core.model.domain.model.DomainHrvRecord
 import app.readylytics.health.core.model.domain.model.HealthDataType
+import app.readylytics.health.core.model.domain.model.DomainHeartRateSample
+import app.readylytics.health.core.model.domain.model.WorkoutRoutePoint
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
 import app.readylytics.health.core.model.domain.repository.HealthConnectWindowTimeoutException
 import app.readylytics.health.core.model.domain.repository.ReadOutcome
@@ -13,10 +16,19 @@ import app.readylytics.health.core.model.domain.repository.ScoringRepository
 import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
+import app.readylytics.health.core.model.domain.sync.CompleteTypeScan
+import app.readylytics.health.core.model.domain.sync.HealthIngestionBatch
 import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
+import app.readylytics.health.core.model.domain.sync.HeartRateInput
+import app.readylytics.health.core.model.domain.sync.HistoricalRunIdentity
+import app.readylytics.health.core.model.domain.sync.HrvInput
+import app.readylytics.health.core.model.domain.sync.InMemoryScanStagingStore
 import app.readylytics.health.core.model.domain.sync.ResyncCheckpoint
+import app.readylytics.health.core.model.domain.sync.ResyncCheckpointStore
 import app.readylytics.health.core.model.domain.sync.ResyncPhase
+import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.sync.SelectedSourcePruner
+import app.readylytics.health.core.model.domain.sync.SourcePayload
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
 import io.mockk.coEvery
 import io.mockk.coJustRun
@@ -28,7 +40,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.Clock
@@ -125,10 +139,11 @@ class PagedIngestResumptionTest {
         }
 
     @Test
-    fun `resuming ingestion with hrStartPageToken clears token and replays from start`() =
+    fun `resuming ingestion with hrStartPageToken forwards stored token`() =
         runTest {
             val startDate = LocalDate.of(2024, 6, 1)
             val endDate = LocalDate.of(2024, 6, 2)
+            val runIdentity = createRunIdentity(startDate, endDate)
 
             checkpointStore.value =
                 ResyncCheckpoint(
@@ -136,9 +151,10 @@ class PagedIngestResumptionTest {
                     endDate = endDate,
                     phase = ResyncPhase.INGEST,
                     nextDate = startDate,
-                    selectionHash = "",
+                    selectionHash = runIdentity.scoringSnapshotId,
                     baselineChangeTokens = baselineTokens,
                     hrPageToken = "page-2",
+                    runIdentity = runIdentity,
                 )
 
             val capturedStartToken = slot<String?>()
@@ -152,14 +168,15 @@ class PagedIngestResumptionTest {
 
             useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
 
-            assertEquals(null, capturedStartToken.captured)
+            assertEquals("page-2", capturedStartToken.captured)
         }
 
     @Test
-    fun `resuming with hrvStartPageToken clears token and replays both streams from start`() =
+    fun `resuming with hrvStartPageToken forwards stored token`() =
         runTest {
             val startDate = LocalDate.of(2024, 6, 1)
             val endDate = LocalDate.of(2024, 6, 2)
+            val runIdentity = createRunIdentity(startDate, endDate)
 
             checkpointStore.value =
                 ResyncCheckpoint(
@@ -167,10 +184,11 @@ class PagedIngestResumptionTest {
                     endDate = endDate,
                     phase = ResyncPhase.INGEST,
                     nextDate = startDate,
-                    selectionHash = "",
+                    selectionHash = runIdentity.scoringSnapshotId,
                     baselineChangeTokens = baselineTokens,
                     hrPageToken = null,
                     hrvPageToken = "hrv-page-2",
+                    runIdentity = runIdentity,
                 )
 
             val capturedHrvStartToken = slot<String?>()
@@ -184,9 +202,7 @@ class PagedIngestResumptionTest {
 
             useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
 
-            // WP-06: Incomplete scan replays HR stream and replays HRV with null startPageToken
-            coVerify(exactly = 1) { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) }
-            assertEquals(null, capturedHrvStartToken.captured)
+            assertEquals("hrv-page-2", capturedHrvStartToken.captured)
         }
 
     @Test
@@ -274,4 +290,239 @@ class PagedIngestResumptionTest {
                 tokenEvents,
             )
         }
+
+    @Test
+    fun `kill after page 1 HR and resume matches uninterrupted run`() =
+        runTest {
+            val startDate = LocalDate.of(2024, 6, 1)
+            val endDate = LocalDate.of(2024, 6, 2)
+            val (samplePreBaseline, sample1) = createTestHeartRateInputs()
+            val (record1, record2) = createTestDomainRecords()
+
+            val staging = InMemoryScanStagingStore()
+            val trackingStore = ResumptionTrackingStore(staging)
+            trackingStore.heartRateSamples[samplePreBaseline.id] = samplePreBaseline
+            trackingStore.heartRateSamples[sample1.id] = sample1
+
+            val testUseCase = createResyncUseCase(trackingStore, staging, checkpointStore)
+            mockResumedHeartRatePages(record1, record2)
+
+            val run1Result =
+                testUseCase.run(
+                    startDate = startDate,
+                    endDate = endDate,
+                    chunkDays = 30,
+                    onProgress = null,
+                )
+            assertFalse(run1Result.isSuccess)
+            assertEquals("token-page-2", checkpointStore.value?.hrPageToken)
+
+            val run2Result =
+                testUseCase.run(
+                    startDate = startDate,
+                    endDate = endDate,
+                    chunkDays = 30,
+                    onProgress = null,
+                )
+            assertTrue(run2Result.isSuccess)
+
+            val uninterruptedSourceIds =
+                runUninterruptedRun(
+                    startDate = startDate,
+                    endDate = endDate,
+                    records = listOf(record1, record2),
+                    initialSamples = listOf(samplePreBaseline, sample1),
+                )
+
+            assertEquals(
+                "Resumed run must end with exact same sourceIds as uninterrupted run",
+                uninterruptedSourceIds,
+                trackingStore.heartRateSamples.values.map { it.sourceId }.toSet(),
+            )
+            assertFalse(
+                "Pre-baseline deleted record must be removed",
+                trackingStore.heartRateSamples.values.any { it.sourceId == "hr-pre-baseline" },
+            )
+            assertTrue(trackingStore.heartRateSamples.values.any { it.sourceId == "hr-1" })
+            assertTrue(trackingStore.heartRateSamples.values.any { it.sourceId == "hr-2" })
+        }
+
+    private fun createTestHeartRateInputs(): Pair<HeartRateInput, HeartRateInput> {
+        val samplePreBaseline =
+            HeartRateInput(
+                id = "hr-pre-baseline",
+                timestampMs = Instant.parse("2024-06-01T08:00:00Z").toEpochMilli(),
+                beatsPerMinute = 60,
+                recordType = "HEART_RATE",
+                sessionId = null,
+                deviceName = "Watch",
+                sourceId = "hr-pre-baseline",
+            )
+        val sample1 =
+            HeartRateInput(
+                id = "hr-1",
+                timestampMs = Instant.parse("2024-06-01T10:00:00Z").toEpochMilli(),
+                beatsPerMinute = 65,
+                recordType = "HEART_RATE",
+                sessionId = null,
+                deviceName = "Watch",
+                sourceId = "hr-1",
+            )
+        return Pair(samplePreBaseline, sample1)
+    }
+
+    private fun createTestDomainRecords(): Pair<DomainHeartRateRecord, DomainHeartRateRecord> {
+        val record1 =
+            DomainHeartRateRecord(
+                id = "hr-1",
+                deviceName = "Watch",
+                samples = listOf(DomainHeartRateSample(Instant.parse("2024-06-01T10:00:00Z"), 65)),
+                startTime = Instant.parse("2024-06-01T10:00:00Z"),
+                endTime = Instant.parse("2024-06-01T10:01:00Z"),
+            )
+        val record2 =
+            DomainHeartRateRecord(
+                id = "hr-2",
+                deviceName = "Watch",
+                samples = listOf(DomainHeartRateSample(Instant.parse("2024-06-01T11:00:00Z"), 72)),
+                startTime = Instant.parse("2024-06-01T11:00:00Z"),
+                endTime = Instant.parse("2024-06-01T11:01:00Z"),
+            )
+        return Pair(record1, record2)
+    }
+
+    private fun mockResumedHeartRatePages(
+        record1: DomainHeartRateRecord,
+        record2: DomainHeartRateRecord,
+    ) {
+        var callCount = 0
+        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } coAnswers {
+            callCount++
+            val token = invocation.args[2] as String?
+            val onPage = invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
+            if (callCount == 1) {
+                onPage(listOf(record1), "token-page-2")
+                error("Simulated worker kill after page 1")
+            } else {
+                assertEquals("Resumed pass must forward stored token", "token-page-2", token)
+                onPage(listOf(record2), null)
+                ReadOutcome.Available(Unit)
+            }
+        }
+    }
+
+    private fun createResyncUseCase(
+        store: ResumptionTrackingStore,
+        staging: InMemoryScanStagingStore,
+        checkpoint: ResyncCheckpointStore,
+    ): ResyncRangeUseCase =
+        ResyncRangeUseCase(
+            settingsRepo = settingsRepo,
+            clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
+            sessionLinkReconciler = sessionLinkReconciler,
+            changeSynchronizer = changeSynchronizer,
+            selectedSourcePruner = selectedSourcePruner,
+            checkpointStore = checkpoint,
+            healthIngestionStore = store,
+            ingestion =
+                ResyncIngestionDependencies(
+                    ingestionCoordinator = HealthIngestionCoordinator(hcRepo, store, staging = staging),
+                    stepCountFetcher = StepCountFetcher(hcRepo),
+                    staging = staging,
+                ),
+            recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner),
+            ioDispatcher = Dispatchers.Unconfined,
+        )
+
+    private suspend fun runUninterruptedRun(
+        startDate: LocalDate,
+        endDate: LocalDate,
+        records: List<DomainHeartRateRecord>,
+        initialSamples: List<HeartRateInput>,
+    ): Set<String?> {
+        val staging = InMemoryScanStagingStore()
+        val store = ResumptionTrackingStore(staging)
+        initialSamples.forEach { store.heartRateSamples[it.id] = it }
+        val useCase = createResyncUseCase(store, staging, InMemoryResyncCheckpointStore())
+        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } coAnswers {
+            val onPage = invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
+            onPage(listOf(records[0]), "token-page-2")
+            onPage(listOf(records[1]), null)
+            ReadOutcome.Available(Unit)
+        }
+        val result = useCase.run(
+            startDate = startDate,
+            endDate = endDate,
+            chunkDays = 30,
+            onProgress = null,
+        )
+        assertTrue(result.isSuccess)
+        return store.heartRateSamples.values.map { it.sourceId }.toSet()
+    }
+
+    private fun createRunIdentity(
+        startDate: LocalDate,
+        endDate: LocalDate,
+        mode: String = HistoricalRunIdentity.MODE_FULL_INGEST,
+        prefs: UserPreferences = UserPreferences(),
+    ): HistoricalRunIdentity {
+        val resolvedHrMax =
+            if (prefs.autoCalculateMaxHr) {
+                (208 - 0.7 * prefs.age).toFloat()
+            } else {
+                prefs.maxHeartRate.toFloat()
+            }
+        return HistoricalRunIdentity.create(
+            runId = "test-run",
+            mode = mode,
+            startDate = startDate,
+            endDate = endDate,
+            zoneId = prefs.scoringZone(),
+            prefs = prefs,
+            resolvedHrMax = resolvedHrMax,
+            startedAtEpochMs = 1_000_000L,
+        )
+    }
+
+    private class ResumptionTrackingStore(
+        private val staging: InMemoryScanStagingStore,
+    ) : HealthIngestionStore {
+        val heartRateSamples = mutableMapOf<String, HeartRateInput>()
+
+        override suspend fun persist(batch: HealthIngestionBatch) = Unit
+
+        override suspend fun replaceHeartRateSources(sources: List<SourcePayload<HeartRateInput>>) {
+            sources.forEach { source ->
+                source.rows.forEach { heartRateSamples[it.id] = it }
+            }
+        }
+
+        override suspend fun replaceHrvSources(sources: List<SourcePayload<HrvInput>>) = Unit
+        override suspend fun clearFrozenBaselines(start: LocalDate, endExclusive: LocalDate, zoneId: ZoneId) = Unit
+        override suspend fun countHeartRateInRange(startMs: Long, endMs: Long): Int = heartRateSamples.size
+        override suspend fun countHrvInRange(startMs: Long, endMs: Long): Int = 0
+        override suspend fun countSleepSessionsInRange(startMs: Long, endMs: Long): Int = 0
+        override suspend fun countWorkoutsInRange(startMs: Long, endMs: Long): Int = 0
+
+        override suspend fun persistSingleWorkoutRoute(
+            workoutId: String,
+            routePoints: List<WorkoutRoutePoint>,
+            routeState: String,
+            totalDistanceMeters: Float?,
+            avgSpeedKmh: Float?,
+            elevationGainMeters: Float?,
+        ) = Unit
+
+        override suspend fun reconcileWindow(
+            scan: CompleteTypeScan,
+            zoneId: ZoneId,
+        ): ScoreInvalidation.AffectedRange? {
+            if (scan.type == HealthDataType.HEART_RATE) {
+                val scannedIds = staging.stagedIds(scan.scan, scan.type)
+                val toDelete = heartRateSamples.entries.filter { it.value.sourceId !in scannedIds }
+                toDelete.forEach { heartRateSamples.remove(it.key) }
+            }
+            return null
+        }
+    }
 }

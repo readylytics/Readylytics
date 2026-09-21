@@ -8,6 +8,7 @@ import app.readylytics.health.core.model.domain.repository.ReadOutcome
 import app.readylytics.health.core.model.domain.sync.CompleteTypeScan
 import app.readylytics.health.core.model.domain.sync.HealthIngestionBatch
 import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
+import app.readylytics.health.core.model.domain.sync.InMemoryScanStagingStore
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -170,7 +171,8 @@ class HealthIngestionCoordinatorVo2MaxTest {
             val batchSlot = slot<HealthIngestionBatch>()
             coEvery { healthIngestionStore.persist(capture(batchSlot)) } returns Unit
 
-            val coordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore)
+            val staging = InMemoryScanStagingStore()
+            val coordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore, staging = staging)
             coordinator.ingestWindow(
                 windowStart = Instant.parse("2026-09-03T00:00:00Z"),
                 windowEnd = Instant.parse("2026-09-03T23:59:59Z"),
@@ -186,7 +188,7 @@ class HealthIngestionCoordinatorVo2MaxTest {
             // wrongly treated as deleted (mirrors WEIGHT/BODY_FAT/etc).
             val vo2Scan = scanSlot.single { it.type == HealthDataType.VO2_MAX }
             assertEquals("DAILY_SYNC", vo2Scan.scan.runId)
-            assertEquals(setOf("vo2-device-a", "vo2-device-b"), vo2Scan.ids)
+            assertEquals(setOf("vo2-device-a", "vo2-device-b"), staging.stagedIds(vo2Scan.scan, HealthDataType.VO2_MAX))
         }
 
     @Test
@@ -222,7 +224,8 @@ class HealthIngestionCoordinatorVo2MaxTest {
             val batchSlot = slot<HealthIngestionBatch>()
             coEvery { healthIngestionStore.persist(capture(batchSlot)) } returns Unit
 
-            val coordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore)
+            val staging = InMemoryScanStagingStore()
+            val coordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore, staging = staging)
             coordinator.ingestWindow(
                 windowStart = Instant.parse("2026-09-03T00:00:00Z"),
                 windowEnd = Instant.parse("2026-09-03T23:59:59Z"),
@@ -235,7 +238,7 @@ class HealthIngestionCoordinatorVo2MaxTest {
             )
             val vo2Scan = scanSlot.single { it.type == HealthDataType.VO2_MAX }
             assertEquals("DAILY_SYNC", vo2Scan.scan.runId)
-            assertEquals(setOf("vo2-tie-a", "vo2-tie-b"), vo2Scan.ids)
+            assertEquals(setOf("vo2-tie-a", "vo2-tie-b"), staging.stagedIds(vo2Scan.scan, HealthDataType.VO2_MAX))
         }
 
     private fun stubEmptyReads(hcRepo: HealthConnectRepository) {

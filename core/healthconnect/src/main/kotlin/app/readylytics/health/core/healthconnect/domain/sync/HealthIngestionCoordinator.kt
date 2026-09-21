@@ -16,12 +16,29 @@ import app.readylytics.health.core.model.domain.repository.HealthConnectReposito
 import app.readylytics.health.core.model.domain.repository.HealthConnectWindowTimeoutException
 import app.readylytics.health.core.model.domain.repository.ReadOutcome
 import app.readylytics.health.core.model.domain.repository.dataOrEmpty
-import app.readylytics.health.core.model.domain.sync.*
+import app.readylytics.health.core.model.domain.sync.BloodPressureInput
+import app.readylytics.health.core.model.domain.sync.BodyFatInput
+import app.readylytics.health.core.model.domain.sync.BodyTemperatureInput
+import app.readylytics.health.core.model.domain.sync.CompleteTypeScan
+import app.readylytics.health.core.model.domain.sync.HealthIngestionBatch
+import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
+import app.readylytics.health.core.model.domain.sync.InMemoryScanStagingStore
+import app.readylytics.health.core.model.domain.sync.OxygenSaturationInput
+import app.readylytics.health.core.model.domain.sync.ResyncPhase
+import app.readylytics.health.core.model.domain.sync.ScanIdentity
+import app.readylytics.health.core.model.domain.sync.ScanStagingStore
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
-import app.readylytics.health.core.model.domain.sync.mappers.SleepDataMapper
-import app.readylytics.health.core.model.domain.sync.mappers.WorkoutMapper
+import app.readylytics.health.core.model.domain.sync.SleepSessionInput
+import app.readylytics.health.core.model.domain.sync.SleepStageInput
+import app.readylytics.health.core.model.domain.sync.StepRecordInput
+import app.readylytics.health.core.model.domain.sync.TypeScanState
+import app.readylytics.health.core.model.domain.sync.Vo2MaxInput
+import app.readylytics.health.core.model.domain.sync.WeightInput
+import app.readylytics.health.core.model.domain.sync.WorkoutInput
 import app.readylytics.health.core.model.domain.sync.mappers.HeartRateMapper
 import app.readylytics.health.core.model.domain.sync.mappers.HrvMapper
+import app.readylytics.health.core.model.domain.sync.mappers.SleepDataMapper
+import app.readylytics.health.core.model.domain.sync.mappers.WorkoutMapper
 import app.readylytics.health.core.model.domain.util.logD
 import java.time.Instant
 import javax.inject.Inject
@@ -52,11 +69,16 @@ class HealthIngestionCoordinator
     constructor(
         private val hcRepo: HealthConnectRepository,
         private val healthIngestionStore: HealthIngestionStore,
+        private val staging: ScanStagingStore = InMemoryScanStagingStore(),
     ) {
+        private val streamer: HeartSampleStreamer = HeartSampleStreamer(hcRepo, healthIngestionStore, staging)
+
         suspend fun ingestWindow(
             windowStart: Instant,
             windowEnd: Instant,
             prefs: UserPreferences,
+            scanIdentity: ScanIdentity = ScanIdentities.daily(windowStart),
+            resumeStagedScan: Boolean = false,
             windowBudgetMs: Long = 3 * 60_000L,
             onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)? = null,
             hrStartPageToken: String? = null,
@@ -70,6 +92,8 @@ class HealthIngestionCoordinator
                         windowStart = windowStart,
                         windowEnd = windowEnd,
                         prefs = prefs,
+                        scanIdentity = scanIdentity,
+                        resumeStagedScan = resumeStagedScan,
                         windowBudgetMs = windowBudgetMs,
                         onProgress = onProgress,
                         hrStartPageToken = hrStartPageToken,
@@ -90,8 +114,8 @@ class HealthIngestionCoordinator
             return withTimeout(params.windowBudgetMs) {
                 val (rawRecords, sessionContext) =
                     fetchAndPersistBulkRecords(params.windowStart, params.windowEnd, params.prefs)
-                val heartIds = streamAndPersistHeartSamples(params, sessionContext)
-                val scans = collectCompleteTypeScans(params, rawRecords, heartIds)
+                streamAndPersistHeartSamples(params, sessionContext)
+                val scans = stageBulkScans(params, rawRecords)
                 val affectedRange =
                     if (params.reconcileDeletions) {
                         reconcileDeletions(params, scans)
@@ -207,154 +231,31 @@ class HealthIngestionCoordinator
                 )
             }
 
-        private fun mapAndFilterVitals(
-            raw: RawBulkRecords,
-            prefs: UserPreferences,
-        ): FilteredVitals {
-            val (weights, bodyFat) = mapAndFilterBodyComp(raw, prefs)
-            val (bp, spo2, temp) = mapAndFilterCardioVitals(raw, prefs)
-            return FilteredVitals(
-                weights = weights,
-                bodyFatSamples = bodyFat,
-                bloodPressureSamples = bp,
-                oxygenSaturationSamples = spo2,
-                bodyTemperatureSamples = temp,
-            )
-        }
-
-        private fun mapAndFilterBodyComp(
-            raw: RawBulkRecords,
-            prefs: UserPreferences,
-        ): Pair<List<WeightInput>, List<BodyFatInput>> {
-            val deviceByType = prefs.deviceByDataType
-            fun deviceFor(type: HealthDataType): String? = deviceByType[type.name]?.takeIf { it.isNotBlank() }
-
-            val weightRecords = raw.weightRecords.dataOrEmpty()
-            val bodyFatRecords = raw.bodyFatRecords.dataOrEmpty()
-            val weightInputs =
-                weightRecords.map {
-                    WeightInput(
-                        id = "${it.id}_${it.time.toEpochMilli()}",
-                        timestampMs = it.time.toEpochMilli(),
-                        weightKg = it.weightKg,
-                        deviceName = it.deviceName,
-                        sourceId = it.id,
-                    )
-                }
-            val bodyFatInputs =
-                bodyFatRecords.map {
-                    BodyFatInput(
-                        id = "${it.id}_${it.time.toEpochMilli()}",
-                        timestampMs = it.time.toEpochMilli(),
-                        bodyFatPercent = it.percentage,
-                        deviceName = it.deviceName,
-                        sourceId = it.id,
-                    )
-                }
-
-            val filteredWeights =
-                DeviceSourceFilter.filterToDevice(weightInputs, deviceFor(HealthDataType.WEIGHT)) { it.deviceName }
-            val filteredBodyFat =
-                DeviceSourceFilter.filterToDevice(bodyFatInputs, deviceFor(HealthDataType.BODY_FAT)) { it.deviceName }
-            return Pair(filteredWeights, filteredBodyFat)
-        }
-
-        private fun mapAndFilterCardioVitals(
-            raw: RawBulkRecords,
-            prefs: UserPreferences,
-        ): Triple<List<BloodPressureInput>, List<OxygenSaturationInput>, List<BodyTemperatureInput>> {
-            val deviceByType = prefs.deviceByDataType
-            fun deviceFor(type: HealthDataType): String? = deviceByType[type.name]?.takeIf { it.isNotBlank() }
-
-            val bpRecords = raw.bloodPressureRecords.dataOrEmpty()
-            val spo2Records = raw.spo2Records.dataOrEmpty()
-            val tempRecords = raw.bodyTemperatureRecords.dataOrEmpty()
-            val bpInputs =
-                bpRecords.map {
-                    BloodPressureInput(
-                        id = "${it.id}_${it.time.toEpochMilli()}",
-                        timestampMs = it.time.toEpochMilli(),
-                        systolicMmHg = it.systolicMmHg,
-                        diastolicMmHg = it.diastolicMmHg,
-                        deviceName = it.deviceName,
-                        sourceId = it.id,
-                    )
-                }
-            val spo2Inputs =
-                spo2Records.map {
-                    OxygenSaturationInput(
-                        id = "${it.id}_${it.time.toEpochMilli()}",
-                        timestampMs = it.time.toEpochMilli(),
-                        percentage = it.percentage,
-                        deviceName = it.deviceName,
-                        sourceId = it.id,
-                    )
-                }
-            val tempInputs =
-                tempRecords.map {
-                    BodyTemperatureInput(
-                        id = "${it.id}_${it.time.toEpochMilli()}",
-                        timestampMs = it.time.toEpochMilli(),
-                        celsius = it.celsius,
-                        deviceName = it.deviceName,
-                        sourceId = it.id,
-                    )
-                }
-
-            val filteredBp =
-                DeviceSourceFilter.filterToDevice(bpInputs, deviceFor(HealthDataType.BLOOD_PRESSURE)) { it.deviceName }
-            val filteredSpo2 =
-                DeviceSourceFilter.filterToDevice(
-                    spo2Inputs,
-                    deviceFor(HealthDataType.OXYGEN_SATURATION),
-                ) { it.deviceName }
-            val filteredTemp =
-                DeviceSourceFilter.filterToDevice(
-                    tempInputs,
-                    deviceFor(HealthDataType.BODY_TEMPERATURE),
-                ) { it.deviceName }
-            return Triple(filteredBp, filteredSpo2, filteredTemp)
-        }
-
-
-
         private suspend fun streamAndPersistHeartSamples(
             params: IngestWindowParams,
             sessionContext: IngestionSessionContext,
-        ): HeartIds {
+        ) {
             var pagesIngested = 0
             val deviceByType = params.prefs.deviceByDataType
             fun deviceFor(type: HealthDataType): String? = deviceByType[type.name]?.takeIf { it.isNotBlank() }
 
-            val (hrIds, hrSampleCount) =
-                streamHeartRateSamples(
-                    hcRepo = hcRepo,
-                    healthIngestionStore = healthIngestionStore,
-                    params = params,
-                    sessionContext = sessionContext,
-                    device = deviceFor(HealthDataType.HEART_RATE),
-                ) {
-                    pagesIngested++
-                    params.onProgress?.invoke(ResyncPhase.INGEST, pagesIngested, 0)
-                }
-
-            val (hrvIds, hrvSampleCount) =
-                streamHrvSamples(
-                    hcRepo = hcRepo,
-                    healthIngestionStore = healthIngestionStore,
-                    params = params,
-                    sessionContext = sessionContext,
-                    device = deviceFor(HealthDataType.HRV),
-                ) {
-                    pagesIngested++
-                    params.onProgress?.invoke(ResyncPhase.INGEST, pagesIngested, 0)
-                }
-
-            logD("HealthIngestionCoordinator") {
-                "Streamed samples: hr=$hrSampleCount hrv=$hrvSampleCount"
+            streamer.streamHeartRate(
+                params = params,
+                sessionContext = sessionContext,
+                device = deviceFor(HealthDataType.HEART_RATE),
+            ) {
+                pagesIngested++
+                params.onProgress?.invoke(ResyncPhase.INGEST, pagesIngested, 0)
             }
 
-            return HeartIds(hr = hrIds, hrv = hrvIds)
+            streamer.streamHrv(
+                params = params,
+                sessionContext = sessionContext,
+                device = deviceFor(HealthDataType.HRV),
+            ) {
+                pagesIngested++
+                params.onProgress?.invoke(ResyncPhase.INGEST, pagesIngested, 0)
+            }
         }
 
         private suspend fun reconcileDeletions(
@@ -381,42 +282,83 @@ class HealthIngestionCoordinator
             return ScoreInvalidation.merge(results.values)
         }
 
-        private fun collectCompleteTypeScans(
+        private suspend fun stageBulkScans(
             params: IngestWindowParams,
             raw: RawBulkRecords,
-            heartIds: HeartIds,
         ): List<CompleteTypeScan> {
             val startMs = params.windowStart.toEpochMilli()
             val endExclusiveMs = params.windowEnd.toEpochMilli()
             fun deviceFor(type: HealthDataType) = params.prefs.deviceByDataType[type.name].orEmpty()
 
-            fun MutableList<CompleteTypeScan>.addScan(outcome: ReadOutcome<Set<String>>, type: HealthDataType) {
-                if (outcome is ReadOutcome.Available) {
-                    add(
-                        CompleteTypeScan(
-                            type = type,
-                            windowStartMs = startMs,
-                            windowEndExclusiveMs = endExclusiveMs,
-                            sourceSelectionId = deviceFor(type),
-                            scan = ScanIdentity("DAILY_SYNC", startMs.toString()),
-                            ids = outcome.data,
-                        ),
-                    )
-                }
+            suspend fun MutableList<CompleteTypeScan>.stage(
+                outcome: ReadOutcome<List<String>>,
+                type: HealthDataType,
+            ) {
+                staging.beginTypeScan(params.scanIdentity, type, resume = false)
+                if (outcome !is ReadOutcome.Available) return
+                staging.stageIds(params.scanIdentity, type, outcome.data)
+                staging.markTypeScanComplete(params.scanIdentity, type)
+                add(
+                    CompleteTypeScan(
+                        type = type,
+                        windowStartMs = startMs,
+                        windowEndExclusiveMs = endExclusiveMs,
+                        sourceSelectionId = deviceFor(type),
+                        scan = params.scanIdentity,
+                    ),
+                )
             }
 
             return buildList {
-                addScan(raw.sleepSessions.toIds { it.id }, HealthDataType.SLEEP)
-                addScan(raw.exerciseRecords.toIds { it.id }, HealthDataType.EXERCISE)
-                addScan(heartIds.hr, HealthDataType.HEART_RATE)
-                addScan(heartIds.hrv, HealthDataType.HRV)
-                addScan(raw.weightRecords.toIds { it.id }, HealthDataType.WEIGHT)
-                addScan(raw.bodyFatRecords.toIds { it.id }, HealthDataType.BODY_FAT)
-                addScan(raw.bloodPressureRecords.toIds { it.id }, HealthDataType.BLOOD_PRESSURE)
-                addScan(raw.spo2Records.toIds { it.id }, HealthDataType.OXYGEN_SATURATION)
-                addScan(raw.bodyTemperatureRecords.toIds { it.id }, HealthDataType.BODY_TEMPERATURE)
-                addScan(raw.stepsRecords.toIds { it.id }, HealthDataType.STEPS)
-                addScan(raw.vo2MaxRecords.toIds { it.id }, HealthDataType.VO2_MAX)
+                stage(raw.sleepSessions.toIds { it.id }, HealthDataType.SLEEP)
+                stage(raw.exerciseRecords.toIds { it.id }, HealthDataType.EXERCISE)
+                stage(raw.stepsRecords.toIds { it.id }, HealthDataType.STEPS)
+                // DB-001: vitals rows are keyed "<hcId>_<timestampMs>", so the staged identity is
+                // that persisted row id -- no substringBefore('_') parsing anywhere, and a record
+                // whose timestamp moved converges instead of leaving a stale duplicate behind.
+                stage(raw.weightRecords.toIds { "${it.id}_${it.time.toEpochMilli()}" }, HealthDataType.WEIGHT)
+                stage(raw.bodyFatRecords.toIds { "${it.id}_${it.time.toEpochMilli()}" }, HealthDataType.BODY_FAT)
+                stage(
+                    raw.bloodPressureRecords.toIds { "${it.id}_${it.time.toEpochMilli()}" },
+                    HealthDataType.BLOOD_PRESSURE,
+                )
+                stage(raw.spo2Records.toIds { "${it.id}_${it.time.toEpochMilli()}" }, HealthDataType.OXYGEN_SATURATION)
+                stage(
+                    raw.bodyTemperatureRecords.toIds { "${it.id}_${it.time.toEpochMilli()}" },
+                    HealthDataType.BODY_TEMPERATURE,
+                )
+                stage(raw.vo2MaxRecords.toIds { it.id }, HealthDataType.VO2_MAX)
+                addHeartScans(params, startMs, endExclusiveMs, ::deviceFor)
+            }
+        }
+
+        private suspend fun MutableList<CompleteTypeScan>.addHeartScans(
+            params: IngestWindowParams,
+            startMs: Long,
+            endExclusiveMs: Long,
+            deviceFor: (HealthDataType) -> String,
+        ) {
+            if (staging.stateOf(params.scanIdentity, HealthDataType.HEART_RATE) == TypeScanState.COMPLETE) {
+                add(
+                    CompleteTypeScan(
+                        type = HealthDataType.HEART_RATE,
+                        windowStartMs = startMs,
+                        windowEndExclusiveMs = endExclusiveMs,
+                        sourceSelectionId = deviceFor(HealthDataType.HEART_RATE),
+                        scan = params.scanIdentity,
+                    ),
+                )
+            }
+            if (staging.stateOf(params.scanIdentity, HealthDataType.HRV) == TypeScanState.COMPLETE) {
+                add(
+                    CompleteTypeScan(
+                        type = HealthDataType.HRV,
+                        windowStartMs = startMs,
+                        windowEndExclusiveMs = endExclusiveMs,
+                        sourceSelectionId = deviceFor(HealthDataType.HRV),
+                        scan = params.scanIdentity,
+                    ),
+                )
             }
         }
 
@@ -429,11 +371,6 @@ class HealthIngestionCoordinator
 data class IngestionWindowResult(
     val affectedRange: ScoreInvalidation.AffectedRange?,
     val completedTypes: Set<HealthDataType> = emptySet(),
-)
-
-private data class HeartIds(
-    val hr: ReadOutcome<Set<String>>,
-    val hrv: ReadOutcome<Set<String>>,
 )
 
 private data class RawBulkRecords(
@@ -456,10 +393,12 @@ private data class FilteredVitals(
     val bodyTemperatureSamples: List<BodyTemperatureInput>,
 )
 
-private data class IngestWindowParams(
+internal data class IngestWindowParams(
     val windowStart: Instant,
     val windowEnd: Instant,
     val prefs: UserPreferences,
+    val scanIdentity: ScanIdentity,
+    val resumeStagedScan: Boolean,
     val windowBudgetMs: Long,
     val onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)?,
     val hrStartPageToken: String?,
@@ -468,7 +407,7 @@ private data class IngestWindowParams(
     val reconcileDeletions: Boolean,
 )
 
-private data class IngestionSessionContext(
+internal data class IngestionSessionContext(
     val sleepInputs: List<SleepSessionInput>,
     val workoutInputs: List<WorkoutInput>,
 )
@@ -514,96 +453,119 @@ private fun buildBulkBatch(
             },
     )
 
-private suspend fun streamHeartRateSamples(
-    hcRepo: HealthConnectRepository,
-    healthIngestionStore: HealthIngestionStore,
-    params: IngestWindowParams,
-    sessionContext: IngestionSessionContext,
-    device: String?,
-    onPageDone: () -> Unit,
-): Pair<ReadOutcome<Set<String>>, Int> {
-    val hrIds = mutableSetOf<String>()
-    var hrSampleCount = 0
-    val outcome =
-        hcRepo.readHeartRateSamplesPaged(
-            from = params.windowStart,
-            to = params.windowEnd,
-            startPageToken = params.hrStartPageToken,
-        ) { page, nextToken ->
-            logD("HealthSync.Ingest") { "HR page size=${page.size}" }
-            hrIds.addAll(page.map { it.id })
-            val hrSources =
-                HeartRateMapper.mapToInputs(
-                    page,
-                    sessionContext.sleepInputs,
-                    sessionContext.workoutInputs,
-                )
-            val filteredHr =
-                hrSources.map { source ->
-                    source.copy(
-                        rows = DeviceSourceFilter.filterToDevice(source.rows, device) { it.deviceName },
-                    )
-                }
-            healthIngestionStore.replaceHeartRateSources(filteredHr)
-            hrSampleCount += filteredHr.sumOf { it.rows.size }
-            onPageDone()
-            params.onTokenUpdated?.invoke(nextToken, null)
-        }
-    val readOutcome =
-        when (outcome) {
-            is ReadOutcome.Available -> ReadOutcome.Available(hrIds)
-            ReadOutcome.Denied -> ReadOutcome.Denied
-            ReadOutcome.Unsupported -> ReadOutcome.Unsupported
-        }
-    return readOutcome to hrSampleCount
-}
-
-private suspend fun streamHrvSamples(
-    hcRepo: HealthConnectRepository,
-    healthIngestionStore: HealthIngestionStore,
-    params: IngestWindowParams,
-    sessionContext: IngestionSessionContext,
-    device: String?,
-    onPageDone: () -> Unit,
-): Pair<ReadOutcome<Set<String>>, Int> {
-    val hrvIds = mutableSetOf<String>()
-    var hrvSampleCount = 0
-    val outcome =
-        hcRepo.readHrvSamplesPaged(
-            from = params.windowStart,
-            to = params.windowEnd,
-            startPageToken = params.hrvStartPageToken,
-        ) { page, nextToken ->
-            logD("HealthSync.Ingest") { "HRV page size=${page.size}" }
-            hrvIds.addAll(page.map { it.id })
-            val hrvSources =
-                HrvMapper.mapToInputs(
-                    page,
-                    sessionContext.sleepInputs,
-                )
-            val filteredHrv =
-                hrvSources.map { source ->
-                    source.copy(
-                        rows = DeviceSourceFilter.filterToDevice(source.rows, device) { it.deviceName },
-                    )
-                }
-            healthIngestionStore.replaceHrvSources(filteredHrv)
-            hrvSampleCount += filteredHrv.sumOf { it.rows.size }
-            onPageDone()
-            params.onTokenUpdated?.invoke(null, nextToken)
-        }
-    val readOutcome =
-        when (outcome) {
-            is ReadOutcome.Available -> ReadOutcome.Available(hrvIds)
-            ReadOutcome.Denied -> ReadOutcome.Denied
-            ReadOutcome.Unsupported -> ReadOutcome.Unsupported
-        }
-    return readOutcome to hrvSampleCount
-}
-
-private inline fun <T> ReadOutcome<List<T>>.toIds(crossinline idSelector: (T) -> String): ReadOutcome<Set<String>> =
+private inline fun <T> ReadOutcome<List<T>>.toIds(crossinline idSelector: (T) -> String): ReadOutcome<List<String>> =
     when (this) {
-        is ReadOutcome.Available -> ReadOutcome.Available(data.mapTo(HashSet()) { idSelector(it) })
+        is ReadOutcome.Available -> ReadOutcome.Available(data.map { idSelector(it) })
         ReadOutcome.Denied -> ReadOutcome.Denied
         ReadOutcome.Unsupported -> ReadOutcome.Unsupported
     }
+
+private fun mapAndFilterVitals(
+    raw: RawBulkRecords,
+    prefs: UserPreferences,
+): FilteredVitals {
+    val (weights, bodyFat) = mapAndFilterBodyComp(raw, prefs)
+    val (bp, spo2, temp) = mapAndFilterCardioVitals(raw, prefs)
+    return FilteredVitals(
+        weights = weights,
+        bodyFatSamples = bodyFat,
+        bloodPressureSamples = bp,
+        oxygenSaturationSamples = spo2,
+        bodyTemperatureSamples = temp,
+    )
+}
+
+private fun mapAndFilterBodyComp(
+    raw: RawBulkRecords,
+    prefs: UserPreferences,
+): Pair<List<WeightInput>, List<BodyFatInput>> {
+    val deviceByType = prefs.deviceByDataType
+    fun deviceFor(type: HealthDataType): String? = deviceByType[type.name]?.takeIf { it.isNotBlank() }
+
+    val weightRecords = raw.weightRecords.dataOrEmpty()
+    val bodyFatRecords = raw.bodyFatRecords.dataOrEmpty()
+    val weightInputs =
+        weightRecords.map {
+            WeightInput(
+                id = "${it.id}_${it.time.toEpochMilli()}",
+                timestampMs = it.time.toEpochMilli(),
+                weightKg = it.weightKg,
+                deviceName = it.deviceName,
+                sourceId = it.id,
+            )
+        }
+    val bodyFatInputs =
+        bodyFatRecords.map {
+            BodyFatInput(
+                id = "${it.id}_${it.time.toEpochMilli()}",
+                timestampMs = it.time.toEpochMilli(),
+                bodyFatPercent = it.percentage,
+                deviceName = it.deviceName,
+                sourceId = it.id,
+            )
+        }
+
+    val filteredWeights =
+        DeviceSourceFilter.filterToDevice(weightInputs, deviceFor(HealthDataType.WEIGHT)) { it.deviceName }
+    val filteredBodyFat =
+        DeviceSourceFilter.filterToDevice(bodyFatInputs, deviceFor(HealthDataType.BODY_FAT)) { it.deviceName }
+    return Pair(filteredWeights, filteredBodyFat)
+}
+
+private fun mapAndFilterCardioVitals(
+    raw: RawBulkRecords,
+    prefs: UserPreferences,
+): Triple<List<BloodPressureInput>, List<OxygenSaturationInput>, List<BodyTemperatureInput>> {
+    val deviceByType = prefs.deviceByDataType
+    fun deviceFor(type: HealthDataType): String? = deviceByType[type.name]?.takeIf { it.isNotBlank() }
+
+    val bpRecords = raw.bloodPressureRecords.dataOrEmpty()
+    val spo2Records = raw.spo2Records.dataOrEmpty()
+    val tempRecords = raw.bodyTemperatureRecords.dataOrEmpty()
+    val bpInputs =
+        bpRecords.map {
+            BloodPressureInput(
+                id = "${it.id}_${it.time.toEpochMilli()}",
+                timestampMs = it.time.toEpochMilli(),
+                systolicMmHg = it.systolicMmHg,
+                diastolicMmHg = it.diastolicMmHg,
+                deviceName = it.deviceName,
+                sourceId = it.id,
+            )
+        }
+    val spo2Inputs =
+        spo2Records.map {
+            OxygenSaturationInput(
+                id = "${it.id}_${it.time.toEpochMilli()}",
+                timestampMs = it.time.toEpochMilli(),
+                percentage = it.percentage,
+                deviceName = it.deviceName,
+                sourceId = it.id,
+            )
+        }
+    val tempInputs =
+        tempRecords.map {
+            BodyTemperatureInput(
+                id = "${it.id}_${it.time.toEpochMilli()}",
+                timestampMs = it.time.toEpochMilli(),
+                celsius = it.celsius,
+                deviceName = it.deviceName,
+                sourceId = it.id,
+            )
+        }
+
+    val filteredBp =
+        DeviceSourceFilter.filterToDevice(bpInputs, deviceFor(HealthDataType.BLOOD_PRESSURE)) { it.deviceName }
+    val filteredSpo2 =
+        DeviceSourceFilter.filterToDevice(
+            spo2Inputs,
+            deviceFor(HealthDataType.OXYGEN_SATURATION),
+        ) { it.deviceName }
+    val filteredTemp =
+        DeviceSourceFilter.filterToDevice(
+            tempInputs,
+            deviceFor(HealthDataType.BODY_TEMPERATURE),
+        ) { it.deviceName }
+    return Triple(filteredBp, filteredSpo2, filteredTemp)
+}
+

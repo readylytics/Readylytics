@@ -410,7 +410,7 @@ class ResyncCheckpointResumeTest {
         }
 
     @Test
-    fun `interrupted HR page token in checkpoint is cleared and replayed from beginning on resume`() =
+    fun `interrupted HR page token in checkpoint is forwarded on resume`() =
         runTest {
             val startDate = LocalDate.of(2024, 6, 1)
             checkpointStore.value =
@@ -432,7 +432,7 @@ class ResyncCheckpointResumeTest {
 
             useCase.run(startDate = startDate, endDate = startDate, chunkDays = 30, onProgress = null)
 
-            assertEquals(null, tokenSlot.captured)
+            assertEquals("saved-token-2", tokenSlot.captured)
         }
 
     @Test

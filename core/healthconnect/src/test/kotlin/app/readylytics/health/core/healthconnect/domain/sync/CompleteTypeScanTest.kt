@@ -20,6 +20,7 @@ import app.readylytics.health.core.model.domain.sync.HealthIngestionBatch
 import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
 import app.readylytics.health.core.model.domain.sync.HeartRateInput
 import app.readylytics.health.core.model.domain.sync.HrvInput
+import app.readylytics.health.core.model.domain.sync.InMemoryScanStagingStore
 import app.readylytics.health.core.model.domain.sync.ResyncCheckpoint
 import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
@@ -55,7 +56,8 @@ class CompleteTypeScanTest {
     private val selectedSourcePruner = mockk<SelectedSourcePruner>(relaxed = true)
     private val checkpointStore = InMemoryResyncCheckpointStore()
     private val transactionRunner = RecordingTransactionRunner()
-    private val fakeStore = FakeScanHealthIngestionStore()
+    private val staging = InMemoryScanStagingStore()
+    private val fakeStore = FakeScanHealthIngestionStore(staging)
 
     private val fixedClock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC"))
     private lateinit var useCase: ResyncRangeUseCase
@@ -63,6 +65,7 @@ class CompleteTypeScanTest {
     @Before
     fun setup() {
         fakeStore.clear()
+        staging.clearAll()
         coEvery { changeSynchronizer.applyPendingChanges() } returns HealthChangeSyncOutcome(emptySet(), false)
         coEvery { changeSynchronizer.captureChangesTokens() } returns mapOf(HealthDataType.HEART_RATE to "hr-base")
         coEvery { changeSynchronizer.commitTokens(any()) } returns Unit
@@ -97,8 +100,9 @@ class CompleteTypeScanTest {
                 healthIngestionStore = fakeStore,
                 ingestion =
                     ResyncIngestionDependencies(
-                        ingestionCoordinator = HealthIngestionCoordinator(hcRepo, fakeStore),
+                        ingestionCoordinator = HealthIngestionCoordinator(hcRepo, fakeStore, staging = staging),
                         stepCountFetcher = StepCountFetcher(hcRepo),
+                        staging = staging,
                     ),
                 recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner),
                 ioDispatcher = Dispatchers.Unconfined,
@@ -137,8 +141,7 @@ class CompleteTypeScanTest {
                     onPage(page1, "page-token-2")
                     error("Simulated interruption after page 1 commit")
                 } else {
-                    assertEquals("Interrupted scan must replay with null startPageToken", null, token)
-                    onPage(page1, "page-token-2")
+                    assertEquals("Interrupted scan must forward stored token", "page-token-2", token)
                     onPage(page2, null)
                     ReadOutcome.Available(Unit)
                 }
@@ -262,8 +265,7 @@ class CompleteTypeScanTest {
                     onPage(page1, "hrv-token-2")
                     error("Simulated interruption after page 1 HRV")
                 } else {
-                    assertEquals("Interrupted HRV scan must replay with null startPageToken", null, token)
-                    onPage(page1, "hrv-token-2")
+                    assertEquals("Interrupted HRV scan must forward stored token", "hrv-token-2", token)
                     onPage(page2, null)
                     ReadOutcome.Available(Unit)
                 }
@@ -348,7 +350,9 @@ class CompleteTypeScanTest {
             deviceName = "Watch",
         )
 
-    private class FakeScanHealthIngestionStore : HealthIngestionStore {
+    private class FakeScanHealthIngestionStore(
+        private val staging: InMemoryScanStagingStore? = null,
+    ) : HealthIngestionStore {
         val heartRateSamples = mutableMapOf<String, HeartRateInput>()
         val hrvSamples = mutableMapOf<String, HrvInput>()
 
@@ -392,7 +396,8 @@ class CompleteTypeScanTest {
         ): ScoreInvalidation.AffectedRange? =
             when (scan.type) {
                 HealthDataType.HEART_RATE -> {
-                    val toDelete = heartRateSamples.keys.filter { it !in scan.ids }
+                    val scannedIds = staging?.stagedIds(scan.scan, scan.type) ?: scan.ids
+                    val toDelete = heartRateSamples.keys.filter { it !in scannedIds }
                     toDelete.forEach { heartRateSamples.remove(it) }
                     if (toDelete.isNotEmpty()) {
                         ScoreInvalidation.AffectedRange(
@@ -404,7 +409,8 @@ class CompleteTypeScanTest {
                     }
                 }
                 HealthDataType.HRV -> {
-                    val toDelete = hrvSamples.keys.filter { it !in scan.ids }
+                    val scannedIds = staging?.stagedIds(scan.scan, scan.type) ?: scan.ids
+                    val toDelete = hrvSamples.keys.filter { it !in scannedIds }
                     toDelete.forEach { hrvSamples.remove(it) }
                     if (toDelete.isNotEmpty()) {
                         ScoreInvalidation.AffectedRange(

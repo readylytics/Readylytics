@@ -62,11 +62,14 @@ class DailySyncUseCase
             windowBudgetMs: Long,
             onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)?,
         ) {
+            val scanIdentity = ScanIdentities.daily(startMs)
             try {
                 ingestionCoordinator.ingestWindow(
-                    startMs,
-                    endMs,
-                    prefs,
+                    windowStart = startMs,
+                    windowEnd = endMs,
+                    prefs = prefs,
+                    scanIdentity = scanIdentity,
+                    resumeStagedScan = false,
                     windowBudgetMs = windowBudgetMs,
                     onProgress = onProgress,
                 )
@@ -75,9 +78,11 @@ class DailySyncUseCase
                     "Ingest segment $startMs..$endMs timed out; retrying with extended budget"
                 }
                 ingestionCoordinator.ingestWindow(
-                    startMs,
-                    endMs,
-                    prefs,
+                    windowStart = startMs,
+                    windowEnd = endMs,
+                    prefs = prefs,
+                    scanIdentity = scanIdentity,
+                    resumeStagedScan = false,
                     windowBudgetMs = EXTENDED_DAILY_INGEST_BUDGET_MS,
                     onProgress = onProgress,
                 )

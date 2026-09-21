@@ -73,3 +73,74 @@ interface ScanStagingStore {
         const val STAGE_BATCH_SIZE: Int = 500
     }
 }
+
+class InMemoryScanStagingStore : ScanStagingStore {
+    private val staged = mutableMapOf<Triple<String, String, String>, MutableSet<String>>()
+    private val states = mutableMapOf<Triple<String, String, String>, TypeScanState>()
+
+    fun stagedIds(scan: ScanIdentity, type: HealthDataType): Set<String> =
+        staged[Triple(scan.runId, scan.chunkId, type.name)]?.toSet() ?: emptySet()
+
+    fun clearAll() {
+        staged.clear()
+        states.clear()
+    }
+
+    override suspend fun beginTypeScan(
+        scan: ScanIdentity,
+        type: HealthDataType,
+        resume: Boolean,
+    ) {
+        val key = Triple(scan.runId, scan.chunkId, type.name)
+        if (!resume) {
+            staged[key]?.clear()
+        }
+        states[key] = TypeScanState.SCANNING
+    }
+
+    override suspend fun stageIds(
+        scan: ScanIdentity,
+        type: HealthDataType,
+        ids: Collection<String>,
+    ) {
+        val key = Triple(scan.runId, scan.chunkId, type.name)
+        staged.getOrPut(key) { mutableSetOf() }.addAll(ids)
+    }
+
+    override suspend fun markTypeScanComplete(
+        scan: ScanIdentity,
+        type: HealthDataType,
+    ) {
+        val key = Triple(scan.runId, scan.chunkId, type.name)
+        states[key] = TypeScanState.COMPLETE
+    }
+
+    override suspend fun stateOf(
+        scan: ScanIdentity,
+        type: HealthDataType,
+    ): TypeScanState? = states[Triple(scan.runId, scan.chunkId, type.name)]
+
+    override suspend fun stagedCount(
+        scan: ScanIdentity,
+        type: HealthDataType,
+    ): Int = staged[Triple(scan.runId, scan.chunkId, type.name)]?.size ?: 0
+
+    override suspend fun clearTypeScan(
+        scan: ScanIdentity,
+        type: HealthDataType,
+    ) {
+        val key = Triple(scan.runId, scan.chunkId, type.name)
+        staged.remove(key)
+        states.remove(key)
+    }
+
+    override suspend fun clearRun(runId: String) {
+        staged.keys.filter { it.first == runId }.forEach { staged.remove(it) }
+        states.keys.filter { it.first == runId }.forEach { states.remove(it) }
+    }
+
+    override suspend fun clearRunsOtherThan(runId: String) {
+        staged.keys.filter { it.first != runId }.forEach { staged.remove(it) }
+        states.keys.filter { it.first != runId }.forEach { states.remove(it) }
+    }
+}

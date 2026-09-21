@@ -8,7 +8,11 @@ import app.readylytics.health.core.model.domain.sync.HistoricalRunIdentity
 import app.readylytics.health.core.model.domain.sync.ResyncCheckpoint
 import app.readylytics.health.core.model.domain.sync.ResyncCheckpointStore
 import app.readylytics.health.core.model.domain.sync.ResyncPhase
+import app.readylytics.health.core.model.domain.sync.ScanIdentity
+import app.readylytics.health.core.model.domain.sync.ScanStagingStore
 import app.readylytics.health.core.model.domain.util.logD
+import app.readylytics.health.core.model.domain.util.logW
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import java.time.Clock
@@ -70,11 +74,13 @@ class HistoricalIngestPhase
         private val ingestion: ResyncIngestionDependencies,
         private val checkpointStore: ResyncCheckpointStore,
         private val clock: Clock = Clock.systemDefaultZone(),
+        private val staging: ScanStagingStore = ingestion.staging,
     ) {
         suspend fun execute(
             context: IngestPhaseContext,
             onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)?,
         ): IngestPhaseOutcome {
+            staging.clearRunsOtherThan(context.runIdentity.runId)
             val beforeCounts = readCounts(context.reconcileStartMs, context.reconcileEndMs)
             val ingestStart = clock.millis()
             var chunkStart = context.checkpoint?.nextDate?.coerceAtLeast(context.startDate) ?: context.startDate
@@ -84,7 +90,6 @@ class HistoricalIngestPhase
                     .coerceIn(0, context.totalChunks)
             var effectiveChunkDays = context.checkpoint?.chunkDaysOverride ?: context.chunkDays
             var runCompletedTypes = context.initialCompletedTypes
-            clearInterruptedTokensIfNeeded(context, chunkStart, runCompletedTypes)
 
             var earliestDeletionDate: LocalDate? = null
 
@@ -129,25 +134,14 @@ class HistoricalIngestPhase
             workout = healthIngestionStore.countWorkoutsInRange(startMs, endMs),
         )
 
-        private suspend fun clearInterruptedTokensIfNeeded(
-            context: IngestPhaseContext,
-            chunkStart: LocalDate,
-            completedTypes: Set<HealthDataType>,
-        ) {
-            val isInterrupted =
-                context.checkpoint?.phase == ResyncPhase.INGEST && context.checkpoint.nextDate == chunkStart
-            val hasTokens = context.checkpoint?.hrPageToken != null || context.checkpoint?.hrvPageToken != null
-            if (isInterrupted && hasTokens) {
-                checkpointStore.save(
-                    context.checkpoint.copy(
-                        hrPageToken = null,
-                        hrvPageToken = null,
-                        completedTypes = completedTypes,
-                        runIdentity = context.runIdentity,
-                    ),
-                )
-            }
-        }
+        private data class ChunkWindowParams(
+            val windowStart: Instant,
+            val windowEnd: Instant,
+            val scanIdentity: ScanIdentity,
+            val chunkStart: LocalDate,
+            val chunkOverride: Int?,
+            val runCompletedTypes: Set<HealthDataType>,
+        )
 
         private suspend fun processChunk(
             context: IngestPhaseContext,
@@ -161,28 +155,33 @@ class HistoricalIngestPhase
             val windowEnd = chunkEndExclusive.atStartOfDay(context.zoneId).toInstant()
             val chunkOverride = if (effectiveChunkDays != context.chunkDays) effectiveChunkDays else null
 
+            val scanIdentity = ScanIdentities.historical(context.runIdentity.runId, chunkStart)
+            val resumingThisChunk =
+                context.checkpoint?.phase == ResyncPhase.INGEST &&
+                    context.checkpoint.nextDate == chunkStart &&
+                    context.checkpoint.runIdentity?.runId == context.runIdentity.runId
+            val hrStartPageToken = if (resumingThisChunk) context.checkpoint.hrPageToken else null
+            val hrvStartPageToken = if (resumingThisChunk) context.checkpoint.hrvPageToken else null
+
+            val params =
+                ChunkWindowParams(
+                    windowStart = windowStart,
+                    windowEnd = windowEnd,
+                    scanIdentity = scanIdentity,
+                    chunkStart = chunkStart,
+                    chunkOverride = chunkOverride,
+                    runCompletedTypes = runCompletedTypes,
+                )
+
             val ingestResult =
                 try {
-                    retryWithBackoff {
-                        ingestion.ingestionCoordinator.ingestWindow(
-                            windowStart = windowStart,
-                            windowEnd = windowEnd,
-                            prefs = context.prefs,
-                            hrStartPageToken = null,
-                            hrvStartPageToken = null,
-                            onTokenUpdated = { hrToken, hrvToken ->
-                                saveChunkProgress(
-                                    context,
-                                    chunkStart,
-                                    chunkOverride,
-                                    hrToken,
-                                    hrvToken,
-                                    runCompletedTypes,
-                                )
-                            },
-                            reconcileDeletions = !context.skipIngestAndPrune,
-                        )
-                    }
+                    executeChunkIngest(
+                        context = context,
+                        params = params,
+                        resumingThisChunk = resumingThisChunk,
+                        hrStartPageToken = hrStartPageToken,
+                        hrvStartPageToken = hrvStartPageToken,
+                    )
                 } catch (e: HealthConnectWindowTimeoutException) {
                     return handleChunkTimeout(
                         e,
@@ -197,12 +196,103 @@ class HistoricalIngestPhase
 
             val updatedCompletedTypes = runCompletedTypes.intersect(ingestResult.completedTypes)
             saveChunkCompleted(context, chunkEndExclusive, updatedCompletedTypes)
+            for (type in HealthDataType.entries) {
+                staging.clearTypeScan(scanIdentity, type)
+            }
             return ChunkIngestResult.Success(
                 nextChunkStart = chunkEndExclusive,
                 affectedStart = ingestResult.affectedRange?.start,
                 completedTypes = updatedCompletedTypes,
             )
         }
+
+        private suspend fun executeChunkIngest(
+            context: IngestPhaseContext,
+            params: ChunkWindowParams,
+            resumingThisChunk: Boolean,
+            hrStartPageToken: String?,
+            hrvStartPageToken: String?,
+        ): IngestionWindowResult =
+            if (hrStartPageToken != null || hrvStartPageToken != null) {
+                runWithTokenFallback(
+                    context = context,
+                    params = params,
+                    resumingThisChunk = resumingThisChunk,
+                    hrStartPageToken = hrStartPageToken,
+                    hrvStartPageToken = hrvStartPageToken,
+                )
+            } else {
+                runIngestWindow(
+                    context = context,
+                    params = params,
+                    resumeStagedScan = resumingThisChunk,
+                    hrStartPageToken = null,
+                    hrvStartPageToken = null,
+                )
+            }
+
+        private suspend fun runWithTokenFallback(
+            context: IngestPhaseContext,
+            params: ChunkWindowParams,
+            resumingThisChunk: Boolean,
+            hrStartPageToken: String?,
+            hrvStartPageToken: String?,
+        ): IngestionWindowResult =
+            try {
+                runIngestWindow(
+                    context = context,
+                    params = params,
+                    resumeStagedScan = resumingThisChunk,
+                    hrStartPageToken = hrStartPageToken,
+                    hrvStartPageToken = hrvStartPageToken,
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: HealthConnectWindowTimeoutException) {
+                throw e
+            } catch (e: Exception) {
+                logW(TELEMETRY_TAG, e) {
+                    "[INGESTION] Resumed token rejected for chunk ${params.chunkStart}; " +
+                        "replaying chunk without tokens."
+                }
+                runIngestWindow(
+                    context = context,
+                    params = params,
+                    resumeStagedScan = false,
+                    hrStartPageToken = null,
+                    hrvStartPageToken = null,
+                )
+            }
+
+        private suspend fun runIngestWindow(
+            context: IngestPhaseContext,
+            params: ChunkWindowParams,
+            resumeStagedScan: Boolean,
+            hrStartPageToken: String?,
+            hrvStartPageToken: String?,
+        ): IngestionWindowResult =
+            retryWithBackoff {
+                ingestion.ingestionCoordinator.ingestWindow(
+                    windowStart = params.windowStart,
+                    windowEnd = params.windowEnd,
+                    prefs = context.prefs,
+                    scanIdentity = params.scanIdentity,
+                    resumeStagedScan = resumeStagedScan,
+                    hrStartPageToken = hrStartPageToken,
+                    hrvStartPageToken = hrvStartPageToken,
+                    onTokenUpdated = { hrToken, hrvToken ->
+                        saveChunkProgress(
+                            context,
+                            params.chunkStart,
+                            params.chunkOverride,
+                            hrToken,
+                            hrvToken,
+                            params.runCompletedTypes,
+                        )
+                    },
+                    reconcileDeletions = !context.skipIngestAndPrune,
+                )
+            }
 
         private suspend fun handleChunkTimeout(
             e: HealthConnectWindowTimeoutException,
