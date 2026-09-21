@@ -1,13 +1,19 @@
 package app.readylytics.health.core.database.data.repository
 
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.model.data.preferences.appliedTrainingReadinessConfig
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.preferences.Vo2MaxEstimationMethod
+import app.readylytics.health.core.model.domain.repository.FatigueWorkoutInput
 import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardVo2MaxContext
+import app.readylytics.health.core.model.domain.repository.Vo2MaxKey
+import app.readylytics.health.core.model.domain.scoring.DayAssembly
+import app.readylytics.health.core.model.domain.scoring.DayAssemblyUnavailableReason
+import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.scoring.domain.cardio.MaterkoAdaptedVo2MaxCalculator
 import app.readylytics.health.core.scoring.domain.cardio.UthVo2MaxCalculator
 import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxResolution
@@ -16,6 +22,7 @@ import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
 import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 import app.readylytics.health.core.scoring.domain.scoring.EverydayHrLoadResult
 import app.readylytics.health.core.scoring.domain.scoring.TrainingReadinessProjection
+import kotlinx.coroutines.CancellationException
 import java.util.concurrent.TimeUnit
 
 data class Vo2MaxScoringDependencies(
@@ -52,36 +59,119 @@ class FinalSummaryAssembler(
         val baselineContext: WalkForwardBaselineContext?,
         val fatigueContext: WalkForwardFatigueContext?,
         val vo2MaxContext: WalkForwardVo2MaxContext?,
+        val stagedFatigueInputs: List<FatigueWorkoutInput> = emptyList(),
+        val stagedWorkouts: List<WorkoutRecordEntity> = emptyList(),
     )
 
-    suspend fun assemble(inputs: Inputs): DailySummary {
-        val baseSummary =
-            baseSummaryAssembler.buildBaseSummary(
-                inputs.context,
-                inputs.dailyTrimpRaw,
-                inputs.trimpEverydayHr,
-                inputs.rasTotals,
-                inputs.everydayResult,
-                inputs.aggregatedSleep,
-            )
-        val isCalibrated =
-            calibrationGate.isCalibrated(
-                inputs.context,
-                inputs.baselineContext?.sessions,
-                inputs.session != null,
-            )
-        val base =
+    /**
+     * C3 (WP-13): each stage of this pipeline is wrapped so a transient failure anywhere converts
+     * to an explicit [DayAssembly.Unavailable] with a stage-specific reason code instead of a bare
+     * exception -- the caller (`ScoringRepositoryImpl`) must then leave the previous complete day,
+     * its canonical workout values, and its dirty ticket entirely untouched. [CancellationException]
+     * always rethrows: cancellation must propagate as cancellation, never get swallowed into an
+     * "unavailable" result. On success the day is [DayAssembly.Computed] when its required sleep
+     * session was present, or [DayAssembly.Absent] when it was confirmed missing -- both are
+     * genuinely complete, publishable candidates.
+     */
+    suspend fun assemble(inputs: Inputs): DayAssembly {
+        val base = assembleBase(inputs)
+        val isCalibrated = base?.let { isCalibratedOrNull(inputs, inputs.session != null) }
+        val summary = base?.let { b -> isCalibrated?.let { resolveScoredSummaryOrNull(b, inputs, it) } }
+        val finalSummary = summary?.let { s -> isCalibrated?.let { finalizeScoredSummaryOrNull(s, inputs, it) } }
+
+        // Single terminal return keeps this within detekt's ReturnCount limit -- each `null` above
+        // was already logged at its own stage by the *OrNull helper that produced it. `base != null`
+        // is implied once we reach the `isCalibrated == null` branch, so that case unambiguously
+        // means the calibration gate itself failed, not that base assembly never ran.
+        return when {
+            base == null -> DayAssembly.Unavailable(DayAssemblyUnavailableReason.BASE_ASSEMBLY_FAILED)
+            isCalibrated == null -> DayAssembly.Unavailable(DayAssemblyUnavailableReason.CALIBRATION_GATE_FAILED)
+            summary == null -> DayAssembly.Unavailable(DayAssemblyUnavailableReason.READINESS_ASSEMBLY_FAILED)
+            finalSummary == null -> DayAssembly.Unavailable(DayAssemblyUnavailableReason.FINAL_ASSEMBLY_FAILED)
+            inputs.session == null -> DayAssembly.Absent(finalSummary)
+            else -> DayAssembly.Computed(finalSummary)
+        }
+    }
+
+    private suspend fun isCalibratedOrNull(inputs: Inputs, hasSession: Boolean): Boolean? =
+        try {
+            calibrationGate.isCalibrated(inputs.context, hasSession)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logE("FinalSummaryAssembler", e) { "Calibration gate failed for ${inputs.context.targetDate}" }
+            null
+        }
+
+    private suspend fun resolveScoredSummaryOrNull(
+        base: ReadinessBaseInputs,
+        inputs: Inputs,
+        isCalibrated: Boolean,
+    ): DailySummary? =
+        try {
+            resolveScoredSummary(base, inputs, isCalibrated)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logE("FinalSummaryAssembler", e) { "Readiness assembly failed for ${inputs.context.targetDate}" }
+            null
+        }
+
+    private suspend fun finalizeScoredSummaryOrNull(
+        summary: DailySummary,
+        inputs: Inputs,
+        isCalibrated: Boolean,
+    ): DailySummary? =
+        try {
+            finalizeScoredSummary(summary, inputs, isCalibrated)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logE("FinalSummaryAssembler", e) { "Final assembly failed for ${inputs.context.targetDate}" }
+            null
+        }
+
+    private suspend fun assembleBase(inputs: Inputs): ReadinessBaseInputs? =
+        try {
+            val baseSummary =
+                baseSummaryAssembler.buildBaseSummary(
+                    inputs.context,
+                    inputs.dailyTrimpRaw,
+                    inputs.trimpEverydayHr,
+                    inputs.rasTotals,
+                    inputs.everydayResult,
+                    inputs.aggregatedSleep,
+                )
             ReadinessBaseInputs(
                 session = inputs.session,
                 currentSessionIds = inputs.currentSessionIds,
                 baseSummary = baseSummary,
                 avgSpo2 = bodyMetricsDataLoader.loadAvgSpo2(inputs.session),
                 avgBodyTemp = bodyMetricsDataLoader.loadAvgBodyTemp(inputs.session),
+                coreRecoveryInput = inputs.aggregatedSleep?.coreRecoveryInput,
             )
-        val summary = resolveScoredSummary(base, inputs, isCalibrated)
-        val withFatigue = summary.copy(
-            residualFatigue = residualFatigueComputer.compute(inputs.context, inputs.fatigueContext)
-        )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logE("FinalSummaryAssembler", e) { "Base summary assembly failed for ${inputs.context.targetDate}" }
+            null
+        }
+
+    private suspend fun finalizeScoredSummary(
+        summary: DailySummary,
+        inputs: Inputs,
+        isCalibrated: Boolean,
+    ): DailySummary {
+        val withFatigue =
+            summary.copy(
+                residualFatigue =
+                    residualFatigueComputer.compute(
+                        context = inputs.context,
+                        fatigueContext = inputs.fatigueContext,
+                        stagedFatigueInputs = inputs.stagedFatigueInputs,
+                        stagedWorkouts = inputs.stagedWorkouts,
+                    ),
+            )
         val (projectionForWorkout, projectionForEveryday) = resolveReadinessProjections(withFatigue, inputs)
         val vo2MaxResolution = resolveVo2Max(inputs, isCalibrated, withFatigue.hrvMuMssd)
         return withFatigue.copy(
@@ -169,12 +259,12 @@ class FinalSummaryAssembler(
         val context = inputs.vo2MaxContext
         return if (context != null) {
             context.vo2MaxByTimestampMs
-                .floorEntry(inputs.context.nextDayMidnightMs)
-                ?.takeIf { it.key >= wearableLookbackMs }
+                .lowerEntry(Vo2MaxKey(inputs.context.nextDayMidnightMs, ""))
+                ?.takeIf { it.key.timestampMs >= wearableLookbackMs }
                 ?.value
         } else {
             bodyMetricsDataLoader
-                .loadLatestVo2Max(inputs.context.nextDayMidnightMs, wearableLookbackMs)
+                .loadLatestVo2Max(wearableLookbackMs, inputs.context.nextDayMidnightMs)
                 ?.vo2Max
         }
     }

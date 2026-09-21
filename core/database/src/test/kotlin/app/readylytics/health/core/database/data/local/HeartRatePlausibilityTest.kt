@@ -3,6 +3,7 @@ package app.readylytics.health.core.database.data.local
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
+import app.readylytics.health.core.databaseschema.data.local.dao.getOrCreateSourceRef
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity
 import kotlinx.coroutines.runBlocking

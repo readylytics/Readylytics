@@ -28,8 +28,14 @@ interface WorkerScheduler {
      *   (default) keeps the existing full-retention-window recompute behavior.
      * @param endDate R2-CACHE-001: optional inclusive end of the bounded recompute-only range.
      *   `null` (default) keeps the existing full-retention-window recompute behavior.
+     *
+     * WP-10 review fix: `suspend` so the implementation can read the currently saved
+     * [app.readylytics.health.core.model.domain.sync.ResyncCheckpointStore] checkpoint (if any) and
+     * thread its immutable [app.readylytics.health.core.model.domain.sync.HistoricalRunIdentity.runId]
+     * into the enqueued work request -- a resumed/re-enqueued request must reference the existing
+     * saved run rather than always minting a fresh one.
      */
-    fun scheduleResyncWorker(
+    suspend fun scheduleResyncWorker(
         recomputeOnly: Boolean = false,
         startDate: LocalDate? = null,
         endDate: LocalDate? = null,

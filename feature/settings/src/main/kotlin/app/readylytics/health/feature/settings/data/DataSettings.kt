@@ -303,6 +303,18 @@ fun DataSourceSettingsSection(viewModel: DataSourceSettingsViewModel = hiltViewM
                                 ),
                         enabled = hasDevices || selected != null,
                     )
+                    if (type == HealthDataType.STEPS && selected != null) {
+                        Text(
+                            text = stringResource(R.string.data_sources_steps_selected_attribution_note),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier =
+                                Modifier.padding(
+                                    horizontal = MaterialTheme.spacing.medium,
+                                    vertical = MaterialTheme.spacing.extraSmall,
+                                ),
+                        )
+                    }
                 }
             }
 
@@ -402,4 +414,5 @@ private fun HealthDataType.labelRes(): Int =
         HealthDataType.HRV -> R.string.data_type_hrv
         HealthDataType.OXYGEN_SATURATION -> R.string.data_type_oxygen_saturation
         HealthDataType.BODY_TEMPERATURE -> R.string.data_type_body_temperature
+        HealthDataType.VO2_MAX -> R.string.data_type_vo2_max
     }

@@ -54,7 +54,7 @@ class BaselineComputerTest {
             val values = samples.map { it.beatsPerMinute }.toIntArray()
             val weights = IntArray(values.size) { 1 }
 
-            coEvery { repository.getSleepSessionsSince(any()) } returns listOf(session)
+            coEvery { repository.getSleepSessionsBetween(any(), any()) } returns listOf(session)
             coEvery { repository.getSleepHrProjectionForSessions(listOf("s1")) } returns samples
 
             val p5 = baselineComputer.rhrHistory(now, percentile = 5)
@@ -199,7 +199,6 @@ class BaselineComputerTest {
             val samples = (50..69).map { SleepHrSample("s_cross", it) }
 
             coEvery { repository.getDailySummaryByDate(any(), any()) } returns null
-            coEvery { repository.getSleepSessionsSince(any()) } returns listOf(session)
             coEvery { repository.getSleepSessionsBetween(any(), any()) } returns listOf(session)
             coEvery { repository.getSleepRmssdForSessionsMap(any()) } returns mapOf("s_cross" to listOf(52f))
             coEvery { repository.getSleepHrProjectionForSessions(any()) } returns samples

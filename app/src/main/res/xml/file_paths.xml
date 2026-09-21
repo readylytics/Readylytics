@@ -4,6 +4,9 @@
         name="crash_reports"
         path="crash_reports/" />
     <cache-path
+        name="crash_reports_v2"
+        path="crash_reports_v2/" />
+    <cache-path
         name="logcat_capture"
         path="logcat_capture/" />
     <cache-path

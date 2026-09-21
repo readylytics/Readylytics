@@ -11,7 +11,6 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -59,7 +58,7 @@ class DataRollupWorkerTest {
 
             createWorker().doWork()
 
-            verify(exactly = 1) {
+            coVerify(exactly = 1) {
                 workerScheduler.scheduleResyncWorker(
                     recomputeOnly = true,
                     startDate = LocalDate.of(2026, 1, 1),
@@ -75,7 +74,7 @@ class DataRollupWorkerTest {
 
             createWorker().doWork()
 
-            verify(exactly = 0) { workerScheduler.scheduleResyncWorker(any(), any(), any()) }
+            coVerify(exactly = 0) { workerScheduler.scheduleResyncWorker(any(), any(), any()) }
         }
 
     @Test
@@ -88,12 +87,27 @@ class DataRollupWorkerTest {
             assertEquals(ListenableWorker.Result.retry(), result)
         }
 
-    private fun createWorker() =
-        DataRollupWorker(
-            context = ApplicationProvider.getApplicationContext(),
-            params = workerParams,
-            rollupManager = rollupManagerLazy,
-            workerScheduler = workerSchedulerLazy,
-            clock = fixedClock,
-        )
+    @Test
+    fun `doWork retries when maintenance is pending`() =
+        runBlocking {
+            val coordinator = mockk<app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator>()
+            io.mockk.coEvery { coordinator.isMaintenancePending() } returns true
+
+            val worker = createWorker(coordinator)
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.retry(), result)
+            coVerify(exactly = 0) { rollupManager.rollupExpiredHotTier(any()) }
+        }
+
+    private fun createWorker(
+        coordinator: app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator? = null,
+    ) = DataRollupWorker(
+        context = ApplicationProvider.getApplicationContext(),
+        params = workerParams,
+        rollupManager = rollupManagerLazy,
+        workerScheduler = workerSchedulerLazy,
+        clock = fixedClock,
+        healthMutationCoordinator = coordinator?.let { Lazy { it } },
+    )
 }

@@ -8,11 +8,17 @@ import app.readylytics.health.core.databaseschema.data.local.dao.BloodPressureRe
 import app.readylytics.health.core.databaseschema.data.local.dao.BodyFatRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.BodyTemperatureRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.DailySummaryDao
+import app.readylytics.health.core.databaseschema.data.local.dao.DirtyRangeDao
+import app.readylytics.health.core.databaseschema.data.local.dao.HealthMutationStateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
+import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateRefreshStagingDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao
 import app.readylytics.health.core.databaseschema.data.local.dao.InsightDismissalDao
 import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
 import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketMaintenanceDao
+import app.readylytics.health.core.databaseschema.data.local.dao.MinuteCoverageDao
+import app.readylytics.health.core.databaseschema.data.local.dao.MinuteCoverageMaintenanceDao
+import app.readylytics.health.core.databaseschema.data.local.dao.MinuteCoverageSelectionDao
 import app.readylytics.health.core.databaseschema.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepStageDao
@@ -27,14 +33,20 @@ import app.readylytics.health.core.databaseschema.data.local.entity.BloodPressur
 import app.readylytics.health.core.databaseschema.data.local.entity.BodyFatRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.BodyTemperatureRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.DirtyRangeEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HealthMutationStateEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HealthSourceRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HrSourceMinuteContributionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrMinuteBucketEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.InsightDismissalEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.MinuteCoverageEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.OxygenSaturationRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepStageEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.StagedHeartRateEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.StagedSourceMetadataEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.StepRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.Vo2MaxRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity
@@ -61,6 +73,12 @@ import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRoute
         HrMinuteBucketEntity::class,
         WorkoutRoutePointEntity::class,
         Vo2MaxRecordEntity::class,
+        DirtyRangeEntity::class,
+        HealthMutationStateEntity::class,
+        MinuteCoverageEntity::class,
+        HrSourceMinuteContributionEntity::class,
+        StagedSourceMetadataEntity::class,
+        StagedHeartRateEntity::class,
     ],
     version = HealthDatabase.DATABASE_VERSION,
 )
@@ -107,7 +125,19 @@ abstract class HealthDatabase : RoomDatabase() {
 
     abstract fun vo2MaxRecordDao(): Vo2MaxRecordDao
 
+    abstract fun dirtyRangeDao(): DirtyRangeDao
+
+    abstract fun healthMutationStateDao(): HealthMutationStateDao
+
+    abstract fun minuteCoverageDao(): MinuteCoverageDao
+
+    abstract fun minuteCoverageMaintenanceDao(): MinuteCoverageMaintenanceDao
+
+    abstract fun minuteCoverageSelectionDao(): MinuteCoverageSelectionDao
+
+    abstract fun heartRateRefreshStagingDao(): HeartRateRefreshStagingDao
+
     companion object {
-        const val DATABASE_VERSION = 19
+        const val DATABASE_VERSION = 22
     }
 }

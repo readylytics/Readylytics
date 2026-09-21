@@ -1,15 +1,19 @@
 package app.readylytics.health
 
+import android.content.Context
 import app.readylytics.health.core.healthconnect.domain.sync.HealthSyncUseCase
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.WorkoutTrimpBackfillStatus
+import app.readylytics.health.core.model.domain.sync.DirtyRangeStore
 import app.readylytics.health.core.model.domain.util.RetentionBounds
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.core.scoring.domain.scoring.BackfillHistoricalBaselinesUseCase
+import app.readylytics.health.crashreport.CachePrune
+import app.readylytics.health.data.backup.RestoreMaintenanceCoordinator
 import app.readylytics.health.data.preferences.PhysiologyPreferences
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.domain.migration.DatabaseMigrationUiState
@@ -29,14 +33,40 @@ internal class DatabaseReadyStartupInitializer(
     private val physiologyPreferences: Lazy<PhysiologyPreferences>,
     private val workerScheduler: WorkerScheduler,
     private val workoutTrimpBackfillStatus: Lazy<WorkoutTrimpBackfillStatus>,
+    private val context: Context? = null,
+    private val dirtyRangeStore: Lazy<DirtyRangeStore>? = null,
+    private val restoreMaintenanceCoordinator: Lazy<RestoreMaintenanceCoordinator>? = null,
 ) {
     private val initialized = AtomicBoolean(false)
 
     suspend fun initializeIfReady(readiness: DatabaseReadiness): StartupInitializationResult {
         if (readiness != DatabaseReadiness.Ready) return StartupInitializationResult.NOT_READY
-        if (!initialized.compareAndSet(false, true)) return StartupInitializationResult.COMPLETE
+        return if (initialized.compareAndSet(false, true)) {
+            initializeDatabase()
+        } else {
+            StartupInitializationResult.COMPLETE
+        }
+    }
 
+    private suspend fun initializeDatabase(): StartupInitializationResult {
         return try {
+            if (context != null) {
+                runNonFatal("Orphan backup staging cleanup") {
+                    CachePrune.pruneBackupStaging(context)
+                }
+            }
+
+            if (restoreMaintenanceCoordinator != null) {
+                val recoveryCoordinator = restoreMaintenanceCoordinator.get()
+                runNonFatal("Restore recovery") {
+                    recoveryCoordinator.recoverInterruptedRestoreOnStartup()
+                }
+                if (recoveryCoordinator.isMaintenancePending()) {
+                    initialized.set(false)
+                    return StartupInitializationResult.RETRYABLE_FAILURE
+                }
+            }
+
             runNonFatal("Historical baseline backfill") {
                 val backfilled =
                     healthSyncUseCase.get().withSyncLock {
@@ -59,23 +89,7 @@ internal class DatabaseReadyStartupInitializer(
                 }
             }
 
-            val backupSchedule = settings.backupSchedule.first()
-            val backgroundSyncEnabled = settings.backgroundSyncEnabled.first()
-            val periodicSyncMinutes =
-                if (backgroundSyncEnabled) {
-                    settings.backgroundSyncIntervalMinutes.first()
-                } else {
-                    null
-                }
-            workerScheduler.scheduleBackupWorker(backupSchedule)
-            workerScheduler.scheduleBirthdayWorker()
-            workerScheduler.scheduleDataCleanupWorker()
-            workerScheduler.scheduleDataRollupWorker()
-            if (periodicSyncMinutes != null) {
-                workerScheduler.schedulePeriodicSync(periodicSyncMinutes.toLong())
-            } else {
-                workerScheduler.cancelPeriodicSync()
-            }
+            scheduleStartupWorkers(settings)
             StartupInitializationResult.COMPLETE
         } catch (e: CancellationException) {
             initialized.set(false)
@@ -84,6 +98,26 @@ internal class DatabaseReadyStartupInitializer(
             initialized.set(false)
             logE(TAG, e) { "Database-ready startup initialization failed" }
             StartupInitializationResult.RETRYABLE_FAILURE
+        }
+    }
+
+    private suspend fun scheduleStartupWorkers(settings: SettingsRepository) {
+        val backupSchedule = settings.backupSchedule.first()
+        val backgroundSyncEnabled = settings.backgroundSyncEnabled.first()
+        val periodicSyncMinutes =
+            if (backgroundSyncEnabled) {
+                settings.backgroundSyncIntervalMinutes.first()
+            } else {
+                null
+            }
+        workerScheduler.scheduleBackupWorker(backupSchedule)
+        workerScheduler.scheduleBirthdayWorker()
+        workerScheduler.scheduleDataCleanupWorker()
+        workerScheduler.scheduleDataRollupWorker()
+        if (periodicSyncMinutes != null) {
+            workerScheduler.schedulePeriodicSync(periodicSyncMinutes.toLong())
+        } else {
+            workerScheduler.cancelPeriodicSync()
         }
     }
 
@@ -109,12 +143,20 @@ internal class DatabaseReadyStartupInitializer(
                 .startTimeMs
         val needsBackfillRecompute =
             workoutTrimpBackfillStatus.get().hasUnbackfilledWorkouts(retentionStartMs)
-        if (!needsVersionRecompute && !needsBackfillRecompute) return
+        val hasPendingDirty =
+            try {
+                dirtyRangeStore?.get()?.pending(100)?.isNotEmpty() == true
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                false
+            }
+        if (!needsVersionRecompute && !needsBackfillRecompute && !hasPendingDirty) return
 
         logD(TAG) {
             "Enqueueing recompute-only resync (staleVersion=$needsVersionRecompute " +
                 "stored=$storedScoringVersion current=${SettingsDefaults.CURRENT_SCORING_VERSION}, " +
-                "unbackfilledCanonicalTrimp=$needsBackfillRecompute)"
+                "unbackfilledCanonicalTrimp=$needsBackfillRecompute, pendingDirty=$hasPendingDirty)"
         }
         // The worker owns the version bump (HealthResyncWorker.persistPostRecomputeState, on
         // success only). Never bump here: a killed worker must leave the stale version in
@@ -165,13 +207,11 @@ internal class DatabaseReadyStartupCoordinator(
         readiness: DatabaseReadiness,
     ) {
         var result = initializer.initializeIfReady(readiness)
-        if (result != StartupInitializationResult.RETRYABLE_FAILURE) return
-
-        for (retryDelayMillis in retryDelaysMillis) {
-            waitBeforeRetry(retryDelayMillis)
-            if (states.value.readiness != DatabaseReadiness.Ready) return
+        val retryDelays = retryDelaysMillis.iterator()
+        while (result == StartupInitializationResult.RETRYABLE_FAILURE && retryDelays.hasNext()) {
+            waitBeforeRetry(retryDelays.next())
+            if (states.value.readiness != DatabaseReadiness.Ready) break
             result = initializer.initializeIfReady(DatabaseReadiness.Ready)
-            if (result != StartupInitializationResult.RETRYABLE_FAILURE) return
         }
     }
 

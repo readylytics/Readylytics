@@ -64,5 +64,11 @@ class AssembleDailySummaryUseCase
                 snapshotProfile = baseSummary.snapshotProfile ?: prefs.physiologyProfile.name,
                 hrvSigmaPrior = baseSummary.hrvSigmaPrior ?: prefs.physiologyProfile.lnSigmaPrior,
                 baselineObservationCount = baseSummary.baselineObservationCount,
+                // Task C2: this branch is only ever reached once the day-level CalibrationGate has
+                // determined the user IS calibrated, so isCalibrating must be explicitly cleared
+                // here -- never left to whatever value happened to already be on baseSummary (a
+                // stale DB row, or a value carried over from a still-calibrating state). Mirrors
+                // assembleUncalibrated's explicit `isCalibrating = true` below.
+                isCalibrating = false,
             )
     }

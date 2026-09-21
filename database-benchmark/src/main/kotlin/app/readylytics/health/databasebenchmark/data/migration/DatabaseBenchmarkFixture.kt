@@ -102,9 +102,28 @@ internal class DatabaseBenchmarkFixture(
         createdNames -= fixture.name
     }
 
+    val currentSchema: CurrentSchemaBenchmarkFixture by lazy { CurrentSchemaBenchmarkFixture(context) }
+
+    fun createCurrentSchemaDatabase(
+        name: String = "current-benchmark.db",
+        useSqlCipher: Boolean = false,
+    ): app.readylytics.health.core.database.data.local.HealthDatabase = currentSchema.createDatabase(name, useSqlCipher)
+
+    fun createCurrentSchemaTemplate(
+        suffix: String,
+        useSqlCipher: Boolean = false,
+        seed: (suspend (app.readylytics.health.core.database.data.local.HealthDatabase) -> Unit)? = null,
+    ): CurrentSchemaFixtureInstance = currentSchema.createTemplate(suffix, useSqlCipher, seed)
+
+    fun copyCurrentSchemaTemplate(
+        source: CurrentSchemaFixtureInstance,
+        suffix: String,
+    ): CurrentSchemaFixtureInstance = currentSchema.copyTemplate(source, suffix)
+
     fun cleanUp() {
         createdNames.forEach(context::deleteDatabase)
         createdNames.clear()
+        currentSchema.cleanUp()
     }
 
     private fun newFixture(name: String): Fixture {

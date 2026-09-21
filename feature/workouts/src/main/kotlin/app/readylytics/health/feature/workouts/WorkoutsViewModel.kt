@@ -320,7 +320,7 @@ class WorkoutsViewModel
             val selectedDayWorkouts =
                 repositories.workout.getInRange(window.selectedMidnightMs, window.selectedDayEndMs)
             val selectedDaySamples = fetchHeartRateSamplesByWorkout(selectedDayWorkouts, repositories.heartRate)
-            return selectedDayWorkouts.map { workout ->
+            return selectedDayWorkouts.mapNotNull { workout ->
                 val samples = selectedDaySamples[workout.id] ?: emptyList()
                 useCases.getWorkoutDisplayMetrics
                     .execute(

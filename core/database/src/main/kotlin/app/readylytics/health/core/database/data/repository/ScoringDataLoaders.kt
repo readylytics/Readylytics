@@ -17,4 +17,5 @@ data class ScoringDataLoaders
         val day: ScoringDayDataLoader,
         val bodyMetrics: BodyMetricsDataLoader,
         val series: ScoringSeriesLoader,
+        val heartRate: ScoringHeartRateDataLoader,
     )

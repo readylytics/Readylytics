@@ -13,6 +13,14 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.exp
 
+/**
+ * Precise/rounded HRV baseline lookups for one target [LocalDate] at a time.
+ *
+ * Resolution order: persisted per-day geometric mu -> user override -> live recompute via
+ * [BaselineComputer.computeHrvBaseline]. WP-11: the live-recompute fallback is bounded to the
+ * target date's scoring-zone day end (never the device's system zone/clock), so a lookup for a
+ * past date never reads sessions dated after it.
+ */
 @Singleton
 class HrvBaselineProvider
     @Inject

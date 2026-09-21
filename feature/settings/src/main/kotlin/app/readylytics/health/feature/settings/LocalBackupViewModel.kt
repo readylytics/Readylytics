@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.core.model.domain.backup.BackupFileInfo
+import app.readylytics.health.core.model.domain.backup.BackupOperationPhase
 import app.readylytics.health.core.model.domain.backup.BackupService
 import app.readylytics.health.core.model.domain.backup.RestoreResult
 import app.readylytics.health.core.model.domain.backup.RestoreService
@@ -79,14 +80,18 @@ class LocalBackupViewModel
                 settingsRepo.userPreferences,
                 transientState,
                 availableBackupsFlow,
-            ) { prefs, transient, backups ->
+                backupService.operationState,
+            ) { prefs, transient, backups, operation ->
+                val isRotating =
+                    operation.phase != BackupOperationPhase.IDLE &&
+                        operation.phase != BackupOperationPhase.COMPLETE
                 LocalBackupState(
                     lastBackupTimestamp = prefs.lastBackupTimestamp,
                     backupSchedule = prefs.backupSchedule,
                     backupDirectory = prefs.backupDirectoryUri,
                     isBackingUp = transient.isBackingUp,
                     isRestoring = transient.isRestoring,
-                    isReencrypting = transient.isReencrypting,
+                    isReencrypting = transient.isReencrypting || isRotating,
                     isPasswordSet = prefs.backupPasswordHash != null,
                     showSetPasswordDialog = transient.showSetPasswordDialog,
                     showRestoreConfirmDialog = transient.showRestoreConfirmDialog,
@@ -95,6 +100,7 @@ class LocalBackupViewModel
                     pendingRestoreFile = transient.pendingRestoreFile,
                     availableBackups = backups,
                     passwordVerificationResult = transient.passwordVerificationResult,
+                    operationState = operation,
                 )
             }.stateIn(
                 scope = viewModelScope,
@@ -208,32 +214,29 @@ class LocalBackupViewModel
                 }
                 is SettingsEvent.UpdateBackupPassword -> {
                     viewModelScope.launch {
-                        val currentPrefs = settingsRepo.userPreferences.first()
-                        val oldHash = currentPrefs.backupPasswordHash
-                        val oldPassword = oldHash?.let { encryptionManager.decrypt(it) }
+                        transientState.update {
+                            it.copy(
+                                isReencrypting = true,
+                                showSetPasswordDialog = false,
+                                backupError = null,
+                            )
+                        }
 
-                        val newHash = if (event.raw.isBlank()) null else encryptionManager.encrypt(event.raw)
-
-                        transientState.update { it.copy(isReencrypting = true, showSetPasswordDialog = false) }
-
-                        // 1. Re-encrypt existing backups
                         backupService
-                            .reencryptBackups(oldPassword, event.raw)
-                            .onFailure { e ->
-                                logE("LocalBackupViewModel", e) { "Backup re-encryption failed" }
+                            .rotatePassword(event.raw)
+                            .onSuccess {
+                                transientState.update { it.copy(refreshTrigger = it.refreshTrigger + 1) }
+                                if (event.autoStartBackup) {
+                                    startBackup()
+                                }
+                            }.onFailure { e ->
+                                logE("LocalBackupViewModel", e) { "Backup password rotation failed" }
                                 transientState.update {
                                     it.copy(backupError = UiText.StringRes(R.string.error_backup_reencrypt_failed))
                                 }
                             }
 
-                        // 2. Update master password hash
-                        backupSettings.updateBackupPasswordHash(newHash)
-
                         transientState.update { it.copy(isReencrypting = false) }
-
-                        if (event.autoStartBackup) {
-                            startBackup()
-                        }
                     }
                 }
                 is SettingsEvent.VerifyBackupPassword -> {

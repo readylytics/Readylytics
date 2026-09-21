@@ -7,6 +7,7 @@ import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoor
 import app.readylytics.health.core.database.data.repository.ScoringDataLoaders
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringDayUseCases
+import app.readylytics.health.core.database.data.repository.ScoringHeartRateDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.core.database.data.repository.ScoringSeriesLoader
 import app.readylytics.health.core.databaseschema.data.local.dao.BloodPressureRecordDao
@@ -108,19 +109,7 @@ class ScoringRepositoryRecommendationWiringTest {
     private val recommendationDailySummaryRepository = mockk<DailySummaryRepository>(relaxed = true)
     private val recommendationDisplayMetricsUseCase = mockk<GetWorkoutDisplayMetricsUseCase>(relaxed = true)
 
-    private val dataLoader =
-        ScoringDayDataLoader(
-            workoutDao,
-            sleepSessionDao,
-            dailySummaryDao,
-            heartRateDao,
-            minuteBucketDao,
-            weightRecordDao,
-            bodyFatRecordDao,
-            bloodPressureRecordDao,
-            oxygenSaturationRecordDao,
-            bodyTemperatureRecordDao,
-        )
+    private val dataLoader = ScoringDayDataLoader(workoutDao, sleepSessionDao, dailySummaryDao)
     private val bodyMetricsDataLoader =
         BodyMetricsDataLoader(
             weightRecordDao,
@@ -131,6 +120,7 @@ class ScoringRepositoryRecommendationWiringTest {
             vo2MaxRecordDao,
         )
     private val seriesLoader = ScoringSeriesLoader(workoutDao, dailySummaryDao)
+    private val heartRateDataLoader = ScoringHeartRateDataLoader(heartRateDao, minuteBucketDao)
 
     private fun createRepo(
         recommendationDependencies: MorningRecommendationDependencies = createRecommendationDependencies(),
@@ -147,7 +137,7 @@ class ScoringRepositoryRecommendationWiringTest {
                 AssembleDailySummaryUseCase(),
             )
         return ScoringRepositoryImpl(
-            ScoringDataLoaders(dataLoader, bodyMetricsDataLoader, seriesLoader),
+            ScoringDataLoaders(dataLoader, bodyMetricsDataLoader, seriesLoader, heartRateDataLoader),
             settingsRepo,
             baselineComputer,
             scoringConfigFactory,

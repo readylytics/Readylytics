@@ -18,7 +18,11 @@ import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUse
 import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
 import app.readylytics.health.core.scoring.domain.scoring.SleepMetricsRequest
 import app.readylytics.health.core.scoring.domain.scoring.components.EmergencyFlagThresholds
+import app.readylytics.health.core.scoring.domain.scoring.sleep.CoreRecoveryInput
 import app.readylytics.health.core.scoring.domain.scoring.sleep.CurrentNightHrvResolver
+import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayAggregator
+import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDaySegment
+import app.readylytics.health.core.scoring.domain.scoring.sleep.findPreviousCoreEndZoneOffsetSeconds
 import java.time.Instant
 import java.time.LocalDate
 import javax.inject.Inject
@@ -29,6 +33,7 @@ internal const val CIRCADIAN_HISTORY_WINDOW_MS =
     ScoringConstants.CIRCADIAN_CONSISTENCY_WINDOW_DAYS.toLong() * 24L * 60L * 60L * 1000L
 
 private const val MILLIS_PER_DAY = 86_400_000L
+private const val MILLIS_PER_MINUTE = 60_000L
 
 /**
  * The sleep history the morning assembly needs for one day: everything starting within
@@ -62,6 +67,51 @@ internal fun SleepSessionData.toDomainSession(): SleepSession =
         startZoneOffsetSeconds = startZoneOffsetSeconds,
         endZoneOffsetSeconds = endZoneOffsetSeconds,
         deviceName = deviceName,
+    )
+
+/**
+ * WP-14/C4 (fix round 1): the nearest prior *canonical core*'s end-of-window travel offset, scoped
+ * the same way the daily pipeline scopes it (`ReadinessSummaryCoordinator.resolveSleepAggregation`).
+ *
+ * This path has no pre-existing [app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayAggregate]
+ * of its own -- unlike the daily pipeline, which already ran `SleepDayAggregator` over its fetch
+ * window -- so [boundedSessions] (already wake-time-bounded) is aggregated here, once, purely to
+ * classify which of them are canonical cores versus naps before
+ * [findPreviousCoreEndZoneOffsetSeconds] -- the exact same lookup the daily pipeline uses -- picks
+ * the nearest one strictly before [ScoringDayContext.targetDate].
+ */
+private fun resolvePreviousCoreEndZoneOffsetSeconds(
+    context: ScoringDayContext,
+    session: SleepSession,
+    boundedSessions: List<SleepSession>,
+): Int? {
+    val aggregates =
+        SleepDayAggregator
+            .aggregate(
+                segments = boundedSessions.map { it.toSleepDaySegment() },
+                policy = context.sleepDayPolicy,
+            ).aggregates
+    val currentCoreStartTimeMs =
+        aggregates.firstOrNull { it.scoreDay == context.targetDate }?.coreCluster?.startTimeMs
+            ?: session.startTime
+    return findPreviousCoreEndZoneOffsetSeconds(aggregates, context.targetDate, currentCoreStartTimeMs)
+}
+
+private fun SleepSession.toSleepDaySegment(): SleepDaySegment =
+    SleepDaySegment(
+        stableId = id,
+        startTimeMs = startTime,
+        endTimeMs = endTime,
+        durationMinutes =
+            if (durationMinutes > 0) durationMinutes else ((endTime - startTime) / MILLIS_PER_MINUTE).toInt(),
+        lightSleepMinutes = lightSleepMinutes,
+        deepSleepMinutes = deepSleepMinutes,
+        remSleepMinutes = remSleepMinutes,
+        awakeMinutes = awakeMinutes,
+        efficiency = efficiency,
+        startZoneOffsetSeconds = startZoneOffsetSeconds,
+        endZoneOffsetSeconds = endZoneOffsetSeconds,
+        sourcePackageName = deviceName,
     )
 
 /**
@@ -120,13 +170,13 @@ class MorningRecoveryLoader
             val thresholds = emergencyThresholds(context)
             // `ComputeSleepMetricsUseCase` never stamps `isCalibrating` on the summary it returns
             // (it passes the caller's value through), so it has to be resolved here — through the
-            // same gate the daily pipeline uses, bounded at the wake time.
+            // same gate the daily pipeline uses. The gate's cumulative prior-days count is
+            // day-granular (through yesterday), so it needs no wake-time bound; today's own
+            // eligibility is `hasSession` below, not `boundedSessions`.
             val isCalibrating =
                 !calibrationGate.isCalibrated(
                     context = context,
-                    prefetchedSessions = boundedSessions,
                     hasSession = true,
-                    toMs = wakeTimeMs,
                 )
 
             return WorkoutRecommendationInput(
@@ -166,9 +216,30 @@ class MorningRecoveryLoader
         ): DailySummary? {
             val wakeTimeMs = session.endTime
             val baseSummary = context.dailySummary ?: DailySummary(date = context.targetDate)
+            // This morning-anchored path has no core/nap cluster context of its own -- [session] is
+            // already the single, wake-time-bounded record the caller resolved, so it is treated as
+            // its own (single-segment) core. The previous-core offset, however, must still be scoped
+            // to canonical cores only (fix round 1): [boundedSessions] is re-aggregated through the
+            // same `SleepDayAggregator` the daily pipeline uses purely to classify which of them are
+            // canonical cores versus naps, then `findPreviousCoreEndZoneOffsetSeconds` -- the exact
+            // helper `ReadinessSummaryCoordinator.resolveSleepAggregation` uses -- picks the nearest
+            // prior core. A same-day-or-later nap can therefore never be mistaken for the previous
+            // night's core here either.
+            val previousCoreEndZoneOffsetSeconds =
+                resolvePreviousCoreEndZoneOffsetSeconds(context, session, boundedSessions)
+            val core =
+                CoreRecoveryInput.fromSingleSession(
+                    sessionId = session.id,
+                    startTimeMs = session.startTime,
+                    endTimeMs = session.endTime,
+                    coreSleepDurationMinutes = session.durationMinutes,
+                    endZoneOffsetSeconds = session.endZoneOffsetSeconds,
+                    previousCoreEndZoneOffsetSeconds = previousCoreEndZoneOffsetSeconds,
+                )
             val request =
                 SleepMetricsRequest(
                     session = session,
+                    core = core,
                     dayMidnight = Instant.ofEpochMilli(context.dayMidnightMs),
                     targetDate = context.targetDate,
                     prefs = context.prefs,

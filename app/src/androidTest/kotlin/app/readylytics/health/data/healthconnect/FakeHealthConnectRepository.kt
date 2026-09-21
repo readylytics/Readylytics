@@ -30,6 +30,7 @@ import app.readylytics.health.core.model.domain.model.DomainWeightRecord
 import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
 import app.readylytics.health.core.model.domain.repository.PermissionStatus
+import app.readylytics.health.core.model.domain.repository.ReadOutcome
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -142,50 +143,65 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
         }
     }
 
+    private inline fun <T> runRead(
+        op: FakeOp,
+        block: () -> T,
+    ): ReadOutcome<T> {
+        if (!isAvailable()) return ReadOutcome.Unsupported
+        val error = errors[op]
+        if (error is SecurityException) return ReadOutcome.Denied
+        if (error != null) throw error
+        return ReadOutcome.Available(block())
+    }
+
     override suspend fun readSleepSessions(
         from: Instant,
         to: Instant,
-    ): List<DomainSleepSessionRecord> {
-        translateCritical(FakeOp.Sleep)
-        val total = totalInRange(sleepCount, from, to)
-        sleepPagesServed = pagesFor(total)
-        return stubList(total) { index -> placeholderSleep(index) }
-    }
+    ): ReadOutcome<List<DomainSleepSessionRecord>> =
+        runRead(FakeOp.Sleep) {
+            val total = totalInRange(sleepCount, from, to)
+            sleepPagesServed = pagesFor(total)
+            stubList(total) { index -> placeholderSleep(index) }
+        }
 
     override suspend fun readHeartRateSamples(
         from: Instant,
         to: Instant,
-    ): List<DomainHeartRateRecord> {
-        translateCritical(FakeOp.HeartRate)
-        val total = totalInRange(hrCount, from, to)
-        hrPagesServed = pagesFor(total)
-        return stubList(total) { index -> placeholderHeartRate(index) }
-    }
+    ): ReadOutcome<List<DomainHeartRateRecord>> =
+        runRead(FakeOp.HeartRate) {
+            val total = totalInRange(hrCount, from, to)
+            hrPagesServed = pagesFor(total)
+            stubList(total) { index -> placeholderHeartRate(index) }
+        }
 
     override suspend fun readHrvSamples(
         from: Instant,
         to: Instant,
-    ): List<DomainHrvRecord> {
-        translateCritical(FakeOp.Hrv)
-        return stubList(totalInRange(hrvCount, from, to)) { index -> placeholderHrv(index) }
-    }
+    ): ReadOutcome<List<DomainHrvRecord>> =
+        runRead(FakeOp.Hrv) {
+            stubList(totalInRange(hrvCount, from, to)) { index -> placeholderHrv(index) }
+        }
 
     override suspend fun readHeartRateSamplesPaged(
         from: Instant,
         to: Instant,
         startPageToken: String?,
         onPage: suspend (List<DomainHeartRateRecord>, String?) -> Unit,
-    ) {
-        translateCritical(FakeOp.HeartRate)
+    ): ReadOutcome<Unit> {
+        if (!isAvailable()) return ReadOutcome.Unsupported
+        val error = errors[FakeOp.HeartRate]
+        if (error is SecurityException) return ReadOutcome.Denied
+        if (error != null) throw error
         val total = totalInRange(hrCount, from, to)
         hrPagesServed = pagesFor(total)
         val chunks = stubList(total) { index -> placeholderHeartRate(index) }.chunked(pageSize)
-        if (chunks.isEmpty()) return
+        if (chunks.isEmpty()) return ReadOutcome.Available(Unit)
         val startIndex = startPageToken?.removePrefix("page-")?.toIntOrNull() ?: 0
         for (i in startIndex until chunks.size) {
             val nextToken = if (i < chunks.size - 1) "page-${i + 1}" else null
             onPage(chunks[i], nextToken)
         }
+        return ReadOutcome.Available(Unit)
     }
 
     override suspend fun readHrvSamplesPaged(
@@ -193,105 +209,103 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
         to: Instant,
         startPageToken: String?,
         onPage: suspend (List<DomainHrvRecord>, String?) -> Unit,
-    ) {
-        translateCritical(FakeOp.Hrv)
+    ): ReadOutcome<Unit> {
+        if (!isAvailable()) return ReadOutcome.Unsupported
+        val error = errors[FakeOp.Hrv]
+        if (error is SecurityException) return ReadOutcome.Denied
+        if (error != null) throw error
         val total = totalInRange(hrvCount, from, to)
         val chunks = stubList(total) { index -> placeholderHrv(index) }.chunked(pageSize)
-        if (chunks.isEmpty()) return
+        if (chunks.isEmpty()) return ReadOutcome.Available(Unit)
         val startIndex = startPageToken?.removePrefix("page-")?.toIntOrNull() ?: 0
         for (i in startIndex until chunks.size) {
             val nextToken = if (i < chunks.size - 1) "page-${i + 1}" else null
             onPage(chunks[i], nextToken)
         }
+        return ReadOutcome.Available(Unit)
     }
 
     override suspend fun readExerciseSessions(
         from: Instant,
         to: Instant,
         includeDetails: Boolean,
-    ): List<DomainExerciseSessionRecord> {
-        translateCritical(FakeOp.Exercise)
-        val total = totalInRange(exerciseCount, from, to)
-        exercisePagesServed = pagesFor(total)
-        return stubList(total) { index -> placeholderExercise(index) }
-    }
+    ): ReadOutcome<List<DomainExerciseSessionRecord>> =
+        runRead(FakeOp.Exercise) {
+            val total = totalInRange(exerciseCount, from, to)
+            exercisePagesServed = pagesFor(total)
+            stubList(total) { index -> placeholderExercise(index) }
+        }
 
     override suspend fun readStepsRecords(
         from: Instant,
         to: Instant,
-    ): List<DomainStepsRecord> {
-        val error = errors[FakeOp.Steps]
-        if (error is SecurityException) return emptyList()
-        if (error != null) throw error
-        val count = stepsByInstant.keys.count { inRange(it, from, to) }
-        return stubList(count) { index -> placeholderSteps(index) }
-    }
+    ): ReadOutcome<List<DomainStepsRecord>> =
+        runRead(FakeOp.Steps) {
+            val count = stepsByInstant.keys.count { inRange(it, from, to) }
+            stubList(count) { index -> placeholderSteps(index) }
+        }
 
     override suspend fun readSteps(
         from: Instant,
         to: Instant,
-    ): Long {
-        val error = errors[FakeOp.Steps]
-        if (error is SecurityException) return 0L
-        if (error != null) throw error
-        return stepsByInstant
-            .filterKeys { inRange(it, from, to) }
-            .values
-            .sum()
-    }
+    ): ReadOutcome<Long> =
+        runRead(FakeOp.Steps) {
+            stepsByInstant
+                .filterKeys { inRange(it, from, to) }
+                .values
+                .sum()
+        }
 
     override suspend fun readDailyStepTotals(
         from: Instant,
         to: Instant,
         zoneId: ZoneId,
-    ): Map<LocalDate, Long> {
-        val error = errors[FakeOp.Steps]
-        if (error is SecurityException) return emptyMap()
-        if (error != null) throw error
-        return stepsByInstant
-            .filterKeys { inRange(it, from, to) }
-            .entries
-            .groupBy { it.key.atZone(zoneId).toLocalDate() }
-            .mapValues { (_, list) -> list.sumOf { it.value } }
-    }
+    ): ReadOutcome<Map<LocalDate, Long>> =
+        runRead(FakeOp.Steps) {
+            stepsByInstant
+                .filterKeys { inRange(it, from, to) }
+                .entries
+                .groupBy { it.key.atZone(zoneId).toLocalDate() }
+                .mapValues { (_, list) -> list.sumOf { it.value } }
+        }
 
     override suspend fun readWeightRecords(
         from: Instant,
         to: Instant,
-    ): List<DomainWeightRecord> =
-        runOptional(FakeOp.Weight) {
+    ): ReadOutcome<List<DomainWeightRecord>> =
+        runRead(FakeOp.Weight) {
             stubList(totalInRange(weightCount, from, to)) { index -> placeholderWeight(index) }
         }
 
     override suspend fun readBodyFatRecords(
         from: Instant,
         to: Instant,
-    ): List<DomainBodyFatRecord> =
-        runOptional(FakeOp.BodyFat) {
+    ): ReadOutcome<List<DomainBodyFatRecord>> =
+        runRead(FakeOp.BodyFat) {
             stubList(totalInRange(bodyFatCount, from, to)) { index -> placeholderBodyFat(index) }
         }
 
     override suspend fun readBloodPressureRecords(
         from: Instant,
         to: Instant,
-    ): List<DomainBloodPressureRecord> =
-        runOptional(FakeOp.BloodPressure) {
+    ): ReadOutcome<List<DomainBloodPressureRecord>> =
+        runRead(FakeOp.BloodPressure) {
             stubList(totalInRange(bpCount, from, to)) { index -> placeholderBloodPressure(index) }
         }
 
     override suspend fun readOxygenSaturationRecords(
         from: Instant,
         to: Instant,
-    ): List<DomainOxygenSaturationRecord> =
-        runOptional(FakeOp.OxygenSaturation) {
+    ): ReadOutcome<List<DomainOxygenSaturationRecord>> =
+        runRead(FakeOp.OxygenSaturation) {
             stubList(totalInRange(spo2Count, from, to)) { index -> placeholderOxygen(index) }
         }
 
     override suspend fun readBodyTemperatureRecords(
         from: Instant,
         to: Instant,
-    ): List<DomainBodyTemperatureRecord> =
-        runOptional(FakeOp.BodyTemperature) {
+    ): ReadOutcome<List<DomainBodyTemperatureRecord>> =
+        runRead(FakeOp.BodyTemperature) {
             stubList(totalInRange(bodyTemperatureCount, from, to)) { index -> placeholderBodyTemperature(index) }
         }
 
@@ -328,7 +342,10 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
     override suspend fun readVo2MaxRecords(
         startTime: Instant,
         endTime: Instant,
-    ): List<DomainVo2MaxRecord> = emptyList()
+    ): ReadOutcome<List<DomainVo2MaxRecord>> =
+        runRead(FakeOp.Discovery) {
+            emptyList()
+        }
 
     override suspend fun discoverDevices(windowDays: Int): List<String> {
         lastDiscoveryWindowDays = windowDays
@@ -345,23 +362,6 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
     }
 
     // ---- helpers ----
-
-    private fun translateCritical(op: FakeOp) {
-        val e = errors[op] ?: return
-        if (e is SecurityException) throw HealthConnectPermissionRevokedException(e)
-        throw e
-    }
-
-    private inline fun <T> runOptional(
-        op: FakeOp,
-        block: () -> List<T>,
-    ): List<T> =
-        try {
-            errors[op]?.let { throw it }
-            block()
-        } catch (_: SecurityException) {
-            emptyList()
-        }
 
     private fun inRange(
         value: Instant,

@@ -75,7 +75,7 @@ class DataCleanupWorkerTest {
 
             assertEquals(ListenableWorker.Result.success(), result)
             coVerify(exactly = 0) { retentionCleanup.deleteBefore(any()) }
-            verify(exactly = 0) { workerScheduler.scheduleResyncWorker(any(), any(), any()) }
+            coVerify(exactly = 0) { workerScheduler.scheduleResyncWorker(any(), any(), any()) }
         }
 
     @Test
@@ -112,7 +112,7 @@ class DataCleanupWorkerTest {
 
             createWorker().doWork()
 
-            verify(exactly = 1) {
+            coVerify(exactly = 1) {
                 workerScheduler.scheduleResyncWorker(
                     recomputeOnly = true,
                     startDate = LocalDate.of(2026, 1, 1),
@@ -130,17 +130,32 @@ class DataCleanupWorkerTest {
 
             createWorker().doWork()
 
-            verify(exactly = 0) { workerScheduler.scheduleResyncWorker(any(), any(), any()) }
+            coVerify(exactly = 0) { workerScheduler.scheduleResyncWorker(any(), any(), any()) }
         }
 
-    private fun createWorker() =
-        DataCleanupWorker(
-            context = context,
-            params = workerParams,
-            retentionCleanup = retentionCleanupLazy,
-            settingsRepo = settingsRepo,
-            databaseReadinessGate = databaseReadinessGate,
-            workerScheduler = workerSchedulerLazy,
-            clock = fixedClock,
-        )
+    @Test
+    fun `doWork retries when maintenance is pending`() =
+        runBlocking {
+            val coordinator = mockk<app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator>()
+            io.mockk.coEvery { coordinator.isMaintenancePending() } returns true
+
+            val worker = createWorker(coordinator)
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.retry(), result)
+            verify(exactly = 0) { retentionCleanupLazy.get() }
+        }
+
+    private fun createWorker(
+        coordinator: app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator? = null,
+    ) = DataCleanupWorker(
+        context = context,
+        params = workerParams,
+        retentionCleanup = retentionCleanupLazy,
+        settingsRepo = settingsRepo,
+        databaseReadinessGate = databaseReadinessGate,
+        workerScheduler = workerSchedulerLazy,
+        clock = fixedClock,
+        healthMutationCoordinator = coordinator?.let { Lazy { it } },
+    )
 }

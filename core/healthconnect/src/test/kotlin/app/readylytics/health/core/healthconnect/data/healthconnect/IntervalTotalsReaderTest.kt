@@ -88,7 +88,9 @@ class IntervalTotalsReaderTest {
                 every { pageToken } returns null
             }
 
-            val totals = reader.readDistanceTotals(t0, t1)
+            val outcome = reader.readDistanceTotals(t0, t1)
+            assertTrue(outcome is app.readylytics.health.core.model.domain.repository.ReadOutcome.Available)
+            val totals = (outcome as app.readylytics.health.core.model.domain.repository.ReadOutcome.Available).data
             assertEquals(1, totals.size)
             assertEquals(5000.0, totals.first().value, 0.01)
             assertEquals("com.strava", totals.first().originPackage)
@@ -105,7 +107,9 @@ class IntervalTotalsReaderTest {
                 every { pageToken } returns null
             }
 
-            val totals = reader.readElevationTotals(t0, t1)
+            val outcome = reader.readElevationTotals(t0, t1)
+            assertTrue(outcome is app.readylytics.health.core.model.domain.repository.ReadOutcome.Available)
+            val totals = (outcome as app.readylytics.health.core.model.domain.repository.ReadOutcome.Available).data
             assertEquals(1, totals.size)
             assertEquals(150.0, totals.first().value, 0.01)
         }
@@ -117,8 +121,8 @@ class IntervalTotalsReaderTest {
                 client.readRecords<DistanceRecord>(any())
             } throws SecurityException("Permission denied")
 
-            val totals = reader.readDistanceTotals(t0, t1)
-            assertTrue(totals.isEmpty())
+            val outcome = reader.readDistanceTotals(t0, t1)
+            assertEquals(app.readylytics.health.core.model.domain.repository.ReadOutcome.Denied, outcome)
         }
 
     @Test

@@ -97,9 +97,9 @@ interface WorkoutDao {
     @Query(
         // SCORE-001: prefer the user-selected-model TRIMP once a row has been touched by a
         // walk-forward recompute; fall back to the zone-weighted value for rows not yet backfilled.
-        "SELECT startTime AS timestampMs, COALESCE(modelTrimp, trimp) AS trimp FROM workout_records " +
+        "SELECT startTime AS timestampMs, modelTrimp AS trimp FROM workout_records " +
             "WHERE startTime >= :fromMs AND startTime < :toMs " +
-            "AND COALESCE(modelTrimp, trimp) IS NOT NULL ORDER BY startTime ASC, id ASC",
+            "AND modelTrimp IS NOT NULL ORDER BY startTime ASC, id ASC",
     )
     suspend fun getTrimpPoints(
         fromMs: Long,

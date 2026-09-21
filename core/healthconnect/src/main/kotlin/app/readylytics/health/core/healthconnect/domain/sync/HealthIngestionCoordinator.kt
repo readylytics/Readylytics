@@ -1,10 +1,21 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
+import app.readylytics.health.core.model.domain.model.DomainBloodPressureRecord
+import app.readylytics.health.core.model.domain.model.DomainBodyFatRecord
+import app.readylytics.health.core.model.domain.model.DomainBodyTemperatureRecord
+import app.readylytics.health.core.model.domain.model.DomainExerciseSessionRecord
+import app.readylytics.health.core.model.domain.model.DomainOxygenSaturationRecord
+import app.readylytics.health.core.model.domain.model.DomainSleepSessionRecord
+import app.readylytics.health.core.model.domain.model.DomainStepsRecord
+import app.readylytics.health.core.model.domain.model.DomainVo2MaxRecord
+import app.readylytics.health.core.model.domain.model.DomainWeightRecord
 import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
 import app.readylytics.health.core.model.domain.repository.HealthConnectWindowTimeoutException
+import app.readylytics.health.core.model.domain.repository.ReadOutcome
+import app.readylytics.health.core.model.domain.repository.dataOrEmpty
 import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.sync.mappers.SleepDataMapper
@@ -52,7 +63,7 @@ class HealthIngestionCoordinator
             hrvStartPageToken: String? = null,
             onTokenUpdated: (suspend (hrToken: String?, hrvToken: String?) -> Unit)? = null,
             reconcileDeletions: Boolean = RECONCILE_DELETIONS,
-        ): ScoreInvalidation.AffectedRange? {
+        ): IngestionWindowResult {
             return try {
                 ingestWindowWithinBudget(
                     IngestWindowParams(
@@ -75,16 +86,22 @@ class HealthIngestionCoordinator
             }
         }
 
-        private suspend fun ingestWindowWithinBudget(params: IngestWindowParams): ScoreInvalidation.AffectedRange? {
+        private suspend fun ingestWindowWithinBudget(params: IngestWindowParams): IngestionWindowResult {
             return withTimeout(params.windowBudgetMs) {
                 val (rawRecords, sessionContext) =
                     fetchAndPersistBulkRecords(params.windowStart, params.windowEnd, params.prefs)
                 val heartIds = streamAndPersistHeartSamples(params, sessionContext)
-                if (params.reconcileDeletions) {
-                    reconcileDeletions(params, rawRecords, heartIds)
-                } else {
-                    null
-                }
+                val scans = collectCompleteTypeScans(params, rawRecords, heartIds)
+                val affectedRange =
+                    if (params.reconcileDeletions) {
+                        reconcileDeletions(params, scans)
+                    } else {
+                        null
+                    }
+                IngestionWindowResult(
+                    affectedRange = affectedRange,
+                    completedTypes = scans.mapTo(HashSet()) { it.type },
+                )
             }
         }
 
@@ -94,8 +111,10 @@ class HealthIngestionCoordinator
             prefs: UserPreferences,
         ): Pair<RawBulkRecords, IngestionSessionContext> {
             val raw = fetchBulkRecords(windowStart, windowEnd)
-            val sleepInputs = raw.sleepSessions.map { SleepDataMapper.mapSleepSession(it) }
-            val workoutInputs = raw.exerciseRecords.map { WorkoutMapper.mapExerciseSession(it) }
+            val sleepSessions = raw.sleepSessions.dataOrEmpty()
+            val exerciseRecords = raw.exerciseRecords.dataOrEmpty()
+            val sleepInputs = sleepSessions.map { SleepDataMapper.mapSleepSession(it) }
+            val workoutInputs = exerciseRecords.map { WorkoutMapper.mapExerciseSession(it) }
             val deviceByType = prefs.deviceByDataType
             fun deviceFor(type: HealthDataType): String? = deviceByType[type.name]?.takeIf { it.isNotBlank() }
 
@@ -113,10 +132,15 @@ class HealthIngestionCoordinator
             val vitals = mapAndFilterVitals(raw, prefs)
             val filteredSleepIds = filteredSleep.mapTo(HashSet()) { it.id }
             val allStages =
-                raw.sleepSessions
+                sleepSessions
                     .flatMap {
                         SleepDataMapper.mapSleepSessionStages(it)
                     }.filter { it.sessionId in filteredSleepIds }
+            val filteredVo2MaxRecords =
+                DeviceSourceFilter.filterToDevice(
+                    raw.vo2MaxRecords.dataOrEmpty(),
+                    deviceFor(HealthDataType.VO2_MAX),
+                ) { it.deviceName }
 
             healthIngestionStore.persist(
                 buildBulkBatch(
@@ -124,8 +148,8 @@ class HealthIngestionCoordinator
                     allStages = allStages,
                     filteredWorkouts = filteredWorkouts,
                     vitals = vitals,
-                    stepsRecords = raw.stepsRecords,
-                    vo2MaxRecords = raw.vo2MaxRecords,
+                    stepsRecords = raw.stepsRecords.dataOrEmpty(),
+                    vo2MaxRecords = filteredVo2MaxRecords,
                 ),
             )
 
@@ -167,7 +191,7 @@ class HealthIngestionCoordinator
                         if (hcRepo.hasVo2MaxPermission()) {
                             retryWithBackoff { hcRepo.readVo2MaxRecords(windowStart, windowEnd) }
                         } else {
-                            emptyList()
+                            ReadOutcome.Denied
                         }
                     }
                 RawBulkRecords(
@@ -205,22 +229,26 @@ class HealthIngestionCoordinator
             val deviceByType = prefs.deviceByDataType
             fun deviceFor(type: HealthDataType): String? = deviceByType[type.name]?.takeIf { it.isNotBlank() }
 
+            val weightRecords = raw.weightRecords.dataOrEmpty()
+            val bodyFatRecords = raw.bodyFatRecords.dataOrEmpty()
             val weightInputs =
-                raw.weightRecords.map {
+                weightRecords.map {
                     WeightInput(
                         id = "${it.id}_${it.time.toEpochMilli()}",
                         timestampMs = it.time.toEpochMilli(),
                         weightKg = it.weightKg,
                         deviceName = it.deviceName,
+                        sourceId = it.id,
                     )
                 }
             val bodyFatInputs =
-                raw.bodyFatRecords.map {
+                bodyFatRecords.map {
                     BodyFatInput(
                         id = "${it.id}_${it.time.toEpochMilli()}",
                         timestampMs = it.time.toEpochMilli(),
                         bodyFatPercent = it.percentage,
                         deviceName = it.deviceName,
+                        sourceId = it.id,
                     )
                 }
 
@@ -238,32 +266,38 @@ class HealthIngestionCoordinator
             val deviceByType = prefs.deviceByDataType
             fun deviceFor(type: HealthDataType): String? = deviceByType[type.name]?.takeIf { it.isNotBlank() }
 
+            val bpRecords = raw.bloodPressureRecords.dataOrEmpty()
+            val spo2Records = raw.spo2Records.dataOrEmpty()
+            val tempRecords = raw.bodyTemperatureRecords.dataOrEmpty()
             val bpInputs =
-                raw.bloodPressureRecords.map {
+                bpRecords.map {
                     BloodPressureInput(
                         id = "${it.id}_${it.time.toEpochMilli()}",
                         timestampMs = it.time.toEpochMilli(),
                         systolicMmHg = it.systolicMmHg,
                         diastolicMmHg = it.diastolicMmHg,
                         deviceName = it.deviceName,
+                        sourceId = it.id,
                     )
                 }
             val spo2Inputs =
-                raw.spo2Records.map {
+                spo2Records.map {
                     OxygenSaturationInput(
                         id = "${it.id}_${it.time.toEpochMilli()}",
                         timestampMs = it.time.toEpochMilli(),
                         percentage = it.percentage,
                         deviceName = it.deviceName,
+                        sourceId = it.id,
                     )
                 }
             val tempInputs =
-                raw.bodyTemperatureRecords.map {
+                tempRecords.map {
                     BodyTemperatureInput(
                         id = "${it.id}_${it.time.toEpochMilli()}",
                         timestampMs = it.time.toEpochMilli(),
                         celsius = it.celsius,
                         deviceName = it.deviceName,
+                        sourceId = it.id,
                     )
                 }
 
@@ -282,6 +316,8 @@ class HealthIngestionCoordinator
             return Triple(filteredBp, filteredSpo2, filteredTemp)
         }
 
+
+
         private suspend fun streamAndPersistHeartSamples(
             params: IngestWindowParams,
             sessionContext: IngestionSessionContext,
@@ -290,54 +326,29 @@ class HealthIngestionCoordinator
             val deviceByType = params.prefs.deviceByDataType
             fun deviceFor(type: HealthDataType): String? = deviceByType[type.name]?.takeIf { it.isNotBlank() }
 
-            val hrDevice = deviceFor(HealthDataType.HEART_RATE)
-            var hrSampleCount = 0
-            val hrIds = mutableSetOf<String>()
-            if (params.hrvStartPageToken == null) {
-                hcRepo.readHeartRateSamplesPaged(
-                    from = params.windowStart,
-                    to = params.windowEnd,
-                    startPageToken = params.hrStartPageToken,
-                ) { page, nextToken ->
-                    logD("HealthSync.Ingest") { "HR page size=${page.size}" }
-                    hrIds.addAll(page.map { it.id })
-                    val hrInputs =
-                        HeartRateMapper.mapToInputs(
-                            page,
-                            sessionContext.sleepInputs,
-                            sessionContext.workoutInputs,
-                        )
-                    val filteredHr = DeviceSourceFilter.filterToDevice(hrInputs, hrDevice) { it.deviceName }
-                    healthIngestionStore.persistHeartRateSamples(filteredHr)
-                    hrSampleCount += filteredHr.size
+            val (hrIds, hrSampleCount) =
+                streamHeartRateSamples(
+                    hcRepo = hcRepo,
+                    healthIngestionStore = healthIngestionStore,
+                    params = params,
+                    sessionContext = sessionContext,
+                    device = deviceFor(HealthDataType.HEART_RATE),
+                ) {
                     pagesIngested++
                     params.onProgress?.invoke(ResyncPhase.INGEST, pagesIngested, 0)
-                    params.onTokenUpdated?.invoke(nextToken, null)
                 }
-            }
 
-            val hrvDevice = deviceFor(HealthDataType.HRV)
-            var hrvSampleCount = 0
-            val hrvIds = mutableSetOf<String>()
-            hcRepo.readHrvSamplesPaged(
-                from = params.windowStart,
-                to = params.windowEnd,
-                startPageToken = params.hrvStartPageToken,
-            ) { page, nextToken ->
-                logD("HealthSync.Ingest") { "HRV page size=${page.size}" }
-                hrvIds.addAll(page.map { it.id })
-                val hrvInputs =
-                    HrvMapper.mapToInputs(
-                        page,
-                        sessionContext.sleepInputs,
-                    )
-                val filteredHrv = DeviceSourceFilter.filterToDevice(hrvInputs, hrvDevice) { it.deviceName }
-                healthIngestionStore.persistHrvSamples(filteredHrv)
-                hrvSampleCount += filteredHrv.size
-                pagesIngested++
-                params.onProgress?.invoke(ResyncPhase.INGEST, pagesIngested, 0)
-                params.onTokenUpdated?.invoke(null, nextToken)
-            }
+            val (hrvIds, hrvSampleCount) =
+                streamHrvSamples(
+                    hcRepo = hcRepo,
+                    healthIngestionStore = healthIngestionStore,
+                    params = params,
+                    sessionContext = sessionContext,
+                    device = deviceFor(HealthDataType.HRV),
+                ) {
+                    pagesIngested++
+                    params.onProgress?.invoke(ResyncPhase.INGEST, pagesIngested, 0)
+                }
 
             logD("HealthIngestionCoordinator") {
                 "Streamed samples: hr=$hrSampleCount hrv=$hrvSampleCount"
@@ -348,18 +359,13 @@ class HealthIngestionCoordinator
 
         private suspend fun reconcileDeletions(
             params: IngestWindowParams,
-            raw: RawBulkRecords,
-            heartIds: HeartIds,
+            scans: List<CompleteTypeScan>,
         ): ScoreInvalidation.AffectedRange? {
             val zoneId = params.prefs.scoringZone()
-            val startMs = params.windowStart.toEpochMilli()
-            val endMs = params.windowEnd.toEpochMilli() - 1
-
-            val typeToIds = collectReconcilableTypes(params, raw, heartIds)
 
             val results =
-                typeToIds.associate { (type, ids) ->
-                    type to healthIngestionStore.reconcileWindow(type, startMs, endMs, ids, zoneId)
+                scans.associate { scan ->
+                    scan.type to healthIngestionStore.reconcileWindow(scan, zoneId)
                 }
 
             logD(TELEMETRY_TAG) {
@@ -375,39 +381,35 @@ class HealthIngestionCoordinator
             return ScoreInvalidation.merge(results.values)
         }
 
-        private suspend fun collectReconcilableTypes(
+        private fun collectCompleteTypeScans(
             params: IngestWindowParams,
             raw: RawBulkRecords,
             heartIds: HeartIds,
-        ): List<Pair<HealthDataType, Set<String>>> =
-            buildList {
-                add(HealthDataType.SLEEP to raw.sleepSessions.mapTo(HashSet()) { it.id })
-                add(HealthDataType.EXERCISE to raw.exerciseRecords.mapTo(HashSet()) { it.id })
-                if (params.hrStartPageToken == null && params.hrvStartPageToken == null) {
-                    add(HealthDataType.HEART_RATE to heartIds.hr)
-                }
-                if (params.hrvStartPageToken == null) {
-                    add(HealthDataType.HRV to heartIds.hrv)
-                }
-                if (hcRepo.hasWeightPermission()) {
-                    add(HealthDataType.WEIGHT to raw.weightRecords.mapTo(HashSet()) { it.id })
-                }
-                if (hcRepo.hasBodyFatPermission()) {
-                    add(HealthDataType.BODY_FAT to raw.bodyFatRecords.mapTo(HashSet()) { it.id })
-                }
-                if (hcRepo.hasBloodPressurePermission()) {
-                    add(HealthDataType.BLOOD_PRESSURE to raw.bloodPressureRecords.mapTo(HashSet()) { it.id })
-                }
-                if (hcRepo.hasOxygenSaturationPermission()) {
-                    add(HealthDataType.OXYGEN_SATURATION to raw.spo2Records.mapTo(HashSet()) { it.id })
-                }
-                if (hcRepo.hasBodyTemperaturePermission()) {
-                    add(HealthDataType.BODY_TEMPERATURE to raw.bodyTemperatureRecords.mapTo(HashSet()) { it.id })
-                }
-                if (hcRepo.hasStepsPermission()) {
-                    add(HealthDataType.STEPS to raw.stepsRecords.mapTo(HashSet()) { it.id })
+        ): List<CompleteTypeScan> {
+            val startMs = params.windowStart.toEpochMilli()
+            val endExclusiveMs = params.windowEnd.toEpochMilli()
+            fun deviceFor(type: HealthDataType) = params.prefs.deviceByDataType[type.name].orEmpty()
+
+            fun MutableList<CompleteTypeScan>.addScan(outcome: ReadOutcome<Set<String>>, type: HealthDataType) {
+                if (outcome is ReadOutcome.Available) {
+                    add(CompleteTypeScan(type, startMs, endExclusiveMs, deviceFor(type), outcome.data))
                 }
             }
+
+            return buildList {
+                addScan(raw.sleepSessions.toIds { it.id }, HealthDataType.SLEEP)
+                addScan(raw.exerciseRecords.toIds { it.id }, HealthDataType.EXERCISE)
+                addScan(heartIds.hr, HealthDataType.HEART_RATE)
+                addScan(heartIds.hrv, HealthDataType.HRV)
+                addScan(raw.weightRecords.toIds { it.id }, HealthDataType.WEIGHT)
+                addScan(raw.bodyFatRecords.toIds { it.id }, HealthDataType.BODY_FAT)
+                addScan(raw.bloodPressureRecords.toIds { it.id }, HealthDataType.BLOOD_PRESSURE)
+                addScan(raw.spo2Records.toIds { it.id }, HealthDataType.OXYGEN_SATURATION)
+                addScan(raw.bodyTemperatureRecords.toIds { it.id }, HealthDataType.BODY_TEMPERATURE)
+                addScan(raw.stepsRecords.toIds { it.id }, HealthDataType.STEPS)
+                addScan(raw.vo2MaxRecords.toIds { it.id }, HealthDataType.VO2_MAX)
+            }
+        }
 
         companion object {
             const val RECONCILE_DELETIONS = true
@@ -415,21 +417,26 @@ class HealthIngestionCoordinator
         }
     }
 
+data class IngestionWindowResult(
+    val affectedRange: ScoreInvalidation.AffectedRange?,
+    val completedTypes: Set<HealthDataType> = emptySet(),
+)
+
 private data class HeartIds(
-    val hr: Set<String>,
-    val hrv: Set<String>,
+    val hr: ReadOutcome<Set<String>>,
+    val hrv: ReadOutcome<Set<String>>,
 )
 
 private data class RawBulkRecords(
-    val sleepSessions: List<app.readylytics.health.core.model.domain.model.DomainSleepSessionRecord>,
-    val exerciseRecords: List<app.readylytics.health.core.model.domain.model.DomainExerciseSessionRecord>,
-    val weightRecords: List<app.readylytics.health.core.model.domain.model.DomainWeightRecord>,
-    val bodyFatRecords: List<app.readylytics.health.core.model.domain.model.DomainBodyFatRecord>,
-    val bloodPressureRecords: List<app.readylytics.health.core.model.domain.model.DomainBloodPressureRecord>,
-    val spo2Records: List<app.readylytics.health.core.model.domain.model.DomainOxygenSaturationRecord>,
-    val bodyTemperatureRecords: List<app.readylytics.health.core.model.domain.model.DomainBodyTemperatureRecord>,
-    val stepsRecords: List<app.readylytics.health.core.model.domain.model.DomainStepsRecord>,
-    val vo2MaxRecords: List<app.readylytics.health.core.model.domain.model.DomainVo2MaxRecord> = emptyList(),
+    val sleepSessions: ReadOutcome<List<DomainSleepSessionRecord>>,
+    val exerciseRecords: ReadOutcome<List<DomainExerciseSessionRecord>>,
+    val weightRecords: ReadOutcome<List<DomainWeightRecord>>,
+    val bodyFatRecords: ReadOutcome<List<DomainBodyFatRecord>>,
+    val bloodPressureRecords: ReadOutcome<List<DomainBloodPressureRecord>>,
+    val spo2Records: ReadOutcome<List<DomainOxygenSaturationRecord>>,
+    val bodyTemperatureRecords: ReadOutcome<List<DomainBodyTemperatureRecord>>,
+    val stepsRecords: ReadOutcome<List<DomainStepsRecord>>,
+    val vo2MaxRecords: ReadOutcome<List<DomainVo2MaxRecord>> = ReadOutcome.Available(emptyList()),
 )
 
 private data class FilteredVitals(
@@ -497,3 +504,97 @@ private fun buildBulkBatch(
                 )
             },
     )
+
+private suspend fun streamHeartRateSamples(
+    hcRepo: HealthConnectRepository,
+    healthIngestionStore: HealthIngestionStore,
+    params: IngestWindowParams,
+    sessionContext: IngestionSessionContext,
+    device: String?,
+    onPageDone: () -> Unit,
+): Pair<ReadOutcome<Set<String>>, Int> {
+    val hrIds = mutableSetOf<String>()
+    var hrSampleCount = 0
+    val outcome =
+        hcRepo.readHeartRateSamplesPaged(
+            from = params.windowStart,
+            to = params.windowEnd,
+            startPageToken = params.hrStartPageToken,
+        ) { page, nextToken ->
+            logD("HealthSync.Ingest") { "HR page size=${page.size}" }
+            hrIds.addAll(page.map { it.id })
+            val hrSources =
+                HeartRateMapper.mapToInputs(
+                    page,
+                    sessionContext.sleepInputs,
+                    sessionContext.workoutInputs,
+                )
+            val filteredHr =
+                hrSources.map { source ->
+                    source.copy(
+                        rows = DeviceSourceFilter.filterToDevice(source.rows, device) { it.deviceName },
+                    )
+                }
+            healthIngestionStore.replaceHeartRateSources(filteredHr)
+            hrSampleCount += filteredHr.sumOf { it.rows.size }
+            onPageDone()
+            params.onTokenUpdated?.invoke(nextToken, null)
+        }
+    val readOutcome =
+        when (outcome) {
+            is ReadOutcome.Available -> ReadOutcome.Available(hrIds)
+            ReadOutcome.Denied -> ReadOutcome.Denied
+            ReadOutcome.Unsupported -> ReadOutcome.Unsupported
+        }
+    return readOutcome to hrSampleCount
+}
+
+private suspend fun streamHrvSamples(
+    hcRepo: HealthConnectRepository,
+    healthIngestionStore: HealthIngestionStore,
+    params: IngestWindowParams,
+    sessionContext: IngestionSessionContext,
+    device: String?,
+    onPageDone: () -> Unit,
+): Pair<ReadOutcome<Set<String>>, Int> {
+    val hrvIds = mutableSetOf<String>()
+    var hrvSampleCount = 0
+    val outcome =
+        hcRepo.readHrvSamplesPaged(
+            from = params.windowStart,
+            to = params.windowEnd,
+            startPageToken = params.hrvStartPageToken,
+        ) { page, nextToken ->
+            logD("HealthSync.Ingest") { "HRV page size=${page.size}" }
+            hrvIds.addAll(page.map { it.id })
+            val hrvSources =
+                HrvMapper.mapToInputs(
+                    page,
+                    sessionContext.sleepInputs,
+                )
+            val filteredHrv =
+                hrvSources.map { source ->
+                    source.copy(
+                        rows = DeviceSourceFilter.filterToDevice(source.rows, device) { it.deviceName },
+                    )
+                }
+            healthIngestionStore.replaceHrvSources(filteredHrv)
+            hrvSampleCount += filteredHrv.sumOf { it.rows.size }
+            onPageDone()
+            params.onTokenUpdated?.invoke(null, nextToken)
+        }
+    val readOutcome =
+        when (outcome) {
+            is ReadOutcome.Available -> ReadOutcome.Available(hrvIds)
+            ReadOutcome.Denied -> ReadOutcome.Denied
+            ReadOutcome.Unsupported -> ReadOutcome.Unsupported
+        }
+    return readOutcome to hrvSampleCount
+}
+
+private inline fun <T> ReadOutcome<List<T>>.toIds(crossinline idSelector: (T) -> String): ReadOutcome<Set<String>> =
+    when (this) {
+        is ReadOutcome.Available -> ReadOutcome.Available(data.mapTo(HashSet()) { idSelector(it) })
+        ReadOutcome.Denied -> ReadOutcome.Denied
+        ReadOutcome.Unsupported -> ReadOutcome.Unsupported
+    }

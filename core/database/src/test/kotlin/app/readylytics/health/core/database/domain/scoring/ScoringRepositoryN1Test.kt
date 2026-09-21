@@ -32,7 +32,9 @@ import app.readylytics.health.core.databaseschema.data.local.dao.Vo2MaxRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
+import app.readylytics.health.core.model.domain.model.RecordType
 import app.readylytics.health.core.model.data.preferences.Gender
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
@@ -41,6 +43,7 @@ import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoade
 import app.readylytics.health.core.database.data.repository.MorningRecommendationDependencies
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
+import app.readylytics.health.core.database.data.repository.ScoringHeartRateDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringSeriesLoader
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
@@ -163,19 +166,19 @@ class ScoringRepositoryN1Test {
         coEvery { heartRateDao.getAvgSleepHrPerSession(any()) } returns listOf(55, 55, 55)
         coEvery { heartRateDao.getAvgSleepHr(any()) } returns 55
         coEvery { heartRateDao.getAvgSleepHrForSessions(any()) } returns emptyMap()
-        coEvery { heartRateDao.getMinHrInRange(any(), any()) } returns 50
-        coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
+        coEvery { heartRateDao.getVisibleMinHrInRange(any(), any()) } returns 50
+        coEvery { heartRateDao.getVisibleByTimeRange(any(), any()) } returns emptyList()
         // DB-001: exercise-HR fetch now uses SQL-filtered getByTypeAndTimeRange instead of
         // getByTimeRange + Kotlin filter
-        coEvery { heartRateDao.getByTypeAndTimeRange(any(), any(), any()) } returns emptyList()
+        coEvery { heartRateDao.getVisibleByTypeAndTimeRange(any(), any(), any()) } returns emptyList()
         // PERF-006/WP-21: everyday-HR load now reads SQL-bucketed rows instead of raw getByTimeRange rows.
-        coEvery { heartRateDao.getMinuteBuckets(any(), any()) } returns emptyList()
+        coEvery { heartRateDao.getVisibleMinuteBuckets(any(), any()) } returns emptyList()
         coEvery { heartRateDao.getMinHrTimestamp(any()) } returns null
         coEvery { heartRateDao.getSleepHrSampleCount(any()) } returns 300
         coEvery { heartRateDao.getSleepHrSampleAtOffset(any(), any()) } returns 50
-        coEvery { heartRateDao.getSleepHrSamplesForSession(any()) } returns listOf(48, 50, 52, 54, 56, 58, 60)
+        coEvery { heartRateDao.getVisibleSleepHrSamplesForSession(any()) } returns listOf(48, 50, 52, 54, 56, 58, 60)
         coEvery { heartRateDao.getSleepHrSamplesForSessions(any()) } returns emptyList()
-        coEvery { heartRateDao.getSleepHrProjectionForSessions(any()) } returns emptyList()
+        coEvery { heartRateDao.getVisibleSleepHrProjectionForSessions(any()) } returns emptyList()
 
         coEvery { dailySummaryDao.getByDate(any()) } returns null
         coEvery { dailySummaryDao.getByDates(any()) } returns emptyList()
@@ -221,19 +224,7 @@ class ScoringRepositoryN1Test {
         val bodyTemperatureRecordDao = mockk<BodyTemperatureRecordDao>(relaxed = true)
         val vo2MaxRecordDao = mockk<Vo2MaxRecordDao>(relaxed = true)
 
-        val dataLoader =
-            ScoringDayDataLoader(
-                workoutDao,
-                sleepSessionDao,
-                dailySummaryDao,
-                heartRateDao,
-                minuteBucketDao,
-                weightRecordDao,
-                bodyFatRecordDao,
-                bloodPressureRecordDao,
-                oxygenSaturationRecordDao,
-                bodyTemperatureRecordDao,
-            )
+        val dataLoader = ScoringDayDataLoader(workoutDao, sleepSessionDao, dailySummaryDao)
         val bodyMetricsDataLoader =
             BodyMetricsDataLoader(
                 weightRecordDao,
@@ -244,6 +235,7 @@ class ScoringRepositoryN1Test {
                 vo2MaxRecordDao,
             )
         val seriesLoader = ScoringSeriesLoader(workoutDao, dailySummaryDao)
+        val heartRateDataLoader = ScoringHeartRateDataLoader(heartRateDao, minuteBucketDao)
         val buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator)
         val resolveDailyBaselinesUseCase = ResolveDailyBaselinesUseCase(baselineComputer)
         val assembleDailySummaryUseCase = AssembleDailySummaryUseCase()
@@ -265,6 +257,7 @@ class ScoringRepositoryN1Test {
                     dataLoader,
                     bodyMetricsDataLoader,
                     seriesLoader,
+                    heartRateDataLoader,
                 ),
                 settingsRepo = settingsRepo,
                 baselineComputer = baselineComputer,
@@ -333,7 +326,7 @@ class ScoringRepositoryN1Test {
                     )
                 }
             // DB-001: exercise-HR fetch now uses getByTypeAndTimeRange instead of getByTimeRange
-            coEvery { heartRateDao.getByTypeAndTimeRange("EXERCISE", any(), any()) } returns samples
+            coEvery { heartRateDao.getVisibleByTypeAndTimeRange("EXERCISE", any(), any()) } returns samples
 
             val capturedSummaries = mutableListOf<DailySummaryEntity>()
             coEvery { dailySummaryDao.upsert(capture(capturedSummaries)) } returns Unit
@@ -391,7 +384,7 @@ class ScoringRepositoryN1Test {
             // Batch path fetches both sessions once, then filters invalid nights in memory.
             coVerify { hrvDao.getSleepRmssdForSessionsMap(match { it.containsAll(listOf("valid", "short")) }) }
             coVerify {
-                heartRateDao.getSleepHrProjectionForSessions(
+                heartRateDao.getVisibleSleepHrProjectionForSessions(
                     match { it.containsAll(listOf("valid", "short")) },
                 )
             }
@@ -435,9 +428,9 @@ class ScoringRepositoryN1Test {
             repo.computeAndPersistDailySummary(today)
             // One SQL-bucketed HR fetch for everyday-HR load (PERF-006/WP-21), one or more
             // projection batches for sleep-baseline math.
-            coVerify(atLeast = 1) { heartRateDao.getMinuteBuckets(any(), any()) }
-            coVerify(atLeast = 1) { heartRateDao.getSleepHrProjectionForSessions(any()) }
-            coVerify(exactly = 0) { heartRateDao.getMinHrInRange(any(), any()) }
+            coVerify(atLeast = 1) { heartRateDao.getVisibleMinuteBuckets(any(), any()) }
+            coVerify(atLeast = 1) { heartRateDao.getVisibleSleepHrProjectionForSessions(any()) }
+            coVerify(exactly = 0) { heartRateDao.getVisibleMinHrInRange(any(), any()) }
         }
 
     @Test
@@ -452,7 +445,7 @@ class ScoringRepositoryN1Test {
             repo.computeAndPersistDailySummary(today)
 
             coVerify(atLeast = 1) { hrvDao.getSleepRmssdForSessionsMap(any()) }
-            coVerify(atLeast = 1) { heartRateDao.getSleepHrProjectionForSessions(any()) }
+            coVerify(atLeast = 1) { heartRateDao.getVisibleSleepHrProjectionForSessions(any()) }
             coVerify(exactly = 1) { hrvDao.getSleepRmssdForSession(any()) }
             coVerify(exactly = 0) { heartRateDao.getAvgSleepHr(any()) }
         }
@@ -483,6 +476,18 @@ class ScoringRepositoryN1Test {
                     avgHr = 150f,
                 )
             coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns listOf(workout)
+            coEvery {
+                heartRateDao.getVisibleByTypeAndTimeRange(RecordType.EXERCISE.name, any(), any())
+            } returns
+                listOf(
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 1L,
+                        timestampMs = todayMidnight + 4_000_000L,
+                        beatsPerMinute = 150,
+                        recordType = RecordType.EXERCISE.name,
+                        sessionId = "single-trimp",
+                    ),
+                )
 
             repo.computeAndPersistDailySummary(today)
 
@@ -512,10 +517,10 @@ class ScoringRepositoryN1Test {
 
             // Mock 10 heart rate samples of 53 bpm to satisfy minimum size requirement of 10
             val hrSamples = (1..10).map { SleepHrSample("today", 53) }
-            coEvery { heartRateDao.getSleepHrProjectionForSessions(listOf("today")) } returns hrSamples
+            coEvery { heartRateDao.getVisibleSleepHrProjectionForSessions(listOf("today")) } returns hrSamples
 
             // For daily average RHR calculation (avgRhr)
-            coEvery { heartRateDao.getSleepHrSamplesForSession("today") } returns (1..10).map { 53 }
+            coEvery { heartRateDao.getVisibleSleepHrSamplesForSession("today") } returns (1..10).map { 53 }
 
             // Mock 1 HRV sample of 32 ms
             coEvery { hrvDao.getSleepRmssdForSessionsMap(listOf("today")) } returns mapOf("today" to listOf(32f))
@@ -542,8 +547,8 @@ class ScoringRepositoryN1Test {
             coEvery { sleepSessionDao.countSince(any()) } returns 1
 
             val hrSamples = (1..10).map { SleepHrSample("today", 53) }
-            coEvery { heartRateDao.getSleepHrProjectionForSessions(listOf("today")) } returns hrSamples
-            coEvery { heartRateDao.getSleepHrSamplesForSession("today") } returns (1..10).map { 53 }
+            coEvery { heartRateDao.getVisibleSleepHrProjectionForSessions(listOf("today")) } returns hrSamples
+            coEvery { heartRateDao.getVisibleSleepHrSamplesForSession("today") } returns (1..10).map { 53 }
 
             // Sleep RMSSD map has consistent 32f
             coEvery { hrvDao.getSleepRmssdForSessionsMap(listOf("today")) } returns mapOf("today" to listOf(32f))

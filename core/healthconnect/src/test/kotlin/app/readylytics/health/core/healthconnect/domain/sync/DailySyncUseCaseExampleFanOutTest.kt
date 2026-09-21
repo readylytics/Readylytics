@@ -5,6 +5,7 @@ import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.ReadOutcome
 import app.readylytics.health.core.model.domain.repository.ScoringRepository
 import app.readylytics.health.core.model.domain.repository.WalDiagnostics
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
@@ -61,6 +62,21 @@ class DailySyncUseCaseExampleFanOutTest {
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
         coEvery { scoringRepository.fetchWalkForwardFatigueContext(any(), any(), any()) } returns
             WalkForwardFatigueContext(emptyList())
+        coEvery { hcRepo.readSleepSessions(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readExerciseSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readStepsRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readWeightRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBodyFatRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBloodPressureRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readOxygenSaturationRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBodyTemperatureRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readVo2MaxRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readSteps(any(), any()) } returns ReadOutcome.Available(0L)
+        coEvery { hcRepo.readDailyStepTotals(any(), any(), any()) } returns ReadOutcome.Available(emptyMap())
+        coEvery { hcRepo.readHeartRateSamples(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readHrvSamples(any(), any()) } returns ReadOutcome.Available(emptyList())
 
         useCase =
             DailySyncUseCase(

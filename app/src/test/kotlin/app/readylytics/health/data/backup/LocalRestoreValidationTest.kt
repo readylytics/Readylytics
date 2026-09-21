@@ -48,12 +48,83 @@ class LocalRestoreValidationTest : LocalRestoreManagerTestBase() {
     fun validate_acceptsBackupVersionsFiveThroughCurrent() =
         runTest {
             for (version in BackupSchemaPolicy.MIN_SUPPORTED_VERSION..BackupSchemaPolicy.MAX_SUPPORTED_VERSION) {
-                val json = createValidBackupJson().put("schemaVersion", version)
+                val json = createValidBackupJsonForVersion(version)
                 val zipFile = createBackupZipFile("backup-v$version.zip", json)
 
                 assertTrue(manager.validate(Uri.fromFile(zipFile)).isSuccess)
 
                 zipFile.delete()
+            }
+        }
+
+    @Test
+    fun validate_rejectsMissingRequiredTable() =
+        runTest {
+            val payload = createValidBackupJson().apply { remove("heartRateRecords") }
+            val archive = createBackupZipFile("missing-heart-rate.zip", payload)
+            assertTrue(manager.validate(Uri.fromFile(archive)).isFailure)
+            archive.delete()
+        }
+
+    @Test
+    fun validate_rejectsDuplicateTopLevelKey() =
+        runTest {
+            val valid = createValidBackupJson().toString()
+            val malformed = valid.substringBeforeLast("}") + ",\"schemaVersion\": 19}"
+            val archive = createRawBackupZipFile("duplicate-top-level-key.zip", malformed)
+            val result = manager.validate(Uri.fromFile(archive))
+            assertTrue(result.isFailure)
+            archive.delete()
+        }
+
+    @Test
+    fun validate_rejectsNegativeDeclaredCount() =
+        runTest {
+            val payload =
+                createValidBackupJson().apply {
+                    getJSONObject("rowCounts").put("heartRateRecords", -1)
+                }
+            val archive = createBackupZipFile("negative-count.zip", payload)
+            assertTrue(manager.validate(Uri.fromFile(archive)).isFailure)
+            archive.delete()
+        }
+
+    @Test
+    fun validate_rejectsMismatchedDeclaredAndObservedCount() =
+        runTest {
+            val payload =
+                createValidBackupJson().apply {
+                    getJSONObject("rowCounts").put("sleepSessions", 5)
+                }
+            val archive = createBackupZipFile("mismatched-count.zip", payload)
+            assertTrue(manager.validate(Uri.fromFile(archive)).isFailure)
+            archive.delete()
+        }
+
+    @Test
+    fun validate_rejectsCorruptOrTruncatedJson() =
+        runTest {
+            val archive = createRawBackupZipFile("truncated.zip", "{\"schemaVersion\": 19, \"exportedAt\":")
+            assertTrue(manager.validate(Uri.fromFile(archive)).isFailure)
+            archive.delete()
+        }
+
+    @Test
+    fun validate_acceptsHistoricalFixtures() =
+        runTest {
+            val fixtures =
+                listOf(
+                    "v5" to createValidV5BackupJson(),
+                    "v7" to createValidV7BackupJson(),
+                    "v9-before" to createValidV9BeforeFixBackupJson(),
+                    "v9-after" to createValidV9AfterFixBackupJson(),
+                    "v10" to createValidV10BackupJson(),
+                    "current" to createValidBackupJson(),
+                )
+            for ((name, json) in fixtures) {
+                val archive = createBackupZipFile("fixture-$name.zip", json)
+                assertTrue(manager.validate(Uri.fromFile(archive)).isSuccess, "Fixture $name should validate")
+                archive.delete()
             }
         }
 
@@ -113,8 +184,7 @@ class LocalRestoreValidationTest : LocalRestoreManagerTestBase() {
         runTest {
             val timestamp = 1_700_000_000_000L
             val json =
-                createValidBackupJson()
-                    .put("schemaVersion", 5)
+                createValidV5BackupJson()
                     .put(
                         "heartRateRecords",
                         JSONArray().put(
@@ -134,6 +204,7 @@ class LocalRestoreValidationTest : LocalRestoreManagerTestBase() {
                                 .put("recordType", "SLEEP"),
                         ),
                     )
+            json.getJSONObject("rowCounts").put("heartRateRecords", 1).put("hrvRecords", 1)
             val zipFile = createBackupZipFile("legacy-v5.zip", json)
 
             assertTrue(manager.applyRestore(Uri.fromFile(zipFile)) is RestoreResult.SuccessRequiresRestart)
@@ -175,8 +246,7 @@ class LocalRestoreValidationTest : LocalRestoreManagerTestBase() {
             val malformedHeartId = "hc-heart_${timestamp}x"
             val mismatchedHrvId = "hc-hrv_${timestamp + 1}"
             val json =
-                createValidBackupJson()
-                    .put("schemaVersion", 6)
+                createValidBackupJsonForVersion(6)
                     .put(
                         "heartRateRecords",
                         JSONArray().put(
@@ -196,6 +266,7 @@ class LocalRestoreValidationTest : LocalRestoreManagerTestBase() {
                                 .put("recordType", "SLEEP"),
                         ),
                     )
+            json.getJSONObject("rowCounts").put("heartRateRecords", 1).put("hrvRecords", 1)
             val zipFile = createBackupZipFile("legacy-malformed-suffix-v6.zip", json)
 
             assertTrue(manager.applyRestore(Uri.fromFile(zipFile)) is RestoreResult.SuccessRequiresRestart)

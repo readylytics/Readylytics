@@ -168,4 +168,10 @@ interface DailySummaryDao {
         fromMs: Long,
         toMs: Long,
     ): List<TimestampedTrimp>
+
+    @Query("SELECT MIN(dateMidnightMs) FROM daily_summaries")
+    suspend fun getEarliestDateMs(): Long?
+
+    @Query("SELECT MAX(dateMidnightMs) FROM daily_summaries")
+    suspend fun getLatestDateMs(): Long?
 }
