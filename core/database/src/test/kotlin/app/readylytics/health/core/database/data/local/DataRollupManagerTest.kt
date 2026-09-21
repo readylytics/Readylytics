@@ -256,6 +256,112 @@ class DataRollupManagerTest {
             assertEquals(3, minuteBucketDao.getBucketsForSession("RESTING", "").size)
         }
 
+    // PERF-003 (Task 8): the core correctness contract of streaming the rollup -- bucket output
+    // (avgBpm, sampleCount, min/max, p5..p95) must be byte-identical whether a day's samples fit in
+    // one keyset page/group or are forced across many. Two fresh databases are seeded with the
+    // identical dense-3-minute fixture; one rolls up with a page/group size that comfortably fits
+    // the whole day in a single page and group, the other with a page size small enough to force
+    // several keyset pages and a group-minute-budget of 1 (one group per minute). Since
+    // `aggregateIntoMinuteBuckets` sorts each minute's own BPM values before computing avg/
+    // percentiles, the result must depend only on which samples share a minute, never on how many
+    // pages/groups the run was split into.
+    @Test
+    fun `rollup produces byte-identical buckets whether the day fits one page or is split across many`() =
+        runBlocking {
+            fun freshDatabase() =
+                Room
+                    .inMemoryDatabaseBuilder(
+                        ApplicationProvider.getApplicationContext(),
+                        HealthDatabase::class.java,
+                    ).allowMainThreadQueries()
+                    .build()
+
+            fun manager(db: HealthDatabase) =
+                DataRollupManager(
+                    minuteCoverageDao = db.minuteCoverageDao(),
+                    heartRateDao = db.heartRateDao(),
+                    publisher = MinuteCoveragePublisher(db.minuteBucketDao(), db.minuteCoverageDao()),
+                    transactionRunner = RoomTransactionRunner(db),
+                )
+
+            suspend fun seedDenseDay(db: HealthDatabase) {
+                val ref = db.sourceRecordDao().getOrCreateSourceRef("dense", "HEART_RATE", 0L)
+                val samples =
+                    (0 until 3).flatMap { minute ->
+                        (0 until 21).map { i ->
+                            hr(
+                                ref,
+                                minute * 60_000L + i * 2_500L,
+                                50 + (minute * 7 + i * 3) % 41,
+                                "RESTING",
+                                null,
+                            )
+                        }
+                    }
+                db.heartRateDao().upsertAll(samples)
+            }
+
+            val singlePageDb = freshDatabase()
+            val manyPagesDb = freshDatabase()
+            seedDenseDay(singlePageDb)
+            seedDenseDay(manyPagesDb)
+
+            // Single page, single group: the whole 3-minute/63-sample day fits well under both defaults.
+            manager(singlePageDb).rollupExpiredHotTier(
+                cutoffMs = 3 * 60_000L,
+                pageSize = MinuteRollupStreamer.SAMPLE_PAGE_SIZE,
+                groupMinuteBudget = MinuteRollupStreamer.GROUP_MINUTE_BUDGET,
+            )
+            // Forced multi-page (7 rows/page against 63 total) and one group per minute.
+            manager(manyPagesDb).rollupExpiredHotTier(cutoffMs = 3 * 60_000L, pageSize = 7, groupMinuteBudget = 1)
+
+            val singlePageBuckets =
+                singlePageDb.minuteBucketDao().getBucketsInTimeRange(0L, 3 * 60_000L).sortedBy { it.bucketStartMs }
+            val manyPagesBuckets =
+                manyPagesDb.minuteBucketDao().getBucketsInTimeRange(0L, 3 * 60_000L).sortedBy { it.bucketStartMs }
+
+            assertEquals(3, singlePageBuckets.size)
+            assertEquals(singlePageBuckets.map { it.bucketStartMs }, manyPagesBuckets.map { it.bucketStartMs })
+            singlePageBuckets.zip(manyPagesBuckets).forEach { (single, many) ->
+                assertEquals("avgBpm must be byte-identical", single.avgBpm, many.avgBpm, 0.0)
+                assertEquals(single.sampleCount, many.sampleCount)
+                assertEquals(single.minBpm, many.minBpm)
+                assertEquals(single.maxBpm, many.maxBpm)
+                assertEquals(single.p5Bpm, many.p5Bpm)
+                assertEquals(single.p25Bpm, many.p25Bpm)
+                assertEquals(single.p50Bpm, many.p50Bpm)
+                assertEquals(single.p75Bpm, many.p75Bpm)
+                assertEquals(single.p95Bpm, many.p95Bpm)
+            }
+
+            singlePageDb.close()
+            manyPagesDb.close()
+        }
+
+    // PERF-003 (Task 8): a minute whose only raw rows are implausible (outside 30..230 bpm) never
+    // appears in any streamed group -- the old single-pass rollupDayChunk still swept it via an
+    // unconditional whole-day delete. The new per-group deletes alone would leak it forever, so
+    // rollupDayChunk's conditional day-scoped backstop sweep must still catch it.
+    @Test
+    fun `rollup sweeps implausible-only raw rows even though they never form a group`() =
+        runBlocking {
+            val heartRateDao = database.heartRateDao()
+            val sourceRecordDao = database.sourceRecordDao()
+
+            val ref = sourceRecordDao.getOrCreateSourceRef("uuid-implausible-only", "HEART_RATE", 0L)
+            heartRateDao.upsertAll(
+                listOf(
+                    hr(ref, 5_000L, 250, "RESTING", null),
+                    hr(ref, 10_000L, 20, "RESTING", null),
+                ),
+            )
+
+            val touched = rollupManager.rollupExpiredHotTier(cutoffMs = 60_000L)
+
+            assertNull("an implausible-only day publishes nothing", touched)
+            assertEquals(0, heartRateDao.count())
+        }
+
     private fun hr(
         ref: Long,
         timestampMs: Long,

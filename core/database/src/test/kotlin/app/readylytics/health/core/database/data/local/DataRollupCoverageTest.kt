@@ -6,6 +6,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.getOrCreateSour
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrMinuteBucketEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.MinuteCoverageEntity
+import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -14,6 +15,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.time.LocalDate
 
 /**
  * WP-17/OD-1 coverage behaviour of the hot→warm rollup: what it publishes, what it refuses to
@@ -233,6 +235,74 @@ class DataRollupCoverageTest {
             // The already-visible projection is intentionally left in place (see SourceRecordDao).
             val coverage = database.minuteCoverageDao().getCoverageInRange(0L, MINUTE_MS).single()
             assertEquals(QUALITY_SOURCE_BACKED, coverage.quality)
+        }
+
+    // Task 8 (PERF-003): `nextGeneration()` is captured once PER GROUP, not once per day, so a
+    // concurrent source mutation between one group's generation-capture and its own publish
+    // transaction aborts only that group -- groups already committed earlier in the same pass (even
+    // the same day chunk) stay published, and the pass stops cleanly (no crash) rather than
+    // continuing to chunk against a moving generation.
+    @Test
+    fun `a generation conflict on one group stops the pass without losing earlier groups`() =
+        runBlocking {
+            val ref = seedSource("src-a")
+            // Two samples a minute apart so groupMinuteBudget = 1 forces two separate publishGroup
+            // calls (two transactions) within the same day chunk.
+            database.heartRateDao().upsertAll(
+                listOf(
+                    hr(ref, 1_000L, 60),
+                    hr(ref, 65_000L, 70),
+                ),
+            )
+
+            var transactionCount = 0
+            val conflictInjectingRunner =
+                object : TransactionRunner {
+                    override suspend fun <T> runInTransaction(block: suspend () -> T): T {
+                        transactionCount++
+                        if (transactionCount == 2) {
+                            // Simulates another writer mutating sources, in its own transaction,
+                            // between the second group's generation-capture (outside any
+                            // transaction) and this transaction's own publish.
+                            database.healthMutationStateDao().incrementGeneration()
+                        }
+                        return RoomTransactionRunner(database).runInTransaction(block)
+                    }
+                }
+
+            val manager =
+                DataRollupManager(
+                    minuteCoverageDao = database.minuteCoverageDao(),
+                    heartRateDao = database.heartRateDao(),
+                    publisher =
+                        MinuteCoveragePublisher(
+                            minuteBucketDao = database.minuteBucketDao(),
+                            minuteCoverageDao = database.minuteCoverageDao(),
+                            dirtyRangeDao = database.dirtyRangeDao(),
+                            healthMutationStateDao = database.healthMutationStateDao(),
+                        ),
+                    transactionRunner = conflictInjectingRunner,
+                    dirtyRangeDao = database.dirtyRangeDao(),
+                    healthMutationStateDao = database.healthMutationStateDao(),
+                )
+
+            // Must NOT throw -- the conflict is caught inside rollupDayChunk and the pass stops
+            // cleanly, returning whatever was already published.
+            val touched = manager.rollupExpiredHotTier(cutoffMs = 2 * MINUTE_MS, groupMinuteBudget = 1)
+
+            // Group 1 (minute 0) committed before the injected conflict.
+            val coverage = database.minuteCoverageDao().getCoverageInRange(0L, 2 * MINUTE_MS)
+            assertEquals(1, coverage.size)
+            assertEquals(0L, coverage.single().bucketStartMs)
+            assertEquals(LocalDate.of(1970, 1, 1), touched?.start)
+            assertEquals(LocalDate.of(1970, 1, 1), touched?.endInclusive)
+
+            // Group 2 (minute 1) was aborted -- its raw sample survives untouched for the next
+            // scheduled rollup to retry idempotently.
+            assertEquals(1, database.heartRateDao().count())
+            val remainingRaw = database.heartRateDao().getPlausibleSamplesInRangeForRollup(0L, 2 * MINUTE_MS)
+            assertEquals(1, remainingRaw.size)
+            assertEquals(65_000L, remainingRaw.single().timestampMs)
         }
 
     private suspend fun seedSource(id: String): Long =
