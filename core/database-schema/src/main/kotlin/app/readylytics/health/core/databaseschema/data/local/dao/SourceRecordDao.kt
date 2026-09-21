@@ -113,6 +113,26 @@ interface SourceRecordDao : SourceRecordMaintenanceDao {
         windowStartMs: Long,
         windowEndMs: Long,
     ): List<HealthSourceRecordEntity>
+
+    @Query(
+        "SELECT * FROM health_source_records " +
+            "WHERE recordType = :recordType AND metadataState = 'AUTHORITATIVE' " +
+            "AND recordStartMs < :windowEndMs AND recordEndExclusiveMs > :windowStartMs " +
+            "AND id > :afterRef " +
+            "AND sourceRecordId NOT IN (" +
+            "  SELECT sourceId FROM scan_seen_ids " +
+            "  WHERE runId = :runId AND chunkId = :chunkId AND recordType = :recordType) " +
+            "ORDER BY id ASC LIMIT :limit",
+    )
+    suspend fun pageUnstagedAuthoritativeSources(
+        recordType: String,
+        windowStartMs: Long,
+        windowEndMs: Long,
+        runId: String,
+        chunkId: String,
+        afterRef: Long,
+        limit: Int,
+    ): List<HealthSourceRecordEntity>
 }
 
 suspend fun SourceRecordDao.getOrCreateSourceRef(

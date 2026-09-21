@@ -392,7 +392,16 @@ class HealthIngestionCoordinator
 
             fun MutableList<CompleteTypeScan>.addScan(outcome: ReadOutcome<Set<String>>, type: HealthDataType) {
                 if (outcome is ReadOutcome.Available) {
-                    add(CompleteTypeScan(type, startMs, endExclusiveMs, deviceFor(type), outcome.data))
+                    add(
+                        CompleteTypeScan(
+                            type = type,
+                            windowStartMs = startMs,
+                            windowEndExclusiveMs = endExclusiveMs,
+                            sourceSelectionId = deviceFor(type),
+                            scan = ScanIdentity("DAILY_SYNC", startMs.toString()),
+                            ids = outcome.data,
+                        ),
+                    )
                 }
             }
 

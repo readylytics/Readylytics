@@ -119,8 +119,51 @@ interface SleepSessionDao {
     @Query("SELECT MIN(startTime) FROM sleep_sessions")
     fun observeEarliestSessionTime(): Flow<Long?>
 
-    @Query("DELETE FROM sleep_sessions WHERE startTime >= :startMs AND endTime <= :endMs AND id NOT IN (:validIds)")
-    suspend fun deleteSessionsNotIn(startMs: Long, endMs: Long, validIds: List<String>): Int
+    @Query(
+        "SELECT MIN(startTime) AS minMs, MAX(endTime) AS maxMs FROM sleep_sessions " +
+            "WHERE startTime >= :startMs AND endTime <= :endMs " +
+            "AND id NOT IN (" +
+            "  SELECT sourceId FROM scan_seen_ids " +
+            "  WHERE runId = :runId AND chunkId = :chunkId AND recordType = :recordType)",
+    )
+    suspend fun boundsOfUnstagedSessions(
+        startMs: Long,
+        endMs: Long,
+        runId: String,
+        chunkId: String,
+        recordType: String,
+    ): StagedDeletionBounds
+
+    @Query(
+        "DELETE FROM sleep_stages WHERE sessionId IN (" +
+            "  SELECT id FROM sleep_sessions " +
+            "  WHERE startTime >= :startMs AND endTime <= :endMs " +
+            "  AND id NOT IN (" +
+            "    SELECT sourceId FROM scan_seen_ids " +
+            "    WHERE runId = :runId AND chunkId = :chunkId AND recordType = :recordType))",
+    )
+    suspend fun deleteStagesOfUnstagedSessions(
+        startMs: Long,
+        endMs: Long,
+        runId: String,
+        chunkId: String,
+        recordType: String,
+    ): Int
+
+    @Query(
+        "DELETE FROM sleep_sessions " +
+            "WHERE startTime >= :startMs AND endTime <= :endMs " +
+            "AND id NOT IN (" +
+            "  SELECT sourceId FROM scan_seen_ids " +
+            "  WHERE runId = :runId AND chunkId = :chunkId AND recordType = :recordType)",
+    )
+    suspend fun deleteSessionsNotStaged(
+        startMs: Long,
+        endMs: Long,
+        runId: String,
+        chunkId: String,
+        recordType: String,
+    ): Int
 
     @Query("DELETE FROM sleep_sessions WHERE startTime >= :startMs AND endTime <= :endMs")
     suspend fun deleteBetween(startMs: Long, endMs: Long): Int

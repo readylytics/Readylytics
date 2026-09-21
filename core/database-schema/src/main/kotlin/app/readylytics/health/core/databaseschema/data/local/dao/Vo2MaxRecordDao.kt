@@ -20,12 +20,6 @@ interface Vo2MaxRecordDao {
     ): List<Vo2MaxRecordEntity>
 
     @Query(
-        "SELECT * FROM vo2_max_records WHERE timestampMs <= :maxTimestampMs " +
-            "ORDER BY timestampMs DESC LIMIT 1",
-    )
-    suspend fun getLatestUpTo(maxTimestampMs: Long): Vo2MaxRecordEntity?
-
-    @Query(
         "SELECT * FROM vo2_max_records WHERE timestampMs >= :minTimestampMs AND timestampMs < :endExclusiveMs " +
             "ORDER BY timestampMs DESC, id DESC LIMIT 1",
     )
@@ -59,6 +53,33 @@ interface Vo2MaxRecordDao {
     @Query("SELECT COUNT(*) FROM vo2_max_records")
     suspend fun count(): Int
 
-    @Query("DELETE FROM vo2_max_records")
-    suspend fun deleteAll(): Int
+    @Query(
+        "SELECT MIN(timestampMs) AS minMs, MAX(timestampMs) AS maxMs FROM vo2_max_records " +
+            "WHERE timestampMs >= :startMs AND timestampMs <= :endMs " +
+            "AND id NOT IN (" +
+            "  SELECT sourceId FROM scan_seen_ids " +
+            "  WHERE runId = :runId AND chunkId = :chunkId AND recordType = :recordType)",
+    )
+    suspend fun boundsOfUnstagedRows(
+        startMs: Long,
+        endMs: Long,
+        runId: String,
+        chunkId: String,
+        recordType: String,
+    ): StagedDeletionBounds
+
+    @Query(
+        "DELETE FROM vo2_max_records " +
+            "WHERE timestampMs >= :startMs AND timestampMs <= :endMs " +
+            "AND id NOT IN (" +
+            "  SELECT sourceId FROM scan_seen_ids " +
+            "  WHERE runId = :runId AND chunkId = :chunkId AND recordType = :recordType)",
+    )
+    suspend fun deleteRowsNotStaged(
+        startMs: Long,
+        endMs: Long,
+        runId: String,
+        chunkId: String,
+        recordType: String,
+    ): Int
 }

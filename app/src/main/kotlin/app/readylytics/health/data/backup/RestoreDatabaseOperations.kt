@@ -109,7 +109,7 @@ class RestoreDatabaseOperations
             healthDatabase.oxygenSaturationRecordDao().deleteAll()
             healthDatabase.bodyTemperatureRecordDao().deleteAll()
             healthDatabase.stepRecordDao().deleteAll()
-            healthDatabase.vo2MaxRecordDao().deleteAll()
+            healthDatabase.vo2MaxRecordDao().deleteBefore(Long.MAX_VALUE)
             healthDatabase.dailySummaryDao().deleteAll()
             healthDatabase.sleepSessionDao().deleteAll()
             healthDatabase.workoutDao().deleteAll()

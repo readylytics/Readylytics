@@ -3,12 +3,16 @@ package app.readylytics.health.core.database.data.local
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.readylytics.health.core.databaseschema.data.local.dao.ScanStagingDao
+import app.readylytics.health.core.databaseschema.data.local.entity.ScanSeenIdEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.ScanTypeStateEntity
 import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.sync.BloodPressureInput
 import app.readylytics.health.core.model.domain.sync.CompleteTypeScan
 import app.readylytics.health.core.model.domain.sync.HealthIngestionBatch
 import app.readylytics.health.core.model.domain.sync.HeartRateInput
 import app.readylytics.health.core.model.domain.sync.HrvInput
+import app.readylytics.health.core.model.domain.sync.ScanIdentity
 import app.readylytics.health.core.model.domain.sync.SourceMetadata
 import app.readylytics.health.core.model.domain.sync.SourcePayload
 import app.readylytics.health.core.model.domain.sync.Vo2MaxInput
@@ -354,8 +358,22 @@ class RoomHealthIngestionStoreTest {
             )
 
             // 3. Reconcile against the replay's complete scan: ids = {hr-A, hr-C}, hr-B absent.
-            val ids = setOf("hr-A", "hr-C")
-            val scan = CompleteTypeScan(HealthDataType.HEART_RATE, windowStartMs, windowEndMs, "", ids)
+            val scanId = ScanIdentity(runId = "run-test", chunkId = "0")
+            val ids = listOf("hr-A", "hr-C")
+            database.scanStagingDao().insertSeenIds(
+                ids.map { ScanSeenIdEntity(scanId.runId, scanId.chunkId, HealthDataType.HEART_RATE.name, it) },
+            )
+            database.scanStagingDao().upsertState(
+                ScanTypeStateEntity(
+                    runId = scanId.runId,
+                    chunkId = scanId.chunkId,
+                    recordType = HealthDataType.HEART_RATE.name,
+                    state = ScanStagingDao.STATE_COMPLETE,
+                    stagedCount = ids.size,
+                    updatedAtMs = 0L,
+                ),
+            )
+            val scan = CompleteTypeScan(HealthDataType.HEART_RATE, windowStartMs, windowEndMs, "", scanId)
             store.reconcileWindow(scan, zoneId)
 
             // B's source record and heart-rate row must be gone.
@@ -591,6 +609,7 @@ class RoomHealthIngestionStoreTest {
             dailySummaryDao = db.dailySummaryDao(),
             transactionRunner = RoomTransactionRunner(db),
             vo2MaxRecordDao = db.vo2MaxRecordDao(),
+            scanStagingDao = db.scanStagingDao(),
         )
 
     private suspend fun assertMatchesCleanDb(

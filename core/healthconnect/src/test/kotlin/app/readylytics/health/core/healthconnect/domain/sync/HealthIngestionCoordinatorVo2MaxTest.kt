@@ -185,6 +185,7 @@ class HealthIngestionCoordinatorVo2MaxTest {
             // selection, otherwise a non-selected-device record still present in HC would be
             // wrongly treated as deleted (mirrors WEIGHT/BODY_FAT/etc).
             val vo2Scan = scanSlot.single { it.type == HealthDataType.VO2_MAX }
+            assertEquals("DAILY_SYNC", vo2Scan.scan.runId)
             assertEquals(setOf("vo2-device-a", "vo2-device-b"), vo2Scan.ids)
         }
 
@@ -233,6 +234,7 @@ class HealthIngestionCoordinatorVo2MaxTest {
                 batchSlot.captured.vo2MaxSamples.map { it.id }.toSet(),
             )
             val vo2Scan = scanSlot.single { it.type == HealthDataType.VO2_MAX }
+            assertEquals("DAILY_SYNC", vo2Scan.scan.runId)
             assertEquals(setOf("vo2-tie-a", "vo2-tie-b"), vo2Scan.ids)
         }
 
