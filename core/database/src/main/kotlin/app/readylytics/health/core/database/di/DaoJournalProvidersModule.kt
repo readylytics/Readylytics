@@ -3,6 +3,7 @@ package app.readylytics.health.core.database.di
 import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.databaseschema.data.local.dao.DirtyRangeDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HealthMutationStateDao
+import app.readylytics.health.core.databaseschema.data.local.dao.ScanStagingDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -16,4 +17,7 @@ object DaoJournalProvidersModule {
 
     @Provides
     fun provideHealthMutationStateDao(db: HealthDatabase): HealthMutationStateDao = db.healthMutationStateDao()
+
+    @Provides
+    fun provideScanStagingDao(database: HealthDatabase): ScanStagingDao = database.scanStagingDao()
 }
