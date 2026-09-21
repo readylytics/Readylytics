@@ -81,6 +81,12 @@ interface SourceRecordDao : SourceRecordMaintenanceDao {
     @Query("SELECT * FROM health_source_records WHERE sourceRecordId = :sourceRecordId")
     suspend fun getBySourceRecordId(sourceRecordId: String): HealthSourceRecordEntity?
 
+    @Query("SELECT * FROM health_source_records WHERE sourceRecordId IN (:sourceRecordIds)")
+    suspend fun getSourcesByRecordIds(sourceRecordIds: List<String>): List<HealthSourceRecordEntity>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertIgnoreAll(entities: List<HealthSourceRecordEntity>)
+
     @Query(
         "UPDATE health_source_records " +
             "SET originPackage = :originPackage, " +

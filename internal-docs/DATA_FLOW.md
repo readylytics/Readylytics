@@ -743,7 +743,12 @@ sessionId=excluded.sessionId, deviceName=excluded.deviceName WHERE (mutable colu
 — this updates mutable columns in place with a stable `rowId` and is a near-no-op (SQLite `changes() = 0`)
 on an identical re-ingest, unlike the former `@Insert(onConflict = REPLACE)` which deleted+reinserted and rotated
 `rowId`. `SourcePayloadWriter` authoritatively replaces complete source payloads (`replaceHeartRateSources`/`replaceHrvSources`)
-by upserting in 500-row chunks and deleting only old child timestamps absent from the complete new parent payload.
+using `SourceRefResolver` (PERF-001) to bulk-resolve source identities within the same transaction as sample writes.
+For each page of sources, `SourceRefResolver.resolveAll` batches lookups and inserts in 250-source chunks using bulk `IN` queries
+and `INSERT OR IGNORE` to create missing source records in two statements per chunk instead of one round-trip per parent;
+this eliminates the previous quadratic transaction scaling (one per parent) and replaces it with linear scaling per bounded row group (`PAGE_TRANSACTION_MAX_ROWS = 5_000`).
+Once all sources in the page are resolved, `SourcePayloadWriter` groups payloads by row budget (`groupedByRowBudget`), opens one transaction per group, resolves all sources in that group in bulk, then upsets each payload's samples
+in 500-row chunks and deletes only old child timestamps absent from the complete new parent payload.
 The `WHERE` predicate ensures numeric updates and the session-link reconciler's post-ingest re-tags still propagate. All other
 DAOs use `@Upsert` keyed on the stable primary key, so
 re-fetching a record replaces rather than duplicates. Workout bulk ingestion is a raw-record
