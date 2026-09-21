@@ -15,6 +15,7 @@ import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.sync.HealthChangeIngestionStore
 import app.readylytics.health.core.model.domain.sync.HealthChangeTokenStore
 import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
+import app.readylytics.health.core.model.domain.sync.IntervalKind
 import app.readylytics.health.core.model.domain.sync.SessionSpans
 import io.mockk.*
 import kotlinx.coroutines.flow.flowOf
@@ -35,6 +36,8 @@ class HealthChangeSynchronizerImplTest {
     private val transactionRunner = mockk<TransactionRunner>(relaxed = true)
     private val healthIngestionStore = mockk<HealthIngestionStore>(relaxed = true)
     private val changeIngestionStore = mockk<HealthChangeIngestionStore>(relaxed = true)
+    private val workoutReadPreparer = mockk<WorkoutReadPreparer>(relaxed = true)
+    private val workoutEnrichmentRefresher = mockk<WorkoutEnrichmentRefresher>(relaxed = true)
 
     private val client = mockk<HealthConnectClient>(relaxed = true)
 
@@ -46,6 +49,13 @@ class HealthChangeSynchronizerImplTest {
             val block = firstArg<suspend () -> Any>()
             block()
         }
+        val allReadPermissions =
+            HealthDataType.entries.flatMap { dataType ->
+                recordClassesFor(dataType).map {
+                    HealthPermission.getReadPermission(it)
+                }
+            }.toSet()
+        coEvery { client.permissionController.getGrantedPermissions() } returns allReadPermissions
 
         coEvery { client.readRecords<Record>(any()) } returns
             mockk {
@@ -69,6 +79,8 @@ class HealthChangeSynchronizerImplTest {
                 transactionRunner = transactionRunner,
                 healthIngestionStore = healthIngestionStore,
                 changeIngestionStore = changeIngestionStore,
+                workoutReadPreparer = workoutReadPreparer,
+                workoutEnrichmentRefresher = workoutEnrichmentRefresher,
                 clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
             )
     }
@@ -106,14 +118,88 @@ class HealthChangeSynchronizerImplTest {
         }
 
     @Test
-    fun `applyPendingChanges returns requiresFullResync on SecurityException`() =
+    fun `applyPendingChanges suspends type and avoids full resync on SecurityException`() =
         runTest {
+            val allPerms =
+                HealthDataType.entries.flatMap { current ->
+                    recordClassesFor(current).map {
+                        HealthPermission.getReadPermission(it)
+                    }
+                }.toSet()
+            coEvery { client.permissionController.getGrantedPermissions() } returns allPerms
             coEvery { tokenStore.get(any()) } returns "token"
             coEvery { client.getChanges(any()) } throws SecurityException("Revoked")
 
             val outcome = synchronizer.applyPendingChanges()
 
-            assertTrue(outcome.requiresFullResync)
+            assertFalse(outcome.requiresFullResync)
+            coVerify(atLeast = 1) { tokenStore.suspendType(any()) }
+        }
+
+    @Test
+    fun `grant sync revoke repeat twice regrant lifecycle suspends type and bootstraps upon regrant`() =
+        runTest {
+            val allPerms = allPermissions()
+            val permsWithoutSteps = allPerms - stepsPermissions()
+
+            val inMemoryTokens = HealthDataType.entries.associateWith { "token-$it" }.toMutableMap()
+            val suspended = mutableSetOf<HealthDataType>()
+            setupFakeTokenStore(inMemoryTokens, suspended)
+
+            HealthDataType.entries.forEach { current ->
+                coEvery { client.getChanges("token-$current") } returns changesResponse(emptyList())
+            }
+
+            // 1. Grant & sync
+            coEvery { client.permissionController.getGrantedPermissions() } returns allPerms
+            val outcome1 = synchronizer.applyPendingChanges()
+            assertFalse("Initial sync should succeed without full resync", outcome1.requiresFullResync)
+
+            // 2. Revoke STEPS & sync
+            coEvery { client.permissionController.getGrantedPermissions() } returns permsWithoutSteps
+            val outcome2 = synchronizer.applyPendingChanges()
+            assertFalse("Revoked sync should not enter full resync loop", outcome2.requiresFullResync)
+            coVerify(exactly = 1) { tokenStore.suspendType(HealthDataType.STEPS) }
+
+            // 3. Repeat sync (first repeat)
+            val outcome3 = synchronizer.applyPendingChanges()
+            assertFalse("Repeated sync should not request full resync", outcome3.requiresFullResync)
+
+            // 4. Repeat sync (second repeat)
+            val outcome4 = synchronizer.applyPendingChanges()
+            assertFalse("Second repeated sync should not request full resync", outcome4.requiresFullResync)
+
+            // 5. Regrant STEPS
+            coEvery { client.permissionController.getGrantedPermissions() } returns allPerms
+            val outcome5 = synchronizer.applyPendingChanges()
+            assertTrue(
+                "Regrant must request full resync to bootstrap the newly regranted type",
+                outcome5.requiresFullResync,
+            )
+
+            // 6. Resync captures baseline tokens (including newly regranted STEPS)
+            coEvery { client.getChangesToken(any()) } answers {
+                val request = firstArg<ChangesTokenRequest>()
+                "fresh-token-${request.recordTypes.first().simpleName}"
+            }
+            val baselineTokens = synchronizer.captureChangesTokens()
+            assertTrue(
+                "Baseline tokens must include newly regranted STEPS",
+                baselineTokens.containsKey(HealthDataType.STEPS),
+            )
+
+            // 7. Commit baseline tokens, clearing suspension and bootstrapping delta sync
+            synchronizer.commitTokens(baselineTokens)
+            baselineTokens.forEach { (_, token) ->
+                coEvery { client.getChanges(token) } returns changesResponse(emptyList())
+            }
+
+            // 8. Subsequent delta sync resumes without requiring full resync
+            val outcome6 = synchronizer.applyPendingChanges()
+            assertFalse(
+                "Subsequent sync after regrant and baseline commit should not request full resync",
+                outcome6.requiresFullResync,
+            )
         }
 
     @Test
@@ -412,6 +498,99 @@ class HealthChangeSynchronizerImplTest {
             assertEquals("next-hr", outcome.nextTokens[HealthDataType.HEART_RATE])
         }
 
+    @Test
+    fun `applyPendingChanges processes distance changes and commits staged interval token`() =
+        runTest {
+            seedTokens()
+            HealthDataType.entries.forEach { current ->
+                coEvery { client.getChanges(tokenFor(current)) } returns changesResponse(emptyList())
+            }
+
+            val distPermission = HealthPermission.getReadPermission(DistanceRecord::class)
+            coEvery { client.permissionController.getGrantedPermissions() } returns
+                allPermissions() + distPermission
+
+            coEvery { tokenStore.getToken("DISTANCE") } returns "dist-token-1"
+            val distRecord =
+                mockk<DistanceRecord>(relaxed = true) {
+                    every { metadata.id } returns "dist-1"
+                    every { metadata.dataOrigin.packageName } returns "com.strava"
+                    every { startTime } returns Instant.parse("2026-08-31T10:00:00Z")
+                    every { endTime } returns Instant.parse("2026-08-31T11:00:00Z")
+                }
+            val change = UpsertionChange(distRecord)
+            val distResponse =
+                mockk<ChangesResponse>(relaxed = true) {
+                    every { changesTokenExpired } returns false
+                    every { changes } returns listOf(change)
+                    every { nextChangesToken } returns "dist-token-2"
+                    every { hasMore } returns false
+                }
+            coEvery { client.getChanges("dist-token-1") } returns distResponse
+            coEvery {
+                workoutEnrichmentRefresher.refreshForIntervalChanges(any(), any())
+            } returns setOf(LocalDate.parse("2026-08-31"))
+
+            val outcome = synchronizer.applyPendingChanges()
+
+            assertFalse(outcome.requiresFullResync)
+            assertTrue(outcome.affectedDates.contains(LocalDate.parse("2026-08-31")))
+            coVerify(exactly = 1) {
+                workoutEnrichmentRefresher.refreshForIntervalChanges(
+                    match { list ->
+                        list.size == 1 && list[0].sourceId == "dist-1" && list[0].kind == IntervalKind.DISTANCE
+                    },
+                    any(),
+                )
+            }
+
+            synchronizer.commitTokens(outcome.nextTokens)
+            coVerify { tokenStore.putToken("DISTANCE", "dist-token-2", any()) }
+        }
+
+    @Test
+    fun `applyPendingChanges suspends interval token when permission revoked`() =
+        runTest {
+            seedTokens()
+            HealthDataType.entries.forEach { current ->
+                coEvery { client.getChanges(tokenFor(current)) } returns changesResponse(emptyList())
+            }
+
+            // Grant all except DistanceRecord
+            coEvery { client.permissionController.getGrantedPermissions() } returns allPermissions()
+            coEvery { tokenStore.getToken("DISTANCE") } returns "dist-token-old"
+
+            val outcome = synchronizer.applyPendingChanges()
+
+            assertFalse(outcome.requiresFullResync)
+            coVerify { tokenStore.suspendToken("DISTANCE") }
+        }
+
+    @Test
+    fun `applyPendingChanges bootstraps interval token on first authorized run without resync`() =
+        runTest {
+            seedTokens()
+            HealthDataType.entries.forEach { current ->
+                coEvery { client.getChanges(tokenFor(current)) } returns changesResponse(emptyList())
+            }
+
+            val distPermission = HealthPermission.getReadPermission(DistanceRecord::class)
+            coEvery { client.permissionController.getGrantedPermissions() } returns
+                allPermissions() + distPermission
+
+            coEvery { tokenStore.getToken("DISTANCE") } returns null
+            coEvery {
+                client.getChangesToken(match { it.recordTypes.contains(DistanceRecord::class) })
+            } returns "bootstrap-dist-token"
+            coEvery { client.getChanges("bootstrap-dist-token") } returns changesResponse(emptyList())
+
+            val outcome = synchronizer.applyPendingChanges()
+
+            assertFalse(outcome.requiresFullResync)
+            synchronizer.commitTokens(outcome.nextTokens)
+            coVerify { tokenStore.putToken("DISTANCE", "next-token", any()) }
+        }
+
     private fun seedTokens() {
         coEvery { tokenStore.get(HealthDataType.SLEEP) } returns "sleep-token"
         coEvery { tokenStore.get(HealthDataType.HEART_RATE) } returns "heart-token"
@@ -423,6 +602,7 @@ class HealthChangeSynchronizerImplTest {
         coEvery { tokenStore.get(HealthDataType.OXYGEN_SATURATION) } returns "spo2-token"
         coEvery { tokenStore.get(HealthDataType.BODY_TEMPERATURE) } returns "bodytemp-token"
         coEvery { tokenStore.get(HealthDataType.STEPS) } returns "steps-token"
+        coEvery { tokenStore.get(HealthDataType.VO2_MAX) } returns "vo2max-token"
     }
 
     private fun routeOneChange(
@@ -453,6 +633,7 @@ class HealthChangeSynchronizerImplTest {
             HealthDataType.OXYGEN_SATURATION -> "spo2-token"
             HealthDataType.BODY_TEMPERATURE -> "bodytemp-token"
             HealthDataType.STEPS -> "steps-token"
+            HealthDataType.VO2_MAX -> "vo2max-token"
         }
 
     private fun changesResponse(changes: List<androidx.health.connect.client.changes.Change>) =
@@ -462,4 +643,30 @@ class HealthChangeSynchronizerImplTest {
             every { nextChangesToken } returns "next-token"
             every { hasMore } returns false
         }
+
+    private fun allPermissions(): Set<String> =
+        HealthDataType.entries.flatMap { current ->
+            recordClassesFor(current).map { HealthPermission.getReadPermission(it) }
+        }.toSet()
+
+    private fun stepsPermissions(): Set<String> =
+        recordClassesFor(HealthDataType.STEPS).map { HealthPermission.getReadPermission(it) }.toSet()
+
+    private fun setupFakeTokenStore(
+        inMemoryTokens: MutableMap<HealthDataType, String>,
+        suspended: MutableSet<HealthDataType>,
+    ) {
+        coEvery { tokenStore.get(any()) } answers { inMemoryTokens[firstArg()] }
+        coEvery { tokenStore.isSuspended(any()) } answers { firstArg<HealthDataType>() in suspended }
+        coEvery { tokenStore.suspendType(any()) } answers {
+            val type = firstArg<HealthDataType>()
+            suspended.add(type)
+            inMemoryTokens.remove(type)
+        }
+        coEvery { tokenStore.putAll(any(), any()) } answers {
+            val tokens = firstArg<Map<HealthDataType, String>>()
+            inMemoryTokens.putAll(tokens)
+            suspended.removeAll(tokens.keys)
+        }
+    }
 }

@@ -20,6 +20,9 @@ import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
+import app.readylytics.health.core.model.domain.sync.DirtyRangeStore
+import app.readylytics.health.core.model.domain.sync.DirtyTicket
+import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.util.RetentionBounds
@@ -55,12 +58,21 @@ class HealthResyncWorker
         private val foregroundSyncController: Lazy<ForegroundSyncController>,
         private val databaseReadinessGate: DatabaseReadinessInspector,
         private val settingsRepository: Lazy<SettingsRepository>,
+        private val dirtyRangeStore: Lazy<DirtyRangeStore> =
+            Lazy {
+                object : DirtyRangeStore {
+                    override suspend fun pending(limit: Int): List<DirtyTicket> = emptyList()
+                }
+            },
+        private val healthMutationCoordinator: Lazy<HealthMutationCoordinator>? = null,
     ) : CoroutineWorker(appContext, params) {
         // Progress notifications (posted from runNormalRecompute/runTrainingReadinessProjection)
         // are best-effort (wrapped in runCatching); POST_NOTIFICATIONS is declared in the manifest
         // and a missing runtime grant simply drops the update.
         override suspend fun doWork(): Result {
-            if (databaseReadinessGate.inspect() != DatabaseReadiness.Ready) {
+            if (databaseReadinessGate.inspect() != DatabaseReadiness.Ready ||
+                healthMutationCoordinator?.get()?.isMaintenancePending() == true
+            ) {
                 return Result.retry()
             }
             val resyncUseCase = fullHistoricalResyncUseCase.get()
@@ -104,18 +116,16 @@ class HealthResyncWorker
             onSuccessChanged: (Boolean) -> Unit,
         ): Result {
             val recomputeOnly = inputData.getBoolean(KEY_RECOMPUTE_ONLY, false)
-            val rangeOverride =
-                inputData.getLong(KEY_RECOMPUTE_START_EPOCH_DAY, -1L).takeIf { it >= 0 }?.let { startEpochDay ->
-                    val endEpochDay = inputData.getLong(KEY_RECOMPUTE_END_EPOCH_DAY, startEpochDay)
-                    ScoreInvalidation.AffectedRange(
-                        start = LocalDate.ofEpochDay(startEpochDay),
-                        endInclusive = LocalDate.ofEpochDay(endEpochDay),
-                    )
-                }
+            val runId = inputData.getString(KEY_RUN_ID)
+            val prefs = settingsRepository.get().userPreferences.first()
+            val retentionStart = RetentionBounds.resolveResyncStartDate(prefs, LocalDate.now(prefs.scoringZone()))
+            dirtyRangeStore.get().discardBefore(retentionStart)
+            val rangeOverride = resolveRecomputeRange(recomputeOnly)
             val result =
                 resyncUseCase.execute(
                     recomputeOnly = recomputeOnly,
                     rangeOverride = rangeOverride,
+                    runId = runId,
                 ) { phase, current, total ->
                     setProgressAsync(workDataOf(KEY_CURRENT to current, KEY_TOTAL to total))
                     syncController.onBackgroundRecalcProgress(phase, current, total)
@@ -136,6 +146,23 @@ class HealthResyncWorker
             } else {
                 // Transient HC/IO failure: let WorkManager retry with its backoff policy.
                 Result.retry()
+            }
+        }
+
+        private suspend fun resolveRecomputeRange(recomputeOnly: Boolean): ScoreInvalidation.AffectedRange? {
+            val explicitStart = inputData.getLong(KEY_RECOMPUTE_START_EPOCH_DAY, -1L)
+            if (explicitStart >= 0) {
+                val end = inputData.getLong(KEY_RECOMPUTE_END_EPOCH_DAY, explicitStart)
+                return ScoreInvalidation.AffectedRange(LocalDate.ofEpochDay(explicitStart), LocalDate.ofEpochDay(end))
+            }
+            val pending = if (recomputeOnly) dirtyRangeStore.get().pending(100) else emptyList()
+            return pending.takeIf { it.isNotEmpty() }?.let {
+                ScoreInvalidation.AffectedRange(
+                    it.minOf { ticket ->
+                        ticket.nextDay
+                    },
+                    it.maxOf { ticket -> ticket.endInclusive },
+                )
             }
         }
 
@@ -293,6 +320,9 @@ class HealthResyncWorker
 
             /** Input data key: true routes this run through the SCORE-007 recompute-only path. */
             const val KEY_RECOMPUTE_ONLY = "recompute_only"
+
+            /** WP-10: optional input data key referencing the immutable historical run ID. */
+            const val KEY_RUN_ID = "run_id"
 
             /**
              * R2-CACHE-001: optional input data keys carrying a bounded recompute-only date-range

@@ -38,7 +38,7 @@
     "snapshotCalibrationPhase": "EARLY_BASELINE",
     "hrvSigmaPrior": 0.1,
     "rasScalingFactor": 0.18,
-    "baselineObservationCount": 13,
+    "baselineObservationCount": 14,
     "trimpWorkoutOnly": 0.0,
     "trimpEverydayHr": 0.0,
     "rasWorkoutOnly": 0.0,

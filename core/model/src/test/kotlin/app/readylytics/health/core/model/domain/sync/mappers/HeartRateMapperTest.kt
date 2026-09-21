@@ -41,7 +41,9 @@ class HeartRateMapperTest {
 
         val result = HeartRateMapper.mapToInputs(listOf(record), emptyList(), emptyList())
 
-        assertEquals(0, result.size)
+        assertEquals(1, result.size)
+        assertEquals("rec_empty", result[0].source.sourceId)
+        assertEquals(0, result[0].rows.size)
     }
 
     @Test
@@ -69,9 +71,85 @@ class HeartRateMapperTest {
         val result = HeartRateMapper.mapToInputs(listOf(recordA, recordB), listOf(sleepSession), emptyList())
 
         assertEquals(2, result.size)
-        val byTs = result.associateBy { it.timestampMs }
+        val rows = result.flatMap { it.rows }
+        assertEquals(2, rows.size)
+        val byTs = rows.associateBy { it.timestampMs }
         assertEquals("SLEEP", byTs[sample1Time.toEpochMilli()]?.recordType)
         assertEquals("SLEEP", byTs[sample2Time.toEpochMilli()]?.recordType)
+    }
+
+    @Test
+    fun `mapToInputs handles out-of-order records across distinct sessions`() {
+        val s1Start = Instant.parse("2026-05-10T00:00:00Z").toEpochMilli()
+        val s1End = Instant.parse("2026-05-10T02:00:00Z").toEpochMilli()
+        val s2Start = Instant.parse("2026-05-10T02:30:00Z").toEpochMilli()
+        val s2End = Instant.parse("2026-05-10T04:00:00Z").toEpochMilli()
+
+        val session1 = sleepSession.copy(id = "sleep_early", startTime = s1Start, endTime = s1End)
+        val session2 = sleepSession.copy(id = "sleep_late", startTime = s2Start, endTime = s2End)
+
+        val tLater = Instant.parse("2026-05-10T03:00:00Z")
+        val tEarlier = Instant.parse("2026-05-10T01:00:00Z")
+
+        val recordLater =
+            DomainHeartRateRecord(
+                id = "rec_later",
+                deviceName = "Watch",
+                samples = listOf(DomainHeartRateSample(time = tLater, beatsPerMinute = 60)),
+            )
+        val recordEarlier =
+            DomainHeartRateRecord(
+                id = "rec_earlier",
+                deviceName = "Watch",
+                samples = listOf(DomainHeartRateSample(time = tEarlier, beatsPerMinute = 65)),
+            )
+
+        val result =
+            HeartRateMapper.mapToInputs(
+                listOf(recordLater, recordEarlier),
+                listOf(session1, session2),
+                emptyList(),
+            )
+
+        val rows = result.flatMap { it.rows }.associateBy { it.timestampMs }
+        assertEquals("sleep_late", rows[tLater.toEpochMilli()]?.sessionId)
+        assertEquals("sleep_early", rows[tEarlier.toEpochMilli()]?.sessionId)
+    }
+
+    @Test
+    fun `mapToInputs handles out-of-order samples within a single record across distinct sessions`() {
+        val s1Start = Instant.parse("2026-05-10T00:00:00Z").toEpochMilli()
+        val s1End = Instant.parse("2026-05-10T02:00:00Z").toEpochMilli()
+        val s2Start = Instant.parse("2026-05-10T02:30:00Z").toEpochMilli()
+        val s2End = Instant.parse("2026-05-10T04:00:00Z").toEpochMilli()
+
+        val session1 = sleepSession.copy(id = "sleep_early", startTime = s1Start, endTime = s1End)
+        val session2 = sleepSession.copy(id = "sleep_late", startTime = s2Start, endTime = s2End)
+
+        val tLater = Instant.parse("2026-05-10T03:00:00Z")
+        val tEarlier = Instant.parse("2026-05-10T01:00:00Z")
+
+        val record =
+            DomainHeartRateRecord(
+                id = "rec_unordered_samples",
+                deviceName = "Watch",
+                samples =
+                    listOf(
+                        DomainHeartRateSample(time = tLater, beatsPerMinute = 60),
+                        DomainHeartRateSample(time = tEarlier, beatsPerMinute = 65),
+                    ),
+            )
+
+        val result =
+            HeartRateMapper.mapToInputs(
+                listOf(record),
+                listOf(session1, session2),
+                emptyList(),
+            )
+
+        val rows = result.flatMap { it.rows }.associateBy { it.timestampMs }
+        assertEquals("sleep_late", rows[tLater.toEpochMilli()]?.sessionId)
+        assertEquals("sleep_early", rows[tEarlier.toEpochMilli()]?.sessionId)
     }
 
     @Test
@@ -89,8 +167,10 @@ class HeartRateMapperTest {
 
         val result = HeartRateMapper.mapToInputs(listOf(record), emptyList(), emptyList())
 
-        assertEquals(2, result.size)
-        val ids = result.map { it.id }.toSet()
+        assertEquals(1, result.size)
+        val rows = result[0].rows
+        assertEquals(2, rows.size)
+        val ids = rows.map { it.id }.toSet()
         assertEquals(setOf("rec_1_${t1.toEpochMilli()}", "rec_1_${t2.toEpochMilli()}"), ids)
     }
 
@@ -108,8 +188,10 @@ class HeartRateMapperTest {
         val result = HeartRateMapper.mapToInputs(listOf(record), listOf(sleepSession), emptyList())
 
         assertEquals(1, result.size)
-        assertEquals("RESTING", result[0].recordType)
-        assertNull(result[0].sessionId)
+        val rows = result[0].rows
+        assertEquals(1, rows.size)
+        assertEquals("RESTING", rows[0].recordType)
+        assertNull(rows[0].sessionId)
     }
 
     @Test
@@ -145,8 +227,10 @@ class HeartRateMapperTest {
         val result = HeartRateMapper.mapToInputs(listOf(record), emptyList(), listOf(workoutSession))
 
         assertEquals(1, result.size)
-        assertEquals("EXERCISE", result[0].recordType)
-        assertEquals("workout_1", result[0].sessionId)
+        val rows = result[0].rows
+        assertEquals(1, rows.size)
+        assertEquals("EXERCISE", rows[0].recordType)
+        assertEquals("workout_1", rows[0].sessionId)
     }
 
     @Test
@@ -184,8 +268,10 @@ class HeartRateMapperTest {
         val result = HeartRateMapper.mapToInputs(listOf(record), listOf(sleepSession), listOf(workoutSession))
 
         assertEquals(1, result.size)
-        assertEquals("SLEEP", result[0].recordType)
-        assertEquals("sleep_1", result[0].sessionId)
+        val rows = result[0].rows
+        assertEquals(1, rows.size)
+        assertEquals("SLEEP", rows[0].recordType)
+        assertEquals("sleep_1", rows[0].sessionId)
     }
 }
 

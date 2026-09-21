@@ -62,6 +62,10 @@ class PermissionBulletsTest {
             R.string.onboarding_hc_permission_body_temperature,
             healthPermissionLabelRes(HealthPermission.getReadPermission(BodyTemperatureRecord::class)),
         )
+        assertEquals(
+            R.string.onboarding_hc_permission_background,
+            healthPermissionLabelRes(HealthPermission.PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND),
+        )
     }
 
     /**

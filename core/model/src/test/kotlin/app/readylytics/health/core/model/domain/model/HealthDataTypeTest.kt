@@ -5,8 +5,8 @@ import org.junit.Test
 
 class HealthDataTypeTest {
     @Test
-    fun `all ten data types are present`() {
-        assertEquals(10, HealthDataType.entries.size)
+    fun `all eleven data types are present`() {
+        assertEquals(11, HealthDataType.entries.size)
     }
 
     @Test
@@ -32,6 +32,7 @@ class HealthDataTypeTest {
                 HealthDataType.HRV,
                 HealthDataType.OXYGEN_SATURATION,
                 HealthDataType.BODY_TEMPERATURE,
+                HealthDataType.VO2_MAX,
             ),
             byCategory[HealthDataCategory.VITALS]?.toSet(),
         )

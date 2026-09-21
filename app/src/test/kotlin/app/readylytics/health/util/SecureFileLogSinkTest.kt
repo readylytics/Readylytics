@@ -47,6 +47,7 @@ class SecureFileLogSinkTest {
         every { Log.w(any(), any() as String, any()) } returns 0
         every { Log.e(any(), any() as String) } returns 0
         every { Log.e(any(), any() as String, any()) } returns 0
+        every { Log.println(any(), any(), any()) } returns 0
         every { Log.getStackTraceString(any()) } answers { firstArg<Throwable>().stackTraceToString() }
     }
 
@@ -94,7 +95,7 @@ class SecureFileLogSinkTest {
 
             sink.readLogsDecrypted()
 
-            val storedContents = secureFileStore.storedContents(File(cacheDir, "logs"))
+            val storedContents = secureFileStore.storedContents(File(cacheDir, SecureFileLogSink.LOG_DIRECTORY_NAME))
             val totalBytes = storedContents.values.sumOf { it.toByteArray(Charsets.UTF_8).size.toLong() }
 
             assertTrue("Rotation should never exceed active plus backup slots", storedContents.size <= 3)
@@ -123,11 +124,12 @@ class SecureFileLogSinkTest {
             sink.log(LogLevel.ERROR, "ErrorTag", "Something went wrong", exception, LogContext("session-123"))
 
             val content = sink.readLogsDecrypted()
-            assertTrue("Log should contain Tag", content.contains("[ErrorTag]"))
-            assertTrue("Log should contain Level", content.contains("[ERROR]"))
-            assertTrue("Log should contain SessionId", content.contains("[Session:session-123]"))
-            assertTrue("Log should contain Message", content.contains("Something went wrong"))
-            assertTrue("Log should contain Stack Trace", content.contains("java.lang.RuntimeException: Test Exception"))
+            assertTrue("Log should contain reason", content.contains("OPERATION_FAILED"))
+            assertTrue("Log should contain Stack Trace", content.contains("java.lang.RuntimeException"))
+            assertFalse("Log must not contain Tag", content.contains("[ErrorTag]"))
+            assertFalse("Log must not contain SessionId", content.contains("session-123"))
+            assertFalse("Log must not contain Message", content.contains("Something went wrong"))
+            assertFalse("Log must not contain Exception Message", content.contains("Test Exception"))
         }
 
     @Test
@@ -156,11 +158,11 @@ class SecureFileLogSinkTest {
                 )
             sink.log(LogLevel.INFO, "TestTag", "Log 1", null, LogContext("session-1"))
 
-            val logFile = File(cacheDir, "logs/prod_logs.txt")
+            val logFile = File(cacheDir, "${SecureFileLogSink.LOG_DIRECTORY_NAME}/prod_logs.txt")
             assertTrue(!logFile.exists() || logFile.readText().isEmpty())
 
             val content = sink.readLogsDecrypted()
-            assertTrue(content.contains("Log 1"))
+            assertTrue(content.contains("OPERATION_FAILED"))
         }
 
     @Test
@@ -192,8 +194,9 @@ class SecureFileLogSinkTest {
             // buffer). A fresh instance hydrating the slot just written proves the read path also
             // delegates to the helper.
             val content = newSink().readLogsDecrypted()
+            assertTrue(content.contains("OPERATION_FAILED"))
             for (i in 1..5) {
-                assertTrue(content.contains("Encrypted log $i"))
+                assertFalse(content.contains("Encrypted log $i"))
             }
             assertTrue("Encrypted read should delegate to helper", secureFileStore.readCalls.contains("prod_logs.txt"))
         }
@@ -214,11 +217,12 @@ class SecureFileLogSinkTest {
                 sink.log(LogLevel.INFO, "TestTag", "Log $i", null, LogContext("session-1"))
             }
 
-            val logFile = File(cacheDir, "logs/prod_logs.txt")
+            val logFile = File(cacheDir, "${SecureFileLogSink.LOG_DIRECTORY_NAME}/prod_logs.txt")
             assertTrue(logFile.exists())
             val content = logFile.readText()
+            assertTrue(content.contains("OPERATION_FAILED"))
             for (i in 1..5) {
-                assertTrue(content.contains("Log $i"))
+                assertFalse(content.contains("Log $i"))
             }
         }
 
@@ -227,7 +231,7 @@ class SecureFileLogSinkTest {
         runBlocking {
             val secureFileStore = FakeSecureFileStore()
             val legacyFile =
-                File(cacheDir, "logs/prod_logs.txt").apply {
+                File(cacheDir, "${SecureFileLogSink.LOG_DIRECTORY_NAME}/prod_logs.txt").apply {
                     parentFile?.mkdirs()
                     writeText("legacy-garbage")
                 }
@@ -248,13 +252,14 @@ class SecureFileLogSinkTest {
 
             val content = sink.readLogsDecrypted()
 
+            assertTrue(content.contains("OPERATION_FAILED"))
             for (i in 1..5) {
-                assertTrue(content.contains("Fresh log $i"))
+                assertFalse(content.contains("Fresh log $i"))
             }
             assertTrue(!content.contains("legacy-garbage"))
             assertTrue(
                 "Unreadable content should be replaced with new readable data",
-                secureFileStore.readableContentFor(legacyFile).contains("Fresh log 5"),
+                secureFileStore.readableContentFor(legacyFile).contains("OPERATION_FAILED"),
             )
         }
 
@@ -270,7 +275,7 @@ class SecureFileLogSinkTest {
                     coroutineContext = Dispatchers.Unconfined,
                 )
 
-            val logDir = File(cacheDir, "logs")
+            val logDir = File(cacheDir, SecureFileLogSink.LOG_DIRECTORY_NAME)
             if (!logDir.exists()) logDir.mkdirs()
 
             File(logDir, "prod_logs.txt.2").writeText("Oldest log\n")
@@ -293,7 +298,7 @@ class SecureFileLogSinkTest {
                     coroutineContext = Dispatchers.Unconfined,
                 )
 
-            val logDir = File(cacheDir, "logs")
+            val logDir = File(cacheDir, SecureFileLogSink.LOG_DIRECTORY_NAME)
             if (!logDir.exists()) logDir.mkdirs()
 
             File(logDir, "prod_logs.txt.2").writeText("Oldest log\n")
@@ -322,11 +327,13 @@ class SecureFileLogSinkTest {
 
             val content = sink.readLogsDecrypted()
 
-            assertTrue(content.contains("[ErrorTag]"))
-            assertTrue(content.contains("[ERROR]"))
-            assertTrue(content.contains("[Session:session-123]"))
-            assertTrue(content.contains("Something went wrong"))
-            assertTrue(content.contains("java.lang.RuntimeException: Test Exception"))
+            assertTrue(content.contains("OPERATION_FAILED"))
+            assertTrue(content.contains("java.lang.RuntimeException"))
+            assertFalse(content.contains("[ErrorTag]"))
+            assertFalse(content.contains("[ERROR]"))
+            assertFalse(content.contains("[Session:session-123]"))
+            assertFalse(content.contains("Something went wrong"))
+            assertFalse(content.contains("Test Exception"))
             assertTrue(
                 "Plaintext mode should not use secure file helper",
                 secureFileStore.writeCalls.isEmpty() && secureFileStore.readCalls.isEmpty(),
@@ -349,13 +356,15 @@ class SecureFileLogSinkTest {
 
             sink.log(LogLevel.INFO, "TestTag", "Timed Log", null, LogContext("session-1"))
 
-            val logFile = File(cacheDir, "logs/prod_logs.txt")
+            val logFile = File(cacheDir, "${SecureFileLogSink.LOG_DIRECTORY_NAME}/prod_logs.txt")
             delay(50)
             assertTrue(!logFile.exists() || logFile.readText().isEmpty())
 
             delay(500)
             assertTrue(logFile.exists())
-            assertTrue(logFile.readText().contains("Timed Log"))
+            val content = logFile.readText()
+            assertTrue(content.contains("OPERATION_FAILED"))
+            assertFalse(content.contains("Timed Log"))
         }
 
     @Test
@@ -403,10 +412,11 @@ class SecureFileLogSinkTest {
             }
 
             val content = sink.readLogsDecrypted()
-            val slots = secureFileStore.storedContents(File(cacheDir, "logs"))
+            val slots = secureFileStore.storedContents(File(cacheDir, SecureFileLogSink.LOG_DIRECTORY_NAME))
             val totalBytes = slots.values.sumOf { it.toByteArray(Charsets.UTF_8).size.toLong() }
 
-            assertTrue(content.contains("Log 20"))
+            assertTrue(content.contains("OPERATION_FAILED"))
+            assertFalse(content.contains("Log 20"))
             assertTrue("Slot count is structurally bounded", slots.size <= 2)
             assertTrue("Total retention must stay bounded", totalBytes <= 2 * (80L + longestLineBytes(slots)))
         }
@@ -453,6 +463,100 @@ class SecureFileLogSinkTest {
         }
 
     @Test
+    fun testReleaseDiagnosticsOmitNestedPayloadsFromLogcatAndDecryptedFile() =
+        runBlocking {
+            val loggedTags = mutableListOf<String>()
+            val loggedMessages = mutableListOf<String>()
+            setupMockLog(loggedTags, loggedMessages)
+
+            val secureFileStore = FakeSecureFileStore()
+            val sink =
+                SecureFileLogSink(
+                    context = mockContext,
+                    maxFileSize = 10000L,
+                    maxBackups = 2,
+                    encryptStreams = true,
+                    coroutineContext = Dispatchers.Unconfined,
+                    secureFileStore = secureFileStore,
+                )
+
+            val corpus =
+                listOf(
+                    "bpm=187",
+                    "rmssd=94.7",
+                    "52.5200,13.4050",
+                    "source_private_123",
+                    "content://private/tree/secret",
+                    "backup-secret",
+                )
+            val root = IllegalStateException(corpus[5], IllegalArgumentException(corpus[0]))
+            root.addSuppressed(java.io.IOException(corpus[1]))
+
+            sink.log(
+                level = LogLevel.ERROR,
+                tag = corpus[3],
+                message = corpus[2],
+                throwable = root,
+                context = LogContext(sessionId = corpus[4]),
+            )
+
+            val content = sink.readLogsDecrypted()
+
+            corpus.forEach { item ->
+                assertFalse("Decrypted log must not contain $item", content.contains(item))
+                loggedTags.forEach { tag ->
+                    assertFalse("Logcat tag must not contain $item", tag.contains(item))
+                }
+                loggedMessages.forEach { msg ->
+                    assertFalse("Logcat message must not contain $item", msg.contains(item))
+                }
+            }
+        }
+
+    private fun setupMockLog(
+        loggedTags: MutableList<String>,
+        loggedMessages: MutableList<String>,
+    ) {
+        every { Log.d(any(), any()) } answers {
+            loggedTags += firstArg<String>()
+            loggedMessages += secondArg<String>()
+            0
+        }
+        every { Log.i(any(), any()) } answers {
+            loggedTags += firstArg<String>()
+            loggedMessages += secondArg<String>()
+            0
+        }
+        every { Log.w(any(), any() as String) } answers {
+            loggedTags += firstArg<String>()
+            loggedMessages += secondArg<String>()
+            0
+        }
+        every { Log.w(any(), any() as String, any()) } answers {
+            loggedTags += firstArg<String>()
+            loggedMessages += secondArg<String>()
+            loggedMessages += thirdArg<Throwable?>()?.message.orEmpty()
+            0
+        }
+        every { Log.e(any(), any() as String) } answers {
+            loggedTags += firstArg<String>()
+            loggedMessages += secondArg<String>()
+            0
+        }
+        every { Log.e(any(), any() as String, any()) } answers {
+            loggedTags += firstArg<String>()
+            loggedMessages += secondArg<String>()
+            loggedMessages += thirdArg<Throwable?>()?.message.orEmpty()
+            0
+        }
+        every { Log.println(any(), any(), any()) } answers {
+            loggedTags += secondArg<String>()
+            loggedMessages += thirdArg<String>()
+            0
+        }
+    }
+
+    @Test
     fun testDebugIsNotLoggableAndNeverReachesTheFile() =
         runBlocking {
             val sink =
@@ -473,7 +577,8 @@ class SecureFileLogSinkTest {
 
             val content = sink.readLogsDecrypted()
             assertFalse("DEBUG must not reach the diagnostic file", content.contains("chatty sync detail"))
-            assertTrue("INFO must reach the diagnostic file", content.contains("sync milestone"))
+            assertTrue("OPERATION_FAILED must reach the diagnostic file", content.contains("OPERATION_FAILED"))
+            assertFalse("Raw message must not reach the diagnostic file", content.contains("sync milestone"))
         }
 
     private fun longestLineBytes(storedContents: Map<String, String>): Long =

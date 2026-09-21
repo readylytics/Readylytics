@@ -176,6 +176,170 @@ interface HeartRateDao {
         endMs: Long,
     ): Flow<List<HeartRateRecordEntity>> = _observeByTimeRange(startMs, endMs).distinctUntilChanged()
 
+    // ---------------------------------------------------------------------------------------------
+    // WP-17 Step 3: raw-side tier-visibility predicate.
+    //
+    // Every query below returns only raw rows that are still the AUTHORITATIVE tier for their own
+    // minute, i.e. rows whose minute either has no committed `minute_coverage` row at all (never
+    // rolled up, or rolled-up coverage retired) or has an explicit `HOT` coverage row. A minute
+    // whose committed tier is `WARM`/`LEGACY_WARM` is served exclusively from
+    // `hr_minute_buckets` (see MinuteBucketDao's mirror predicate) -- readers must never union the
+    // two for the same minute, because after the OD-1 legacy-quarantine rule raw rows can coexist
+    // below the hot/warm cutoff alongside a `LEGACY_*` coverage row.
+    //
+    // The minute key is the floor-division epoch minute T1 and `completeMinuteCutoff` use: SQLite's
+    // `/` truncates toward zero and `%` keeps the dividend's sign, so the `CASE` term subtracts one
+    // minute for a negative remainder. That makes a pre-1970 timestamp land in the same bucket here
+    // as in `minute_coverage`/`hr_minute_buckets`.
+    //
+    // Last-resort fallback (WP-17 review round 1, I2): a minute whose coverage says
+    // `WARM`/`LEGACY_WARM` at generation G but which has NO bucket slice at G -- a partially applied
+    // restore, or any future writer that commits coverage without its projection -- would otherwise
+    // fail BOTH predicates and vanish from every reader: raw suppressed because coverage exists and
+    // is not `HOT`, warm hidden because the generation does not match, and MinuteBucketDao's
+    // coverage-less `NOT EXISTS` branch cannot fire because coverage *does* exist. The
+    // `NOT EXISTS (... b2 ...)` term below degrades that minute to showing its raw evidence instead,
+    // which makes the two predicates a total partition of the minute space rather than one that is
+    // total only given today's writers. It can never double-count: it is reachable only when the
+    // warm side has nothing visible for that minute at all. SQLite short-circuits the `OR` chain, so
+    // the correlated subquery is evaluated only for a raw row whose minute is warm-covered.
+    //
+    // `minute_coverage.bucketStartMs` is a single-column INTEGER primary key, i.e. a SQLite rowid
+    // alias, so the join is a rowid seek per raw row and needs no extra index; `hr_minute_buckets`
+    // has an existing `(bucketStartMs, bucketEndMs)` index that covers the fallback subquery. Both
+    // claims are asserted against real SQLite by
+    // `AuthoritativeHeartRateReaderEquivalenceTest.the visibility predicates are index-driven`,
+    // which dumps `EXPLAIN QUERY PLAN` and fails on a table scan. The raw side is driven by the
+    // existing `index_hr_v10_timestamp` / `index_hr_v10_type_timestamp` range scans, unchanged.
+    // ---------------------------------------------------------------------------------------------
+
+    /** Tier-authoritative equivalent of [getByTimeRange] (inclusive `endMs`, matching it). */
+    @Query(
+        "SELECT h.* FROM heart_rate_records h " +
+            "LEFT JOIN minute_coverage c ON c.bucketStartMs = " +
+            "((h.timestampMs / 60000) - (CASE WHEN h.timestampMs % 60000 < 0 THEN 1 ELSE 0 END)) * 60000 " +
+            "WHERE h.timestampMs >= :startMs AND h.timestampMs <= :endMs " +
+            "AND (c.bucketStartMs IS NULL OR c.tier = 'HOT' " +
+            "OR (c.tier IN ('WARM', 'LEGACY_WARM') AND NOT EXISTS (" +
+            "SELECT 1 FROM hr_minute_buckets b2 WHERE b2.bucketStartMs = c.bucketStartMs " +
+            "AND b2.generation = c.visibleGeneration))) " +
+            "ORDER BY h.timestampMs ASC, h.sourceRecordRef ASC",
+    )
+    suspend fun getVisibleByTimeRange(
+        startMs: Long,
+        endMs: Long,
+    ): List<HeartRateRecordEntity>
+
+    /** Tier-authoritative equivalent of [getByTypeAndTimeRange] (inclusive `endMs`, matching it). */
+    @Query(
+        "SELECT h.* FROM heart_rate_records h " +
+            "LEFT JOIN minute_coverage c ON c.bucketStartMs = " +
+            "((h.timestampMs / 60000) - (CASE WHEN h.timestampMs % 60000 < 0 THEN 1 ELSE 0 END)) * 60000 " +
+            "WHERE h.recordType = :recordType " +
+            "AND h.timestampMs >= :startMs AND h.timestampMs <= :endMs " +
+            "AND (c.bucketStartMs IS NULL OR c.tier = 'HOT' " +
+            "OR (c.tier IN ('WARM', 'LEGACY_WARM') AND NOT EXISTS (" +
+            "SELECT 1 FROM hr_minute_buckets b2 WHERE b2.bucketStartMs = c.bucketStartMs " +
+            "AND b2.generation = c.visibleGeneration))) " +
+            "ORDER BY h.timestampMs ASC, h.sourceRecordRef ASC",
+    )
+    suspend fun getVisibleByTypeAndTimeRange(
+        recordType: String,
+        startMs: Long,
+        endMs: Long,
+    ): List<HeartRateRecordEntity>
+
+    /** Tier-authoritative equivalent of [_observeByTimeRange] (exclusive `endMs`, matching it). */
+    @Query(
+        "SELECT h.* FROM heart_rate_records h " +
+            "LEFT JOIN minute_coverage c ON c.bucketStartMs = " +
+            "((h.timestampMs / 60000) - (CASE WHEN h.timestampMs % 60000 < 0 THEN 1 ELSE 0 END)) * 60000 " +
+            "WHERE h.timestampMs >= :startMs AND h.timestampMs < :endMs " +
+            "AND (c.bucketStartMs IS NULL OR c.tier = 'HOT' " +
+            "OR (c.tier IN ('WARM', 'LEGACY_WARM') AND NOT EXISTS (" +
+            "SELECT 1 FROM hr_minute_buckets b2 WHERE b2.bucketStartMs = c.bucketStartMs " +
+            "AND b2.generation = c.visibleGeneration))) " +
+            "ORDER BY h.timestampMs ASC, h.sourceRecordRef ASC",
+    )
+    fun _observeVisibleByTimeRange(
+        startMs: Long,
+        endMs: Long,
+    ): Flow<List<HeartRateRecordEntity>>
+
+    fun observeVisibleByTimeRange(
+        startMs: Long,
+        endMs: Long,
+    ): Flow<List<HeartRateRecordEntity>> = _observeVisibleByTimeRange(startMs, endMs).distinctUntilChanged()
+
+    /** Tier-authoritative equivalent of [getMinuteBuckets] (exclusive `dayEndMs`, matching it). */
+    @Query(
+        "SELECT (h.timestampMs - :dayStartMs) / 60000 AS bucketIndex, " +
+            "AVG(h.beatsPerMinute) AS avgBpm, COUNT(*) AS sampleCount " +
+            "FROM heart_rate_records h " +
+            "LEFT JOIN minute_coverage c ON c.bucketStartMs = " +
+            "((h.timestampMs / 60000) - (CASE WHEN h.timestampMs % 60000 < 0 THEN 1 ELSE 0 END)) * 60000 " +
+            "WHERE h.timestampMs >= :dayStartMs AND h.timestampMs < :dayEndMs " +
+            "AND h.beatsPerMinute BETWEEN 30 AND 230 " +
+            "AND (c.bucketStartMs IS NULL OR c.tier = 'HOT' " +
+            "OR (c.tier IN ('WARM', 'LEGACY_WARM') AND NOT EXISTS (" +
+            "SELECT 1 FROM hr_minute_buckets b2 WHERE b2.bucketStartMs = c.bucketStartMs " +
+            "AND b2.generation = c.visibleGeneration))) " +
+            "GROUP BY bucketIndex " +
+            "ORDER BY bucketIndex ASC",
+    )
+    suspend fun getVisibleMinuteBuckets(
+        dayStartMs: Long,
+        dayEndMs: Long,
+    ): List<HrMinuteBucketRow>
+
+    /** Tier-authoritative equivalent of [getSleepHrProjectionForSessions]. */
+    @Query(
+        "SELECT h.sessionId AS sessionId, h.beatsPerMinute AS beatsPerMinute " +
+            "FROM heart_rate_records h " +
+            "LEFT JOIN minute_coverage c ON c.bucketStartMs = " +
+            "((h.timestampMs / 60000) - (CASE WHEN h.timestampMs % 60000 < 0 THEN 1 ELSE 0 END)) * 60000 " +
+            "WHERE h.sessionId IN (:sessionIds) AND h.recordType = 'SLEEP' " +
+            "AND h.beatsPerMinute BETWEEN 30 AND 230 " +
+            "AND (c.bucketStartMs IS NULL OR c.tier = 'HOT' " +
+            "OR (c.tier IN ('WARM', 'LEGACY_WARM') AND NOT EXISTS (" +
+            "SELECT 1 FROM hr_minute_buckets b2 WHERE b2.bucketStartMs = c.bucketStartMs " +
+            "AND b2.generation = c.visibleGeneration))) " +
+            "ORDER BY h.sessionId ASC, h.beatsPerMinute ASC, h.timestampMs ASC, h.sourceRecordRef ASC",
+    )
+    suspend fun getVisibleSleepHrProjectionForSessions(sessionIds: List<String>): List<SleepHrSample>
+
+    /** Tier-authoritative equivalent of [getSleepHrSamplesForSession]. */
+    @Query(
+        "SELECT h.beatsPerMinute FROM heart_rate_records h " +
+            "LEFT JOIN minute_coverage c ON c.bucketStartMs = " +
+            "((h.timestampMs / 60000) - (CASE WHEN h.timestampMs % 60000 < 0 THEN 1 ELSE 0 END)) * 60000 " +
+            "WHERE h.sessionId = :sessionId AND h.recordType = 'SLEEP' " +
+            "AND h.beatsPerMinute BETWEEN 30 AND 230 " +
+            "AND (c.bucketStartMs IS NULL OR c.tier = 'HOT' " +
+            "OR (c.tier IN ('WARM', 'LEGACY_WARM') AND NOT EXISTS (" +
+            "SELECT 1 FROM hr_minute_buckets b2 WHERE b2.bucketStartMs = c.bucketStartMs " +
+            "AND b2.generation = c.visibleGeneration))) " +
+            "ORDER BY h.beatsPerMinute ASC, h.timestampMs ASC, h.sourceRecordRef ASC",
+    )
+    suspend fun getVisibleSleepHrSamplesForSession(sessionId: String): List<Int>
+
+    /** Tier-authoritative equivalent of [getMinHrInRange] (inclusive `endTimeMs`, matching it). */
+    @Query(
+        "SELECT MIN(h.beatsPerMinute) FROM heart_rate_records h " +
+            "LEFT JOIN minute_coverage c ON c.bucketStartMs = " +
+            "((h.timestampMs / 60000) - (CASE WHEN h.timestampMs % 60000 < 0 THEN 1 ELSE 0 END)) * 60000 " +
+            "WHERE h.timestampMs >= :startTimeMs AND h.timestampMs <= :endTimeMs " +
+            "AND h.beatsPerMinute BETWEEN 30 AND 230 " +
+            "AND (c.bucketStartMs IS NULL OR c.tier = 'HOT' " +
+            "OR (c.tier IN ('WARM', 'LEGACY_WARM') AND NOT EXISTS (" +
+            "SELECT 1 FROM hr_minute_buckets b2 WHERE b2.bucketStartMs = c.bucketStartMs " +
+            "AND b2.generation = c.visibleGeneration)))",
+    )
+    suspend fun getVisibleMinHrInRange(
+        startTimeMs: Long,
+        endTimeMs: Long,
+    ): Int?
+
     // Conflict-targeted UPSERT on the natural unique key (sourceRecordRef, timestampMs): updates
     // mutable columns (recordType/sessionId/deviceName) in place and preserves rowId — unlike
     // SQLite REPLACE, which deletes+reinserts and rotates rowId on every re-upsert. The WHERE
@@ -185,10 +349,12 @@ interface HeartRateDao {
             "(sourceRecordRef, timestampMs, beatsPerMinute, recordType, sessionId, deviceName) " +
             "VALUES (:sourceRecordRef, :timestampMs, :beatsPerMinute, :recordType, :sessionId, :deviceName) " +
             "ON CONFLICT(sourceRecordRef, timestampMs) DO UPDATE SET " +
+            "beatsPerMinute = excluded.beatsPerMinute, " +
             "recordType = excluded.recordType, " +
             "sessionId = excluded.sessionId, " +
             "deviceName = excluded.deviceName " +
-            "WHERE (recordType IS NOT excluded.recordType OR " +
+            "WHERE (beatsPerMinute IS NOT excluded.beatsPerMinute OR " +
+            "recordType IS NOT excluded.recordType OR " +
             "sessionId IS NOT excluded.sessionId OR deviceName IS NOT excluded.deviceName)",
     )
     suspend fun conflictTargetedUpsert(
@@ -369,6 +535,31 @@ interface HeartRateDao {
         toMs: Long,
     ): List<HeartRateRecordEntity>
 
+    /**
+     * WP-17/OD-1 rollup deletion: removes every raw row in `[fromMs, toMs)` whose minute was just
+     * published, i.e. all of them EXCEPT the minutes whose visible coverage is still the pre-v22
+     * approximate projection (`quality = 'LEGACY_UNKNOWN'`). Those minutes are left as raw
+     * quarantine evidence pending an authorized complete refresh, because an ordinary rollup may
+     * neither overwrite their legacy coverage nor concatenate source-backed buckets into them.
+     *
+     * The predicate is one set-based statement (no bind-variable list) so a day-chunk with up to
+     * 1440 quarantined minutes still deletes in a single statement. The minute key truncates with
+     * integer division rather than `Math.floorDiv`, matching `minute_coverage.bucketStartMs` for
+     * every non-negative epoch; rollup cutoffs are always post-1970.
+     */
+    @Query(
+        "DELETE FROM heart_rate_records " +
+            "WHERE timestampMs >= :fromMs AND timestampMs < :toMs " +
+            "AND (timestampMs / 60000) * 60000 NOT IN (" +
+            "  SELECT bucketStartMs FROM minute_coverage " +
+            "  WHERE bucketStartMs >= :fromMs AND bucketStartMs < :toMs " +
+            "  AND quality = 'LEGACY_UNKNOWN')",
+    )
+    suspend fun deleteConsumedSamplesInRange(
+        fromMs: Long,
+        toMs: Long,
+    )
+
     // R2-DB-004: anchors DataRollupManager's day-chunk loop to wherever raw data actually starts,
     // and (re-queried after each chunk) to the next day containing data.
     @Query("SELECT MIN(timestampMs) FROM heart_rate_records")
@@ -379,4 +570,38 @@ interface HeartRateDao {
     // deletion touched.
     @Query("SELECT MIN(timestampMs) FROM heart_rate_records WHERE timestampMs < :beforeMs")
     suspend fun minTimestampBefore(beforeMs: Long): Long?
+
+    @Query(
+        "SELECT sourceRecordRef, MIN(timestampMs) AS minTimestampMs, MAX(timestampMs) AS maxTimestampMs " +
+            "FROM heart_rate_records WHERE sourceRecordRef IN (:sourceRecordRefs) " +
+            "GROUP BY sourceRecordRef",
+    )
+    suspend fun getChildBoundsForRefs(sourceRecordRefs: List<Long>): List<RefChildBounds>
+
+    @Query(
+        "SELECT sourceRecordRef, MIN(timestampMs) AS minTimestampMs, MAX(timestampMs) AS maxTimestampMs " +
+            "FROM heart_rate_records WHERE sourceRecordRef = :sourceRecordRef " +
+            "GROUP BY sourceRecordRef",
+    )
+    suspend fun getChildBoundsForRef(sourceRecordRef: Long): RefChildBounds?
+
+    @Query(
+        "SELECT timestampMs FROM heart_rate_records " +
+            "WHERE sourceRecordRef = :sourceRecordRef AND timestampMs > :afterTimestampMs " +
+            "ORDER BY timestampMs ASC LIMIT :limit",
+    )
+    suspend fun getTimestampsBySourceRecordRef(
+        sourceRecordRef: Long,
+        afterTimestampMs: Long,
+        limit: Int,
+    ): List<Long>
+
+    @Query(
+        "DELETE FROM heart_rate_records " +
+            "WHERE sourceRecordRef = :sourceRecordRef AND timestampMs IN (:timestamps)",
+    )
+    suspend fun deleteBySourceRecordRefAndTimestamps(
+        sourceRecordRef: Long,
+        timestamps: List<Long>,
+    ): Int
 }

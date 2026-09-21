@@ -40,7 +40,7 @@ class HealthDataRefreshAdapterTest {
         runTest {
             adapter.refreshHistorical()
 
-            verify(exactly = 1) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
+            coVerify(exactly = 1) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
             verify(exactly = 0) { workerScheduler.scheduleTrainingReadinessRecompute(any()) }
         }
 
@@ -54,7 +54,7 @@ class HealthDataRefreshAdapterTest {
             val configSlot = slot<TrainingReadinessConfig>()
             verify(exactly = 1) { workerScheduler.scheduleTrainingReadinessRecompute(capture(configSlot)) }
             assertEquals(requested, configSlot.captured)
-            verify(exactly = 0) { workerScheduler.scheduleResyncWorker(any(), any(), any()) }
+            coVerify(exactly = 0) { workerScheduler.scheduleResyncWorker(any(), any(), any()) }
         }
 
     @Test

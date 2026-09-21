@@ -1,24 +1,24 @@
 package app.readylytics.health.core.model.domain.util
 
-object PaceSpeedCalculator {
-    // Health Connect ExerciseSessionRecord type IDs:
-    // 56 (Running), 57 (Running - Treadmill), 79 (Walking), 37 (Hiking).
-    // These match the numeric IDs stored by HealthConnectRecordConverters; do not confuse
-    // 78 (Volleyball) or 34 (Gymnastics) for Hiking.
-    private val PACE_ACTIVITY_IDS = setOf("56", "57", "79", "37")
+import app.readylytics.health.core.model.domain.workouts.detail.ExerciseType
+import app.readylytics.health.core.model.domain.workouts.detail.ExerciseTypeMapper
 
-    // Fallback for sources that hand us a symbolic type instead of the numeric ID.
-    private val PACE_ACTIVITY_NAMES =
-        setOf("running", "running_treadmill", "walking", "hiking", "treadmill", "run", "walk", "hike")
+object PaceSpeedCalculator {
+    // Foot-borne activities, reported as pace (min/km) rather than speed (km/h). Resolution of the
+    // raw `exerciseType` string — numeric Health Connect id or symbolic name — is delegated to
+    // [ExerciseTypeMapper] so this does not keep a second copy of the id table.
+    private val PACE_ACTIVITIES =
+        setOf(
+            ExerciseType.RUNNING,
+            ExerciseType.RUNNING_TREADMILL,
+            ExerciseType.WALKING,
+            ExerciseType.HIKING,
+        )
 
     const val MAX_PACE_MIN_KM = 20.0
     const val PACE_CAP_MIN_PER_KM = MAX_PACE_MIN_KM
 
-    fun isPaceActivity(exerciseType: String): Boolean {
-        val trimmed = exerciseType.trim()
-        if (trimmed in PACE_ACTIVITY_IDS) return true
-        return trimmed.lowercase().removePrefix("exercise_type_") in PACE_ACTIVITY_NAMES
-    }
+    fun isPaceActivity(exerciseType: String): Boolean = ExerciseTypeMapper.fromRaw(exerciseType) in PACE_ACTIVITIES
 
     fun speedMpsToPaceMinKm(speedMps: Double): Double {
         if (speedMps <= 0.05) return MAX_PACE_MIN_KM
@@ -28,4 +28,3 @@ object PaceSpeedCalculator {
 
     fun speedMpsToSpeedKmh(speedMps: Double): Double = (speedMps * 3.6).coerceAtLeast(0.0)
 }
-

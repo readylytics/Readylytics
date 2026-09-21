@@ -29,4 +29,29 @@ message ResyncCheckpointProto {
   // R2-HC-002: Page tokens for resuming streamed sample reads mid-chunk.
   string hr_page_token = 8;
   string hrv_page_token = 9;
+  // WP-06: Types that completed ingest and deletion reconciliation.
+  repeated string completed_types = 10;
+  // H1 review fix: whether completed_types was populated by completedTypes-aware code. proto3
+  // scalars have no "was this ever set" signal, so a checkpoint serialized before this field
+  // existed decodes it to false (the default) -- correctly signaling "treat completed_types as
+  // absent, fall back to the permissive baseline-tokens default" rather than conflating a genuine
+  // narrowed-to-empty completed_types with a legacy/absent one.
+  bool completed_types_recorded = 11;
+  // WP-10: immutable run identity and scoring snapshot.
+  HistoricalRunIdentityProto run_identity = 12;
 }
+
+message HistoricalRunIdentityProto {
+  int32 protocol_version = 1;
+  string run_id = 2;
+  string mode = 3;
+  int64 start_epoch_day = 4;
+  int64 end_epoch_day_inclusive = 5;
+  string zone_id = 6;
+  int64 started_at_epoch_ms = 7;
+  string source_selection_id = 8;
+  int32 algorithm_revision = 9;
+  string scoring_snapshot_json = 10;
+  string scoring_snapshot_id = 11;
+}
+

@@ -44,13 +44,15 @@ class HrvMapperTest {
         val result = HrvMapper.mapToInputs(listOf(r1, r2), listOf(sleepSession))
 
         assertEquals(2, result.size)
+        val rows = result.flatMap { it.rows }
+        assertEquals(2, rows.size)
         // Should be sorted by timestamp ascending
-        assertEquals(t2.toEpochMilli(), result[0].timestampMs)
-        assertEquals(t1.toEpochMilli(), result[1].timestampMs)
-        assertEquals("SLEEP", result[0].recordType)
-        assertEquals("sleep_1", result[0].sessionId)
-        assertEquals("SLEEP", result[1].recordType)
-        assertEquals("sleep_1", result[1].sessionId)
+        assertEquals(t2.toEpochMilli(), rows[0].timestampMs)
+        assertEquals(t1.toEpochMilli(), rows[1].timestampMs)
+        assertEquals("SLEEP", rows[0].recordType)
+        assertEquals("sleep_1", rows[0].sessionId)
+        assertEquals("SLEEP", rows[1].recordType)
+        assertEquals("sleep_1", rows[1].sessionId)
     }
 
     @Test
@@ -61,11 +63,12 @@ class HrvMapperTest {
         val result = HrvMapper.mapToInputs(listOf(record), emptyList())
 
         assertEquals(1, result.size)
-        assertEquals("hrv_rec_${t.toEpochMilli()}", result[0].id)
-        assertEquals(55f, result[0].rmssdMs)
-        assertEquals("Ring", result[0].deviceName)
-        assertEquals("RESTING", result[0].recordType)
-        assertNull(result[0].sessionId)
+        val rows = result[0].rows
+        assertEquals("hrv_rec_${t.toEpochMilli()}", rows[0].id)
+        assertEquals(55f, rows[0].rmssdMs)
+        assertEquals("Ring", rows[0].deviceName)
+        assertEquals("RESTING", rows[0].recordType)
+        assertNull(rows[0].sessionId)
     }
 
     @Test
@@ -76,7 +79,8 @@ class HrvMapperTest {
         val result = HrvMapper.mapToInputs(listOf(record), listOf(sleepSession))
 
         assertEquals(1, result.size)
-        assertEquals("RESTING", result[0].recordType)
-        assertNull(result[0].sessionId)
+        val rows = result[0].rows
+        assertEquals("RESTING", rows[0].recordType)
+        assertNull(rows[0].sessionId)
     }
 }

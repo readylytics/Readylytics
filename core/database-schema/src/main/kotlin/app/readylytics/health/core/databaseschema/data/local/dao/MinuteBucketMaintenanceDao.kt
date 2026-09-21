@@ -18,6 +18,24 @@ interface MinuteBucketMaintenanceDao {
     @Query("DELETE FROM hr_minute_buckets WHERE bucketEndMs < :beforeMs")
     suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
 
+    /** Same exclusive cutoff as bucketEndMs: retain the minute ending exactly at the cutoff. */
+    @Query("DELETE FROM minute_coverage WHERE bucketStartMs + 60000 < :beforeMs")
+    suspend fun deleteCoverageBeforeTimestamp(beforeMs: Long): Int
+
+    @Query("DELETE FROM hr_source_minute_contributions WHERE bucketStartMs + 60000 < :beforeMs")
+    suspend fun deleteContributionsBeforeTimestamp(beforeMs: Long): Int
+
+    @Query(
+        "DELETE FROM hr_source_minute_contributions " +
+            "WHERE bucketStartMs >= :fromMs AND bucketStartMs + 60000 <= :toMs " +
+            "AND deviceName != :deviceName",
+    )
+    suspend fun deleteContributionsNotMatchingDevice(
+        fromMs: Long,
+        toMs: Long,
+        deviceName: String,
+    ): Int
+
     @Query("SELECT COUNT(*) FROM hr_minute_buckets")
     suspend fun count(): Int
 
@@ -54,7 +72,11 @@ interface MinuteBucketMaintenanceDao {
             "WHERE bucketStartMs >= :fromMs AND bucketEndMs <= :toMs " +
             "AND (deviceName != :deviceName OR deviceName = '')",
     )
-    suspend fun deleteBucketsNotMatchingDevice(fromMs: Long, toMs: Long, deviceName: String): Int
+    suspend fun deleteBucketsNotMatchingDevice(
+        fromMs: Long,
+        toMs: Long,
+        deviceName: String,
+    ): Int
 
     @Query("SELECT DISTINCT deviceName FROM hr_minute_buckets WHERE deviceName != ''")
     suspend fun getDistinctDeviceNames(): List<String>

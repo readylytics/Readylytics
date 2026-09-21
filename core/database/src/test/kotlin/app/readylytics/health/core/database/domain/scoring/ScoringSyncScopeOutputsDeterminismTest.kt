@@ -42,6 +42,7 @@ import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoade
 import app.readylytics.health.core.database.data.repository.MorningRecommendationDependencies
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
+import app.readylytics.health.core.database.data.repository.ScoringHeartRateDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringSeriesLoader
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
@@ -331,7 +332,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
                 .minByOrNull { it.endTime }
         }
 
-        coEvery { heartRateDao.getByTimeRange(any(), any()) } coAnswers {
+        coEvery { heartRateDao.getVisibleByTimeRange(any(), any()) } coAnswers {
             val fromMs = firstArg<Long>()
             val toMs = secondArg<Long>()
             scopedHeartRateRecords
@@ -346,7 +347,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
                     ?: return@associateWith 0
             }
         }
-        coEvery { heartRateDao.getSleepHrProjectionForSessions(any()) } coAnswers {
+        coEvery { heartRateDao.getVisibleSleepHrProjectionForSessions(any()) } coAnswers {
             firstArg<List<String>>()
                 .flatMap { sessionId ->
                     scopedHrSamples[sessionId]
@@ -354,7 +355,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
                         .map { bpm -> SleepHrSample(sessionId = sessionId, beatsPerMinute = bpm) }
                 }.sortedWith(compareBy<SleepHrSample> { it.sessionId }.thenBy { it.beatsPerMinute })
         }
-        coEvery { heartRateDao.getSleepHrSamplesForSession(any()) } coAnswers {
+        coEvery { heartRateDao.getVisibleSleepHrSamplesForSession(any()) } coAnswers {
             scopedHrSamples[firstArg<String>()].orEmpty()
         }
         coEvery { heartRateDao.getAvgSleepHr(any()) } coAnswers {
@@ -446,19 +447,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
                     ),
             )
 
-        val dataLoader =
-            ScoringDayDataLoader(
-                workoutDao,
-                sleepSessionDao,
-                dailySummaryDao,
-                heartRateDao,
-                minuteBucketDao,
-                weightRecordDao,
-                bodyFatRecordDao,
-                bloodPressureRecordDao,
-                oxygenSaturationRecordDao,
-                bodyTemperatureRecordDao,
-            )
+        val dataLoader = ScoringDayDataLoader(workoutDao, sleepSessionDao, dailySummaryDao)
         val bodyMetricsDataLoader =
             BodyMetricsDataLoader(
                 weightRecordDao,
@@ -469,6 +458,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
                 vo2MaxRecordDao,
             )
         val seriesLoader = ScoringSeriesLoader(workoutDao, dailySummaryDao)
+        val heartRateDataLoader = ScoringHeartRateDataLoader(heartRateDao, minuteBucketDao)
         val buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator)
         val resolveDailyBaselinesUseCase = ResolveDailyBaselinesUseCase(baselineComputer)
         val assembleDailySummaryUseCase = AssembleDailySummaryUseCase()
@@ -490,6 +480,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
                     dataLoader,
                     bodyMetricsDataLoader,
                     seriesLoader,
+                    heartRateDataLoader,
                 ),
                 settingsRepo = settingsRepo,
                 baselineComputer = baselineComputer,
@@ -591,7 +582,20 @@ class ScoringSyncScopeOutputsDeterminismTest {
                 "hrvSigmaMssd" to { it.hrvSigmaMssd },
                 "restingHeartRate" to { it.restingHeartRate },
                 "nocturnalHrv" to { it.nocturnalHrv },
-                "baselineObservationCount" to { it.baselineObservationCount },
+                // Task C2 (WP-12, OD-2 gate): baselineObservationCount is now the cumulative,
+                // unbounded count of eligible sleep-days scanned from currently retained history
+                // (ScoringHistoryRepository.countEligibleSleepDaysThrough) -- deliberately NOT a
+                // fixed-size statistical window anymore, so it legitimately differs across sync
+                // scopes that retained different amounts of history for the exact same underlying
+                // continuous fixture (a 60-day scope genuinely cannot see the 365-day scope's
+                // older sessions; that is the documented "missing history is unknown, never
+                // fabricated" policy, not non-determinism in scoring). What DOES stay invariant --
+                // and is exactly what would affect scoring -- is the resolved calibration PHASE:
+                // every scope here retains at least 60 eligible days, so all cross the same
+                // MATURE (60+) threshold identically. Deliberately excluded from this matrix; see
+                // `snapshotCalibrationPhase` below for the phase-level invariant this replaces it
+                // with.
+                "snapshotCalibrationPhase" to { it.snapshotCalibrationPhase },
                 "zLnHrv" to { it.zLnHrv },
                 "zRhr" to { it.zRhr },
                 "sRest" to { it.sRest },

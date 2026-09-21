@@ -44,42 +44,65 @@ class SleepModifierResolverTest {
             ),
         )
 
-    private fun awake(startMin: Long, endMin: Long) =
-        SleepStageData(
-            stageType = "AWAKE",
-            startTime = startMin * MINUTE,
-            endTime = endMin * MINUTE,
-            durationMinutes = (endMin - startMin).toInt(),
-        )
+    private fun awake(
+        startMin: Long,
+        endMin: Long,
+        sessionId: String? = null,
+    ) = SleepStageData(
+        stageType = "AWAKE",
+        startTime = startMin * MINUTE,
+        endTime = endMin * MINUTE,
+        durationMinutes = (endMin - startMin).toInt(),
+        sessionId = sessionId,
+    )
 
-    private fun light(startMin: Long, endMin: Long) =
-        SleepStageData(
-            stageType = "LIGHT",
-            startTime = startMin * MINUTE,
-            endTime = endMin * MINUTE,
-            durationMinutes = (endMin - startMin).toInt(),
-        )
+    private fun light(
+        startMin: Long,
+        endMin: Long,
+        sessionId: String? = null,
+    ) = SleepStageData(
+        stageType = "LIGHT",
+        startTime = startMin * MINUTE,
+        endTime = endMin * MINUTE,
+        durationMinutes = (endMin - startMin).toInt(),
+        sessionId = sessionId,
+    )
 
-    private fun resolverWith(
+    private fun fakeSessionRepo(
         stages: List<SleepStageData>,
-        regularity: Float?,
-    ): SleepModifierResolver {
-        val sessionRepo = object : SleepSessionRepository {
+        stagesBySessionIds: Map<Set<String>, List<SleepStageData>> = emptyMap(),
+    ): SleepSessionRepository =
+        object : SleepSessionRepository {
             override fun observeSince(fromMs: Long): Flow<List<SleepSessionData>> = emptyFlow()
+
             override suspend fun getSince(fromMs: Long): List<SleepSessionData> = emptyList()
 
             override suspend fun getInRange(
                 fromMs: Long,
                 toMs: Long,
             ): List<SleepSessionData> = emptyList()
+
             override suspend fun countSince(fromMs: Long): Int = 0
+
             override fun observeSessionStages(sessionId: String): Flow<List<SleepStageData>> = emptyFlow()
+
             override suspend fun getSessionStages(sessionId: String): List<SleepStageData> = stages
+
+            override suspend fun getSessionStages(sessionIds: List<String>): List<SleepStageData> =
+                stagesBySessionIds[sessionIds.toSet()] ?: stages
+
             override fun observeFirstSessionEndingInRange(
                 fromMs: Long,
                 toMs: Long,
             ): Flow<SleepSessionData?> = emptyFlow()
         }
+
+    private fun resolverWith(
+        stages: List<SleepStageData>,
+        regularity: Float?,
+        stagesBySessionIds: Map<Set<String>, List<SleepStageData>> = emptyMap(),
+    ): SleepModifierResolver {
+        val sessionRepo = fakeSessionRepo(stages, stagesBySessionIds)
 
         val circadianRepo = mockk<CircadianConsistencyRepository>()
         coEvery { circadianRepo.scoreFor(date, any()) } returns regularity
@@ -87,25 +110,8 @@ class SleepModifierResolverTest {
         return SleepModifierResolver(sessionRepo, circadianRepo)
     }
 
-    private fun resolverThrowingRegularity(
-        stages: List<SleepStageData>,
-    ): SleepModifierResolver {
-        val sessionRepo = object : SleepSessionRepository {
-            override fun observeSince(fromMs: Long): Flow<List<SleepSessionData>> = emptyFlow()
-            override suspend fun getSince(fromMs: Long): List<SleepSessionData> = emptyList()
-
-            override suspend fun getInRange(
-                fromMs: Long,
-                toMs: Long,
-            ): List<SleepSessionData> = emptyList()
-            override suspend fun countSince(fromMs: Long): Int = 0
-            override fun observeSessionStages(sessionId: String): Flow<List<SleepStageData>> = emptyFlow()
-            override suspend fun getSessionStages(sessionId: String): List<SleepStageData> = stages
-            override fun observeFirstSessionEndingInRange(
-                fromMs: Long,
-                toMs: Long,
-            ): Flow<SleepSessionData?> = emptyFlow()
-        }
+    private fun resolverThrowingRegularity(stages: List<SleepStageData>): SleepModifierResolver {
+        val sessionRepo = fakeSessionRepo(stages)
 
         val circadianRepo = mockk<CircadianConsistencyRepository>()
         coEvery { circadianRepo.scoreFor(date, any()) } throws RuntimeException("Regularity resolution failed")
@@ -118,7 +124,7 @@ class SleepModifierResolverTest {
         runTest {
             val resolver = resolverWith(stages = listOf(awake(0, 30), light(30, 400)), regularity = 80f)
 
-            val modifiers = resolver.resolve("session", date, preferences, stagesSuspicious = true)
+            val modifiers = resolver.resolve(setOf("session"), date, preferences, stagesSuspicious = true)
 
             assertNull(modifiers.fragmentation)
             assertEquals(80f, modifiers.regularityScore!!, 0.01f)
@@ -129,7 +135,7 @@ class SleepModifierResolverTest {
         runTest {
             val resolver = resolverWith(stages = emptyList(), regularity = null)
 
-            val modifiers = resolver.resolve("session", date, preferences, stagesSuspicious = false)
+            val modifiers = resolver.resolve(setOf("session"), date, preferences, stagesSuspicious = false)
 
             assertNull(modifiers.fragmentation)
             assertNull(modifiers.regularityScore)
@@ -140,7 +146,7 @@ class SleepModifierResolverTest {
         runTest {
             val resolver = resolverThrowingRegularity(stages = listOf(light(0, 400)))
 
-            val modifiers = resolver.resolve("session", date, preferences, stagesSuspicious = false)
+            val modifiers = resolver.resolve(setOf("session"), date, preferences, stagesSuspicious = false)
 
             assertNull(modifiers.regularityScore)
             assertEquals(0f, modifiers.fragmentation!!.wasoMinutes, 0.01f)
@@ -149,23 +155,7 @@ class SleepModifierResolverTest {
     @Test
     fun `resolve forwards prefetched sessions to circadian regularity`() =
         runTest {
-            val sessionRepo =
-                object : SleepSessionRepository {
-                    override fun observeSince(fromMs: Long): Flow<List<SleepSessionData>> = emptyFlow()
-                    override suspend fun getSince(fromMs: Long): List<SleepSessionData> = emptyList()
-
-            override suspend fun getInRange(
-                fromMs: Long,
-                toMs: Long,
-            ): List<SleepSessionData> = emptyList()
-                    override suspend fun countSince(fromMs: Long): Int = 0
-                    override fun observeSessionStages(sessionId: String): Flow<List<SleepStageData>> = emptyFlow()
-                    override suspend fun getSessionStages(sessionId: String): List<SleepStageData> = emptyList()
-                    override fun observeFirstSessionEndingInRange(
-                        fromMs: Long,
-                        toMs: Long,
-                    ): Flow<SleepSessionData?> = emptyFlow()
-                }
+            val sessionRepo = fakeSessionRepo(stages = emptyList())
             val circadianRepo = mockk<CircadianConsistencyRepository>()
             coEvery { circadianRepo.scoreFor(date, preferences, prefetched) } returns 77f
             val resolver =
@@ -176,7 +166,7 @@ class SleepModifierResolverTest {
 
             val modifiers =
                 resolver.resolve(
-                    sessionId = "session",
+                    coreSessionIds = setOf("session"),
                     targetDate = date,
                     prefs = preferences,
                     stagesSuspicious = false,
@@ -187,5 +177,57 @@ class SleepModifierResolverTest {
             coVerify {
                 circadianRepo.scoreFor(date, preferences, prefetched)
             }
+        }
+
+    // ─── WP-14/C4: multi-session-id core scoping ────────────────────────────────────────────
+
+    @Test
+    fun `resolve fetches stages for every core session id, not just one`() =
+        runTest {
+            val coreIds = setOf("core-1", "core-2")
+            val stagesForBoth =
+                listOf(
+                    light(0, 180, sessionId = "core-1"),
+                    awake(180, 190, sessionId = "core-1"),
+                    light(190, 400, sessionId = "core-2"),
+                )
+            val resolver =
+                resolverWith(
+                    stages = emptyList(),
+                    regularity = null,
+                    stagesBySessionIds = mapOf(coreIds to stagesForBoth),
+                )
+
+            val modifiers = resolver.resolve(coreIds, date, preferences, stagesSuspicious = false)
+
+            // A single-ID fetch (the pre-C4 call path) would have seen only one segment's stages
+            // and reported a shorter/incorrect WASO window; the merged fetch sees the full core.
+            assertEquals(10f, modifiers.fragmentation!!.wasoMinutes, 0.01f)
+        }
+
+    @Test
+    fun `resolve deduplicates identical stage rows synced under more than one session id`() =
+        runTest {
+            val coreIds = setOf("core-1", "core-2")
+            val duplicated =
+                listOf(
+                    light(0, 180, sessionId = "core-1"),
+                    awake(180, 190, sessionId = "core-1"),
+                    // Same interval duplicated verbatim under a second session id -- must collapse
+                    // to a single awakening, not double-count WASO.
+                    awake(180, 190, sessionId = "core-2"),
+                    light(190, 400, sessionId = "core-2"),
+                )
+            val resolver =
+                resolverWith(
+                    stages = emptyList(),
+                    regularity = null,
+                    stagesBySessionIds = mapOf(coreIds to duplicated),
+                )
+
+            val modifiers = resolver.resolve(coreIds, date, preferences, stagesSuspicious = false)
+
+            assertEquals(10f, modifiers.fragmentation!!.wasoMinutes, 0.01f)
+            assertEquals(1, modifiers.fragmentation!!.awakeningCount)
         }
 }
