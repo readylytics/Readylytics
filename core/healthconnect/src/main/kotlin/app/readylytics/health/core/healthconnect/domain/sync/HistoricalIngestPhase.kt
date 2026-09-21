@@ -264,35 +264,37 @@ class HistoricalIngestPhase
         // (HR already complete) alongside hrvPageToken = <token> (HRV mid-stream) -- a single shared
         // flag would then resume-keep HR's prior staged ids through a fresh full HR re-read, letting
         // an HC-side deletion in the gap between attempts survive deletion reconciliation.
+        //
+        // HC-005/PERF-001: no outer retryWithBackoff here anymore -- ingestWindow's reads now share
+        // one bounded ReadRetryBudget (HealthIngestionCoordinator/HeartSampleStreamer), so exhaustion
+        // propagates straight out; WorkManager's EXPONENTIAL Result.retry() is the sole outer retry.
         private suspend fun runIngestWindow(
             context: IngestPhaseContext,
             params: ChunkWindowParams,
             hrStartPageToken: String?,
             hrvStartPageToken: String?,
         ): IngestionWindowResult =
-            retryWithBackoff {
-                ingestion.ingestionCoordinator.ingestWindow(
-                    windowStart = params.windowStart,
-                    windowEnd = params.windowEnd,
-                    prefs = context.prefs,
-                    scanIdentity = params.scanIdentity,
-                    resumeHrScan = hrStartPageToken != null,
-                    resumeHrvScan = hrvStartPageToken != null,
-                    hrStartPageToken = hrStartPageToken,
-                    hrvStartPageToken = hrvStartPageToken,
-                    onTokenUpdated = { hrToken, hrvToken ->
-                        saveChunkProgress(
-                            context,
-                            params.chunkStart,
-                            params.chunkOverride,
-                            hrToken,
-                            hrvToken,
-                            params.runCompletedTypes,
-                        )
-                    },
-                    reconcileDeletions = !context.skipIngestAndPrune,
-                )
-            }
+            ingestion.ingestionCoordinator.ingestWindow(
+                windowStart = params.windowStart,
+                windowEnd = params.windowEnd,
+                prefs = context.prefs,
+                scanIdentity = params.scanIdentity,
+                resumeHrScan = hrStartPageToken != null,
+                resumeHrvScan = hrvStartPageToken != null,
+                hrStartPageToken = hrStartPageToken,
+                hrvStartPageToken = hrvStartPageToken,
+                onTokenUpdated = { hrToken, hrvToken ->
+                    saveChunkProgress(
+                        context,
+                        params.chunkStart,
+                        params.chunkOverride,
+                        hrToken,
+                        hrvToken,
+                        params.runCompletedTypes,
+                    )
+                },
+                reconcileDeletions = !context.skipIngestAndPrune,
+            )
 
         private suspend fun handleChunkTimeout(
             e: HealthConnectWindowTimeoutException,

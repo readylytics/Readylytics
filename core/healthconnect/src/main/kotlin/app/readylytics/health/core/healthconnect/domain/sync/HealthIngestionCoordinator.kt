@@ -127,7 +127,12 @@ class HealthIngestionCoordinator
         private suspend fun ingestWindowWithinBudget(params: IngestWindowParams): IngestionWindowResult {
             return withTimeout(params.windowBudgetMs) {
                 val (rawRecords, sessionContext) =
-                    fetchAndPersistBulkRecords(params.windowStart, params.windowEnd, params.prefs)
+                    fetchAndPersistBulkRecords(
+                        params.windowStart,
+                        params.windowEnd,
+                        params.prefs,
+                        params.retryBudget,
+                    )
                 streamAndPersistHeartSamples(params, sessionContext)
                 val scans = stageBulkScans(params, rawRecords)
                 val affectedRange =
@@ -147,8 +152,9 @@ class HealthIngestionCoordinator
             windowStart: Instant,
             windowEnd: Instant,
             prefs: UserPreferences,
+            retryBudget: ReadRetryBudget,
         ): Pair<RawBulkRecords, IngestionSessionContext> {
-            val raw = fetchBulkRecords(windowStart, windowEnd)
+            val raw = fetchBulkRecords(windowStart, windowEnd, retryBudget)
             val sleepSessions = raw.sleepSessions.dataOrEmpty()
             val exerciseRecords = raw.exerciseRecords.dataOrEmpty()
             val sleepInputs = sleepSessions.map { SleepDataMapper.mapSleepSession(it) }
@@ -201,33 +207,57 @@ class HealthIngestionCoordinator
         }
 
         // Each read is independent of the others' results, so they run concurrently instead of
-        // sequentially -- total latency drops from the sum of all 9 round trips to their max.
+        // sequentially -- total latency drops from the sum of all 9 round trips to their max. All 9
+        // share one window-scoped ReadRetryBudget (HC-005/PERF-001) rather than each retrying
+        // independently, so a provider under quota pressure can't be hit maxAttempts times per read.
         private suspend fun fetchBulkRecords(
             windowStart: Instant,
             windowEnd: Instant,
+            retryBudget: ReadRetryBudget,
         ): RawBulkRecords =
             coroutineScope {
-                val sleepSessions = async { retryWithBackoff { hcRepo.readSleepSessions(windowStart, windowEnd) } }
+                val sleepSessions =
+                    async {
+                        retryBudget.execute("sleepSessions") { hcRepo.readSleepSessions(windowStart, windowEnd) }
+                    }
                 val exerciseRecords =
                     async {
-                        retryWithBackoff {
+                        retryBudget.execute("exerciseRecords") {
                             hcRepo.readExerciseSessions(windowStart, windowEnd, includeDetails = true)
                         }
                     }
-                val weightRecords = async { retryWithBackoff { hcRepo.readWeightRecords(windowStart, windowEnd) } }
+                val weightRecords =
+                    async {
+                        retryBudget.execute("weightRecords") { hcRepo.readWeightRecords(windowStart, windowEnd) }
+                    }
                 val bodyFatRecords =
-                    async { retryWithBackoff { hcRepo.readBodyFatRecords(windowStart, windowEnd) } }
+                    async {
+                        retryBudget.execute("bodyFatRecords") { hcRepo.readBodyFatRecords(windowStart, windowEnd) }
+                    }
                 val bloodPressureRecords =
-                    async { retryWithBackoff { hcRepo.readBloodPressureRecords(windowStart, windowEnd) } }
+                    async {
+                        retryBudget.execute("bloodPressureRecords") {
+                            hcRepo.readBloodPressureRecords(windowStart, windowEnd)
+                        }
+                    }
                 val spo2Records =
-                    async { retryWithBackoff { hcRepo.readOxygenSaturationRecords(windowStart, windowEnd) } }
+                    async {
+                        retryBudget.execute("oxygenSaturationRecords") {
+                            hcRepo.readOxygenSaturationRecords(windowStart, windowEnd)
+                        }
+                    }
                 val bodyTemperatureRecords =
-                    async { retryWithBackoff { hcRepo.readBodyTemperatureRecords(windowStart, windowEnd) } }
-                val stepsRecords = async { retryWithBackoff { hcRepo.readStepsRecords(windowStart, windowEnd) } }
+                    async {
+                        retryBudget.execute("bodyTemperatureRecords") {
+                            hcRepo.readBodyTemperatureRecords(windowStart, windowEnd)
+                        }
+                    }
+                val stepsRecords =
+                    async { retryBudget.execute("stepsRecords") { hcRepo.readStepsRecords(windowStart, windowEnd) } }
                 val vo2MaxRecords =
                     async {
                         if (hcRepo.hasVo2MaxPermission()) {
-                            retryWithBackoff { hcRepo.readVo2MaxRecords(windowStart, windowEnd) }
+                            retryBudget.execute("vo2MaxRecords") { hcRepo.readVo2MaxRecords(windowStart, windowEnd) }
                         } else {
                             ReadOutcome.Denied
                         }
@@ -420,6 +450,10 @@ internal data class IngestWindowParams(
     val hrvStartPageToken: String?,
     val onTokenUpdated: (suspend (hrToken: String?, hrvToken: String?) -> Unit)?,
     val reconcileDeletions: Boolean,
+    // HC-005/PERF-001: one bounded retry budget shared by every read of this window (the 9 bulk
+    // fetchBulkRecords reads plus HeartSampleStreamer's HR/HRV paged reads), replacing the old
+    // per-read + outer-window nested retryWithBackoff wrapping. Always fresh per ingestWindow call.
+    val retryBudget: ReadRetryBudget = ReadRetryBudget(),
 )
 
 internal data class IngestionSessionContext(
