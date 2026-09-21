@@ -10,6 +10,7 @@
     <ID>TooManyFunctions:HrvDao.kt$HrvDao</ID>
     <ID>TooManyFunctions:OxygenSaturationRecordDao.kt$OxygenSaturationRecordDao</ID>
     <ID>TooManyFunctions:SleepSessionDao.kt$SleepSessionDao</ID>
+    <ID>TooManyFunctions:SourceRecordDao.kt$SourceRecordDao : SourceRecordMaintenanceDao</ID>
     <ID>TooManyFunctions:WeightRecordDao.kt$WeightRecordDao</ID>
     <ID>TooManyFunctions:WorkoutDao.kt$WorkoutDao</ID>
   </CurrentIssues>

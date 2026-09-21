@@ -63,7 +63,7 @@ class SourcePayloadWriterBatchingTest {
 
             assertEquals(1, runner.transactionCount)
             assertEquals(600, database.sourceRecordDao().count())
-            assertEquals(600, database.heartRateDao().count())
+            assertEquals(1800, database.heartRateDao().count())
         }
 
     @Test

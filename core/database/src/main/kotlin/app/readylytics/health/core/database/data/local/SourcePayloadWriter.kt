@@ -39,9 +39,9 @@ class SourcePayloadWriter
         private val warmRefresh: SourceHeartRateRefresh? = null,
     ) {
         companion object {
-            const val SOURCE_LOOKUP_CHUNK = 250
             const val PAGE_TRANSACTION_MAX_ROWS = 5_000
         }
+
         suspend fun replaceHeartRateSources(sources: List<SourcePayload<HeartRateInput>>) {
             if (sources.isEmpty()) return
             sources.groupedByRowBudget(PAGE_TRANSACTION_MAX_ROWS).forEach { group ->
@@ -136,7 +136,6 @@ class SourcePayloadWriter
                 endExclusiveMs = source.endExclusiveMs,
             )
         }
-
 
         private suspend fun updateSourceMetadata(
             sourceRef: Long,
