@@ -400,8 +400,8 @@ class PersistenceBatchingTest {
             "deleteBySourceRecordRef",
             "deleteBySourceRecordId",
             "updateAuthoritativeMetadata",
-            "insertIgnoreAll",
             -> 1
+            "insertIgnoreAll" -> Unit
             else -> fallbackForType(returnType)
         }
 
