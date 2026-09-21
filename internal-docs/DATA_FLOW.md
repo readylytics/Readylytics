@@ -285,6 +285,24 @@ so re-ingestion is idempotent, but entity construction itself happens one layer 
 | `OxygenSaturationDataMapper` | `core/healthconnect/src/main/kotlin/app/readylytics/health/core/healthconnect/data/mapper/OxygenSaturationDataMapper.kt` | `DomainOxygenSaturationRecord` → `OxygenSaturationRecordEntity` (%).                                                                               |
 | `BodyTemperatureDataMapper`  | `core/healthconnect/src/main/kotlin/app/readylytics/health/core/healthconnect/data/mapper/BodyTemperatureDataMapper.kt`  | `DomainBodyTemperatureRecord` → `BodyTemperatureRecordEntity` (°C). Ingested through `HealthIngestionCoordinator` exactly like the other optional-permission metrics — same upsert/idempotency contract, no special-casing. |
 
+**PERF-001 — transform buffer bound (`HeartSampleStreamer`):** `HeartRateMapper.mapToInputs` and
+`HrvMapper.mapToInputs` remain pure and page-agnostic, but `HeartSampleStreamer`
+(`core/healthconnect/src/main/kotlin/app/readylytics/health/core/healthconnect/domain/sync/HeartSampleStreamer.kt`)
+never hands either mapper a whole Health Connect page. A page bounds parent-record cardinality, not
+nested-sample count — one dense parent can carry tens of thousands of beat samples — so each page is
+first split via `List<T>.sliceBySampleBudget(TRANSFORM_SAMPLE_BUDGET, sampleCountOf) { slice -> ... }`
+into contiguous slices whose total sample count stays at or under
+`TRANSFORM_SAMPLE_BUDGET = 5_000` (`SyncConstants.kt`) before the mapper is called: HR slices are
+bounded by summed nested `samples.size` across the slice's parents, HRV slices by parent-record
+count (each HRV record holds exactly one RMSSD value, so parent count == sample count there). A
+single parent whose own payload already exceeds the budget still forms its own oversized slice —
+there is no smaller unit to split an HC record into. Each mapper call therefore builds its
+distinct-timestamp link table (`SessionLinkSweep`, §1.2.1) over only that slice, so the link table is
+slice-bounded rather than page-bounded; one `replaceHeartRateSources`/`replaceHrvSources` write
+follows each mapper call. This only changes how many mapper/write calls a dense page takes — staging
+(§1.2, per-page `ScanStagingStore.stageIds`) still runs once per page, before any slicing, so
+staged-id bookkeeping and `TypeScanState.COMPLETE` timing are unaffected by slice boundaries.
+
 When resuming a historical checkpoint after settings changes, `HistoricalRunResolver` chooses the
 earliest invalidated phase. A device-selection change restarts ingestion even when HR zones also
 changed; stale paging tokens and chunk overrides are cleared. Unknown snapshot versions likewise

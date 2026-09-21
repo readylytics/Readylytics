@@ -41,3 +41,14 @@ const val BACK_DAY_INGEST_BUDGET_MS = 5 * 60_000L
  * segment is safe regardless of how far the first attempt got before timing out.
  */
 const val EXTENDED_DAILY_INGEST_BUDGET_MS = 10 * 60_000L
+
+/**
+ * PERF-001: caps how many nested samples [HeartSampleStreamer] holds in memory per mapper call +
+ * write, independent of how many parent records a single Health Connect page contains. A page
+ * bounds parent cardinality, not nested sample count -- e.g. one dense sleep-night heart-rate
+ * parent can carry tens of thousands of beat samples -- so the transform buffer is sliced on
+ * samples instead of on page size. HR slices are bounded by total nested-sample count across a
+ * slice's parents; HRV slices are bounded by parent-record count, since each HRV record holds
+ * exactly one RMSSD value. See [HeartSampleStreamer.sliceBySampleBudget].
+ */
+const val TRANSFORM_SAMPLE_BUDGET = 5_000

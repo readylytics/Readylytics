@@ -10,6 +10,9 @@ import app.readylytics.health.core.model.domain.sync.ScanStagingStore
 import app.readylytics.health.core.model.domain.sync.mappers.HeartRateMapper
 import app.readylytics.health.core.model.domain.sync.mappers.HrvMapper
 import app.readylytics.health.core.model.domain.util.logD
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.yield
 
 internal class HeartSampleStreamer(
     private val hcRepo: HealthConnectRepository,
@@ -76,20 +79,30 @@ internal class HeartSampleStreamer(
         sessionContext: IngestionSessionContext,
         device: String?,
     ): Int {
-        val hrSources =
-            HeartRateMapper.mapToInputs(
-                page,
-                sessionContext.sleepInputs,
-                sessionContext.workoutInputs,
-            )
-        val filteredHr =
-            hrSources.map { source ->
-                source.copy(
-                    rows = DeviceSourceFilter.filterToDevice(source.rows, device) { it.deviceName },
+        var persisted = 0
+        // PERF-001: a Health Connect page bounds parent cardinality, not nested sample count. The
+        // transform buffer is therefore capped on samples: each slice's mapped payloads, the
+        // distinct-timestamp link table HeartRateMapper builds, and the Room write it feeds all stay
+        // proportional to TRANSFORM_SAMPLE_BUDGET instead of to the page's density. A single parent
+        // whose payload already exceeds the budget forms its own slice -- the SDK owns that record
+        // and there is no smaller unit to read.
+        page.sliceBySampleBudget(TRANSFORM_SAMPLE_BUDGET, sampleCountOf = { it.samples.size }) { slice ->
+            val hrSources =
+                HeartRateMapper.mapToInputs(
+                    slice,
+                    sessionContext.sleepInputs,
+                    sessionContext.workoutInputs,
                 )
-            }
-        healthIngestionStore.replaceHeartRateSources(filteredHr)
-        return filteredHr.sumOf { it.rows.size }
+            val filteredHr =
+                hrSources.map { source ->
+                    source.copy(
+                        rows = DeviceSourceFilter.filterToDevice(source.rows, device) { it.deviceName },
+                    )
+                }
+            healthIngestionStore.replaceHeartRateSources(filteredHr)
+            persisted += filteredHr.sumOf { it.rows.size }
+        }
+        return persisted
     }
 
     private suspend fun persistHrvPage(
@@ -97,18 +110,52 @@ internal class HeartSampleStreamer(
         sessionContext: IngestionSessionContext,
         device: String?,
     ): Int {
-        val hrvSources =
-            HrvMapper.mapToInputs(
-                page,
-                sessionContext.sleepInputs,
-            )
-        val filteredHrv =
-            hrvSources.map { source ->
-                source.copy(
-                    rows = DeviceSourceFilter.filterToDevice(source.rows, device) { it.deviceName },
+        var persisted = 0
+        // HRV records carry exactly one RMSSD value each, so slicing by parent count is equivalent
+        // to slicing by sample count here.
+        page.sliceBySampleBudget(TRANSFORM_SAMPLE_BUDGET, sampleCountOf = { 1 }) { slice ->
+            val hrvSources =
+                HrvMapper.mapToInputs(
+                    slice,
+                    sessionContext.sleepInputs,
                 )
-            }
-        healthIngestionStore.replaceHrvSources(filteredHrv)
-        return filteredHrv.sumOf { it.rows.size }
+            val filteredHrv =
+                hrvSources.map { source ->
+                    source.copy(
+                        rows = DeviceSourceFilter.filterToDevice(source.rows, device) { it.deviceName },
+                    )
+                }
+            healthIngestionStore.replaceHrvSources(filteredHrv)
+            persisted += filteredHrv.sumOf { it.rows.size }
+        }
+        return persisted
+    }
+}
+
+/**
+ * Splits this list into contiguous sub-lists whose total [sampleCountOf] stays at or under
+ * [budget], invoking [action] once per sub-list. A single element whose own sample count already
+ * exceeds the budget still forms its own (oversized) slice -- there is no smaller unit to split it
+ * into. Cooperative: checks cancellation before each slice and yields after each slice's work, so a
+ * long paged transform never starves other coroutines or swallows cancellation.
+ */
+internal suspend fun <T> List<T>.sliceBySampleBudget(
+    budget: Int,
+    sampleCountOf: (T) -> Int,
+    action: suspend (List<T>) -> Unit,
+) {
+    require(budget > 0) { "budget must be positive" }
+    var start = 0
+    while (start < size) {
+        currentCoroutineContext().ensureActive()
+        var end = start
+        var samples = 0
+        while (end < size && (end == start || samples + sampleCountOf(this[end]) <= budget)) {
+            samples += sampleCountOf(this[end])
+            end++
+        }
+        action(subList(start, end))
+        start = end
+        yield()
     }
 }
