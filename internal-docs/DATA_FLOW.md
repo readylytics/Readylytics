@@ -54,7 +54,7 @@ Paths below are rooted at the project root. Module prefixes are explicit, for ex
                │   columns in place, near-no-op on identical re-ingest; others: @Upsert on stable id
                ▼
 ┌──────────────────────────────┐
-│  HealthDatabase (SQLite v22) │   24 entities — single source of truth
+│  HealthDatabase (SQLite v23) │   26 entities — single source of truth
 └──────────────┬───────────────┘
                │ raw DAO reads (local; no further HC calls)
                ▼
@@ -280,7 +280,7 @@ earliest invalidated phase. A device-selection change restarts ingestion even wh
 changed; stale paging tokens and chunk overrides are cleared. Unknown snapshot versions likewise
 restart ingestion conservatively.
 
-### 1.4 Room storage — `HealthDatabase` (`@Database(version = 22)`)
+### 1.4 Room storage — `HealthDatabase` (`@Database(version = 23)`)
 
 Defined in `core/database/src/main/kotlin/app/readylytics/health/core/database/data/local/HealthDatabase.kt`;
 entities in `core/database-schema/src/main/kotlin/app/readylytics/health/core/databaseschema/data/local/entity/`, DAOs in
@@ -420,9 +420,15 @@ Version 21 (`Migration20To21`) bumps the schema for canonical workout TRIMP inpu
 Version 22 (`Migration21To22`) adds the WP-17 coverage tables (`minute_coverage`,
 `hr_source_minute_contributions`) and the refresh-staging tables (`staged_hr_sources`,
 `staged_hr_samples`), plus `hr_minute_buckets.generation` (default `0`). Existing warm buckets are
-initialized as `LEGACY_WARM`/`LEGACY_UNKNOWN` at generation 0; no lineage is invented and no raw
+`LEGACY_WARM`/`LEGACY_UNKNOWN` at generation 0; no lineage is invented and no raw
 row is deleted (OD-1).
-The current Room schema version = 22.
+Version 23 (`Migration22To23`) adds additive operational scan-staging tables (`scan_seen_ids`,
+`scan_type_state`). Both tables hold local in-flight scan state excluded from backup and scoring.
+`scan_seen_ids` is keyed `(runId, chunkId, recordType, sourceId)` with an index on `(runId, chunkId, recordType)`
+replacing in-memory Sets and long `NOT IN` binding lists. `scan_type_state` is keyed
+`(runId, chunkId, recordType)` tracking `state` (`SCANNING` vs `COMPLETE`), `stagedCount`, and `updatedAtMs`.
+Deletion reconciliation obeys the strict invariant: never prune from a scan that is not COMPLETE.
+The current Room schema version = 23.
 
 **Workout distance and elevation come from separate records, not the session.** An
 `ExerciseSessionRecord` carries no distance — the recording app writes `DistanceRecord` and
@@ -2295,7 +2301,7 @@ defaults when unset).
 | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/model/VitalStatusClassifiers.kt`      | Domain — canonical steps/heart-rate status seams     | `StepsStatusClassifier` and `HeartRateStatusClassifier` classify display statuses         |
 | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/service/HealthMetricsService.kt`     | Domain — canonical BP status seam and facade         | delegates BMI/body-fat assessments; owns blood-pressure assessment and component chart-band metadata derived from the same thresholds |
 | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/calculation/HealthMetricsCalculator.kt` | Domain — facade (delegates)                     | `assessBmi()`/`assessBodyFatPercent()` → `BodyCompositionAssessment`; `assessBloodPressure()` → `HealthMetricsService` |
-| `core/database/src/main/kotlin/app/readylytics/health/core/database/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v22)                             | 24 entities; pre-bridge Room migration chain ends at v6; external migration owns v7; Room owns v7→v22 |
+| `core/database/src/main/kotlin/app/readylytics/health/core/database/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v23)                             | 26 entities; pre-bridge Room migration chain ends at v6; external migration owns v7; Room owns v7→v23 |
 | `app/src/main/kotlin/app/readylytics/health/data/migration/DatabaseReadinessGate.kt`                                            | Storage — pre-Room readiness guard                  | missing or v7..`DATABASE_VERSION` ready; v5/v6 or resumable metadata require external migration |
 | `app/src/main/kotlin/app/readylytics/health/data/migration/V7DatabaseMigrator.kt`                                               | Storage — resumable external v7 migration           | preflight; 10k keyset copy/checkpoint; per-index transactions; validated atomic cutover  |
 | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/migration/DatabaseMigrationModels.kt`                                 | Domain — migration contracts                        | readiness inspector/state; phase/progress/result models                                  |
