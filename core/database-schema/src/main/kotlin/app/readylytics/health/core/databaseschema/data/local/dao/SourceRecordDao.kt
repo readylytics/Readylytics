@@ -148,6 +148,29 @@ interface SourceRecordDao : SourceRecordMaintenanceDao, SourceRecordResolutionDa
         afterRef: Long,
         limit: Int,
     ): List<HealthSourceRecordEntity>
+
+    // PERF-003: candidate orphan metadata. A row qualifies only when nothing references it any
+    // more: no raw HR/HRV children, no warm contribution evidence (OD-1 lineage), and no
+    // in-flight staging naming it. Backup pages every remaining source, so this predicate is also
+    // what keeps an export FK-complete.
+    @Query(
+        "SELECT id FROM health_source_records " +
+            "WHERE id > :afterRef " +
+            "AND NOT EXISTS (SELECT 1 FROM heart_rate_records WHERE sourceRecordRef = health_source_records.id) " +
+            "AND NOT EXISTS (SELECT 1 FROM hrv_records WHERE sourceRecordRef = health_source_records.id) " +
+            "AND NOT EXISTS (" +
+            "  SELECT 1 FROM hr_source_minute_contributions " +
+            "  WHERE sourceRecordRef = health_source_records.id) " +
+            "AND NOT EXISTS (" +
+            "  SELECT 1 FROM staged_hr_sources WHERE sourceId = health_source_records.sourceRecordId) " +
+            "AND NOT EXISTS (" +
+            "  SELECT 1 FROM scan_seen_ids WHERE sourceId = health_source_records.sourceRecordId) " +
+            "ORDER BY id ASC LIMIT :limit",
+    )
+    suspend fun pageUnreferencedSourceIds(afterRef: Long, limit: Int): List<Long>
+
+    @Query("DELETE FROM health_source_records WHERE id IN (:ids)")
+    suspend fun deleteSourcesByRefs(ids: List<Long>): Int
 }
 
 suspend fun SourceRecordDao.getOrCreateSourceRef(
