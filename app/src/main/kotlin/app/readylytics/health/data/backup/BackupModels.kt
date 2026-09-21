@@ -42,10 +42,20 @@ internal object BackupSchemaPolicy {
 }
 
 @Serializable
+data class BackupSnapshotIdentity(
+    val sourceGeneration: Long,
+    val scoringSnapshotId: String,
+    val schemaVersion: Int,
+    val exportedAtEpochMs: Long,
+)
+
+@Serializable
 data class BackupManifest(
     val schemaVersion: Int,
     val exportedAt: String,
     val rowCounts: Map<String, Int>,
+    val sourceGeneration: Long = 0L,
+    val scoringSnapshotId: String = "",
 )
 
 @Serializable

@@ -114,6 +114,7 @@ class HealthConnectRepositoryImplDiscoverDevicesTest {
                 clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
                 client = client,
             )
+        coEvery { client.permissionController.getGrantedPermissions() } returns repo.allPermissions
     }
 
     @After

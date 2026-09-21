@@ -161,8 +161,10 @@ class FirstSetupDummyIngestionFlowTest {
                         deviceName = "Pixel Watch",
                     ),
                 )
-            assertEquals(2, ingestionStore.persistedHeartRateSamples.size)
-            ingestionStore.persistedHeartRateSamples.forEach { assertEquals(expectedHeartRateSamples, it) }
+            assertEquals(2, ingestionStore.persistedHeartRateSources.size)
+            ingestionStore.persistedHeartRateSources.forEach { sources ->
+                assertEquals(expectedHeartRateSamples, sources.flatMap { it.rows })
+            }
 
             val expectedHrvSamples =
                 listOf(
@@ -175,8 +177,10 @@ class FirstSetupDummyIngestionFlowTest {
                         deviceName = "Pixel Watch",
                     ),
                 )
-            assertEquals(2, ingestionStore.persistedHrvSamples.size)
-            ingestionStore.persistedHrvSamples.forEach { assertEquals(expectedHrvSamples, it) }
+            assertEquals(2, ingestionStore.persistedHrvSources.size)
+            ingestionStore.persistedHrvSources.forEach { sources ->
+                assertEquals(expectedHrvSamples, sources.flatMap { it.rows })
+            }
         }
 
     @Test
@@ -193,11 +197,11 @@ class FirstSetupDummyIngestionFlowTest {
             assertEquals(4, ingestionStore.persisted.size)
             assertEquals(1, ingestionStore.persisted.toSet().size)
 
-            assertEquals(4, ingestionStore.persistedHeartRateSamples.size)
-            assertEquals(1, ingestionStore.persistedHeartRateSamples.toSet().size)
+            assertEquals(4, ingestionStore.persistedHeartRateSources.size)
+            assertEquals(1, ingestionStore.persistedHeartRateSources.toSet().size)
 
-            assertEquals(4, ingestionStore.persistedHrvSamples.size)
-            assertEquals(1, ingestionStore.persistedHrvSamples.toSet().size)
+            assertEquals(4, ingestionStore.persistedHrvSources.size)
+            assertEquals(1, ingestionStore.persistedHrvSources.toSet().size)
         }
 
     private fun buildUseCase(
@@ -239,20 +243,20 @@ class FirstSetupDummyIngestionFlowTest {
 
     private class RecordingHealthIngestionStore : HealthIngestionStore {
         val persisted = mutableListOf<HealthIngestionBatch>()
-        val persistedHeartRateSamples = mutableListOf<List<HeartRateInput>>()
-        val persistedHrvSamples = mutableListOf<List<HrvInput>>()
+        val persistedHeartRateSources = mutableListOf<List<SourcePayload<HeartRateInput>>>()
+        val persistedHrvSources = mutableListOf<List<SourcePayload<HrvInput>>>()
         val clearedRanges = mutableListOf<Pair<LocalDate, LocalDate>>()
 
         override suspend fun persist(batch: HealthIngestionBatch) {
             persisted += batch
         }
 
-        override suspend fun persistHeartRateSamples(samples: List<HeartRateInput>) {
-            persistedHeartRateSamples += samples
+        override suspend fun replaceHeartRateSources(sources: List<SourcePayload<HeartRateInput>>) {
+            persistedHeartRateSources += sources
         }
 
-        override suspend fun persistHrvSamples(samples: List<HrvInput>) {
-            persistedHrvSamples += samples
+        override suspend fun replaceHrvSources(sources: List<SourcePayload<HrvInput>>) {
+            persistedHrvSources += sources
         }
 
         override suspend fun clearFrozenBaselines(
@@ -293,10 +297,7 @@ class FirstSetupDummyIngestionFlowTest {
         ) = Unit
 
         override suspend fun reconcileWindow(
-            type: app.readylytics.health.core.model.domain.model.HealthDataType,
-            windowStartMs: Long,
-            windowEndMs: Long,
-            hcIds: Set<String>,
+            scan: app.readylytics.health.core.model.domain.sync.CompleteTypeScan,
             zoneId: ZoneId,
         ): ScoreInvalidation.AffectedRange? = null
     }
@@ -315,25 +316,29 @@ class FirstSetupDummyIngestionFlowTest {
         override suspend fun readSleepSessions(
             from: Instant,
             to: Instant,
-        ): List<DomainSleepSessionRecord> = listOf(sleepSession)
+        ): app.readylytics.health.core.model.domain.repository.ReadOutcome<List<DomainSleepSessionRecord>> =
+            app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(listOf(sleepSession))
 
         override suspend fun readHeartRateSamples(
             from: Instant,
             to: Instant,
-        ): List<DomainHeartRateRecord> = heartRateRecords
+        ): app.readylytics.health.core.model.domain.repository.ReadOutcome<List<DomainHeartRateRecord>> =
+            app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(heartRateRecords)
 
         override suspend fun readHrvSamples(
             from: Instant,
             to: Instant,
-        ): List<DomainHrvRecord> = listOf(hrvRecord)
+        ): app.readylytics.health.core.model.domain.repository.ReadOutcome<List<DomainHrvRecord>> =
+            app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(listOf(hrvRecord))
 
         override suspend fun readHeartRateSamplesPaged(
             from: Instant,
             to: Instant,
             startPageToken: String?,
             onPage: suspend (List<DomainHeartRateRecord>, String?) -> Unit,
-        ) {
+        ): app.readylytics.health.core.model.domain.repository.ReadOutcome<Unit> {
             onPage(heartRateRecords, null)
+            return app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(Unit)
         }
 
         override suspend fun readHrvSamplesPaged(
@@ -341,58 +346,68 @@ class FirstSetupDummyIngestionFlowTest {
             to: Instant,
             startPageToken: String?,
             onPage: suspend (List<DomainHrvRecord>, String?) -> Unit,
-        ) {
+        ): app.readylytics.health.core.model.domain.repository.ReadOutcome<Unit> {
             onPage(listOf(hrvRecord), null)
+            return app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(Unit)
         }
 
         override suspend fun readExerciseSessions(
             from: Instant,
             to: Instant,
             includeDetails: Boolean,
-        ): List<DomainExerciseSessionRecord> = listOf(workoutSession)
+        ): app.readylytics.health.core.model.domain.repository.ReadOutcome<List<DomainExerciseSessionRecord>> =
+            app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(listOf(workoutSession))
 
         override suspend fun readStepsRecords(
             from: Instant,
             to: Instant,
-        ): List<DomainStepsRecord> = emptyList()
+        ): app.readylytics.health.core.model.domain.repository.ReadOutcome<List<DomainStepsRecord>> =
+            app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(emptyList())
 
         override suspend fun readSteps(
             from: Instant,
             to: Instant,
-        ): Long = 4200L
+        ): app.readylytics.health.core.model.domain.repository.ReadOutcome<Long> =
+            app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(4200L)
 
         override suspend fun readDailyStepTotals(
             from: Instant,
             to: Instant,
             zoneId: ZoneId,
-        ): Map<LocalDate, Long> = emptyMap()
+        ): app.readylytics.health.core.model.domain.repository.ReadOutcome<Map<LocalDate, Long>> =
+            app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(emptyMap())
 
         override suspend fun discoverDevices(windowDays: Int): List<String> = listOf("Pixel Watch")
 
         override suspend fun readWeightRecords(
             from: Instant,
             to: Instant,
-        ): List<DomainWeightRecord> = emptyList()
+        ): app.readylytics.health.core.model.domain.repository.ReadOutcome<List<DomainWeightRecord>> =
+            app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(emptyList())
 
         override suspend fun readBodyFatRecords(
             from: Instant,
             to: Instant,
-        ): List<DomainBodyFatRecord> = emptyList()
+        ): app.readylytics.health.core.model.domain.repository.ReadOutcome<List<DomainBodyFatRecord>> =
+            app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(emptyList())
 
         override suspend fun readBloodPressureRecords(
             from: Instant,
             to: Instant,
-        ): List<DomainBloodPressureRecord> = emptyList()
+        ): app.readylytics.health.core.model.domain.repository.ReadOutcome<List<DomainBloodPressureRecord>> =
+            app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(emptyList())
 
         override suspend fun readOxygenSaturationRecords(
             from: Instant,
             to: Instant,
-        ): List<DomainOxygenSaturationRecord> = emptyList()
+        ): app.readylytics.health.core.model.domain.repository.ReadOutcome<List<DomainOxygenSaturationRecord>> =
+            app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(emptyList())
 
         override suspend fun readBodyTemperatureRecords(
             from: Instant,
             to: Instant,
-        ): List<DomainBodyTemperatureRecord> = emptyList()
+        ): app.readylytics.health.core.model.domain.repository.ReadOutcome<List<DomainBodyTemperatureRecord>> =
+            app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(emptyList())
 
         override suspend fun hasBodyTemperaturePermission(): Boolean = false
 
@@ -421,7 +436,8 @@ class FirstSetupDummyIngestionFlowTest {
         override suspend fun readVo2MaxRecords(
             startTime: Instant,
             endTime: Instant,
-        ): List<DomainVo2MaxRecord> = emptyList()
+        ): app.readylytics.health.core.model.domain.repository.ReadOutcome<List<DomainVo2MaxRecord>> =
+            app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(emptyList())
 
         private companion object {
             val sleepStart: Instant = Instant.parse("2026-06-28T22:00:00Z")

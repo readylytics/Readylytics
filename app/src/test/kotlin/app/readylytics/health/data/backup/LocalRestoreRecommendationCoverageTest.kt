@@ -10,8 +10,8 @@ import app.readylytics.health.core.model.domain.recommendation.WorkoutRecommenda
 import app.readylytics.health.core.model.domain.recommendation.WorkoutRecommendationState
 import app.readylytics.health.data.preferences.UserPreferencesProto
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.coVerifyOrder
-import io.mockk.verify
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.json.JSONArray
@@ -49,6 +49,7 @@ class LocalRestoreRecommendationCoverageTest : LocalRestoreManagerTestBase() {
                     )
                 }
             json.put("dailySummaries", summariesJson)
+            json.getJSONObject("rowCounts").put("dailySummaries", summariesJson.length())
             val zipFile = createBackupZipFile("old_backup_missing_recommendation.zip", json)
 
             val builderSlot = io.mockk.slot<UserPreferencesProto.Builder.() -> Unit>()
@@ -57,7 +58,7 @@ class LocalRestoreRecommendationCoverageTest : LocalRestoreManagerTestBase() {
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
             assertTrue(result is RestoreResult.SuccessRequiresRestart)
-            verify(exactly = 1) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
+            coVerify(exactly = 1) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
             zipFile.delete()
         }
 
@@ -81,12 +82,13 @@ class LocalRestoreRecommendationCoverageTest : LocalRestoreManagerTestBase() {
                     )
                 }
             json.put("dailySummaries", summariesJson)
+            json.getJSONObject("rowCounts").put("dailySummaries", summariesJson.length())
             val zipFile = createBackupZipFile("valid_recommendation_backup.zip", json)
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
             assertTrue(result is RestoreResult.SuccessRequiresRestart)
-            verify(exactly = 0) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
+            coVerify(exactly = 0) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
             zipFile.delete()
         }
 
@@ -122,12 +124,13 @@ class LocalRestoreRecommendationCoverageTest : LocalRestoreManagerTestBase() {
                     )
                 }
             json.put("dailySummaries", summariesJson)
+            json.getJSONObject("rowCounts").put("dailySummaries", summariesJson.length())
             val zipFile = createBackupZipFile("partially_covered_backup.zip", json)
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
             assertTrue(result is RestoreResult.SuccessRequiresRestart)
-            verify(exactly = 0) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
+            coVerify(exactly = 0) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
             zipFile.delete()
         }
 
@@ -141,7 +144,7 @@ class LocalRestoreRecommendationCoverageTest : LocalRestoreManagerTestBase() {
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
             assertTrue(result is RestoreResult.SuccessRequiresRestart)
-            verify(exactly = 0) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
+            coVerify(exactly = 0) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
             zipFile.delete()
         }
 
@@ -170,12 +173,13 @@ class LocalRestoreRecommendationCoverageTest : LocalRestoreManagerTestBase() {
                     )
                 }
             json.put("dailySummaries", summariesJson)
+            json.getJSONObject("rowCounts").put("dailySummaries", summariesJson.length())
             val zipFile = createBackupZipFile("outside_retention_missing_payload_backup.zip", json)
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
             assertTrue(result is RestoreResult.SuccessRequiresRestart)
-            verify(exactly = 0) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
+            coVerify(exactly = 0) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
             zipFile.delete()
         }
 
@@ -200,12 +204,13 @@ class LocalRestoreRecommendationCoverageTest : LocalRestoreManagerTestBase() {
                     )
                 }
             json.put("dailySummaries", summariesJson)
+            json.getJSONObject("rowCounts").put("dailySummaries", summariesJson.length())
             val zipFile = createBackupZipFile("within_retention_missing_payload_backup.zip", json)
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
             assertTrue(result is RestoreResult.SuccessRequiresRestart)
-            verify(exactly = 1) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
+            coVerify(exactly = 1) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
             zipFile.delete()
         }
 
@@ -226,6 +231,7 @@ class LocalRestoreRecommendationCoverageTest : LocalRestoreManagerTestBase() {
                     )
                 }
             json.put("dailySummaries", summariesJson)
+            json.getJSONObject("rowCounts").put("dailySummaries", summariesJson.length())
             val zipFile = createBackupZipFile("ordering_backup.zip", json)
 
             val builderSlot = io.mockk.slot<UserPreferencesProto.Builder.() -> Unit>()
@@ -242,11 +248,10 @@ class LocalRestoreRecommendationCoverageTest : LocalRestoreManagerTestBase() {
         }
 
     @Test
-    fun applyRestore_stillSchedulesRecomputeWhenPreferencesRestoreFails() =
+    fun applyRestore_doesNotScheduleRecomputeWhenPreferencesRestoreFails() =
         runTest {
-            // Task 5 fix round 1 (Minor #2): the caller's original intent -- still check/schedule
-            // even when preferences restore itself fails, since the database data already
-            // committed and is fully valid -- must survive the reordering fix.
+            // Task R3: When preferences restore fails, maintenance remains active and
+            // recompute must NOT be scheduled with stale preferences.
             val json = createValidBackupJson()
             val summariesJson =
                 JSONArray().apply {
@@ -258,14 +263,15 @@ class LocalRestoreRecommendationCoverageTest : LocalRestoreManagerTestBase() {
                     )
                 }
             json.put("dailySummaries", summariesJson)
-            val zipFile = createBackupZipFile("prefs_fail_still_recomputes_backup.zip", json)
+            json.getJSONObject("rowCounts").put("dailySummaries", summariesJson.length())
+            val zipFile = createBackupZipFile("prefs_fail_no_recompute_backup.zip", json)
 
             coEvery { settingsRepo.batchUpdate(any()) } throws RuntimeException("prefs fail")
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
             assertTrue(result is RestoreResult.PartialSuccessRequiresRestart)
-            verify(exactly = 1) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
+            coVerify(exactly = 0) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
             zipFile.delete()
         }
 }

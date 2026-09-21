@@ -1,5 +1,6 @@
 package app.readylytics.health.core.database.data.local
 
+import app.readylytics.health.core.database.data.local.AuthoritativeHeartRateReader
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -72,6 +73,7 @@ class SessionLinkReconcilerImplTest {
                 heartRateDao = heartRateDao,
                 hrvDao = hrvDao,
                 transactionRunner = countingRunner,
+                authoritativeReader = AuthoritativeHeartRateReader(heartRateDao, database.minuteBucketDao()),
             )
     }
 

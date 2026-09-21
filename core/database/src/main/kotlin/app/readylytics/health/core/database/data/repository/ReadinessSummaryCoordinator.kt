@@ -3,6 +3,7 @@ package app.readylytics.health.core.database.data.repository
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.database.data.mapper.SleepSessionMapper
 import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.model.RecoveryFlag
 import app.readylytics.health.core.model.domain.model.getOrNull
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
@@ -18,10 +19,12 @@ import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesU
 import app.readylytics.health.core.scoring.domain.scoring.ScoringConfig
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.scoring.domain.scoring.TrimpDateBucketer
+import app.readylytics.health.core.scoring.domain.scoring.sleep.CoreRecoveryInput
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayAggregate
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayAggregator
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayPolicy
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDaySegment
+import app.readylytics.health.core.scoring.domain.scoring.sleep.findPreviousCoreEndZoneOffsetSeconds
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
@@ -58,12 +61,15 @@ class ReadinessSummaryCoordinator
                     supplementalArchitectureCoveragePercent = prefs.supplementalArchitectureCoveragePercent,
                     scoringZoneId = zoneId,
                 )
-            val aggregate =
-                SleepDayAggregator.aggregateForScoreDay(
-                    scoreDay = targetDate,
+            // Aggregated once over the whole fetched window (not per-day via aggregateForScoreDay)
+            // so the same pass also yields yesterday's/earlier days' core clusters, needed below to
+            // resolve the previous-core offset independently of any baseline-window statistics.
+            val aggregationResult =
+                SleepDayAggregator.aggregate(
                     segments = sessions.map(::toSleepDaySegment),
                     policy = policy,
-                ) ?: return null
+                )
+            val aggregate = aggregationResult.aggregates.firstOrNull { it.scoreDay == targetDate } ?: return null
 
             val coreSessionIds = aggregate.coreCluster.segments.map { it.stableId }.toSet()
             val coreSessions = sessions.filter { it.id in coreSessionIds }
@@ -89,12 +95,20 @@ class ReadinessSummaryCoordinator
                         add(LongInterval(it.segment.startTimeMs, it.segment.endTimeMs))
                     }
                 }
+            val previousCoreEndZoneOffsetSeconds =
+                findPreviousCoreEndZoneOffsetSeconds(
+                    aggregationResult.aggregates,
+                    aggregate.scoreDay,
+                    aggregate.coreCluster.startTimeMs,
+                )
+            val coreRecoveryInput = CoreRecoveryInput.from(aggregate, previousCoreEndZoneOffsetSeconds)
 
             return SleepAggregationContext(
                 aggregate = aggregate,
                 scoringSession = scoringSession,
                 coreSessionIds = coreSessionIds,
                 allSleepIntervals = allSleepIntervals,
+                coreRecoveryInput = coreRecoveryInput,
             )
         }
 
@@ -143,7 +157,7 @@ class ReadinessSummaryCoordinator
                     avgBodyTemp = base.avgBodyTemp,
                     calibHrvBaseline = calibHrvBaseline,
                     rhrBaselineValue = rhrBaselineValue,
-                )
+                ).withAbsentSleepDiagnostics()
             }
             val hrvValues = if (base.currentSessionIds.size <= 1) {
                 scoringHistoryRepository.getSleepRmssdForSession(base.session.id)
@@ -284,6 +298,7 @@ class ReadinessSummaryCoordinator
                 computeSleepMetricsUseCase(
                     SleepMetricsRequest(
                         session = SleepSessionMapper.toDomain(base.session),
+                        core = base.coreRecoveryInput ?: fallbackCoreRecoveryInput(base.session),
                         dayMidnight = context.targetDate.atStartOfDay(context.zoneId).toInstant(),
                         targetDate = context.targetDate,
                         prefs = context.prefs,
@@ -298,10 +313,48 @@ class ReadinessSummaryCoordinator
                     ),
                 ).getOrNull() ?: withHrvBaseline
             } else {
-                withHrvBaseline
+                // C3 (WP-13): the day's only sleep session is confirmed absent -- explicitly flag
+                // it as no-data rather than silently leaving withHrvBaseline's sleep fields at
+                // whatever freshDaySummary left them (null). Independent inputs already folded
+                // into withHrvBaseline (load, steps, vitals) are untouched.
+                withHrvBaseline.withAbsentSleepDiagnostics()
             }
         }
+
+        /**
+         * Explicitly flags a day whose required source input (its sleep session) was confirmed
+         * absent, reusing the existing [RecoveryFlag.HRV_MISSING] vocabulary (already surfaced to
+         * the user via the RECOVERY_HRV_MISSING insight and AI-recommendation glossary) rather than
+         * leaving sleep-related diagnostics silently null with no explanation.
+         */
+        private fun DailySummary.withAbsentSleepDiagnostics(): DailySummary =
+            copy(
+                readinessResult =
+                    readinessResult.copy(
+                        recoveryFlags = readinessResult.recoveryFlags + RecoveryFlag.HRV_MISSING,
+                        diagnostics = readinessResult.diagnostics.copy(hrvMissing = true),
+                    ),
+            )
     }
+
+/**
+ * WP-14/C4: [ReadinessBaseInputs.coreRecoveryInput] is only ever null when
+ * [ReadinessSummaryCoordinator.resolveSleepAggregation] itself returned null and the caller fell
+ * back to a single raw session ([ScoringDayDataLoader.loadSessionEndingInRange]) with no
+ * aggregation context at all -- there is no core/nap distinction to make in that case, so this
+ * treats the raw session as its own (single-segment) core, with no previous-core offset evidence
+ * available. Kept as a file-level function (rather than a member) to keep
+ * [ReadinessSummaryCoordinator]'s own method count under detekt's `TooManyFunctions` threshold.
+ */
+private fun fallbackCoreRecoveryInput(session: SleepSessionEntity): CoreRecoveryInput =
+    CoreRecoveryInput.fromSingleSession(
+        sessionId = session.id,
+        startTimeMs = session.startTime,
+        endTimeMs = session.endTime,
+        coreSleepDurationMinutes = session.durationMinutes,
+        endZoneOffsetSeconds = session.endZoneOffsetSeconds,
+        previousCoreEndZoneOffsetSeconds = null,
+    )
 
 data class ReadinessBaseInputs(
     val session: SleepSessionEntity?,
@@ -309,6 +362,7 @@ data class ReadinessBaseInputs(
     val baseSummary: DailySummary,
     val avgSpo2: Float?,
     val avgBodyTemp: Float?,
+    val coreRecoveryInput: CoreRecoveryInput? = null,
 )
 
 data class CalibratedScoringContext(
@@ -330,4 +384,5 @@ data class SleepAggregationContext(
     val scoringSession: SleepSessionEntity,
     val coreSessionIds: Set<String>,
     val allSleepIntervals: List<LongInterval>,
+    val coreRecoveryInput: CoreRecoveryInput,
 )

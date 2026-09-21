@@ -86,5 +86,26 @@ class LocalBackupWorkerTest {
             verify(exactly = 0) { localBackupManagerLazy.get() }
         }
 
-    private fun createWorker() = LocalBackupWorker(context, workerParams, localBackupManagerLazy, databaseReadinessGate)
+    @Test
+    fun `doWork retries when maintenance is pending`() =
+        runBlocking {
+            val coordinator = mockk<app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator>()
+            io.mockk.coEvery { coordinator.isMaintenancePending() } returns true
+
+            val worker = createWorker(coordinator)
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.retry(), result)
+            verify(exactly = 0) { localBackupManagerLazy.get() }
+        }
+
+    private fun createWorker(
+        coordinator: app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator? = null,
+    ) = LocalBackupWorker(
+        context = context,
+        params = workerParams,
+        localBackupManager = localBackupManagerLazy,
+        databaseReadinessGate = databaseReadinessGate,
+        healthMutationCoordinator = coordinator?.let { Lazy { it } },
+    )
 }

@@ -1,4 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Seeder-only permissions belong to the debug target app: GrantPermissionRule grants
+         permissions to the target package, not the separately installed test APK. -->
+    <uses-permission android:name="android.permission.health.READ_RESTING_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.WRITE_RESTING_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.WRITE_HEART_RATE_VARIABILITY" />
+
     <application>
         <!-- Test-only: two separate OS processes used by
              SqlCipherKeyManagerCrossProcessRaceTest (app/src/androidTest) to reproduce the real

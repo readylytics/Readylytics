@@ -1,10 +1,20 @@
 package app.readylytics.health.core.database.data.local
 
 import app.readylytics.health.core.databaseschema.data.local.dao.DailySummaryDao
+import app.readylytics.health.core.databaseschema.data.local.dao.DirtyRangeDao
+import app.readylytics.health.core.databaseschema.data.local.dao.HealthMutationStateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.Vo2MaxRecordDao
+import app.readylytics.health.core.databaseschema.data.local.entity.DirtyRangeEntity
+import app.readylytics.health.core.model.data.preferences.scoringZone
+import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
+import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
+import java.time.Clock
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneOffset
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -17,47 +27,109 @@ class RetentionCleanup
         private val daos: HealthRecordDaos,
         private val dailySummaryDao: DailySummaryDao,
         private val vo2MaxRecordDao: Vo2MaxRecordDao,
+        private val coordinator: HealthMutationCoordinator? = null,
+        private val dirtyRangeDao: DirtyRangeDao? = null,
+        private val healthMutationStateDao: HealthMutationStateDao? = null,
+        private val clock: Clock = Clock.systemDefaultZone(),
+        private val settingsRepository: SettingsRepository? = null,
     ) {
-        // DB-002: heart_rate_records/hrv_records are deleted in bounded batches, each its own
-        // transaction, before the remaining ten low-volume tables run in a single transaction as
-        // before. Every constituent delete is `WHERE timestampMs < cutoff`, so re-running after a
-        // killed worker (mid-batch, or between the HR/HRV phase and the low-volume phase) is safe
-        // -- already-deleted rows simply contribute 0 to the next call.
-        //
-        // R2-CACHE-001: returns the ScoreInvalidation.AffectedRange this call actually touched, or
-        // `null` on a no-op run (nothing older than cutoffMs). Scoped to heart_rate_records and
-        // hr_minute_buckets -- the two sources that feed the scoring walk-forward and change size
-        // with the rolling retention cutoff -- read *before* they're deleted. Sleep/workout/vitals
-        // retention deletions ride the same daily cutoff advance and are covered by the same
-        // 84-day forward slack, so they are not separately tracked here.
         suspend fun deleteBefore(cutoffMs: Long): ScoreInvalidation.AffectedRange? {
+            val runner: suspend () -> ScoreInvalidation.AffectedRange? = { doDeleteBefore(cutoffMs) }
+            return if (coordinator != null) {
+                coordinator.withMutation { runner() }
+            } else {
+                runner()
+            }
+        }
+
+        private suspend fun doDeleteBefore(cutoffMs: Long): ScoreInvalidation.AffectedRange? {
             val earliestHrMs = daos.heartRateDao.minTimestampBefore(cutoffMs)
             val earliestBucketMs = daos.minuteBucketMaintenanceDao.minBucketStartBefore(cutoffMs)
             val earliestMs = listOfNotNull(earliestHrMs, earliestBucketMs).minOrNull()
+            var totalDeleted = 0
+            var dirtyRecorded = false
 
-            deleteInBatches { limit -> daos.heartRateDao.deleteBeforeTimestampBatch(cutoffMs, limit) }
-            deleteInBatches { limit -> daos.hrvDao.deleteBeforeTimestampBatch(cutoffMs, limit) }
-
-            transactionRunner.runInTransaction {
-                daos.sleepSessionDao.deleteBeforeTimestamp(cutoffMs)
-                daos.minuteBucketMaintenanceDao.deleteBeforeTimestamp(cutoffMs)
-                daos.workoutDao.deleteBeforeTimestamp(cutoffMs)
-                dailySummaryDao.deleteBeforeTimestamp(cutoffMs)
-                daos.weightRecordDao.deleteBeforeTimestamp(cutoffMs)
-                daos.bodyFatRecordDao.deleteBeforeTimestamp(cutoffMs)
-                daos.bloodPressureRecordDao.deleteBeforeTimestamp(cutoffMs)
-                daos.oxygenSaturationRecordDao.deleteBeforeTimestamp(cutoffMs)
-                daos.bodyTemperatureRecordDao.deleteBeforeTimestamp(cutoffMs)
-                daos.stepRecordDao.deleteBeforeTimestamp(cutoffMs)
-                vo2MaxRecordDao.deleteBefore(cutoffMs)
+            suspend fun ensureJournaled() {
+                if (dirtyRecorded) return
+                recordDirtyRange(cutoffMs, earliestMs)
+                dirtyRecorded = true
             }
 
-            val earliest = earliestMs ?: return null
+            deleteInBatches { limit ->
+                val count = daos.heartRateDao.deleteBeforeTimestampBatch(cutoffMs, limit)
+                if (count > 0) ensureJournaled()
+                totalDeleted += count
+                count
+            }
+            deleteInBatches { limit ->
+                val count = daos.hrvDao.deleteBeforeTimestampBatch(cutoffMs, limit)
+                if (count > 0) ensureJournaled()
+                totalDeleted += count
+                count
+            }
+
+            transactionRunner.runInTransaction {
+                val lowVolumeDeleted = deleteLowVolumeTables(cutoffMs)
+                if (lowVolumeDeleted > 0) ensureJournaled()
+                totalDeleted += lowVolumeDeleted
+            }
+
+            if (totalDeleted == 0) return null
+            val effectiveEarliest = earliestMs ?: (cutoffMs - DAY_MS)
             return ScoreInvalidation.AffectedRange(
-                start = Instant.ofEpochMilli(earliest).atZone(ZoneOffset.UTC).toLocalDate(),
+                start = Instant.ofEpochMilli(effectiveEarliest).atZone(ZoneOffset.UTC).toLocalDate(),
                 endInclusive = Instant.ofEpochMilli(cutoffMs).atZone(ZoneOffset.UTC).toLocalDate(),
             )
         }
+
+        private suspend fun recordDirtyRange(
+            cutoffMs: Long,
+            earliestMs: Long?,
+        ) {
+            if (dirtyRangeDao == null || healthMutationStateDao == null) return
+            val effectiveEarliest = earliestMs ?: (cutoffMs - DAY_MS)
+            val scoringZone = resolveScoringZone()
+            val startDate = Instant.ofEpochMilli(effectiveEarliest).atZone(scoringZone).toLocalDate()
+            val today = LocalDate.now(clock.withZone(scoringZone))
+            val endInclusive = maxOf(today, Instant.ofEpochMilli(cutoffMs).atZone(scoringZone).toLocalDate())
+
+            healthMutationStateDao.incrementGeneration()
+            val currentGen = healthMutationStateDao.current().sourceGeneration
+            dirtyRangeDao.insert(
+                DirtyRangeEntity(
+                    sourceGeneration = currentGen,
+                    startEpochDay = startDate.toEpochDay(),
+                    endEpochDayInclusive = endInclusive.toEpochDay(),
+                    nextEpochDay = startDate.toEpochDay(),
+                    reason = "RETENTION_CLEANUP",
+                    scoringSnapshotId = "ACTIVE",
+                ),
+            )
+        }
+
+        private suspend fun resolveScoringZone() =
+            try {
+                settingsRepository?.userPreferences?.first()?.scoringZone() ?: clock.zone
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                clock.zone
+            }
+
+        private suspend fun deleteLowVolumeTables(cutoffMs: Long): Int =
+            daos.sleepSessionDao.deleteBeforeTimestamp(cutoffMs) +
+                daos.minuteBucketMaintenanceDao.deleteBeforeTimestamp(cutoffMs) +
+                daos.minuteBucketMaintenanceDao.deleteContributionsBeforeTimestamp(cutoffMs) +
+                daos.minuteBucketMaintenanceDao.deleteCoverageBeforeTimestamp(cutoffMs) +
+                daos.workoutDao.deleteBeforeTimestamp(cutoffMs) +
+                dailySummaryDao.deleteBeforeTimestamp(cutoffMs) +
+                daos.weightRecordDao.deleteBeforeTimestamp(cutoffMs) +
+                daos.bodyFatRecordDao.deleteBeforeTimestamp(cutoffMs) +
+                daos.bloodPressureRecordDao.deleteBeforeTimestamp(cutoffMs) +
+                daos.oxygenSaturationRecordDao.deleteBeforeTimestamp(cutoffMs) +
+                daos.bodyTemperatureRecordDao.deleteBeforeTimestamp(cutoffMs) +
+                daos.stepRecordDao.deleteBeforeTimestamp(cutoffMs) +
+                vo2MaxRecordDao.deleteBefore(cutoffMs)
 
         private suspend fun deleteInBatches(deleteBatch: suspend (limit: Int) -> Int) {
             while (true) {
@@ -68,5 +140,6 @@ class RetentionCleanup
 
         private companion object {
             private const val BATCH_SIZE = 10_000
+            private const val DAY_MS = 86_400_000L
         }
     }

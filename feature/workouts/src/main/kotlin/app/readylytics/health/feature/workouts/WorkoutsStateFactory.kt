@@ -34,8 +34,8 @@ import java.util.Locale
 
 data class WorkoutDisplayItem(
     val workout: WorkoutData,
-    val gainedStrain: Float,
-    val computedTrimp: Int,
+    val gainedStrain: Float?,
+    val computedTrimp: Int?,
     val gainedStrainDisplay: String,
     val classification: WorkoutLoadClassification?,
 )

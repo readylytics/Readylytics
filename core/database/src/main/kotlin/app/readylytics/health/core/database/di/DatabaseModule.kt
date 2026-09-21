@@ -58,6 +58,11 @@ abstract class DatabaseModule {
                     .addMigrations(*DatabaseMigrations.all)
                     .addCallback(
                         object : RoomDatabase.Callback() {
+                            override fun onCreate(db: SupportSQLiteDatabase) {
+                                super.onCreate(db)
+                                db.execSQL("INSERT OR IGNORE INTO health_mutation_state VALUES (1, 0, NULL, NULL, 0)")
+                            }
+
                             override fun onOpen(db: SupportSQLiteDatabase) {
                                 super.onOpen(db)
                                 db.execSQL("PRAGMA synchronous = NORMAL")

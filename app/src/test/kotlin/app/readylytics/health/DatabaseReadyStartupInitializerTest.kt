@@ -1,5 +1,6 @@
 package app.readylytics.health
 
+import android.content.Context
 import app.readylytics.health.core.healthconnect.domain.sync.HealthSyncUseCase
 import app.readylytics.health.core.model.data.preferences.BackupSchedule
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
@@ -8,6 +9,7 @@ import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.repository.WorkoutTrimpBackfillStatus
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.core.scoring.domain.scoring.BackfillHistoricalBaselinesUseCase
+import app.readylytics.health.data.backup.RestoreMaintenanceCoordinator
 import app.readylytics.health.data.preferences.PhysiologyPreferences
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.domain.migration.DatabaseMigrationUiState
@@ -29,8 +31,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DatabaseReadyStartupInitializerTest {
@@ -263,7 +268,99 @@ class DatabaseReadyStartupInitializerTest {
             verify(exactly = 0) { workerScheduler.schedulePeriodicSync(any()) }
         }
 
-    private fun createInitializer(): DatabaseReadyStartupInitializer {
+    @Test
+    fun `ready startup cleans up orphan backup staging before scheduling work`() =
+        runTest {
+            val cacheDir =
+                java.nio.file.Files
+                    .createTempDirectory("cache")
+                    .toFile()
+            try {
+                val stagingDir = File(cacheDir, "backup-staging").apply { mkdirs() }
+                val orphan = File(stagingDir, "backup_orphan.json").apply { writeText("{}") }
+                val context = mockk<Context>()
+                every { context.cacheDir } returns cacheDir
+
+                every { healthSyncLazy.get() } returns healthSyncUseCase
+                every { backfillLazy.get() } returns backfill
+                every { settingsRepository.backupSchedule } returns flowOf(BackupSchedule.DAILY)
+                every { settingsRepository.backgroundSyncEnabled } returns flowOf(false)
+                coEvery { healthSyncUseCase.withSyncLock<Int>(any()) } coAnswers {
+                    firstArg<suspend () -> Int>().invoke()
+                }
+                coEvery { backfill.execute() } returns 0
+                val initializer = createInitializer(context = context)
+
+                initializer.initializeIfReady(DatabaseReadiness.Ready)
+
+                assertFalse(orphan.exists())
+                verify(exactly = 1) { workerScheduler.scheduleBackupWorker(BackupSchedule.DAILY) }
+            } finally {
+                cacheDir.deleteRecursively()
+            }
+        }
+
+    @Test
+    fun `ready startup recovers interrupted restore before backfill`() =
+        runTest {
+            val restoreCoordinator = mockk<RestoreMaintenanceCoordinator>()
+            coEvery { restoreCoordinator.recoverInterruptedRestoreOnStartup() } returns true
+            coEvery { restoreCoordinator.isMaintenancePending() } returns false
+
+            every { healthSyncLazy.get() } returns healthSyncUseCase
+            every { backfillLazy.get() } returns backfill
+            every { settingsRepository.backupSchedule } returns flowOf(BackupSchedule.DAILY)
+            every { settingsRepository.backgroundSyncEnabled } returns flowOf(false)
+            coEvery { healthSyncUseCase.withSyncLock<Int>(any()) } coAnswers {
+                firstArg<suspend () -> Int>().invoke()
+            }
+            coEvery { backfill.execute() } returns 0
+
+            val initializer =
+                createInitializer(
+                    restoreMaintenanceCoordinator = Lazy { restoreCoordinator },
+                )
+
+            val result = initializer.initializeIfReady(DatabaseReadiness.Ready)
+            assertEquals(StartupInitializationResult.COMPLETE, result)
+
+            coVerify(exactly = 1) { restoreCoordinator.recoverInterruptedRestoreOnStartup() }
+            coVerify(exactly = 1) { backfill.execute() }
+        }
+
+    @Test
+    fun `failed restore recovery keeps startup retryable until maintenance is released`() =
+        runTest {
+            val restoreCoordinator = mockk<RestoreMaintenanceCoordinator>()
+            coEvery { restoreCoordinator.recoverInterruptedRestoreOnStartup() } returns false
+            coEvery { restoreCoordinator.isMaintenancePending() } returns true
+            every { healthSyncLazy.get() } returns healthSyncUseCase
+            every { backfillLazy.get() } returns backfill
+            every { settingsRepository.backupSchedule } returns flowOf(BackupSchedule.DAILY)
+            every { settingsRepository.backgroundSyncEnabled } returns flowOf(false)
+            coEvery { healthSyncUseCase.withSyncLock<Int>(any()) } coAnswers {
+                firstArg<suspend () -> Int>().invoke()
+            }
+            coEvery { backfill.execute() } returns 0
+            val initializer = createInitializer(restoreMaintenanceCoordinator = Lazy { restoreCoordinator })
+
+            assertEquals(
+                StartupInitializationResult.RETRYABLE_FAILURE,
+                initializer.initializeIfReady(DatabaseReadiness.Ready),
+            )
+            coVerify(exactly = 0) { backfill.execute() }
+            verify(exactly = 0) { workerScheduler.scheduleBackupWorker(any()) }
+
+            coEvery { restoreCoordinator.recoverInterruptedRestoreOnStartup() } returns true
+            coEvery { restoreCoordinator.isMaintenancePending() } returns false
+            assertEquals(StartupInitializationResult.COMPLETE, initializer.initializeIfReady(DatabaseReadiness.Ready))
+            coVerify(exactly = 1) { backfill.execute() }
+        }
+
+    private fun createInitializer(
+        context: Context? = null,
+        restoreMaintenanceCoordinator: Lazy<RestoreMaintenanceCoordinator>? = null,
+    ): DatabaseReadyStartupInitializer {
         every { settingsRepositoryLazy.get() } returns settingsRepository
         every { physiologyPreferencesLazy.get() } returns physiologyPreferences
         every { settingsRepository.userPreferences } returns
@@ -284,6 +381,8 @@ class DatabaseReadyStartupInitializerTest {
                         override suspend fun hasUnbackfilledWorkouts(retentionStartMs: Long): Boolean = false
                     }
                 },
+            context = context,
+            restoreMaintenanceCoordinator = restoreMaintenanceCoordinator,
         )
     }
 }

@@ -1,0 +1,309 @@
+package app.readylytics.health.core.healthconnect.domain.sync
+
+import app.readylytics.health.core.model.domain.model.HealthDataType
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.repository.HealthConnectWindowTimeoutException
+import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
+import app.readylytics.health.core.model.domain.sync.HistoricalRunIdentity
+import app.readylytics.health.core.model.domain.sync.ResyncCheckpoint
+import app.readylytics.health.core.model.domain.sync.ResyncCheckpointStore
+import app.readylytics.health.core.model.domain.sync.ResyncPhase
+import app.readylytics.health.core.model.domain.util.logD
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import java.time.Clock
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.temporal.ChronoUnit
+import javax.inject.Inject
+import javax.inject.Singleton
+
+data class IngestPhaseContext(
+    val startDate: LocalDate,
+    val endDate: LocalDate,
+    val zoneId: ZoneId,
+    val prefs: UserPreferences,
+    val chunkDays: Int,
+    val totalChunks: Int,
+    val reconcileStartMs: Long,
+    val reconcileEndMs: Long,
+    val selectionHash: String,
+    val baselineChangeTokens: Map<HealthDataType, String>,
+    val initialCompletedTypes: Set<HealthDataType>,
+    val runIdentity: HistoricalRunIdentity,
+    val checkpoint: ResyncCheckpoint?,
+    val skipIngestAndPrune: Boolean,
+)
+
+data class IngestPhaseOutcome(
+    val earliestDeletionDate: LocalDate?,
+    val completedTypes: Set<HealthDataType>,
+    val hrBeforePrune: Int,
+    val hrvBeforePrune: Int,
+    val sleepBeforePrune: Int,
+    val workoutBeforePrune: Int,
+)
+
+private data class IngestCounts(
+    val hr: Int,
+    val hrv: Int,
+    val sleep: Int,
+    val workout: Int,
+)
+
+private sealed interface ChunkIngestResult {
+    data class Success(
+        val nextChunkStart: LocalDate,
+        val affectedStart: LocalDate?,
+        val completedTypes: Set<HealthDataType>,
+    ) : ChunkIngestResult
+
+    data class Shrunk(val newChunkDays: Int) : ChunkIngestResult
+}
+
+@Singleton
+class HistoricalIngestPhase
+    @Inject
+    constructor(
+        private val healthIngestionStore: HealthIngestionStore,
+        private val ingestion: ResyncIngestionDependencies,
+        private val checkpointStore: ResyncCheckpointStore,
+        private val clock: Clock = Clock.systemDefaultZone(),
+    ) {
+        suspend fun execute(
+            context: IngestPhaseContext,
+            onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)?,
+        ): IngestPhaseOutcome {
+            val beforeCounts = readCounts(context.reconcileStartMs, context.reconcileEndMs)
+            val ingestStart = clock.millis()
+            var chunkStart = context.checkpoint?.nextDate?.coerceAtLeast(context.startDate) ?: context.startDate
+            var chunksCompleted =
+                (ChronoUnit.DAYS.between(context.startDate, chunkStart) / context.chunkDays)
+                    .toInt()
+                    .coerceIn(0, context.totalChunks)
+            var effectiveChunkDays = context.checkpoint?.chunkDaysOverride ?: context.chunkDays
+            var runCompletedTypes = context.initialCompletedTypes
+            clearInterruptedTokensIfNeeded(context, chunkStart, runCompletedTypes)
+
+            var earliestDeletionDate: LocalDate? = null
+
+            while (!chunkStart.isAfter(context.endDate)) {
+                currentCoroutineContext().ensureActive()
+                val chunkResult = processChunk(context, chunkStart, effectiveChunkDays, runCompletedTypes)
+                when (chunkResult) {
+                    is ChunkIngestResult.Shrunk -> {
+                        effectiveChunkDays = chunkResult.newChunkDays
+                    }
+                    is ChunkIngestResult.Success -> {
+                        runCompletedTypes = chunkResult.completedTypes
+                        if (chunkResult.affectedStart != null) {
+                            earliestDeletionDate =
+                                minOf(earliestDeletionDate ?: chunkResult.affectedStart, chunkResult.affectedStart)
+                        }
+                        effectiveChunkDays = context.chunkDays
+                        chunksCompleted++
+                        onProgress?.invoke(ResyncPhase.INGEST, chunksCompleted, context.totalChunks)
+                        chunkStart = chunkResult.nextChunkStart
+                    }
+                }
+            }
+
+            val afterCounts = readCounts(context.reconcileStartMs, context.reconcileEndMs)
+            logCompletionTelemetry(ingestStart, beforeCounts, afterCounts)
+
+            return IngestPhaseOutcome(
+                earliestDeletionDate = earliestDeletionDate,
+                completedTypes = runCompletedTypes,
+                hrBeforePrune = afterCounts.hr,
+                hrvBeforePrune = afterCounts.hrv,
+                sleepBeforePrune = afterCounts.sleep,
+                workoutBeforePrune = afterCounts.workout,
+            )
+        }
+
+        private suspend fun readCounts(startMs: Long, endMs: Long) = IngestCounts(
+            hr = healthIngestionStore.countHeartRateInRange(startMs, endMs),
+            hrv = healthIngestionStore.countHrvInRange(startMs, endMs),
+            sleep = healthIngestionStore.countSleepSessionsInRange(startMs, endMs),
+            workout = healthIngestionStore.countWorkoutsInRange(startMs, endMs),
+        )
+
+        private suspend fun clearInterruptedTokensIfNeeded(
+            context: IngestPhaseContext,
+            chunkStart: LocalDate,
+            completedTypes: Set<HealthDataType>,
+        ) {
+            val isInterrupted =
+                context.checkpoint?.phase == ResyncPhase.INGEST && context.checkpoint.nextDate == chunkStart
+            val hasTokens = context.checkpoint?.hrPageToken != null || context.checkpoint?.hrvPageToken != null
+            if (isInterrupted && hasTokens) {
+                checkpointStore.save(
+                    context.checkpoint.copy(
+                        hrPageToken = null,
+                        hrvPageToken = null,
+                        completedTypes = completedTypes,
+                        runIdentity = context.runIdentity,
+                    ),
+                )
+            }
+        }
+
+        private suspend fun processChunk(
+            context: IngestPhaseContext,
+            chunkStart: LocalDate,
+            effectiveChunkDays: Int,
+            runCompletedTypes: Set<HealthDataType>,
+        ): ChunkIngestResult {
+            val chunkEndExclusive =
+                minOf(chunkStart.plusDays(effectiveChunkDays.toLong()), context.endDate.plusDays(1))
+            val windowStart = chunkStart.minusDays(1).atStartOfDay(context.zoneId).toInstant()
+            val windowEnd = chunkEndExclusive.atStartOfDay(context.zoneId).toInstant()
+            val chunkOverride = if (effectiveChunkDays != context.chunkDays) effectiveChunkDays else null
+
+            val ingestResult =
+                try {
+                    retryWithBackoff {
+                        ingestion.ingestionCoordinator.ingestWindow(
+                            windowStart = windowStart,
+                            windowEnd = windowEnd,
+                            prefs = context.prefs,
+                            hrStartPageToken = null,
+                            hrvStartPageToken = null,
+                            onTokenUpdated = { hrToken, hrvToken ->
+                                saveChunkProgress(
+                                    context,
+                                    chunkStart,
+                                    chunkOverride,
+                                    hrToken,
+                                    hrvToken,
+                                    runCompletedTypes,
+                                )
+                            },
+                            reconcileDeletions = !context.skipIngestAndPrune,
+                        )
+                    }
+                } catch (e: HealthConnectWindowTimeoutException) {
+                    return handleChunkTimeout(
+                        e,
+                        context,
+                        chunkStart,
+                        effectiveChunkDays,
+                        runCompletedTypes,
+                        windowStart,
+                        windowEnd,
+                    )
+                }
+
+            val updatedCompletedTypes = runCompletedTypes.intersect(ingestResult.completedTypes)
+            saveChunkCompleted(context, chunkEndExclusive, updatedCompletedTypes)
+            return ChunkIngestResult.Success(
+                nextChunkStart = chunkEndExclusive,
+                affectedStart = ingestResult.affectedRange?.start,
+                completedTypes = updatedCompletedTypes,
+            )
+        }
+
+        private suspend fun handleChunkTimeout(
+            e: HealthConnectWindowTimeoutException,
+            context: IngestPhaseContext,
+            chunkStart: LocalDate,
+            effectiveChunkDays: Int,
+            completedTypes: Set<HealthDataType>,
+            windowStart: Instant,
+            windowEnd: Instant,
+        ): ChunkIngestResult {
+            if (effectiveChunkDays <= MIN_CHUNK_DAYS) {
+                logD(TELEMETRY_TAG) {
+                    "[INGESTION] Window $windowStart..$windowEnd timed out even at the " +
+                        "$MIN_CHUNK_DAYS-day floor; giving up."
+                }
+                throw e
+            }
+            val shrunkDays = (effectiveChunkDays / 2).coerceAtLeast(MIN_CHUNK_DAYS)
+            logD(TELEMETRY_TAG) {
+                "[INGESTION] Window $windowStart..$windowEnd timed out; shrinking chunk " +
+                    "$effectiveChunkDays -> $shrunkDays days and retrying $chunkStart."
+            }
+            checkpointStore.save(
+                ResyncCheckpoint(
+                    startDate = context.startDate,
+                    endDate = context.endDate,
+                    phase = ResyncPhase.INGEST,
+                    nextDate = chunkStart,
+                    selectionHash = context.selectionHash,
+                    baselineChangeTokens = context.baselineChangeTokens,
+                    chunkDaysOverride = shrunkDays,
+                    hrPageToken = null,
+                    hrvPageToken = null,
+                    completedTypes = completedTypes,
+                    runIdentity = context.runIdentity,
+                ),
+            )
+            return ChunkIngestResult.Shrunk(shrunkDays)
+        }
+
+        private suspend fun saveChunkProgress(
+            context: IngestPhaseContext,
+            chunkStart: LocalDate,
+            chunkOverride: Int?,
+            hrToken: String?,
+            hrvToken: String?,
+            completedTypes: Set<HealthDataType>,
+        ) {
+            checkpointStore.save(
+                ResyncCheckpoint(
+                    startDate = context.startDate,
+                    endDate = context.endDate,
+                    phase = ResyncPhase.INGEST,
+                    nextDate = chunkStart,
+                    selectionHash = context.selectionHash,
+                    baselineChangeTokens = context.baselineChangeTokens,
+                    chunkDaysOverride = chunkOverride,
+                    hrPageToken = hrToken,
+                    hrvPageToken = hrvToken,
+                    completedTypes = completedTypes,
+                    runIdentity = context.runIdentity,
+                ),
+            )
+        }
+
+        private suspend fun saveChunkCompleted(
+            context: IngestPhaseContext,
+            chunkEndExclusive: LocalDate,
+            completedTypes: Set<HealthDataType>,
+        ) {
+            val nextPhase = if (chunkEndExclusive.isAfter(context.endDate)) ResyncPhase.PRUNE else ResyncPhase.INGEST
+            checkpointStore.save(
+                ResyncCheckpoint(
+                    startDate = context.startDate,
+                    endDate = context.endDate,
+                    phase = nextPhase,
+                    nextDate = if (nextPhase == ResyncPhase.INGEST) chunkEndExclusive else context.startDate,
+                    selectionHash = context.selectionHash,
+                    baselineChangeTokens = context.baselineChangeTokens,
+                    chunkDaysOverride = null,
+                    hrPageToken = null,
+                    hrvPageToken = null,
+                    completedTypes = completedTypes,
+                    runIdentity = context.runIdentity,
+                ),
+            )
+        }
+
+        private fun logCompletionTelemetry(startMs: Long, before: IngestCounts, after: IngestCounts) {
+            val duration = clock.millis() - startMs
+            logD(TELEMETRY_TAG) {
+                "[INGESTION] Completed in ${duration}ms. " +
+                    "HeartRate: ${before.hr} -> ${after.hr} (delta: ${after.hr - before.hr}), " +
+                    "HRV: ${before.hrv} -> ${after.hrv} (delta: ${after.hrv - before.hrv}), " +
+                    "Sleep: ${before.sleep} -> ${after.sleep} (delta: ${after.sleep - before.sleep}), " +
+                    "Workout: ${before.workout} -> ${after.workout} (delta: ${after.workout - before.workout})"
+            }
+        }
+
+        companion object {
+            private const val TELEMETRY_TAG = "ResyncTelemetry"
+            private const val MIN_CHUNK_DAYS = 1
+        }
+    }

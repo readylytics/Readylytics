@@ -30,6 +30,10 @@ data class DomainHeartRateRecord(
     val id: String,
     val deviceName: String,
     val samples: List<DomainHeartRateSample>,
+    val startTime: Instant = Instant.EPOCH,
+    val endTime: Instant = Instant.EPOCH,
+    val originPackage: String? = null,
+    val lastModifiedTime: Instant? = null,
 )
 
 data class DomainHeartRateSample(
@@ -42,6 +46,8 @@ data class DomainHrvRecord(
     val time: Instant,
     val rmssdMs: Float,
     val deviceName: String,
+    val originPackage: String? = null,
+    val lastModifiedTime: Instant? = null,
 )
 
 data class DomainExerciseSessionRecord(
@@ -82,6 +88,7 @@ data class DomainIntervalTotal(
     val endTime: Instant,
     val value: Double,
     val originPackage: String,
+    val sourceId: String? = null,
 )
 
 data class DomainStepsRecord(

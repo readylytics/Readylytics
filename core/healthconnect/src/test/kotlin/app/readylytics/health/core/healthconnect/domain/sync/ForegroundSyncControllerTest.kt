@@ -139,7 +139,7 @@ class ForegroundSyncControllerTest {
             controller.evaluateAndSync()
 
             coVerify(exactly = 1) { syncUseCase.sync(windowDays = MAX_INLINE_RECOMPUTE_DAYS, onProgress = any()) }
-            verify(exactly = 1) { workerScheduler.scheduleResyncWorker() }
+            coVerify(exactly = 1) { workerScheduler.scheduleResyncWorker() }
         }
 
     @Test
@@ -277,7 +277,7 @@ class ForegroundSyncControllerTest {
 
             controller.triggerDailySync()
 
-            verify(exactly = 1) { workerScheduler.scheduleResyncWorker() }
+            coVerify(exactly = 1) { workerScheduler.scheduleResyncWorker() }
         }
 
     @Test
@@ -295,7 +295,7 @@ class ForegroundSyncControllerTest {
             controller.triggerDailySync()
             runCurrent()
 
-            verify(exactly = 0) { workerScheduler.scheduleResyncWorker() }
+            coVerify(exactly = 0) { workerScheduler.scheduleResyncWorker() }
             kotlin.test.assertEquals(0, completedCount)
             job.cancel()
         }

@@ -43,6 +43,9 @@ abstract class LocalRestoreManagerTestBase {
     protected lateinit var workerScheduler: WorkerScheduler
     protected lateinit var auditTrailRepository: FakeAuditTrailRepository
     protected lateinit var manager: LocalRestoreManager
+    protected lateinit var restoreMaintenanceCoordinator: RestoreMaintenanceCoordinator
+    protected lateinit var restoreJournal: RestoreOperationJournal
+    protected lateinit var mutationCoordinator: app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 
     @Before
     fun setUp() {
@@ -53,6 +56,24 @@ abstract class LocalRestoreManagerTestBase {
                 .allowMainThreadQueries()
                 .build()
 
+        setupMocks()
+        val restoreDbOps =
+            RestoreDatabaseOperations(db, RestoreBatchLoader(db, RestoreVitalsLoader(db), CoverageRestoreLoader(db)))
+        restoreMaintenanceCoordinator = buildRestoreMaintenanceCoordinator()
+        manager =
+            LocalRestoreManager(
+                context = context,
+                settingsRepository = settingsRepo,
+                restoreDatabaseOperations = restoreDbOps,
+                encryptionManager = encryptionManager,
+                auditTrailRepository = auditTrailRepository,
+                inventoryValidator = RestoreInventoryValidator(),
+                ioDispatcher = Dispatchers.Unconfined,
+                restoreMaintenanceCoordinator = restoreMaintenanceCoordinator,
+            )
+    }
+
+    private fun setupMocks() {
         settingsRepo = mockk<SettingsRepository>(relaxed = true)
         coEvery { settingsRepo.userPreferences } returns
             flowOf(
@@ -61,7 +82,18 @@ abstract class LocalRestoreManagerTestBase {
                 },
             )
         encryptionManager = mockk<EncryptionManager>(relaxed = true)
-        every { encryptionManager.encrypt("restored_password") } returns "encrypted_restored_password"
+        every { encryptionManager.encrypt(any()) } answers {
+            val str = firstArg<String>()
+            if (str == "restored_password") "encrypted_restored_password" else "enc_$str"
+        }
+        every { encryptionManager.decrypt(any()) } answers {
+            val str = firstArg<String>()
+            when {
+                str == "encrypted_restored_password" -> "restored_password"
+                str.startsWith("enc_") -> str.removePrefix("enc_")
+                else -> str
+            }
+        }
         cardConfigRepo = mockk<CardConfigurationRepository>(relaxed = true)
         vitalsLayoutRepo = mockk<VitalsLayoutRepository>(relaxed = true)
         sleepLayoutRepo = mockk<SleepLayoutRepository>(relaxed = true)
@@ -69,51 +101,122 @@ abstract class LocalRestoreManagerTestBase {
         workoutDetailLayoutRepo = mockk<WorkoutDetailLayoutRepository>(relaxed = true)
         workerScheduler = mockk<WorkerScheduler>(relaxed = true)
         auditTrailRepository = FakeAuditTrailRepository()
-        manager =
-            LocalRestoreManager(
-                context,
-                db,
+    }
+
+    private fun buildRestoreMaintenanceCoordinator(): RestoreMaintenanceCoordinator {
+        val prefsApplier =
+            RestorePreferencesApplier(
                 settingsRepo,
-                RestoreBatchLoader(db, RestoreVitalsLoader(db)),
-                RestorePreferencesApplier(
-                    settingsRepo,
-                    RestoreLayoutRepositories(
-                        cardConfigRepo,
-                        vitalsLayoutRepo,
-                        sleepLayoutRepo,
-                        workoutsLayoutRepo,
-                        workoutDetailLayoutRepo,
-                    ),
-                    workerScheduler,
-                    encryptionManager,
+                RestoreLayoutRepositories(
+                    cardConfigRepo,
+                    vitalsLayoutRepo,
+                    sleepLayoutRepo,
+                    workoutsLayoutRepo,
+                    workoutDetailLayoutRepo,
                 ),
+                workerScheduler,
                 encryptionManager,
-                auditTrailRepository,
-                RestoreRecommendationCoverageChecker(db, settingsRepo, workerScheduler),
-                Dispatchers.Unconfined,
             )
+        mutationCoordinator =
+            app.readylytics.health.core.database.data.local
+                .HealthMutationCoordinatorImpl(db.healthMutationStateDao())
+        restoreJournal = RestoreOperationJournal(context, encryptionManager)
+        val coverageChecker = RestoreRecommendationCoverageChecker(db, settingsRepo, workerScheduler)
+        return RestoreMaintenanceCoordinator(
+            healthMutationCoordinator = mutationCoordinator,
+            healthDatabase = db,
+            journal = restoreJournal,
+            restorePrefsApplier = prefsApplier,
+            encryptionManager = encryptionManager,
+            recommendationCoverageChecker = coverageChecker,
+        )
     }
 
     @After
     fun tearDown() {
+        restoreJournal.delete()
         db.close()
     }
 
     protected fun createBackupZipFile(
         fileName: String,
         json: JSONObject,
+    ): File = createRawBackupZipFile(fileName, json.toString())
+
+    protected fun createRawBackupZipFile(
+        fileName: String,
+        rawContent: String,
     ): File {
         val zipFile = File(context.cacheDir, fileName)
         if (zipFile.exists()) zipFile.delete()
         val jsonFile = File(context.cacheDir, fileName.replace(".zip", ".json"))
-        jsonFile.writeText(json.toString())
+        jsonFile.writeText(rawContent)
         val zip = net.lingala.zip4j.ZipFile(zipFile)
         zip.addFile(jsonFile)
         jsonFile.delete()
         return zipFile
     }
 
-    protected fun createValidBackupJson(): JSONObject {
+    protected fun createValidBackupJson(): JSONObject = createValidBackupJsonForVersion(HealthDatabase.DATABASE_VERSION)
+
+    protected fun createValidV5BackupJson(): JSONObject =
+        createBaseBackupJson(5, setOf("sleepSessions", "heartRateRecords", "hrvRecords", "workouts", "dailySummaries"))
+
+    protected fun createValidV7BackupJson(): JSONObject =
+        createBaseBackupJson(7, setOf("sleepSessions", "heartRateRecords", "hrvRecords", "workouts", "dailySummaries"))
+
+    protected fun createValidV9BeforeFixBackupJson(): JSONObject =
+        createBaseBackupJson(9, setOf("sleepSessions", "heartRateRecords", "hrvRecords", "workouts", "dailySummaries"))
+
+    protected fun createValidV9AfterFixBackupJson(): JSONObject {
+        val tables =
+            setOf(
+                "sleepSessions",
+                "heartRateRecords",
+                "hrvRecords",
+                "workouts",
+                "dailySummaries",
+                "weightRecords",
+                "bodyFatRecords",
+                "bloodPressureRecords",
+                "oxygenSaturationRecords",
+                "bodyTemperatureRecords",
+                "stepRecords",
+            )
+        return createBaseBackupJson(9, tables)
+    }
+
+    protected fun createValidV10BackupJson(): JSONObject {
+        val tables =
+            setOf(
+                "sleepSessions",
+                "heartRateRecords",
+                "hrvRecords",
+                "workouts",
+                "dailySummaries",
+                "weightRecords",
+                "bodyFatRecords",
+                "bloodPressureRecords",
+                "oxygenSaturationRecords",
+                "bodyTemperatureRecords",
+                "stepRecords",
+                "healthSourceRecords",
+                "hrMinuteBuckets",
+            )
+        return createBaseBackupJson(10, tables)
+    }
+
+    protected fun createValidBackupJsonForVersion(version: Int): JSONObject {
+        val tables =
+            app.readylytics.health.core.model.domain.backup.BackupInventoryPolicy
+                .requiredTables(version)
+        return createBaseBackupJson(version, tables)
+    }
+
+    private fun createBaseBackupJson(
+        version: Int,
+        tables: Set<String>,
+    ): JSONObject {
         val sleepSessions =
             JSONArray().apply {
                 put(
@@ -132,22 +235,30 @@ abstract class LocalRestoreManagerTestBase {
                 )
             }
 
-        return JSONObject().apply {
-            put("schemaVersion", HealthDatabase.DATABASE_VERSION)
-            put("exportedAt", Instant.now().toString())
-            put("rowCounts", JSONObject().apply { put("sleepSessions", 1) })
-            put("sleepSessions", sleepSessions)
-            put("heartRateRecords", JSONArray())
-            put("hrvRecords", JSONArray())
-            put("workouts", JSONArray())
-            put("dailySummaries", JSONArray())
-            put(
-                "preferences",
-                JSONObject().apply {
-                    put("goalSleepHours", 8.0)
-                },
-            )
+        val rowCountsJson = JSONObject()
+        val root =
+            JSONObject().apply {
+                put("schemaVersion", version)
+                put("exportedAt", Instant.now().toString())
+                put(
+                    "preferences",
+                    JSONObject().apply {
+                        put("goalSleepHours", 8.0)
+                    },
+                )
+            }
+
+        tables.forEach { table ->
+            if (table == "sleepSessions") {
+                rowCountsJson.put(table, 1)
+                root.put(table, sleepSessions)
+            } else {
+                rowCountsJson.put(table, 0)
+                root.put(table, JSONArray())
+            }
         }
+        root.put("rowCounts", rowCountsJson)
+        return root
     }
 
     protected class FakeAuditTrailRepository : AuditTrailRepository {

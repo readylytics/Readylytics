@@ -43,6 +43,7 @@ class FullHistoricalResyncUseCase
         suspend fun execute(
             recomputeOnly: Boolean = false,
             rangeOverride: ScoreInvalidation.AffectedRange? = null,
+            runId: String? = null,
             onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)? = null,
         ): Result<Unit> {
             val prefs = settingsRepo.userPreferences.first()
@@ -61,12 +62,18 @@ class FullHistoricalResyncUseCase
                 return Result.success(Unit)
             }
             return if (recomputeOnly) {
-                healthSyncUseCase.recomputeRange(startDate = startDate, endDate = endDate, onProgress = onProgress)
+                healthSyncUseCase.recomputeRange(
+                    startDate = startDate,
+                    endDate = endDate,
+                    onProgress = onProgress,
+                    requestedRunId = runId,
+                )
             } else {
                 healthSyncUseCase.resyncRange(
                     startDate = historicalWindow.startDate,
                     endDate = historicalWindow.endDate,
                     onProgress = onProgress,
+                    requestedRunId = runId,
                 )
             }
         }

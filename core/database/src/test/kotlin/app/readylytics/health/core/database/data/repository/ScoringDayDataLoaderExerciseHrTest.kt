@@ -26,17 +26,9 @@ class ScoringDayDataLoaderExerciseHrTest {
     private val heartRateDao = mockk<HeartRateDao>()
 
     private val loader =
-        ScoringDayDataLoader(
-            workoutDao = mockk<WorkoutDao>(relaxed = true),
-            sleepSessionDao = mockk<SleepSessionDao>(relaxed = true),
-            dailySummaryDao = mockk<DailySummaryDao>(relaxed = true),
+        ScoringHeartRateDataLoader(
             heartRateDao = heartRateDao,
             minuteBucketDao = mockk(relaxed = true),
-            weightRecordDao = mockk<WeightRecordDao>(relaxed = true),
-            bodyFatRecordDao = mockk<BodyFatRecordDao>(relaxed = true),
-            bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true),
-            oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true),
-            bodyTemperatureRecordDao = mockk<BodyTemperatureRecordDao>(relaxed = true),
         )
 
     @Test
@@ -73,11 +65,11 @@ class ScoringDayDataLoaderExerciseHrTest {
                         avgHr = 0f,
                     ),
                 )
-            coEvery { heartRateDao.getByTypeAndTimeRange("EXERCISE", 1_000L, 9_000L) } returns emptyList()
+            coEvery { heartRateDao.getVisibleByTypeAndTimeRange("EXERCISE", 1_000L, 9_000L) } returns emptyList()
 
             loader.loadExerciseHrSamples(workouts)
 
-            coVerify(exactly = 1) { heartRateDao.getByTypeAndTimeRange("EXERCISE", 1_000L, 9_000L) }
-            coVerify(exactly = 0) { heartRateDao.getByTimeRange(any(), any()) }
+            coVerify(exactly = 1) { heartRateDao.getVisibleByTypeAndTimeRange("EXERCISE", 1_000L, 9_000L) }
+            coVerify(exactly = 0) { heartRateDao.getVisibleByTimeRange(any(), any()) }
         }
 }

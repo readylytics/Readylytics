@@ -66,22 +66,26 @@ interface HealthConnectRepository : HealthConnectPermissionChecker {
 
     fun isAvailable(): Boolean
 
+    fun isHistoryReadAvailable(): Boolean = false
+
+    fun isBackgroundReadAvailable(): Boolean = false
+
     suspend fun checkPermissions(): PermissionStatus
 
     suspend fun readSleepSessions(
         from: Instant,
         to: Instant,
-    ): List<DomainSleepSessionRecord>
+    ): ReadOutcome<List<DomainSleepSessionRecord>>
 
     suspend fun readHeartRateSamples(
         from: Instant,
         to: Instant,
-    ): List<DomainHeartRateRecord>
+    ): ReadOutcome<List<DomainHeartRateRecord>>
 
     suspend fun readHrvSamples(
         from: Instant,
         to: Instant,
-    ): List<DomainHrvRecord>
+    ): ReadOutcome<List<DomainHrvRecord>>
 
     /**
      * Streams heart-rate samples page-by-page instead of materializing the whole [from]..[to]
@@ -93,7 +97,7 @@ interface HealthConnectRepository : HealthConnectPermissionChecker {
         to: Instant,
         startPageToken: String? = null,
         onPage: suspend (records: List<DomainHeartRateRecord>, nextPageToken: String?) -> Unit,
-    )
+    ): ReadOutcome<Unit>
 
     /** HRV equivalent of [readHeartRateSamplesPaged]. */
     suspend fun readHrvSamplesPaged(
@@ -101,7 +105,7 @@ interface HealthConnectRepository : HealthConnectPermissionChecker {
         to: Instant,
         startPageToken: String? = null,
         onPage: suspend (records: List<DomainHrvRecord>, nextPageToken: String?) -> Unit,
-    )
+    ): ReadOutcome<Unit>
 
     /**
      * @param includeDetails when true, each session additionally costs one Health Connect
@@ -114,17 +118,17 @@ interface HealthConnectRepository : HealthConnectPermissionChecker {
         from: Instant,
         to: Instant,
         includeDetails: Boolean = true,
-    ): List<DomainExerciseSessionRecord>
+    ): ReadOutcome<List<DomainExerciseSessionRecord>>
 
     suspend fun readStepsRecords(
         from: Instant,
         to: Instant,
-    ): List<DomainStepsRecord>
+    ): ReadOutcome<List<DomainStepsRecord>>
 
     suspend fun readSteps(
         from: Instant,
         to: Instant,
-    ): Long
+    ): ReadOutcome<Long>
 
     /**
      * Daily step totals for [from]..[to], grouped by local calendar day in [zoneId] via Health
@@ -136,39 +140,39 @@ interface HealthConnectRepository : HealthConnectPermissionChecker {
         from: Instant,
         to: Instant,
         zoneId: java.time.ZoneId,
-    ): Map<java.time.LocalDate, Long>
+    ): ReadOutcome<Map<java.time.LocalDate, Long>>
 
     suspend fun discoverDevices(windowDays: Int = 2): List<String>
 
     suspend fun readWeightRecords(
         from: Instant,
         to: Instant,
-    ): List<DomainWeightRecord>
+    ): ReadOutcome<List<DomainWeightRecord>>
 
     suspend fun readBodyFatRecords(
         from: Instant,
         to: Instant,
-    ): List<DomainBodyFatRecord>
+    ): ReadOutcome<List<DomainBodyFatRecord>>
 
     suspend fun readBloodPressureRecords(
         from: Instant,
         to: Instant,
-    ): List<DomainBloodPressureRecord>
+    ): ReadOutcome<List<DomainBloodPressureRecord>>
 
     suspend fun readOxygenSaturationRecords(
         from: Instant,
         to: Instant,
-    ): List<DomainOxygenSaturationRecord>
+    ): ReadOutcome<List<DomainOxygenSaturationRecord>>
 
     suspend fun readBodyTemperatureRecords(
         from: Instant,
         to: Instant,
-    ): List<DomainBodyTemperatureRecord>
+    ): ReadOutcome<List<DomainBodyTemperatureRecord>>
 
     suspend fun readVo2MaxRecords(
         startTime: Instant,
         endTime: Instant,
-    ): List<DomainVo2MaxRecord>
+    ): ReadOutcome<List<DomainVo2MaxRecord>>
 
     /** Reads a single exercise session by ID with its route data. */
     suspend fun readExerciseSession(id: String): DomainExerciseSessionRecord?

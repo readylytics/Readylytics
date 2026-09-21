@@ -166,4 +166,63 @@ class FileBackupStoreTest {
             assertFalse(oldFile.exists())
             assertTrue(recentFile.exists())
         }
+
+    @Test
+    fun publishNew_writesSourceToTargetAndPreservesSource() =
+        runTest {
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            val backupDir = tempFolder.newFolder("backups_publish_new")
+            val store = FileBackupStore(context, backupDir)
+
+            val source =
+                tempFolder.newFile("source_new.zip").apply {
+                    writeText("publish new content")
+                }
+            val targetName = "backup_2026_01_03.zip"
+
+            val location = store.publishNew(source, targetName)
+
+            assertTrue(source.exists(), "Source file should be preserved after publishNew")
+            val target = File(backupDir, targetName)
+            assertTrue(target.exists(), "Target file must exist")
+            assertEquals("publish new content", target.readText())
+            assertEquals(
+                android.net.Uri
+                    .fromFile(target)
+                    .toString(),
+                location.value,
+            )
+            assertEquals("publish new content", store.read(location).bufferedReader().readText())
+        }
+
+    @Test
+    fun publishNew_emptySource_throwsIllegalStateException() =
+        runTest {
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            val backupDir = tempFolder.newFolder("backups_empty_publish_new")
+            val store = FileBackupStore(context, backupDir)
+
+            val emptySource = tempFolder.newFile("empty_new.zip")
+
+            assertFailsWith<IllegalStateException> {
+                store.publishNew(emptySource, "backup_empty.zip")
+            }
+        }
+
+    @Test
+    fun publishNew_existingTarget_throwsIllegalStateException() =
+        runTest {
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            val backupDir = tempFolder.newFolder("backups_existing_publish_new")
+            val store = FileBackupStore(context, backupDir)
+
+            val targetName = "backup_exists.zip"
+            File(backupDir, targetName).writeText("existing")
+
+            val source = tempFolder.newFile("source_exists.zip").apply { writeText("new") }
+
+            assertFailsWith<IllegalStateException> {
+                store.publishNew(source, targetName)
+            }
+        }
 }

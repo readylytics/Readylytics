@@ -4,6 +4,7 @@ import androidx.datastore.core.CorruptionException
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.Serializer
 import app.readylytics.health.core.model.domain.model.HealthDataType
+import app.readylytics.health.core.model.domain.sync.HistoricalRunIdentity
 import app.readylytics.health.core.model.domain.sync.ResyncCheckpoint
 import app.readylytics.health.core.model.domain.sync.ResyncCheckpointStore
 import app.readylytics.health.core.model.domain.sync.ResyncPhase
@@ -79,7 +80,45 @@ internal fun ResyncCheckpointProto.toDomain(): ResyncCheckpoint =
         chunkDaysOverride = chunkDaysOverride.takeIf { it > 0 },
         hrPageToken = hrPageToken.takeIf { it.isNotBlank() },
         hrvPageToken = hrvPageToken.takeIf { it.isNotBlank() },
+        completedTypes =
+            completedTypesList
+                .mapNotNull { name ->
+                    runCatching { HealthDataType.valueOf(name) }.getOrNull()
+                }.toSet(),
+        completedTypesRecorded = completedTypesRecorded,
+        runIdentity = if (hasRunIdentity()) runIdentity.toDomain() else null,
     )
+
+internal fun HistoricalRunIdentityProto.toDomain(): HistoricalRunIdentity =
+    HistoricalRunIdentity(
+        protocolVersion = protocolVersion,
+        runId = runId,
+        mode = mode,
+        startEpochDay = startEpochDay,
+        endEpochDayInclusive = endEpochDayInclusive,
+        zoneId = zoneId,
+        startedAtEpochMs = startedAtEpochMs,
+        sourceSelectionId = sourceSelectionId,
+        algorithmRevision = algorithmRevision,
+        scoringSnapshotJson = scoringSnapshotJson,
+        scoringSnapshotId = scoringSnapshotId,
+    )
+
+internal fun HistoricalRunIdentity.toProto(): HistoricalRunIdentityProto =
+    HistoricalRunIdentityProto
+        .newBuilder()
+        .setProtocolVersion(protocolVersion)
+        .setRunId(runId)
+        .setMode(mode)
+        .setStartEpochDay(startEpochDay)
+        .setEndEpochDayInclusive(endEpochDayInclusive)
+        .setZoneId(zoneId)
+        .setStartedAtEpochMs(startedAtEpochMs)
+        .setSourceSelectionId(sourceSelectionId)
+        .setAlgorithmRevision(algorithmRevision)
+        .setScoringSnapshotJson(scoringSnapshotJson)
+        .setScoringSnapshotId(scoringSnapshotId)
+        .build()
 
 internal fun ResyncCheckpoint.toProto(): ResyncCheckpointProto {
     val builder =
@@ -100,5 +139,8 @@ internal fun ResyncCheckpoint.toProto(): ResyncCheckpointProto {
             .setChunkDaysOverride(chunkDaysOverride ?: 0)
     hrPageToken?.let { builder.setHrPageToken(it) }
     hrvPageToken?.let { builder.setHrvPageToken(it) }
+    builder.addAllCompletedTypes(completedTypes.map { it.name })
+    builder.setCompletedTypesRecorded(completedTypesRecorded)
+    runIdentity?.let { builder.setRunIdentity(it.toProto()) }
     return builder.build()
 }

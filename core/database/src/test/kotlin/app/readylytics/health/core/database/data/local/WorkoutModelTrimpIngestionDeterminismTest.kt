@@ -78,6 +78,11 @@ class WorkoutModelTrimpIngestionDeterminismTest {
                     date = targetDate.minusDays(1),
                     zoneTrimp = 90f,
                     modelTrimp = 35f,
+                ).copy(
+                    modelTrimpSourceRevision = 42L,
+                    modelTrimpSnapshotId = "snap-1",
+                    modelTrimpAlgorithmRevision = 1,
+                    modelTrimpQuality = "DIRECT_SAMPLES",
                 )
             database.workoutDao().upsertAll(listOf(existing))
 
@@ -86,6 +91,10 @@ class WorkoutModelTrimpIngestionDeterminismTest {
             val refreshed = database.workoutDao().getById(existing.id)!!
             assertEquals(120f, refreshed.trimp)
             assertEquals(35f, refreshed.modelTrimp)
+            assertEquals(42L, refreshed.modelTrimpSourceRevision)
+            assertEquals("snap-1", refreshed.modelTrimpSnapshotId)
+            assertEquals(1, refreshed.modelTrimpAlgorithmRevision)
+            assertEquals("DIRECT_SAMPLES", refreshed.modelTrimpQuality)
         }
 
     @Test

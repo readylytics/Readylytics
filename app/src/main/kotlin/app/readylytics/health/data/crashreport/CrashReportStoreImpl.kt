@@ -30,7 +30,7 @@ class CrashReportStoreImpl
         override fun reportFile(): File = File(File(context.cacheDir, CRASH_REPORTS_DIR), LATEST_CRASH_FILE)
 
         companion object {
-            const val CRASH_REPORTS_DIR = "crash_reports"
+            const val CRASH_REPORTS_DIR = "crash_reports_v2"
             const val LATEST_CRASH_FILE = "latest_crash.txt"
         }
     }
