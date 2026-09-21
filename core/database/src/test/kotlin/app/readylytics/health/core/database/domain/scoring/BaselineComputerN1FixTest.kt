@@ -110,8 +110,8 @@ class BaselineComputerN1FixTest {
             // Override path returns before DAO freeze check, so result is non-null
             assertEquals(override, result)
             // Verify no database queries made when override provided
-            coVerify(exactly = 0) { sleepSessionDao.getSince(any()) }
-            coVerify(exactly = 0) { heartRateDao.getSleepHrProjectionForSessions(any()) }
+            coVerify(exactly = 0) { sleepSessionDao.getBetween(any(), any()) }
+            coVerify(exactly = 0) { heartRateDao.getVisibleSleepHrProjectionForSessions(any()) }
         }
 
     @Test
@@ -137,7 +137,7 @@ class BaselineComputerN1FixTest {
                     )
                 }
 
-            coEvery { sleepSessionDao.getSince(any()) } returns sessions
+            coEvery { sleepSessionDao.getBetween(any(), any()) } returns sessions
 
             // Mock validation to accept all sessions
             every { scoringCalculator.validateNight(any(), any(), any(), any(), any(), any()) } returns
@@ -165,7 +165,7 @@ class BaselineComputerN1FixTest {
                     }
                 }
 
-            coEvery { heartRateDao.getSleepHrProjectionForSessions(any()) } returns allHrSamples
+            coEvery { heartRateDao.getVisibleSleepHrProjectionForSessions(any()) } returns allHrSamples
 
             val result =
                 baselineComputer.computeAdaptiveBaselineRhrBpm(
@@ -180,8 +180,8 @@ class BaselineComputerN1FixTest {
             assertTrue(result >= 40f && result <= 190f)
 
             // Verify ONLY the necessary database queries were made
-            coVerify(exactly = 1) { sleepSessionDao.getSince(any()) }
-            coVerify(exactly = 1) { heartRateDao.getSleepHrProjectionForSessions(any()) }
+            coVerify(exactly = 1) { sleepSessionDao.getBetween(any(), any()) }
+            coVerify(exactly = 1) { heartRateDao.getVisibleSleepHrProjectionForSessions(any()) }
 
             // NOT called: getSleepHrSampleCount and getSleepHrSampleAtOffset (the N+1 culprits)
             coVerify(exactly = 0) { heartRateDao.getSleepHrSampleCount(any()) }
@@ -200,7 +200,7 @@ class BaselineComputerN1FixTest {
                     session(baselineFromMs + 24 * 60 * 60 * 1000, "session_2", 8 * 60 * 60 * 1000),
                 )
 
-            coEvery { sleepSessionDao.getSince(any()) } returns sessions
+            coEvery { sleepSessionDao.getBetween(any(), any()) } returns sessions
             stubAcceptingValidation()
             stubEmptyVitalsMaps()
 
@@ -219,7 +219,7 @@ class BaselineComputerN1FixTest {
                         )
                     }
 
-            coEvery { heartRateDao.getSleepHrProjectionForSessions(any()) } returns hrSamples
+            coEvery { heartRateDao.getVisibleSleepHrProjectionForSessions(any()) } returns hrSamples
 
             val result =
                 baselineComputer.computeAdaptiveBaselineRhrBpm(
@@ -239,7 +239,7 @@ class BaselineComputerN1FixTest {
         runTest {
             val dayMidnight = Instant.now().truncatedTo(ChronoUnit.DAYS)
 
-            coEvery { sleepSessionDao.getSince(any()) } returns emptyList()
+            coEvery { sleepSessionDao.getBetween(any(), any()) } returns emptyList()
 
             val result =
                 baselineComputer.computeAdaptiveBaselineRhrBpm(
@@ -266,7 +266,7 @@ class BaselineComputerN1FixTest {
                     session(baselineFromMs + 72 * 60 * 60 * 1000, "session_4", 8 * 60 * 60 * 1000),
                 )
 
-            coEvery { sleepSessionDao.getSince(any()) } returns sessions
+            coEvery { sleepSessionDao.getBetween(any(), any()) } returns sessions
             stubAcceptingValidation()
             stubEmptyVitalsMaps()
 
@@ -297,7 +297,7 @@ class BaselineComputerN1FixTest {
                 },
             )
 
-            coEvery { heartRateDao.getSleepHrProjectionForSessions(any()) } returns hrSamples
+            coEvery { heartRateDao.getVisibleSleepHrProjectionForSessions(any()) } returns hrSamples
 
             val result =
                 baselineComputer.computeAdaptiveBaselineRhrBpm(
@@ -334,7 +334,7 @@ class BaselineComputerN1FixTest {
                     )
                 }
 
-            coEvery { sleepSessionDao.getSince(any()) } returns sessions
+            coEvery { sleepSessionDao.getBetween(any(), any()) } returns sessions
             every { scoringCalculator.validateNight(any(), any(), any(), any(), any(), any()) } returns
                 ScoringCalculator.NightValidationResult(
                     rmssdValid = true,
@@ -358,7 +358,7 @@ class BaselineComputerN1FixTest {
                     }
                 }
 
-            coEvery { heartRateDao.getSleepHrProjectionForSessions(any()) } returns allHrSamples
+            coEvery { heartRateDao.getVisibleSleepHrProjectionForSessions(any()) } returns allHrSamples
 
             val startTime = System.currentTimeMillis()
             baselineComputer.computeAdaptiveBaselineRhrBpm(
@@ -370,8 +370,8 @@ class BaselineComputerN1FixTest {
             val endTime = System.currentTimeMillis()
 
             // Verify database query count is constant (not N*2)
-            coVerify(exactly = 1) { sleepSessionDao.getSince(any()) }
-            coVerify(exactly = 1) { heartRateDao.getSleepHrProjectionForSessions(any()) }
+            coVerify(exactly = 1) { sleepSessionDao.getBetween(any(), any()) }
+            coVerify(exactly = 1) { heartRateDao.getVisibleSleepHrProjectionForSessions(any()) }
 
             // Computation should complete quickly even with 100 sessions
             assertTrue((endTime - startTime) < 1000, "Computation took too long: ${endTime - startTime}ms")

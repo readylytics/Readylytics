@@ -28,10 +28,8 @@ import kotlin.reflect.KClass
  * Requires a real Health Connect provider (Android 14+ / API 36 emulator).
  * Tests are skipped automatically via [assumeTrue] when HC is unavailable.
  *
- * Permission note: both WRITE_HEART_RATE and WRITE_RESTING_HEART_RATE are declared because
- * the exact permission string for [RestingHeartRateRecord] varies by HC SDK build.
- * Use `HealthPermission.getWritePermission(RestingHeartRateRecord::class)` at runtime
- * to discover the canonical string if a PermissionRequiredException occurs.
+ * Resting heart rate requires separate permissions from ordinary heart rate.
+ * Derive read and write permissions from the SDK record classes used by the seeder.
  */
 @LargeTest
 @RunWith(AndroidJUnit4::class)
@@ -39,17 +37,16 @@ class HealthConnectSeederTest {
     @get:Rule
     val grantPermissions: GrantPermissionRule =
         GrantPermissionRule.grant(
-            "android.permission.health.READ_HEART_RATE",
-            "android.permission.health.WRITE_HEART_RATE",
-            "android.permission.health.WRITE_RESTING_HEART_RATE",
-            "android.permission.health.READ_HEART_RATE_VARIABILITY",
-            "android.permission.health.WRITE_HEART_RATE_VARIABILITY",
+            HealthPermission.getReadPermission(RestingHeartRateRecord::class),
+            HealthPermission.getWritePermission(RestingHeartRateRecord::class),
+            HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
+            HealthPermission.getWritePermission(HeartRateVariabilityRmssdRecord::class),
         )
 
     private lateinit var client: HealthConnectClient
 
-    // Captured once per class to avoid midnight boundary issues across test methods.
-    private val today: LocalDate = LocalDate.now(ZoneOffset.UTC)
+    // Use completed nights even when CI runs before dawn; HC rejects future samples.
+    private val today: LocalDate = LocalDate.now(ZoneOffset.UTC).minusDays(1)
 
     @Before
     fun setUp() {
@@ -71,6 +68,15 @@ class HealthConnectSeederTest {
         assumeTrue(
             "Health Connect write permissions not granted — test skipped",
             granted.containsAll(required),
+        )
+        assertTrue(
+            "Health Connect read permissions must be granted for both seeded record types",
+            granted.containsAll(
+                setOf(
+                    HealthPermission.getReadPermission(RestingHeartRateRecord::class),
+                    HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
+                ),
+            ),
         )
     }
 

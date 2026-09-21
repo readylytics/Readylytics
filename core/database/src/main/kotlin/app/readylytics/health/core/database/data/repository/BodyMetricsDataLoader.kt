@@ -61,8 +61,8 @@ class BodyMetricsDataLoader
             )
         }
 
-        suspend fun loadLatestVo2Max(nextDayMidnightMs: Long, minTimestampMs: Long): Vo2MaxRecordEntity? =
-            vo2MaxRecordDao.getLatestInWindow(minTimestampMs, nextDayMidnightMs)
+        suspend fun loadLatestVo2Max(minTimestampMs: Long, endExclusiveMs: Long): Vo2MaxRecordEntity? =
+            vo2MaxRecordDao.getLatestInRange(minTimestampMs, endExclusiveMs)
 
         suspend fun loadVo2MaxRange(fromMs: Long, toMs: Long): List<Vo2MaxRecordEntity> =
             vo2MaxRecordDao.getByTimeRange(fromMs, toMs)

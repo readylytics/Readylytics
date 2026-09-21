@@ -4,15 +4,25 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.core.model.domain.model.HealthDataType
+import app.readylytics.health.core.model.domain.sync.CompleteTypeScan
 import app.readylytics.health.core.model.domain.sync.HealthIngestionBatch
 import app.readylytics.health.core.model.domain.sync.HeartRateInput
 import app.readylytics.health.core.model.domain.sync.HrvInput
 import app.readylytics.health.core.model.domain.sync.SleepSessionInput
+import app.readylytics.health.core.model.domain.sync.SourceMetadata
+import app.readylytics.health.core.model.domain.sync.SourcePayload
 import app.readylytics.health.core.model.domain.sync.StepRecordInput
+import app.readylytics.health.core.model.domain.sync.Vo2MaxInput
 import app.readylytics.health.core.model.domain.sync.WeightInput
+import app.readylytics.health.core.model.domain.repository.ReadOutcome
+import app.readylytics.health.core.model.domain.sync.IntervalKind
+import app.readylytics.health.core.model.domain.sync.IntervalSourceRecord
+import app.readylytics.health.core.model.domain.sync.PreparedWorkout
 import app.readylytics.health.core.model.domain.sync.WorkoutInput
 import kotlinx.coroutines.test.runTest
 import org.junit.After
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -60,7 +70,7 @@ class RoomHealthChangeIngestionStoreTest {
                 transactionRunner = RoomTransactionRunner(database),
                 vo2MaxRecordDao = database.vo2MaxRecordDao(),
             )
-        changeStore = RoomHealthChangeIngestionStore(daos = daos)
+        changeStore = RoomHealthChangeIngestionStore(daos = daos, vo2MaxRecordDao = database.vo2MaxRecordDao())
     }
 
     @After
@@ -91,9 +101,14 @@ class RoomHealthChangeIngestionStoreTest {
 
     @Test
     fun `deleteRecord removes the heart rate record and its source ref`() = runTest {
-        seedStore.persistHeartRateSamples(listOf(
-            HeartRateInput(id = "hc-hr-1_1000", timestampMs = 1000L, beatsPerMinute = 60,
-                recordType = "RESTING", sessionId = null, deviceName = null),
+        seedStore.replaceHeartRateSources(listOf(
+            SourcePayload(
+                SourceMetadata("hc-hr-1", 1000L, 1000L),
+                listOf(
+                    HeartRateInput(id = "hc-hr-1_1000", sourceId = "hc-hr-1", timestampMs = 1000L, beatsPerMinute = 60,
+                        recordType = "RESTING", sessionId = null, deviceName = null),
+                ),
+            ),
         ))
         assertEquals(1, seedStore.countHeartRateInRange(0, 2000))
 
@@ -130,11 +145,21 @@ class RoomHealthChangeIngestionStoreTest {
 
     @Test
     fun `heartRateSamplesForMetrics filters by record type and range`() = runTest {
-        seedStore.persistHeartRateSamples(listOf(
-            HeartRateInput(id = "hc-hr-2_1000", timestampMs = 1000L, beatsPerMinute = 140,
-                recordType = "EXERCISE", sessionId = "w1", deviceName = null),
-            HeartRateInput(id = "hc-hr-3_2000", timestampMs = 2000L, beatsPerMinute = 60,
-                recordType = "RESTING", sessionId = null, deviceName = null),
+        seedStore.replaceHeartRateSources(listOf(
+            SourcePayload(
+                SourceMetadata("hc-hr-2", 1000L, 1000L),
+                listOf(
+                    HeartRateInput(id = "hc-hr-2_1000", sourceId = "hc-hr-2", timestampMs = 1000L, beatsPerMinute = 140,
+                        recordType = "EXERCISE", sessionId = "w1", deviceName = null),
+                ),
+            ),
+            SourcePayload(
+                SourceMetadata("hc-hr-3", 2000L, 2000L),
+                listOf(
+                    HeartRateInput(id = "hc-hr-3_2000", sourceId = "hc-hr-3", timestampMs = 2000L, beatsPerMinute = 60,
+                        recordType = "RESTING", sessionId = null, deviceName = null),
+                ),
+            ),
         ))
 
         val samples = changeStore.heartRateSamplesForMetrics("EXERCISE", 0L, 5000L)
@@ -146,15 +171,30 @@ class RoomHealthChangeIngestionStoreTest {
     @Test
     fun `affectedDatesForRecord returns dates for every heart rate sample sharing the source record id`() =
         runTest {
-            seedStore.persistHeartRateSamples(
+            seedStore.replaceHeartRateSources(
                 listOf(
-                    HeartRateInput(
-                        id = "hc-hr-4_1000", timestampMs = 1_000L, beatsPerMinute = 60,
-                        recordType = "RESTING", sessionId = null, deviceName = null,
-                    ),
-                    HeartRateInput(
-                        id = "hc-hr-4_90000000", timestampMs = 90_000_000L, beatsPerMinute = 61,
-                        recordType = "RESTING", sessionId = null, deviceName = null,
+                    SourcePayload(
+                        SourceMetadata("hc-hr-4", 1_000L, 90_000_000L),
+                        listOf(
+                            HeartRateInput(
+                                id = "hc-hr-4_1000",
+                                sourceId = "hc-hr-4",
+                                timestampMs = 1_000L,
+                                beatsPerMinute = 60,
+                                recordType = "RESTING",
+                                sessionId = null,
+                                deviceName = null,
+                            ),
+                            HeartRateInput(
+                                id = "hc-hr-4_90000000",
+                                sourceId = "hc-hr-4",
+                                timestampMs = 90_000_000L,
+                                beatsPerMinute = 61,
+                                recordType = "RESTING",
+                                sessionId = null,
+                                deviceName = null,
+                            ),
+                        ),
                     ),
                 ),
             )
@@ -167,15 +207,30 @@ class RoomHealthChangeIngestionStoreTest {
     @Test
     fun `affectedDatesForRecord returns dates for every hrv sample sharing the source record id`() =
         runTest {
-            seedStore.persistHrvSamples(
+            seedStore.replaceHrvSources(
                 listOf(
-                    HrvInput(
-                        id = "hc-hrv-1_1000", timestampMs = 1_000L, rmssdMs = 40f,
-                        recordType = "RESTING", sessionId = null, deviceName = null,
-                    ),
-                    HrvInput(
-                        id = "hc-hrv-1_90000000", timestampMs = 90_000_000L, rmssdMs = 41f,
-                        recordType = "RESTING", sessionId = null, deviceName = null,
+                    SourcePayload(
+                        SourceMetadata("hc-hrv-1", 1_000L, 90_000_000L),
+                        listOf(
+                            HrvInput(
+                                id = "hc-hrv-1_1000",
+                                sourceId = "hc-hrv-1",
+                                timestampMs = 1_000L,
+                                rmssdMs = 40f,
+                                recordType = "RESTING",
+                                sessionId = null,
+                                deviceName = null,
+                            ),
+                            HrvInput(
+                                id = "hc-hrv-1_90000000",
+                                sourceId = "hc-hrv-1",
+                                timestampMs = 90_000_000L,
+                                rmssdMs = 41f,
+                                recordType = "RESTING",
+                                sessionId = null,
+                                deviceName = null,
+                            ),
+                        ),
                     ),
                 ),
             )
@@ -249,16 +304,298 @@ class RoomHealthChangeIngestionStoreTest {
             assertEquals(setOf(LocalDate.of(2026, 3, 10), LocalDate.of(2026, 3, 11)), dates)
         }
 
+    @Test
+    fun `affectedDatesForRecord returns the sample's date for VO2_MAX using its raw stable id`() =
+        runTest {
+            val vo2Time = Instant.parse("2026-05-01T12:00:00Z")
+            seedStore.persist(
+                batch(
+                    vo2MaxSamples = listOf(
+                        Vo2MaxInput(
+                            id = "hc-vo2-1",
+                            timestampMs = vo2Time.toEpochMilli(),
+                            vo2Max = 45f,
+                            measurementMethod = 1,
+                            deviceName = "Watch A",
+                        ),
+                    ),
+                ),
+            )
+
+            val dates = changeStore.affectedDatesForRecord(HealthDataType.VO2_MAX, "hc-vo2-1", ZoneId.of("UTC"))
+
+            assertEquals(setOf(LocalDate.of(2026, 5, 1)), dates)
+        }
+
+    @Test
+    fun `deleteRecord removes a VO2_MAX record seeded 45 days ago leaving no stale carry-forward`() =
+        runTest {
+            val today = LocalDate.of(2026, 9, 14)
+            val seededAt = today.minusDays(45).atStartOfDay(ZoneId.of("UTC")).toInstant()
+            seedStore.persist(
+                batch(
+                    vo2MaxSamples = listOf(
+                        Vo2MaxInput(
+                            id = "hc-vo2-old",
+                            timestampMs = seededAt.toEpochMilli(),
+                            vo2Max = 42f,
+                            measurementMethod = null,
+                            deviceName = "Watch A",
+                        ),
+                    ),
+                ),
+            )
+            assertEquals(1, database.vo2MaxRecordDao().getByTimeRange(0, Long.MAX_VALUE).size)
+
+            changeStore.deleteRecord(HealthDataType.VO2_MAX, "hc-vo2-old")
+
+            // Matches a clean DB that never persisted the record -- no stale carry-forward.
+            assertTrue(database.vo2MaxRecordDao().getByTimeRange(0, Long.MAX_VALUE).isEmpty())
+            assertNull(database.vo2MaxRecordDao().getById("hc-vo2-old"))
+        }
+
+    @Test
+    fun `reconcileWindow deletes VO2_MAX records absent from an empty complete scan`() =
+        runTest {
+            val vo2Time = Instant.parse("2026-05-01T12:00:00Z")
+            seedStore.persist(
+                batch(
+                    vo2MaxSamples = listOf(
+                        Vo2MaxInput(
+                            id = "hc-vo2-empty",
+                            timestampMs = vo2Time.toEpochMilli(),
+                            vo2Max = 40f,
+                            measurementMethod = null,
+                            deviceName = null,
+                        ),
+                    ),
+                ),
+            )
+            val dayStart = vo2Time.atZone(ZoneId.of("UTC")).toLocalDate().atStartOfDay(ZoneId.of("UTC")).toInstant()
+            val scan =
+                CompleteTypeScan(
+                    type = HealthDataType.VO2_MAX,
+                    windowStartMs = dayStart.toEpochMilli(),
+                    windowEndExclusiveMs = dayStart.plusSeconds(86_400).toEpochMilli(),
+                    sourceSelectionId = "",
+                    ids = emptySet(),
+                )
+
+            val affected = seedStore.reconcileWindow(scan, ZoneId.of("UTC"))
+
+            assertTrue(database.vo2MaxRecordDao().getByTimeRange(0, Long.MAX_VALUE).isEmpty())
+            assertEquals(LocalDate.of(2026, 5, 1), affected?.start)
+        }
+
+    @Test
+    fun `reconcileWindow with a stable timestamp tie deletes only the id absent from the scan`() =
+        runTest {
+            val sharedTime = Instant.parse("2026-05-01T12:00:00Z")
+            seedStore.persist(
+                batch(
+                    vo2MaxSamples = listOf(
+                        Vo2MaxInput(
+                            id = "hc-vo2-keep",
+                            timestampMs = sharedTime.toEpochMilli(),
+                            vo2Max = 41f,
+                            measurementMethod = null,
+                            deviceName = null,
+                        ),
+                        Vo2MaxInput(
+                            id = "hc-vo2-gone",
+                            timestampMs = sharedTime.toEpochMilli(),
+                            vo2Max = 39f,
+                            measurementMethod = null,
+                            deviceName = null,
+                        ),
+                    ),
+                ),
+            )
+            val dayStart = sharedTime.atZone(ZoneId.of("UTC")).toLocalDate().atStartOfDay(ZoneId.of("UTC")).toInstant()
+            val scan =
+                CompleteTypeScan(
+                    type = HealthDataType.VO2_MAX,
+                    windowStartMs = dayStart.toEpochMilli(),
+                    windowEndExclusiveMs = dayStart.plusSeconds(86_400).toEpochMilli(),
+                    sourceSelectionId = "",
+                    ids = setOf("hc-vo2-keep"),
+                )
+
+            seedStore.reconcileWindow(scan, ZoneId.of("UTC"))
+
+            val remaining = database.vo2MaxRecordDao().getByTimeRange(0, Long.MAX_VALUE)
+            assertEquals(listOf("hc-vo2-keep"), remaining.map { it.id })
+        }
+
+    @Test
+    fun `reconcileWindow for VO2_MAX leaves an unrelated WEIGHT record intact`() =
+        runTest {
+            val sampleTime = Instant.parse("2026-05-01T12:00:00Z")
+            seedStore.persist(
+                batch(
+                    weights = listOf(
+                        WeightInput(
+                            id = "hc-weight-untouched_${sampleTime.toEpochMilli()}",
+                            timestampMs = sampleTime.toEpochMilli(),
+                            weightKg = 70f,
+                            deviceName = null,
+                        ),
+                    ),
+                    vo2MaxSamples = listOf(
+                        Vo2MaxInput(
+                            id = "hc-vo2-deleted",
+                            timestampMs = sampleTime.toEpochMilli(),
+                            vo2Max = 38f,
+                            measurementMethod = null,
+                            deviceName = null,
+                        ),
+                    ),
+                ),
+            )
+            val dayStart = sampleTime.atZone(ZoneId.of("UTC")).toLocalDate().atStartOfDay(ZoneId.of("UTC")).toInstant()
+            val scan =
+                CompleteTypeScan(
+                    type = HealthDataType.VO2_MAX,
+                    windowStartMs = dayStart.toEpochMilli(),
+                    windowEndExclusiveMs = dayStart.plusSeconds(86_400).toEpochMilli(),
+                    sourceSelectionId = "",
+                    ids = emptySet(),
+                )
+
+            seedStore.reconcileWindow(scan, ZoneId.of("UTC"))
+
+            assertTrue(database.vo2MaxRecordDao().getByTimeRange(0, Long.MAX_VALUE).isEmpty())
+            assertEquals(1, database.weightRecordDao().getByTimeRange(0, Long.MAX_VALUE).size)
+        }
+
+        @Test
+        fun `workoutsOverlapping returns stored workouts that overlap the range`() =
+            runTest {
+                val w1 =
+                    WorkoutInput(
+                        id = "w1",
+                        startTime = 10_000L,
+                        endTime = 30_000L,
+                        exerciseType = "RUNNING",
+                        durationMinutes = 20,
+                        zone1Minutes = 0f,
+                        zone2Minutes = 0f,
+                        zone3Minutes = 0f,
+                        zone4Minutes = 0f,
+                        zone5Minutes = 0f,
+                        trimp = 0f,
+                        avgHr = 0f,
+                        deviceName = null,
+                    )
+                val w2 =
+                    WorkoutInput(
+                        id = "w2",
+                        startTime = 40_000L,
+                        endTime = 60_000L,
+                        exerciseType = "CYCLING",
+                        durationMinutes = 20,
+                        zone1Minutes = 0f,
+                        zone2Minutes = 0f,
+                        zone3Minutes = 0f,
+                        zone4Minutes = 0f,
+                        zone5Minutes = 0f,
+                        trimp = 0f,
+                        avgHr = 0f,
+                        deviceName = null,
+                    )
+                seedStore.persist(batch(workouts = listOf(w1, w2)))
+
+                // Query overlapping [15, 25) -> should find w1 only
+                val overlapping1 = changeStore.workoutsOverlapping(15_000L, 25_000L)
+                assertEquals(1, overlapping1.size)
+                assertEquals("w1", overlapping1[0].id)
+
+                // Query touching boundary [30, 40) -> neither overlaps half-open
+                val overlappingBoundary = changeStore.workoutsOverlapping(30_000L, 40_000L)
+                assertTrue(overlappingBoundary.isEmpty())
+
+                // Query overlapping [25, 45) -> both w1 and w2 overlap
+                val overlappingBoth = changeStore.workoutsOverlapping(25_000L, 45_000L)
+                assertEquals(2, overlappingBoth.size)
+            }
+
+        @Test
+        fun `persistIntervalEnrichment updates workouts and source metadata atomically`() =
+            runTest {
+                val w1 =
+                    WorkoutInput(
+                        id = "w1",
+                        startTime = 10_000L,
+                        endTime = 30_000L,
+                        exerciseType = "RUNNING",
+                        durationMinutes = 20,
+                        zone1Minutes = 0f,
+                        zone2Minutes = 0f,
+                        zone3Minutes = 0f,
+                        zone4Minutes = 0f,
+                        zone5Minutes = 0f,
+                        trimp = 0f,
+                        avgHr = 0f,
+                        deviceName = null,
+                    )
+                seedStore.persist(batch(workouts = listOf(w1)))
+
+                val prepared =
+                    PreparedWorkout(
+                        workout = w1,
+                        route = ReadOutcome.Denied,
+                        distanceMeters = ReadOutcome.Available(1500f),
+                        elevationMeters = ReadOutcome.Available(50f),
+                    )
+                val sourceRecord =
+                    IntervalSourceRecord(
+                        sourceId = "dist-1",
+                        kind = IntervalKind.DISTANCE,
+                        startMs = 15_000L,
+                        endExclusiveMs = 25_000L,
+                        originPackage = "com.strava",
+                    )
+
+                changeStore.persistIntervalEnrichment(
+                    preparedWorkouts = listOf(prepared),
+                    sourceUpserts = listOf(sourceRecord),
+                    sourceDeletes = emptyList(),
+                    dirtyDates = setOf(LocalDate.parse("2026-08-31")),
+                )
+
+                // Verify workout updated with distance and elevation
+                val updatedWorkout = database.workoutDao().getById("w1")
+                assertEquals(1500f, updatedWorkout?.totalDistanceMeters)
+                assertEquals(50f, updatedWorkout?.elevationGainMeters)
+
+                // Verify source metadata stored and retrievable via getIntervalSource
+                val retrievedSource = changeStore.getIntervalSource("dist-1")
+                assertEquals("dist-1", retrievedSource?.sourceId)
+                assertEquals(IntervalKind.DISTANCE, retrievedSource?.kind)
+                assertEquals(15_000L, retrievedSource?.startMs)
+                assertEquals(25_000L, retrievedSource?.endExclusiveMs)
+
+                // Now test source deletion
+                changeStore.persistIntervalEnrichment(
+                    preparedWorkouts = emptyList(),
+                    sourceUpserts = emptyList(),
+                    sourceDeletes = listOf("dist-1"),
+                    dirtyDates = emptySet(),
+                )
+                assertNull(changeStore.getIntervalSource("dist-1"))
+            }
+
     private fun batch(
         sleepSessions: List<SleepSessionInput> = emptyList(),
         workouts: List<WorkoutInput> = emptyList(),
         weights: List<WeightInput> = emptyList(),
         stepRecords: List<StepRecordInput> = emptyList(),
+        vo2MaxSamples: List<Vo2MaxInput> = emptyList(),
     ) = HealthIngestionBatch(
         sleepSessions = sleepSessions, sleepStages = emptyList(), heartRateSamples = emptyList(),
         hrvSamples = emptyList(), workouts = workouts, weights = weights, bodyFatSamples = emptyList(),
         bloodPressureSamples = emptyList(), oxygenSaturationSamples = emptyList(),
-        bodyTemperatureSamples = emptyList(), stepRecords = stepRecords,
+        bodyTemperatureSamples = emptyList(), stepRecords = stepRecords, vo2MaxSamples = vo2MaxSamples,
     )
 
     private companion object {

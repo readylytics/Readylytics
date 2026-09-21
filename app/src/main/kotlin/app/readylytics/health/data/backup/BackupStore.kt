@@ -16,6 +16,12 @@ interface BackupStore {
         name: String,
     )
 
+    /** Publishes [source] as a new unique archive under [name], failing on collision. */
+    suspend fun publishNew(
+        source: File,
+        name: String,
+    ): BackupLocation
+
     suspend fun delete(location: BackupLocation)
 
     suspend fun prune(retentionPeriodMs: Long)

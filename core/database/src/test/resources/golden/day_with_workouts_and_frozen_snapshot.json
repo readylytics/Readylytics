@@ -9,7 +9,6 @@
     "restingHrRatio": 1.0,
     "zLnHrv": 0.3014059,
     "zRhr": 0.2777778,
-    "recoveryFlags": "CALIBRATING",
     "hrvSigma": 0.25,
     "diagnostics": {
         "zLnHrv": 0.3014059,
@@ -17,7 +16,6 @@
         "lnSigma": 0.25,
         "rollingMu": 3.95,
         "rhrDeltaBpm": 1.0,
-        "isCalibrating": true,
         "configHashCode": -146785848,
         "phaseName": "Mature"
     },
@@ -37,7 +35,7 @@
     "baselineCalculatedAtDate": "2026-06-15",
     "hrMax": 188.0,
     "snapshotProfile": "ACTIVE",
-    "snapshotCalibrationPhase": "CALIBRATION",
+    "snapshotCalibrationPhase": "EARLY_BASELINE",
     "hrvSigmaPrior": 0.15,
     "rasScalingFactor": 0.22,
     "baselineObservationCount": 14,

@@ -1,4 +1,5 @@
 package app.readylytics.health.core.database.domain.scoring.golden
+import app.readylytics.health.core.database.data.local.AuthoritativeHeartRateReader
 import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
 import androidx.room.Room
@@ -13,6 +14,7 @@ import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoade
 import app.readylytics.health.core.database.data.repository.MorningRecommendationDependencies
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
+import app.readylytics.health.core.database.data.repository.ScoringHeartRateDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringSeriesLoader
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
@@ -133,6 +135,8 @@ class GoldenFixtureWalkForwardTest {
                     heartRateDao = db.heartRateDao(),
                     hrvDao = db.hrvDao(),
                     transactionRunner = RoomTransactionRunner(db),
+                    authoritativeReader =
+                        AuthoritativeHeartRateReader(db.heartRateDao(), db.minuteBucketDao()),
                 )
             val reconcileStartMs =
                 startDate
@@ -187,11 +191,7 @@ class GoldenFixtureWalkForwardTest {
                         ),
                 )
             val dataLoader =
-                ScoringDayDataLoader(
-                    db.workoutDao(), db.sleepSessionDao(), db.dailySummaryDao(), db.heartRateDao(),
-                    db.minuteBucketDao(), db.weightRecordDao(), db.bodyFatRecordDao(),
-                    db.bloodPressureRecordDao(), db.oxygenSaturationRecordDao(), db.bodyTemperatureRecordDao(),
-                )
+                ScoringDayDataLoader(db.workoutDao(), db.sleepSessionDao(), db.dailySummaryDao())
             val bodyMetricsDataLoader =
                 BodyMetricsDataLoader(
                     db.weightRecordDao(), db.bodyFatRecordDao(), db.bloodPressureRecordDao(),
@@ -199,6 +199,7 @@ class GoldenFixtureWalkForwardTest {
                     db.vo2MaxRecordDao(),
                 )
             val seriesLoader = ScoringSeriesLoader(db.workoutDao(), db.dailySummaryDao())
+            val heartRateDataLoader = ScoringHeartRateDataLoader(db.heartRateDao(), db.minuteBucketDao())
             val buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator)
             val resolveDailyBaselinesUseCase = ResolveDailyBaselinesUseCase(baselineComputer)
             val assembleDailySummaryUseCase = AssembleDailySummaryUseCase()
@@ -220,6 +221,7 @@ class GoldenFixtureWalkForwardTest {
                         dataLoader,
                         bodyMetricsDataLoader,
                         seriesLoader,
+                        heartRateDataLoader,
                     ),
                     settingsRepo = settingsRepo,
                     baselineComputer = baselineComputer,

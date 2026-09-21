@@ -36,4 +36,5 @@ data class HrMinuteBucketEntity(
     val p50Bpm: Int? = null,
     val p75Bpm: Int? = null,
     val p95Bpm: Int? = null,
+    @androidx.room.ColumnInfo(defaultValue = "0") val generation: Long = 0L,
 )

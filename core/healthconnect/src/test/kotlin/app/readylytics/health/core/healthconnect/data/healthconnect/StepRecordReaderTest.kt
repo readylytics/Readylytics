@@ -3,6 +3,7 @@ package app.readylytics.health.core.healthconnect.data.healthconnect
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.aggregate.AggregationResult
 import androidx.health.connect.client.aggregate.AggregationResultGroupedByPeriod
+import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.StepsRecord
 import io.mockk.coEvery
 import io.mockk.every
@@ -31,6 +32,10 @@ class StepRecordReaderTest {
 
     @Before
     fun setup() {
+        coEvery {
+            client.permissionController.getGrantedPermissions()
+        } returns setOf(HealthPermission.getReadPermission(StepsRecord::class))
+
         reader =
             StepRecordReader(
                 context = mockk(relaxed = true),
@@ -59,16 +64,16 @@ class StepRecordReaderTest {
             coEvery { client.aggregate(any()) } returns aggResult
 
             val result = reader.readSteps(t0, t1)
-            assertEquals(5432L, result)
+            assertEquals(app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(5432L), result)
         }
 
     @Test
-    fun `readSteps returns 0 on security exception`() =
+    fun `readSteps returns Denied on security exception`() =
         runTest {
             coEvery { client.aggregate(any()) } throws SecurityException("Permission denied")
 
             val result = reader.readSteps(t0, t1)
-            assertEquals(0L, result)
+            assertEquals(app.readylytics.health.core.model.domain.repository.ReadOutcome.Denied, result)
         }
 
     @Test
@@ -95,7 +100,9 @@ class StepRecordReaderTest {
                 client.aggregateGroupByPeriod(any())
             } returns listOf(group)
 
-            val result = reader.readDailyStepTotals(t0, t1, zoneUtc)
+            val outcome = reader.readDailyStepTotals(t0, t1, zoneUtc)
+            assertTrue(outcome is app.readylytics.health.core.model.domain.repository.ReadOutcome.Available)
+            val result = (outcome as app.readylytics.health.core.model.domain.repository.ReadOutcome.Available).data
             assertEquals(1, result.size)
             assertEquals(8500L, result[LocalDate.of(2026, 5, 1)])
         }
@@ -112,17 +119,19 @@ class StepRecordReaderTest {
             }
             coEvery { client.aggregate(any()) } returns aggResult
 
-            val result = reader.readDailyStepTotals(t0, t1, zoneUtc)
+            val outcome = reader.readDailyStepTotals(t0, t1, zoneUtc)
+            assertTrue(outcome is app.readylytics.health.core.model.domain.repository.ReadOutcome.Available)
+            val result = (outcome as app.readylytics.health.core.model.domain.repository.ReadOutcome.Available).data
             assertEquals(3000L, result[LocalDate.of(2026, 5, 1)])
         }
 
     @Test
-    fun `readDailyStepTotals returns empty map on security exception`() =
+    fun `readDailyStepTotals returns Denied on security exception`() =
         runTest {
             coEvery { client.aggregateGroupByPeriod(any()) } throws SecurityException("No perm")
 
             val result = reader.readDailyStepTotals(t0, t1, zoneUtc)
-            assertTrue(result.isEmpty())
+            assertEquals(app.readylytics.health.core.model.domain.repository.ReadOutcome.Denied, result)
         }
 
     @Test
@@ -136,20 +145,22 @@ class StepRecordReaderTest {
                 every { pageToken } returns null
             }
 
-            val records = reader.readStepsRecords(t0, t1)
+            val outcome = reader.readStepsRecords(t0, t1)
+            assertTrue(outcome is app.readylytics.health.core.model.domain.repository.ReadOutcome.Available)
+            val records = (outcome as app.readylytics.health.core.model.domain.repository.ReadOutcome.Available).data
             assertEquals(1, records.size)
             assertEquals("step-1", records.first().id)
             assertEquals(1200L, records.first().count)
         }
 
     @Test
-    fun `readStepsRecords returns empty list on security exception`() =
+    fun `readStepsRecords returns Denied on security exception`() =
         runTest {
             coEvery {
                 client.readRecords<StepsRecord>(any())
             } throws SecurityException("Permission denied")
 
-            val records = reader.readStepsRecords(t0, t1)
-            assertTrue(records.isEmpty())
+            val outcome = reader.readStepsRecords(t0, t1)
+            assertEquals(app.readylytics.health.core.model.domain.repository.ReadOutcome.Denied, outcome)
         }
 }

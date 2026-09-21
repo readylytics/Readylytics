@@ -38,6 +38,7 @@ import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoade
 import app.readylytics.health.core.database.data.repository.MorningRecommendationDependencies
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
+import app.readylytics.health.core.database.data.repository.ScoringHeartRateDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.core.database.data.repository.ScoringSeriesLoader
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
@@ -97,19 +98,7 @@ class ScoringDeterminismRegressionTest {
 
     @Before
     fun setup() {
-        val dataLoader =
-            ScoringDayDataLoader(
-                workoutDao,
-                sleepSessionDao,
-                dailySummaryDao,
-                heartRateDao,
-                minuteBucketDao,
-                weightRecordDao,
-                bodyFatRecordDao,
-                bloodPressureRecordDao,
-                oxygenSaturationRecordDao,
-                bodyTemperatureRecordDao,
-            )
+        val dataLoader = ScoringDayDataLoader(workoutDao, sleepSessionDao, dailySummaryDao)
         val bodyMetricsDataLoader =
             BodyMetricsDataLoader(
                 weightRecordDao,
@@ -120,7 +109,8 @@ class ScoringDeterminismRegressionTest {
                 vo2MaxRecordDao,
             )
         val seriesLoader = ScoringSeriesLoader(workoutDao, dailySummaryDao)
-        repo = buildRepo(dataLoader, bodyMetricsDataLoader, seriesLoader)
+        val heartRateDataLoader = ScoringHeartRateDataLoader(heartRateDao, minuteBucketDao)
+        repo = buildRepo(dataLoader, bodyMetricsDataLoader, seriesLoader, heartRateDataLoader)
         coEvery { sleepSessionDao.getOverlapping(any(), any()) } returns emptyList()
     }
 
@@ -128,6 +118,7 @@ class ScoringDeterminismRegressionTest {
         dataLoader: ScoringDayDataLoader,
         bodyMetricsDataLoader: BodyMetricsDataLoader,
         seriesLoader: ScoringSeriesLoader,
+        heartRateDataLoader: ScoringHeartRateDataLoader,
     ): ScoringRepositoryImpl {
         val readinessSummaryCoordinator =
             ReadinessSummaryCoordinator(
@@ -145,6 +136,7 @@ class ScoringDeterminismRegressionTest {
                 dataLoader,
                 bodyMetricsDataLoader,
                 seriesLoader,
+                heartRateDataLoader,
             ),
             settingsRepo,
             baselineComputer,

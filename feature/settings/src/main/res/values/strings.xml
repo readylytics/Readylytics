@@ -138,6 +138,8 @@
 <string name="data_type_oxygen_saturation">Oxygen saturation</string>
 <string name="data_type_sleep">Sleep</string>
 <string name="data_type_steps">Steps</string>
+<string name="data_sources_steps_selected_attribution_note">Step intervals crossing midnight are attributed to their start day when a specific device is selected.</string>
+<string name="data_type_vo2_max">VO₂ max</string>
 <string name="data_type_weight">Weight</string>
 <string name="device_change_notice_body">Press Apply at the bottom of this section to save your device
         selection. Applying will resync your Health Connect data using the new selection.</string>

@@ -69,6 +69,11 @@ class WorkoutRepositoryImpl
                 avgSpeedKmh = entity.avgSpeedKmh,
                 elevationGainMeters = entity.elevationGainMeters,
                 routeState = entity.routeState,
+                modelTrimp = entity.modelTrimp,
+                modelTrimpSourceRevision = entity.modelTrimpSourceRevision,
+                modelTrimpSnapshotId = entity.modelTrimpSnapshotId,
+                modelTrimpAlgorithmRevision = entity.modelTrimpAlgorithmRevision,
+                modelTrimpQuality = entity.modelTrimpQuality,
             )
 
         private fun WorkoutRoutePointEntity.toDomain() =

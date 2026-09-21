@@ -4,624 +4,195 @@ import app.readylytics.health.core.database.domain.sync.DailyRecomputeSupport
 import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.model.Result
+import app.readylytics.health.core.model.domain.preferences.SettingsDefaults
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.core.model.domain.repository.HealthConnectWindowTimeoutException
-import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
-import app.readylytics.health.core.model.domain.sync.*
-import app.readylytics.health.core.model.domain.sync.StepAttribution
+import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
+import app.readylytics.health.core.model.domain.sync.HistoricalRunIdentity
+import app.readylytics.health.core.model.domain.sync.ResyncCheckpoint
+import app.readylytics.health.core.model.domain.sync.ResyncCheckpointStore
+import app.readylytics.health.core.model.domain.sync.ResyncPhase
+import app.readylytics.health.core.model.domain.sync.SelectedSourcePruner
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logI
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.yield
 import java.time.Clock
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.temporal.ChronoUnit
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * Full historical resync over a retention-bounded range. Health Connect is re-read in [chunkDays]-day
- * chunks (with bounded backoff to ride out rate limits), then a single walk-forward recompute
- * rebuilds every day's scores via the unchanged scoring-engine formulas.
- *
- * Idempotent by construction: ingestion upserts by stable Health Connect record id (overlaps
- * replace, never duplicate) and no blanket delete is performed, so a worker killed/failed mid-pass
- * leaves prior valid data intact and a retry re-runs the same range cleanly. Checkpoint-resumable
- * across four phases (INGEST → PRUNE → RECONCILE → RECOMPUTE).
- *
- * Serialized against the daily sync by the shared `syncMutex` owned by [HealthSyncUseCase] — callers
- * must invoke this under that lock.
- */
+private data class ResyncExecutionPlan(
+    val requestedRun: HistoricalRunIdentity,
+    val runIdentity: HistoricalRunIdentity,
+    val effectivePrefs: UserPreferences,
+    val runStartDate: LocalDate,
+    val runEndDate: LocalDate,
+    val runZoneId: ZoneId,
+    val selectionHash: String,
+    val checkpoint: ResyncCheckpoint?,
+    val baselineChangeTokens: Map<HealthDataType, String>,
+    val runCompletedTypes: Set<HealthDataType>,
+    val totalDays: Int,
+    val totalChunks: Int,
+    val recomputeStartDate: LocalDate,
+    val completedDays: Int,
+    val reconcileStartMs: Long,
+    val reconcileEndMs: Long,
+    val runIngestion: Boolean,
+    val runPruning: Boolean,
+    val runReconciliation: Boolean,
+) {
+    companion object {
+        fun create(
+            requestedRun: HistoricalRunIdentity,
+            activeRun: HistoricalRunIdentity,
+            prefs: UserPreferences,
+            checkpoint: ResyncCheckpoint?,
+            baselineChangeTokens: Map<HealthDataType, String>,
+            chunkDays: Int,
+            skipIngestAndPrune: Boolean,
+        ): ResyncExecutionPlan {
+            val effectivePrefs = activeRun.effectivePreferences() ?: prefs
+            val runCompletedTypes = when {
+                checkpoint?.completedTypesRecorded == true -> checkpoint.completedTypes
+                skipIngestAndPrune -> emptySet()
+                else -> baselineChangeTokens.keys
+            }
+            val runStartDate = LocalDate.ofEpochDay(activeRun.startEpochDay)
+            val runEndDate = LocalDate.ofEpochDay(activeRun.endEpochDayInclusive)
+            val runZoneId = ZoneId.of(activeRun.zoneId)
+            val totalDays = (ChronoUnit.DAYS.between(runStartDate, runEndDate) + 1).toInt().coerceAtLeast(0)
+            val totalChunks = if (totalDays <= 0) 0 else (totalDays + chunkDays - 1) / chunkDays
+            val recomputeStartDate = when {
+                checkpoint?.phase == ResyncPhase.RECOMPUTE -> minOf(checkpoint.nextDate, runEndDate.plusDays(1))
+                else -> runStartDate
+            }
+            val completedDays = ChronoUnit.DAYS.between(runStartDate, recomputeStartDate).toInt().coerceIn(0, totalDays)
+            val reconcileStartMs = runStartDate.minusDays(1).atStartOfDay(runZoneId).toInstant().toEpochMilli()
+            val reconcileEndMs = runEndDate.plusDays(1).atStartOfDay(runZoneId).toInstant().toEpochMilli() - 1
+            val currentPhase = checkpoint?.phase
+            val canIngest = currentPhase == null || currentPhase == ResyncPhase.INGEST
+            val canPrune = canIngest || currentPhase == ResyncPhase.PRUNE
+
+            return ResyncExecutionPlan(
+                requestedRun = requestedRun,
+                runIdentity = activeRun,
+                effectivePrefs = effectivePrefs,
+                runStartDate = runStartDate,
+                runEndDate = runEndDate,
+                runZoneId = runZoneId,
+                selectionHash = activeRun.scoringSnapshotId,
+                checkpoint = checkpoint,
+                baselineChangeTokens = baselineChangeTokens,
+                runCompletedTypes = runCompletedTypes,
+                totalDays = totalDays,
+                totalChunks = totalChunks,
+                recomputeStartDate = recomputeStartDate,
+                completedDays = completedDays,
+                reconcileStartMs = reconcileStartMs,
+                reconcileEndMs = reconcileEndMs,
+                runIngestion = !skipIngestAndPrune && canIngest,
+                runPruning = !skipIngestAndPrune && canPrune,
+                runReconciliation = currentPhase != ResyncPhase.RECOMPUTE,
+            )
+        }
+    }
+}
+
 @Singleton
 class ResyncRangeUseCase
     @Inject
     constructor(
-        private val settingsRepo: SettingsRepository,
-        private val clock: Clock = Clock.systemDefaultZone(),
-        private val sessionLinkReconciler: SessionLinkReconciler,
         private val changeSynchronizer: HealthChangeSynchronizer,
         private val selectedSourcePruner: SelectedSourcePruner,
+        private val sessionLinkReconciler: SessionLinkReconciler,
         private val checkpointStore: ResyncCheckpointStore,
+        private val settingsRepo: SettingsRepository,
         private val healthIngestionStore: HealthIngestionStore,
-        private val ingestion: ResyncIngestionDependencies,
         private val recomputeSupport: DailyRecomputeSupport,
+        private val ingestion: ResyncIngestionDependencies,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+        private val clock: Clock = Clock.systemDefaultZone(),
+        private val ingestPhase: HistoricalIngestPhase =
+            HistoricalIngestPhase(
+                healthIngestionStore = healthIngestionStore,
+                ingestion = ingestion,
+                checkpointStore = checkpointStore,
+                clock = clock,
+            ),
+        private val prunePhase: HistoricalPrunePhase =
+            HistoricalPrunePhase(
+                selectedSourcePruner = selectedSourcePruner,
+                healthIngestionStore = healthIngestionStore,
+                checkpointStore = checkpointStore,
+                clock = clock,
+            ),
+        private val recomputePhase: HistoricalRecomputePhase =
+            HistoricalRecomputePhase(
+                healthIngestionStore = healthIngestionStore,
+                recomputeSupport = recomputeSupport,
+                checkpointStore = checkpointStore,
+                clock = clock,
+            ),
     ) {
-        /**
-         * @param skipIngestAndPrune SCORE-007/WP-26: when true, skips the INGEST and PRUNE phases
-         *   entirely and starts at RECONCILE -- used for a settings-driven recompute (e.g. a TRIMP
-         *   model/parameter or HR-zone change) where raw Health Connect data is untouched and only
-         *   the derived session-linking/scoring needs to be rebuilt across the range. Never commits
-         *   change tokens or updates `lastSyncTimestamp` (no HC read happened to justify either).
-         *   The checkpoint's [selectionHash] is namespaced separately from full-resync runs so a
-         *   recompute-only pass can never resume from (or be resumed by) an unrelated, possibly
-         *   ingestion-incomplete full-resync checkpoint for the same date range. Both kinds of run
-         *   still share one `RESYNC_WORK_NAME` WorkManager chain. Full resync uses
-         *   `ExistingWorkPolicy.KEEP`; local recompute uses `ExistingWorkPolicy.APPEND_OR_REPLACE`
-         *   so it runs as a durable successor after existing work. The namespacing prevents either
-         *   run type from resuming the other type's checkpoint. Health
-         *   Connect change tokens are mandatory for full resync checkpoints, but deliberately
-         *   empty for local recompute checkpoints because no Health Connect access occurs.
-         * @param onProgress reports (phase, completed, total) as the resync advances through its
-         *   four phases (INGEST batches, PRUNE, RECONCILE, RECOMPUTE days).
-         */
         suspend fun run(
             startDate: LocalDate,
             endDate: LocalDate,
             chunkDays: Int,
             onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)?,
             skipIngestAndPrune: Boolean = false,
+            requestedRunId: String? = null,
         ): Result<Unit> =
             withContext(ioDispatcher) {
                 try {
-                    logD("ResyncRangeUseCase") {
-                        if (skipIngestAndPrune) {
-                            "Recompute-only $startDate..$endDate"
-                        } else {
-                            "Full resync $startDate..$endDate (chunk=$chunkDays days)"
-                        }
-                    }
-
-                    val initialPrefs = settingsRepo.userPreferences.first()
-                    recomputeSupport.refreshAutoMaxHr(initialPrefs)
-                    val prefs = settingsRepo.userPreferences.first()
-                    // Resolve day boundaries via the stored scoring timezone (falls back to the
-                    // device zone when un-seeded) so chunked ingest, reconcile, and prune all use
-                    // the same boundaries as the scoring engine.
-                    val zoneId = prefs.scoringZone()
-                    val baseSelectionHash =
-                        prefs.deviceByDataType.toSortedMap().entries.joinToString(
-                            "|",
-                        ) { (type, device) -> "$type=${device.orEmpty()}" }
-                    val selectionHash =
-                        if (skipIngestAndPrune) {
-                            "RECOMPUTE_ONLY_V2|$baseSelectionHash|${prefs.scoringCheckpointIdentity()}"
-                        } else {
-                            baseSelectionHash
-                        }
-                    val savedCheckpoint = checkpointStore.checkpoint.first()
-                    val checkpoint =
-                        savedCheckpoint
-                            ?.takeIf { saved ->
-                                saved.startDate == startDate &&
-                                    saved.endDate == endDate &&
-                                    saved.selectionHash == selectionHash &&
-                                    (skipIngestAndPrune || saved.baselineChangeTokens.isNotEmpty())
-                            }?.also {
-                                logD("ResyncRangeUseCase") {
-                                    "Resuming resync from ${it.phase} at ${it.nextDate}"
-                                }
-                            }
-                    if (savedCheckpoint != null && checkpoint == null) {
-                        checkpointStore.clear()
-                    }
-                    val baselineChangeTokens =
-                        checkpoint?.baselineChangeTokens
-                            ?: if (skipIngestAndPrune) {
-                                emptyMap()
-                            } else {
-                                changeSynchronizer.captureChangesTokens()
-                            }
-                    if (checkpoint == null) {
-                        checkpointStore.save(
-                            ResyncCheckpoint(
-                                startDate = startDate,
-                                endDate = endDate,
-                                phase = if (skipIngestAndPrune) ResyncPhase.RECONCILE else ResyncPhase.INGEST,
-                                nextDate = startDate,
-                                selectionHash = selectionHash,
-                                baselineChangeTokens = baselineChangeTokens,
-                            ),
-                        )
-                    }
-
-                    val totalDays = (ChronoUnit.DAYS.between(startDate, endDate) + 1).toInt().coerceAtLeast(0)
-                    val totalChunks = if (totalDays <= 0) 0 else (totalDays + chunkDays - 1) / chunkDays
-                    var recomputeStartDate =
-                        if (checkpoint?.phase == ResyncPhase.RECOMPUTE) {
-                            minOf(checkpoint.nextDate, endDate.plusDays(1))
-                        } else {
-                            startDate
-                        }
-                    var completedDays =
-                        ChronoUnit
-                            .DAYS
-                            .between(startDate, recomputeStartDate)
-                            .toInt()
-                            .coerceIn(0, totalDays)
-
-                    val reconcileStartMs =
-                        startDate
-                            .minusDays(1)
-                            .atStartOfDay(zoneId)
-                            .toInstant()
-                            .toEpochMilli()
-                    val reconcileEndMs =
-                        endDate
-                            .plusDays(1)
-                            .atStartOfDay(zoneId)
-                            .toInstant()
-                            .toEpochMilli() - 1
-
-                    val runIngestion =
-                        !skipIngestAndPrune && (checkpoint == null || checkpoint.phase == ResyncPhase.INGEST)
-                    val runPruning =
-                        !skipIngestAndPrune &&
-                            (
-                                checkpoint == null ||
-                                    checkpoint.phase == ResyncPhase.INGEST ||
-                                    checkpoint.phase == ResyncPhase.PRUNE
-                            )
-                    val runReconciliation =
-                        checkpoint == null ||
-                            checkpoint.phase == ResyncPhase.INGEST ||
-                            checkpoint.phase == ResyncPhase.PRUNE ||
-                            checkpoint.phase == ResyncPhase.RECONCILE
-
-                    var hrBeforePrune = 0
-                    var hrvBeforePrune = 0
-                    var sleepBeforePrune = 0
-                    var workoutBeforePrune = 0
+                    val plan = preparePlan(startDate, endDate, chunkDays, skipIngestAndPrune, requestedRunId)
+                    var runCompletedTypes = plan.runCompletedTypes
                     var earliestDeletionDate: LocalDate? = null
+                    var initialCounts = PruneCounts(0, 0, 0, 0)
 
-                    val stepsDevice =
-                        prefs.deviceByDataType[HealthDataType.STEPS.name]?.takeIf { it.isNotBlank() }
-
-                    // --- Ingestion phase: chunked HC re-fetch + idempotent upsert ---
-                    if (runIngestion) {
-                        val hrBeforeResync =
-                            healthIngestionStore.countHeartRateInRange(reconcileStartMs, reconcileEndMs)
-                        val hrvBeforeResync =
-                            healthIngestionStore.countHrvInRange(reconcileStartMs, reconcileEndMs)
-                        val sleepBeforeResync =
-                            healthIngestionStore.countSleepSessionsInRange(reconcileStartMs, reconcileEndMs)
-                        val workoutBeforeResync =
-                            healthIngestionStore.countWorkoutsInRange(reconcileStartMs, reconcileEndMs)
-
-                        val ingestStart = clock.millis()
-                        var chunkStart = checkpoint?.nextDate?.coerceAtLeast(startDate) ?: startDate
-                        var chunksCompleted =
-                            (ChronoUnit.DAYS.between(startDate, chunkStart) / chunkDays)
-                                .toInt()
-                                .coerceIn(0, totalChunks)
-                        // HC-002: the effective chunk size shrinks (persisted via
-                        // chunkDaysOverride, so it survives a killed worker) when a window can't be
-                        // read within its timeout budget, and grows back to the caller-supplied
-                        // chunkDays once a window succeeds -- a shrink is a recovery measure for
-                        // unusually dense data, not a permanent downgrade.
-                        var effectiveChunkDays = checkpoint?.chunkDaysOverride ?: chunkDays
-                        var activeHrToken =
-                            if (checkpoint?.phase == ResyncPhase.INGEST && checkpoint.nextDate == chunkStart) {
-                                checkpoint.hrPageToken
-                            } else {
-                                null
-                            }
-                        var activeHrvToken =
-                            if (checkpoint?.phase == ResyncPhase.INGEST && checkpoint.nextDate == chunkStart) {
-                                checkpoint.hrvPageToken
-                            } else {
-                                null
-                            }
-                        while (!chunkStart.isAfter(endDate)) {
-                            ensureActive()
-                            val chunkEndExclusive =
-                                minOf(chunkStart.plusDays(effectiveChunkDays.toLong()), endDate.plusDays(1))
-                            val ingestFromDate = chunkStart.minusDays(1)
-                            val windowStart = ingestFromDate.atStartOfDay(zoneId).toInstant()
-                            val windowEnd = chunkEndExclusive.atStartOfDay(zoneId).toInstant()
-                            val chunkOverride = if (effectiveChunkDays != chunkDays) effectiveChunkDays else null
-
-                            val chunkAffectedRange =
-                                try {
-                                    retryWithBackoff {
-                                        ingestion.ingestionCoordinator.ingestWindow(
-                                            windowStart = windowStart,
-                                            windowEnd = windowEnd,
-                                            prefs = prefs,
-                                            hrStartPageToken = activeHrToken,
-                                            hrvStartPageToken = activeHrvToken,
-                                            onTokenUpdated = { hrToken, hrvToken ->
-                                                activeHrToken = hrToken
-                                                activeHrvToken = hrvToken
-                                                checkpointStore.save(
-                                                    ResyncCheckpoint(
-                                                        startDate = startDate,
-                                                        endDate = endDate,
-                                                        phase = ResyncPhase.INGEST,
-                                                        nextDate = chunkStart,
-                                                        selectionHash = selectionHash,
-                                                        baselineChangeTokens = baselineChangeTokens,
-                                                        chunkDaysOverride = chunkOverride,
-                                                        hrPageToken = hrToken,
-                                                        hrvPageToken = hrvToken,
-                                                    ),
-                                                )
-                                            },
-                                            reconcileDeletions = !skipIngestAndPrune,
-                                        )
-                                    }
-                                } catch (e: HealthConnectWindowTimeoutException) {
-                                    activeHrToken = null
-                                    activeHrvToken = null
-                                    if (effectiveChunkDays <= MIN_CHUNK_DAYS) {
-                                        logD(TELEMETRY_TAG) {
-                                            "[INGESTION] Window $windowStart..$windowEnd timed out even at the " +
-                                                "$MIN_CHUNK_DAYS-day floor; giving up."
-                                        }
-                                        throw e
-                                    }
-                                    val shrunkChunkDays = (effectiveChunkDays / 2).coerceAtLeast(MIN_CHUNK_DAYS)
-                                    logD(TELEMETRY_TAG) {
-                                        "[INGESTION] Window $windowStart..$windowEnd timed out; shrinking chunk " +
-                                            "$effectiveChunkDays -> $shrunkChunkDays days and retrying $chunkStart."
-                                    }
-                                    effectiveChunkDays = shrunkChunkDays
-                                    checkpointStore.save(
-                                        ResyncCheckpoint(
-                                            startDate = startDate,
-                                            endDate = endDate,
-                                            phase = ResyncPhase.INGEST,
-                                            nextDate = chunkStart,
-                                            selectionHash = selectionHash,
-                                            baselineChangeTokens = baselineChangeTokens,
-                                            chunkDaysOverride = effectiveChunkDays,
-                                            hrPageToken = null,
-                                            hrvPageToken = null,
-                                        ),
-                                    )
-                                    continue
-                                }
-
-                            if (chunkAffectedRange != null) {
-                                earliestDeletionDate =
-                                    minOf(earliestDeletionDate ?: chunkAffectedRange.start, chunkAffectedRange.start)
-                            }
-
-                            activeHrToken = null
-                            activeHrvToken = null
-                            effectiveChunkDays = chunkDays
-                            val nextPhase =
-                                if (chunkEndExclusive.isAfter(endDate)) {
-                                    ResyncPhase.PRUNE
-                                } else {
-                                    ResyncPhase.INGEST
-                                }
-                            checkpointStore.save(
-                                ResyncCheckpoint(
-                                    startDate = startDate,
-                                    endDate = endDate,
-                                    phase = nextPhase,
-                                    nextDate =
-                                        if (nextPhase ==
-                                            ResyncPhase.INGEST
-                                        ) {
-                                            chunkEndExclusive
-                                        } else {
-                                            startDate
-                                        },
-                                    selectionHash = selectionHash,
-                                    baselineChangeTokens = baselineChangeTokens,
-                                    chunkDaysOverride = null,
-                                    hrPageToken = null,
-                                    hrvPageToken = null,
-                                ),
+                    if (plan.runIngestion) {
+                        val outcome = executeIngestion(plan, chunkDays, skipIngestAndPrune, onProgress)
+                        earliestDeletionDate = outcome.earliestDeletionDate
+                        runCompletedTypes = outcome.completedTypes
+                        initialCounts =
+                            PruneCounts(
+                                hr = outcome.hrBeforePrune,
+                                hrv = outcome.hrvBeforePrune,
+                                sleep = outcome.sleepBeforePrune,
+                                workout = outcome.workoutBeforePrune,
                             )
-                            chunksCompleted++
-                            onProgress?.invoke(ResyncPhase.INGEST, chunksCompleted, totalChunks)
-                            chunkStart = chunkEndExclusive
-                        }
-                        val ingestEnd = clock.millis()
-                        hrBeforePrune =
-                            healthIngestionStore.countHeartRateInRange(reconcileStartMs, reconcileEndMs)
-                        hrvBeforePrune =
-                            healthIngestionStore.countHrvInRange(reconcileStartMs, reconcileEndMs)
-                        sleepBeforePrune =
-                            healthIngestionStore.countSleepSessionsInRange(reconcileStartMs, reconcileEndMs)
-                        workoutBeforePrune =
-                            healthIngestionStore.countWorkoutsInRange(reconcileStartMs, reconcileEndMs)
-
-                        logD(TELEMETRY_TAG) {
-                            "[INGESTION] Completed in ${ingestEnd - ingestStart}ms. " +
-                                "HeartRate: $hrBeforeResync -> $hrBeforePrune " +
-                                "(delta: ${hrBeforePrune - hrBeforeResync}), " +
-                                "HRV: $hrvBeforeResync -> $hrvBeforePrune " +
-                                "(delta: ${hrvBeforePrune - hrvBeforeResync}), " +
-                                "Sleep: $sleepBeforeResync -> $sleepBeforePrune " +
-                                "(delta: ${sleepBeforePrune - sleepBeforeResync}), " +
-                                "Workout: $workoutBeforeResync -> $workoutBeforePrune " +
-                                "(delta: ${workoutBeforePrune - workoutBeforeResync})"
-                        }
                     }
 
-                    // --- Prune phase: remove stale data from non-selected devices ---
-                    if (runPruning) {
-                        onProgress?.invoke(ResyncPhase.PRUNE, 0, 0)
-                        if (!runIngestion) {
-                            hrBeforePrune =
-                                healthIngestionStore.countHeartRateInRange(reconcileStartMs, reconcileEndMs)
-                            hrvBeforePrune =
-                                healthIngestionStore.countHrvInRange(reconcileStartMs, reconcileEndMs)
-                            sleepBeforePrune =
-                                healthIngestionStore.countSleepSessionsInRange(reconcileStartMs, reconcileEndMs)
-                            workoutBeforePrune =
-                                healthIngestionStore.countWorkoutsInRange(reconcileStartMs, reconcileEndMs)
-                        }
+                    if (plan.runPruning) {
+                        executePruning(plan, runCompletedTypes, initialCounts, onProgress)
+                    }
 
-                        val prunerSelections =
-                            HealthDataType.entries.associateWith { type ->
-                                prefs.deviceByDataType[type.name]
-                            }
-                        val pruneStart = clock.millis()
-                        selectedSourcePruner.prune(
-                            start = startDate,
-                            endInclusive = endDate,
-                            selections = prunerSelections,
-                            zoneId = prefs.scoringZone(),
+                    if (plan.runReconciliation) {
+                        executeReconciliation(plan, runCompletedTypes, onProgress)
+                    }
+
+                    val recomputeResult =
+                        executeRecompute(
+                            plan,
+                            chunkDays,
+                            skipIngestAndPrune,
+                            runCompletedTypes,
+                            earliestDeletionDate,
+                            onProgress,
                         )
-                        checkpointStore.save(
-                            ResyncCheckpoint(
-                                startDate = startDate,
-                                endDate = endDate,
-                                phase = ResyncPhase.RECONCILE,
-                                nextDate = startDate,
-                                selectionHash = selectionHash,
-                                baselineChangeTokens = baselineChangeTokens,
-                            ),
-                        )
-                        val pruneEnd = clock.millis()
-                        val hrAfterPrune =
-                            healthIngestionStore.countHeartRateInRange(reconcileStartMs, reconcileEndMs)
-                        val hrvAfterPrune =
-                            healthIngestionStore.countHrvInRange(reconcileStartMs, reconcileEndMs)
-                        val sleepAfterPrune =
-                            healthIngestionStore.countSleepSessionsInRange(reconcileStartMs, reconcileEndMs)
-                        val workoutAfterPrune =
-                            healthIngestionStore.countWorkoutsInRange(reconcileStartMs, reconcileEndMs)
+                    if (recomputeResult is Result.Failure) return@withContext recomputeResult
 
-                        logD(TELEMETRY_TAG) {
-                            "[PRUNING] Completed in ${pruneEnd - pruneStart}ms. " +
-                                "HeartRate: $hrBeforePrune -> $hrAfterPrune " +
-                                "(pruned: ${hrBeforePrune - hrAfterPrune}), " +
-                                "HRV: $hrvBeforePrune -> $hrvAfterPrune " +
-                                "(pruned: ${hrvBeforePrune - hrvAfterPrune}), " +
-                                "Sleep: $sleepBeforePrune -> $sleepAfterPrune " +
-                                "(pruned: ${sleepBeforePrune - sleepAfterPrune}), " +
-                                "Workout: $workoutBeforePrune -> $workoutAfterPrune " +
-                                "(pruned: ${workoutBeforePrune - workoutAfterPrune})"
-                        }
-                    }
-
-                    // --- Reconcile phase: chunk-independent session linkage ---
-                    if (runReconciliation) {
-                        onProgress?.invoke(ResyncPhase.RECONCILE, 0, 0)
-                        val reconcileStart = clock.millis()
-                        val zoneThresholds =
-                            app.readylytics.health.core.model.domain.heartrate.ZoneThresholds.create(
-                                prefs.zone1MinBpm,
-                                prefs.zone1MaxBpm,
-                                prefs.zone2MaxBpm,
-                                prefs.zone3MaxBpm,
-                                prefs.zone4MaxBpm,
-                            )
-                        sessionLinkReconciler.reconcile(reconcileStartMs, reconcileEndMs, zoneThresholds)
-
-                        checkpointStore.save(
-                            ResyncCheckpoint(
-                                startDate = startDate,
-                                endDate = endDate,
-                                phase = ResyncPhase.RECOMPUTE,
-                                nextDate = startDate,
-                                selectionHash = selectionHash,
-                                baselineChangeTokens = baselineChangeTokens,
-                            ),
-                        )
-                        val reconcileEnd = clock.millis()
-                        logD(TELEMETRY_TAG) {
-                            "[RECONCILIATION] Completed in ${reconcileEnd - reconcileStart}ms."
-                        }
-                    }
-
-                    // --- Recompute phase: walk-forward over the full range ---
-                    // Clear frozen snapshots for the exact range so bounded baseline variants
-                    // recompute per day and recent sync/resync use the same baseline path.
-                    val recomputeStart = clock.millis()
-                    if (earliestDeletionDate != null && earliestDeletionDate.isBefore(recomputeStartDate)) {
-                        recomputeStartDate = earliestDeletionDate
-                        completedDays =
-                            ChronoUnit
-                                .DAYS
-                                .between(startDate, recomputeStartDate)
-                                .toInt()
-                                .coerceIn(0, totalDays)
-                    }
-                    val stepsMap =
-                        if (!skipIngestAndPrune && !recomputeStartDate.isAfter(endDate)) {
-                            ingestion.stepCountFetcher.fetchRange(
-                                startDate = recomputeStartDate,
-                                endDate = endDate,
-                                chunkDays = chunkDays,
-                                stepsDevice = stepsDevice,
-                                zoneId = zoneId,
-                            )
-                        } else {
-                            emptyMap()
-                        }
-                    // PERF-002/WP-20/WP-22: fetch the workout-only/everyday-HR TRIMP series and the
-                    // RHR/HRV baseline sleep-session window once for the whole walk-forward instead
-                    // of every recomputed day independently re-querying its own lookback -- same
-                    // batched-once shape as stepsMap above.
-                    val trimpContext =
-                        if (!recomputeStartDate.isAfter(endDate)) {
-                            recomputeSupport.buildWalkForwardTrimpContext(recomputeStartDate, endDate, zoneId)
-                        } else {
-                            null
-                        }
-                    val baselineContext =
-                        if (!recomputeStartDate.isAfter(endDate)) {
-                            recomputeSupport.buildWalkForwardBaselineContext(recomputeStartDate, endDate, zoneId)
-                        } else {
-                            null
-                        }
-                    // WP-27: prefetch historical seed impulses once for the whole recompute
-                    // walk-forward (exact retained history). Null when the recompute range is
-                    // empty, mirroring trimpContext/baselineContext. The mutable accumulator advances
-                    // across the chronological day loop below (including across chunk boundaries).
-                    val fatigueContext =
-                        if (!recomputeStartDate.isAfter(endDate)) {
-                            recomputeSupport.buildWalkForwardFatigueContext(recomputeStartDate, endDate, zoneId)
-                        } else {
-                            null
-                        }
-                    // PERF: fetch the wearable-VO2-Max series once for the whole walk-forward
-                    // instead of every recomputed day independently re-querying its own 30-day
-                    // lookback -- same batched-once shape as trimpContext/baselineContext/fatigueContext.
-                    val vo2MaxContext =
-                        if (!recomputeStartDate.isAfter(endDate)) {
-                            recomputeSupport.buildWalkForwardVo2MaxContext(recomputeStartDate, endDate, zoneId)
-                        } else {
-                            null
-                        }
-                    if (checkpoint == null || checkpoint.phase != ResyncPhase.RECOMPUTE) {
-                        healthIngestionStore.clearFrozenBaselines(startDate, endDate.plusDays(1), zoneId)
-                    }
-                    onProgress?.invoke(ResyncPhase.RECOMPUTE, completedDays, totalDays)
-                    // F7: recompute in RECOMPUTE_CHECKPOINT_INTERVAL_DAYS-day units, each unit one
-                    // Room transaction. Room invalidates per table per transaction, so a 10-year
-                    // resync fires one daily_summaries/workout_records invalidation round per chunk
-                    // instead of one per day -- while its foreground-service notification is up and
-                    // the user may be on a chart screen. The chunk size doubles as the checkpoint
-                    // interval so transaction boundary == resume boundary: a kill or a rollback
-                    // discards at most one chunk, and the checkpoint (saved only AFTER the chunk
-                    // commits) still points at the first day of that chunk, so the resumed run
-                    // idempotently redoes exactly what was lost.
-                    var chunkStartDay = recomputeStartDate
-                    var recomputedDays = completedDays
-                    while (!chunkStartDay.isAfter(endDate)) {
-                        val chunkEndDay =
-                            minOf(
-                                chunkStartDay.plusDays((RECOMPUTE_CHECKPOINT_INTERVAL_DAYS - 1).toLong()),
-                                endDate,
-                            )
-                        val daysBeforeChunk = recomputedDays
-                        val chunkFailure =
-                            recomputeSupport.inRecomputeTransaction {
-                                var day = chunkStartDay
-                                var failure: Result.Failure? = null
-                                var daysDone = daysBeforeChunk
-                                while (!day.isAfter(chunkEndDay)) {
-                                    ensureActive()
-                                    val stepsForDay =
-                                        StepAttribution.resolve(
-                                            day,
-                                            stepsMap,
-                                            stepsDeviceSelected = stepsDevice != null,
-                                            recomputeOnly = skipIngestAndPrune,
-                                        )
-                                    // The nullable fields already express "not available for this
-                                    // run", so no branch is needed: each computer handles a null
-                                    // context individually.
-                                    val dayResult =
-                                        recomputeSupport.recomputeDay(
-                                            day,
-                                            stepsForDay,
-                                            prefs,
-                                            WalkForwardContexts(
-                                                trimpContext,
-                                                baselineContext,
-                                                fatigueContext,
-                                                vo2MaxContext,
-                                            ),
-                                        )
-                                    if (dayResult is Result.Failure) {
-                                        logD(TELEMETRY_TAG) { "[RECOMPUTE] Failed at day $day: ${dayResult.reason}" }
-                                        failure = dayResult
-                                        break
-                                    }
-                                    daysDone++
-                                    onProgress?.invoke(ResyncPhase.RECOMPUTE, daysDone, totalDays)
-                                    day = day.plusDays(1)
-                                    yield()
-                                }
-                                failure
-                            }
-                        if (chunkFailure != null) {
-                            // The chunk does NOT roll back: recomputeDay catches and returns a
-                            // Result.Failure instead of throwing, so inRecomputeTransaction returns
-                            // normally and the days completed before the failure commit. Safety comes
-                            // from the checkpoint, not the transaction — it is not advanced, so it
-                            // still starts at this chunk's first day and a retry redoes the chunk
-                            // whole. Recompute is idempotent, and the retry rebuilds the fatigue
-                            // accumulator from the checkpoint boundary, so the partially committed
-                            // days are recomputed to the same values (see DATA_FLOW.md §2.8).
-                            return@withContext chunkFailure
-                        }
-                        recomputedDays =
-                            ChronoUnit
-                                .DAYS
-                                .between(startDate, chunkEndDay.plusDays(1))
-                                .toInt()
-                                .coerceIn(0, totalDays)
-                        checkpointStore.save(
-                            ResyncCheckpoint(
-                                startDate = startDate,
-                                endDate = endDate,
-                                phase = ResyncPhase.RECOMPUTE,
-                                nextDate = chunkEndDay.plusDays(1),
-                                selectionHash = selectionHash,
-                                baselineChangeTokens = baselineChangeTokens,
-                            ),
-                        )
-                        chunkStartDay = chunkEndDay.plusDays(1)
-                    }
-                    val recomputeEnd = clock.millis()
-                    logD(TELEMETRY_TAG) {
-                        "[RECOMPUTE] Completed in ${recomputeEnd - recomputeStart}ms. Days recomputed: $recomputedDays"
-                    }
-
-                    if (!skipIngestAndPrune) {
-                        // A recompute-only pass never read Health Connect, so it must not commit
-                        // change tokens (that would mark interim HC changes as already processed)
-                        // or update lastSyncTimestamp (the foreground sync's catch-up window math
-                        // assumes that timestamp means "data was actually re-ingested up to here").
-                        changeSynchronizer.commitTokens(baselineChangeTokens)
-                        settingsRepo.updateLastSyncTimestamp(clock.millis())
-                    }
-                    checkpointStore.clear()
-                    logI("ResyncRangeUseCase") {
-                        if (skipIngestAndPrune) {
-                            "Recompute-only complete ($totalDays days)"
-                        } else {
-                            "Full resync complete ($totalDays days)"
-                        }
-                    }
+                    finalizeRun(plan, skipIngestAndPrune, runCompletedTypes)
                     Result.success(Unit)
                 } catch (e: CancellationException) {
                     logI(TELEMETRY_TAG) { "Resync cancelled." }
@@ -630,10 +201,6 @@ class ResyncRangeUseCase
                     logI(TELEMETRY_TAG) { "Resync stopped by Health Connect permission failure: ${e.message}" }
                     throw e
                 } catch (e: HealthConnectWindowTimeoutException) {
-                    // HC-002: distinct from RESYNC_ERROR so telemetry can tell "genuinely stuck even
-                    // at the smallest chunk size" apart from other failures; WorkManager's normal
-                    // backoff (Result.retry() in HealthResyncWorker) is still the right fallback --
-                    // a later retry may find a less dense window or a recovered provider.
                     logI(TELEMETRY_TAG) {
                         "Resync failed: window read timed out even at the minimum chunk size (${e.message})"
                     }
@@ -644,53 +211,290 @@ class ResyncRangeUseCase
                 }
             }
 
-        companion object {
-            private const val TELEMETRY_TAG = "ResyncTelemetry"
-            private const val MIN_CHUNK_DAYS = 1
+        private suspend fun preparePlan(
+            startDate: LocalDate,
+            endDate: LocalDate,
+            chunkDays: Int,
+            skipIngestAndPrune: Boolean,
+            requestedRunId: String?,
+        ): ResyncExecutionPlan {
+            logD(TAG) {
+                if (skipIngestAndPrune) {
+                    "Recompute-only $startDate..$endDate"
+                } else {
+                    "Full resync $startDate..$endDate (chunk=$chunkDays days)"
+                }
+            }
+            val (requestedRun, prefs) =
+                prepareRequestedRun(startDate, endDate, skipIngestAndPrune, requestedRunId)
 
-            // PERF-002/WP-20 + F7: RECOMPUTE-phase transaction *and* checkpoint granularity. Each
-            // unit of this many days is one Room transaction, checkpointed only after it commits,
-            // so transaction rollback and resume boundaries coincide. Recompute is idempotent, so
-            // redoing at most one unit after a kill only repeats already-correct work.
-            private const val RECOMPUTE_CHECKPOINT_INTERVAL_DAYS = 30
+            val savedCheckpoint = checkpointStore.checkpoint.first()
+            val activeRun = HistoricalRunResolver.resolve(savedCheckpoint?.runIdentity, requestedRun)
+            val isSameRun = savedCheckpoint != null && activeRun == savedCheckpoint.runIdentity
+            val runStartDate = LocalDate.ofEpochDay(activeRun.startEpochDay)
+            val runEndDate = LocalDate.ofEpochDay(activeRun.endEpochDayInclusive)
+            val runZoneId = ZoneId.of(activeRun.zoneId)
+
+            val checkpoint =
+                HistoricalRunResolver.resolveEffectiveCheckpoint(
+                    savedCheckpoint = savedCheckpoint,
+                    runIdentity = activeRun,
+                    isSameRun = isSameRun,
+                    skipIngestAndPrune = skipIngestAndPrune,
+                    runStartDate = runStartDate,
+                )
+            if (savedCheckpoint != null && checkpoint == null) {
+                checkpointStore.clear()
+            }
+
+            val baselineChangeTokens = resolveBaselineTokens(checkpoint, skipIngestAndPrune)
+            if (checkpoint == null) {
+                checkpointStore.save(
+                    ResyncCheckpoint(
+                        startDate = runStartDate,
+                        endDate = runEndDate,
+                        phase = if (skipIngestAndPrune) ResyncPhase.RECONCILE else ResyncPhase.INGEST,
+                        nextDate = runStartDate,
+                        selectionHash = activeRun.scoringSnapshotId,
+                        baselineChangeTokens = baselineChangeTokens,
+                        completedTypes = if (skipIngestAndPrune) emptySet() else baselineChangeTokens.keys,
+                        runIdentity = activeRun,
+                    ),
+                )
+            }
+
+            return ResyncExecutionPlan.create(
+                requestedRun = requestedRun,
+                activeRun = activeRun,
+                prefs = prefs,
+                checkpoint = checkpoint,
+                baselineChangeTokens = baselineChangeTokens,
+                chunkDays = chunkDays,
+                skipIngestAndPrune = skipIngestAndPrune,
+            )
+        }
+
+        private suspend fun prepareRequestedRun(
+            startDate: LocalDate,
+            endDate: LocalDate,
+            skipIngestAndPrune: Boolean,
+            requestedRunId: String?,
+        ): Pair<HistoricalRunIdentity, UserPreferences> {
+            val initialPrefs = settingsRepo.userPreferences.first()
+            recomputeSupport.refreshAutoMaxHr(initialPrefs)
+            val prefs = settingsRepo.userPreferences.first()
+            val zoneId = prefs.scoringZone()
+            val resolvedHrMax =
+                if (prefs.autoCalculateMaxHr) {
+                    (TANAKA_BASE - TANAKA_FACTOR * prefs.age).toFloat()
+                } else {
+                    prefs.maxHeartRate.toFloat()
+                }
+            val mode =
+                if (skipIngestAndPrune) {
+                    HistoricalRunIdentity.MODE_RECOMPUTE_ONLY
+                } else {
+                    HistoricalRunIdentity.MODE_FULL_INGEST
+                }
+            val requestedRun =
+                HistoricalRunIdentity.create(
+                    runId = requestedRunId ?: UUID.randomUUID().toString(),
+                    mode = mode,
+                    startDate = startDate,
+                    endDate = endDate,
+                    zoneId = zoneId,
+                    prefs = prefs,
+                    resolvedHrMax = resolvedHrMax,
+                    startedAtEpochMs = clock.millis(),
+                    algorithmRevision = SettingsDefaults.CURRENT_SCORING_VERSION,
+                )
+            return Pair(requestedRun, prefs)
+        }
+
+        private suspend fun resolveBaselineTokens(
+            checkpoint: ResyncCheckpoint?,
+            skipIngestAndPrune: Boolean,
+        ): Map<HealthDataType, String> =
+            checkpoint?.baselineChangeTokens
+                ?: if (skipIngestAndPrune) {
+                    emptyMap()
+                } else {
+                    changeSynchronizer.captureChangesTokens()
+                }
+
+        private suspend fun executeIngestion(
+            plan: ResyncExecutionPlan,
+            chunkDays: Int,
+            skipIngestAndPrune: Boolean,
+            onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)?,
+        ): IngestPhaseOutcome =
+            ingestPhase.execute(
+                IngestPhaseContext(
+                    startDate = plan.runStartDate,
+                    endDate = plan.runEndDate,
+                    zoneId = plan.runZoneId,
+                    prefs = plan.effectivePrefs,
+                    chunkDays = chunkDays,
+                    totalChunks = plan.totalChunks,
+                    reconcileStartMs = plan.reconcileStartMs,
+                    reconcileEndMs = plan.reconcileEndMs,
+                    selectionHash = plan.selectionHash,
+                    baselineChangeTokens = plan.baselineChangeTokens,
+                    initialCompletedTypes = plan.runCompletedTypes,
+                    runIdentity = plan.runIdentity,
+                    checkpoint = plan.checkpoint,
+                    skipIngestAndPrune = skipIngestAndPrune,
+                ),
+                onProgress,
+            )
+
+        private suspend fun executePruning(
+            plan: ResyncExecutionPlan,
+            runCompletedTypes: Set<HealthDataType>,
+            initialCounts: PruneCounts,
+            onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)?,
+        ) {
+            prunePhase.execute(
+                PrunePhaseContext(
+                    startDate = plan.runStartDate,
+                    endDate = plan.runEndDate,
+                    zoneId = plan.runZoneId,
+                    prefs = plan.effectivePrefs,
+                    reconcileStartMs = plan.reconcileStartMs,
+                    reconcileEndMs = plan.reconcileEndMs,
+                    selectionHash = plan.selectionHash,
+                    baselineChangeTokens = plan.baselineChangeTokens,
+                    runCompletedTypes = runCompletedTypes,
+                    runIdentity = plan.runIdentity,
+                    runIngestion = plan.runIngestion,
+                    initialCounts = initialCounts,
+                ),
+                onProgress,
+            )
+        }
+
+        /**
+         * Phase 3 of the four resumable phases: one session-link reconcile over the **complete**
+         * range, after all ingest and prune. Chunk-independent by construction -- the reconciler
+         * sees the full session list, so a session straddling an ingest-chunk boundary resolves the
+         * same way regardless of how the range happened to be chunked.
+         *
+         * **WP-17 Step 4:** this is also where warm-tier minutes get re-keyed. A warm minute stores
+         * its session link inside its primary key, so `SessionLinkReconciler` re-derives every
+         * `SOURCE_BACKED` minute's projection from stable per-source evidence and republishes the
+         * ones whose assignment changed, and retires minutes whose evidence a Health Connect
+         * deletion removed. That makes this phase the convergence point for rolled-up-source
+         * deletions too: the recompute-only resync a deletion's dirty range schedules runs with
+         * `skipIngestAndPrune = true`, whose checkpoint starts at [ResyncPhase.RECONCILE], so the
+         * relink always runs before the days that depend on it are recomputed. `runReconciliation`
+         * is false only when a killed run is resuming *inside* the recompute phase, i.e. after this
+         * pass already committed.
+         */
+        private suspend fun executeReconciliation(
+            plan: ResyncExecutionPlan,
+            runCompletedTypes: Set<HealthDataType>,
+            onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)?,
+        ) {
+            onProgress?.invoke(ResyncPhase.RECONCILE, 0, 0)
+            val reconcileStart = clock.millis()
+            val zoneThresholds =
+                app.readylytics.health.core.model.domain.heartrate.ZoneThresholds.create(
+                    plan.effectivePrefs.zone1MinBpm,
+                    plan.effectivePrefs.zone1MaxBpm,
+                    plan.effectivePrefs.zone2MaxBpm,
+                    plan.effectivePrefs.zone3MaxBpm,
+                    plan.effectivePrefs.zone4MaxBpm,
+                )
+            sessionLinkReconciler.reconcile(plan.reconcileStartMs, plan.reconcileEndMs, zoneThresholds)
+
+            checkpointStore.save(
+                ResyncCheckpoint(
+                    startDate = plan.runStartDate,
+                    endDate = plan.runEndDate,
+                    phase = ResyncPhase.RECOMPUTE,
+                    nextDate = plan.runStartDate,
+                    selectionHash = plan.selectionHash,
+                    baselineChangeTokens = plan.baselineChangeTokens,
+                    completedTypes = runCompletedTypes,
+                    runIdentity = plan.runIdentity,
+                ),
+            )
+            val reconcileEnd = clock.millis()
+            logD(TELEMETRY_TAG) {
+                "[RECONCILIATION] Completed in ${reconcileEnd - reconcileStart}ms."
+            }
+        }
+
+        private suspend fun executeRecompute(
+            plan: ResyncExecutionPlan,
+            chunkDays: Int,
+            skipIngestAndPrune: Boolean,
+            runCompletedTypes: Set<HealthDataType>,
+            earliestDeletionDate: LocalDate?,
+            onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)?,
+        ): Result<Unit> {
+            var recomputeStartDate = plan.recomputeStartDate
+            var completedDays = plan.completedDays
+            if (earliestDeletionDate != null && earliestDeletionDate.isBefore(recomputeStartDate)) {
+                recomputeStartDate = earliestDeletionDate
+                completedDays =
+                    ChronoUnit
+                        .DAYS
+                        .between(plan.runStartDate, recomputeStartDate)
+                        .toInt()
+                        .coerceIn(0, plan.totalDays)
+            }
+
+            val stepsDevice =
+                plan.effectivePrefs.deviceByDataType[HealthDataType.STEPS.name]?.takeIf { it.isNotBlank() }
+
+            val recomputeContext =
+                RecomputePhaseContext(
+                    startDate = plan.runStartDate,
+                    endDate = plan.runEndDate,
+                    zoneId = plan.runZoneId,
+                    prefs = plan.effectivePrefs,
+                    recomputeStartDate = recomputeStartDate,
+                    completedDays = completedDays,
+                    totalDays = plan.totalDays,
+                    chunkDays = chunkDays,
+                    skipIngestAndPrune = skipIngestAndPrune,
+                    stepsDevice = stepsDevice,
+                    stepCountFetcher = ingestion.stepCountFetcher,
+                    selectionHash = plan.selectionHash,
+                    baselineChangeTokens = plan.baselineChangeTokens,
+                    runCompletedTypes = runCompletedTypes,
+                    runIdentity = plan.runIdentity,
+                    checkpoint = plan.checkpoint,
+                )
+
+            return recomputePhase.execute(recomputeContext, onProgress)
+        }
+
+        private suspend fun finalizeRun(
+            plan: ResyncExecutionPlan,
+            skipIngestAndPrune: Boolean,
+            runCompletedTypes: Set<HealthDataType>,
+        ) {
+            if (!skipIngestAndPrune) {
+                val tokensToPromote = plan.baselineChangeTokens.filterKeys { it in runCompletedTypes }
+                changeSynchronizer.commitTokens(tokensToPromote)
+                settingsRepo.updateLastSyncTimestamp(clock.millis())
+            }
+            checkpointStore.clear()
+            logI(TAG) {
+                if (skipIngestAndPrune) {
+                    "Recompute-only complete (${plan.totalDays} days)"
+                } else {
+                    "Full resync complete (${plan.totalDays} days)"
+                }
+            }
+        }
+
+        companion object {
+            private const val TAG = "ResyncRangeUseCase"
+            private const val TELEMETRY_TAG = "ResyncTelemetry"
+            private const val TANAKA_BASE = 208
+            private const val TANAKA_FACTOR = 0.7
         }
     }
-
-internal fun UserPreferences.scoringCheckpointIdentity(): String =
-    listOf(
-        "goalSleepHours=$goalSleepHours",
-        "hrvBaselineOverride=$hrvBaselineOverride",
-        "rhrBaselineOverride=$rhrBaselineOverride",
-        "maxHeartRate=$maxHeartRate",
-        "autoCalculateMaxHr=$autoCalculateMaxHr",
-        "zone1MinBpm=$zone1MinBpm",
-        "zone1MaxBpm=$zone1MaxBpm",
-        "zone2MaxBpm=$zone2MaxBpm",
-        "zone3MaxBpm=$zone3MaxBpm",
-        "zone4MaxBpm=$zone4MaxBpm",
-        "age=$age",
-        "gender=${gender?.name}",
-        "hrvOptimalThreshold=$hrvOptimalThreshold",
-        "rhrOptimalThreshold=$rhrOptimalThreshold",
-        "restingHrPercentile=$restingHrPercentile",
-        "consistencyThresholdMinutes=$consistencyThresholdMinutes",
-        "consistencyEvaluationDays=$consistencyEvaluationDays",
-        "consistencyBaselineDays=$consistencyBaselineDays",
-        "rasScalingFactor=$rasScalingFactor",
-        "physiologyProfile=${physiologyProfile.name}",
-        "installDate=$installDate",
-        "circadianThresholdOverride=$circadianThresholdOverride",
-        "trimpModel=${trimpModel.name}",
-        "banisterMultiplier=$banisterMultiplier",
-        "chengBeta=$chengBeta",
-        "itrimB=$itrimB",
-        "scoringZone=${scoringZone().id}",
-        "strainLoadSourceMode=${strainLoadSourceMode.name}",
-        "rasSourceMode=${rasSourceMode.name}",
-        "coreMergeGapMinutes=$coreMergeGapMinutes",
-        "supplementalCutoffMinutesOfDay=$supplementalCutoffMinutesOfDay",
-        "minimumCountedSleepSegmentMinutes=$minimumCountedSleepSegmentMinutes",
-        "supplementalArchitectureCoveragePercent=$supplementalArchitectureCoveragePercent",
-        "residualFatigueHalfLifeHours=$residualFatigueHalfLifeHours",
-        "residualFatigueGain=$residualFatigueGain",
-    ).joinToString("|")

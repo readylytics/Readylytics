@@ -2,6 +2,7 @@ package app.readylytics.health.data.backup
 
 import android.util.JsonReader
 import app.readylytics.health.core.database.data.local.HealthDatabase
+import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HealthSourceRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
@@ -20,6 +21,7 @@ class RestoreBatchLoader
     constructor(
         private val healthDatabase: HealthDatabase,
         val vitalsLoader: RestoreVitalsLoader,
+        val coverageLoader: CoverageRestoreLoader,
     ) {
         private val json = Json { ignoreUnknownKeys = true }
 
@@ -95,19 +97,35 @@ class RestoreBatchLoader
             reader.endArray()
         }
 
-        suspend fun restoreHrMinuteBuckets(reader: JsonReader) {
+        suspend fun restoreHrMinuteBuckets(
+            reader: JsonReader,
+            schemaVersion: Int,
+        ) {
             val dao = healthDatabase.minuteBucketDao()
             reader.beginArray()
             val batch = mutableListOf<HrMinuteBucketEntity>()
             while (reader.hasNext()) {
                 batch.add(json.decodeFromString(readNextObjectAsString(json, reader)))
                 if (batch.size >= 500) {
-                    dao.upsertBuckets(batch)
+                    processBucketBatch(batch, schemaVersion, dao)
                     batch.clear()
                 }
             }
-            if (batch.isNotEmpty()) dao.upsertBuckets(batch)
+            if (batch.isNotEmpty()) {
+                processBucketBatch(batch, schemaVersion, dao)
+            }
             reader.endArray()
+        }
+
+        private suspend fun processBucketBatch(
+            batch: List<HrMinuteBucketEntity>,
+            schemaVersion: Int,
+            dao: MinuteBucketDao,
+        ) {
+            dao.upsertBuckets(batch)
+            if (schemaVersion < COVERAGE_SCHEMA_VERSION) {
+                coverageLoader.initializeLegacyCoverage(batch)
+            }
         }
 
         suspend fun restoreWorkouts(reader: JsonReader) {
@@ -153,5 +171,10 @@ class RestoreBatchLoader
             }
             if (batch.isNotEmpty()) dao.upsertAll(batch)
             reader.endArray()
+        }
+
+        private companion object {
+            /** Archive schema version that first carried the coverage/contribution tables. */
+            const val COVERAGE_SCHEMA_VERSION = 22
         }
     }

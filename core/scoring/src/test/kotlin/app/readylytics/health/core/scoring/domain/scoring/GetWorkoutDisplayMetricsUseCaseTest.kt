@@ -34,6 +34,7 @@ class GetWorkoutDisplayMetricsUseCaseTest {
     private val heartRateRepository = mockk<HeartRateRepository>()
     private val settingsRepo = mockk<SettingsRepository>()
     private val computeWorkoutLoadMetricsUseCase = mockk<ComputeWorkoutLoadMetricsUseCase>()
+    private val canonicalWorkoutResolver = mockk<CanonicalWorkoutResolver>(relaxed = true)
 
     private val useCase =
         GetWorkoutDisplayMetricsUseCase(
@@ -41,6 +42,7 @@ class GetWorkoutDisplayMetricsUseCaseTest {
             heartRateRepository = heartRateRepository,
             settingsRepo = settingsRepo,
             computeWorkoutLoadMetricsUseCase = computeWorkoutLoadMetricsUseCase,
+            canonicalWorkoutResolver = canonicalWorkoutResolver,
         )
 
     @Test
@@ -70,6 +72,7 @@ class GetWorkoutDisplayMetricsUseCaseTest {
             val midnight = workoutDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
             val summary = mockk<DailySummary>()
             every { summary.rhrBpm } returns 55f
+            every { summary.hrMax } returns null
             coEvery { dailySummaryRepository.getByDate(midnight) } returns summary
 
             val fortyTwoDaysAgo =
@@ -112,9 +115,7 @@ class GetWorkoutDisplayMetricsUseCaseTest {
                 computeWorkoutLoadMetricsUseCase.execute(
                     workout = workout,
                     workoutDate = workoutDate,
-                    samples = any(),
-                    prefs = prefs,
-                    restingHrBaseline = 55f,
+                    canonicalResult = any(),
                     trimpByDate = any(),
                 )
             } returns loadMetrics
@@ -166,6 +167,7 @@ class GetWorkoutDisplayMetricsUseCaseTest {
             val midnight = workoutDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
             val summary = mockk<DailySummary>()
             every { summary.rhrBpm } returns 55f
+            every { summary.hrMax } returns null
             coEvery { dailySummaryRepository.getByDate(midnight) } returns summary
 
             val dbSamples =
@@ -192,9 +194,7 @@ class GetWorkoutDisplayMetricsUseCaseTest {
                 computeWorkoutLoadMetricsUseCase.execute(
                     workout = workout,
                     workoutDate = workoutDate,
-                    samples = any(),
-                    prefs = prefs,
-                    restingHrBaseline = 55f,
+                    canonicalResult = any(),
                     // Pin the actual map content: `any()` here would silently accept a wrong or
                     // unclamped history window.
                     trimpByDate =
@@ -218,36 +218,25 @@ class GetWorkoutDisplayMetricsUseCaseTest {
                 )
 
             assertEquals(50f, result.preciseTrimp)
-            coVerify(exactly = 0) { dailySummaryRepository.getSince(any()) }
+            assertEquals(50, result.computedTrimp)
+            assertEquals("50", result.trimpDisplay)
+            assertEquals(0.36f, result.gainedStrain)
+            assertEquals("0.36", result.gainedStrainDisplay)
         }
 
     @Test
-    fun `clamps pre-fetched historicalSummaries to the same 42-day window as the self-fetch path`() =
+    fun `clamping ignores summaries outside the 42-day window`() =
         runTest {
             val zoneId = ZoneId.of("Pacific/Honolulu")
             val workoutDate = LocalDate.of(2026, 6, 9)
             val startMs = Instant.parse("2026-06-10T05:00:00Z").toEpochMilli()
-
-            val workout =
-                WorkoutData(
-                    id = "run-1",
-                    startTime = startMs,
-                    endTime = startMs + 30 * 60 * 1000L,
-                    exerciseType = "RUNNING",
-                    durationMinutes = 30,
-                    zone1Minutes = 0f,
-                    zone2Minutes = 0f,
-                    zone3Minutes = 0f,
-                    zone4Minutes = 0f,
-                    zone5Minutes = 0f,
-                    trimp = 50f,
-                    avgHr = 130f,
-                )
+            val workout = createTestWorkout(startMs = startMs)
 
             val prefs = UserPreferences(scoringZoneId = "Pacific/Honolulu")
             val midnight = workoutDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
             val summary = mockk<DailySummary>()
             every { summary.rhrBpm } returns 55f
+            every { summary.hrMax } returns null
             coEvery { dailySummaryRepository.getByDate(midnight) } returns summary
             coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns emptyList()
 
@@ -268,9 +257,7 @@ class GetWorkoutDisplayMetricsUseCaseTest {
                 computeWorkoutLoadMetricsUseCase.execute(
                     workout = workout,
                     workoutDate = workoutDate,
-                    samples = any(),
-                    prefs = prefs,
-                    restingHrBaseline = 55f,
+                    canonicalResult = any(),
                     trimpByDate =
                         match {
                             it.size == 1 && it.containsKey(inWindow) && !it.containsKey(outOfWindow)
@@ -322,6 +309,7 @@ class GetWorkoutDisplayMetricsUseCaseTest {
             val midnight = workoutDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
             val summary = mockk<DailySummary>()
             every { summary.rhrBpm } returns 55f
+            every { summary.hrMax } returns null
             coEvery { dailySummaryRepository.getByDate(midnight) } returns summary
             coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns emptyList()
 
@@ -369,7 +357,6 @@ class GetWorkoutDisplayMetricsUseCaseTest {
                 }
             val realComputeUseCase =
                 ComputeWorkoutLoadMetricsUseCase(
-                    computeWorkoutTrimpUseCase = ComputeWorkoutTrimpUseCase(),
                     scoringCalculator = realScoringCalculator,
                     workoutLoadClassifier = WorkoutLoadClassifier(),
                 )
@@ -379,6 +366,7 @@ class GetWorkoutDisplayMetricsUseCaseTest {
                     heartRateRepository = heartRateRepository,
                     settingsRepo = settingsRepo,
                     computeWorkoutLoadMetricsUseCase = realComputeUseCase,
+                    canonicalWorkoutResolver = CanonicalWorkoutResolver(ComputeWorkoutTrimpUseCase()),
                 )
 
             val selfFetched =
@@ -397,4 +385,25 @@ class GetWorkoutDisplayMetricsUseCaseTest {
             assertEquals(selfFetched.gainedStrain, preFetched.gainedStrain)
             assertEquals(selfFetched.gainedStrainDisplay, preFetched.gainedStrainDisplay)
         }
+
+    private fun createTestWorkout(
+        id: String = "run-1",
+        startMs: Long = 0L,
+        durationMinutes: Int = 30,
+        trimp: Float = 50f,
+        avgHr: Float = 130f,
+    ) = WorkoutData(
+        id = id,
+        startTime = startMs,
+        endTime = startMs + durationMinutes * 60 * 1000L,
+        exerciseType = "RUNNING",
+        durationMinutes = durationMinutes,
+        zone1Minutes = 0f,
+        zone2Minutes = 0f,
+        zone3Minutes = 0f,
+        zone4Minutes = 0f,
+        zone5Minutes = 0f,
+        trimp = trimp,
+        avgHr = avgHr,
+    )
 }

@@ -38,4 +38,9 @@ data class WorkoutRecordEntity(
     val avgSpeedKmh: Float? = null,
     val elevationGainMeters: Float? = null,
     val routeState: String = "NOT_AVAILABLE",
+    // v20->v21 OD-3 Canonical workout metadata columns
+    val modelTrimpSourceRevision: Long? = null,
+    val modelTrimpSnapshotId: String? = null,
+    val modelTrimpAlgorithmRevision: Int? = null,
+    val modelTrimpQuality: String? = null,
 )

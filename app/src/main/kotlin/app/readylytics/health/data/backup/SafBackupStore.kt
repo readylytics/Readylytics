@@ -106,6 +106,45 @@ class SafBackupStore(
         }
     }
 
+    override suspend fun publishNew(
+        source: File,
+        name: String,
+    ): BackupLocation {
+        check(source.length() > 0) { "Cannot publish empty backup" }
+        val dir =
+            getTreeDocumentFile()
+                ?: error("Could not access backup directory")
+        val existing = dir.findFile(name)
+        check(existing == null) { "Destination already exists: $name" }
+
+        val created =
+            dir.createFile("application/zip", "$name.tmp")
+                ?: error("Could not create backup file in SAF directory: $name")
+
+        var published = false
+        try {
+            val writeSuccess =
+                context.contentResolver.openOutputStream(created.uri)?.use { output ->
+                    source.inputStream().use { it.copyTo(output) }
+                } != null
+            if (!writeSuccess) {
+                error("Could not write backup to SAF document: $name")
+            }
+            check(created.length() == source.length()) {
+                "Published backup length mismatch (${created.length()} vs ${source.length()})"
+            }
+            check(created.renameTo(name)) {
+                "Could not rename published backup to $name"
+            }
+            published = true
+            return BackupLocation(created.uri.toString())
+        } finally {
+            if (!published) {
+                created.delete()
+            }
+        }
+    }
+
     override suspend fun delete(location: BackupLocation) {
         val uri = location.value.toUri()
         if (uri.scheme == "file") {

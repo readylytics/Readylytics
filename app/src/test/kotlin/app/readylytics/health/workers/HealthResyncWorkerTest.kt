@@ -2,9 +2,13 @@ package app.readylytics.health.workers
 
 import android.content.Context
 import android.content.pm.ServiceInfo
+import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
+import app.readylytics.health.core.database.data.local.HealthDatabase
+import app.readylytics.health.core.database.data.local.RoomDirtyRangeStore
+import app.readylytics.health.core.databaseschema.data.local.entity.HealthMutationStateEntity
 import app.readylytics.health.core.healthconnect.domain.sync.ForegroundSyncController
 import app.readylytics.health.core.healthconnect.domain.sync.FullHistoricalResyncUseCase
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
@@ -14,7 +18,10 @@ import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspe
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
+import app.readylytics.health.core.model.domain.sync.DirtyRangeStore
+import app.readylytics.health.core.model.domain.sync.DirtyTicket
 import app.readylytics.health.core.model.domain.sync.ResyncPhase
+import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import dagger.Lazy
 import io.mockk.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +30,8 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.time.LocalDate
+import java.time.ZoneOffset
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -84,8 +93,8 @@ class HealthResyncWorkerTest {
     @Test
     fun `doWork reports progress and returns success when resync usecase succeeds`() =
         runBlocking {
-            coEvery { useCase.execute(any(), any(), any()) } answers {
-                val progressCallback = thirdArg<(ResyncPhase, Int, Int) -> Unit>()
+            coEvery { useCase.execute(any(), any(), any(), any()) } answers {
+                val progressCallback = args[3] as (ResyncPhase, Int, Int) -> Unit
                 progressCallback(ResyncPhase.RECOMPUTE, 1, 10)
                 app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
@@ -112,7 +121,7 @@ class HealthResyncWorkerTest {
                     .putBoolean(HealthResyncWorker.KEY_RECOMPUTE_ONLY, true)
                     .build()
             val recomputeOnlySlot = slot<Boolean>()
-            coEvery { useCase.execute(capture(recomputeOnlySlot), any(), any()) } returns
+            coEvery { useCase.execute(capture(recomputeOnlySlot), any(), any(), any()) } returns
                 app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
 
@@ -123,10 +132,87 @@ class HealthResyncWorkerTest {
         }
 
     @Test
+    fun `doWork with recomputeOnly and pending dirty ranges derives rangeOverride from dirty tickets`() =
+        runBlocking {
+            every { workerParams.inputData } returns
+                androidx.work.Data
+                    .Builder()
+                    .putBoolean(HealthResyncWorker.KEY_RECOMPUTE_ONLY, true)
+                    .build()
+            val rangeSlot = slot<ScoreInvalidation.AffectedRange?>()
+            coEvery { useCase.execute(any(), captureNullable(rangeSlot), any(), any()) } returns
+                app.readylytics.health.core.model.domain.model.Result
+                    .Success(Unit)
+
+            val dirtyStore =
+                object : DirtyRangeStore {
+                    override suspend fun pending(limit: Int): List<DirtyTicket> =
+                        listOf(
+                            DirtyTicket(
+                                id = 1L,
+                                sourceGeneration = 1L,
+                                nextDay = java.time.LocalDate.of(2026, 9, 2),
+                                endInclusive = java.time.LocalDate.of(2026, 9, 8),
+                                scoringSnapshotId = "s1",
+                            ),
+                        )
+                }
+            val worker = createWorker(dirtyStore)
+            worker.doWork()
+
+            assertEquals(java.time.LocalDate.of(2026, 9, 2), rangeSlot.captured?.start)
+            assertEquals(java.time.LocalDate.of(2026, 9, 8), rangeSlot.captured?.endInclusive)
+        }
+
+    @Test
+    fun `worker trims expired dirty work before choosing the pending ticket range`() =
+        runBlocking {
+            val database =
+                Room
+                    .inMemoryDatabaseBuilder(
+                        context,
+                        HealthDatabase::class.java,
+                    ).allowMainThreadQueries()
+                    .build()
+            try {
+                database.healthMutationStateDao().upsert(HealthMutationStateEntity(id = 1, sourceGeneration = 7))
+                val store = RoomDirtyRangeStore(database.dirtyRangeDao(), database.healthMutationStateDao())
+                val cutoff = LocalDate.now(ZoneOffset.UTC).minusDays(30)
+                repeat(105) { store.append(cutoff.minusDays(10), cutoff.minusDays(1), "EXPIRED", "snapshot") }
+                val retainedId = store.append(cutoff.minusDays(4), cutoff.plusDays(2), "OVERLAP", "snapshot")
+                coEvery { settingsRepository.userPreferences } returns
+                    MutableStateFlow(
+                        UserPreferences(retentionDaysEnabled = true, retentionDays = 30, scoringZoneId = "UTC"),
+                    )
+                every { workerParams.inputData } returns
+                    androidx.work.Data
+                        .Builder()
+                        .putBoolean(HealthResyncWorker.KEY_RECOMPUTE_ONLY, true)
+                        .build()
+                val range = slot<ScoreInvalidation.AffectedRange?>()
+                coEvery { useCase.execute(any(), captureNullable(range), any(), any()) } returns
+                    app.readylytics.health.core.model.domain.model.Result
+                        .Success(Unit)
+
+                assertEquals(
+                    androidx.work.ListenableWorker.Result
+                        .success(),
+                    createWorker(store).doWork(),
+                )
+
+                assertEquals(ScoreInvalidation.AffectedRange(cutoff, cutoff.plusDays(2)), range.captured)
+                assertEquals(listOf(retainedId), store.pending(100).map { it.id })
+                assertEquals(cutoff, store.pending(100).single().nextDay)
+            } finally {
+                database.close()
+            }
+        }
+
+    @Test
     fun `doWork defaults recomputeOnly to false when input data is absent`() =
         runBlocking {
             val recomputeOnlySlot = slot<Boolean>()
-            coEvery { useCase.execute(capture(recomputeOnlySlot), any(), any()) } returns
+            coEvery { useCase.execute(capture(recomputeOnlySlot), any(), any(), any()) } returns
                 app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
 
@@ -155,7 +241,7 @@ class HealthResyncWorkerTest {
                             .toEpochDay(),
                     ).build()
             val rangeSlot = slot<app.readylytics.health.core.model.domain.sync.ScoreInvalidation.AffectedRange>()
-            coEvery { useCase.execute(any(), capture(rangeSlot), any()) } returns
+            coEvery { useCase.execute(any(), capture(rangeSlot), any(), any()) } returns
                 app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
 
@@ -171,7 +257,7 @@ class HealthResyncWorkerTest {
         runBlocking {
             val rangeSlot =
                 slot<app.readylytics.health.core.model.domain.sync.ScoreInvalidation.AffectedRange?>()
-            coEvery { useCase.execute(any(), captureNullable(rangeSlot), any()) } returns
+            coEvery { useCase.execute(any(), captureNullable(rangeSlot), any(), any()) } returns
                 app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
 
@@ -184,7 +270,7 @@ class HealthResyncWorkerTest {
     @Test
     fun `doWork returns retry when resync usecase fails`() =
         runBlocking {
-            coEvery { useCase.execute(any(), any(), any()) } returns
+            coEvery { useCase.execute(any(), any(), any(), any()) } returns
                 app.readylytics.health.core.model.domain.model.Result
                     .Failure("error", "network error")
             val worker = createWorker()
@@ -199,7 +285,7 @@ class HealthResyncWorkerTest {
     @Test
     fun `doWork returns retry when resync usecase throws exception`() =
         runBlocking {
-            coEvery { useCase.execute(any(), any(), any()) } throws RuntimeException("critical error")
+            coEvery { useCase.execute(any(), any(), any(), any()) } throws RuntimeException("critical error")
             val worker = createWorker()
             val result = worker.doWork()
             assertEquals(
@@ -212,7 +298,7 @@ class HealthResyncWorkerTest {
     @Test
     fun `doWork returns terminal failure when Health Connect permission is revoked`() =
         runBlocking {
-            coEvery { useCase.execute(any(), any(), any()) } throws
+            coEvery { useCase.execute(any(), any(), any(), any()) } throws
                 HealthConnectPermissionRevokedException(SecurityException("permission revoked"))
             val worker = createWorker()
 
@@ -244,7 +330,7 @@ class HealthResyncWorkerTest {
     @Test
     fun `success bumps scoring version and marks the sleep-score recalc baseline`() =
         runBlocking {
-            coEvery { useCase.execute(any(), any(), any()) } returns
+            coEvery { useCase.execute(any(), any(), any(), any()) } returns
                 app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
             createWorker().doWork()
@@ -262,7 +348,7 @@ class HealthResyncWorkerTest {
     @Test
     fun `success with a current scoring version skips the bump but still marks the baseline`() =
         runBlocking {
-            coEvery { useCase.execute(any(), any(), any()) } returns
+            coEvery { useCase.execute(any(), any(), any(), any()) } returns
                 app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
             coEvery { settingsRepository.userPreferences } returns
@@ -276,7 +362,7 @@ class HealthResyncWorkerTest {
     @Test
     fun `retry path does not persist scoring version or baseline`() =
         runBlocking {
-            coEvery { useCase.execute(any(), any(), any()) } returns
+            coEvery { useCase.execute(any(), any(), any(), any()) } returns
                 app.readylytics.health.core.model.domain.model.Result
                     .Failure("error", "network error")
             createWorker().doWork()
@@ -288,7 +374,7 @@ class HealthResyncWorkerTest {
     @Test
     fun `exception path does not persist scoring version or baseline`() =
         runBlocking {
-            coEvery { useCase.execute(any(), any(), any()) } throws RuntimeException("critical error")
+            coEvery { useCase.execute(any(), any(), any(), any()) } throws RuntimeException("critical error")
             createWorker().doWork()
 
             coVerify(exactly = 0) { settingsRepository.updateScoringVersion(any()) }
@@ -408,23 +494,42 @@ class HealthResyncWorkerTest {
                     .putString(HealthResyncWorker.KEY_RECOMPUTE_MODE, "not_a_real_mode")
                     .putBoolean(HealthResyncWorker.KEY_RECOMPUTE_ONLY, true)
                     .build()
-            coEvery { useCase.execute(any(), any(), any()) } returns
+            coEvery { useCase.execute(any(), any(), any(), any()) } returns
                 app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
 
             createWorker().doWork()
 
-            coVerify(exactly = 1) { useCase.execute(true, any(), any()) }
+            coVerify(exactly = 1) { useCase.execute(true, any(), any(), any()) }
             coVerify(exactly = 0) { useCase.executeTrainingReadinessProjection(any(), any()) }
+        }
+
+    @Test
+    fun `doWork passes runId from input data through to the use case`() =
+        runBlocking {
+            every { workerParams.inputData } returns
+                androidx.work.Data
+                    .Builder()
+                    .putString(HealthResyncWorker.KEY_RUN_ID, "test-run-123")
+                    .build()
+            val runIdSlot = slot<String?>()
+            coEvery { useCase.execute(any(), any(), captureNullable(runIdSlot), any()) } returns
+                app.readylytics.health.core.model.domain.model.Result
+                    .Success(Unit)
+
+            val worker = createWorker()
+            worker.doWork()
+
+            assertEquals("test-run-123", runIdSlot.captured)
         }
 
     @Test
     fun `persistence failure does not fail the worker`() =
         runBlocking {
-            coEvery { useCase.execute(any(), any(), any()) } returns
+            coEvery { useCase.execute(any(), any(), any(), any()) } returns
                 app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
-            coEvery { settingsRepository.userPreferences } throws
+            coEvery { settingsRepository.updateScoringVersion(any()) } throws
                 RuntimeException("datastore io failure")
             val result = createWorker().doWork()
             assertEquals(
@@ -434,7 +539,7 @@ class HealthResyncWorkerTest {
             )
         }
 
-    private fun createWorker() =
+    private fun createWorker(dirtyRangeStore: DirtyRangeStore? = null) =
         HealthResyncWorker(
             appContext = context,
             params = workerParams,
@@ -442,5 +547,11 @@ class HealthResyncWorkerTest {
             foregroundSyncController = foregroundSyncControllerLazy,
             databaseReadinessGate = databaseReadinessGate,
             settingsRepository = settingsRepositoryLazy,
+            dirtyRangeStore =
+                Lazy {
+                    dirtyRangeStore ?: object : DirtyRangeStore {
+                        override suspend fun pending(limit: Int): List<DirtyTicket> = emptyList()
+                    }
+                },
         )
 }
