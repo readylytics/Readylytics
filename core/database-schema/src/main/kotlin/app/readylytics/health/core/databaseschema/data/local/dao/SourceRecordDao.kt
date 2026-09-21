@@ -38,14 +38,29 @@ interface SourceRecordMaintenanceDao {
     ): Int
 }
 
-@Dao
-interface SourceRecordDao : SourceRecordMaintenanceDao {
+/**
+ * Single- and bulk-lookup/insert of `health_source_records` rows by `sourceRecordId`. Split out of
+ * [SourceRecordDao] -- which owns deletion/authoritative-metadata/paging -- so neither interface
+ * crosses detekt's `TooManyFunctions` threshold; PERF-001's bulk `getSourcesByRecordIds` /
+ * `insertIgnoreAll` pair pushed the combined interface over it. [SourceRecordDao] extends this
+ * interface, so callers keep using the single `SourceRecordDao` type unchanged.
+ */
+interface SourceRecordResolutionDao {
     @Query("SELECT id FROM health_source_records WHERE sourceRecordId = :sourceRecordId")
     suspend fun getSourceRef(sourceRecordId: String): Long?
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertIgnore(entity: HealthSourceRecordEntity): Long
 
+    @Query("SELECT * FROM health_source_records WHERE sourceRecordId IN (:sourceRecordIds)")
+    suspend fun getSourcesByRecordIds(sourceRecordIds: List<String>): List<HealthSourceRecordEntity>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertIgnoreAll(entities: List<HealthSourceRecordEntity>)
+}
+
+@Dao
+interface SourceRecordDao : SourceRecordMaintenanceDao, SourceRecordResolutionDao {
     /**
      * WP-17/OD-1 delta-delete handling. `hr_minute_buckets` children cascade, but
      * `hr_source_minute_contributions` references this table with `ON DELETE RESTRICT`, so a
@@ -80,12 +95,6 @@ interface SourceRecordDao : SourceRecordMaintenanceDao {
 
     @Query("SELECT * FROM health_source_records WHERE sourceRecordId = :sourceRecordId")
     suspend fun getBySourceRecordId(sourceRecordId: String): HealthSourceRecordEntity?
-
-    @Query("SELECT * FROM health_source_records WHERE sourceRecordId IN (:sourceRecordIds)")
-    suspend fun getSourcesByRecordIds(sourceRecordIds: List<String>): List<HealthSourceRecordEntity>
-
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertIgnoreAll(entities: List<HealthSourceRecordEntity>)
 
     @Query(
         "UPDATE health_source_records " +
@@ -193,6 +202,3 @@ suspend fun SourceRecordDao.upsertIntervalSourceRecord(
         )
     }
 }
-
-
-
