@@ -1,10 +1,15 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test
 import java.io.IOException
+import java.util.concurrent.atomic.AtomicInteger
 
 class ReadRetryBudgetTest {
     @Test
@@ -29,7 +34,7 @@ class ReadRetryBudgetTest {
             // a fresh 5 attempts (10 total); the shared window budget instead replays read-1's last
             // failure immediately, without calling read-2's block at all.
             assertThrows(IOException::class.java) {
-                kotlinx.coroutines.runBlocking {
+                runBlocking {
                     budget.execute("read-2") {
                         secondReadCalls++
                         throw IOException("boom")
@@ -66,7 +71,7 @@ class ReadRetryBudgetTest {
             var calls = 0
 
             assertThrows(IllegalStateException::class.java) {
-                kotlinx.coroutines.runBlocking {
+                runBlocking {
                     budget.execute("read-1") {
                         calls++
                         error("not transient")
@@ -75,4 +80,41 @@ class ReadRetryBudgetTest {
             }
             assertEquals(1, calls)
         }
+
+    // Regression for a review finding on this task: HealthIngestionCoordinator.fetchBulkRecords
+    // shares one ReadRetryBudget across 9 concurrent `async` reads (each internally hopping onto an
+    // IO dispatcher via `withContext`), so their catch blocks can genuinely run on different OS
+    // threads at once. runTest's virtual-time dispatcher is single-threaded and cannot reproduce a
+    // real data race, so this uses a real multi-threaded dispatcher (Dispatchers.Default) instead.
+    // Every launched read always fails, so attemptsUsed must end up exactly equal to the externally
+    // (atomically) counted number of failed block() invocations -- a racing, non-atomic
+    // `attemptsUsed++` would lose updates under contention and leave attemptsUsed strictly lower
+    // than the true failure count, which would in turn let shouldRetry keep permitting more Health
+    // Connect calls than the policy intends.
+    @Test
+    fun attemptsUsedNeverLosesAConcurrentUpdateAcrossRealThreads() {
+        val budget = ReadRetryBudget(delayFn = {})
+        val totalFailedCalls = AtomicInteger(0)
+
+        runBlocking(Dispatchers.Default) {
+            coroutineScope {
+                repeat(CONCURRENT_READS) { i ->
+                    launch {
+                        runCatching {
+                            budget.execute("read-$i") {
+                                totalFailedCalls.incrementAndGet()
+                                throw IOException("boom")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        assertEquals(totalFailedCalls.get(), budget.attemptsUsed)
+    }
+
+    companion object {
+        private const val CONCURRENT_READS = 50
+    }
 }
