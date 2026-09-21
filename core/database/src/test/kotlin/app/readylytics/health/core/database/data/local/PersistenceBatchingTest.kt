@@ -395,11 +395,12 @@ class PersistenceBatchingTest {
         when (methodName) {
             "getOrCreateSourceRef", "getSourceRef", "insertIgnore" -> 1L
             "getModelTrimpById", "getById", "getBySourceRecordId" -> null
-            "getTimestampsBySourceRecordRef", "getBySourceRecordRef" -> emptyList<Any>()
+            "getTimestampsBySourceRecordRef", "getBySourceRecordRef", "getSourcesByRecordIds" -> emptyList<Any>()
             "deleteBySourceRecordRefAndTimestamps",
             "deleteBySourceRecordRef",
             "deleteBySourceRecordId",
             "updateAuthoritativeMetadata",
+            "insertIgnoreAll",
             -> 1
             else -> fallbackForType(returnType)
         }
