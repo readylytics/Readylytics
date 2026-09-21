@@ -178,7 +178,6 @@ class HistoricalIngestPhase
                     executeChunkIngest(
                         context = context,
                         params = params,
-                        resumingThisChunk = resumingThisChunk,
                         hrStartPageToken = hrStartPageToken,
                         hrvStartPageToken = hrvStartPageToken,
                     )
@@ -209,7 +208,6 @@ class HistoricalIngestPhase
         private suspend fun executeChunkIngest(
             context: IngestPhaseContext,
             params: ChunkWindowParams,
-            resumingThisChunk: Boolean,
             hrStartPageToken: String?,
             hrvStartPageToken: String?,
         ): IngestionWindowResult =
@@ -217,7 +215,6 @@ class HistoricalIngestPhase
                 runWithTokenFallback(
                     context = context,
                     params = params,
-                    resumingThisChunk = resumingThisChunk,
                     hrStartPageToken = hrStartPageToken,
                     hrvStartPageToken = hrvStartPageToken,
                 )
@@ -225,7 +222,6 @@ class HistoricalIngestPhase
                 runIngestWindow(
                     context = context,
                     params = params,
-                    resumeStagedScan = resumingThisChunk,
                     hrStartPageToken = null,
                     hrvStartPageToken = null,
                 )
@@ -234,7 +230,6 @@ class HistoricalIngestPhase
         private suspend fun runWithTokenFallback(
             context: IngestPhaseContext,
             params: ChunkWindowParams,
-            resumingThisChunk: Boolean,
             hrStartPageToken: String?,
             hrvStartPageToken: String?,
         ): IngestionWindowResult =
@@ -242,7 +237,6 @@ class HistoricalIngestPhase
                 runIngestWindow(
                     context = context,
                     params = params,
-                    resumeStagedScan = resumingThisChunk,
                     hrStartPageToken = hrStartPageToken,
                     hrvStartPageToken = hrvStartPageToken,
                 )
@@ -258,16 +252,21 @@ class HistoricalIngestPhase
                 runIngestWindow(
                     context = context,
                     params = params,
-                    resumeStagedScan = false,
                     hrStartPageToken = null,
                     hrvStartPageToken = null,
                 )
             }
 
+        // Fix for Task 4 review Finding 2: resume is derived independently per type from whether
+        // that type's own stored page token is present, rather than from one shared "is this chunk
+        // being resumed" boolean. HR always streams to completion before HRV starts within a chunk
+        // attempt, so the common post-interruption-during-HRV case checkpoints hrPageToken = null
+        // (HR already complete) alongside hrvPageToken = <token> (HRV mid-stream) -- a single shared
+        // flag would then resume-keep HR's prior staged ids through a fresh full HR re-read, letting
+        // an HC-side deletion in the gap between attempts survive deletion reconciliation.
         private suspend fun runIngestWindow(
             context: IngestPhaseContext,
             params: ChunkWindowParams,
-            resumeStagedScan: Boolean,
             hrStartPageToken: String?,
             hrvStartPageToken: String?,
         ): IngestionWindowResult =
@@ -277,7 +276,8 @@ class HistoricalIngestPhase
                     windowEnd = params.windowEnd,
                     prefs = context.prefs,
                     scanIdentity = params.scanIdentity,
-                    resumeStagedScan = resumeStagedScan,
+                    resumeHrScan = hrStartPageToken != null,
+                    resumeHrvScan = hrvStartPageToken != null,
                     hrStartPageToken = hrStartPageToken,
                     hrvStartPageToken = hrvStartPageToken,
                     onTokenUpdated = { hrToken, hrvToken ->

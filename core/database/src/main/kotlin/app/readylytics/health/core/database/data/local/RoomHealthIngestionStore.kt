@@ -2,7 +2,7 @@ package app.readylytics.health.core.database.data.local
 
 import app.readylytics.health.core.databaseschema.data.local.dao.DailySummaryDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HealthMutationStateDao
-import app.readylytics.health.core.databaseschema.data.local.dao.ScanStagingDao
+import app.readylytics.health.core.databaseschema.data.local.dao.ScanTypeStateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.Vo2MaxRecordDao
 import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.model.RouteState
@@ -43,7 +43,7 @@ class RoomHealthIngestionStore
         private val dailySummaryDao: DailySummaryDao,
         private val transactionRunner: TransactionRunner,
         private val vo2MaxRecordDao: Vo2MaxRecordDao,
-        private val scanStagingDao: ScanStagingDao,
+        private val scanTypeStateDao: ScanTypeStateDao,
         private val sourcePayloadWriter: SourcePayloadWriter? = null,
         private val dirtyRangeStore: RoomDirtyRangeStore? = null,
         private val healthMutationStateDao: HealthMutationStateDao? = null,
@@ -149,7 +149,7 @@ class RoomHealthIngestionStore
                 StagedDeletionReconciler.reconcile(
                     daos = daos,
                     vo2MaxRecordDao = vo2MaxRecordDao,
-                    scanStagingDao = scanStagingDao,
+                    scanTypeStateDao = scanTypeStateDao,
                     scan = scan,
                     zoneId = zoneId,
                 )

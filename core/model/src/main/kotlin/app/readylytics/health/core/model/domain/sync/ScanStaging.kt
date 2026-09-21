@@ -68,6 +68,18 @@ interface ScanStagingStore {
     /** Purges abandoned generations: every staged row whose `runId` is not [runId]. */
     suspend fun clearRunsOtherThan(runId: String)
 
+    /**
+     * Purges staged rows for [runId] whose `chunkId` is not in [keepChunkIds]. The daily-sync flow
+     * reuses the same fixed `runId` every day with a new `chunkId` per invocation (unlike a
+     * historical run, which never reuses a `runId`), and never runs [clearRunsOtherThan] since a new
+     * generation never starts -- without this, staging for that `runId` would grow one row-set per
+     * day, per bulk type, forever.
+     */
+    suspend fun clearChunksOtherThan(
+        runId: String,
+        keepChunkIds: Set<String>,
+    )
+
     companion object {
         /** Bounded insert batch; stays far below the 999-variable floor at 4 columns per row. */
         const val STAGE_BATCH_SIZE: Int = 500
@@ -75,16 +87,8 @@ interface ScanStagingStore {
 }
 
 class InMemoryScanStagingStore : ScanStagingStore {
-    private val staged = mutableMapOf<Triple<String, String, String>, MutableSet<String>>()
-    private val states = mutableMapOf<Triple<String, String, String>, TypeScanState>()
-
-    fun stagedIds(scan: ScanIdentity, type: HealthDataType): Set<String> =
-        staged[Triple(scan.runId, scan.chunkId, type.name)]?.toSet() ?: emptySet()
-
-    fun clearAll() {
-        staged.clear()
-        states.clear()
-    }
+    internal val staged = mutableMapOf<Triple<String, String, String>, MutableSet<String>>()
+    internal val states = mutableMapOf<Triple<String, String, String>, TypeScanState>()
 
     override suspend fun beginTypeScan(
         scan: ScanIdentity,
@@ -142,5 +146,13 @@ class InMemoryScanStagingStore : ScanStagingStore {
     override suspend fun clearRunsOtherThan(runId: String) {
         staged.keys.filter { it.first != runId }.forEach { staged.remove(it) }
         states.keys.filter { it.first != runId }.forEach { states.remove(it) }
+    }
+
+    override suspend fun clearChunksOtherThan(
+        runId: String,
+        keepChunkIds: Set<String>,
+    ) {
+        staged.keys.filter { it.first == runId && it.second !in keepChunkIds }.forEach { staged.remove(it) }
+        states.keys.filter { it.first == runId && it.second !in keepChunkIds }.forEach { states.remove(it) }
     }
 }

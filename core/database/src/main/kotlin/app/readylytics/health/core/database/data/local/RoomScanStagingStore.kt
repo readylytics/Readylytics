@@ -1,6 +1,7 @@
 package app.readylytics.health.core.database.data.local
 
 import app.readylytics.health.core.databaseschema.data.local.dao.ScanStagingDao
+import app.readylytics.health.core.databaseschema.data.local.dao.ScanTypeStateDao
 import app.readylytics.health.core.databaseschema.data.local.entity.ScanSeenIdEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.ScanTypeStateEntity
 import app.readylytics.health.core.model.domain.model.HealthDataType
@@ -18,6 +19,7 @@ class RoomScanStagingStore
     @Inject
     constructor(
         private val scanStagingDao: ScanStagingDao,
+        private val scanTypeStateDao: ScanTypeStateDao,
         private val clock: Clock = Clock.systemUTC(),
     ) : ScanStagingStore {
         override suspend fun beginTypeScan(
@@ -28,7 +30,7 @@ class RoomScanStagingStore
             if (!resume) {
                 scanStagingDao.deleteSeenForType(scan.runId, scan.chunkId, type.name)
             }
-            writeState(scan, type, ScanStagingDao.STATE_SCANNING)
+            writeState(scan, type, ScanTypeStateDao.STATE_SCANNING)
         }
 
         override suspend fun stageIds(
@@ -55,15 +57,15 @@ class RoomScanStagingStore
         override suspend fun markTypeScanComplete(
             scan: ScanIdentity,
             type: HealthDataType,
-        ) = writeState(scan, type, ScanStagingDao.STATE_COMPLETE)
+        ) = writeState(scan, type, ScanTypeStateDao.STATE_COMPLETE)
 
         override suspend fun stateOf(
             scan: ScanIdentity,
             type: HealthDataType,
         ): TypeScanState? =
-            when (scanStagingDao.getState(scan.runId, scan.chunkId, type.name)?.state) {
-                ScanStagingDao.STATE_COMPLETE -> TypeScanState.COMPLETE
-                ScanStagingDao.STATE_SCANNING -> TypeScanState.SCANNING
+            when (scanTypeStateDao.getState(scan.runId, scan.chunkId, type.name)?.state) {
+                ScanTypeStateDao.STATE_COMPLETE -> TypeScanState.COMPLETE
+                ScanTypeStateDao.STATE_SCANNING -> TypeScanState.SCANNING
                 else -> null
             }
 
@@ -77,17 +79,26 @@ class RoomScanStagingStore
             type: HealthDataType,
         ) {
             scanStagingDao.deleteSeenForType(scan.runId, scan.chunkId, type.name)
-            scanStagingDao.deleteStateForType(scan.runId, scan.chunkId, type.name)
+            scanTypeStateDao.deleteStateForType(scan.runId, scan.chunkId, type.name)
         }
 
         override suspend fun clearRun(runId: String) {
             scanStagingDao.deleteSeenForRun(runId)
-            scanStagingDao.deleteStateForRun(runId)
+            scanTypeStateDao.deleteStateForRun(runId)
         }
 
         override suspend fun clearRunsOtherThan(runId: String) {
             scanStagingDao.deleteSeenForOtherRuns(runId)
-            scanStagingDao.deleteStateForOtherRuns(runId)
+            scanTypeStateDao.deleteStateForOtherRuns(runId)
+        }
+
+        override suspend fun clearChunksOtherThan(
+            runId: String,
+            keepChunkIds: Set<String>,
+        ) {
+            val keep = keepChunkIds.toList()
+            scanStagingDao.deleteSeenForOtherChunks(runId, keep)
+            scanTypeStateDao.deleteStateForOtherChunks(runId, keep)
         }
 
         private suspend fun writeState(
@@ -95,7 +106,7 @@ class RoomScanStagingStore
             type: HealthDataType,
             state: String,
         ) {
-            scanStagingDao.upsertState(
+            scanTypeStateDao.upsertState(
                 ScanTypeStateEntity(
                     runId = scan.runId,
                     chunkId = scan.chunkId,

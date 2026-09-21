@@ -22,7 +22,7 @@ internal class HeartSampleStreamer(
         device: String?,
         onPageDone: () -> Unit,
     ): ReadOutcome<Unit> {
-        staging.beginTypeScan(params.scanIdentity, HealthDataType.HEART_RATE, params.resumeStagedScan)
+        staging.beginTypeScan(params.scanIdentity, HealthDataType.HEART_RATE, params.resumeHrScan)
         var sampleCount = 0
         val outcome =
             hcRepo.readHeartRateSamplesPaged(
@@ -51,7 +51,7 @@ internal class HeartSampleStreamer(
         device: String?,
         onPageDone: () -> Unit,
     ): ReadOutcome<Unit> {
-        staging.beginTypeScan(params.scanIdentity, HealthDataType.HRV, params.resumeStagedScan)
+        staging.beginTypeScan(params.scanIdentity, HealthDataType.HRV, params.resumeHrvScan)
         var sampleCount = 0
         val outcome =
             hcRepo.readHrvSamplesPaged(

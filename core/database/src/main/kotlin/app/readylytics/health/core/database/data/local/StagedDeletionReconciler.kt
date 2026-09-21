@@ -1,6 +1,6 @@
 package app.readylytics.health.core.database.data.local
 
-import app.readylytics.health.core.databaseschema.data.local.dao.ScanStagingDao
+import app.readylytics.health.core.databaseschema.data.local.dao.ScanTypeStateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.StagedDeletionBounds
 import app.readylytics.health.core.databaseschema.data.local.dao.Vo2MaxRecordDao
 import app.readylytics.health.core.model.domain.model.HealthDataType
@@ -28,12 +28,12 @@ internal object StagedDeletionReconciler {
     suspend fun reconcile(
         daos: HealthRecordDaos,
         vo2MaxRecordDao: Vo2MaxRecordDao,
-        scanStagingDao: ScanStagingDao,
+        scanTypeStateDao: ScanTypeStateDao,
         scan: CompleteTypeScan,
         zoneId: ZoneId,
     ): ScoreInvalidation.AffectedRange? {
-        val state = scanStagingDao.getState(scan.scan.runId, scan.scan.chunkId, scan.type.name)
-        if (state?.state != ScanStagingDao.STATE_COMPLETE) return null
+        val state = scanTypeStateDao.getState(scan.scan.runId, scan.scan.chunkId, scan.type.name)
+        if (state?.state != ScanTypeStateDao.STATE_COMPLETE) return null
 
         val ctx = StagedScanContext(scan, zoneId)
         return when (scan.type) {

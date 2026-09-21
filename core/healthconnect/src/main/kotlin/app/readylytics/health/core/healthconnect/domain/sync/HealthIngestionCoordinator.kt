@@ -78,7 +78,8 @@ class HealthIngestionCoordinator
             windowEnd: Instant,
             prefs: UserPreferences,
             scanIdentity: ScanIdentity = ScanIdentities.daily(windowStart),
-            resumeStagedScan: Boolean = false,
+            resumeHrScan: Boolean = false,
+            resumeHrvScan: Boolean = false,
             windowBudgetMs: Long = 3 * 60_000L,
             onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)? = null,
             hrStartPageToken: String? = null,
@@ -93,7 +94,8 @@ class HealthIngestionCoordinator
                         windowEnd = windowEnd,
                         prefs = prefs,
                         scanIdentity = scanIdentity,
-                        resumeStagedScan = resumeStagedScan,
+                        resumeHrScan = resumeHrScan,
+                        resumeHrvScan = resumeHrvScan,
                         windowBudgetMs = windowBudgetMs,
                         onProgress = onProgress,
                         hrStartPageToken = hrStartPageToken,
@@ -108,6 +110,18 @@ class HealthIngestionCoordinator
                 // cooperative cancellation, which they must never swallow.
                 throw HealthConnectWindowTimeoutException(windowStart, windowEnd, e)
             }
+        }
+
+        /**
+         * Fix for Task 4 review Finding 1: the daily-sync flow reuses [ScanIdentities.DAILY_RUN_ID]
+         * every day with a new chunk id per invocation and -- unlike a historical run, which purges
+         * its own chunk's staging right after that chunk completes -- never otherwise clears it, so
+         * without this call the staging tables would grow one row-set per day, per bulk type,
+         * forever. [DailySyncUseCase] calls this once its own chunk id(s) for the current run are
+         * known, so every other `DAILY_SYNC` chunk -- i.e. every past day's leftovers -- is dropped.
+         */
+        suspend fun clearStaleDailyStaging(keepChunkIds: Set<String>) {
+            staging.clearChunksOtherThan(ScanIdentities.DAILY_RUN_ID, keepChunkIds)
         }
 
         private suspend fun ingestWindowWithinBudget(params: IngestWindowParams): IngestionWindowResult {
@@ -398,7 +412,8 @@ internal data class IngestWindowParams(
     val windowEnd: Instant,
     val prefs: UserPreferences,
     val scanIdentity: ScanIdentity,
-    val resumeStagedScan: Boolean,
+    val resumeHrScan: Boolean,
+    val resumeHrvScan: Boolean,
     val windowBudgetMs: Long,
     val onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)?,
     val hrStartPageToken: String?,
