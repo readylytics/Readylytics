@@ -11,6 +11,7 @@ import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoade
 import app.readylytics.health.core.database.data.repository.MorningRecommendationDependencies
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
+import app.readylytics.health.core.database.data.repository.ScoringHeartRateDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringSeriesLoader
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
@@ -139,11 +140,7 @@ class WalkForwardTransactionEquivalenceTest {
             val baselineComputer = BaselineComputer(scoringHistoryRepository, scoringCalculator)
             val scoringConfigFactory = ScoringConfigFactory()
             val dataLoader =
-                ScoringDayDataLoader(
-                    db.workoutDao(), db.sleepSessionDao(), db.dailySummaryDao(), db.heartRateDao(),
-                    db.minuteBucketDao(), db.weightRecordDao(), db.bodyFatRecordDao(),
-                    db.bloodPressureRecordDao(), db.oxygenSaturationRecordDao(), db.bodyTemperatureRecordDao(),
-                )
+                ScoringDayDataLoader(db.workoutDao(), db.sleepSessionDao(), db.dailySummaryDao())
             val bodyMetricsDataLoader =
                 BodyMetricsDataLoader(
                     db.weightRecordDao(), db.bodyFatRecordDao(), db.bloodPressureRecordDao(),
@@ -151,6 +148,7 @@ class WalkForwardTransactionEquivalenceTest {
                     db.vo2MaxRecordDao(),
                 )
             val seriesLoader = ScoringSeriesLoader(db.workoutDao(), db.dailySummaryDao())
+            val heartRateDataLoader = ScoringHeartRateDataLoader(db.heartRateDao(), db.minuteBucketDao())
             val sleepSessionRepository = SleepSessionRepositoryImpl(db.sleepSessionDao(), db.sleepStageDao())
             val circadianConsistencyRepository =
                 CircadianConsistencyRepository(sleepSessionRepository, settingsRepo, FakeEncryptionManager())
@@ -193,6 +191,7 @@ class WalkForwardTransactionEquivalenceTest {
                         dataLoader,
                         bodyMetricsDataLoader,
                         seriesLoader,
+                        heartRateDataLoader,
                     ),
                     settingsRepo = settingsRepo,
                     baselineComputer = baselineComputer,

@@ -12,8 +12,10 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import app.readylytics.health.core.model.data.preferences.BackupSchedule
 import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
+import app.readylytics.health.core.model.domain.sync.ResyncCheckpointStore
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import dagger.Lazy
+import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -24,6 +26,7 @@ class WorkerSchedulerImpl
     @Inject
     constructor(
         private val workManager: Lazy<WorkManager>,
+        private val resyncCheckpointStore: Lazy<ResyncCheckpointStore>,
     ) : WorkerScheduler {
         companion object {
             const val LOCAL_BACKUP_WORK_NAME = WorkerScheduler.LOCAL_BACKUP_WORK_NAME
@@ -60,8 +63,15 @@ class WorkerSchedulerImpl
          * range (e.g. from `ScoreInvalidation.affectedRange`) through to
          * [HealthResyncWorker]/`FullHistoricalResyncUseCase`. Left `null` (the default), the
          * recompute-only pass keeps its prior full-retention-window behavior.
+         *
+         * WP-10 review fix: also reads the currently saved [ResyncCheckpointStore] checkpoint (if
+         * any) and, when it carries an immutable run identity, threads that same
+         * [HealthResyncWorker.KEY_RUN_ID] into the enqueued input data so a resumed/re-enqueued
+         * request references the existing saved run instead of `HistoricalRunResolver` always
+         * minting a fresh one. Absent a saved checkpoint (first-ever run), the key is simply omitted
+         * -- `HistoricalRunIdentity.create` falls back to a fresh UUID.
          */
-        override fun scheduleResyncWorker(
+        override suspend fun scheduleResyncWorker(
             recomputeOnly: Boolean,
             startDate: LocalDate?,
             endDate: LocalDate?,
@@ -69,6 +79,9 @@ class WorkerSchedulerImpl
             val dataBuilder = Data.Builder().putBoolean(HealthResyncWorker.KEY_RECOMPUTE_ONLY, recomputeOnly)
             startDate?.let { dataBuilder.putLong(HealthResyncWorker.KEY_RECOMPUTE_START_EPOCH_DAY, it.toEpochDay()) }
             endDate?.let { dataBuilder.putLong(HealthResyncWorker.KEY_RECOMPUTE_END_EPOCH_DAY, it.toEpochDay()) }
+            resyncCheckpointStore.get().checkpoint.first()?.runIdentity?.runId?.let {
+                dataBuilder.putString(HealthResyncWorker.KEY_RUN_ID, it)
+            }
 
             val request =
                 OneTimeWorkRequestBuilder<HealthResyncWorker>()

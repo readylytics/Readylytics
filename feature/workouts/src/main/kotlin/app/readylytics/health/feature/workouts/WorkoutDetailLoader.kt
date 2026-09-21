@@ -132,14 +132,16 @@ class WorkoutDetailLoader
                     hrr3Min = hrDetails.recoveryMetrics.hrr3Min,
                     totalRas = summary?.let { LoadSourceSelector.selectTotalRas(it, prefs.rasSourceMode) },
                     rasDailyBreakdown = rasBreakdown,
-                    computedTrimp = hrDetails.displayMetrics.computedTrimp.takeIf { trimp -> trimp > 0 },
+                    computedTrimp = hrDetails.displayMetrics.computedTrimp?.takeIf { trimp -> trimp > 0 },
                     gainedStrain = hrDetails.displayMetrics.gainedStrain,
                     gainedStrainDisplay = hrDetails.displayMetrics.gainedStrainDisplay,
                     ras =
-                        RasCalculator.calculateDailyRas(
-                            hrDetails.displayMetrics.preciseTrimp,
-                            prefs.rasScalingFactor,
-                        ),
+                        hrDetails.displayMetrics.preciseTrimp?.let { trimp ->
+                            RasCalculator.calculateDailyRas(
+                                trimp,
+                                prefs.rasScalingFactor,
+                            )
+                        },
                     classification = hrDetails.displayMetrics.classification,
                     routeUiState = routeDetails.routeUiState,
                     paceSpeedChartData = routeDetails.paceSpeedChartData,

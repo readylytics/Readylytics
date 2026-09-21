@@ -105,7 +105,7 @@ class BaselineComputerWalkForwardEquivalenceTest {
             val ids = firstArg<List<String>>()
             ids.mapNotNull { id -> avgHrById[id]?.let { id to it } }.toMap()
         }
-        coEvery { heartRateDao.getSleepHrProjectionForSessions(any()) } answers {
+        coEvery { heartRateDao.getVisibleSleepHrProjectionForSessions(any()) } answers {
             val ids = firstArg<List<String>>()
             ids.flatMap { id -> (hrProjectionById[id] ?: emptyList()).sorted().map { SleepHrSample(id, it) } }
         }

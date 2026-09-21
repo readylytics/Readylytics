@@ -4,6 +4,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
 import app.readylytics.health.core.model.domain.repository.PermissionStatus
+import app.readylytics.health.core.model.domain.repository.ReadOutcome
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -46,6 +47,8 @@ class HealthConnectRepositoryImplTest {
     private val t2: Instant = Instant.parse("2026-05-03T00:00:00Z")
     private val t3: Instant = Instant.parse("2026-05-04T00:00:00Z")
     private val t7: Instant = Instant.parse("2026-05-08T00:00:00Z")
+
+    private fun <T> ReadOutcome<T>.asAvailable(): T = (this as ReadOutcome.Available<T>).data
 
     @Before
     fun setUp() {
@@ -130,7 +133,7 @@ class HealthConnectRepositoryImplTest {
     @Test
     fun readSleepSessions_emptyWhenNoneRecorded() =
         runBlocking {
-            assertTrue(repo.readSleepSessions(t0, t7).isEmpty())
+            assertTrue(repo.readSleepSessions(t0, t7).asAvailable().isEmpty())
         }
 
     @Test
@@ -138,7 +141,7 @@ class HealthConnectRepositoryImplTest {
         runBlocking {
             fake.sleepCount[t1] = 1
             fake.sleepCount[t2] = 1
-            assertEquals(2, repo.readSleepSessions(t0, t7).size)
+            assertEquals(2, repo.readSleepSessions(t0, t7).asAvailable().size)
         }
 
     @Test
@@ -147,17 +150,16 @@ class HealthConnectRepositoryImplTest {
             fake.sleepCount[t0.minusSeconds(1)] = 1
             fake.sleepCount[t1] = 1
             fake.sleepCount[t7.plusSeconds(1)] = 1
-            assertEquals(1, repo.readSleepSessions(t0, t7).size)
+            assertEquals(1, repo.readSleepSessions(t0, t7).asAvailable().size)
         }
 
     @Test
-    fun readSleepSessions_translatesSecurityException() {
-        fake.sleepCount[t1] = 1
-        fake.errors[FakeOp.Sleep] = SecurityException("revoked")
-        assertThrows(HealthConnectPermissionRevokedException::class.java) {
-            runBlocking { repo.readSleepSessions(t0, t7) }
+    fun readSleepSessions_returnsDeniedOnSecurityException() =
+        runBlocking {
+            fake.sleepCount[t1] = 1
+            fake.errors[FakeOp.Sleep] = SecurityException("revoked")
+            assertEquals(ReadOutcome.Denied, repo.readSleepSessions(t0, t7))
         }
-    }
 
     @Test
     fun readSleepSessions_paginatesLargeResultSet() =
@@ -168,7 +170,7 @@ class HealthConnectRepositoryImplTest {
             repeat(250) { i ->
                 fake.sleepCount[t0.plusSeconds(i.toLong())] = 1
             }
-            val out = repo.readSleepSessions(t0, t7)
+            val out = repo.readSleepSessions(t0, t7).asAvailable()
             assertEquals(250, out.size)
             assertEquals(5, fake.sleepPagesServed)
         }
@@ -177,7 +179,7 @@ class HealthConnectRepositoryImplTest {
     fun readSleepSessions_zeroWidthRangeIsEmpty() =
         runBlocking {
             fake.sleepCount[t1] = 1
-            assertTrue(repo.readSleepSessions(t1, t1).isEmpty())
+            assertTrue(repo.readSleepSessions(t1, t1).asAvailable().isEmpty())
         }
 
     // ---------- heart rate ----------
@@ -185,7 +187,7 @@ class HealthConnectRepositoryImplTest {
     @Test
     fun readHeartRateSamples_emptyWhenNone() =
         runBlocking {
-            assertTrue(repo.readHeartRateSamples(t0, t7).isEmpty())
+            assertTrue(repo.readHeartRateSamples(t0, t7).asAvailable().isEmpty())
         }
 
     @Test
@@ -193,17 +195,16 @@ class HealthConnectRepositoryImplTest {
         runBlocking {
             fake.hrCount[t1] = 1
             fake.hrCount[t2] = 1
-            assertEquals(2, repo.readHeartRateSamples(t0, t7).size)
+            assertEquals(2, repo.readHeartRateSamples(t0, t7).asAvailable().size)
         }
 
     @Test
-    fun readHeartRateSamples_translatesSecurityException() {
-        fake.hrCount[t1] = 1
-        fake.errors[FakeOp.HeartRate] = SecurityException("revoked")
-        assertThrows(HealthConnectPermissionRevokedException::class.java) {
-            runBlocking { repo.readHeartRateSamples(t0, t7) }
+    fun readHeartRateSamples_returnsDeniedOnSecurityException() =
+        runBlocking {
+            fake.hrCount[t1] = 1
+            fake.errors[FakeOp.HeartRate] = SecurityException("revoked")
+            assertEquals(ReadOutcome.Denied, repo.readHeartRateSamples(t0, t7))
         }
-    }
 
     @Test
     fun readHeartRateSamples_paginatesThousandRecords() =
@@ -211,7 +212,7 @@ class HealthConnectRepositoryImplTest {
             repeat(1_000) { i ->
                 fake.hrCount[t0.plusSeconds(i.toLong())] = 1
             }
-            assertEquals(1_000, repo.readHeartRateSamples(t0, t7).size)
+            assertEquals(1_000, repo.readHeartRateSamples(t0, t7).asAvailable().size)
             assertEquals(20, fake.hrPagesServed)
         }
 
@@ -219,7 +220,7 @@ class HealthConnectRepositoryImplTest {
     fun readHeartRateSamples_reversedRangeIsEmpty() =
         runBlocking {
             fake.hrCount[t1] = 1
-            assertTrue(repo.readHeartRateSamples(t7, t0).isEmpty())
+            assertTrue(repo.readHeartRateSamples(t7, t0).asAvailable().isEmpty())
         }
 
     // ---------- heart rate, paged (HC-001) ----------
@@ -232,29 +233,31 @@ class HealthConnectRepositoryImplTest {
             }
             var total = 0
             var pagesSeen = 0
-            repo.readHeartRateSamplesPaged(t0, t7) { page, _ ->
-                total += page.size
-                pagesSeen++
-            }
+            val outcome =
+                repo.readHeartRateSamplesPaged(t0, t7) { page, _ ->
+                    total += page.size
+                    pagesSeen++
+                }
+            assertEquals(ReadOutcome.Available(Unit), outcome)
             assertEquals(1_000, total)
             assertEquals(fake.hrPagesServed, pagesSeen)
         }
 
     @Test
-    fun readHeartRateSamplesPaged_translatesSecurityException() {
-        fake.hrCount[t1] = 1
-        fake.errors[FakeOp.HeartRate] = SecurityException("revoked")
-        assertThrows(HealthConnectPermissionRevokedException::class.java) {
-            runBlocking { repo.readHeartRateSamplesPaged(t0, t7) { _, _ -> } }
+    fun readHeartRateSamplesPaged_returnsDeniedOnSecurityException() =
+        runBlocking {
+            fake.hrCount[t1] = 1
+            fake.errors[FakeOp.HeartRate] = SecurityException("revoked")
+            val outcome = repo.readHeartRateSamplesPaged(t0, t7) { _, _ -> }
+            assertEquals(ReadOutcome.Denied, outcome)
         }
-    }
 
     // ---------- HRV ----------
 
     @Test
     fun readHrvSamples_emptyWhenNone() =
         runBlocking {
-            assertTrue(repo.readHrvSamples(t0, t7).isEmpty())
+            assertTrue(repo.readHrvSamples(t0, t7).asAvailable().isEmpty())
         }
 
     @Test
@@ -263,24 +266,23 @@ class HealthConnectRepositoryImplTest {
             fake.hrvCount[t1] = 1
             fake.hrvCount[t2] = 1
             fake.hrvCount[t3] = 1
-            assertEquals(3, repo.readHrvSamples(t0, t7).size)
+            assertEquals(3, repo.readHrvSamples(t0, t7).asAvailable().size)
         }
 
     @Test
-    fun readHrvSamples_translatesSecurityException() {
-        fake.hrvCount[t1] = 1
-        fake.errors[FakeOp.Hrv] = SecurityException("revoked")
-        assertThrows(HealthConnectPermissionRevokedException::class.java) {
-            runBlocking { repo.readHrvSamples(t0, t7) }
+    fun readHrvSamples_returnsDeniedOnSecurityException() =
+        runBlocking {
+            fake.hrvCount[t1] = 1
+            fake.errors[FakeOp.Hrv] = SecurityException("revoked")
+            assertEquals(ReadOutcome.Denied, repo.readHrvSamples(t0, t7))
         }
-    }
 
     @Test
     fun readHrvSamples_excludesOutOfRange() =
         runBlocking {
             fake.hrvCount[t0.minusSeconds(1)] = 1
             fake.hrvCount[t1] = 1
-            assertEquals(1, repo.readHrvSamples(t0, t7).size)
+            assertEquals(1, repo.readHrvSamples(t0, t7).asAvailable().size)
         }
 
     // ---------- HRV, paged (HC-001) ----------
@@ -292,25 +294,26 @@ class HealthConnectRepositoryImplTest {
             fake.hrvCount[t2] = 1
             fake.hrvCount[t3] = 1
             var total = 0
-            repo.readHrvSamplesPaged(t0, t7) { page, _ -> total += page.size }
+            val outcome = repo.readHrvSamplesPaged(t0, t7) { page, _ -> total += page.size }
+            assertEquals(ReadOutcome.Available(Unit), outcome)
             assertEquals(3, total)
         }
 
     @Test
-    fun readHrvSamplesPaged_translatesSecurityException() {
-        fake.hrvCount[t1] = 1
-        fake.errors[FakeOp.Hrv] = SecurityException("revoked")
-        assertThrows(HealthConnectPermissionRevokedException::class.java) {
-            runBlocking { repo.readHrvSamplesPaged(t0, t7) { _, _ -> } }
+    fun readHrvSamplesPaged_returnsDeniedOnSecurityException() =
+        runBlocking {
+            fake.hrvCount[t1] = 1
+            fake.errors[FakeOp.Hrv] = SecurityException("revoked")
+            val outcome = repo.readHrvSamplesPaged(t0, t7) { _, _ -> }
+            assertEquals(ReadOutcome.Denied, outcome)
         }
-    }
 
     // ---------- exercise / workouts ----------
 
     @Test
     fun readExerciseSessions_emptyWhenNone() =
         runBlocking {
-            assertTrue(repo.readExerciseSessions(t0, t7).isEmpty())
+            assertTrue(repo.readExerciseSessions(t0, t7).asAvailable().isEmpty())
         }
 
     @Test
@@ -318,17 +321,16 @@ class HealthConnectRepositoryImplTest {
         runBlocking {
             fake.exerciseCount[t1] = 1
             fake.exerciseCount[t2] = 1
-            assertEquals(2, repo.readExerciseSessions(t0, t7).size)
+            assertEquals(2, repo.readExerciseSessions(t0, t7).asAvailable().size)
         }
 
     @Test
-    fun readExerciseSessions_translatesSecurityException() {
-        fake.exerciseCount[t1] = 1
-        fake.errors[FakeOp.Exercise] = SecurityException("revoked")
-        assertThrows(HealthConnectPermissionRevokedException::class.java) {
-            runBlocking { repo.readExerciseSessions(t0, t7) }
+    fun readExerciseSessions_returnsDeniedOnSecurityException() =
+        runBlocking {
+            fake.exerciseCount[t1] = 1
+            fake.errors[FakeOp.Exercise] = SecurityException("revoked")
+            assertEquals(ReadOutcome.Denied, repo.readExerciseSessions(t0, t7))
         }
-    }
 
     @Test
     fun readExerciseSessions_paginatesLargeResultSet() =
@@ -336,7 +338,7 @@ class HealthConnectRepositoryImplTest {
             repeat(500) { i ->
                 fake.exerciseCount[t0.plusSeconds(i.toLong())] = 1
             }
-            assertEquals(500, repo.readExerciseSessions(t0, t7).size)
+            assertEquals(500, repo.readExerciseSessions(t0, t7).asAvailable().size)
             assertEquals(10, fake.exercisePagesServed)
         }
 
@@ -345,7 +347,7 @@ class HealthConnectRepositoryImplTest {
     @Test
     fun readStepsRecords_emptyWhenNone() =
         runBlocking {
-            assertTrue(repo.readStepsRecords(t0, t7).isEmpty())
+            assertTrue(repo.readStepsRecords(t0, t7).asAvailable().isEmpty())
         }
 
     @Test
@@ -353,7 +355,7 @@ class HealthConnectRepositoryImplTest {
         runBlocking {
             fake.stepsByInstant[t1] = 1_000L
             fake.stepsByInstant[t2] = 2_000L
-            assertEquals(2, repo.readStepsRecords(t0, t7).size)
+            assertEquals(2, repo.readStepsRecords(t0, t7).asAvailable().size)
         }
 
     // ---------- readSteps (aggregate) ----------
@@ -364,13 +366,13 @@ class HealthConnectRepositoryImplTest {
             fake.stepsByInstant[t1] = 1_000L
             fake.stepsByInstant[t2] = 2_500L
             fake.stepsByInstant[t3] = 500L
-            assertEquals(4_000L, repo.readSteps(t0, t7))
+            assertEquals(4_000L, repo.readSteps(t0, t7).asAvailable())
         }
 
     @Test
     fun readSteps_zeroWhenEmpty() =
         runBlocking {
-            assertEquals(0L, repo.readSteps(t0, t7))
+            assertEquals(0L, repo.readSteps(t0, t7).asAvailable())
         }
 
     @Test
@@ -378,7 +380,7 @@ class HealthConnectRepositoryImplTest {
         runBlocking {
             fake.stepsByInstant[t0.minusSeconds(1)] = 9_999L
             fake.stepsByInstant[t1] = 100L
-            assertEquals(100L, repo.readSteps(t0, t7))
+            assertEquals(100L, repo.readSteps(t0, t7).asAvailable())
         }
 
     // ---------- readDailyStepTotals (grouped, HC-003) ----------
@@ -393,18 +395,18 @@ class HealthConnectRepositoryImplTest {
             fake.stepsByInstant[day1.plusSeconds(3_600)] = 500L
             fake.stepsByInstant[day2] = 2_000L
 
-            val map = repo.readDailyStepTotals(day1, day2.plusSeconds(86_400), zone)
+            val map = repo.readDailyStepTotals(day1, day2.plusSeconds(86_400), zone).asAvailable()
             assertEquals(2, map.size)
             assertEquals(1_500L, map[LocalDate.of(2026, 5, 1)])
             assertEquals(2_000L, map[LocalDate.of(2026, 5, 2)])
         }
 
     @Test
-    fun readDailyStepTotals_returnsEmptyMapOnSecurityException() =
+    fun readDailyStepTotals_returnsDeniedOnSecurityException() =
         runBlocking {
             fake.stepsByInstant[t1] = 100L
             fake.errors[FakeOp.Steps] = SecurityException("revoked")
-            assertEquals(emptyMap<LocalDate, Long>(), repo.readDailyStepTotals(t0, t7, ZoneId.systemDefault()))
+            assertEquals(ReadOutcome.Denied, repo.readDailyStepTotals(t0, t7, ZoneId.systemDefault()))
         }
 
     @Test
@@ -423,7 +425,7 @@ class HealthConnectRepositoryImplTest {
     @Test
     fun readWeightRecords_emptyWhenNone() =
         runBlocking {
-            assertTrue(repo.readWeightRecords(t0, t7).isEmpty())
+            assertTrue(repo.readWeightRecords(t0, t7).asAvailable().isEmpty())
         }
 
     @Test
@@ -431,15 +433,15 @@ class HealthConnectRepositoryImplTest {
         runBlocking {
             fake.weightCount[t1] = 1
             fake.weightCount[t2] = 1
-            assertEquals(2, repo.readWeightRecords(t0, t7).size)
+            assertEquals(2, repo.readWeightRecords(t0, t7).asAvailable().size)
         }
 
     @Test
-    fun readWeightRecords_returnsEmptyOnSecurityException() =
+    fun readWeightRecords_returnsDeniedOnSecurityException() =
         runBlocking {
             fake.weightCount[t1] = 1
             fake.errors[FakeOp.Weight] = SecurityException("optional missing")
-            assertTrue(repo.readWeightRecords(t0, t7).isEmpty())
+            assertEquals(ReadOutcome.Denied, repo.readWeightRecords(t0, t7))
         }
 
     @Test
@@ -458,22 +460,22 @@ class HealthConnectRepositoryImplTest {
     @Test
     fun readBodyFatRecords_emptyWhenNone() =
         runBlocking {
-            assertTrue(repo.readBodyFatRecords(t0, t7).isEmpty())
+            assertTrue(repo.readBodyFatRecords(t0, t7).asAvailable().isEmpty())
         }
 
     @Test
     fun readBodyFatRecords_returnsRecordsInRange() =
         runBlocking {
             fake.bodyFatCount[t1] = 1
-            assertEquals(1, repo.readBodyFatRecords(t0, t7).size)
+            assertEquals(1, repo.readBodyFatRecords(t0, t7).asAvailable().size)
         }
 
     @Test
-    fun readBodyFatRecords_returnsEmptyOnSecurityException() =
+    fun readBodyFatRecords_returnsDeniedOnSecurityException() =
         runBlocking {
             fake.bodyFatCount[t1] = 1
             fake.errors[FakeOp.BodyFat] = SecurityException("optional missing")
-            assertTrue(repo.readBodyFatRecords(t0, t7).isEmpty())
+            assertEquals(ReadOutcome.Denied, repo.readBodyFatRecords(t0, t7))
         }
 
     @Test
@@ -492,7 +494,7 @@ class HealthConnectRepositoryImplTest {
     @Test
     fun readBloodPressureRecords_emptyWhenNone() =
         runBlocking {
-            assertTrue(repo.readBloodPressureRecords(t0, t7).isEmpty())
+            assertTrue(repo.readBloodPressureRecords(t0, t7).asAvailable().isEmpty())
         }
 
     @Test
@@ -500,15 +502,15 @@ class HealthConnectRepositoryImplTest {
         runBlocking {
             fake.bpCount[t1] = 1
             fake.bpCount[t2] = 1
-            assertEquals(2, repo.readBloodPressureRecords(t0, t7).size)
+            assertEquals(2, repo.readBloodPressureRecords(t0, t7).asAvailable().size)
         }
 
     @Test
-    fun readBloodPressureRecords_returnsEmptyOnSecurityException() =
+    fun readBloodPressureRecords_returnsDeniedOnSecurityException() =
         runBlocking {
             fake.bpCount[t1] = 1
             fake.errors[FakeOp.BloodPressure] = SecurityException("optional missing")
-            assertTrue(repo.readBloodPressureRecords(t0, t7).isEmpty())
+            assertEquals(ReadOutcome.Denied, repo.readBloodPressureRecords(t0, t7))
         }
 
     @Test

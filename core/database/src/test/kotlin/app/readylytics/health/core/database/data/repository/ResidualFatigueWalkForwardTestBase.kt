@@ -98,19 +98,7 @@ abstract class ResidualFatigueWalkForwardTestBase {
     }
 
     private fun createRepo(): ScoringRepositoryImpl {
-        val dataLoader =
-            ScoringDayDataLoader(
-                workoutDao,
-                sleepSessionDao,
-                dailySummaryDao,
-                heartRateDao,
-                minuteBucketDao,
-                weightRecordDao,
-                bodyFatRecordDao,
-                bloodPressureRecordDao,
-                oxygenSaturationRecordDao,
-                bodyTemperatureRecordDao,
-            )
+        val dataLoader = ScoringDayDataLoader(workoutDao, sleepSessionDao, dailySummaryDao)
         val bodyMetricsDataLoader =
             BodyMetricsDataLoader(
                 weightRecordDao,
@@ -121,6 +109,7 @@ abstract class ResidualFatigueWalkForwardTestBase {
                 vo2MaxRecordDao,
             )
         val seriesLoader = ScoringSeriesLoader(workoutDao, dailySummaryDao)
+        val heartRateDataLoader = ScoringHeartRateDataLoader(heartRateDao, minuteBucketDao)
         val readinessSummaryCoordinator =
             ReadinessSummaryCoordinator(
                 dataLoader,
@@ -137,6 +126,7 @@ abstract class ResidualFatigueWalkForwardTestBase {
                 dataLoader,
                 bodyMetricsDataLoader,
                 seriesLoader,
+                heartRateDataLoader,
             ),
             settingsRepo,
             baselineComputer,
@@ -179,7 +169,7 @@ abstract class ResidualFatigueWalkForwardTestBase {
         coEvery { sleepSessionDao.countSince(any()) } returns 10
         coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns null
         coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns emptyList()
-        coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
+        coEvery { heartRateDao.getVisibleByTimeRange(any(), any()) } returns emptyList()
         coEvery { workoutDao.getTrimpPoints(any(), any()) } returns emptyList()
         coEvery { dailySummaryDao.getEverydayTrimpPoints(any(), any()) } returns emptyList()
         coEvery {
@@ -333,7 +323,7 @@ abstract class ResidualFatigueWalkForwardTestBase {
             val to = secondArg<Long>()
             store.workouts.values.filter { it.startTime in from until to }
         }
-        coEvery { heartRateDao.getByTypeAndTimeRange(RecordType.EXERCISE.name, any(), any()) } answers {
+        coEvery { heartRateDao.getVisibleByTypeAndTimeRange(RecordType.EXERCISE.name, any(), any()) } answers {
             val from = secondArg<Long>()
             val to = thirdArg<Long>()
             if (includeHeartRateSample) {

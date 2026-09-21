@@ -6,6 +6,7 @@ import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.ReadOutcome
 import app.readylytics.health.core.model.domain.repository.ScoringRepository
 import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
@@ -66,6 +67,19 @@ class ResyncCheckpointResumeTest {
         // so the walk-forward actually exercises the 6-arg path.
         coEvery { scoringRepository.fetchWalkForwardFatigueContext(any(), any(), any()) } returns
             WalkForwardFatigueContext(emptyList())
+        coEvery { hcRepo.readSleepSessions(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readExerciseSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readStepsRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readSteps(any(), any()) } returns ReadOutcome.Available(0L)
+        coEvery { hcRepo.readDailyStepTotals(any(), any(), any()) } returns ReadOutcome.Available(emptyMap())
+        coEvery { hcRepo.readWeightRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBodyFatRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBloodPressureRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readOxygenSaturationRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBodyTemperatureRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readVo2MaxRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
         useCase =
             ResyncRangeUseCase(
                 settingsRepo = settingsRepo,
@@ -85,6 +99,30 @@ class ResyncCheckpointResumeTest {
             )
     }
 
+    private fun createRunIdentity(
+        startDate: LocalDate,
+        endDate: LocalDate,
+        mode: String = HistoricalRunIdentity.MODE_FULL_INGEST,
+        prefs: UserPreferences = UserPreferences(),
+    ): HistoricalRunIdentity {
+        val resolvedHrMax =
+            if (prefs.autoCalculateMaxHr) {
+                (208 - 0.7 * prefs.age).toFloat()
+            } else {
+                prefs.maxHeartRate.toFloat()
+            }
+        return HistoricalRunIdentity.create(
+            runId = "test-run",
+            mode = mode,
+            startDate = startDate,
+            endDate = endDate,
+            zoneId = ZoneId.systemDefault(),
+            prefs = prefs,
+            resolvedHrMax = resolvedHrMax,
+            startedAtEpochMs = 1000L,
+        )
+    }
+
     @Test
     fun `resyncRange resumes ingest from saved chunk checkpoint`() =
         runTest {
@@ -100,10 +138,13 @@ class ResyncCheckpointResumeTest {
                     nextDate = resumedChunkStart,
                     selectionHash = "",
                     baselineChangeTokens = baselineTokens,
+                    runIdentity = createRunIdentity(startDate, endDate),
                 )
 
             val sleepFromSlot = slot<Instant>()
-            coEvery { hcRepo.readSleepSessions(capture(sleepFromSlot), any()) } returns emptyList()
+            coEvery {
+                hcRepo.readSleepSessions(capture(sleepFromSlot), any())
+            } returns ReadOutcome.Available(emptyList())
 
             useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
 
@@ -126,6 +167,7 @@ class ResyncCheckpointResumeTest {
                     nextDate = startDate.plusDays(2),
                     selectionHash = "",
                     baselineChangeTokens = baselineTokens,
+                    runIdentity = createRunIdentity(startDate, endDate),
                 )
             val progress = mutableListOf<Triple<ResyncPhase, Int, Int>>()
 
@@ -176,6 +218,7 @@ class ResyncCheckpointResumeTest {
                     nextDate = resumedStart,
                     selectionHash = "",
                     baselineChangeTokens = baselineTokens,
+                    runIdentity = createRunIdentity(startDate, endDate),
                 )
             coEvery {
                 scoringRepository.fetchWalkForwardFatigueContext(resumedStart, endDate, any())
@@ -210,10 +253,13 @@ class ResyncCheckpointResumeTest {
                     nextDate = LocalDate.of(2024, 7, 1),
                     selectionHash = "stale",
                     baselineChangeTokens = baselineTokens,
+                    runIdentity = createRunIdentity(startDate.minusDays(10), endDate),
                 )
 
             val sleepFromInstants = mutableListOf<Instant>()
-            coEvery { hcRepo.readSleepSessions(capture(sleepFromInstants), any()) } returns emptyList()
+            coEvery {
+                hcRepo.readSleepSessions(capture(sleepFromInstants), any())
+            } returns ReadOutcome.Available(emptyList())
 
             useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
 
@@ -237,6 +283,7 @@ class ResyncCheckpointResumeTest {
                     nextDate = LocalDate.of(2024, 7, 1),
                     selectionHash = "",
                     baselineChangeTokens = emptyMap(),
+                    runIdentity = createRunIdentity(startDate, endDate),
                 )
 
             val sleepFromSlot = slot<Instant>()
@@ -271,6 +318,121 @@ class ResyncCheckpointResumeTest {
                 changeSynchronizer.commitTokens(baselineTokens)
             }
             assertEquals(null, checkpointStore.value)
+        }
+
+    @Test
+    fun `resyncRange promotes only completed types and does not promote denied types`() =
+        runTest {
+            val startDate = LocalDate.of(2024, 6, 1)
+            val multiTokens =
+                mapOf(
+                    HealthDataType.SLEEP to "baseline-sleep-token",
+                    HealthDataType.HRV to "baseline-hrv-token",
+                )
+            coEvery { changeSynchronizer.captureChangesTokens() } returns multiTokens
+            coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Denied
+
+            useCase.run(startDate = startDate, endDate = startDate, chunkDays = 30, onProgress = null)
+
+            coVerify {
+                changeSynchronizer.commitTokens(
+                    match { tokens ->
+                        tokens.containsKey(HealthDataType.SLEEP) && !tokens.containsKey(HealthDataType.HRV)
+                    },
+                )
+            }
+        }
+
+    @Test
+    fun `denied type excluded by an earlier committed chunk is not re-promoted after a later chunk succeeds for it`() =
+        runTest {
+            val startDate = LocalDate.of(2024, 6, 1)
+            val endDate = LocalDate.of(2024, 6, 4)
+            val resumedChunkStart = LocalDate.of(2024, 6, 3)
+            val hrvOnlyTokens = mapOf(HealthDataType.HRV to "baseline-hrv-token")
+
+            // Simulate a checkpoint saved right after chunk 1 (6/1-6/2) committed: HRV was denied
+            // during that chunk, so the chunk-completion intersect narrowed completedTypes down to
+            // genuinely empty. completedTypesRecorded=true because this checkpoint was written by
+            // completedTypes-aware (post-H1) code, not decoded from a legacy/absent-field proto.
+            checkpointStore.value =
+                ResyncCheckpoint(
+                    startDate = startDate,
+                    endDate = endDate,
+                    phase = ResyncPhase.INGEST,
+                    nextDate = resumedChunkStart,
+                    selectionHash = "",
+                    baselineChangeTokens = hrvOnlyTokens,
+                    completedTypes = emptySet(),
+                    completedTypesRecorded = true,
+                    runIdentity = createRunIdentity(startDate, endDate),
+                )
+
+            // The resumed chunk (6/3-6/4) regrants HRV -- it must NOT resurrect HRV's promotion
+            // eligibility: chunk 1's denial was already committed and is never reprocessed on
+            // resume, so it must permanently exclude HRV for the rest of this run.
+            coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
+
+            useCase.run(startDate = startDate, endDate = endDate, chunkDays = 2, onProgress = null)
+
+            coVerify(exactly = 0) {
+                changeSynchronizer.commitTokens(match { tokens -> tokens.containsKey(HealthDataType.HRV) })
+            }
+        }
+
+    @Test
+    fun `checkpoint without completedTypesRecorded falls back to the permissive baseline candidate set`() =
+        runTest {
+            val startDate = LocalDate.of(2024, 6, 1)
+
+            // A checkpoint decoded from a proto that predates completedTypesRecorded (or predates
+            // completedTypes itself) always decodes that flag to false -- it must be treated as
+            // "completedTypes absent", replaying conservatively via the pre-H1 permissive default,
+            // never as "genuinely narrowed to empty".
+            checkpointStore.value =
+                ResyncCheckpoint(
+                    startDate = startDate,
+                    endDate = startDate,
+                    phase = ResyncPhase.INGEST,
+                    nextDate = startDate,
+                    selectionHash = "",
+                    baselineChangeTokens = baselineTokens,
+                    completedTypes = emptySet(),
+                    completedTypesRecorded = false,
+                    runIdentity = createRunIdentity(startDate, startDate),
+                )
+
+            useCase.run(startDate = startDate, endDate = startDate, chunkDays = 30, onProgress = null)
+
+            coVerify {
+                changeSynchronizer.commitTokens(match { tokens -> tokens.containsKey(HealthDataType.SLEEP) })
+            }
+        }
+
+    @Test
+    fun `interrupted HR page token in checkpoint is cleared and replayed from beginning on resume`() =
+        runTest {
+            val startDate = LocalDate.of(2024, 6, 1)
+            checkpointStore.value =
+                ResyncCheckpoint(
+                    startDate = startDate,
+                    endDate = startDate,
+                    phase = ResyncPhase.INGEST,
+                    nextDate = startDate,
+                    selectionHash = "",
+                    baselineChangeTokens = baselineTokens,
+                    hrPageToken = "saved-token-2",
+                    runIdentity = createRunIdentity(startDate, startDate),
+                )
+
+            val tokenSlot = slot<String?>()
+            coEvery {
+                hcRepo.readHeartRateSamplesPaged(any(), any(), captureNullable(tokenSlot), any())
+            } returns ReadOutcome.Available(Unit)
+
+            useCase.run(startDate = startDate, endDate = startDate, chunkDays = 30, onProgress = null)
+
+            assertEquals(null, tokenSlot.captured)
         }
 
     @Test
@@ -425,6 +587,13 @@ class ResyncCheckpointResumeTest {
                     nextDate = startDate.plusDays(2),
                     selectionHash = "RECOMPUTE_ONLY_V2||${oldPrefs.scoringCheckpointIdentity()}",
                     baselineChangeTokens = emptyMap(),
+                    runIdentity =
+                        createRunIdentity(
+                            startDate,
+                            endDate,
+                            mode = HistoricalRunIdentity.MODE_RECOMPUTE_ONLY,
+                            prefs = oldPrefs,
+                        ),
                 )
 
             useCase.run(
@@ -464,6 +633,13 @@ class ResyncCheckpointResumeTest {
                     nextDate = startDate.plusDays(2),
                     selectionHash = "RECOMPUTE_ONLY_V2||${oldPrefs.scoringCheckpointIdentity()}",
                     baselineChangeTokens = emptyMap(),
+                    runIdentity =
+                        createRunIdentity(
+                            startDate,
+                            endDate,
+                            mode = HistoricalRunIdentity.MODE_RECOMPUTE_ONLY,
+                            prefs = oldPrefs,
+                        ),
                 )
 
             useCase.run(

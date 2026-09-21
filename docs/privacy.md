@@ -50,17 +50,18 @@ Readylytics to a cloud service.
 
 Readylytics may create encrypted local backup files when you use the backup
 feature. These backup files are controlled by you and remain local to your
-device or the storage location you choose.
+device or the storage location you choose. Prior valid backups are retained
+until any replacement archive is fully published and verified; temporary
+plaintext staging files in private app cache are cleaned up on process startup.
+If password rotation is interrupted after saving the new credential, recovery retains the
+verified archives encrypted with that credential. Interrupted restores keep recovery state
+until local maintenance is released; startup retries unfinished recovery before admitting sync.
 
 Local encryption keys are stored through Android Keystore. On devices that support StrongBox,
 Readylytics attempts to use StrongBox-backed key protection and falls back to standard Keystore
 when StrongBox is unavailable. Backup passwords and database keys remain local to the device.
 
-A local restore replaces local health data from the selected backup. If settings restoration fails
-after health data is restored, Readylytics reports a partial restore and asks you to restart and
-rerun restore. An older backup made before workout recommendations existed, or one otherwise missing
-that computed data, still restores successfully; Readylytics detects the gap from the restored data
-itself and quietly recomputes those recommendations locally afterward, entirely on-device.
+A local restore replaces local health data from the selected backup after validating the complete schema inventory and declared record counts. If parsing, count verification, or database integrity checks fail, no data is modified and the database is rolled back. If settings restoration fails after health data is restored, Readylytics reports a partial restore and asks you to restart and rerun restore. An older backup made before workout recommendations existed, or one otherwise missing that computed data, still restores successfully; Readylytics detects the gap from the restored data itself and quietly recomputes those recommendations locally afterward, entirely on-device.
 
 The production app does not request the Android `INTERNET` permission. It does
 not include analytics, advertising, telemetry uploads, or any Readylytics-run
@@ -72,24 +73,26 @@ Readylytics does not sell health data, does not use advertising trackers, and
 does not upload Health Connect data to third-party sign-in, cloud backup, or
 Readylytics-hosted services.
 
-Diagnostic logging stays on-device and is only enabled in debug builds.
-Production error handling uses sanitized messages rather than exposing raw
-exception text from health data, storage, or cryptographic operations.
+Diagnostic logging stays on-device. Production diagnostics and crash reports
+route through strict sanitization that emits only structured reason codes,
+exception class names, and bounded stack frames — raw exception messages,
+source/device IDs, GPS coordinates, and private health payloads are never
+logged or stored.
 
-Diagnostic, crash, and logcat export files are written to the app's internal
+Diagnostic, crash, logcat export, and backup staging files are written to the app's internal
 cache and are excluded from Android auto-backup and device-to-device transfer.
-Each export directory holds at most one file (a diagnostic export overwrites
-the previous one) and the app prunes these cache directories on startup, so
-diagnostic exports do not accumulate on your device.
+The app prunes these cache directories on startup, so transient staging and diagnostic
+files do not accumulate on your device.
 
 If Readylytics crashes, it stores a local, plain-text crash report on your
-device containing only the error's stack trace, app version, Android version,
-and device model — never health data. This report is never sent automatically.
-You can choose to share it, either from the prompt shown after a crash or from
-Settings: by emailing it to readylytics@gmail.com through your own email app
-(private, only seen by the developer), or by filing it as an issue on the
-project's public GitHub repository through your own browser (publicly visible
-to anyone). If you don't send it, it stays local to your device.
+device containing only structured reason codes, sanitized stack frames, app
+version, Android version, and device model — never health data or raw exception
+messages. This report is never sent automatically. You can choose to share it,
+either from the prompt shown after a crash or from Settings: by emailing it to
+readylytics@gmail.com through your own email app (private, only seen by the
+developer), or by filing it as an issue on the project's public GitHub repository
+through your own browser (publicly visible to anyone). If you don't send it, it
+stays local to your device.
 
 Settings also has "Report Bug or Crash" and "Request Feature" buttons you can
 use at any time, independent of whether the app has crashed. These share only
@@ -100,6 +103,9 @@ choice described above.
 ## Your controls
 
 You can revoke Health Connect permissions in Android Health Connect settings.
+If permissions are revoked, Readylytics preserves your existing local data and
+suspends synchronization for the revoked types without data loss or blanket deletions.
+When permissions are re-granted, data synchronization resumes safely.
 You can delete local app data through Android system settings. You can also
 delete local backup files from their storage location.
 
@@ -109,7 +115,15 @@ to any value between 180 days and 3 years (1095 days). State retention
 applies to every imported health-record table. If you turn retention
 limiting off, Readylytics keeps history up to a 10-year (3650-day) ceiling
 rather than indefinitely. Backups contain only records present in the local
-database at backup time.
+database at backup time. Since heart-rate history older than 90 days is stored as
+one-minute summaries rather than individual samples, an encrypted local backup now also
+includes the per-minute coverage records that say which device or app each summarised
+minute came from, so a restore reproduces the same history. This is the same on-device
+health data you already had; no new data is collected and nothing is uploaded. Files
+staged for an in-progress data refresh are working state and are not included in backups.
+Retention cleanup removes expired minute coverage and per-source heart-rate evidence together
+with their summaries. Changing the selected heart-rate device also removes discarded devices'
+contributions from the affected range before rebuilding summaries.
 
 To protect your privacy and prevent decryption or data corruption issues on new devices (since cryptographic keys are hardware-bound and do not transfer), all local app data—including databases, preferences, encryption keys, and local backup files—is explicitly excluded from standard Android Auto Backup (cloud backup) and device-to-device transfers.
 

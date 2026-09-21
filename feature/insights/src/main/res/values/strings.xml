@@ -31,7 +31,7 @@
         <item quantity="other">Your heart rate nadir occurred late in the night, and you slept %1$d minutes less than your %2$d minute goal, limiting overnight restoration.</item>
     </plurals>
     <string name="insight_recovery_hrv_missing_title">HRV Data Missing</string>
-    <string name="insight_recovery_hrv_missing_body">Today\'s readiness score is based on resting heart rate and sleep only because no HRV reading was recorded last night.</string>
+    <string name="insight_recovery_hrv_missing_body">No HRV reading was recorded last night, so today\'s readiness score does not include HRV.</string>
     <string name="insight_recovery_suspicious_stage_ratio_title">Unusual Sleep Stage Proportions</string>
     <string name="insight_recovery_suspicious_stage_ratio_body">Last night\'s deep/REM sleep proportions looked implausible, so your sleep score reflects duration and restoration only, not architecture.</string>
     <string name="insight_hrv_drop_low_spo2_title">Possible Illness or Breathing Disruption</string>
@@ -271,9 +271,10 @@
     <string-array name="insight_detail_ras_weekly_underperformance_caveats">
         <item>A low RAS week is not automatically bad if you are intentionally recovering or focusing on strength.</item>
     </string-array>
-    <string name="insight_detail_recovery_hrv_missing_observed">No sleep HRV reading was recorded last night.</string>
+    <string name="insight_detail_recovery_hrv_missing_observed">No HRV reading was recorded last night.</string>
     <string name="insight_detail_recovery_hrv_missing_meaning">Readiness may be less personalized today because HRV could not be included.</string>
     <string-array name="insight_detail_recovery_hrv_missing_causes">
+        <item>No sleep recorded|No sleep session was found for last night, so no HRV reading could be captured.|GENERIC</item>
         <item>Watch not worn overnight|No overnight wear can prevent HRV capture.|GENERIC</item>
         <item>Loose fit|Poor sensor contact can prevent HRV capture.|GENERIC</item>
         <item>Low battery|Low battery can stop overnight recording.|GENERIC</item>

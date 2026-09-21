@@ -61,9 +61,9 @@
         about what you were doing when the app crashed.</string>
     <string name="crash_report_chooser_title">Send crash report</string>
     <string name="crash_report_dialog_title">Readylytics closed unexpectedly</string>
-    <string name="crash_report_dialog_body">Send a report to help fix it? It only contains the
-        error details and basic device info, never your health data. Email is private; a GitHub
-        issue is posted publicly.</string>
+    <string name="crash_report_dialog_body">Send a report to help fix it? It only contains
+        sanitized error details and basic device info, never your health data or raw error
+        messages. Email is private; a GitHub issue is posted publicly.</string>
     <string name="crash_report_dialog_send_email">Email</string>
     <string name="crash_report_dialog_send_github">GitHub Issue</string>
     <string name="crash_report_dialog_dismiss">Not now</string>

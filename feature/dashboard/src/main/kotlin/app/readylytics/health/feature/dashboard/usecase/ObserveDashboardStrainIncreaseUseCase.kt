@@ -83,7 +83,7 @@ class ObserveDashboardStrainIncreaseUseCase
                                         workouts
                                             .filter {
                                                 it.startTime in selectedDayStartMs until selectedDayEndMs
-                                            }.map { workout ->
+                                            }.mapNotNull { workout ->
                                                 getWorkoutDisplayMetricsUseCase
                                                     .execute(
                                                         workout = workout,

@@ -23,6 +23,7 @@ internal fun DomainWeightRecord.toWeightInput() = WeightInput(
     timestampMs = MapperHelpers.extractTimestampMs(time),
     weightKg = weightKg,
     deviceName = MapperHelpers.extractDeviceName(deviceName),
+    sourceId = id,
 )
 
 internal fun DomainBodyFatRecord.toBodyFatInput() = BodyFatInput(
@@ -30,6 +31,7 @@ internal fun DomainBodyFatRecord.toBodyFatInput() = BodyFatInput(
     timestampMs = MapperHelpers.extractTimestampMs(time),
     bodyFatPercent = percentage,
     deviceName = MapperHelpers.extractDeviceName(deviceName),
+    sourceId = id,
 )
 
 internal fun DomainBloodPressureRecord.toBloodPressureInput() = BloodPressureInput(
@@ -38,6 +40,7 @@ internal fun DomainBloodPressureRecord.toBloodPressureInput() = BloodPressureInp
     systolicMmHg = systolicMmHg,
     diastolicMmHg = diastolicMmHg,
     deviceName = MapperHelpers.extractDeviceName(deviceName),
+    sourceId = id,
 )
 
 internal fun DomainOxygenSaturationRecord.toOxygenSaturationInput() = OxygenSaturationInput(
@@ -45,6 +48,7 @@ internal fun DomainOxygenSaturationRecord.toOxygenSaturationInput() = OxygenSatu
     timestampMs = MapperHelpers.extractTimestampMs(time),
     percentage = percentage,
     deviceName = MapperHelpers.extractDeviceName(deviceName),
+    sourceId = id,
 )
 
 internal fun DomainBodyTemperatureRecord.toBodyTemperatureInput() = BodyTemperatureInput(
@@ -52,4 +56,5 @@ internal fun DomainBodyTemperatureRecord.toBodyTemperatureInput() = BodyTemperat
     timestampMs = MapperHelpers.extractTimestampMs(time),
     celsius = celsius,
     deviceName = MapperHelpers.extractDeviceName(deviceName),
+    sourceId = id,
 )
