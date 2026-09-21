@@ -2,7 +2,6 @@ package app.readylytics.health.core.scoring.domain.scoring.sleep
 
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepNadirAnalyzer
 
-import app.readylytics.health.core.model.domain.model.SleepSession
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import javax.inject.Inject
@@ -20,14 +19,18 @@ class SleepNadirAnalyzer
             val isTimezoneJump: Boolean,
         )
 
+        /**
+         * WP-14/C4: derives nadir-timing/timezone-jump exclusively from [core] -- the core
+         * (overnight) cluster's own window and offset evidence -- never from the whole-day,
+         * nap-inclusive session or from an arbitrary "most recent" historical session that could
+         * itself be a supplemental nap.
+         */
         suspend fun analyze(
-            session: SleepSession,
-            historicalSessions: List<SleepSession>,
+            core: CoreRecoveryInput,
             minHrTimestamp: Long?,
         ): NadirContext {
-            val currentOffset = session.endZoneOffsetSeconds
-            val previousSession = historicalSessions.maxByOrNull { it.endTime }
-            val previousOffset = previousSession?.endZoneOffsetSeconds
+            val currentOffset = core.endZoneOffsetSeconds
+            val previousOffset = core.previousCoreEndZoneOffsetSeconds
             val isTimezoneJump =
                 currentOffset != null &&
                     previousOffset != null &&
@@ -35,7 +38,11 @@ class SleepNadirAnalyzer
 
             val isLateNadirRaw =
                 minHrTimestamp != null &&
-                    scoringCalculator.isLateNadir(minHrTimestamp, session.startTime, session.durationMinutes)
+                    scoringCalculator.isLateNadir(
+                        minHrTimestamp,
+                        core.window.startTimeMs,
+                        core.window.coreSleepDurationMinutes,
+                    )
             val isLateNadir = isLateNadirRaw && !isTimezoneJump
 
             return NadirContext(isLateNadir, isTimezoneJump)

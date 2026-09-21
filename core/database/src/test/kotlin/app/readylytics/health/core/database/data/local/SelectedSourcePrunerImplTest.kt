@@ -12,6 +12,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
 import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketMaintenanceDao
 import app.readylytics.health.core.databaseschema.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
+import app.readylytics.health.core.databaseschema.data.local.dao.Vo2MaxRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import app.readylytics.health.core.databaseschema.data.local.entity.BodyTemperatureRecordEntity
@@ -19,6 +20,7 @@ import app.readylytics.health.core.databaseschema.data.local.entity.HealthSource
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrMinuteBucketEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.Vo2MaxRecordEntity
 import app.readylytics.health.core.model.domain.model.HealthDataType
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -44,6 +46,7 @@ class SelectedSourcePrunerImplTest {
     private lateinit var bloodPressureDao: BloodPressureRecordDao
     private lateinit var oxygenSaturationDao: OxygenSaturationRecordDao
     private lateinit var bodyTemperatureDao: BodyTemperatureRecordDao
+    private lateinit var vo2MaxDao: Vo2MaxRecordDao
     private lateinit var pruner: SelectedSourcePrunerImpl
 
     @Before
@@ -66,12 +69,14 @@ class SelectedSourcePrunerImplTest {
         bloodPressureDao = database.bloodPressureRecordDao()
         oxygenSaturationDao = database.oxygenSaturationRecordDao()
         bodyTemperatureDao = database.bodyTemperatureRecordDao()
+        vo2MaxDao = database.vo2MaxRecordDao()
 
         val transactionRunner = RoomTransactionRunner(database)
 
         pruner =
             SelectedSourcePrunerImpl(
                 transactionRunner = transactionRunner,
+                vo2MaxRecordDao = vo2MaxDao,
                 daos =
                     HealthRecordDaos(
                         sleepSessionDao = sleepDao,
@@ -251,6 +256,41 @@ class SelectedSourcePrunerImplTest {
             val remainingBodyTemperature = bodyTemperatureDao.getByTimeRange(0, timestamp + 10000000)
             assertEquals(1, remainingBodyTemperature.size)
             assertEquals("bt_b", remainingBodyTemperature[0].id)
+        }
+
+    @Test
+    fun pruneDeletesNonMatchingVo2MaxDevicesWithinRange() =
+        runTest {
+            val zoneId = ZoneId.systemDefault()
+            val date = LocalDate.of(2024, 6, 1)
+            val timestamp = date.atStartOfDay(zoneId).toInstant().toEpochMilli()
+
+            vo2MaxDao.upsertAll(
+                listOf(
+                    Vo2MaxRecordEntity(
+                        id = "vo2_a",
+                        timestampMs = timestamp,
+                        vo2Max = 45f,
+                        measurementMethod = null,
+                        deviceName = "Device A",
+                    ),
+                    Vo2MaxRecordEntity(
+                        id = "vo2_b",
+                        timestampMs = timestamp,
+                        vo2Max = 50f,
+                        measurementMethod = null,
+                        deviceName = "Device B",
+                    ),
+                ),
+            )
+
+            val selections = mapOf(HealthDataType.VO2_MAX to "Device B")
+
+            pruner.prune(date, date, selections, zoneId)
+
+            val remaining = vo2MaxDao.getByTimeRange(0, timestamp + 10000000)
+            assertEquals(1, remaining.size)
+            assertEquals("vo2_b", remaining[0].id)
         }
 
     @Test

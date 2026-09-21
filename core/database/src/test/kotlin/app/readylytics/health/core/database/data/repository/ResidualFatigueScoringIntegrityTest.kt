@@ -529,6 +529,7 @@ class ResidualFatigueScoringIntegrityTest {
             database.vo2MaxRecordDao(),
         )
         val seriesLoader = ScoringSeriesLoader(database.workoutDao(), database.dailySummaryDao())
+        val heartRateDataLoader = ScoringHeartRateDataLoader(database.heartRateDao(), database.minuteBucketDao())
         val components = RepoComponents(
             database = database,
             settingsRepo = settingsRepo,
@@ -546,6 +547,7 @@ class ResidualFatigueScoringIntegrityTest {
                 dataLoader,
                 bodyMetricsDataLoader,
                 seriesLoader,
+                heartRateDataLoader,
             ),
             settingsRepo = settingsRepo,
             baselineComputer = baselineComputer,
@@ -581,10 +583,9 @@ class ResidualFatigueScoringIntegrityTest {
 
     private fun createDataLoader(database: HealthDatabase): ScoringDayDataLoader =
         ScoringDayDataLoader(
-            database.workoutDao(), database.sleepSessionDao(), database.dailySummaryDao(),
-            database.heartRateDao(), database.minuteBucketDao(), database.weightRecordDao(),
-            database.bodyFatRecordDao(), database.bloodPressureRecordDao(),
-            database.oxygenSaturationRecordDao(), database.bodyTemperatureRecordDao(),
+            database.workoutDao(),
+            database.sleepSessionDao(),
+            database.dailySummaryDao(),
         )
 
     private fun createReadinessCoordinator(

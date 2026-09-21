@@ -7,6 +7,7 @@ import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -106,6 +107,7 @@ class AssembleDailySummaryUseCaseTest {
         assertEquals(192f, result.hrMax)
         assertEquals(0.25f, result.rasScalingFactor)
         assertEquals(PhysiologyProfile.ATHLETE.name, result.snapshotProfile)
+        assertFalse(result.isCalibrating)
     }
 
     @Test
@@ -148,5 +150,38 @@ class AssembleDailySummaryUseCaseTest {
         assertEquals("CUSTOM", result.snapshotProfile)
         assertEquals(0.5f, result.hrvSigmaPrior)
         assertEquals(14, result.baselineObservationCount)
+        assertFalse(result.isCalibrating)
+    }
+
+    @Test
+    fun `assembleCalibrated clears a stale isCalibrating flag carried over from baseSummary`() {
+        // Task C2: this branch is only ever reached once CalibrationGate has already determined
+        // the user IS calibrated, so a stale `true` left on the persisted row (e.g. from a prior
+        // still-calibrating write) must never leak through uncleared.
+        val date = LocalDate.of(2026, 6, 15)
+        val prefs = UserPreferences(physiologyProfile = PhysiologyProfile.ATHLETE)
+        val finalBaselines =
+            ResolveDailyBaselinesUseCase.FinalBaselines(
+                hrvMuMssd = 4.0f,
+                hrvSigmaMssd = 0.3f,
+                rhrBpm = 50f,
+                rhrSigma = 1.2f,
+            )
+        val staleSummary = DailySummary(date = date, isCalibrating = true)
+
+        val result =
+            useCase.assembleCalibrated(
+                baseSummary = staleSummary,
+                targetDate = date,
+                computedHrvBaseline = 65,
+                finalBaselines = finalBaselines,
+                avgSpo2 = 98f,
+                avgBodyTemp = 36.6f,
+                resolvedHrMax = 192f,
+                scoringConfigRasScalingFactor = 0.25f,
+                prefs = prefs,
+            )
+
+        assertFalse(result.isCalibrating)
     }
 }

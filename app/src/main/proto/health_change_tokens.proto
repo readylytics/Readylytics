@@ -9,4 +9,5 @@ option java_outer_classname = "HealthChangeTokensProtoFile";
 message HealthChangeTokensProto {
   map<string, string> tokens = 1;
   map<string, int64> last_success_timestamps_ms = 2;
+  repeated string suspended_types = 3;
 }

@@ -17,6 +17,8 @@ import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.sync.HealthIngestionBatch
 import app.readylytics.health.core.model.domain.sync.HeartRateInput
 import app.readylytics.health.core.model.domain.sync.HrvInput
+import app.readylytics.health.core.model.domain.sync.SourceMetadata
+import app.readylytics.health.core.model.domain.sync.SourcePayload
 import app.readylytics.health.core.model.domain.sync.WorkoutInput
 import java.lang.reflect.Proxy
 import kotlinx.coroutines.cancel
@@ -72,8 +74,13 @@ class PersistenceBatchingTest {
                 HealthIngestionBatch(
                     sleepSessions = emptyList(),
                     sleepStages = emptyList(),
-                    heartRateSamples = (1..1_001).map(::heartRateInput),
-                    hrvSamples = emptyList(),
+                    heartRateSources = listOf(
+                        SourcePayload(
+                            SourceMetadata("source-1", 1L, 1_001L),
+                            (1..1_001).map { heartRateInput(it).copy(sourceId = "source-1") },
+                        ),
+                    ),
+                    hrvSources = emptyList(),
                     workouts = emptyList(),
                     weights = emptyList(),
                     bodyFatSamples = emptyList(),
@@ -84,7 +91,7 @@ class PersistenceBatchingTest {
                 ),
             )
 
-            assertEquals(4, transactionRunner.transactionCount)
+            assertEquals(2, transactionRunner.transactionCount)
             assertEquals(
                 listOf("sleep:0", "heartRate:500", "heartRate:500", "heartRate:1"),
                 events.filter { it.startsWith("sleep:") || it.startsWith("heartRate:") },
@@ -92,21 +99,34 @@ class PersistenceBatchingTest {
         }
 
     @Test
-    fun `persist splits heart rate samples above multiple batch boundaries via the bulk entrypoint`() =
+    fun `persist splits heart rate sources across multiple parent source transactions via the bulk entrypoint`() =
         runTest {
-            // persist() delegates to persistHeartRateSamples, which batches at 500 internally.
-            // With input spanning three chunks (500, 500, 201), batching must upsert every row
-            // in the expected batch shape.
             val events = mutableListOf<String>()
             val transactionRunner = RecordingTransactionRunner(events)
             val store = buildStore(events, transactionRunner)
+
+            val p1 =
+                SourcePayload(
+                    SourceMetadata("src-1", 1L, 500L),
+                    (1..500).map { heartRateInput(it).copy(sourceId = "src-1") },
+                )
+            val p2 =
+                SourcePayload(
+                    SourceMetadata("src-2", 501L, 1000L),
+                    (501..1000).map { heartRateInput(it).copy(sourceId = "src-2") },
+                )
+            val p3 =
+                SourcePayload(
+                    SourceMetadata("src-3", 1001L, 1201L),
+                    (1001..1201).map { heartRateInput(it).copy(sourceId = "src-3") },
+                )
 
             store.persist(
                 HealthIngestionBatch(
                     sleepSessions = emptyList(),
                     sleepStages = emptyList(),
-                    heartRateSamples = (1..1201).map(::heartRateInput),
-                    hrvSamples = emptyList(),
+                    heartRateSources = listOf(p1, p2, p3),
+                    hrvSources = emptyList(),
                     workouts = emptyList(),
                     weights = emptyList(),
                     bodyFatSamples = emptyList(),
@@ -117,7 +137,7 @@ class PersistenceBatchingTest {
                 ),
             )
 
-            // 1 metadata transaction + 3 heart-rate batches (500, 500, 201).
+            // 1 metadata transaction + 3 heart-rate parent transactions.
             assertEquals(4, transactionRunner.transactionCount)
             assertEquals(
                 listOf("heartRate:500", "heartRate:500", "heartRate:201"),
@@ -126,15 +146,20 @@ class PersistenceBatchingTest {
         }
 
     @Test
-    fun `persistHeartRateSamples splits inputs above the batch size into multiple transactions`() =
+    fun `replaceHeartRateSources splits large parent into 500-sample chunks within parent transaction`() =
         runTest {
             val events = mutableListOf<String>()
             val transactionRunner = RecordingTransactionRunner(events)
             val store = buildStore(events, transactionRunner)
 
-            store.persistHeartRateSamples((1..1201).map(::heartRateInput))
+            val payload =
+                SourcePayload(
+                    SourceMetadata("src-1", 1L, 1201L),
+                    (1..1201).map { heartRateInput(it).copy(sourceId = "src-1") },
+                )
+            store.replaceHeartRateSources(listOf(payload))
 
-            assertEquals(3, transactionRunner.transactionCount)
+            assertEquals(1, transactionRunner.transactionCount)
             assertEquals(
                 listOf("heartRate:500", "heartRate:500", "heartRate:201"),
                 events.filter { it.startsWith("heartRate:") },
@@ -142,39 +167,54 @@ class PersistenceBatchingTest {
         }
 
     @Test
-    fun `persistHeartRateSamples at or below the batch size persists in a single transaction`() =
+    fun `replaceHeartRateSources at or below the batch size persists in a single chunk within parent transaction`() =
         runTest {
             val events = mutableListOf<String>()
             val transactionRunner = RecordingTransactionRunner(events)
             val store = buildStore(events, transactionRunner)
 
-            store.persistHeartRateSamples((1..500).map(::heartRateInput))
+            val payload =
+                SourcePayload(
+                    SourceMetadata("src-1", 1L, 500L),
+                    (1..500).map { heartRateInput(it).copy(sourceId = "src-1") },
+                )
+            store.replaceHeartRateSources(listOf(payload))
 
             assertEquals(1, transactionRunner.transactionCount)
             assertEquals(listOf("heartRate:500"), events.filter { it.startsWith("heartRate:") })
         }
 
     @Test
-    fun `persistHrvSamples splits inputs above the batch size into multiple transactions`() =
+    fun `replaceHrvSources splits large parent into multiple 500-sample upsert chunks within parent transaction`() =
         runTest {
             val events = mutableListOf<String>()
             val transactionRunner = RecordingTransactionRunner(events)
             val store = buildStore(events, transactionRunner)
 
-            store.persistHrvSamples((1..1200).map(::hrvInput))
+            val payload =
+                SourcePayload(
+                    SourceMetadata("src-1", 1L, 1200L),
+                    (1..1200).map { hrvInput(it).copy(sourceId = "src-1") },
+                )
+            store.replaceHrvSources(listOf(payload))
 
-            assertEquals(3, transactionRunner.transactionCount)
+            assertEquals(1, transactionRunner.transactionCount)
             assertEquals(listOf("hrv:500", "hrv:500", "hrv:200"), events.filter { it.startsWith("hrv:") })
         }
 
     @Test
-    fun `persistHrvSamples at or below the batch size persists in a single transaction`() =
+    fun `replaceHrvSources at or below the batch size persists in a single chunk within parent transaction`() =
         runTest {
             val events = mutableListOf<String>()
             val transactionRunner = RecordingTransactionRunner(events)
             val store = buildStore(events, transactionRunner)
 
-            store.persistHrvSamples((1..499).map(::hrvInput))
+            val payload =
+                SourcePayload(
+                    SourceMetadata("src-1", 1L, 499L),
+                    (1..499).map { hrvInput(it).copy(sourceId = "src-1") },
+                )
+            store.replaceHrvSources(listOf(payload))
 
             assertEquals(1, transactionRunner.transactionCount)
             assertEquals(listOf("hrv:499"), events.filter { it.startsWith("hrv:") })
@@ -326,6 +366,12 @@ class PersistenceBatchingTest {
 
         override suspend fun count(): Int = points.size
 
+        override suspend fun deleteAll(): Int {
+            val count = points.size
+            points.clear()
+            return count
+        }
+
 
         override suspend fun pageAfter(
             afterId: Long,
@@ -341,16 +387,29 @@ class PersistenceBatchingTest {
             if (method.name == "upsertAll") {
                 events += "$name:${(args?.firstOrNull() as? List<*>)?.size ?: 0}"
             }
-            when {
-                // suspend DAO methods surface as Object return types on the Proxy; the source-ref
-                // resolvers must hand back a Long or re-ingest breaks with a ClassCastException.
-                method.name == "getOrCreateSourceRef" || method.name == "getSourceRef" -> 1L
-                method.name == "getModelTrimpById" || method.name == "getById" -> null
-                method.returnType == java.lang.Integer.TYPE -> 1
-                method.returnType == java.lang.Long.TYPE || method.returnType == Long::class.javaObjectType -> 1L
-                else -> Unit
-            }
+            resolveProxyReturnValue(method.name, method.returnType)
         } as T
+
+    private fun resolveProxyReturnValue(methodName: String, returnType: Class<*>): Any? =
+        when (methodName) {
+            "getOrCreateSourceRef", "getSourceRef", "insertIgnore" -> 1L
+            "getModelTrimpById", "getById", "getBySourceRecordId" -> null
+            "getTimestampsBySourceRecordRef", "getBySourceRecordRef" -> emptyList<Any>()
+            "deleteBySourceRecordRefAndTimestamps",
+            "deleteBySourceRecordRef",
+            "deleteBySourceRecordId",
+            "updateAuthoritativeMetadata",
+            -> 1
+            else -> fallbackForType(returnType)
+        }
+
+    private fun fallbackForType(returnType: Class<*>): Any? =
+        when {
+            returnType == List::class.java -> emptyList<Any>()
+            returnType == java.lang.Integer.TYPE -> 1
+            returnType == java.lang.Long.TYPE || returnType == Long::class.javaObjectType -> 1L
+            else -> Unit
+        }
 
     private fun buildStore(
         events: MutableList<String>,

@@ -28,7 +28,7 @@ class HealthIngestionCoordinatorTimeoutTest {
             val healthIngestionStore = mockk<HealthIngestionStore>(relaxed = true)
             coEvery { hcRepo.readSleepSessions(any(), any()) } coAnswers {
                 delay(200L)
-                emptyList()
+                app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(emptyList())
             }
             val coordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore)
             val windowStart = Instant.EPOCH

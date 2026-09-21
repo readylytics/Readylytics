@@ -23,6 +23,9 @@ import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
+import androidx.health.connect.client.permission.HealthPermission
+import app.readylytics.health.core.model.domain.repository.ReadOutcome
+
 /**
  * Reads and aggregates step records from Health Connect.
  */
@@ -38,29 +41,60 @@ class StepRecordReader
         private val client: HealthConnectClient
             get() = clientOverride ?: HealthConnectClient.getOrCreate(context)
 
+        private fun isSdkAvailable(): Boolean =
+            clientOverride != null ||
+                HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE
+
+        private suspend fun hasStepsPermission(): Boolean =
+            if (!isSdkAvailable()) {
+                false
+            } else {
+                try {
+                    client.permissionController
+                        .getGrantedPermissions()
+                        .contains(HealthPermission.getReadPermission(StepsRecord::class))
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    false
+                }
+            }
+
         suspend fun readStepsRecords(
             from: Instant,
             to: Instant,
-        ): List<DomainStepsRecord> =
+        ): ReadOutcome<List<DomainStepsRecord>> =
             withContext(ioDispatcher) {
+                if (!isSdkAvailable()) return@withContext ReadOutcome.Unsupported
+                if (!hasStepsPermission()) return@withContext ReadOutcome.Denied
                 try {
-                    readAllStepsRecordsPages(from, to).map { it.toDomain() }
+                    ReadOutcome.Available(readAllStepsRecordsPages(from, to).map { it.toDomain() })
                 } catch (e: CancellationException) {
                     throw e
+                } catch (e: HealthConnectPermissionRevokedException) {
+                    logD("StepRecordReader") { "Steps records permission revoked: ${e.message}" }
+                    ReadOutcome.Denied
+                } catch (e: SecurityException) {
+                    logD("StepRecordReader") { "Steps records permission denied: ${e.message}" }
+                    ReadOutcome.Denied
                 } catch (e: Exception) {
-                    if (e.asHealthConnectSecurityCause() == null) throw e
-                    logD("StepRecordReader") {
-                        "Steps record permission not granted"
+                    val securityCause = e.asHealthConnectSecurityCause()
+                    if (securityCause != null) {
+                        logD("StepRecordReader") { "Steps records permission denied: ${securityCause.message}" }
+                        ReadOutcome.Denied
+                    } else {
+                        throw e
                     }
-                    emptyList()
                 }
             }
 
         suspend fun readSteps(
             from: Instant,
             to: Instant,
-        ): Long =
+        ): ReadOutcome<Long> =
             withContext(ioDispatcher) {
+                if (!isSdkAvailable()) return@withContext ReadOutcome.Unsupported
+                if (!hasStepsPermission()) return@withContext ReadOutcome.Denied
                 try {
                     val result =
                         client.aggregate(
@@ -69,15 +103,23 @@ class StepRecordReader
                                 timeRangeFilter = TimeRangeFilter.between(from, to),
                             ),
                         )
-                    result[StepsRecord.COUNT_TOTAL] ?: 0L
+                    ReadOutcome.Available(result[StepsRecord.COUNT_TOTAL] ?: 0L)
                 } catch (e: CancellationException) {
                     throw e
+                } catch (e: HealthConnectPermissionRevokedException) {
+                    logD("StepRecordReader") { "Steps aggregate permission revoked: ${e.message}" }
+                    ReadOutcome.Denied
+                } catch (e: SecurityException) {
+                    logD("StepRecordReader") { "Steps aggregate permission denied: ${e.message}" }
+                    ReadOutcome.Denied
                 } catch (e: Exception) {
-                    if (e.asHealthConnectSecurityCause() == null) throw e
-                    logD("StepRecordReader") {
-                        "Steps permission not granted"
+                    val securityCause = e.asHealthConnectSecurityCause()
+                    if (securityCause != null) {
+                        logD("StepRecordReader") { "Steps aggregate permission denied: ${securityCause.message}" }
+                        ReadOutcome.Denied
+                    } else {
+                        throw e
                     }
-                    0L
                 }
             }
 
@@ -85,8 +127,10 @@ class StepRecordReader
             from: Instant,
             to: Instant,
             zoneId: ZoneId,
-        ): Map<LocalDate, Long> =
+        ): ReadOutcome<Map<LocalDate, Long>> =
             withContext(ioDispatcher) {
+                if (!isSdkAvailable()) return@withContext ReadOutcome.Unsupported
+                if (!hasStepsPermission()) return@withContext ReadOutcome.Denied
                 try {
                     val response =
                         client.aggregateGroupByPeriod(
@@ -100,11 +144,13 @@ class StepRecordReader
                                 timeRangeSlicer = Period.ofDays(1),
                             ),
                         )
-                    response
-                        .mapNotNull { group ->
-                            val total = group.result[StepsRecord.COUNT_TOTAL] ?: return@mapNotNull null
-                            group.startTime.toLocalDate() to total
-                        }.toMap()
+                    val mapped =
+                        response
+                            .mapNotNull { group ->
+                                val total = group.result[StepsRecord.COUNT_TOTAL] ?: return@mapNotNull null
+                                group.startTime.toLocalDate() to total
+                            }.toMap()
+                    ReadOutcome.Available(mapped)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: UnsupportedOperationException) {
@@ -114,12 +160,20 @@ class StepRecordReader
                         "aggregateGroupByPeriod unsupported; falling back to per-day step aggregate (${e.message})"
                     }
                     readDailyStepTotalsPerDay(from, to, zoneId)
+                } catch (e: HealthConnectPermissionRevokedException) {
+                    logD("StepRecordReader") { "Daily step totals permission revoked: ${e.message}" }
+                    ReadOutcome.Denied
+                } catch (e: SecurityException) {
+                    logD("StepRecordReader") { "Daily step totals permission denied: ${e.message}" }
+                    ReadOutcome.Denied
                 } catch (e: Exception) {
-                    if (e.asHealthConnectSecurityCause() == null) throw e
-                    logD("StepRecordReader") {
-                        "Steps permission not granted"
+                    val securityCause = e.asHealthConnectSecurityCause()
+                    if (securityCause != null) {
+                        logD("StepRecordReader") { "Daily step totals permission denied: ${securityCause.message}" }
+                        ReadOutcome.Denied
+                    } else {
+                        throw e
                     }
-                    emptyMap()
                 }
             }
 
@@ -127,21 +181,26 @@ class StepRecordReader
             from: Instant,
             to: Instant,
             zoneId: ZoneId,
-        ): Map<LocalDate, Long> {
+        ): ReadOutcome<Map<LocalDate, Long>> {
             val totals = mutableMapOf<LocalDate, Long>()
             var day = LocalDateTime.ofInstant(from, zoneId).toLocalDate()
             val endDay = LocalDateTime.ofInstant(to, zoneId).toLocalDate()
-            while (!day.isAfter(endDay)) {
+            var failureOutcome: ReadOutcome<Nothing>? = null
+            while (!day.isAfter(endDay) && failureOutcome == null) {
                 val dayStart = day.atStartOfDay(zoneId).toInstant()
                 val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
                 val boundedStart = maxOf(dayStart, from)
                 val boundedEnd = minOf(dayEnd, to)
                 if (boundedStart.isBefore(boundedEnd)) {
-                    totals[day] = readSteps(boundedStart, boundedEnd)
+                    when (val outcome = readSteps(boundedStart, boundedEnd)) {
+                        is ReadOutcome.Available -> totals[day] = outcome.data
+                        ReadOutcome.Denied -> failureOutcome = ReadOutcome.Denied
+                        ReadOutcome.Unsupported -> failureOutcome = ReadOutcome.Unsupported
+                    }
                 }
                 day = day.plusDays(1)
             }
-            return totals
+            return failureOutcome ?: ReadOutcome.Available(totals)
         }
 
         private suspend fun readAllStepsRecordsPages(

@@ -7,6 +7,7 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspector
+import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.data.backup.LocalBackupManager
@@ -24,9 +25,12 @@ class LocalBackupWorker
         @Assisted params: WorkerParameters,
         private val localBackupManager: Lazy<LocalBackupManager>,
         private val databaseReadinessGate: DatabaseReadinessInspector,
+        private val healthMutationCoordinator: Lazy<HealthMutationCoordinator>? = null,
     ) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result {
-            if (databaseReadinessGate.inspect() != DatabaseReadiness.Ready) {
+            if (databaseReadinessGate.inspect() != DatabaseReadiness.Ready ||
+                healthMutationCoordinator?.get()?.isMaintenancePending() == true
+            ) {
                 return Result.retry()
             }
             val result = localBackupManager.get().createBackup()

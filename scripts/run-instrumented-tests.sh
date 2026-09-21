@@ -12,6 +12,17 @@ adb shell pm disable-user --user 0 com.google.android.apps.messaging || true
 
 echo "==> Running instrumented tests..."
 
+# Keep the timeout scoped to device execution. A clean CI checkout can spend more than
+# 15 minutes compiling every module before the first instrumented suite finishes, which
+# previously killed a healthy build and forced the retry to reuse half-built outputs.
+echo "==> Prebuilding debug app and test APKs..."
+prebuild_status=0
+./gradlew assembleDebug assembleDebugAndroidTest --stacktrace --console=plain || prebuild_status=$?
+if [ "${prebuild_status}" -ne 0 ]; then
+    echo "==> APK prebuild failed with exit code: ${prebuild_status}"
+    exit "${prebuild_status}"
+fi
+
 # Retry once on a timeout (exit 124) only -- a real test failure is not retried.
 # (A prior version of this comment attributed hangs to a ClassNotFoundException on
 # androidx.startup.InitializationProvider in the app.readylytics.health.test process.

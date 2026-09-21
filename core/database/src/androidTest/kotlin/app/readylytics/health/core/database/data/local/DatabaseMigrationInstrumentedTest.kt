@@ -389,6 +389,35 @@ class DatabaseMigrationInstrumentedTest {
         }
     }
 
+    @Test
+    fun migrate19To20AddsProvenanceColumnsAndDirtyRangesAndPreservesExistingData() {
+        helper.createDatabase(TEST_DATABASE, 19).apply {
+            execSQL(
+                "INSERT INTO health_source_records (id, sourceRecordId, recordType, createdAtMs) " +
+                    "VALUES (42, 'src-42', 'HEART_RATE', 1000)",
+            )
+            close()
+        }
+
+        val database = helper.runMigrationsAndValidate(TEST_DATABASE, 20, true, *DatabaseMigrations.all)
+
+        database.query("SELECT id, sourceRecordId, metadataState, sourceRevision FROM health_source_records").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(42L, cursor.getLong(0))
+            assertEquals("src-42", cursor.getString(1))
+            assertEquals("UNKNOWN", cursor.getString(2))
+            assertEquals(0L, cursor.getLong(3))
+        }
+        database.query("SELECT COUNT(*) FROM dirty_ranges").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(0L, cursor.getLong(0))
+        }
+        database.query("SELECT COUNT(*) FROM health_mutation_state").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(1L, cursor.getLong(0))
+        }
+    }
+
     private fun androidx.sqlite.db.SupportSQLiteDatabase.insertWorkout(id: String) {
         execSQL(
             "INSERT INTO workout_records (id, startTime, endTime, exerciseType, durationMinutes, " +

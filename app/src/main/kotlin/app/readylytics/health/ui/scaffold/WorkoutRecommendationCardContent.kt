@@ -10,7 +10,7 @@ import app.readylytics.health.core.model.domain.recommendation.WorkoutRecommenda
 import app.readylytics.health.core.model.domain.recommendation.WorkoutRecommendationReason
 import app.readylytics.health.core.model.domain.recommendation.WorkoutRecommendationSnapshot
 import app.readylytics.health.core.model.domain.recommendation.WorkoutRecommendationState
-import app.readylytics.health.core.model.domain.workouts.detail.WorkoutLayoutTypeMapper
+import app.readylytics.health.core.model.domain.workouts.detail.ExerciseTypeMapper
 import app.readylytics.health.feature.dashboard.DashboardUiState
 import app.readylytics.health.feature.dashboard.recommendation.WorkoutRecommendationCard
 import app.readylytics.health.feature.dashboard.recommendation.WorkoutRecommendationExamplePresentation
@@ -140,9 +140,11 @@ private fun reasonText(
 
 private fun WorkoutRecommendationExample.toPresentation(context: Context): WorkoutRecommendationExamplePresentation {
     // Reuses the shared workout-type-label helper/resources (feature/workouts) rather than
-    // duplicating type-label strings here.
-    val layoutType = WorkoutLayoutTypeMapper.fromExerciseType(exerciseType)
-    val typeLabel = context.getString(layoutType.displayNameResId)
+    // duplicating type-label strings here. The label is per exercise type ("Badminton"); the icon
+    // stays on the coarser layout grouping.
+    val resolvedType = ExerciseTypeMapper.fromRaw(exerciseType)
+    val layoutType = resolvedType.layoutType
+    val typeLabel = context.getString(resolvedType.displayNameResId)
     val recordedSessionDescription =
         averageHr?.let { hr ->
             context.getString(

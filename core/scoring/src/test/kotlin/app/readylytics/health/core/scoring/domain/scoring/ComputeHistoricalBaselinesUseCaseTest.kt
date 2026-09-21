@@ -6,6 +6,7 @@ import app.readylytics.health.core.scoring.domain.scoring.ComputeHistoricalBasel
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.scoring.domain.scoring.strategies.LoadScoringStrategy
 import app.readylytics.health.core.scoring.domain.util.stdev
 import io.mockk.coEvery
@@ -29,7 +30,13 @@ import kotlin.test.assertNotNull
 class ComputeHistoricalBaselinesUseCaseTest {
     private val baselineComputer = mockk<BaselineComputer>()
     private val loadScoringStrategy = mockk<LoadScoringStrategy>()
-    private val useCase = ComputeHistoricalBaselinesUseCase(baselineComputer, loadScoringStrategy)
+    private val scoringHistoryRepository = mockk<ScoringHistoryRepository>()
+    private val useCase =
+        ComputeHistoricalBaselinesUseCase(baselineComputer, loadScoringStrategy, scoringHistoryRepository)
+
+    private fun stubEligibleDayCounts(counts: Map<LocalDate, Int?> = emptyMap()) {
+        coEvery { scoringHistoryRepository.countEligibleSleepDaysThroughBatch(any(), any()) } returns counts
+    }
 
     private fun fakeSummary(date: LocalDate): DailySummary = DailySummary(date = date)
 
@@ -54,6 +61,7 @@ class ComputeHistoricalBaselinesUseCaseTest {
             coEvery { baselineComputer.computeBackfillBaselines(any(), any(), any(), any()) } returns
                 summaries.associate { it.date to fakeBaseline() }
             every { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
+            stubEligibleDayCounts()
 
             val result = useCase.computeHistoricalBaselines(summaries, UserPreferences())
 
@@ -68,6 +76,7 @@ class ComputeHistoricalBaselinesUseCaseTest {
             coEvery { baselineComputer.computeBackfillBaselines(any(), capture(percentileSlot), any(), any()) } returns
                 mapOf(summary.date to fakeBaseline())
             every { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
+            stubEligibleDayCounts()
 
             useCase.computeHistoricalBaselines(listOf(summary), UserPreferences(restingHrPercentile = 9))
 
@@ -84,6 +93,7 @@ class ComputeHistoricalBaselinesUseCaseTest {
 
             val capturedSigmaPrior = slot<Float>()
             every { loadScoringStrategy.hrvSigma(any(), capture(capturedSigmaPrior)) } returns 0.10f
+            stubEligibleDayCounts()
 
             val athletePrefs = UserPreferences(physiologyProfile = PhysiologyProfile.ATHLETE)
             val result = useCase.computeHistoricalBaselines(listOf(summary), athletePrefs)
@@ -95,17 +105,51 @@ class ComputeHistoricalBaselinesUseCaseTest {
         }
 
     @Test
-    fun `observation count and rhr baseline pass through from the batched result`() =
+    fun `rhr baseline passes through from the batched result`() =
         runTest {
             val summary = fakeSummary(LocalDate.of(2026, 1, 1))
             coEvery { baselineComputer.computeBackfillBaselines(any(), any(), any(), any()) } returns
                 mapOf(summary.date to fakeBaseline(mu = listOf(48f, 49f, 51f), rhr = 57f))
             every { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
+            stubEligibleDayCounts()
 
             val result = useCase.computeHistoricalBaselines(listOf(summary), UserPreferences())
 
-            assertEquals(3, result.first().baselineObservationCount)
             assertEquals(57f, result.first().rhrBpm)
+        }
+
+    /**
+     * Task C2 (OD-2): baselineObservationCount is the cumulative maturity counter from
+     * [ScoringHistoryRepository.countEligibleSleepDaysThroughBatch] -- deliberately decoupled from
+     * `windows.muHistory.size` (which stays capped at HRV_MU_WINDOW_DAYS for the statistical
+     * window). A count far larger than the mu-history size proves the two are no longer conflated.
+     */
+    @Test
+    fun `observation count comes from the cumulative counter, not the mu history window size`() =
+        runTest {
+            val summary = fakeSummary(LocalDate.of(2026, 1, 1))
+            coEvery { baselineComputer.computeBackfillBaselines(any(), any(), any(), any()) } returns
+                mapOf(summary.date to fakeBaseline(mu = listOf(48f, 49f, 51f)))
+            every { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
+            stubEligibleDayCounts(mapOf(summary.date to 42))
+
+            val result = useCase.computeHistoricalBaselines(listOf(summary), UserPreferences())
+
+            assertEquals(42, result.first().baselineObservationCount)
+        }
+
+    @Test
+    fun `observation count is null when the cumulative counter reports unknown`() =
+        runTest {
+            val summary = fakeSummary(LocalDate.of(2026, 1, 1))
+            coEvery { baselineComputer.computeBackfillBaselines(any(), any(), any(), any()) } returns
+                mapOf(summary.date to fakeBaseline())
+            every { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
+            stubEligibleDayCounts(mapOf(summary.date to null))
+
+            val result = useCase.computeHistoricalBaselines(listOf(summary), UserPreferences())
+
+            assertEquals(null, result.first().baselineObservationCount)
         }
 
     @Test
@@ -116,6 +160,7 @@ class ComputeHistoricalBaselinesUseCaseTest {
             coEvery { baselineComputer.computeBackfillBaselines(any(), any(), any(), any()) } returns
                 mapOf(summary.date to fakeBaseline(rhrHistory = rhrHistory))
             every { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
+            stubEligibleDayCounts()
 
             val result = useCase.computeHistoricalBaselines(listOf(summary), UserPreferences())
 
@@ -133,6 +178,7 @@ class ComputeHistoricalBaselinesUseCaseTest {
                     noData.date to fakeBaseline(mu = emptyList(), sigma = emptyList()),
                 )
             every { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
+            stubEligibleDayCounts()
 
             val result = useCase.computeHistoricalBaselines(listOf(withData, noData), UserPreferences())
 
@@ -149,6 +195,7 @@ class ComputeHistoricalBaselinesUseCaseTest {
             coEvery { baselineComputer.computeBackfillBaselines(any(), any(), any(), any()) } returns
                 mapOf(frozen.date to fakeBaseline())
             every { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
+            stubEligibleDayCounts()
 
             val result = useCase.computeHistoricalBaselines(listOf(frozen), UserPreferences())
 

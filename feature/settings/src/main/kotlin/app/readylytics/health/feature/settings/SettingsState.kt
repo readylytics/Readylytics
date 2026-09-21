@@ -9,6 +9,7 @@ import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.data.preferences.SyncPreference
 import app.readylytics.health.core.model.data.preferences.UnitSystem
 import app.readylytics.health.core.model.domain.backup.BackupFileInfo
+import app.readylytics.health.core.model.domain.backup.BackupOperationState
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.preferences.Vo2MaxEstimationMethod
 import app.readylytics.health.core.model.domain.preferences.Vo2MaxSourceMode
@@ -93,6 +94,7 @@ data class LocalBackupState(
     val pendingRestoreFile: BackupFileInfo? = null,
     val availableBackups: List<BackupFileInfo> = emptyList(),
     val passwordVerificationResult: Boolean? = null,
+    val operationState: BackupOperationState = BackupOperationState(),
 )
 
 data class UIState(

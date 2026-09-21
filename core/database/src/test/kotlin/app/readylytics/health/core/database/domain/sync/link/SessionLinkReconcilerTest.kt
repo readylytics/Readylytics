@@ -3,7 +3,9 @@ package app.readylytics.health.core.database.domain.sync.link
 import app.readylytics.health.core.database.data.local.SessionLinkReconcilerImpl
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
 import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
+import app.readylytics.health.core.database.data.local.AuthoritativeHeartRateReader
 import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao
+import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
@@ -26,6 +28,7 @@ class SessionLinkReconcilerTest {
     private val workoutDao = mockk<WorkoutDao>(relaxed = true)
     private val heartRateDao = mockk<HeartRateDao>(relaxed = true)
     private val hrvDao = mockk<HrvDao>(relaxed = true)
+    private val minuteBucketDao = mockk<MinuteBucketDao>(relaxed = true)
     private val transactionRunner = mockk<TransactionRunner>(relaxed = true)
 
     private lateinit var reconciler: SessionLinkReconciler
@@ -70,7 +73,19 @@ class SessionLinkReconcilerTest {
         coEvery { workoutDao.getOverlapping(any(), any()) } returns listOf(workoutSession)
         coEvery { workoutDao.getById("workout_1") } returns workoutSession
 
-        reconciler = SessionLinkReconcilerImpl(sleepSessionDao, workoutDao, heartRateDao, hrvDao, transactionRunner)
+        // WP-17 Step 3: no warm coverage in this fixture, so the authoritative reader resolves
+        // every minute to the hot tier -- which is exactly the pre-WP-17 behaviour this test pins.
+        coEvery { minuteBucketDao.getVisibleBucketsForSession(any(), any()) } returns emptyList()
+
+        reconciler =
+            SessionLinkReconcilerImpl(
+                sleepSessionDao = sleepSessionDao,
+                workoutDao = workoutDao,
+                heartRateDao = heartRateDao,
+                hrvDao = hrvDao,
+                transactionRunner = transactionRunner,
+                authoritativeReader = AuthoritativeHeartRateReader(heartRateDao, minuteBucketDao),
+            )
     }
 
     @Test
@@ -103,7 +118,7 @@ class SessionLinkReconcilerTest {
 
             coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 0L, 0L, any()) } returns listOf(hr1, hr2, hr3)
             coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 11_000L, 3L, any()) } returns emptyList()
-            coEvery { heartRateDao.getByTimeRange(10_000L, 14_000L) } returns listOf(hr3)
+            coEvery { heartRateDao.getVisibleByTimeRange(10_000L, 14_000L) } returns listOf(hr3)
 
             val upsertSlot = slot<List<HeartRateRecordEntity>>()
             coEvery { heartRateDao.upsertAll(capture(upsertSlot)) } returns Unit
@@ -132,7 +147,7 @@ class SessionLinkReconcilerTest {
 
             coEvery { hrvDao.getKeysetPage(0L, 20_000L, 0L, 0L, any()) } returns listOf(hrv1)
             coEvery { hrvDao.getKeysetPage(0L, 20_000L, 2_000L, 1L, any()) } returns emptyList()
-            coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { heartRateDao.getVisibleByTimeRange(any(), any()) } returns emptyList()
 
             val upsertSlot = slot<List<HrvRecordEntity>>()
             coEvery { hrvDao.upsertAll(capture(upsertSlot)) } returns Unit
@@ -160,7 +175,7 @@ class SessionLinkReconcilerTest {
             coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 11_000L, 3L, any()) } returns emptyList()
             coEvery { workoutDao.getByIds(listOf("workout_1")) } returns listOf(workoutSession)
             coEvery {
-                heartRateDao.getByTypeAndTimeRange(RecordType.EXERCISE.name, 10_000L, 14_000L)
+                heartRateDao.getVisibleByTypeAndTimeRange(RecordType.EXERCISE.name, 10_000L, 14_000L)
             } returns listOf(hr3)
             coEvery { hrvDao.getKeysetPage(any(), any(), any(), any(), any()) } returns emptyList()
 
@@ -210,7 +225,7 @@ class SessionLinkReconcilerTest {
             val hr1B = hr1A.copy(recordType = RecordType.SLEEP.name, sessionId = "sleep_1")
             val hr2B = hr2A
 
-            coEvery { heartRateDao.getByTimeRange(10_000L, 14_000L) } returns emptyList()
+            coEvery { heartRateDao.getVisibleByTimeRange(10_000L, 14_000L) } returns emptyList()
             coEvery { hrvDao.getKeysetPage(any(), any(), any(), any(), any()) } returns emptyList()
 
             // --- Scenario A ---

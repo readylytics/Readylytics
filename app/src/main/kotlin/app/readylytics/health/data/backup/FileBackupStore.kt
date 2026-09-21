@@ -61,6 +61,31 @@ class FileBackupStore(
         }
     }
 
+    override suspend fun publishNew(
+        source: File,
+        name: String,
+    ): BackupLocation {
+        backupDir.mkdirs()
+        val target = File(backupDir, name)
+        check(source.length() > 0) { "Cannot publish empty backup" }
+        check(!target.exists()) { "Destination already exists: ${target.name}" }
+        val tempTarget = File(backupDir, "$name.tmp")
+        try {
+            source.copyTo(tempTarget, overwrite = true)
+            check(tempTarget.length() == source.length()) {
+                "Failed to copy complete backup to temporary file (${tempTarget.length()} vs ${source.length()})"
+            }
+            check(tempTarget.renameTo(target)) {
+                "Could not rename temporary file to destination $target"
+            }
+            return BackupLocation(Uri.fromFile(target).toString())
+        } finally {
+            if (tempTarget.exists()) {
+                tempTarget.delete()
+            }
+        }
+    }
+
     override suspend fun delete(location: BackupLocation) {
         val file = File(location.value.toUri().path ?: error("Invalid file location"))
         if (file.exists() && !file.delete()) {

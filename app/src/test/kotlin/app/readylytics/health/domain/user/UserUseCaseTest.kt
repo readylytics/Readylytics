@@ -6,9 +6,9 @@ import app.readylytics.health.core.model.domain.repository.ScoringRepository
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import io.mockk.coEvery
 import io.mockk.coJustRun
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -52,7 +52,7 @@ class UserUseCaseTest {
 
             useCase.updateBirthday(birthday)
 
-            verify(exactly = 1) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
+            coVerify(exactly = 1) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
         }
 
     @Test
@@ -65,7 +65,7 @@ class UserUseCaseTest {
 
             useCase.updateBirthday(birthday)
 
-            verify(exactly = 1) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
+            coVerify(exactly = 1) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
         }
 
     @Test

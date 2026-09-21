@@ -20,7 +20,9 @@ import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
 
 import app.readylytics.health.core.databaseschema.data.local.dao.*
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
+import app.readylytics.health.core.model.domain.model.RecordType
 import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
 import app.readylytics.health.core.model.data.preferences.Gender
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
@@ -30,6 +32,7 @@ import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoade
 import app.readylytics.health.core.database.data.repository.MorningRecommendationDependencies
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
+import app.readylytics.health.core.database.data.repository.ScoringHeartRateDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.core.database.data.repository.ScoringSeriesLoader
 import app.readylytics.health.core.model.domain.model.TimestampedTrimp
@@ -81,19 +84,7 @@ class ScoringPointInTimeRegressionTest {
     }
 
     private fun buildRepo(): ScoringRepositoryImpl {
-        val dataLoader =
-            ScoringDayDataLoader(
-                workoutDao,
-                sleepSessionDao,
-                dailySummaryDao,
-                heartRateDao,
-                minuteBucketDao,
-                weightRecordDao,
-                bodyFatRecordDao,
-                bloodPressureRecordDao,
-                oxygenSaturationRecordDao,
-                bodyTemperatureRecordDao,
-            )
+        val dataLoader = ScoringDayDataLoader(workoutDao, sleepSessionDao, dailySummaryDao)
         val bodyMetricsDataLoader =
             BodyMetricsDataLoader(
                 weightRecordDao,
@@ -104,6 +95,7 @@ class ScoringPointInTimeRegressionTest {
                 vo2MaxRecordDao,
             )
         val seriesLoader = ScoringSeriesLoader(workoutDao, dailySummaryDao)
+        val heartRateDataLoader = ScoringHeartRateDataLoader(heartRateDao, minuteBucketDao)
         val readinessSummaryCoordinator =
             ReadinessSummaryCoordinator(
                 dataLoader,
@@ -120,6 +112,7 @@ class ScoringPointInTimeRegressionTest {
                 dataLoader,
                 bodyMetricsDataLoader,
                 seriesLoader,
+                heartRateDataLoader,
             ),
             settingsRepo,
             baselineComputer,
@@ -185,7 +178,19 @@ class ScoringPointInTimeRegressionTest {
                 avgHr = 130f,
             )
         coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns listOf(workout)
-        coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
+        coEvery {
+            heartRateDao.getVisibleByTypeAndTimeRange(RecordType.EXERCISE.name, any(), any())
+        } returns
+            listOf(
+                HeartRateRecordEntity(
+                    sourceRecordRef = 1L,
+                    timestampMs = dayMidnightMs + 1800000L,
+                    beatsPerMinute = 130,
+                    recordType = RecordType.EXERCISE.name,
+                    sessionId = "w1",
+                ),
+            )
+        coEvery { heartRateDao.getVisibleByTimeRange(any(), any()) } returns emptyList()
         return workout
     }
 
@@ -209,7 +214,7 @@ class ScoringPointInTimeRegressionTest {
         maxHeartRate = 170,
         rasScalingFactor = 0.15f,
         rhrBaselineOverride = 72f,
-        gender = Gender.FEMALE,
+        gender = Gender.MALE,
     )
 
     @Test
@@ -286,7 +291,7 @@ class ScoringPointInTimeRegressionTest {
             coEvery { sleepSessionDao.countSince(any()) } returns 10
             coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns null
             coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns emptyList()
-            coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { heartRateDao.getVisibleByTimeRange(any(), any()) } returns emptyList()
 
             setupPreferences(athletePrefs())
 
@@ -342,7 +347,7 @@ class ScoringPointInTimeRegressionTest {
                 coEvery { sleepSessionDao.countSince(any()) } returns 10
                 coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns null
                 coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns emptyList()
-                coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
+                coEvery { heartRateDao.getVisibleByTimeRange(any(), any()) } returns emptyList()
                 coEvery { workoutDao.getTrimpPoints(any(), any()) } returns
                     listOf(TimestampedTrimp(historicalMidnightMs, 30f))
                 coEvery { dailySummaryDao.getEverydayTrimpPoints(any(), any()) } returns
@@ -395,7 +400,7 @@ class ScoringPointInTimeRegressionTest {
             coEvery { sleepSessionDao.countSince(any()) } returns 10
             coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns null
             coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns emptyList()
-            coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { heartRateDao.getVisibleByTimeRange(any(), any()) } returns emptyList()
             coEvery { dailySummaryDao.getEverydayTrimpPoints(any(), any()) } returns emptyList()
 
             listOf(LocalDate.of(2025, 3, 31), LocalDate.of(2025, 10, 27)).forEach { targetDate ->

@@ -95,4 +95,34 @@ interface ScoringHistoryRepository {
         rasScalingFactor: Float? = null,
         baselineObservationCount: Int? = null,
     )
+
+    /**
+     * Task C2 (WP-12, OD-2 gate): cumulative count of distinct eligible sleep-days ("how many
+     * nights has the user now accumulated toward calibration maturity") through [endDay]
+     * inclusive, scanning the full retained history.
+     *
+     * Deliberately distinct from the HRV mu/sigma *statistical* windows used for baseline math
+     * (`BaselineComputer.computeHrvWindowsBetween`, bounded to
+     * `ScoringConstants.HRV_SIGMA_WINDOW_DAYS`/`HRV_MU_WINDOW_DAYS`) -- those must keep their own
+     * small rolling windows unchanged. This is the separate, unbounded maturity counter: eligibility
+     * uses the same `ScoringCalculator.validateNight` policy as the rest of the scoring pipeline,
+     * deduplicated by canonical score-day so two sessions landing on the same day count once.
+     *
+     * Returns `null` when there is no retained session data through [endDay] at all -- "unknown",
+     * never fabricated as zero, and never inferred from a smaller statistical window.
+     */
+    suspend fun countEligibleSleepDaysThrough(
+        endDay: LocalDate,
+        zoneId: ZoneId,
+    ): Int?
+
+    /**
+     * Batch form of [countEligibleSleepDaysThrough]: computes the same cumulative count for every
+     * date in [endDays] from a single full-history scan instead of one scan per date -- for
+     * callers (e.g. the historical baseline backfill) that need it for many days at once.
+     */
+    suspend fun countEligibleSleepDaysThroughBatch(
+        endDays: List<LocalDate>,
+        zoneId: ZoneId,
+    ): Map<LocalDate, Int?>
 }

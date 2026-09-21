@@ -78,3 +78,12 @@ internal fun WorkoutRoutePoint.toEntity() =
         horizontalAccuracy = horizontalAccuracy,
         verticalAccuracy = verticalAccuracy,
     )
+
+internal fun deriveWorkoutAvgSpeedKmh(
+    distanceMeters: Float?,
+    startTimeMs: Long,
+    endTimeMs: Long,
+): Float? {
+    val durationSeconds = (endTimeMs - startTimeMs) / 1000.0
+    return distanceMeters?.takeIf { durationSeconds > 0.0 }?.let { (it / durationSeconds * 3.6).toFloat() }
+}

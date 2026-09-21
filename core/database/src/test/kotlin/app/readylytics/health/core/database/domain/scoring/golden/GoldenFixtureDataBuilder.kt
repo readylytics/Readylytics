@@ -395,8 +395,8 @@ class GoldenFixtureDataBuilder(
                     sourceRecordRef = nextSourceRecordRef(),
                     timestampMs = sampleTime,
                     beatsPerMinute = bpm,
-                    recordType = RecordType.RESTING.name,
-                    sessionId = null,
+                    recordType = RecordType.EXERCISE.name,
+                    sessionId = id,
                     deviceName = deviceName,
                 )
             sampleTime += 2 * 60_000L

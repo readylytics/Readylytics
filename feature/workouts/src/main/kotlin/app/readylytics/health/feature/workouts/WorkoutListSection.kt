@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.model.domain.model.MetricStatus
+import app.readylytics.health.core.model.domain.workouts.detail.ExerciseTypeMapper
 import app.readylytics.health.core.ui.components.PaginationControls
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.containerColor
@@ -64,7 +65,7 @@ private fun WorkoutHistoryItem(
     modifier: Modifier = Modifier,
 ) {
     val workout = item.workout
-    val displayType = exerciseTypeToDisplayName(workout.exerciseType)
+    val displayType = stringResource(ExerciseTypeMapper.fromRaw(workout.exerciseType).displayNameResId)
     val dateStr =
         remember(workout.startTime) {
             val fmt =

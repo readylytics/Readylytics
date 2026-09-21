@@ -16,7 +16,21 @@ interface HealthChangeTokenStore {
         syncedAtMs: Long,
     )
 
-    suspend fun clear(dataType: HealthDataType)
+    suspend fun suspendType(dataType: HealthDataType)
+
+    suspend fun isSuspended(dataType: HealthDataType): Boolean
 
     suspend fun clearAll()
+
+    suspend fun getToken(tokenKey: String): String?
+
+    suspend fun putToken(
+        tokenKey: String,
+        token: String,
+        syncedAtMs: Long,
+    )
+
+    suspend fun suspendToken(tokenKey: String)
+
+    suspend fun isTokenSuspended(tokenKey: String): Boolean
 }

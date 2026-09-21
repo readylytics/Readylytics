@@ -94,9 +94,13 @@ class RootNavigationTest {
     }
 
     private fun selectTab(label: String) {
-        val tab = composeRule.onNode(isTabWithText(label))
-        tab.performClick()
-        tab.assertIsSelected()
+        composeRule.onNode(isTabWithText(label)).performClick()
+        composeRule.waitUntil(timeoutMillis = TAB_SELECTION_TIMEOUT_MILLIS) {
+            runCatching {
+                composeRule.onNode(isTabWithText(label)).assertIsSelected()
+            }.isSuccess
+        }
+        composeRule.onNode(isTabWithText(label)).assertIsSelected()
     }
 
     private fun isTabWithText(label: String): SemanticsMatcher =
@@ -109,5 +113,9 @@ class RootNavigationTest {
         composeRule.waitUntil(timeoutMillis = timeoutMillis) {
             runCatching { node.assertIsDisplayed() }.isSuccess
         }
+    }
+
+    private companion object {
+        const val TAB_SELECTION_TIMEOUT_MILLIS = 10_000L
     }
 }

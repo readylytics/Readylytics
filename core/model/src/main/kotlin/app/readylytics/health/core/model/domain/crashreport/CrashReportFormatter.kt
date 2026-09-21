@@ -1,5 +1,8 @@
 package app.readylytics.health.core.model.domain.crashreport
 
+import app.readylytics.health.core.model.domain.util.DiagnosticReason
+import app.readylytics.health.core.model.domain.util.safeDiagnostic
+
 fun formatCrashReport(
     throwable: Throwable,
     metadata: CrashReportMetadata,
@@ -11,5 +14,5 @@ fun formatCrashReport(
         appendLine("Android: ${metadata.androidRelease} (SDK ${metadata.androidSdkInt})")
         appendLine("Device: ${metadata.deviceManufacturer} ${metadata.deviceModel}")
         appendLine()
-        append(throwable.stackTraceToString())
+        append(safeDiagnostic(DiagnosticReason.OPERATION_FAILED, throwable))
     }

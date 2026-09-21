@@ -140,7 +140,11 @@ internal data class SummaryAssemblyContext(
     val validHistoricalSessionIds: List<String>,
     val persistedZLnHrv: Float?,
     val persistedZRhr: Float?,
-    val sessionPhase: String,
+    val sessionPhase: String?,
+    // Task C2 (OD-2): the resolved cumulative maturity count (CalibrationState.observationCount)
+    // -- distinct from validHistoricalSessionIds.size below, which stays scoped to the HRV
+    // mu/sigma statistical window and must not be reused as the persisted observation count.
+    val observationCount: Int?,
     val readinessResult: ReadinessResult,
     val sRest: Float?,
     val sleepScore: Float?,
@@ -165,7 +169,10 @@ internal fun resolveCalibrationSnapshots(ctx: SummaryAssemblyContext): BaselineC
             rasScalingFactor = ctx.summary.rasScalingFactor,
             snapshotProfile = ctx.summary.snapshotProfile,
             hrvSigmaPrior = ctx.summary.hrvSigmaPrior,
-            observationCount = ctx.summary.baselineObservationCount,
+            // Task C2: the resolved CalibrationState already prefers the frozen count when one
+            // validated -- and resolves to null (needing repair) on a detected frozen count/phase
+            // mismatch, which must NOT fall back to the stale ctx.summary.baselineObservationCount.
+            observationCount = ctx.observationCount,
         )
     } else if (!ctx.isCalibrating) {
         BaselineCalibrationSnapshots(
@@ -174,7 +181,10 @@ internal fun resolveCalibrationSnapshots(ctx: SummaryAssemblyContext): BaselineC
             rasScalingFactor = ctx.rasScalingFactor,
             snapshotProfile = ctx.prefs.physiologyProfile.name,
             hrvSigmaPrior = ctx.prefs.physiologyProfile.lnSigmaPrior,
-            observationCount = ctx.validHistoricalSessionIds.size,
+            // Task C2 (OD-2): the cumulative maturity count, NOT validHistoricalSessionIds.size
+            // (that list is scoped to the HRV mu/sigma statistical window and caps out around
+            // HRV_SIGMA_WINDOW_DAYS regardless of true tenure).
+            observationCount = ctx.observationCount,
         )
     } else {
         BaselineCalibrationSnapshots(

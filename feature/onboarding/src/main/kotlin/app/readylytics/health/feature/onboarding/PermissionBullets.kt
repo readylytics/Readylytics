@@ -75,5 +75,6 @@ internal fun healthPermissionLabelRes(permission: String): Int? =
             BodyTemperatureRecord::class,
         ),
         -> R.string.onboarding_hc_permission_body_temperature
+        HealthPermission.PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND -> R.string.onboarding_hc_permission_background
         else -> null
     }

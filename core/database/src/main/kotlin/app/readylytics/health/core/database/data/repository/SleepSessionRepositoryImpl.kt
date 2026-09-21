@@ -19,6 +19,7 @@ private fun List<SleepStageEntity>.toSleepStageData(): List<SleepStageData> =
             startTime = entity.startTime,
             endTime = entity.endTime,
             durationMinutes = entity.durationMinutes,
+            sessionId = entity.sessionId,
         )
     }
 
@@ -64,6 +65,11 @@ class SleepSessionRepositoryImpl
 
         override suspend fun getSessionStages(sessionId: String): List<SleepStageData> =
             stageDao.getStagesForSession(sessionId).toSleepStageData()
+
+        override suspend fun getSessionStages(sessionIds: List<String>): List<SleepStageData> {
+            if (sessionIds.isEmpty()) return emptyList()
+            return stageDao.getStagesForSessions(sessionIds).toSleepStageData()
+        }
 
         override fun observeFirstSessionEndingInRange(
             fromMs: Long,
