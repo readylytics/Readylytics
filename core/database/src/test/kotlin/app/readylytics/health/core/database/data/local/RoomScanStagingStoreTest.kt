@@ -36,6 +36,7 @@ class RoomScanStagingStoreTest {
         store =
             RoomScanStagingStore(
                 scanStagingDao = database.scanStagingDao(),
+                scanTypeStateDao = database.scanTypeStateDao(),
                 clock = Clock.fixed(Instant.ofEpochMilli(1_000L), ZoneOffset.UTC),
             )
     }
@@ -146,6 +147,29 @@ class RoomScanStagingStoreTest {
             assertNull(store.stateOf(chunk2, HealthDataType.HRV))
             assertEquals(1, store.stagedCount(runB, HealthDataType.HEART_RATE))
             assertEquals(TypeScanState.SCANNING, store.stateOf(runB, HealthDataType.HEART_RATE))
+        }
+
+    @Test
+    fun clearChunksOtherThanDropsOtherChunksOfSameRunButLeavesOtherRuns() =
+        runBlocking {
+            val staleChunk = ScanIdentity(runId = "run-a", chunkId = "18000")
+            val keptChunk = ScanIdentity(runId = "run-a", chunkId = "19000")
+            val otherRun = ScanIdentity(runId = "run-b", chunkId = "18000")
+
+            store.beginTypeScan(staleChunk, HealthDataType.HEART_RATE, resume = false)
+            store.stageIds(staleChunk, HealthDataType.HEART_RATE, listOf("hc-stale"))
+            store.beginTypeScan(keptChunk, HealthDataType.HEART_RATE, resume = false)
+            store.stageIds(keptChunk, HealthDataType.HEART_RATE, listOf("hc-kept"))
+            store.beginTypeScan(otherRun, HealthDataType.HEART_RATE, resume = false)
+            store.stageIds(otherRun, HealthDataType.HEART_RATE, listOf("hc-other-run"))
+
+            store.clearChunksOtherThan("run-a", keepChunkIds = setOf("19000"))
+
+            assertEquals(0, store.stagedCount(staleChunk, HealthDataType.HEART_RATE))
+            assertNull(store.stateOf(staleChunk, HealthDataType.HEART_RATE))
+            assertEquals(1, store.stagedCount(keptChunk, HealthDataType.HEART_RATE))
+            assertEquals(TypeScanState.SCANNING, store.stateOf(keptChunk, HealthDataType.HEART_RATE))
+            assertEquals(1, store.stagedCount(otherRun, HealthDataType.HEART_RATE))
         }
 
     @Test

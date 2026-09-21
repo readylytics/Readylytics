@@ -6,7 +6,6 @@ import app.readylytics.health.core.databaseschema.data.local.dao.DailySummaryDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao
 import app.readylytics.health.core.databaseschema.data.local.dao.OxygenSaturationRecordDao
-import app.readylytics.health.core.databaseschema.data.local.dao.ScanStagingDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepStageDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
@@ -69,7 +68,7 @@ class PersistenceBatchingTest {
                     dailySummaryDao = recordingDao(events, "summary"),
                     transactionRunner = transactionRunner,
                     vo2MaxRecordDao = recordingDao(events, "vo2Max"),
-                    scanStagingDao = recordingDao(events, "scanStaging"),
+                    scanTypeStateDao = recordingDao(events, "scanStaging"),
                 )
 
             store.persist(
@@ -439,7 +438,7 @@ class PersistenceBatchingTest {
             dailySummaryDao = recordingDao(events, "summary"),
             transactionRunner = transactionRunner,
             vo2MaxRecordDao = recordingDao(events, "vo2Max"),
-            scanStagingDao = recordingDao(events, "scanStaging"),
+            scanTypeStateDao = recordingDao(events, "scanStaging"),
         )
 
     private fun heartRateInput(index: Int) =

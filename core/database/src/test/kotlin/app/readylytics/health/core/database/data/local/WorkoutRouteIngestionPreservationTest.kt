@@ -65,7 +65,7 @@ class WorkoutRouteIngestionPreservationTest {
             dailySummaryDao = db.dailySummaryDao(),
             transactionRunner = RoomTransactionRunner(db),
             vo2MaxRecordDao = db.vo2MaxRecordDao(),
-            scanStagingDao = db.scanStagingDao(),
+            scanTypeStateDao = db.scanTypeStateDao(),
         )
 
     private fun buildChangeStore(

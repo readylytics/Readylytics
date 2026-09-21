@@ -3,6 +3,7 @@ package app.readylytics.health.core.database.data.local
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.readylytics.health.core.databaseschema.data.local.dao.ScanStagingDao
+import app.readylytics.health.core.databaseschema.data.local.dao.ScanTypeStateDao
 import app.readylytics.health.core.databaseschema.data.local.entity.ScanSeenIdEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.ScanTypeStateEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
@@ -25,6 +26,7 @@ class StagedDeletionReconcilerTest {
     private lateinit var database: HealthDatabase
     private lateinit var daos: HealthRecordDaos
     private lateinit var scanStagingDao: ScanStagingDao
+    private lateinit var scanTypeStateDao: ScanTypeStateDao
     private val scanId = ScanIdentity(runId = "run-a", chunkId = "0")
     private val windowStartMs = 0L
     private val windowEndMs = 10 * 86_400_000L
@@ -39,6 +41,7 @@ class StagedDeletionReconcilerTest {
                 ).allowMainThreadQueries()
                 .build()
         scanStagingDao = database.scanStagingDao()
+        scanTypeStateDao = database.scanTypeStateDao()
         daos =
             HealthRecordDaos(
                 sleepSessionDao = database.sleepSessionDao(),
@@ -123,7 +126,7 @@ class StagedDeletionReconcilerTest {
         StagedDeletionReconciler.reconcile(
             daos = daos,
             vo2MaxRecordDao = database.vo2MaxRecordDao(),
-            scanStagingDao = scanStagingDao,
+            scanTypeStateDao = scanTypeStateDao,
             scan =
                 CompleteTypeScan(
                     type = type,
@@ -141,12 +144,12 @@ class StagedDeletionReconcilerTest {
         complete: Boolean,
     ) {
         scanStagingDao.insertSeenIds(ids.map { ScanSeenIdEntity(scanId.runId, scanId.chunkId, type.name, it) })
-        scanStagingDao.upsertState(
+        scanTypeStateDao.upsertState(
             ScanTypeStateEntity(
                 runId = scanId.runId,
                 chunkId = scanId.chunkId,
                 recordType = type.name,
-                state = if (complete) ScanStagingDao.STATE_COMPLETE else ScanStagingDao.STATE_SCANNING,
+                state = if (complete) ScanTypeStateDao.STATE_COMPLETE else ScanTypeStateDao.STATE_SCANNING,
                 stagedCount = ids.size,
                 updatedAtMs = 0L,
             ),

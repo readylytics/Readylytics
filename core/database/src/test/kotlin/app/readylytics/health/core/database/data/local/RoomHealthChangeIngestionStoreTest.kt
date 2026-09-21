@@ -3,7 +3,7 @@ package app.readylytics.health.core.database.data.local
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.readylytics.health.core.databaseschema.data.local.dao.ScanStagingDao
+import app.readylytics.health.core.databaseschema.data.local.dao.ScanTypeStateDao
 import app.readylytics.health.core.databaseschema.data.local.entity.ScanSeenIdEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.ScanTypeStateEntity
 import app.readylytics.health.core.model.domain.model.HealthDataType
@@ -73,7 +73,7 @@ class RoomHealthChangeIngestionStoreTest {
                 dailySummaryDao = database.dailySummaryDao(),
                 transactionRunner = RoomTransactionRunner(database),
                 vo2MaxRecordDao = database.vo2MaxRecordDao(),
-                scanStagingDao = database.scanStagingDao(),
+                scanTypeStateDao = database.scanTypeStateDao(),
             )
         changeStore = RoomHealthChangeIngestionStore(daos = daos, vo2MaxRecordDao = database.vo2MaxRecordDao())
     }
@@ -618,12 +618,12 @@ class RoomHealthChangeIngestionStoreTest {
         database.scanStagingDao().insertSeenIds(
             ids.map { ScanSeenIdEntity(scanId.runId, scanId.chunkId, type.name, it) },
         )
-        database.scanStagingDao().upsertState(
+        database.scanTypeStateDao().upsertState(
             ScanTypeStateEntity(
                 runId = scanId.runId,
                 chunkId = scanId.chunkId,
                 recordType = type.name,
-                state = if (complete) ScanStagingDao.STATE_COMPLETE else ScanStagingDao.STATE_SCANNING,
+                state = if (complete) ScanTypeStateDao.STATE_COMPLETE else ScanTypeStateDao.STATE_SCANNING,
                 stagedCount = ids.size,
                 updatedAtMs = 0L,
             ),

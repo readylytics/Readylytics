@@ -3,7 +3,7 @@ package app.readylytics.health.core.database.data.local
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.readylytics.health.core.databaseschema.data.local.dao.ScanStagingDao
+import app.readylytics.health.core.databaseschema.data.local.dao.ScanTypeStateDao
 import app.readylytics.health.core.databaseschema.data.local.entity.ScanSeenIdEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.ScanTypeStateEntity
 import app.readylytics.health.core.model.domain.model.HealthDataType
@@ -363,12 +363,12 @@ class RoomHealthIngestionStoreTest {
             database.scanStagingDao().insertSeenIds(
                 ids.map { ScanSeenIdEntity(scanId.runId, scanId.chunkId, HealthDataType.HEART_RATE.name, it) },
             )
-            database.scanStagingDao().upsertState(
+            database.scanTypeStateDao().upsertState(
                 ScanTypeStateEntity(
                     runId = scanId.runId,
                     chunkId = scanId.chunkId,
                     recordType = HealthDataType.HEART_RATE.name,
-                    state = ScanStagingDao.STATE_COMPLETE,
+                    state = ScanTypeStateDao.STATE_COMPLETE,
                     stagedCount = ids.size,
                     updatedAtMs = 0L,
                 ),
@@ -609,7 +609,7 @@ class RoomHealthIngestionStoreTest {
             dailySummaryDao = db.dailySummaryDao(),
             transactionRunner = RoomTransactionRunner(db),
             vo2MaxRecordDao = db.vo2MaxRecordDao(),
-            scanStagingDao = db.scanStagingDao(),
+            scanTypeStateDao = db.scanTypeStateDao(),
         )
 
     private suspend fun assertMatchesCleanDb(

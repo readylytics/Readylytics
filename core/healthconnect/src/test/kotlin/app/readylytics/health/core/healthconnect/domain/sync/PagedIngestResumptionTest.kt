@@ -30,6 +30,7 @@ import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.sync.SelectedSourcePruner
 import app.readylytics.health.core.model.domain.sync.SourcePayload
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
+import app.readylytics.health.core.model.domain.sync.stagedIds
 import io.mockk.coEvery
 import io.mockk.coJustRun
 import io.mockk.coVerify
@@ -346,6 +347,116 @@ class PagedIngestResumptionTest {
             assertTrue(trackingStore.heartRateSamples.values.any { it.sourceId == "hr-1" })
             assertTrue(trackingStore.heartRateSamples.values.any { it.sourceId == "hr-2" })
         }
+
+    @Test
+    fun `HR completes then HRV interrupted mid-stream - resumed HR re-read still prunes an HC-side deletion`() =
+        runTest {
+            // Task 4 review Finding 2 regression: HR always streams to completion before HRV starts
+            // within a chunk attempt. When the crash happens mid-HRV, the checkpoint ends up with
+            // hrPageToken = null (HR already complete, no token to store) and hrvPageToken = <token>
+            // (HRV mid-stream). A single shared "resume this chunk" flag would incorrectly resume
+            // HR's beginTypeScan too (because an HRV token is present), keeping attempt 1's stale HR
+            // staged ids alive through attempt 2's fresh full HR re-read and hiding an HC-side
+            // deletion from deletion reconciliation. Resume must be derived per type from that type's
+            // own stored token instead.
+            val startDate = LocalDate.of(2024, 6, 1)
+            val endDate = LocalDate.of(2024, 6, 2)
+            val records = createCrossTypeResumeRecords()
+
+            val staging = InMemoryScanStagingStore()
+            val trackingStore = ResumptionTrackingStore(staging)
+            val testUseCase = createResyncUseCase(trackingStore, staging, checkpointStore)
+            mockCrossTypeResumePages(records)
+
+            val run1Result =
+                testUseCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
+            assertFalse(run1Result.isSuccess)
+            assertNull(
+                "HR completed in attempt 1, so no HR page token should be checkpointed",
+                checkpointStore.value?.hrPageToken,
+            )
+            assertEquals("hrv-token-page-2", checkpointStore.value?.hrvPageToken)
+
+            val run2Result =
+                testUseCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
+            assertTrue(run2Result.isSuccess)
+
+            assertFalse(
+                "hr-1 was deleted upstream between attempts; it must not survive deletion reconciliation",
+                trackingStore.heartRateSamples.values.any { it.sourceId == "hr-1" },
+            )
+            assertTrue(trackingStore.heartRateSamples.values.any { it.sourceId == "hr-2" })
+        }
+
+    private data class CrossTypeResumeRecords(
+        val hrAttempt1: DomainHeartRateRecord,
+        val hrAttempt2: DomainHeartRateRecord,
+        val hrv1: DomainHrvRecord,
+        val hrv2: DomainHrvRecord,
+    )
+
+    private fun createCrossTypeResumeRecords(): CrossTypeResumeRecords {
+        val hrAttempt1 =
+            DomainHeartRateRecord(
+                id = "hr-1",
+                deviceName = "Watch",
+                samples = listOf(DomainHeartRateSample(Instant.parse("2024-06-01T10:00:00Z"), 65)),
+                startTime = Instant.parse("2024-06-01T10:00:00Z"),
+                endTime = Instant.parse("2024-06-01T10:01:00Z"),
+            )
+        // Attempt 2's fresh HR re-read (triggered because HR had already completed without a
+        // stored token) observes that "hr-1" was deleted upstream between attempts -- only "hr-2"
+        // remains.
+        val hrAttempt2 =
+            DomainHeartRateRecord(
+                id = "hr-2",
+                deviceName = "Watch",
+                samples = listOf(DomainHeartRateSample(Instant.parse("2024-06-01T11:00:00Z"), 72)),
+                startTime = Instant.parse("2024-06-01T11:00:00Z"),
+                endTime = Instant.parse("2024-06-01T11:01:00Z"),
+            )
+        val hrv1 =
+            DomainHrvRecord(
+                id = "hrv-1",
+                time = Instant.parse("2024-06-01T10:00:00Z"),
+                rmssdMs = 40f,
+                deviceName = "Watch",
+            )
+        val hrv2 =
+            DomainHrvRecord(
+                id = "hrv-2",
+                time = Instant.parse("2024-06-01T11:00:00Z"),
+                rmssdMs = 42f,
+                deviceName = "Watch",
+            )
+        return CrossTypeResumeRecords(hrAttempt1, hrAttempt2, hrv1, hrv2)
+    }
+
+    private fun mockCrossTypeResumePages(records: CrossTypeResumeRecords) {
+        var hrCallCount = 0
+        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } coAnswers {
+            hrCallCount++
+            val onPage = invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
+            val record = if (hrCallCount == 1) records.hrAttempt1 else records.hrAttempt2
+            onPage(listOf(record), null)
+            ReadOutcome.Available(Unit)
+        }
+
+        var hrvCallCount = 0
+        coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } coAnswers {
+            hrvCallCount++
+            val token = invocation.args[2] as String?
+            val onPage = invocation.args[3] as suspend (List<DomainHrvRecord>, String?) -> Unit
+            if (hrvCallCount == 1) {
+                onPage(listOf(records.hrv1), "hrv-token-page-2")
+                error("Simulated worker kill after HRV page 1")
+            } else {
+                assertEquals("Resumed HRV pass must forward stored token", "hrv-token-page-2", token)
+                onPage(listOf(records.hrv2), null)
+                ReadOutcome.Available(Unit)
+            }
+        }
+    }
 
     private fun createTestHeartRateInputs(): Pair<HeartRateInput, HeartRateInput> {
         val samplePreBaseline =

@@ -6,7 +6,6 @@ import app.readylytics.health.core.databaseschema.data.local.dao.DailySummaryDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao
 import app.readylytics.health.core.databaseschema.data.local.dao.OxygenSaturationRecordDao
-import app.readylytics.health.core.databaseschema.data.local.dao.ScanStagingDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepStageDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
@@ -80,7 +79,7 @@ class RoomHealthIngestionStoreZoneTest {
                     override suspend fun <R> runInTransaction(block: suspend () -> R): R = block()
                 },
             vo2MaxRecordDao = noOpDao(),
-            scanStagingDao = noOpDao(),
+            scanTypeStateDao = noOpDao(),
         )
 
     private fun recordingClearCallDao(

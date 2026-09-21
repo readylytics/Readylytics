@@ -2,7 +2,7 @@ package app.readylytics.health.core.database.data.local
 
 import app.readylytics.health.core.databaseschema.data.local.dao.DailySummaryDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
-import app.readylytics.health.core.databaseschema.data.local.dao.ScanStagingDao
+import app.readylytics.health.core.databaseschema.data.local.dao.ScanTypeStateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepStageDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SourceRecordDao
@@ -38,7 +38,7 @@ class RoomHealthIngestionStoreReconcileTest {
     private val sourceRecordDao = mockk<SourceRecordDao>(relaxed = true)
     private val heartRateDao = mockk<HeartRateDao>(relaxed = true)
     private val dailySummaryDao = mockk<DailySummaryDao>(relaxed = true)
-    private val scanStagingDao = mockk<ScanStagingDao>(relaxed = true)
+    private val scanTypeStateDao = mockk<ScanTypeStateDao>(relaxed = true)
 
     private val daos =
         HealthRecordDaos(
@@ -64,14 +64,14 @@ class RoomHealthIngestionStoreReconcileTest {
             dailySummaryDao = dailySummaryDao,
             transactionRunner = transactionRunner,
             vo2MaxRecordDao = mockk(relaxed = true),
-            scanStagingDao = scanStagingDao,
+            scanTypeStateDao = scanTypeStateDao,
         )
 
     private val zoneId = ZoneId.of("UTC")
 
     @Before
     fun setup() {
-        clearMocks(sleepSessionDao, sleepStageDao, sourceRecordDao, heartRateDao, dailySummaryDao, scanStagingDao)
+        clearMocks(sleepSessionDao, sleepStageDao, sourceRecordDao, heartRateDao, dailySummaryDao, scanTypeStateDao)
     }
 
     @Test
@@ -305,13 +305,13 @@ class RoomHealthIngestionStoreReconcileTest {
 
     private fun stubScanState(scanId: ScanIdentity, type: HealthDataType, complete: Boolean = true) {
         coEvery {
-            scanStagingDao.getState(scanId.runId, scanId.chunkId, type.name)
+            scanTypeStateDao.getState(scanId.runId, scanId.chunkId, type.name)
         } returns
             ScanTypeStateEntity(
                 runId = scanId.runId,
                 chunkId = scanId.chunkId,
                 recordType = type.name,
-                state = if (complete) ScanStagingDao.STATE_COMPLETE else ScanStagingDao.STATE_SCANNING,
+                state = if (complete) ScanTypeStateDao.STATE_COMPLETE else ScanTypeStateDao.STATE_SCANNING,
                 stagedCount = 0,
                 updatedAtMs = 0L,
             )

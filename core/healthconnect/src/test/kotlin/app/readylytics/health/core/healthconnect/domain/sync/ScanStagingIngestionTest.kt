@@ -20,6 +20,7 @@ import app.readylytics.health.core.model.domain.repository.ReadOutcome
 import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
 import app.readylytics.health.core.model.domain.sync.ScanIdentity
 import app.readylytics.health.core.model.domain.sync.TypeScanState
+import app.readylytics.health.core.model.domain.sync.stagedIds
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -119,7 +120,7 @@ class ScanStagingIngestionTest {
                 windowEnd = Instant.ofEpochMilli(86_400_000),
                 prefs = prefs(),
                 scanIdentity = scanId,
-                resumeStagedScan = true,
+                resumeHrScan = true,
                 hrStartPageToken = "token-1",
             )
 

@@ -9,6 +9,7 @@ import app.readylytics.health.core.model.domain.sync.CompleteTypeScan
 import app.readylytics.health.core.model.domain.sync.HealthIngestionBatch
 import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
 import app.readylytics.health.core.model.domain.sync.InMemoryScanStagingStore
+import app.readylytics.health.core.model.domain.sync.stagedIds
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
