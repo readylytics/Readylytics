@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 23,
-    "identityHash": "29f3e50f51e62982b9362b5b9086e0ce",
+    "identityHash": "5bcac15594f5750807e7c28a47300e05",
     "entities": [
       {
         "tableName": "sleep_sessions",
@@ -283,6 +283,16 @@
             ],
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_hr_v10_type_timestamp` ON `${TABLE_NAME}` (`recordType`, `timestampMs`)"
+          },
+          {
+            "name": "index_hr_v10_timestamp_source",
+            "unique": false,
+            "columnNames": [
+              "timestampMs",
+              "sourceRecordRef"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_hr_v10_timestamp_source` ON `${TABLE_NAME}` (`timestampMs`, `sourceRecordRef`)"
           }
         ],
         "foreignKeys": [
@@ -2167,6 +2177,15 @@
             ],
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_scan_seen_ids_runId_chunkId_recordType` ON `${TABLE_NAME}` (`runId`, `chunkId`, `recordType`)"
+          },
+          {
+            "name": "index_scan_seen_ids_sourceId",
+            "unique": false,
+            "columnNames": [
+              "sourceId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_scan_seen_ids_sourceId` ON `${TABLE_NAME}` (`sourceId`)"
           }
         ]
       },
@@ -2223,7 +2242,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '29f3e50f51e62982b9362b5b9086e0ce')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '5bcac15594f5750807e7c28a47300e05')"
     ]
   }
 }

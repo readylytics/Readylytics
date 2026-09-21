@@ -253,3 +253,37 @@ adb devices
 4. **Scoring Recompute (PERF-002):** Calibrated daily summary recompute for day $D$ must not re-scan or expand unneeded historical raw samples, completing within $\le 50$ ms per scored day.
 5. **Rollup & Export Streaming (PERF-003):** Hot-to-warm rollup and backup export must maintain chunked page boundaries (500 rows/page) with zero full-table heap buffering.
 
+## Phase 2 — query plans and index cost (Task 10)
+
+`Phase2QueryPlanTest` (`core/database/src/test/kotlin/app/readylytics/health/core/database/data/local/Phase2QueryPlanTest.kt`) runs real SQLite `EXPLAIN QUERY PLAN` against the five performance-sensitive predicates Tasks 3/5/8/9 of the Phase 2 HC/DB scalability plan added, using each predicate's real SQL copied verbatim from the owning `@Query`. An index is kept only when a plan proved a scan or a temp sort; three of the five predicates already passed on the indexes those earlier tasks shipped, with no schema change.
+
+| Query (owning DAO method) | Predicate under test | Result without change |
+|---|---|---|
+| `ScanStagingDao.countSeen` | staged-id lookup by `(runId, chunkId, recordType)` | PASS — served by the composite PRIMARY KEY, no change |
+| `SleepSessionDao.deleteSessionsNotStaged` | anti-join delete of unstaged sleep sessions | PASS — `index_sleep_sessions_endTime` outer side, PK-covered subquery |
+| `SourceRecordDao.pageUnstagedAuthoritativeSources` | unstaged authoritative-source keyset page | PASS — `index_health_source_records_recordType_metadataState_recordStartMs` |
+| `HeartRateDao.pagePlausibleSamplesForRollup` | Task 8 rollup streamer's keyset page | **FAILED** — `USE TEMP B-TREE FOR RIGHT PART OF ORDER BY` |
+| `SourceRecordDao.pageUnreferencedSourceIds` | Task 9 GC's 5-way existence check | **FAILED** — bare `SCAN TABLE scan_seen_ids` (no index at all) |
+
+Two indexes were added to `Migration22To23` (still unreleased at this point in the phase, so extended rather than versioned to v24) after the plan proved each necessary:
+
+### 1. `heart_rate_records(timestampMs, sourceRecordRef)` — `index_hr_v10_timestamp_source`
+
+- **Statement:** `SELECT * FROM heart_rate_records WHERE timestampMs >= :fromMs AND timestampMs < :toMs AND beatsPerMinute BETWEEN 30 AND 230 AND (timestampMs > :afterTs OR (timestampMs = :afterTs AND sourceRecordRef > :afterRef)) ORDER BY timestampMs ASC, sourceRecordRef ASC LIMIT :limit`
+- **Plan before:** `SEARCH TABLE heart_rate_records USING INDEX index_hr_v10_timestamp (timestampMs>? AND timestampMs<?), USE TEMP B-TREE FOR RIGHT PART OF ORDER BY`. The pre-existing single-column `index_hr_v10_timestamp` (from Migration9To10, 2024-era) satisfied the range filter and the primary sort key, but SQLite still had to materialize and sort every matching row to break `timestampMs` ties on `sourceRecordRef`, defeating the keyset page's bounded-memory intent for a dense multi-device day.
+- **Plan after:** `SEARCH TABLE heart_rate_records USING INDEX index_hr_v10_timestamp_source (timestampMs>? AND timestampMs<?)` — no temp sort; the index's own order satisfies `ORDER BY timestampMs ASC, sourceRecordRef ASC` directly.
+- **Index size (measured):** built the identical Room-generated table + all five real indexes in a standalone SQLite file (`sqlite3`, page_size=4096) and loaded 8,640 rows (the same dense-parent scale as the OD-1 baseline above: 720 minutes × 12 samples/min). `index_hr_v10_timestamp_source` measured **118,784 bytes / 29 pages** via `dbstat` — **13.75 B/row**, identical footprint to the existing `index_hr_v10_source_time` at the same row count (same two-INTEGER-column shape).
+- **Write-cost delta:** one more 2-column INTEGER B-tree insert per raw HR row alongside the four indexes already maintained per write (Task 5's `PersistenceBatchingTest` batches raw HR writes in 500-row transactional chunks; this adds one more index page write per row within that same existing transaction boundary — no new transaction, no new batching tier). The pre-existing single-column `index_hr_v10_timestamp` was left in place rather than dropped/replaced: the migration is additive-only per the plan's constraint, and it remains a valid (if now largely redundant) index for any future single-column `timestampMs`-only query.
+
+### 2. `scan_seen_ids(sourceId)` — `index_scan_seen_ids_sourceId`
+
+- **Statement (5-way existence check, one branch shown):** `... AND NOT EXISTS (SELECT 1 FROM scan_seen_ids WHERE sourceId = health_source_records.sourceRecordId) ...` inside `SourceRecordDao.pageUnreferencedSourceIds`, evaluated once per GC page candidate (up to 500 rows/page, `SourceMetadataGc.PAGE_SIZE`).
+- **Plan before:** `... CORRELATED SCALAR SUBQUERY 5, SCAN TABLE scan_seen_ids`. Both existing indexes on `scan_seen_ids` — the composite PRIMARY KEY `(runId, chunkId, recordType, sourceId)` and `index_scan_seen_ids_runId_chunkId_recordType` — lead with `runId`, which this GC predicate has no value for, so neither could seek and SQLite fell back to a full unindexed table scan, run once per GC candidate row (up to 10,000 rows/run, `SourceMetadataGc.LIMIT_PER_RUN`).
+- **Plan after:** `... CORRELATED SCALAR SUBQUERY 5, SEARCH TABLE scan_seen_ids USING COVERING INDEX index_scan_seen_ids_sourceId (sourceId=?)` — an index seek instead of a scan.
+- **Index size (measured):** same standalone-file measurement, 8,640 synthetic staged rows (one dense scan chunk's worth). `index_scan_seen_ids_sourceId` measured **196,608 bytes / 48 pages** — **22.75 B/row** (wider than the HR index above because `sourceId` is a Health Connect UUID string, ~14+ bytes, versus two INTEGERs).
+- **Write-cost delta:** one more single-TEXT-column index insert per row inserted into `scan_seen_ids` by `ScanStagingDao.insertSeenIds`. `scan_seen_ids` is transient operational state cleared per run/chunk (`deleteSeenForRun`/`deleteSeenForOtherChunks`), not a durable historical table, so this cost does not accumulate across a user's lifetime the way a raw-sample index would.
+
+### Not changed: `staged_hr_sources` full existence-check scan
+
+The same Task 9 query's `NOT EXISTS (SELECT 1 FROM staged_hr_sources WHERE sourceId = health_source_records.sourceRecordId)` branch plans as `SCAN TABLE staged_hr_sources USING COVERING INDEX sqlite_autoindex_staged_hr_sources_1` — a full scan of the table's own composite-PRIMARY-KEY covering index (PK is `(runId, sourceId)`, also `runId`-led), not a seek. Per the discipline this task enforces, an index-covering scan is not proof of a missing index the way a bare `SCAN TABLE <table>` is: `staged_hr_sources` is transient in-flight refresh state (WP-17 Step 4), bounded to a handful of rows per active authorized refresh rather than accumulating with history, so a full scan of its own PK index carries negligible real cost. No index was added for it — adding one here would have been the speculative kind of change this task's rule explicitly forbids.
+
