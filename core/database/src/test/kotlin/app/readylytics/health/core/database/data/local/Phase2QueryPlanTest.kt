@@ -60,7 +60,10 @@ class Phase2QueryPlanTest {
                     "AND id NOT IN (SELECT sourceId FROM scan_seen_ids " +
                     "WHERE runId = 'run-a' AND chunkId = '0' AND recordType = 'SLEEP')",
             )
-        assertTrue("subquery side must use the staging index: $plan", plan.any { it.contains("scan_seen_ids") })
+        assertTrue(
+            "subquery side must use the staging index, not a bare scan: $plan",
+            plan.none { it.scansTable("scan_seen_ids") },
+        )
         assertTrue("outer side must not table-scan: $plan", plan.none { it.scansTable("sleep_sessions") })
     }
 
