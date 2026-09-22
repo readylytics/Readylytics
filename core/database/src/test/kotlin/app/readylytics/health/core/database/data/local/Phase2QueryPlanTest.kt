@@ -111,13 +111,21 @@ class Phase2QueryPlanTest {
     /**
      * Mirrors [app.readylytics.health.core.databaseschema.data.local.dao.SourceRecordDao
      * .pageUnreferencedSourceIds]'s predicate -- the Task 9 GC's full five-way existence check
-     * (raw HR/HRV children, warm contribution evidence, staged metadata, in-flight scan staging).
+     * (raw HR/HRV children, warm contribution evidence, staged metadata, in-flight scan staging),
+     * plus the `recordType` allowlist. The `+recordType` unary-plus hint is load-bearing: without
+     * it, an un-ANALYZE'd production DB has SQLite prefer
+     * `index_health_source_records_recordType_metadataState_recordStartMs` (`recordType=?`) over
+     * the `id > :afterRef ... ORDER BY id ASC LIMIT` keyset seek, which both defeats the keyset
+     * page (forcing a full scan of every HR/HRV row before the five `NOT EXISTS` checks) and adds
+     * a `USE TEMP B-TREE FOR ORDER BY`. The hint forces the planner back onto
+     * `USING INTEGER PRIMARY KEY (rowid>?)`, which this test also asserts directly.
      */
     @Test
     fun sourceGcCandidatePageDoesNotScanChildTables() {
         val plan =
             explain(
                 "SELECT id FROM health_source_records WHERE id > 0 " +
+                    "AND +recordType IN ('HEART_RATE', 'HRV') " +
                     "AND NOT EXISTS (SELECT 1 FROM heart_rate_records " +
                     "WHERE sourceRecordRef = health_source_records.id) " +
                     "AND NOT EXISTS (SELECT 1 FROM hrv_records " +
@@ -143,6 +151,14 @@ class Phase2QueryPlanTest {
         assertTrue(
             "scan staging existence check must use an index: $plan",
             plan.none { it.scansTable("scan_seen_ids") },
+        )
+        assertTrue(
+            "outer keyset page must not fall back to a temp-sorted index scan: $plan",
+            plan.none { it.contains("USE TEMP B-TREE") },
+        )
+        assertTrue(
+            "expected the rowid keyset seek, not the recordType index: $plan",
+            plan.any { it.contains("USING INTEGER PRIMARY KEY (rowid>?)") },
         )
     }
 

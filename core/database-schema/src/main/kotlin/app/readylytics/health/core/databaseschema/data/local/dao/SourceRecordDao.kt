@@ -168,7 +168,11 @@ interface SourceRecordDao : SourceRecordMaintenanceDao, SourceRecordResolutionDa
     @Query(
         "SELECT id FROM health_source_records " +
             "WHERE id > :afterRef " +
-            "AND recordType IN ('HEART_RATE', 'HRV') " +
+            // `+` hints the planner to prefer the rowid keyset scan (`id > :afterRef ... LIMIT`)
+            // over `index_health_source_records_recordType_metadataState_recordStartMs`, which
+            // an un-hinted `recordType IN (...)` otherwise wins on an un-ANALYZE'd production
+            // DB -- forcing a full-index scan + temp B-tree sort instead of the cheap page seek.
+            "AND +recordType IN ('HEART_RATE', 'HRV') " +
             "AND NOT EXISTS (SELECT 1 FROM heart_rate_records WHERE sourceRecordRef = health_source_records.id) " +
             "AND NOT EXISTS (SELECT 1 FROM hrv_records WHERE sourceRecordRef = health_source_records.id) " +
             "AND NOT EXISTS (" +
