@@ -21,7 +21,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
 import app.readylytics.health.MainActivity
-import app.readylytics.health.core.ui.R as CoreUiR
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assume.assumeTrue
@@ -29,6 +28,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import app.readylytics.health.core.ui.R as CoreUiR
 
 @RunWith(AndroidJUnit4::class)
 class RootNavigationTest {
