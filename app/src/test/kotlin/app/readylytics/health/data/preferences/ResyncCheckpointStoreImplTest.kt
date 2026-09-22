@@ -3,6 +3,7 @@ package app.readylytics.health.data.preferences
 import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.sync.ResyncCheckpoint
 import app.readylytics.health.core.model.domain.sync.ResyncPhase
+import app.readylytics.health.core.model.domain.sync.HistoricalRunIdentity
 import org.junit.Test
 import java.time.LocalDate
 import kotlin.test.assertEquals
@@ -142,7 +143,7 @@ class ResyncCheckpointStoreImplTest {
     fun `round trips HistoricalRunIdentity with all fields`() {
         val identity =
             app.readylytics.health.core.model.domain.sync.HistoricalRunIdentity(
-                protocolVersion = 2,
+                protocolVersion = HistoricalRunIdentity.CURRENT_PROTOCOL_VERSION,
                 runId = "run-uuid-123",
                 mode = "FULL_INGEST",
                 startEpochDay = LocalDate.of(2024, 1, 1).toEpochDay(),
@@ -151,7 +152,7 @@ class ResyncCheckpointStoreImplTest {
                 startedAtEpochMs = 1704067200000L,
                 sourceSelectionId = "source-selection-hash-456",
                 algorithmRevision = 5,
-                scoringSnapshotJson = """{"part1":{"goalSleepHours":8.0}}""",
+                scoringSnapshotJson = """{"part1":{"goalSleepHours":8.0},"part9":{"retentionDaysEnabled":true,"retentionDays":540}}""",
                 scoringSnapshotId = "snapshot-hash-789",
             )
         val checkpoint =

@@ -23,6 +23,7 @@ data class ScoringRunSnapshot(
     val part6: ScoringSnapshotPart6,
     val part7: ScoringSnapshotPart7,
     val part8: ScoringSnapshotPart8,
+    val part9: ScoringSnapshotPart9,
     val resolvedHrMax: Float,
     val sourceSelection: Map<String, String>,
 ) {
@@ -35,7 +36,7 @@ data class ScoringRunSnapshot(
 
         val base = UserPreferences(primaryDeviceName = primaryDevice, deviceByDataType = deviceByDataType)
         val withParts1To4 = applyPart1To4(base)
-        return applyPart5To8(withParts1To4)
+        return applyPart5To9(withParts1To4)
     }
 
     private fun applyPart1To4(base: UserPreferences): UserPreferences =
@@ -70,7 +71,7 @@ data class ScoringRunSnapshot(
             consistencyBaselineDays = part4.consistencyBaselineDays,
         )
 
-    private fun applyPart5To8(base: UserPreferences): UserPreferences =
+    private fun applyPart5To9(base: UserPreferences): UserPreferences =
         base.copy(
             hrrToleranceSeconds = part5.hrrToleranceSeconds,
             rasScalingFactor = part5.rasScalingFactor,
@@ -102,6 +103,8 @@ data class ScoringRunSnapshot(
                 part8.lastAppliedTrainingReadinessLoadBalanceWeight,
             vo2MaxSourceMode = Vo2MaxSourceMode.valueOf(part8.vo2MaxSourceMode),
             vo2MaxEstimationMethod = Vo2MaxEstimationMethod.valueOf(part8.vo2MaxEstimationMethod),
+            retentionDaysEnabled = part9.retentionDaysEnabled,
+            retentionDays = part9.retentionDays,
         )
 
     fun toPreferencesOrNull(): UserPreferences? = runCatching { toPreferences() }.getOrNull()
@@ -120,6 +123,7 @@ data class ScoringRunSnapshot(
                 part6 = capturePart6(prefs),
                 part7 = capturePart7(prefs),
                 part8 = capturePart8(prefs),
+                part9 = capturePart9(prefs),
                 resolvedHrMax = resolvedHrMax,
                 sourceSelection = captureSourceSelection(prefs),
             )
@@ -210,6 +214,11 @@ data class ScoringRunSnapshot(
                 prefs.lastAppliedTrainingReadinessLoadBalanceWeight,
             vo2MaxSourceMode = prefs.vo2MaxSourceMode.name,
             vo2MaxEstimationMethod = prefs.vo2MaxEstimationMethod.name,
+        )
+
+        private fun capturePart9(prefs: UserPreferences) = ScoringSnapshotPart9(
+            retentionDaysEnabled = prefs.retentionDaysEnabled,
+            retentionDays = prefs.retentionDays,
         )
     }
 }
