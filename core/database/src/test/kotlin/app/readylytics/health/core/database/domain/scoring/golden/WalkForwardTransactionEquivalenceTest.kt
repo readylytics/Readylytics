@@ -7,6 +7,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.database.data.local.RoomTransactionRunner
 import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoader
 import app.readylytics.health.core.database.data.repository.MorningRecommendationDependencies
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
@@ -221,13 +222,19 @@ class WalkForwardTransactionEquivalenceTest {
                 )
             val recomputeSupport =
                 DailyRecomputeSupport(scoringRepository, settingsRepo, RoomTransactionRunner(db))
+            val runContext = ScoringRunContext.capture(prefs, startDate.atStartOfDay(zoneId).toInstant())
 
             val walkForward: suspend () -> Unit = {
                 val contexts =
                     WalkForwardContexts(
                         trimp = recomputeSupport.buildWalkForwardTrimpContext(startDate, endDate, zoneId),
                         baseline = recomputeSupport.buildWalkForwardBaselineContext(startDate, endDate, zoneId),
-                        fatigue = recomputeSupport.buildWalkForwardFatigueContext(startDate, endDate, zoneId),
+                        fatigue = recomputeSupport.buildWalkForwardFatigueContext(
+                            startDate,
+                            endDate,
+                            prefs,
+                            runContext,
+                        ),
                     )
                 var day = startDate
                 while (!day.isAfter(endDate)) {
@@ -236,6 +243,7 @@ class WalkForwardTransactionEquivalenceTest {
                         buildResult.stepsByDate[day],
                         prefs,
                         contexts,
+                        runContext,
                     )
                     day = day.plusDays(1)
                 }

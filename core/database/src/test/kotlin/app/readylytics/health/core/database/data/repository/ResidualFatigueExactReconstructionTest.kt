@@ -4,6 +4,7 @@ import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.FatigueWorkoutInput
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.scoring.ResidualFatigueConfig
+import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import app.readylytics.health.core.model.domain.util.RetentionBounds
 import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase
 import io.mockk.coEvery
@@ -87,7 +88,12 @@ class ResidualFatigueExactReconstructionTest {
             coEvery { dataLoader.loadCanonicalFatigueSeed(any()) } returns emptyList()
             coEvery { dataLoader.loadUnbackfilledCountBefore(any(), any()) } returns 1
 
-            val context = computer.fetchWalkForwardContext(evaluationDay, zoneId, prefs)
+            val context =
+                computer.fetchWalkForwardContext(
+                    evaluationDay,
+                    zoneId,
+                    retentionStartMs(prefs),
+                )
 
             assertTrue(context.seedIncomplete, "A dropped never-backfilled row must flag the seed incomplete")
         }
@@ -97,7 +103,12 @@ class ResidualFatigueExactReconstructionTest {
         runTest {
             coEvery { dataLoader.loadCanonicalFatigueSeed(any()) } returns emptyList()
             coEvery { dataLoader.loadUnbackfilledCountBefore(any(), any()) } returns 1
-            val fatigueContext = computer.fetchWalkForwardContext(evaluationDay, zoneId, prefs)
+            val fatigueContext =
+                computer.fetchWalkForwardContext(
+                    evaluationDay,
+                    zoneId,
+                    retentionStartMs(prefs),
+                )
 
             val result = computer.compute(scoringContext(evaluationDay), fatigueContext)
 
@@ -109,12 +120,12 @@ class ResidualFatigueExactReconstructionTest {
         runTest {
             val retentionPrefs = prefs.copy(retentionDaysEnabled = true, retentionDays = 365)
             val expectedRetentionStartMs =
-                RetentionBounds.resolveHistoricalWindow(retentionPrefs, Instant.now()).startTimeMs
+                retentionStartMs(retentionPrefs)
             val gateLowerBound = slot<Long>()
             coEvery { dataLoader.loadCanonicalFatigueSeed(any()) } returns emptyList()
             coEvery { dataLoader.loadUnbackfilledCountBefore(capture(gateLowerBound), any()) } returns 0
 
-            computer.fetchWalkForwardContext(evaluationDay, zoneId, retentionPrefs)
+            computer.fetchWalkForwardContext(evaluationDay, zoneId, expectedRetentionStartMs)
 
             // The gate must not reach past the rows WorkoutTrimpBackfillStatus can repair; an
             // unbounded gate would let one ancient null-modelTrimp row pin the metric to null.
@@ -126,7 +137,7 @@ class ResidualFatigueExactReconstructionTest {
         runTest {
             val retentionPrefs = prefs.copy(retentionDaysEnabled = true, retentionDays = 365)
             val expectedRetentionStartMs =
-                RetentionBounds.resolveHistoricalWindow(retentionPrefs, Instant.now()).startTimeMs
+                retentionStartMs(retentionPrefs)
             val gateLowerBound = slot<Long>()
             coEvery { dataLoader.loadUnbackfilledCountThrough(capture(gateLowerBound), any()) } returns 0
             coEvery { dataLoader.loadCanonicalFatigueInputsThrough(any()) } returns emptyList()
@@ -152,7 +163,7 @@ class ResidualFatigueExactReconstructionTest {
         workouts: List<FatigueWorkoutInput>,
         startTimes: Map<String, Long>,
     ): Float {
-        val fatigueContext = computer.fetchWalkForwardContext(startDate, zoneId, prefs)
+        val fatigueContext = computer.fetchWalkForwardContext(startDate, zoneId, retentionStartMs(prefs))
         var day = startDate
         var fatigue = 0f
         while (!day.isAfter(endDate)) {
@@ -173,12 +184,21 @@ class ResidualFatigueExactReconstructionTest {
     ): ScoringDayContext =
         mockk {
             every { prefs } returns preferences
+            every {
+                runContext
+            } returns ScoringRunContext.capture(preferences, day.atStartOfDay(zoneId).toInstant())
             every { nextDayMidnightMs } returns
                 day.plusDays(1)
                     .atStartOfDay(this@ResidualFatigueExactReconstructionTest.zoneId)
                     .toInstant()
                     .toEpochMilli()
         }
+
+    private fun retentionStartMs(preferences: UserPreferences): Long =
+        RetentionBounds.resolveHistoricalWindow(
+            preferences,
+            evaluationDay.atStartOfDay(zoneId).toInstant(),
+        ).startTimeMs
 
     private fun longTailWorkouts(): List<FatigueWorkoutInput> =
         listOf(33L, 60L, 120L).map { daysBeforeEvaluation ->

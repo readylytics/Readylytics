@@ -25,6 +25,7 @@ import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.model.domain.scoring.summaryOrNull
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
+import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.EverydayHrLoadResult
@@ -36,6 +37,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.time.Clock
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.TreeMap
@@ -58,7 +60,10 @@ class ScoringRepositoryImpl
         private val readinessSummaryCoordinator: ReadinessSummaryCoordinator,
         @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
         private val recommendationDependencies: MorningRecommendationDependencies,
+        private val clock: Clock = Clock.systemDefaultZone(),
     ) : ScoringRepository {
+        // Every multi-day caller supplies one immutable ScoringRunContext. Single-day callers are
+        // anchored here with the injected clock before any day-scoped loader is invoked.
         private val calculationMutex = Mutex()
 
         private val dataLoader = loaders.day
@@ -137,11 +142,16 @@ class ScoringRepositoryImpl
             steps: Long?,
             prefs: UserPreferences?,
             contexts: WalkForwardContexts,
+            runContext: ScoringRunContext?,
         ) = calculationMutex.withLock {
             val resolvedPrefs = prefs ?: settingsRepo.userPreferences.first()
-            val zoneId = resolvedPrefs.scoringZone()
+            val resolvedRunContext = runContext ?: ScoringRunContext.capture(resolvedPrefs, clock.instant())
+            require(resolvedRunContext.zoneId == resolvedPrefs.scoringZone()) {
+                "Scoring run context zone must match the preferences snapshot"
+            }
+            val zoneId = resolvedRunContext.zoneId
             val publication = dataLoader.captureDayPublication(targetDate)
-            val computed = computeDay(targetDate, resolvedPrefs, contexts)
+            val computed = computeDay(targetDate, resolvedPrefs, contexts, resolvedRunContext)
             val assembly = computed.assembly.withStepCount(steps)
             val persisted =
                 dataLoader.persistDayAssembly(assembly, zoneId, computed.workouts, computed.workoutUpdates, publication)
@@ -201,13 +211,19 @@ class ScoringRepositoryImpl
         override suspend fun fetchWalkForwardFatigueContext(
             startDate: LocalDate,
             endDate: LocalDate,
-            zoneId: ZoneId,
+            prefs: UserPreferences,
+            runContext: ScoringRunContext,
         ): WalkForwardFatigueContext =
-            residualFatigueComputer.fetchWalkForwardContext(
-                startDate = startDate,
-                zoneId = zoneId,
-                prefs = settingsRepo.userPreferences.first(),
-            )
+            run {
+                require(runContext.zoneId == prefs.scoringZone()) {
+                    "Scoring run context zone must match the preferences snapshot"
+                }
+                residualFatigueComputer.fetchWalkForwardContext(
+                    startDate = startDate,
+                    zoneId = runContext.zoneId,
+                    retentionStartMs = runContext.retentionStartMs,
+                )
+            }
 
         override suspend fun fetchWalkForwardVo2MaxContext(
             startDate: LocalDate,
@@ -235,8 +251,9 @@ class ScoringRepositoryImpl
 
         override suspend fun computeDailySummary(targetDate: LocalDate): DailySummary {
             val prefs = settingsRepo.userPreferences.first()
+            val runContext = ScoringRunContext.capture(prefs, clock.instant())
             return calculationMutex.withLock {
-                val computed = computeDay(targetDate, prefs, WalkForwardContexts())
+                val computed = computeDay(targetDate, prefs, WalkForwardContexts(), runContext)
                 val summary =
                     computed.assembly.summaryOrNull()
                         ?: throw DayAssemblyUnavailableException(computed.assembly.unavailableReasonOrDefault())
@@ -264,10 +281,16 @@ class ScoringRepositoryImpl
             targetDate: LocalDate,
             prefs: UserPreferences,
             contexts: WalkForwardContexts,
+            runContext: ScoringRunContext,
         ): ComputedDay =
             withContext(defaultDispatcher) {
                 val context =
-                    scoringDayContextResolver.resolveScoringDayContext(targetDate, prefs, contexts.baseline)
+                    scoringDayContextResolver.resolveScoringDayContext(
+                        targetDate,
+                        prefs,
+                        contexts.baseline,
+                        runContext,
+                    )
                 logD("ScoringRepository") { "RAS CALC START [$targetDate]" }
                 val processed = dailyTrimpComputer.processWorkouts(context)
                 // NOTE: registerCanonicalImpulses cannot be deferred to after a successful commit

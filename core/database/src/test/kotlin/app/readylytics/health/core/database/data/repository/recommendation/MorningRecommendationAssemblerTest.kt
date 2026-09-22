@@ -17,6 +17,7 @@ import app.readylytics.health.core.model.domain.repository.DailySummaryRepositor
 import app.readylytics.health.core.model.domain.repository.FatigueWorkoutInput
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.model.domain.repository.SleepSessionData
+import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import app.readylytics.health.core.model.domain.repository.SleepSessionRepository
 import app.readylytics.health.core.model.domain.repository.WorkoutData
 import app.readylytics.health.core.model.domain.repository.WorkoutRepository
@@ -169,6 +170,7 @@ class MorningRecommendationAssemblerTest {
                     currentDate = date,
                 ),
             prefs = prefs,
+            runContext = ScoringRunContext.capture(prefs, date.atStartOfDay(zone).toInstant()),
         )
 
     /**

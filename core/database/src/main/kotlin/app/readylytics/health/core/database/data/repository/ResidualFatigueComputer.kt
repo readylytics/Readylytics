@@ -5,7 +5,7 @@ import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.FatigueWorkoutInput
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.scoring.ResidualFatigueConfig
-import app.readylytics.health.core.model.domain.util.RetentionBounds
+import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase
 import java.time.Instant
 import java.time.LocalDate
@@ -28,19 +28,19 @@ class ResidualFatigueComputer(
      *
      * The seed itself is deliberately unbounded below — residual fatigue is exact over all retained
      * history, not a fixed-window approximation. The never-backfilled gate is not: it is clamped to
-     * the retention start so it can only ever block on rows the startup self-heal can actually
-     * repair. See [retentionStartMs].
+     * the run's captured retention start so it can only ever block on rows the startup self-heal
+     * can actually repair.
      */
     suspend fun fetchWalkForwardContext(
         startDate: LocalDate,
         zoneId: ZoneId,
-        prefs: UserPreferences,
+        retentionStartMs: Long,
     ): WalkForwardFatigueContext {
         val boundaryMs = startDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
         val seedInputs = dataLoader.loadCanonicalFatigueSeed(boundaryMs)
         val unbackfilledCount =
             dataLoader.loadUnbackfilledCountBefore(
-                retentionStartMs = retentionStartMs(prefs),
+                retentionStartMs = retentionStartMs,
                 startBeforeMs = boundaryMs,
             )
         return WalkForwardFatigueContext(
@@ -56,14 +56,6 @@ class ResidualFatigueComputer(
             halfLifeHours = prefs.residualFatigueHalfLifeHours,
             fatigueGain = prefs.residualFatigueGain,
         )
-
-    /**
-     * Lower bound of the never-backfilled gate, shared with `WorkoutTrimpBackfillStatus` and the
-     * cleanup worker through [RetentionBounds]. Rows older than this are unreachable by both the
-     * recompute-only resync and the self-heal, so counting them could never clear.
-     */
-    private fun retentionStartMs(prefs: UserPreferences): Long =
-        RetentionBounds.resolveHistoricalWindow(prefs, Instant.now()).startTimeMs // outside WP-01 guard scope
 
     /**
      * Computes the day's residual-fatigue snapshot at next-day midnight. The walk-forward path
@@ -85,6 +77,7 @@ class ResidualFatigueComputer(
                     evalMs = evalMs,
                     config = config,
                     prefs = context.prefs,
+                    retentionStartMs = context.runContext.retentionStartMs,
                     stagedFatigueInputs = stagedFatigueInputs,
                     stagedWorkouts = stagedWorkouts,
                 )
@@ -107,13 +100,17 @@ class ResidualFatigueComputer(
     suspend fun computeAt(
         evaluationTimeMs: Long,
         prefs: UserPreferences,
-    ): Float? = computeSingleDayFallback(evaluationTimeMs, clampedConfig(prefs), prefs)
+        retentionStartMs: Long,
+    ): Float? = computeSingleDayFallback(evaluationTimeMs, clampedConfig(prefs), prefs, retentionStartMs)
 
     /** [computeAt] at the current instant, for the live dashboard card. */
     suspend fun computeLive(
         nowMs: Long,
         prefs: UserPreferences,
-    ): Float? = computeAt(nowMs, prefs)
+    ): Float? {
+        val runContext = ScoringRunContext.capture(prefs, Instant.ofEpochMilli(nowMs))
+        return computeAt(nowMs, prefs, runContext.retentionStartMs)
+    }
 
     private fun computeWalkForward(
         fatigueContext: WalkForwardFatigueContext,
@@ -130,18 +127,18 @@ class ResidualFatigueComputer(
         evalMs: Long,
         config: ResidualFatigueConfig,
         prefs: UserPreferences,
+        retentionStartMs: Long,
         stagedFatigueInputs: List<FatigueWorkoutInput> = emptyList(),
         stagedWorkouts: List<WorkoutRecordEntity> = emptyList(),
     ): Float? {
-        val retentionStart = retentionStartMs(prefs)
         val unbackfilledInDb =
             dataLoader.loadUnbackfilledCountThrough(
-                retentionStartMs = retentionStart,
+                retentionStartMs = retentionStartMs,
                 evaluationTimeMs = evalMs,
             )
         val stagedUnbackfilledInDb =
             stagedWorkouts.count {
-                it.modelTrimp == null && it.startTime >= retentionStart && it.endTime <= evalMs
+                it.modelTrimp == null && it.startTime >= retentionStartMs && it.endTime <= evalMs
             }
         val unbackfilled = (unbackfilledInDb - stagedUnbackfilledInDb).coerceAtLeast(0)
         if (unbackfilled > 0) return null

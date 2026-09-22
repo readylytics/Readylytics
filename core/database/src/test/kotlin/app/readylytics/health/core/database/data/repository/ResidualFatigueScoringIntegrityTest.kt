@@ -21,6 +21,7 @@ import app.readylytics.health.core.model.domain.heartrate.ZoneThresholds
 import app.readylytics.health.core.model.domain.model.RecordType
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
+import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
@@ -471,17 +472,18 @@ class ResidualFatigueScoringIntegrityTest {
         val settingsRepo = MutableTestSettingsRepository(prefs)
         val scoringRepo = buildScoringRepo(database, settingsRepo)
         val support = DailyRecomputeSupport(scoringRepo, settingsRepo, RoomTransactionRunner(database))
+        val runContext = ScoringRunContext.capture(prefs, startDate.atStartOfDay(zoneId).toInstant())
 
         support.inRecomputeTransaction {
             val contexts =
                 WalkForwardContexts(
                     trimp = support.buildWalkForwardTrimpContext(startDate, endDate, zoneId),
                     baseline = support.buildWalkForwardBaselineContext(startDate, endDate, zoneId),
-                    fatigue = support.buildWalkForwardFatigueContext(startDate, endDate, zoneId),
+                    fatigue = support.buildWalkForwardFatigueContext(startDate, endDate, prefs, runContext),
                 )
             var current = startDate
             while (!current.isAfter(endDate)) {
-                support.recomputeDay(current, null, prefs, contexts)
+                support.recomputeDay(current, null, prefs, contexts, runContext)
                 current = current.plusDays(1)
             }
         }

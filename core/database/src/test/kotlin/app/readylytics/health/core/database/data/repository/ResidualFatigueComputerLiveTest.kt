@@ -7,6 +7,7 @@ import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
+import java.time.Instant
 import java.time.ZoneId
 import kotlin.math.pow
 import kotlin.test.assertEquals
@@ -59,5 +60,22 @@ class ResidualFatigueComputerLiveTest {
             val result = computer.computeLive(nowMs, prefs)
 
             assertNull(result)
+        }
+
+    @Test
+    fun `historical fatigue uses supplied retention start after wall clock advances`() =
+        runTest {
+            val evaluationMs = Instant.parse("2026-01-15T08:00:00Z").toEpochMilli()
+            val retainedFromMs = Instant.parse("2025-01-01T00:00:00Z").toEpochMilli()
+            coEvery {
+                dataLoader.loadUnbackfilledCountThrough(retainedFromMs, evaluationMs)
+            } returns 0
+            coEvery { dataLoader.loadCanonicalFatigueInputsThrough(evaluationMs) } returns emptyList()
+
+            computer.computeAt(evaluationMs, prefs, retentionStartMs = retainedFromMs)
+
+            io.mockk.coVerify(exactly = 1) {
+                dataLoader.loadUnbackfilledCountThrough(retainedFromMs, evaluationMs)
+            }
         }
 }

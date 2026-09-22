@@ -122,7 +122,8 @@ private fun SleepSession.toSleepDaySegment(): SleepDaySegment =
  * copying the completed day's stored `zLnHrv`, sleep score, and flags, because those are computed
  * at next-day midnight and a nap recorded later the same day can still move them. The re-run is the
  * *same* [ComputeSleepMetricsUseCase] with the same formulas — only its request bounds differ (see
- * [SleepMetricsRequest]).
+ * [SleepMetricsRequest]). Residual fatigue uses the caller's resolved [ScoringDayContext.runContext]
+ * retention boundary and never reads wall time.
  */
 // Hilt-annotated for a future direct binding, but currently constructed by hand in
 // `ScoringRepositoryImpl` (from `MorningRecommendationDependencies`) rather than injected --
@@ -188,7 +189,12 @@ class MorningRecoveryLoader
                 lowHrvBound = thresholds.illnessZHrvThreshold,
                 highHrvBound = thresholds.strongRecoveryZHrvThreshold,
                 sleepScore = morningSummary.sleepScore,
-                residualFatigue = residualFatigueComputer.computeAt(wakeTimeMs, prefs),
+                residualFatigue =
+                    residualFatigueComputer.computeAt(
+                        evaluationTimeMs = wakeTimeMs,
+                        prefs = prefs,
+                        retentionStartMs = context.runContext.retentionStartMs,
+                    ),
                 fatigueGain = prefs.residualFatigueGain,
                 recoveryFlags = morningSummary.recoveryFlags,
             )

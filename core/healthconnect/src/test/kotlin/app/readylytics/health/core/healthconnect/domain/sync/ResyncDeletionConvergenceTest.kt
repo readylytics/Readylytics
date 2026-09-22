@@ -88,7 +88,7 @@ class ResyncDeletionConvergenceTest {
             WalkForwardTrimpContext(TreeMap(), TreeMap())
         coEvery { scoringRepository.fetchWalkForwardBaselineContext(any(), any(), any()) } returns
             WalkForwardBaselineContext(emptyList())
-        coEvery { scoringRepository.fetchWalkForwardFatigueContext(any(), any(), any()) } returns
+            coEvery { scoringRepository.fetchWalkForwardFatigueContext(any(), any(), any(), any()) } returns
             WalkForwardFatigueContext(emptyList())
         coEvery { hcRepo.readSleepSessions(any(), any()) } returns ReadOutcome.Available(emptyList())
         coEvery { hcRepo.readExerciseSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
