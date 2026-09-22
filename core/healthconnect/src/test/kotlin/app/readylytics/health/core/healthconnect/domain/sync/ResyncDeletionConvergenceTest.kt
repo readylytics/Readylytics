@@ -470,6 +470,58 @@ class ResyncDeletionConvergenceTest {
         }
 
     @Test
+    fun `checkpoint token without staging replays all HR pages before deletion reconciliation`() =
+        runTest {
+            val startDate = LocalDate.of(2026, 6, 1)
+            val endDate = LocalDate.of(2026, 6, 5)
+            val page1Input = createHeartRateInput("hr-migrated-page-1", "2026-06-02T12:00:00Z", 65)
+            fakeStore.heartRateSamples[page1Input.id] = page1Input
+            val page1 =
+                DomainHeartRateRecord(
+                    id = page1Input.id,
+                    deviceName = "Pixel Watch",
+                    samples = listOf(
+                        DomainHeartRateSample(time = Instant.parse("2026-06-02T12:00:00Z"), beatsPerMinute = 65),
+                    ),
+                )
+            val page2 =
+                DomainHeartRateRecord(
+                    id = "hr-migrated-page-2",
+                    deviceName = "Pixel Watch",
+                    samples = listOf(
+                        DomainHeartRateSample(time = Instant.parse("2026-06-02T13:00:00Z"), beatsPerMinute = 70),
+                    ),
+                )
+            setupMidstreamHrCheckpoint(startDate, endDate, "token-page-2")
+            staging.clearAll()
+
+            val capturedStartTokens = mutableListOf<String?>()
+            coEvery {
+                hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any())
+            } coAnswers {
+                val token = invocation.args[2] as String?
+                capturedStartTokens.add(token)
+                val onPage = invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
+                if (token == null) {
+                    onPage(listOf(page1), "token-page-2")
+                    onPage(listOf(page2), null)
+                } else {
+                    onPage(listOf(page2), null)
+                }
+                ReadOutcome.Available(Unit)
+            }
+
+            val result = useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
+
+            assertTrue("Resync must succeed", result.isSuccess)
+            assertEquals(listOf(null), capturedStartTokens)
+            assertEquals(
+                setOf(page1Input.id, page2.id),
+                fakeStore.heartRateSamples.values.map { it.sourceId }.toSet(),
+            )
+        }
+
+    @Test
     fun `midstream denial loses deletion authority even if regranted before reconciliation`() =
         runTest {
             val startDate = LocalDate.of(2026, 6, 1)
@@ -546,6 +598,7 @@ class ResyncDeletionConvergenceTest {
                 startedAtEpochMs = fixedClock.millis(),
             )
         val scanIdentity = ScanIdentities.historical(runIdentity.runId, startDate)
+        staging.beginTypeScan(scanIdentity, HealthDataType.HEART_RATE, resume = false)
         staging.stageIds(scanIdentity, HealthDataType.HEART_RATE, listOf("hr-page-1-sample"))
         checkpointStore.save(
             ResyncCheckpoint(

@@ -139,12 +139,24 @@ High-volume vitals (Heart Rate and HRV) stream page-by-page via `readHeartRateSa
 `readHrvSamplesPaged`. Each streamed page notifies `onTokenUpdated` with the next page token, which
 is checkpointed so interrupted chunk syncs can resume mid-chunk without replaying already-ingested
 pages. Scanned record identities are staged directly to `ScanStagingStore` per page, preserving
-deletion reconciliation coverage across chunk restart. If the Health Connect provider rejects a
-stored page token (HC-005, e.g. token expired, invalidated, or provider error), the ingestion
-coordinator catches the error and falls back to replaying the chunk from scratch without tokens
-(`startPageToken = null`, `resumeHrScan = false`, `resumeHrvScan = false`). Each of the two paged calls (labels
+deletion reconciliation coverage across chunk restart. A saved token is accepted independently for
+HR and HRV only when the exact `(runId, chunkId, recordType)` staging entry exists and contains
+staged IDs; a token from a pre-v23 checkpoint with empty staging therefore replays that type from
+the beginning. Missing evidence is persisted as a null token before the fresh scan starts. If the
+Health Connect provider rejects a stored page token (HC-005, e.g. token expired, invalidated, or
+provider error), the ingestion coordinator first persists null HR/HRV tokens and then falls back to
+replaying the chunk from scratch without tokens (`startPageToken = null`, `resumeHrScan = false`,
+`resumeHrvScan = false`). Each of the two paged calls (labels
 `hrPages`/`hrvPages`) is retried through the window's shared `ReadRetryBudget` (see below), not an
 independent budget of its own.
+
+Historical checkpoint resumption is evidence-bound: `HistoricalIngestPhase` checks the exact
+staging key and staged-ID count for each token's type before setting its `resume*Scan` flag. If a
+checkpoint survives a v22→v23 migration without its operational staging rows, the token is cleared
+and that type replays from page one. A provider-rejected token follows the same durable ordering:
+null page tokens are checkpointed before `beginTypeScan(resume = false)` can clear staged IDs. A
+changed effective chunk size also disables token resumption because the token belongs to the prior
+window.
 
 ### 1.2 Sync engine — orchestration, chunking, idempotency
 
@@ -2683,4 +2695,3 @@ Key components:
 ---
 
 Keep this document synchronized with the source.
-

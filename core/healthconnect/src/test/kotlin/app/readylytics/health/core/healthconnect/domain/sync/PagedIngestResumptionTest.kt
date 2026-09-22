@@ -160,6 +160,9 @@ class PagedIngestResumptionTest {
                     hrPageToken = "page-2",
                     runIdentity = runIdentity,
                 )
+            val scan = ScanIdentities.historical(runIdentity.runId, startDate)
+            staging.beginTypeScan(scan, HealthDataType.HEART_RATE, resume = false)
+            staging.stageIds(scan, HealthDataType.HEART_RATE, listOf("page-1"))
 
             val capturedStartToken = slot<String?>()
             coEvery {
@@ -173,6 +176,39 @@ class PagedIngestResumptionTest {
             useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
 
             assertEquals("page-2", capturedStartToken.captured)
+        }
+
+    @Test
+    fun `checkpoint token without matching staging replays HR from the beginning`() =
+        runTest {
+            val startDate = LocalDate.of(2024, 6, 1)
+            val endDate = LocalDate.of(2024, 6, 2)
+            val runIdentity = createRunIdentity(startDate, endDate)
+
+            checkpointStore.value =
+                ResyncCheckpoint(
+                    startDate = startDate,
+                    endDate = endDate,
+                    phase = ResyncPhase.INGEST,
+                    nextDate = startDate,
+                    selectionHash = runIdentity.scoringSnapshotId,
+                    baselineChangeTokens = baselineTokens,
+                    hrPageToken = "page-2",
+                    runIdentity = runIdentity,
+                )
+
+            val capturedStartToken = slot<String?>()
+            coEvery {
+                hcRepo.readHeartRateSamplesPaged(any(), any(), captureNullable(capturedStartToken), any())
+            } coAnswers {
+                val callback = it.invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
+                callback(listOf(mockk(relaxed = true)), null)
+                ReadOutcome.Available(Unit)
+            }
+
+            useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
+
+            assertNull(capturedStartToken.captured)
         }
 
     @Test
@@ -194,6 +230,9 @@ class PagedIngestResumptionTest {
                     hrvPageToken = "hrv-page-2",
                     runIdentity = runIdentity,
                 )
+            val scan = ScanIdentities.historical(runIdentity.runId, startDate)
+            staging.beginTypeScan(scan, HealthDataType.HRV, resume = false)
+            staging.stageIds(scan, HealthDataType.HRV, listOf("page-1"))
 
             val capturedHrvStartToken = slot<String?>()
             coEvery {
@@ -207,6 +246,65 @@ class PagedIngestResumptionTest {
             useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
 
             assertEquals("hrv-page-2", capturedHrvStartToken.captured)
+        }
+
+    @Test
+    fun `rejected resume clears persisted tokens before fresh staging reset`() =
+        runTest {
+            val startDate = LocalDate.of(2024, 6, 1)
+            val endDate = LocalDate.of(2024, 6, 2)
+            val runIdentity = createRunIdentity(startDate, endDate)
+            checkpointStore.value =
+                ResyncCheckpoint(
+                    startDate = startDate,
+                    endDate = endDate,
+                    phase = ResyncPhase.INGEST,
+                    nextDate = startDate,
+                    selectionHash = runIdentity.scoringSnapshotId,
+                    baselineChangeTokens = baselineTokens,
+                    hrPageToken = "expired-page",
+                    hrvPageToken = "expired-hrv-page",
+                    runIdentity = runIdentity,
+                )
+            val scan = ScanIdentities.historical(runIdentity.runId, startDate)
+            staging.beginTypeScan(scan, HealthDataType.HEART_RATE, resume = false)
+            staging.stageIds(scan, HealthDataType.HEART_RATE, listOf("earlier-hr"))
+            staging.beginTypeScan(scan, HealthDataType.HRV, resume = false)
+            staging.stageIds(scan, HealthDataType.HRV, listOf("earlier-hrv"))
+
+            var heartRateCalls = 0
+            coEvery {
+                hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any())
+            } coAnswers {
+                heartRateCalls++
+                val token = invocation.args[2] as String?
+                when (heartRateCalls) {
+                    1 -> {
+                        assertEquals("expired-page", token)
+                        throw IllegalArgumentException("expired page token")
+                    }
+                    2 -> {
+                        assertNull(token)
+                        assertNull(checkpointStore.value?.hrPageToken)
+                        assertNull(checkpointStore.value?.hrvPageToken)
+                        assertEquals(0, staging.stagedCount(scan, HealthDataType.HEART_RATE))
+                        error("stop after staging reset")
+                    }
+                    else -> {
+                        assertNull(token)
+                        val callback = invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
+                        callback(listOf(mockk(relaxed = true)), null)
+                        ReadOutcome.Available(Unit)
+                    }
+                }
+            }
+
+            val firstResult = useCase.run(startDate, endDate, chunkDays = 30, onProgress = null)
+            assertFalse(firstResult.isSuccess)
+
+            val secondResult = useCase.run(startDate, endDate, chunkDays = 30, onProgress = null)
+            assertTrue(secondResult.isSuccess)
+            assertEquals(3, heartRateCalls)
         }
 
     @Test

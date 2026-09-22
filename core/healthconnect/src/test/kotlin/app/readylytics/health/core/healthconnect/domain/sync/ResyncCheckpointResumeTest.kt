@@ -418,6 +418,7 @@ class ResyncCheckpointResumeTest {
     fun `interrupted HR page token in checkpoint is forwarded on resume`() =
         runTest {
             val startDate = LocalDate.of(2024, 6, 1)
+            val runIdentity = createRunIdentity(startDate, startDate)
             checkpointStore.value =
                 ResyncCheckpoint(
                     startDate = startDate,
@@ -427,8 +428,11 @@ class ResyncCheckpointResumeTest {
                     selectionHash = "",
                     baselineChangeTokens = baselineTokens,
                     hrPageToken = "saved-token-2",
-                    runIdentity = createRunIdentity(startDate, startDate),
+                    runIdentity = runIdentity,
                 )
+            val scan = ScanIdentities.historical(runIdentity.runId, startDate)
+            staging.beginTypeScan(scan, HealthDataType.HEART_RATE, resume = false)
+            staging.stageIds(scan, HealthDataType.HEART_RATE, listOf("page-1"))
 
             val tokenSlot = slot<String?>()
             coEvery {

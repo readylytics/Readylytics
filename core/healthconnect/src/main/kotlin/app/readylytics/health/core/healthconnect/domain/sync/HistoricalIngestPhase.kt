@@ -56,6 +56,62 @@ private data class IngestCounts(
     val workout: Int,
 )
 
+private data class ResumePageTokens(
+    val shouldPersist: Boolean,
+    val hr: String?,
+    val hrv: String?,
+)
+
+private suspend fun ScanStagingStore.resolveResumePageTokens(
+    checkpoint: ResyncCheckpoint?,
+    runIdentity: HistoricalRunIdentity,
+    chunkStart: LocalDate,
+    effectiveChunkDays: Int,
+    defaultChunkDays: Int,
+): ResumePageTokens {
+    val resumingThisChunk =
+        checkpoint?.phase == ResyncPhase.INGEST &&
+            checkpoint.nextDate == chunkStart &&
+            checkpoint.runIdentity?.runId == runIdentity.runId &&
+            effectiveChunkDays == (checkpoint.chunkDaysOverride ?: defaultChunkDays)
+    val checkpointHrToken = if (resumingThisChunk) checkpoint.hrPageToken else null
+    val checkpointHrvToken = if (resumingThisChunk) checkpoint.hrvPageToken else null
+    val scan = ScanIdentities.historical(runIdentity.runId, chunkStart)
+    val hrToken = resumablePageToken(scan, HealthDataType.HEART_RATE, checkpointHrToken)
+    val hrvToken = resumablePageToken(scan, HealthDataType.HRV, checkpointHrvToken)
+    return ResumePageTokens(
+        shouldPersist = resumingThisChunk &&
+            (checkpointHrToken != hrToken || checkpointHrvToken != hrvToken),
+        hr = hrToken,
+        hrv = hrvToken,
+    )
+}
+
+private suspend fun ScanStagingStore.resumablePageToken(
+    scan: ScanIdentity,
+    type: HealthDataType,
+    token: String?,
+): String? =
+    token?.takeIf {
+        stateOf(scan, type) != null && stagedCount(scan, type) > 0
+    }
+
+private fun logIngestCompletionTelemetry(
+    clock: Clock,
+    startMs: Long,
+    before: IngestCounts,
+    after: IngestCounts,
+) {
+    val duration = clock.millis() - startMs
+    logD("ResyncTelemetry") {
+        "[INGESTION] Completed in ${duration}ms. " +
+            "HeartRate: ${before.hr} -> ${after.hr} (delta: ${after.hr - before.hr}), " +
+            "HRV: ${before.hrv} -> ${after.hrv} (delta: ${after.hrv - before.hrv}), " +
+            "Sleep: ${before.sleep} -> ${after.sleep} (delta: ${after.sleep - before.sleep}), " +
+            "Workout: ${before.workout} -> ${after.workout} (delta: ${after.workout - before.workout})"
+    }
+}
+
 private sealed interface ChunkIngestResult {
     data class Success(
         val nextChunkStart: LocalDate,
@@ -115,7 +171,7 @@ class HistoricalIngestPhase
             }
 
             val afterCounts = readCounts(context.reconcileStartMs, context.reconcileEndMs)
-            logCompletionTelemetry(ingestStart, beforeCounts, afterCounts)
+            logIngestCompletionTelemetry(clock, ingestStart, beforeCounts, afterCounts)
 
             return IngestPhaseOutcome(
                 earliestDeletionDate = earliestDeletionDate,
@@ -133,6 +189,24 @@ class HistoricalIngestPhase
             sleep = healthIngestionStore.countSleepSessionsInRange(startMs, endMs),
             workout = healthIngestionStore.countWorkoutsInRange(startMs, endMs),
         )
+
+        private suspend fun persistResumeTokensIfNeeded(
+            context: IngestPhaseContext,
+            chunkStart: LocalDate,
+            chunkOverride: Int?,
+            pageTokens: ResumePageTokens,
+            completedTypes: Set<HealthDataType>,
+        ) {
+            if (!pageTokens.shouldPersist) return
+            saveChunkProgress(
+                context = context,
+                chunkStart = chunkStart,
+                chunkOverride = chunkOverride,
+                hrToken = pageTokens.hr,
+                hrvToken = pageTokens.hrv,
+                completedTypes = completedTypes,
+            )
+        }
 
         private data class ChunkWindowParams(
             val windowStart: Instant,
@@ -156,12 +230,15 @@ class HistoricalIngestPhase
             val chunkOverride = if (effectiveChunkDays != context.chunkDays) effectiveChunkDays else null
 
             val scanIdentity = ScanIdentities.historical(context.runIdentity.runId, chunkStart)
-            val resumingThisChunk =
-                context.checkpoint?.phase == ResyncPhase.INGEST &&
-                    context.checkpoint.nextDate == chunkStart &&
-                    context.checkpoint.runIdentity?.runId == context.runIdentity.runId
-            val hrStartPageToken = if (resumingThisChunk) context.checkpoint.hrPageToken else null
-            val hrvStartPageToken = if (resumingThisChunk) context.checkpoint.hrvPageToken else null
+            val pageTokens =
+                staging.resolveResumePageTokens(
+                    checkpoint = context.checkpoint,
+                    runIdentity = context.runIdentity,
+                    chunkStart = chunkStart,
+                    effectiveChunkDays = effectiveChunkDays,
+                    defaultChunkDays = context.chunkDays,
+                )
+            persistResumeTokensIfNeeded(context, chunkStart, chunkOverride, pageTokens, runCompletedTypes)
 
             val params =
                 ChunkWindowParams(
@@ -178,8 +255,8 @@ class HistoricalIngestPhase
                     executeChunkIngest(
                         context = context,
                         params = params,
-                        hrStartPageToken = hrStartPageToken,
-                        hrvStartPageToken = hrvStartPageToken,
+                        hrStartPageToken = pageTokens.hr,
+                        hrvStartPageToken = pageTokens.hrv,
                     )
                 } catch (e: HealthConnectWindowTimeoutException) {
                     return handleChunkTimeout(
@@ -249,6 +326,14 @@ class HistoricalIngestPhase
                     "[INGESTION] Resumed token rejected for chunk ${params.chunkStart}; " +
                         "replaying chunk without tokens."
                 }
+                saveChunkProgress(
+                    context = context,
+                    chunkStart = params.chunkStart,
+                    chunkOverride = params.chunkOverride,
+                    hrToken = null,
+                    hrvToken = null,
+                    completedTypes = params.runCompletedTypes,
+                )
                 runIngestWindow(
                     context = context,
                     params = params,
@@ -381,17 +466,6 @@ class HistoricalIngestPhase
                     runIdentity = context.runIdentity,
                 ),
             )
-        }
-
-        private fun logCompletionTelemetry(startMs: Long, before: IngestCounts, after: IngestCounts) {
-            val duration = clock.millis() - startMs
-            logD(TELEMETRY_TAG) {
-                "[INGESTION] Completed in ${duration}ms. " +
-                    "HeartRate: ${before.hr} -> ${after.hr} (delta: ${after.hr - before.hr}), " +
-                    "HRV: ${before.hrv} -> ${after.hrv} (delta: ${after.hrv - before.hrv}), " +
-                    "Sleep: ${before.sleep} -> ${after.sleep} (delta: ${after.sleep - before.sleep}), " +
-                    "Workout: ${before.workout} -> ${after.workout} (delta: ${after.workout - before.workout})"
-            }
         }
 
         companion object {
