@@ -9,7 +9,7 @@ import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspector
 import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
-import app.readylytics.health.core.model.domain.util.RetentionBounds
+import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.data.preferences.SettingsRepository
@@ -19,7 +19,6 @@ import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import java.time.Clock
-import java.time.LocalDate
 
 /**
  * R2-CACHE-001: when [RetentionCleanup.deleteBefore] actually deleted data, this enqueues a
@@ -50,13 +49,12 @@ class DataCleanupWorker
             val cleanup = retentionCleanup.get()
             return try {
                 val prefs = settingsRepo.userPreferences.first()
-                // Null cutoff means retention is disabled ("unlimited") — keep everything.
-                val cutoffMs =
-                    RetentionBounds.resolveRetentionCutoffMs(prefs, clock.instant()) ?: return Result.success()
+                val runContext = ScoringRunContext.capture(prefs, clock.instant())
+                if (!prefs.retentionDaysEnabled) return Result.success()
 
-                val touched = cleanup.deleteBefore(cutoffMs)
+                val touched = cleanup.deleteBefore(runContext.retentionStartMs, runContext)
                 if (touched != null) {
-                    val affected = ScoreInvalidation.affectedRange(touched, LocalDate.now(clock))
+                    val affected = ScoreInvalidation.affectedRange(touched, runContext.today)
                     workerScheduler.get().scheduleResyncWorker(
                         recomputeOnly = true,
                         startDate = affected.start,

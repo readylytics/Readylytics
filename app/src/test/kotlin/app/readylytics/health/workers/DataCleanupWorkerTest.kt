@@ -9,6 +9,7 @@ import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspector
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
+import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.data.preferences.SettingsRepository
 import dagger.Lazy
@@ -16,6 +17,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
@@ -61,7 +63,7 @@ class DataCleanupWorkerTest {
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
-            coVerify(exactly = 1) { retentionCleanup.deleteBefore(any()) }
+            coVerify(exactly = 1) { retentionCleanup.deleteBefore(any(), any()) }
         }
 
     @Test
@@ -74,7 +76,7 @@ class DataCleanupWorkerTest {
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
-            coVerify(exactly = 0) { retentionCleanup.deleteBefore(any()) }
+            coVerify(exactly = 0) { retentionCleanup.deleteBefore(any(), any()) }
             coVerify(exactly = 0) { workerScheduler.scheduleResyncWorker(any(), any(), any()) }
         }
 
@@ -83,7 +85,7 @@ class DataCleanupWorkerTest {
         runBlocking {
             val prefs = UserPreferences(retentionDaysEnabled = true, retentionDays = 30)
             every { settingsRepo.userPreferences } returns flowOf(prefs)
-            coEvery { retentionCleanup.deleteBefore(any()) } throws RuntimeException("Database error")
+            coEvery { retentionCleanup.deleteBefore(any(), any()) } throws RuntimeException("Database error")
 
             val worker = createWorker()
             val result = worker.doWork()
@@ -107,7 +109,7 @@ class DataCleanupWorkerTest {
         runBlocking {
             val prefs = UserPreferences(retentionDaysEnabled = true, retentionDays = 30)
             every { settingsRepo.userPreferences } returns flowOf(prefs)
-            coEvery { retentionCleanup.deleteBefore(any()) } returns
+            coEvery { retentionCleanup.deleteBefore(any(), any()) } returns
                 ScoreInvalidation.AffectedRange(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31))
 
             createWorker().doWork()
@@ -126,7 +128,7 @@ class DataCleanupWorkerTest {
         runBlocking {
             val prefs = UserPreferences(retentionDaysEnabled = true, retentionDays = 30)
             every { settingsRepo.userPreferences } returns flowOf(prefs)
-            coEvery { retentionCleanup.deleteBefore(any()) } returns null
+            coEvery { retentionCleanup.deleteBefore(any(), any()) } returns null
 
             createWorker().doWork()
 
@@ -144,6 +146,33 @@ class DataCleanupWorkerTest {
 
             assertEquals(ListenableWorker.Result.retry(), result)
             verify(exactly = 0) { retentionCleanupLazy.get() }
+        }
+
+    @Test
+    fun `cleanup uses the stored scoring zone for its run context and invalidation cap`() =
+        runBlocking {
+            val prefs =
+                UserPreferences(
+                    retentionDaysEnabled = true,
+                    retentionDays = 30,
+                    scoringZoneId = "Pacific/Kiritimati",
+                )
+            every { settingsRepo.userPreferences } returns flowOf(prefs)
+            val contextSlot = slot<ScoringRunContext>()
+            coEvery { retentionCleanup.deleteBefore(any(), capture(contextSlot)) } returns
+                ScoreInvalidation.AffectedRange(LocalDate.of(2026, 8, 31), LocalDate.of(2026, 9, 1))
+
+            createWorker().doWork()
+
+            assertEquals(LocalDate.of(2026, 9, 1), contextSlot.captured.today)
+            assertEquals(ZoneId.of("Pacific/Kiritimati"), contextSlot.captured.zoneId)
+            coVerify {
+                workerScheduler.scheduleResyncWorker(
+                    recomputeOnly = true,
+                    startDate = LocalDate.of(2026, 8, 31),
+                    endDate = LocalDate.of(2026, 9, 1),
+                )
+            }
         }
 
     private fun createWorker(

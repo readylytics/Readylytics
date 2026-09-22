@@ -25,8 +25,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.IOException
+import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.TimeZone
 
 class DatabaseReadyStartupInitializerScoringVersionTest {
@@ -152,28 +154,26 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
                     )
                 val backfillStatus = CapturingBackfillStatus()
                 val scheduler = FakeWorkerScheduler()
-                val before = Instant.now()
+                val fixedInstant = Instant.parse("2026-08-31T12:30:00Z")
 
                 initializerWith(
                     storedScoringVersion = prefs.scoringVersion,
                     scheduler = scheduler,
                     backfillStatus = backfillStatus,
                     userPreferences = prefs,
+                    clock = Clock.fixed(fixedInstant, ZoneOffset.UTC),
                 ).initializeIfReady(DatabaseReadiness.Ready)
 
-                val after = Instant.now()
-                val validScoringBoundaries =
-                    listOf(before, after).mapTo(mutableSetOf()) { instant ->
-                        RetentionBounds
-                            .resolveResyncStartDate(prefs, instant.atZone(scoringZone).toLocalDate())
-                            .atStartOfDay(scoringZone)
-                            .toInstant()
-                            .toEpochMilli()
-                    }
+                val expectedBoundary =
+                    RetentionBounds
+                        .resolveResyncStartDate(prefs, fixedInstant.atZone(scoringZone).toLocalDate())
+                        .atStartOfDay(scoringZone)
+                        .toInstant()
+                        .toEpochMilli()
                 assertTrue(
-                    "Startup boundary ${backfillStatus.retentionStartMs} must match $validScoringBoundaries, " +
+                    "Startup boundary ${backfillStatus.retentionStartMs} must match $expectedBoundary, " +
                         "not system-zone midnight in $systemZone",
-                    backfillStatus.retentionStartMs in validScoringBoundaries,
+                    backfillStatus.retentionStartMs == expectedBoundary,
                 )
                 assertEquals(1, scheduler.recomputeOnlyRequests)
             } finally {
@@ -295,6 +295,7 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
         backfillStatus: WorkoutTrimpBackfillStatus = FakeBackfillStatus(hasUnbackfilled = false),
         userPreferences: UserPreferences = UserPreferences(scoringVersion = storedScoringVersion),
         dirtyRangeStore: DirtyRangeStore? = null,
+        clock: Clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneOffset.UTC),
     ): DatabaseReadyStartupInitializer {
         val healthSyncUseCase = mockk<HealthSyncUseCase>()
         coEvery { healthSyncUseCase.withSyncLock<Int>(any()) } coAnswers {
@@ -327,6 +328,7 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
             workerScheduler = scheduler,
             workoutTrimpBackfillStatus = Lazy { backfillStatus },
             dirtyRangeStore = dirtyRangeLazy,
+            clock = clock,
         )
     }
 

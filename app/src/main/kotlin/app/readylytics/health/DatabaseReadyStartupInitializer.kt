@@ -7,7 +7,7 @@ import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.WorkoutTrimpBackfillStatus
 import app.readylytics.health.core.model.domain.sync.DirtyRangeStore
-import app.readylytics.health.core.model.domain.util.RetentionBounds
+import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.model.workers.WorkerScheduler
@@ -23,7 +23,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
-import java.time.Instant
+import java.time.Clock
 import java.util.concurrent.atomic.AtomicBoolean
 
 internal class DatabaseReadyStartupInitializer(
@@ -36,6 +36,7 @@ internal class DatabaseReadyStartupInitializer(
     private val context: Context? = null,
     private val dirtyRangeStore: Lazy<DirtyRangeStore>? = null,
     private val restoreMaintenanceCoordinator: Lazy<RestoreMaintenanceCoordinator>? = null,
+    private val clock: Clock = Clock.systemDefaultZone(),
 ) {
     private val initialized = AtomicBoolean(false)
 
@@ -137,10 +138,8 @@ internal class DatabaseReadyStartupInitializer(
     private suspend fun scheduleRecomputeResyncIfNeeded(prefs: UserPreferences) {
         val storedScoringVersion = prefs.scoringVersion
         val needsVersionRecompute = storedScoringVersion < SettingsDefaults.CURRENT_SCORING_VERSION
-        val retentionStartMs =
-            RetentionBounds
-                .resolveHistoricalWindow(prefs, Instant.now()) // outside WP-01 guard scope; explicit now
-                .startTimeMs
+        val runContext = ScoringRunContext.capture(prefs, clock.instant())
+        val retentionStartMs = runContext.retentionStartMs
         val needsBackfillRecompute =
             workoutTrimpBackfillStatus.get().hasUnbackfilledWorkouts(retentionStartMs)
         val hasPendingDirty =

@@ -39,6 +39,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.time.Clock
 import javax.inject.Inject
 
 @HiltAndroidApp
@@ -72,6 +73,9 @@ class HealthDashboardApplication :
 
     @Inject
     lateinit var restoreMaintenanceCoordinator: Lazy<RestoreMaintenanceCoordinator>
+
+    @Inject
+    lateinit var clock: Clock
 
     @Inject
     lateinit var databaseMigrationController: DatabaseMigrationController
@@ -140,6 +144,7 @@ class HealthDashboardApplication :
                 context = this,
                 dirtyRangeStore = dirtyRangeStore,
                 restoreMaintenanceCoordinator = restoreMaintenanceCoordinator,
+                clock = clock,
             )
         val startupCoordinator = DatabaseReadyStartupCoordinator(startupInitializer)
         val preferencesPrewarmer = PreferencesPrewarmer(settingsRepo)

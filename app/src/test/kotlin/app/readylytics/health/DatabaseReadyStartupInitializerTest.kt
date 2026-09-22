@@ -36,6 +36,9 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DatabaseReadyStartupInitializerTest {
@@ -383,6 +386,7 @@ class DatabaseReadyStartupInitializerTest {
                 },
             context = context,
             restoreMaintenanceCoordinator = restoreMaintenanceCoordinator,
+            clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneOffset.UTC),
         )
     }
 }

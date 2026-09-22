@@ -9,6 +9,8 @@ import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.sync.HeartRateInput
 import app.readylytics.health.core.model.domain.sync.SourceMetadata
 import app.readylytics.health.core.model.domain.sync.SourcePayload
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -18,6 +20,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.time.LocalDate
+import java.time.Instant
 import java.time.ZoneOffset
 import kotlin.test.assertFailsWith
 
@@ -130,7 +133,10 @@ class WarmMutationRegressionTest {
                 daos,
                 database.dailySummaryDao(),
                 database.vo2MaxRecordDao(),
-            ).deleteBefore(120_000L)
+            ).deleteBefore(
+                120_000L,
+                ScoringRunContext.capture(UserPreferences(), Instant.parse("2026-08-31T12:00:00Z")),
+            )
             assertTrue(database.minuteCoverageDao().getContributionsForMinute(0L).isEmpty())
             assertEquals(
                 listOf(60_000L, 120_000L),

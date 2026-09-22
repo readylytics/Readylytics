@@ -5,18 +5,12 @@ import app.readylytics.health.core.databaseschema.data.local.dao.DirtyRangeDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HealthMutationStateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.Vo2MaxRecordDao
 import app.readylytics.health.core.databaseschema.data.local.entity.DirtyRangeEntity
-import app.readylytics.health.core.model.data.preferences.scoringZone
-import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
+import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import app.readylytics.health.core.model.domain.util.logI
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.first
-import java.time.Clock
 import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneOffset
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -31,11 +25,12 @@ class RetentionCleanup
         private val coordinator: HealthMutationCoordinator? = null,
         private val dirtyRangeDao: DirtyRangeDao? = null,
         private val healthMutationStateDao: HealthMutationStateDao? = null,
-        private val clock: Clock = Clock.systemDefaultZone(),
-        private val settingsRepository: SettingsRepository? = null,
     ) {
-        suspend fun deleteBefore(cutoffMs: Long): ScoreInvalidation.AffectedRange? {
-            val runner: suspend () -> ScoreInvalidation.AffectedRange? = { doDeleteBefore(cutoffMs) }
+        suspend fun deleteBefore(
+            cutoffMs: Long,
+            runContext: ScoringRunContext,
+        ): ScoreInvalidation.AffectedRange? {
+            val runner: suspend () -> ScoreInvalidation.AffectedRange? = { doDeleteBefore(cutoffMs, runContext) }
             return if (coordinator != null) {
                 coordinator.withMutation { runner() }
             } else {
@@ -43,7 +38,10 @@ class RetentionCleanup
             }
         }
 
-        private suspend fun doDeleteBefore(cutoffMs: Long): ScoreInvalidation.AffectedRange? {
+        private suspend fun doDeleteBefore(
+            cutoffMs: Long,
+            runContext: ScoringRunContext,
+        ): ScoreInvalidation.AffectedRange? {
             val earliestHrMs = daos.heartRateDao.minTimestampBefore(cutoffMs)
             val earliestBucketMs = daos.minuteBucketMaintenanceDao.minBucketStartBefore(cutoffMs)
             val earliestMs = listOfNotNull(earliestHrMs, earliestBucketMs).minOrNull()
@@ -52,7 +50,7 @@ class RetentionCleanup
 
             suspend fun ensureJournaled() {
                 if (dirtyRecorded) return
-                recordDirtyRange(cutoffMs, earliestMs)
+                recordDirtyRange(cutoffMs, earliestMs, runContext)
                 dirtyRecorded = true
             }
 
@@ -88,21 +86,20 @@ class RetentionCleanup
             if (totalDeleted == 0) return null
             val effectiveEarliest = earliestMs ?: (cutoffMs - DAY_MS)
             return ScoreInvalidation.AffectedRange(
-                start = Instant.ofEpochMilli(effectiveEarliest).atZone(ZoneOffset.UTC).toLocalDate(),
-                endInclusive = Instant.ofEpochMilli(cutoffMs).atZone(ZoneOffset.UTC).toLocalDate(),
+                start = Instant.ofEpochMilli(effectiveEarliest).atZone(runContext.zoneId).toLocalDate(),
+                endInclusive = Instant.ofEpochMilli(cutoffMs).atZone(runContext.zoneId).toLocalDate(),
             )
         }
 
         private suspend fun recordDirtyRange(
             cutoffMs: Long,
             earliestMs: Long?,
+            runContext: ScoringRunContext,
         ) {
             if (dirtyRangeDao == null || healthMutationStateDao == null) return
             val effectiveEarliest = earliestMs ?: (cutoffMs - DAY_MS)
-            val scoringZone = resolveScoringZone()
-            val startDate = Instant.ofEpochMilli(effectiveEarliest).atZone(scoringZone).toLocalDate()
-            val today = LocalDate.now(clock.withZone(scoringZone))
-            val endInclusive = maxOf(today, Instant.ofEpochMilli(cutoffMs).atZone(scoringZone).toLocalDate())
+            val startDate = Instant.ofEpochMilli(effectiveEarliest).atZone(runContext.zoneId).toLocalDate()
+            val endInclusive = maxOf(runContext.today, Instant.ofEpochMilli(cutoffMs).atZone(runContext.zoneId).toLocalDate())
 
             healthMutationStateDao.incrementGeneration()
             val currentGen = healthMutationStateDao.current().sourceGeneration
@@ -117,15 +114,6 @@ class RetentionCleanup
                 ),
             )
         }
-
-        private suspend fun resolveScoringZone() =
-            try {
-                settingsRepository?.userPreferences?.first()?.scoringZone() ?: clock.zone
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Exception) {
-                clock.zone
-            }
 
         private suspend fun deleteLowVolumeTables(cutoffMs: Long): Int =
             daos.sleepSessionDao.deleteBeforeTimestamp(cutoffMs) +
