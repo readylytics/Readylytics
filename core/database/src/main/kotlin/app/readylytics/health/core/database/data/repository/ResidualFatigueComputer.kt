@@ -76,7 +76,6 @@ class ResidualFatigueComputer(
                 computeSingleDayFallback(
                     evalMs = evalMs,
                     config = config,
-                    prefs = context.prefs,
                     retentionStartMs = context.runContext.retentionStartMs,
                     stagedFatigueInputs = stagedFatigueInputs,
                     stagedWorkouts = stagedWorkouts,

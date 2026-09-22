@@ -186,7 +186,11 @@ class ResidualFatigueExactReconstructionTest {
             every { prefs } returns preferences
             every {
                 runContext
-            } returns ScoringRunContext.capture(preferences, day.atStartOfDay(zoneId).toInstant())
+            } returns
+                ScoringRunContext.capture(
+                    preferences,
+                    day.atStartOfDay(this@ResidualFatigueExactReconstructionTest.zoneId).toInstant(),
+                )
             every { nextDayMidnightMs } returns
                 day.plusDays(1)
                     .atStartOfDay(this@ResidualFatigueExactReconstructionTest.zoneId)
