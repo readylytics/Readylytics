@@ -229,7 +229,7 @@ class FirstSetupDummyIngestionFlowTest {
             rasSourceModeBootstrapUseCase = rasBootstrap,
             changeSynchronizer = changeSynchronizer,
             healthIngestionStore = ingestionStore,
-            ingestionCoordinator = HealthIngestionCoordinator(hcRepo, ingestionStore),
+            ingestionCoordinator = HealthIngestionCoordinator(hcRepo, ingestionStore, FakeScanStagingStore()),
             stepCountFetcher = StepCountFetcher(hcRepo),
             recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, RecordingTransactionRunner()),
             walDiagnostics = mockk<WalDiagnostics>(relaxed = true),

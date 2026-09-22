@@ -22,7 +22,6 @@ import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
 import app.readylytics.health.core.model.domain.sync.HeartRateInput
 import app.readylytics.health.core.model.domain.sync.HistoricalRunIdentity
 import app.readylytics.health.core.model.domain.sync.HrvInput
-import app.readylytics.health.core.model.domain.sync.InMemoryScanStagingStore
 import app.readylytics.health.core.model.domain.sync.ResyncCheckpoint
 import app.readylytics.health.core.model.domain.sync.ResyncCheckpointStore
 import app.readylytics.health.core.model.domain.sync.ResyncPhase
@@ -30,7 +29,6 @@ import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.sync.SelectedSourcePruner
 import app.readylytics.health.core.model.domain.sync.SourcePayload
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
-import app.readylytics.health.core.model.domain.sync.stagedIds
 import io.mockk.coEvery
 import io.mockk.coJustRun
 import io.mockk.coVerify
@@ -63,6 +61,10 @@ class PagedIngestResumptionTest {
     private val checkpointStore = InMemoryResyncCheckpointStore()
     private val baselineTokens = mapOf(HealthDataType.SLEEP to "baseline-sleep-token")
     private val transactionRunner = RecordingTransactionRunner()
+
+    // Required (no default) since the final-review fix: production binds RoomScanStagingStore via
+    // Hilt, so tests must name their store explicitly rather than inherit a heap-backed default.
+    private val staging = FakeScanStagingStore()
 
     private lateinit var useCase: ResyncRangeUseCase
 
@@ -105,8 +107,9 @@ class PagedIngestResumptionTest {
                 healthIngestionStore = healthIngestionStore,
                 ingestion =
                     ResyncIngestionDependencies(
-                        ingestionCoordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore),
+                        ingestionCoordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore, staging),
                         stepCountFetcher = StepCountFetcher(hcRepo),
+                        staging = staging,
                     ),
                 recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner),
                 ioDispatcher = Dispatchers.Unconfined,
@@ -254,7 +257,7 @@ class PagedIngestResumptionTest {
     @Test
     fun `HealthIngestionCoordinator notifies onTokenUpdated per streamed page`() =
         runTest {
-            val coordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore)
+            val coordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore, FakeScanStagingStore())
             val windowStart = Instant.parse("2024-06-01T00:00:00Z")
             val windowEnd = Instant.parse("2024-06-02T00:00:00Z")
 

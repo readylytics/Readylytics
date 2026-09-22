@@ -44,9 +44,14 @@ internal object SourceRefResolver {
             }
         }
 
+        // Hashed once rather than re-scanned per source: a fresh-import page of one-sample parents
+        // is ~5_000 payloads that are virtually all missing, so a linear `missing.any { ... }` here
+        // would cost ~25M comparisons inside the writer transaction -- exactly the O(n*m) shape
+        // this class exists to remove.
+        val missingIds = missing.mapTo(HashSet(missing.size)) { it.sourceId }
         return bySourceId.mapValues { (sourceId, _) ->
             val row = existing[sourceId] ?: error("Failed to resolve source ref for $sourceId")
-            ResolvedSource(ref = row.id, existing = if (missing.any { it.sourceId == sourceId }) null else row)
+            ResolvedSource(ref = row.id, existing = if (sourceId in missingIds) null else row)
         }
     }
 

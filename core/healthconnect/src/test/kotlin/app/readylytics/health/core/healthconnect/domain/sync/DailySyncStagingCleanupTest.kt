@@ -10,10 +10,8 @@ import app.readylytics.health.core.model.domain.repository.ScoringRepository
 import app.readylytics.health.core.model.domain.repository.WalDiagnostics
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
-import app.readylytics.health.core.model.domain.sync.InMemoryScanStagingStore
 import app.readylytics.health.core.model.domain.sync.ScanIdentity
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
-import app.readylytics.health.core.model.domain.sync.stagedIds
 import app.readylytics.health.core.scoring.domain.scoring.RasSourceModeBootstrapUseCase
 import io.mockk.coEvery
 import io.mockk.coJustRun

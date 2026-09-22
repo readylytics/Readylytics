@@ -30,7 +30,7 @@ class HealthIngestionCoordinatorTimeoutTest {
                 delay(200L)
                 app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(emptyList())
             }
-            val coordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore)
+            val coordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore, FakeScanStagingStore())
             val windowStart = Instant.EPOCH
             val windowEnd = Instant.EPOCH.plusSeconds(3600)
 

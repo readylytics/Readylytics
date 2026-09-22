@@ -20,10 +20,7 @@ import app.readylytics.health.core.model.domain.sync.HealthIngestionBatch
 import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
 import app.readylytics.health.core.model.domain.sync.HeartRateInput
 import app.readylytics.health.core.model.domain.sync.HrvInput
-import app.readylytics.health.core.model.domain.sync.InMemoryScanStagingStore
 import app.readylytics.health.core.model.domain.sync.ResyncCheckpoint
-import app.readylytics.health.core.model.domain.sync.clearAll
-import app.readylytics.health.core.model.domain.sync.stagedIds
 import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.sync.SelectedSourcePruner

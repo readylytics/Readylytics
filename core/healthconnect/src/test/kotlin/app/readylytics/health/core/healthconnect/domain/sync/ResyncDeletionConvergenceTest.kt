@@ -23,7 +23,6 @@ import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
 import app.readylytics.health.core.model.domain.sync.HeartRateInput
 import app.readylytics.health.core.model.domain.sync.HistoricalRunIdentity
 import app.readylytics.health.core.model.domain.sync.HrvInput
-import app.readylytics.health.core.model.domain.sync.InMemoryScanStagingStore
 import app.readylytics.health.core.model.domain.sync.ResyncCheckpoint
 import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import app.readylytics.health.core.model.domain.sync.ScanStagingStore
@@ -33,9 +32,7 @@ import app.readylytics.health.core.model.domain.sync.SleepSessionInput
 import app.readylytics.health.core.model.domain.sync.SourcePayload
 import app.readylytics.health.core.model.domain.sync.WeightInput
 import app.readylytics.health.core.model.domain.sync.WorkoutInput
-import app.readylytics.health.core.model.domain.sync.clearAll
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
-import app.readylytics.health.core.model.domain.sync.stagedIds
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk

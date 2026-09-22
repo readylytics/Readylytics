@@ -46,6 +46,10 @@ class ResyncCheckpointResumeTest {
     private val baselineTokens = mapOf(HealthDataType.SLEEP to "baseline-sleep-token")
     private val transactionRunner = RecordingTransactionRunner()
 
+    // Required (no default) since the final-review fix: production binds RoomScanStagingStore via
+    // Hilt, so tests must name their store explicitly rather than inherit a heap-backed default.
+    private val staging = FakeScanStagingStore()
+
     private lateinit var useCase: ResyncRangeUseCase
 
     @Before
@@ -91,8 +95,9 @@ class ResyncCheckpointResumeTest {
                 healthIngestionStore = healthIngestionStore,
                 ingestion =
                     ResyncIngestionDependencies(
-                        ingestionCoordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore),
+                        ingestionCoordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore, staging),
                         stepCountFetcher = StepCountFetcher(hcRepo),
+                        staging = staging,
                     ),
                 recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner),
                 ioDispatcher = Dispatchers.Unconfined,

@@ -10,9 +10,14 @@ import kotlinx.coroutines.yield
  * deletes raw rows but previously left one metadata row per historical parent behind, so a
  * million-parent history kept accumulating identities that every backup then had to page through.
  *
- * Deliberately conservative: a row survives if it still has raw children, warm contribution
- * evidence, or any in-flight staged/scan reference. Deleting a still-referenced row would break a
- * backup FK or destroy OD-1 warm lineage, so "unsure" always means "keep". Must only be invoked
+ * Deliberately conservative: a row is collectable only when it is BOTH of an eligible record type
+ * (`HEART_RATE`/`HRV` -- the types whose `health_source_records` row is a derived index over raw
+ * children stored elsewhere) AND unreferenced (no raw children, no warm contribution evidence, no
+ * in-flight staged/scan reference). The type allowlist is what keeps `DISTANCE`/`ELEVATION_GAINED`
+ * interval sources -- which are primary data with no children anywhere, written by
+ * `RoomHealthChangeIngestionStore.persistIntervalEnrichment` -- out of scope entirely. Deleting a
+ * still-referenced or non-indexed row would break a backup FK, destroy OD-1 warm lineage, or erase
+ * an interval record outright, so "unsure" always means "keep". Must only be invoked
  * after the caller's own raw-row deletion batches for the run have already committed -- a row
  * whose children are deleted later in the same run has to be judged against the post-deletion
  * state, never the pre-deletion one.

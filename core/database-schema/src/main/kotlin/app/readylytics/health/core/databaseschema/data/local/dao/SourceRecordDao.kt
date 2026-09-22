@@ -149,13 +149,26 @@ interface SourceRecordDao : SourceRecordMaintenanceDao, SourceRecordResolutionDa
         limit: Int,
     ): List<HealthSourceRecordEntity>
 
-    // PERF-003: candidate orphan metadata. A row qualifies only when nothing references it any
-    // more: no raw HR/HRV children, no warm contribution evidence (OD-1 lineage), and no
-    // in-flight staging naming it. Backup pages every remaining source, so this predicate is also
-    // what keeps an export FK-complete.
+    // PERF-003: candidate orphan metadata. Two conditions, both required.
+    //
+    // (1) The row must be of a record type whose metadata is a *derived index* over raw children
+    // that live in another table -- only `HEART_RATE` and `HRV`. This is deliberately an allowlist,
+    // not a denylist: `health_source_records` also stores rows that ARE the record rather than an
+    // index over one. `RoomHealthChangeIngestionStore.persistIntervalEnrichment` writes
+    // `DISTANCE`/`ELEVATION_GAINED` interval sources here via `upsertIntervalSourceRecord`; those
+    // carry the interval's own bounds/origin/lastModified and have no children in any table, so
+    // every reference check below would (wrongly) pass for them and GC would erase primary data --
+    // taking `getIntervalSource`'s ability to resolve a record's *previous* range with it, so a
+    // later Health Connect update/delete of that distance would never mark its dates dirty. A
+    // future record type therefore defaults to "kept", never to "collectable".
+    //
+    // (2) Nothing may reference the row any more: no raw HR/HRV children, no warm contribution
+    // evidence (OD-1 lineage), and no in-flight staging naming it. Backup pages every remaining
+    // source, so this predicate is also what keeps an export FK-complete.
     @Query(
         "SELECT id FROM health_source_records " +
             "WHERE id > :afterRef " +
+            "AND recordType IN ('HEART_RATE', 'HRV') " +
             "AND NOT EXISTS (SELECT 1 FROM heart_rate_records WHERE sourceRecordRef = health_source_records.id) " +
             "AND NOT EXISTS (SELECT 1 FROM hrv_records WHERE sourceRecordRef = health_source_records.id) " +
             "AND NOT EXISTS (" +

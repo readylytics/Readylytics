@@ -22,7 +22,6 @@ import app.readylytics.health.core.model.domain.sync.BodyTemperatureInput
 import app.readylytics.health.core.model.domain.sync.CompleteTypeScan
 import app.readylytics.health.core.model.domain.sync.HealthIngestionBatch
 import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
-import app.readylytics.health.core.model.domain.sync.InMemoryScanStagingStore
 import app.readylytics.health.core.model.domain.sync.OxygenSaturationInput
 import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import app.readylytics.health.core.model.domain.sync.ScanIdentity
@@ -62,6 +61,10 @@ import kotlinx.coroutines.withTimeout
  * post-ingestion `SessionLinkReconciler.recomputeWorkouts` pass -- which both sync flows always run
  * immediately after ingestion, before any walk-forward recompute reads workout data -- fills in the
  * real TRIMP/zone-minutes once every HR sample in range has been streamed and tagged.
+ *
+ * [staging] is deliberately required, with no default: a heap-backed store would silently
+ * reintroduce PERF-001 and stop `StagedDeletionReconciler` from ever seeing a scan reach
+ * `COMPLETE`, so losing the `RoomScanStagingStore` Hilt binding must fail wiring, not degrade.
  */
 @Singleton
 class HealthIngestionCoordinator
@@ -69,7 +72,7 @@ class HealthIngestionCoordinator
     constructor(
         private val hcRepo: HealthConnectRepository,
         private val healthIngestionStore: HealthIngestionStore,
-        private val staging: ScanStagingStore = InMemoryScanStagingStore(),
+        private val staging: ScanStagingStore,
     ) {
         private val streamer: HeartSampleStreamer = HeartSampleStreamer(hcRepo, healthIngestionStore, staging)
 
@@ -173,7 +176,7 @@ class HealthIngestionCoordinator
                     deviceFor(HealthDataType.EXERCISE),
                 ) { it.deviceName }
 
-            val vitals = mapAndFilterVitals(raw, prefs)
+            val vitals = VitalsInputMapper.mapAndFilter(raw, prefs)
             val filteredSleepIds = filteredSleep.mapTo(HashSet()) { it.id }
             val allStages =
                 sleepSessions
@@ -417,7 +420,7 @@ data class IngestionWindowResult(
     val completedTypes: Set<HealthDataType> = emptySet(),
 )
 
-private data class RawBulkRecords(
+internal data class RawBulkRecords(
     val sleepSessions: ReadOutcome<List<DomainSleepSessionRecord>>,
     val exerciseRecords: ReadOutcome<List<DomainExerciseSessionRecord>>,
     val weightRecords: ReadOutcome<List<DomainWeightRecord>>,
@@ -429,13 +432,6 @@ private data class RawBulkRecords(
     val vo2MaxRecords: ReadOutcome<List<DomainVo2MaxRecord>> = ReadOutcome.Available(emptyList()),
 )
 
-private data class FilteredVitals(
-    val weights: List<WeightInput>,
-    val bodyFatSamples: List<BodyFatInput>,
-    val bloodPressureSamples: List<BloodPressureInput>,
-    val oxygenSaturationSamples: List<OxygenSaturationInput>,
-    val bodyTemperatureSamples: List<BodyTemperatureInput>,
-)
 
 internal data class IngestWindowParams(
     val windowStart: Instant,
@@ -508,113 +504,3 @@ private inline fun <T> ReadOutcome<List<T>>.toIds(crossinline idSelector: (T) ->
         ReadOutcome.Denied -> ReadOutcome.Denied
         ReadOutcome.Unsupported -> ReadOutcome.Unsupported
     }
-
-private fun mapAndFilterVitals(
-    raw: RawBulkRecords,
-    prefs: UserPreferences,
-): FilteredVitals {
-    val (weights, bodyFat) = mapAndFilterBodyComp(raw, prefs)
-    val (bp, spo2, temp) = mapAndFilterCardioVitals(raw, prefs)
-    return FilteredVitals(
-        weights = weights,
-        bodyFatSamples = bodyFat,
-        bloodPressureSamples = bp,
-        oxygenSaturationSamples = spo2,
-        bodyTemperatureSamples = temp,
-    )
-}
-
-private fun mapAndFilterBodyComp(
-    raw: RawBulkRecords,
-    prefs: UserPreferences,
-): Pair<List<WeightInput>, List<BodyFatInput>> {
-    val deviceByType = prefs.deviceByDataType
-    fun deviceFor(type: HealthDataType): String? = deviceByType[type.name]?.takeIf { it.isNotBlank() }
-
-    val weightRecords = raw.weightRecords.dataOrEmpty()
-    val bodyFatRecords = raw.bodyFatRecords.dataOrEmpty()
-    val weightInputs =
-        weightRecords.map {
-            WeightInput(
-                id = "${it.id}_${it.time.toEpochMilli()}",
-                timestampMs = it.time.toEpochMilli(),
-                weightKg = it.weightKg,
-                deviceName = it.deviceName,
-                sourceId = it.id,
-            )
-        }
-    val bodyFatInputs =
-        bodyFatRecords.map {
-            BodyFatInput(
-                id = "${it.id}_${it.time.toEpochMilli()}",
-                timestampMs = it.time.toEpochMilli(),
-                bodyFatPercent = it.percentage,
-                deviceName = it.deviceName,
-                sourceId = it.id,
-            )
-        }
-
-    val filteredWeights =
-        DeviceSourceFilter.filterToDevice(weightInputs, deviceFor(HealthDataType.WEIGHT)) { it.deviceName }
-    val filteredBodyFat =
-        DeviceSourceFilter.filterToDevice(bodyFatInputs, deviceFor(HealthDataType.BODY_FAT)) { it.deviceName }
-    return Pair(filteredWeights, filteredBodyFat)
-}
-
-private fun mapAndFilterCardioVitals(
-    raw: RawBulkRecords,
-    prefs: UserPreferences,
-): Triple<List<BloodPressureInput>, List<OxygenSaturationInput>, List<BodyTemperatureInput>> {
-    val deviceByType = prefs.deviceByDataType
-    fun deviceFor(type: HealthDataType): String? = deviceByType[type.name]?.takeIf { it.isNotBlank() }
-
-    val bpRecords = raw.bloodPressureRecords.dataOrEmpty()
-    val spo2Records = raw.spo2Records.dataOrEmpty()
-    val tempRecords = raw.bodyTemperatureRecords.dataOrEmpty()
-    val bpInputs =
-        bpRecords.map {
-            BloodPressureInput(
-                id = "${it.id}_${it.time.toEpochMilli()}",
-                timestampMs = it.time.toEpochMilli(),
-                systolicMmHg = it.systolicMmHg,
-                diastolicMmHg = it.diastolicMmHg,
-                deviceName = it.deviceName,
-                sourceId = it.id,
-            )
-        }
-    val spo2Inputs =
-        spo2Records.map {
-            OxygenSaturationInput(
-                id = "${it.id}_${it.time.toEpochMilli()}",
-                timestampMs = it.time.toEpochMilli(),
-                percentage = it.percentage,
-                deviceName = it.deviceName,
-                sourceId = it.id,
-            )
-        }
-    val tempInputs =
-        tempRecords.map {
-            BodyTemperatureInput(
-                id = "${it.id}_${it.time.toEpochMilli()}",
-                timestampMs = it.time.toEpochMilli(),
-                celsius = it.celsius,
-                deviceName = it.deviceName,
-                sourceId = it.id,
-            )
-        }
-
-    val filteredBp =
-        DeviceSourceFilter.filterToDevice(bpInputs, deviceFor(HealthDataType.BLOOD_PRESSURE)) { it.deviceName }
-    val filteredSpo2 =
-        DeviceSourceFilter.filterToDevice(
-            spo2Inputs,
-            deviceFor(HealthDataType.OXYGEN_SATURATION),
-        ) { it.deviceName }
-    val filteredTemp =
-        DeviceSourceFilter.filterToDevice(
-            tempInputs,
-            deviceFor(HealthDataType.BODY_TEMPERATURE),
-        ) { it.deviceName }
-    return Triple(filteredBp, filteredSpo2, filteredTemp)
-}
-

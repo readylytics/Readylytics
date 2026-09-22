@@ -8,8 +8,6 @@ import app.readylytics.health.core.model.domain.repository.ReadOutcome
 import app.readylytics.health.core.model.domain.sync.CompleteTypeScan
 import app.readylytics.health.core.model.domain.sync.HealthIngestionBatch
 import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
-import app.readylytics.health.core.model.domain.sync.InMemoryScanStagingStore
-import app.readylytics.health.core.model.domain.sync.stagedIds
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -45,7 +43,7 @@ class HealthIngestionCoordinatorVo2MaxTest {
             val batchSlot = slot<HealthIngestionBatch>()
             coEvery { healthIngestionStore.persist(capture(batchSlot)) } returns Unit
 
-            val coordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore)
+            val coordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore, FakeScanStagingStore())
             coordinator.ingestWindow(
                 windowStart = Instant.parse("2026-09-03T00:00:00Z"),
                 windowEnd = Instant.parse("2026-09-03T23:59:59Z"),
@@ -75,7 +73,7 @@ class HealthIngestionCoordinatorVo2MaxTest {
             val batchSlot = slot<HealthIngestionBatch>()
             coEvery { healthIngestionStore.persist(capture(batchSlot)) } returns Unit
 
-            val coordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore)
+            val coordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore, FakeScanStagingStore())
             coordinator.ingestWindow(
                 windowStart = Instant.parse("2026-09-03T00:00:00Z"),
                 windowEnd = Instant.parse("2026-09-03T23:59:59Z"),
@@ -109,7 +107,7 @@ class HealthIngestionCoordinatorVo2MaxTest {
                     ),
                 )
 
-            val coordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore)
+            val coordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore, FakeScanStagingStore())
             val result =
                 coordinator.ingestWindow(
                     windowStart = Instant.parse("2026-09-03T00:00:00Z"),
@@ -129,7 +127,7 @@ class HealthIngestionCoordinatorVo2MaxTest {
             coEvery { healthIngestionStore.reconcileWindow(any(), any()) } returns null
             coEvery { hcRepo.hasVo2MaxPermission() } returns false
 
-            val coordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore)
+            val coordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore, FakeScanStagingStore())
             val result =
                 coordinator.ingestWindow(
                     windowStart = Instant.parse("2026-09-03T00:00:00Z"),

@@ -27,7 +27,6 @@ import app.readylytics.health.core.model.domain.sync.ScanIdentity
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.sync.SourcePayload
 import app.readylytics.health.core.model.domain.sync.TypeScanState
-import app.readylytics.health.core.model.domain.sync.stagedIds
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -49,7 +48,7 @@ class TransformBufferBoundTest {
         repo: HealthConnectRepository,
         store: HealthIngestionStore,
         staging: app.readylytics.health.core.model.domain.sync.ScanStagingStore =
-            app.readylytics.health.core.model.domain.sync.InMemoryScanStagingStore(),
+            InMemoryScanStagingStore(),
     ) = HealthIngestionCoordinator(repo, store, staging)
 
     private fun densePage(
@@ -156,7 +155,7 @@ class TransformBufferBoundTest {
             val pageB = densePage(parents = 40, samplesEach = 500, idPrefix = "b")
             val repo = FakeTransformRepository(hrPages = listOf(pageA, pageB))
             val store = RecordingTransformIngestionStore()
-            val staging = app.readylytics.health.core.model.domain.sync.InMemoryScanStagingStore()
+            val staging = InMemoryScanStagingStore()
             val coord = coordinator(repo, store, staging)
             val scanId = ScanIdentity("run-a", "0")
 
