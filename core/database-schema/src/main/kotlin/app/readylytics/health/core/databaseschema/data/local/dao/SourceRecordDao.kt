@@ -38,14 +38,29 @@ interface SourceRecordMaintenanceDao {
     ): Int
 }
 
-@Dao
-interface SourceRecordDao : SourceRecordMaintenanceDao {
+/**
+ * Single- and bulk-lookup/insert of `health_source_records` rows by `sourceRecordId`. Split out of
+ * [SourceRecordDao] -- which owns deletion/authoritative-metadata/paging -- so neither interface
+ * crosses detekt's `TooManyFunctions` threshold; PERF-001's bulk `getSourcesByRecordIds` /
+ * `insertIgnoreAll` pair pushed the combined interface over it. [SourceRecordDao] extends this
+ * interface, so callers keep using the single `SourceRecordDao` type unchanged.
+ */
+interface SourceRecordResolutionDao {
     @Query("SELECT id FROM health_source_records WHERE sourceRecordId = :sourceRecordId")
     suspend fun getSourceRef(sourceRecordId: String): Long?
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertIgnore(entity: HealthSourceRecordEntity): Long
 
+    @Query("SELECT * FROM health_source_records WHERE sourceRecordId IN (:sourceRecordIds)")
+    suspend fun getSourcesByRecordIds(sourceRecordIds: List<String>): List<HealthSourceRecordEntity>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertIgnoreAll(entities: List<HealthSourceRecordEntity>)
+}
+
+@Dao
+interface SourceRecordDao : SourceRecordMaintenanceDao, SourceRecordResolutionDao {
     /**
      * WP-17/OD-1 delta-delete handling. `hr_minute_buckets` children cascade, but
      * `hr_source_minute_contributions` references this table with `ON DELETE RESTRICT`, so a
@@ -113,6 +128,66 @@ interface SourceRecordDao : SourceRecordMaintenanceDao {
         windowStartMs: Long,
         windowEndMs: Long,
     ): List<HealthSourceRecordEntity>
+
+    @Query(
+        "SELECT * FROM health_source_records " +
+            "WHERE recordType = :recordType AND metadataState = 'AUTHORITATIVE' " +
+            "AND recordStartMs < :windowEndMs AND recordEndExclusiveMs > :windowStartMs " +
+            "AND id > :afterRef " +
+            "AND sourceRecordId NOT IN (" +
+            "  SELECT sourceId FROM scan_seen_ids " +
+            "  WHERE runId = :runId AND chunkId = :chunkId AND recordType = :recordType) " +
+            "ORDER BY id ASC LIMIT :limit",
+    )
+    suspend fun pageUnstagedAuthoritativeSources(
+        recordType: String,
+        windowStartMs: Long,
+        windowEndMs: Long,
+        runId: String,
+        chunkId: String,
+        afterRef: Long,
+        limit: Int,
+    ): List<HealthSourceRecordEntity>
+
+    // PERF-003: candidate orphan metadata. Two conditions, both required.
+    //
+    // (1) The row must be of a record type whose metadata is a *derived index* over raw children
+    // that live in another table -- only `HEART_RATE` and `HRV`. This is deliberately an allowlist,
+    // not a denylist: `health_source_records` also stores rows that ARE the record rather than an
+    // index over one. `RoomHealthChangeIngestionStore.persistIntervalEnrichment` writes
+    // `DISTANCE`/`ELEVATION_GAINED` interval sources here via `upsertIntervalSourceRecord`; those
+    // carry the interval's own bounds/origin/lastModified and have no children in any table, so
+    // every reference check below would (wrongly) pass for them and GC would erase primary data --
+    // taking `getIntervalSource`'s ability to resolve a record's *previous* range with it, so a
+    // later Health Connect update/delete of that distance would never mark its dates dirty. A
+    // future record type therefore defaults to "kept", never to "collectable".
+    //
+    // (2) Nothing may reference the row any more: no raw HR/HRV children, no warm contribution
+    // evidence (OD-1 lineage), and no in-flight staging naming it. Backup pages every remaining
+    // source, so this predicate is also what keeps an export FK-complete.
+    @Query(
+        "SELECT id FROM health_source_records " +
+            "WHERE id > :afterRef " +
+            // `+` hints the planner to prefer the rowid keyset scan (`id > :afterRef ... LIMIT`)
+            // over `index_health_source_records_recordType_metadataState_recordStartMs`, which
+            // an un-hinted `recordType IN (...)` otherwise wins on an un-ANALYZE'd production
+            // DB -- forcing a full-index scan + temp B-tree sort instead of the cheap page seek.
+            "AND +recordType IN ('HEART_RATE', 'HRV') " +
+            "AND NOT EXISTS (SELECT 1 FROM heart_rate_records WHERE sourceRecordRef = health_source_records.id) " +
+            "AND NOT EXISTS (SELECT 1 FROM hrv_records WHERE sourceRecordRef = health_source_records.id) " +
+            "AND NOT EXISTS (" +
+            "  SELECT 1 FROM hr_source_minute_contributions " +
+            "  WHERE sourceRecordRef = health_source_records.id) " +
+            "AND NOT EXISTS (" +
+            "  SELECT 1 FROM staged_hr_sources WHERE sourceId = health_source_records.sourceRecordId) " +
+            "AND NOT EXISTS (" +
+            "  SELECT 1 FROM scan_seen_ids WHERE sourceId = health_source_records.sourceRecordId) " +
+            "ORDER BY id ASC LIMIT :limit",
+    )
+    suspend fun pageUnreferencedSourceIds(afterRef: Long, limit: Int): List<Long>
+
+    @Query("DELETE FROM health_source_records WHERE id IN (:ids)")
+    suspend fun deleteSourcesByRefs(ids: List<Long>): Int
 }
 
 suspend fun SourceRecordDao.getOrCreateSourceRef(
@@ -167,6 +242,3 @@ suspend fun SourceRecordDao.upsertIntervalSourceRecord(
         )
     }
 }
-
-
-

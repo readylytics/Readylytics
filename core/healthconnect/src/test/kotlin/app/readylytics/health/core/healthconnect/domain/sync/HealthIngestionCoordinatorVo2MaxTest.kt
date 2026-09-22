@@ -43,7 +43,7 @@ class HealthIngestionCoordinatorVo2MaxTest {
             val batchSlot = slot<HealthIngestionBatch>()
             coEvery { healthIngestionStore.persist(capture(batchSlot)) } returns Unit
 
-            val coordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore)
+            val coordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore, FakeScanStagingStore())
             coordinator.ingestWindow(
                 windowStart = Instant.parse("2026-09-03T00:00:00Z"),
                 windowEnd = Instant.parse("2026-09-03T23:59:59Z"),
@@ -73,7 +73,7 @@ class HealthIngestionCoordinatorVo2MaxTest {
             val batchSlot = slot<HealthIngestionBatch>()
             coEvery { healthIngestionStore.persist(capture(batchSlot)) } returns Unit
 
-            val coordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore)
+            val coordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore, FakeScanStagingStore())
             coordinator.ingestWindow(
                 windowStart = Instant.parse("2026-09-03T00:00:00Z"),
                 windowEnd = Instant.parse("2026-09-03T23:59:59Z"),
@@ -107,7 +107,7 @@ class HealthIngestionCoordinatorVo2MaxTest {
                     ),
                 )
 
-            val coordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore)
+            val coordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore, FakeScanStagingStore())
             val result =
                 coordinator.ingestWindow(
                     windowStart = Instant.parse("2026-09-03T00:00:00Z"),
@@ -127,7 +127,7 @@ class HealthIngestionCoordinatorVo2MaxTest {
             coEvery { healthIngestionStore.reconcileWindow(any(), any()) } returns null
             coEvery { hcRepo.hasVo2MaxPermission() } returns false
 
-            val coordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore)
+            val coordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore, FakeScanStagingStore())
             val result =
                 coordinator.ingestWindow(
                     windowStart = Instant.parse("2026-09-03T00:00:00Z"),
@@ -170,7 +170,8 @@ class HealthIngestionCoordinatorVo2MaxTest {
             val batchSlot = slot<HealthIngestionBatch>()
             coEvery { healthIngestionStore.persist(capture(batchSlot)) } returns Unit
 
-            val coordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore)
+            val staging = InMemoryScanStagingStore()
+            val coordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore, staging = staging)
             coordinator.ingestWindow(
                 windowStart = Instant.parse("2026-09-03T00:00:00Z"),
                 windowEnd = Instant.parse("2026-09-03T23:59:59Z"),
@@ -185,7 +186,8 @@ class HealthIngestionCoordinatorVo2MaxTest {
             // selection, otherwise a non-selected-device record still present in HC would be
             // wrongly treated as deleted (mirrors WEIGHT/BODY_FAT/etc).
             val vo2Scan = scanSlot.single { it.type == HealthDataType.VO2_MAX }
-            assertEquals(setOf("vo2-device-a", "vo2-device-b"), vo2Scan.ids)
+            assertEquals("DAILY_SYNC", vo2Scan.scan.runId)
+            assertEquals(setOf("vo2-device-a", "vo2-device-b"), staging.stagedIds(vo2Scan.scan, HealthDataType.VO2_MAX))
         }
 
     @Test
@@ -221,7 +223,8 @@ class HealthIngestionCoordinatorVo2MaxTest {
             val batchSlot = slot<HealthIngestionBatch>()
             coEvery { healthIngestionStore.persist(capture(batchSlot)) } returns Unit
 
-            val coordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore)
+            val staging = InMemoryScanStagingStore()
+            val coordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore, staging = staging)
             coordinator.ingestWindow(
                 windowStart = Instant.parse("2026-09-03T00:00:00Z"),
                 windowEnd = Instant.parse("2026-09-03T23:59:59Z"),
@@ -233,7 +236,8 @@ class HealthIngestionCoordinatorVo2MaxTest {
                 batchSlot.captured.vo2MaxSamples.map { it.id }.toSet(),
             )
             val vo2Scan = scanSlot.single { it.type == HealthDataType.VO2_MAX }
-            assertEquals(setOf("vo2-tie-a", "vo2-tie-b"), vo2Scan.ids)
+            assertEquals("DAILY_SYNC", vo2Scan.scan.runId)
+            assertEquals(setOf("vo2-tie-a", "vo2-tie-b"), staging.stagedIds(vo2Scan.scan, HealthDataType.VO2_MAX))
         }
 
     private fun stubEmptyReads(hcRepo: HealthConnectRepository) {

@@ -535,6 +535,28 @@ interface HeartRateDao {
         toMs: Long,
     ): List<HeartRateRecordEntity>
 
+    // PERF-003: keyset page of the same plausibility predicate as
+    // getPlausibleSamplesInRangeForRollup, ordered on the (timestampMs, sourceRecordRef) keyset so a
+    // dense multi-device day streams in bounded pages instead of materializing every sample of that
+    // day inside the rollup's writer transaction. Ordered by time first (not recordType) because the
+    // streamer must be able to close a minute: grouping by (bucketStartMs, recordType, sessionId,
+    // deviceName) then happens inside each bounded group (MinuteRollupStreamer).
+    @Query(
+        "SELECT * FROM heart_rate_records " +
+            "WHERE timestampMs >= :fromMs AND timestampMs < :toMs " +
+            "AND beatsPerMinute BETWEEN 30 AND 230 " +
+            "AND (timestampMs > :afterTs OR (timestampMs = :afterTs AND sourceRecordRef > :afterRef)) " +
+            "ORDER BY timestampMs ASC, sourceRecordRef ASC " +
+            "LIMIT :limit",
+    )
+    suspend fun pagePlausibleSamplesForRollup(
+        fromMs: Long,
+        toMs: Long,
+        afterTs: Long,
+        afterRef: Long,
+        limit: Int,
+    ): List<HeartRateRecordEntity>
+
     /**
      * WP-17/OD-1 rollup deletion: removes every raw row in `[fromMs, toMs)` whose minute was just
      * published, i.e. all of them EXCEPT the minutes whose visible coverage is still the pre-v22

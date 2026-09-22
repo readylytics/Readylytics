@@ -160,10 +160,34 @@ interface BodyFatRecordDao {
     suspend fun deleteAll(): Int
 
     @Query(
-        "DELETE FROM body_fat_records " +
-            "WHERE timestampMs >= :startMs AND timestampMs <= :endMs AND id NOT IN (:validIds)",
+        "SELECT MIN(timestampMs) AS minMs, MAX(timestampMs) AS maxMs FROM body_fat_records " +
+            "WHERE timestampMs >= :startMs AND timestampMs <= :endMs " +
+            "AND id NOT IN (" +
+            "  SELECT sourceId FROM scan_seen_ids " +
+            "  WHERE runId = :runId AND chunkId = :chunkId AND recordType = :recordType)",
     )
-    suspend fun deleteNotIn(startMs: Long, endMs: Long, validIds: List<String>): Int
+    suspend fun boundsOfUnstagedRows(
+        startMs: Long,
+        endMs: Long,
+        runId: String,
+        chunkId: String,
+        recordType: String,
+    ): StagedDeletionBounds
+
+    @Query(
+        "DELETE FROM body_fat_records " +
+            "WHERE timestampMs >= :startMs AND timestampMs <= :endMs " +
+            "AND id NOT IN (" +
+            "  SELECT sourceId FROM scan_seen_ids " +
+            "  WHERE runId = :runId AND chunkId = :chunkId AND recordType = :recordType)",
+    )
+    suspend fun deleteRowsNotStaged(
+        startMs: Long,
+        endMs: Long,
+        runId: String,
+        chunkId: String,
+        recordType: String,
+    ): Int
 
     @Query("DELETE FROM body_fat_records WHERE timestampMs >= :startMs AND timestampMs <= :endMs")
     suspend fun deleteBetween(startMs: Long, endMs: Long): Int

@@ -221,8 +221,51 @@ interface WorkoutDao {
     @Query("SELECT * FROM workout_records WHERE startTime >= :startMs AND endTime <= :endMs ORDER BY startTime ASC")
     suspend fun getBetween(startMs: Long, endMs: Long): List<WorkoutRecordEntity>
 
-    @Query("DELETE FROM workout_records WHERE startTime >= :startMs AND endTime <= :endMs AND id NOT IN (:validIds)")
-    suspend fun deleteWorkoutsNotIn(startMs: Long, endMs: Long, validIds: List<String>): Int
+    @Query(
+        "SELECT MIN(startTime) AS minMs, MAX(endTime) AS maxMs FROM workout_records " +
+            "WHERE startTime >= :startMs AND endTime <= :endMs " +
+            "AND id NOT IN (" +
+            "  SELECT sourceId FROM scan_seen_ids " +
+            "  WHERE runId = :runId AND chunkId = :chunkId AND recordType = :recordType)",
+    )
+    suspend fun boundsOfUnstagedWorkouts(
+        startMs: Long,
+        endMs: Long,
+        runId: String,
+        chunkId: String,
+        recordType: String,
+    ): StagedDeletionBounds
+
+    @Query(
+        "DELETE FROM workout_route_points WHERE workoutId IN (" +
+            "  SELECT id FROM workout_records " +
+            "  WHERE startTime >= :startMs AND endTime <= :endMs " +
+            "  AND id NOT IN (" +
+            "    SELECT sourceId FROM scan_seen_ids " +
+            "    WHERE runId = :runId AND chunkId = :chunkId AND recordType = :recordType))",
+    )
+    suspend fun deleteRoutePointsOfUnstagedWorkouts(
+        startMs: Long,
+        endMs: Long,
+        runId: String,
+        chunkId: String,
+        recordType: String,
+    ): Int
+
+    @Query(
+        "DELETE FROM workout_records " +
+            "WHERE startTime >= :startMs AND endTime <= :endMs " +
+            "AND id NOT IN (" +
+            "  SELECT sourceId FROM scan_seen_ids " +
+            "  WHERE runId = :runId AND chunkId = :chunkId AND recordType = :recordType)",
+    )
+    suspend fun deleteWorkoutsNotStaged(
+        startMs: Long,
+        endMs: Long,
+        runId: String,
+        chunkId: String,
+        recordType: String,
+    ): Int
 
     @Query("DELETE FROM workout_records WHERE startTime >= :startMs AND endTime <= :endMs")
     suspend fun deleteBetween(startMs: Long, endMs: Long): Int

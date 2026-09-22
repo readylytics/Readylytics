@@ -22,6 +22,13 @@ import kotlinx.serialization.Serializable
         Index(name = "index_hr_v10_timestamp", value = ["timestampMs"]),
         Index(name = "index_hr_v10_session_type_bpm", value = ["sessionId", "recordType", "beatsPerMinute"]),
         Index(name = "index_hr_v10_type_timestamp", value = ["recordType", "timestampMs"]),
+        // Phase 2 Task 10: proven by EXPLAIN QUERY PLAN, not speculative. Without this,
+        // HeartRateDao.pagePlausibleSamplesForRollup's `ORDER BY timestampMs ASC, sourceRecordRef
+        // ASC` could only use the single-column index_hr_v10_timestamp for the range filter and the
+        // *left* part of the sort; SQLite still needed `USE TEMP B-TREE FOR RIGHT PART OF ORDER BY`
+        // to break timestampMs ties, forcing the rollup streamer's keyset page to materialize and
+        // sort every matching row instead of walking an index directly in keyset order.
+        Index(name = "index_hr_v10_timestamp_source", value = ["timestampMs", "sourceRecordRef"]),
     ],
 )
 data class HeartRateRecordEntity(

@@ -79,6 +79,7 @@ class RoomHealthIngestionStoreZoneTest {
                     override suspend fun <R> runInTransaction(block: suspend () -> R): R = block()
                 },
             vo2MaxRecordDao = noOpDao(),
+            scanTypeStateDao = noOpDao(),
         )
 
     private fun recordingClearCallDao(

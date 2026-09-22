@@ -10,6 +10,7 @@ import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
+import app.readylytics.health.core.model.domain.util.logI
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import java.time.Clock
@@ -72,6 +73,16 @@ class RetentionCleanup
                 val lowVolumeDeleted = deleteLowVolumeTables(cutoffMs)
                 if (lowVolumeDeleted > 0) ensureJournaled()
                 totalDeleted += lowVolumeDeleted
+            }
+
+            // PERF-003: must run after every raw-row deletion batch above has committed, never
+            // before -- a source row whose only children were just deleted this run has to be
+            // judged against that post-deletion state. Metadata-only, so it neither contributes to
+            // totalDeleted (which gates dirty-range journaling/score invalidation) nor extends the
+            // returned affected range.
+            val gcDeleted = SourceMetadataGc.collect(daos.sourceRecordDao)
+            if (gcDeleted > 0) {
+                logI(TAG) { "Collected $gcDeleted unreferenced source-metadata rows" }
             }
 
             if (totalDeleted == 0) return null
@@ -141,5 +152,6 @@ class RetentionCleanup
         private companion object {
             private const val BATCH_SIZE = 10_000
             private const val DAY_MS = 86_400_000L
+            private const val TAG = "RetentionCleanup"
         }
     }

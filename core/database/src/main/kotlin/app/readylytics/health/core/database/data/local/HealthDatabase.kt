@@ -20,6 +20,8 @@ import app.readylytics.health.core.databaseschema.data.local.dao.MinuteCoverageD
 import app.readylytics.health.core.databaseschema.data.local.dao.MinuteCoverageMaintenanceDao
 import app.readylytics.health.core.databaseschema.data.local.dao.MinuteCoverageSelectionDao
 import app.readylytics.health.core.databaseschema.data.local.dao.OxygenSaturationRecordDao
+import app.readylytics.health.core.databaseschema.data.local.dao.ScanStagingDao
+import app.readylytics.health.core.databaseschema.data.local.dao.ScanTypeStateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepStageDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SourceRecordDao
@@ -43,6 +45,8 @@ import app.readylytics.health.core.databaseschema.data.local.entity.HrMinuteBuck
 import app.readylytics.health.core.databaseschema.data.local.entity.InsightDismissalEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.MinuteCoverageEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.OxygenSaturationRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.ScanSeenIdEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.ScanTypeStateEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepStageEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.StagedHeartRateEntity
@@ -79,6 +83,8 @@ import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRoute
         HrSourceMinuteContributionEntity::class,
         StagedSourceMetadataEntity::class,
         StagedHeartRateEntity::class,
+        ScanSeenIdEntity::class,
+        ScanTypeStateEntity::class,
     ],
     version = HealthDatabase.DATABASE_VERSION,
 )
@@ -137,7 +143,11 @@ abstract class HealthDatabase : RoomDatabase() {
 
     abstract fun heartRateRefreshStagingDao(): HeartRateRefreshStagingDao
 
+    abstract fun scanStagingDao(): ScanStagingDao
+
+    abstract fun scanTypeStateDao(): ScanTypeStateDao
+
     companion object {
-        const val DATABASE_VERSION = 22
+        const val DATABASE_VERSION = 23
     }
 }

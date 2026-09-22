@@ -11,6 +11,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.SleepStageDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutRoutePointDao
+import app.readylytics.health.core.databaseschema.data.local.entity.HealthSourceRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRoutePointEntity
 import app.readylytics.health.core.model.domain.model.WorkoutRoutePoint
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
@@ -68,6 +69,7 @@ class PersistenceBatchingTest {
                     dailySummaryDao = recordingDao(events, "summary"),
                     transactionRunner = transactionRunner,
                     vo2MaxRecordDao = recordingDao(events, "vo2Max"),
+                    scanTypeStateDao = recordingDao(events, "scanStaging"),
                 )
 
             store.persist(
@@ -99,7 +101,7 @@ class PersistenceBatchingTest {
         }
 
     @Test
-    fun `persist splits heart rate sources across multiple parent source transactions via the bulk entrypoint`() =
+    fun `persist resolves multiple parent sources within one row-budget-group transaction via the bulk entrypoint`() =
         runTest {
             val events = mutableListOf<String>()
             val transactionRunner = RecordingTransactionRunner(events)
@@ -137,8 +139,11 @@ class PersistenceBatchingTest {
                 ),
             )
 
-            // 1 metadata transaction + 3 heart-rate parent transactions.
-            assertEquals(4, transactionRunner.transactionCount)
+            // PERF-001: transaction count scales with row batches, not parent count -- 1 metadata
+            // transaction + 1 heart-rate transaction covering all three parents, since their combined
+            // 1,201 rows stay under PAGE_TRANSACTION_MAX_ROWS (5,000) and SourceRefResolver resolves
+            // all three parent refs in bulk inside that single transaction.
+            assertEquals(2, transactionRunner.transactionCount)
             assertEquals(
                 listOf("heartRate:500", "heartRate:500", "heartRate:201"),
                 events.filter { it.startsWith("heartRate:") },
@@ -382,18 +387,38 @@ class PersistenceBatchingTest {
     private inline fun <reified T> recordingDao(
         events: MutableList<String>,
         name: String,
-    ): T =
-        Proxy.newProxyInstance(T::class.java.classLoader, arrayOf(T::class.java)) { _, method, args ->
+    ): T {
+        // Backs `insertIgnore`/`insertIgnoreAll`/`getSourcesByRecordIds` for SourceRecordDao proxies:
+        // SourceRefResolver.resolveAll looks sources up, inserts the missing ones, then looks them up
+        // again to read back the refs it just created, so the stub must remember what it "inserted"
+        // across calls on the same proxy instance instead of always answering empty.
+        val insertedSourceRecords = mutableMapOf<String, HealthSourceRecordEntity>()
+        return Proxy.newProxyInstance(T::class.java.classLoader, arrayOf(T::class.java)) { _, method, args ->
             if (method.name == "upsertAll") {
                 events += "$name:${(args?.firstOrNull() as? List<*>)?.size ?: 0}"
             }
-            resolveProxyReturnValue(method.name, method.returnType)
+            resolveProxyReturnValue(method.name, method.returnType, args, insertedSourceRecords)
         } as T
+    }
 
-    private fun resolveProxyReturnValue(methodName: String, returnType: Class<*>): Any? =
+    private fun resolveProxyReturnValue(
+        methodName: String,
+        returnType: Class<*>,
+        args: Array<out Any?>?,
+        insertedSourceRecords: MutableMap<String, HealthSourceRecordEntity>,
+    ): Any? =
         when (methodName) {
-            "getOrCreateSourceRef", "getSourceRef", "insertIgnore" -> 1L
+            "getOrCreateSourceRef", "getSourceRef" -> 1L
+            "insertIgnore" -> recordInsertedSource(args?.firstOrNull(), insertedSourceRecords)
+            "insertIgnoreAll" -> {
+                (args?.firstOrNull() as? List<*>)?.forEach { recordInsertedSource(it, insertedSourceRecords) }
+                Unit
+            }
             "getModelTrimpById", "getById", "getBySourceRecordId" -> null
+            "getSourcesByRecordIds" -> {
+                val requestedIds = (args?.firstOrNull() as? List<*>).orEmpty().filterIsInstance<String>()
+                requestedIds.mapNotNull { insertedSourceRecords[it] }
+            }
             "getTimestampsBySourceRecordRef", "getBySourceRecordRef" -> emptyList<Any>()
             "deleteBySourceRecordRefAndTimestamps",
             "deleteBySourceRecordRef",
@@ -402,6 +427,19 @@ class PersistenceBatchingTest {
             -> 1
             else -> fallbackForType(returnType)
         }
+
+    /** Records (or returns the already-recorded) [HealthSourceRecordEntity] for `insertIgnore(All)`. */
+    private fun recordInsertedSource(
+        entityArg: Any?,
+        insertedSourceRecords: MutableMap<String, HealthSourceRecordEntity>,
+    ): Long {
+        val entity = entityArg as? HealthSourceRecordEntity ?: return 1L
+        val stored =
+            insertedSourceRecords.getOrPut(entity.sourceRecordId) {
+                entity.copy(id = (insertedSourceRecords.size + 1).toLong())
+            }
+        return stored.id
+    }
 
     private fun fallbackForType(returnType: Class<*>): Any? =
         when {
@@ -437,6 +475,7 @@ class PersistenceBatchingTest {
             dailySummaryDao = recordingDao(events, "summary"),
             transactionRunner = transactionRunner,
             vo2MaxRecordDao = recordingDao(events, "vo2Max"),
+            scanTypeStateDao = recordingDao(events, "scanStaging"),
         )
 
     private fun heartRateInput(index: Int) =

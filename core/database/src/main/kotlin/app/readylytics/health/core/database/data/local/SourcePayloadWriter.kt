@@ -15,7 +15,10 @@ import app.readylytics.health.core.model.domain.sync.SourceMetadata
 import app.readylytics.health.core.model.domain.sync.SourcePayload
 import app.readylytics.health.core.model.domain.sync.completeMinuteCutoff
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.yield
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -35,29 +38,47 @@ class SourcePayloadWriter
         private val clock: Clock = Clock.systemDefaultZone(),
         private val warmRefresh: SourceHeartRateRefresh? = null,
     ) {
+        companion object {
+            const val PAGE_TRANSACTION_MAX_ROWS = 5_000
+        }
+
         suspend fun replaceHeartRateSources(sources: List<SourcePayload<HeartRateInput>>) {
             if (sources.isEmpty()) return
-            for (source in sources) {
+            sources.groupedByRowBudget(PAGE_TRANSACTION_MAX_ROWS).forEach { group ->
+                currentCoroutineContext().ensureActive()
                 transactionRunner.runInTransaction {
-                    replaceSingleHeartRateSource(source)
+                    val resolved = SourceRefResolver.resolveAll(daos.sourceRecordDao, group.map { it.source })
+                    group.forEach { payload ->
+                        replaceSingleHeartRateSource(payload, resolved.getValue(payload.source.sourceId))
+                    }
                 }
+                yield()
             }
         }
 
         suspend fun replaceHrvSources(sources: List<SourcePayload<HrvInput>>) {
             if (sources.isEmpty()) return
-            for (source in sources) {
+            sources.groupedByRowBudget(PAGE_TRANSACTION_MAX_ROWS).forEach { group ->
+                currentCoroutineContext().ensureActive()
                 transactionRunner.runInTransaction {
-                    replaceSingleHrvSource(source)
+                    val resolved = SourceRefResolver.resolveAll(daos.sourceRecordDao, group.map { it.source })
+                    group.forEach { payload ->
+                        replaceSingleHrvSource(payload, resolved.getValue(payload.source.sourceId))
+                    }
                 }
+                yield()
             }
         }
 
-        private suspend fun replaceSingleHeartRateSource(payload: SourcePayload<HeartRateInput>) {
+        private suspend fun replaceSingleHeartRateSource(
+            payload: SourcePayload<HeartRateInput>,
+            resolved: ResolvedSource,
+        ) {
             val source = payload.source
             val newRows = payload.rows
 
-            val (existingSource, sourceRef) = resolveOrCreateSource(source)
+            val existingSource = resolved.existing
+            val sourceRef = resolved.ref
             val oldTimestamps = daos.heartRateDao.readTimestampsKeyset(sourceRef)
             val warmContributions = warmRefresh?.contributionsFor(sourceRef).orEmpty()
             val warmMinutes = warmContributions.map { it.bucketStartMs }.toSet()
@@ -85,11 +106,15 @@ class SourcePayloadWriter
             warmRefresh?.publish(sourceRef, warmContributions, newRows)
         }
 
-        private suspend fun replaceSingleHrvSource(payload: SourcePayload<HrvInput>) {
+        private suspend fun replaceSingleHrvSource(
+            payload: SourcePayload<HrvInput>,
+            resolved: ResolvedSource,
+        ) {
             val source = payload.source
             val newRows = payload.rows
 
-            val (existingSource, sourceRef) = resolveOrCreateSource(source)
+            val existingSource = resolved.existing
+            val sourceRef = resolved.ref
             val oldTimestamps = daos.hrvDao.readTimestampsKeyset(sourceRef)
 
             if (!isMetadataChanged(existingSource, source) &&
@@ -110,31 +135,6 @@ class SourcePayloadWriter
                 startMs = source.startMs,
                 endExclusiveMs = source.endExclusiveMs,
             )
-        }
-
-        private suspend fun resolveOrCreateSource(source: SourceMetadata): Pair<HealthSourceRecordEntity?, Long> {
-            val existingSource = daos.sourceRecordDao.getBySourceRecordId(source.sourceId)
-            val sourceRef =
-                if (existingSource != null) {
-                    existingSource.id
-                } else {
-                    daos.sourceRecordDao.insertIgnore(
-                        HealthSourceRecordEntity(
-                            sourceRecordId = source.sourceId,
-                            recordType = source.recordType,
-                            createdAtMs = source.startMs,
-                            originPackage = source.originPackage,
-                            recordStartMs = source.startMs,
-                            recordEndExclusiveMs = source.endExclusiveMs,
-                            lastModifiedMs = source.lastModifiedMs,
-                            metadataState = METADATA_STATE_AUTHORITATIVE,
-                            sourceRevision = 0L,
-                        ),
-                    )
-                    daos.sourceRecordDao.getSourceRef(source.sourceId)
-                        ?: error("Failed to resolve source ref for ${source.sourceId}")
-                }
-            return Pair(existingSource, sourceRef)
         }
 
         private suspend fun updateSourceMetadata(
@@ -380,4 +380,25 @@ private suspend fun areHrvRowsIdentical(
                 resolvedNew[old.timestampMs]?.let { old.matchesPayload(it) } == true
             }
     }
+}
+
+private fun <T : SourcePayload<*>> List<T>.groupedByRowBudget(maxRows: Int): List<List<T>> {
+    val groups = mutableListOf<List<T>>()
+    var currentGroup = mutableListOf<T>()
+    var currentRowCount = 0
+
+    for (payload in this) {
+        val payloadRowCount = payload.rows.size
+        if (currentRowCount + payloadRowCount > maxRows && currentGroup.isNotEmpty()) {
+            groups.add(currentGroup)
+            currentGroup = mutableListOf()
+            currentRowCount = 0
+        }
+        currentGroup.add(payload)
+        currentRowCount += payloadRowCount
+    }
+    if (currentGroup.isNotEmpty()) {
+        groups.add(currentGroup)
+    }
+    return groups
 }

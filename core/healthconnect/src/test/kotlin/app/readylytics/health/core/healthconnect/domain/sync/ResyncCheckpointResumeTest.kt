@@ -46,6 +46,10 @@ class ResyncCheckpointResumeTest {
     private val baselineTokens = mapOf(HealthDataType.SLEEP to "baseline-sleep-token")
     private val transactionRunner = RecordingTransactionRunner()
 
+    // Required (no default) since the final-review fix: production binds RoomScanStagingStore via
+    // Hilt, so tests must name their store explicitly rather than inherit a heap-backed default.
+    private val staging = FakeScanStagingStore()
+
     private lateinit var useCase: ResyncRangeUseCase
 
     @Before
@@ -91,8 +95,9 @@ class ResyncCheckpointResumeTest {
                 healthIngestionStore = healthIngestionStore,
                 ingestion =
                     ResyncIngestionDependencies(
-                        ingestionCoordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore),
+                        ingestionCoordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore, staging),
                         stepCountFetcher = StepCountFetcher(hcRepo),
+                        staging = staging,
                     ),
                 recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner),
                 ioDispatcher = Dispatchers.Unconfined,
@@ -410,9 +415,10 @@ class ResyncCheckpointResumeTest {
         }
 
     @Test
-    fun `interrupted HR page token in checkpoint is cleared and replayed from beginning on resume`() =
+    fun `interrupted HR page token in checkpoint is forwarded on resume`() =
         runTest {
             val startDate = LocalDate.of(2024, 6, 1)
+            val runIdentity = createRunIdentity(startDate, startDate)
             checkpointStore.value =
                 ResyncCheckpoint(
                     startDate = startDate,
@@ -422,8 +428,11 @@ class ResyncCheckpointResumeTest {
                     selectionHash = "",
                     baselineChangeTokens = baselineTokens,
                     hrPageToken = "saved-token-2",
-                    runIdentity = createRunIdentity(startDate, startDate),
+                    runIdentity = runIdentity,
                 )
+            val scan = ScanIdentities.historical(runIdentity.runId, startDate)
+            staging.beginTypeScan(scan, HealthDataType.HEART_RATE, resume = false)
+            staging.stageIds(scan, HealthDataType.HEART_RATE, listOf("page-1"))
 
             val tokenSlot = slot<String?>()
             coEvery {
@@ -432,7 +441,7 @@ class ResyncCheckpointResumeTest {
 
             useCase.run(startDate = startDate, endDate = startDate, chunkDays = 30, onProgress = null)
 
-            assertEquals(null, tokenSlot.captured)
+            assertEquals("saved-token-2", tokenSlot.captured)
         }
 
     @Test

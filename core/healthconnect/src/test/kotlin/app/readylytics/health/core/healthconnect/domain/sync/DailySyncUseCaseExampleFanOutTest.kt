@@ -85,7 +85,7 @@ class DailySyncUseCaseExampleFanOutTest {
                 rasSourceModeBootstrapUseCase = rasSourceModeBootstrapUseCase,
                 changeSynchronizer = changeSynchronizer,
                 healthIngestionStore = healthIngestionStore,
-                ingestionCoordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore),
+                ingestionCoordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore, FakeScanStagingStore()),
                 stepCountFetcher = StepCountFetcher(hcRepo),
                 recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner),
                 walDiagnostics = walDiagnostics,

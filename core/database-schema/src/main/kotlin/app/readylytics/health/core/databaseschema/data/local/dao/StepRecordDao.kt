@@ -45,9 +45,33 @@ interface StepRecordDao {
     @Query("SELECT * FROM step_records WHERE startTime >= :startMs AND endTime <= :endMs ORDER BY startTime ASC")
     suspend fun getBetween(startMs: Long, endMs: Long): List<StepRecordEntity>
 
-    @Query("DELETE FROM step_records WHERE startTime >= :startMs AND endTime <= :endMs AND id NOT IN (:validIds)")
-    suspend fun deleteNotIn(startMs: Long, endMs: Long, validIds: List<String>): Int
+    @Query(
+        "SELECT MIN(startTime) AS minMs, MAX(endTime) AS maxMs FROM step_records " +
+            "WHERE startTime >= :startMs AND endTime <= :endMs " +
+            "AND id NOT IN (" +
+            "  SELECT sourceId FROM scan_seen_ids " +
+            "  WHERE runId = :runId AND chunkId = :chunkId AND recordType = :recordType)",
+    )
+    suspend fun boundsOfUnstagedRecords(
+        startMs: Long,
+        endMs: Long,
+        runId: String,
+        chunkId: String,
+        recordType: String,
+    ): StagedDeletionBounds
 
-    @Query("DELETE FROM step_records WHERE startTime >= :startMs AND endTime <= :endMs")
-    suspend fun deleteBetween(startMs: Long, endMs: Long): Int
+    @Query(
+        "DELETE FROM step_records " +
+            "WHERE startTime >= :startMs AND endTime <= :endMs " +
+            "AND id NOT IN (" +
+            "  SELECT sourceId FROM scan_seen_ids " +
+            "  WHERE runId = :runId AND chunkId = :chunkId AND recordType = :recordType)",
+    )
+    suspend fun deleteRecordsNotStaged(
+        startMs: Long,
+        endMs: Long,
+        runId: String,
+        chunkId: String,
+        recordType: String,
+    ): Int
 }

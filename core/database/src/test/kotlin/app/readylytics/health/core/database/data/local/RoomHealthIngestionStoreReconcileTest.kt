@@ -2,14 +2,18 @@ package app.readylytics.health.core.database.data.local
 
 import app.readylytics.health.core.databaseschema.data.local.dao.DailySummaryDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
+import app.readylytics.health.core.databaseschema.data.local.dao.ScanTypeStateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepStageDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SourceRecordDao
+import app.readylytics.health.core.databaseschema.data.local.dao.StagedDeletionBounds
 import app.readylytics.health.core.databaseschema.data.local.entity.HealthSourceRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.ScanTypeStateEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.sync.CompleteTypeScan
+import app.readylytics.health.core.model.domain.sync.ScanIdentity
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import io.mockk.clearMocks
 import io.mockk.coEvery
@@ -34,6 +38,7 @@ class RoomHealthIngestionStoreReconcileTest {
     private val sourceRecordDao = mockk<SourceRecordDao>(relaxed = true)
     private val heartRateDao = mockk<HeartRateDao>(relaxed = true)
     private val dailySummaryDao = mockk<DailySummaryDao>(relaxed = true)
+    private val scanTypeStateDao = mockk<ScanTypeStateDao>(relaxed = true)
 
     private val daos =
         HealthRecordDaos(
@@ -59,13 +64,14 @@ class RoomHealthIngestionStoreReconcileTest {
             dailySummaryDao = dailySummaryDao,
             transactionRunner = transactionRunner,
             vo2MaxRecordDao = mockk(relaxed = true),
+            scanTypeStateDao = scanTypeStateDao,
         )
 
     private val zoneId = ZoneId.of("UTC")
 
     @Before
     fun setup() {
-        clearMocks(sleepSessionDao, sleepStageDao, sourceRecordDao, heartRateDao, dailySummaryDao)
+        clearMocks(sleepSessionDao, sleepStageDao, sourceRecordDao, heartRateDao, dailySummaryDao, scanTypeStateDao)
     }
 
     @Test
@@ -90,31 +96,35 @@ class RoomHealthIngestionStoreReconcileTest {
                     endZoneOffsetSeconds = 0,
                     deviceName = "Watch",
                 )
-            val session2 =
-                SleepSessionEntity(
-                    id = "s2",
-                    startTime = startMs + 30000000,
-                    endTime = startMs + 40000000,
-                    durationMinutes = 166,
-                    efficiency = 0.8f,
-                    deepSleepMinutes = 20,
-                    remSleepMinutes = 30,
-                    lightSleepMinutes = 100,
-                    awakeMinutes = 16,
-                    sleepScore = 70f,
-                    startZoneOffsetSeconds = 0,
-                    endZoneOffsetSeconds = 0,
-                    deviceName = "Watch",
-                )
 
-            coEvery { daos.sleepSessionDao.getBetween(startMs, endMs) } returns listOf(session1, session2)
+            val scanId = ScanIdentity("run-1", "0")
+            stubScanState(scanId, HealthDataType.SLEEP, complete = true)
 
-            // Only s2 is in HC; s1 was deleted
-            val scan = CompleteTypeScan(HealthDataType.SLEEP, startMs, endMs, "", setOf("s2"))
+            coEvery {
+                daos.sleepSessionDao.boundsOfUnstagedSessions(startMs, endMs, scanId.runId, scanId.chunkId, "SLEEP")
+            } returns StagedDeletionBounds(session1.startTime, session1.endTime)
+
+            val scan = CompleteTypeScan(HealthDataType.SLEEP, startMs, endMs, "", scanId)
             val affected = store.reconcileWindow(scan, zoneId)
 
-            coVerify { daos.sleepStageDao.deleteForSessions(listOf("s1")) }
-            coVerify { daos.sleepSessionDao.deleteSessionsNotIn(startMs, endMs, listOf("s2")) }
+            coVerify {
+                daos.sleepSessionDao.deleteStagesOfUnstagedSessions(
+                    startMs,
+                    endMs,
+                    scanId.runId,
+                    scanId.chunkId,
+                    "SLEEP",
+                )
+            }
+            coVerify {
+                daos.sleepSessionDao.deleteSessionsNotStaged(
+                    startMs,
+                    endMs,
+                    scanId.runId,
+                    scanId.chunkId,
+                    "SLEEP",
+                )
+            }
 
             val expectedRange =
                 ScoreInvalidation.AffectedRange(
@@ -130,30 +140,18 @@ class RoomHealthIngestionStoreReconcileTest {
             val startMs = 1700000000000L
             val endMs = 1700086400000L
 
-            val session1 =
-                SleepSessionEntity(
-                    id = "s1",
-                    startTime = startMs + 1000,
-                    endTime = startMs + 28800000,
-                    durationMinutes = 480,
-                    efficiency = 0.9f,
-                    deepSleepMinutes = 60,
-                    remSleepMinutes = 90,
-                    lightSleepMinutes = 270,
-                    awakeMinutes = 60,
-                    sleepScore = 80f,
-                    startZoneOffsetSeconds = 0,
-                    endZoneOffsetSeconds = 0,
-                    deviceName = "Watch",
-                )
+            val scanId = ScanIdentity("run-1", "0")
+            stubScanState(scanId, HealthDataType.SLEEP, complete = true)
 
-            coEvery { daos.sleepSessionDao.getBetween(startMs, endMs) } returns listOf(session1)
+            coEvery {
+                daos.sleepSessionDao.boundsOfUnstagedSessions(startMs, endMs, scanId.runId, scanId.chunkId, "SLEEP")
+            } returns StagedDeletionBounds(null, null)
 
-            val scan = CompleteTypeScan(HealthDataType.SLEEP, startMs, endMs, "", setOf("s1"))
+            val scan = CompleteTypeScan(HealthDataType.SLEEP, startMs, endMs, "", scanId)
             val affected = store.reconcileWindow(scan, zoneId)
 
             assertNull(affected)
-            coVerify(exactly = 0) { daos.sleepSessionDao.deleteSessionsNotIn(any(), any(), any()) }
+            coVerify(exactly = 0) { daos.sleepSessionDao.deleteSessionsNotStaged(any(), any(), any(), any(), any()) }
         }
 
     @Test
@@ -173,15 +171,37 @@ class RoomHealthIngestionStoreReconcileTest {
                     metadataState = "AUTHORITATIVE",
                 )
 
+            val scanId = ScanIdentity("run-1", "0")
+            stubScanState(scanId, HealthDataType.HEART_RATE, complete = true)
+
             coEvery {
-                daos.sourceRecordDao.getAuthoritativeSourcesOverlapping("HEART_RATE", startMs, endMs)
+                daos.sourceRecordDao.pageUnstagedAuthoritativeSources(
+                    recordType = "HEART_RATE",
+                    windowStartMs = startMs,
+                    windowEndMs = endMs,
+                    runId = scanId.runId,
+                    chunkId = scanId.chunkId,
+                    afterRef = Long.MIN_VALUE,
+                    limit = 500,
+                )
             } returns listOf(src1)
 
+            coEvery {
+                daos.sourceRecordDao.pageUnstagedAuthoritativeSources(
+                    recordType = "HEART_RATE",
+                    windowStartMs = startMs,
+                    windowEndMs = endMs,
+                    runId = scanId.runId,
+                    chunkId = scanId.chunkId,
+                    afterRef = 101L,
+                    limit = 500,
+                )
+            } returns emptyList()
+
             // hc-src-1 is deleted in HC
-            val scan = CompleteTypeScan(HealthDataType.HEART_RATE, startMs, endMs, "", emptySet())
+            val scan = CompleteTypeScan(HealthDataType.HEART_RATE, startMs, endMs, "", scanId)
             val affected = store.reconcileWindow(scan, zoneId)
 
-            coVerify { daos.heartRateDao.deleteBySourceRecordRef(101L) }
             coVerify { daos.sourceRecordDao.deleteBySourceRecordId("hc-src-1") }
             assertEquals(LocalDate.of(2023, 11, 14), affected?.start)
         }
@@ -207,38 +227,93 @@ class RoomHealthIngestionStoreReconcileTest {
                     metadataState = "AUTHORITATIVE",
                 )
 
+            val scanId = ScanIdentity("run-1", "0")
+            stubScanState(scanId, HealthDataType.HEART_RATE, complete = true)
+
             coEvery {
-                daos.sourceRecordDao.getAuthoritativeSourcesOverlapping("HEART_RATE", startMs, endMs)
+                daos.sourceRecordDao.pageUnstagedAuthoritativeSources(
+                    recordType = "HEART_RATE",
+                    windowStartMs = startMs,
+                    windowEndMs = endMs,
+                    runId = scanId.runId,
+                    chunkId = scanId.chunkId,
+                    afterRef = Long.MIN_VALUE,
+                    limit = 500,
+                )
             } returns listOf(srcSpanning)
 
-            val scan = CompleteTypeScan(HealthDataType.HEART_RATE, startMs, endMs, "", emptySet())
+            coEvery {
+                daos.sourceRecordDao.pageUnstagedAuthoritativeSources(
+                    recordType = "HEART_RATE",
+                    windowStartMs = startMs,
+                    windowEndMs = endMs,
+                    runId = scanId.runId,
+                    chunkId = scanId.chunkId,
+                    afterRef = 102L,
+                    limit = 500,
+                )
+            } returns emptyList()
+
+            val scan = CompleteTypeScan(HealthDataType.HEART_RATE, startMs, endMs, "", scanId)
             val affected = store.reconcileWindow(scan, zoneId)
 
-            coVerify { daos.heartRateDao.deleteBySourceRecordRef(102L) }
             coVerify { daos.sourceRecordDao.deleteBySourceRecordId("hc-src-spanning") }
             assertEquals(LocalDate.of(2023, 11, 13), affected?.start)
             assertEquals(LocalDate.of(2023, 11, 16), affected?.endInclusive)
         }
 
     @Test
-    fun `reconcileWindow for HEART_RATE delegates only to getAuthoritativeSourcesOverlapping`() =
+    fun `reconcileWindow for HEART_RATE delegates only to pageUnstagedAuthoritativeSources`() =
         runTest {
             val startMs = 1700000000000L
             val endMs = 1700086400000L
 
+            val scanId = ScanIdentity("run-1", "0")
+            stubScanState(scanId, HealthDataType.HEART_RATE, complete = true)
+
             coEvery {
-                daos.sourceRecordDao.getAuthoritativeSourcesOverlapping("HEART_RATE", startMs, endMs)
+                daos.sourceRecordDao.pageUnstagedAuthoritativeSources(
+                    recordType = "HEART_RATE",
+                    windowStartMs = startMs,
+                    windowEndMs = endMs,
+                    runId = scanId.runId,
+                    chunkId = scanId.chunkId,
+                    afterRef = Long.MIN_VALUE,
+                    limit = 500,
+                )
             } returns emptyList()
 
-            val scan = CompleteTypeScan(HealthDataType.HEART_RATE, startMs, endMs, "", emptySet())
+            val scan = CompleteTypeScan(HealthDataType.HEART_RATE, startMs, endMs, "", scanId)
             val affected = store.reconcileWindow(scan, zoneId)
 
             assertNull(affected)
             coVerify(exactly = 1) {
-                daos.sourceRecordDao.getAuthoritativeSourcesOverlapping("HEART_RATE", startMs, endMs)
+                daos.sourceRecordDao.pageUnstagedAuthoritativeSources(
+                    recordType = "HEART_RATE",
+                    windowStartMs = startMs,
+                    windowEndMs = endMs,
+                    runId = scanId.runId,
+                    chunkId = scanId.chunkId,
+                    afterRef = Long.MIN_VALUE,
+                    limit = 500,
+                )
             }
             coVerify(exactly = 0) {
-                daos.heartRateDao.deleteBySourceRecordRef(any())
+                daos.sourceRecordDao.deleteBySourceRecordId(any())
             }
         }
+
+    private fun stubScanState(scanId: ScanIdentity, type: HealthDataType, complete: Boolean = true) {
+        coEvery {
+            scanTypeStateDao.getState(scanId.runId, scanId.chunkId, type.name)
+        } returns
+            ScanTypeStateEntity(
+                runId = scanId.runId,
+                chunkId = scanId.chunkId,
+                recordType = type.name,
+                state = if (complete) ScanTypeStateDao.STATE_COMPLETE else ScanTypeStateDao.STATE_SCANNING,
+                stagedCount = 0,
+                updatedAtMs = 0L,
+            )
+    }
 }

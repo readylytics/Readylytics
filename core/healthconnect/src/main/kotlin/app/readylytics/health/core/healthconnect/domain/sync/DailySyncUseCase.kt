@@ -62,11 +62,15 @@ class DailySyncUseCase
             windowBudgetMs: Long,
             onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)?,
         ) {
+            val scanIdentity = ScanIdentities.daily(startMs)
             try {
                 ingestionCoordinator.ingestWindow(
-                    startMs,
-                    endMs,
-                    prefs,
+                    windowStart = startMs,
+                    windowEnd = endMs,
+                    prefs = prefs,
+                    scanIdentity = scanIdentity,
+                    resumeHrScan = false,
+                    resumeHrvScan = false,
                     windowBudgetMs = windowBudgetMs,
                     onProgress = onProgress,
                 )
@@ -75,9 +79,12 @@ class DailySyncUseCase
                     "Ingest segment $startMs..$endMs timed out; retrying with extended budget"
                 }
                 ingestionCoordinator.ingestWindow(
-                    startMs,
-                    endMs,
-                    prefs,
+                    windowStart = startMs,
+                    windowEnd = endMs,
+                    prefs = prefs,
+                    scanIdentity = scanIdentity,
+                    resumeHrScan = false,
+                    resumeHrvScan = false,
                     windowBudgetMs = EXTENDED_DAILY_INGEST_BUDGET_MS,
                     onProgress = onProgress,
                 )
@@ -207,6 +214,17 @@ class DailySyncUseCase
                             "DEFERRED_DAILY_SYNC",
                         )
                     }
+                    // Fix for Task 4 review Finding 1: today's segment succeeded, so this run's own
+                    // DAILY_SYNC chunk ids are now known -- purge every other DAILY_SYNC chunk (i.e.
+                    // every earlier day's staging) before the back-day segment stages a new one, so
+                    // staging never accumulates across days.
+                    ingestionCoordinator.clearStaleDailyStaging(
+                        keepChunkIds =
+                            setOf(
+                                ScanIdentities.daily(todayMidnight).chunkId,
+                                ScanIdentities.daily(ingestStart).chunkId,
+                            ),
+                    )
                     try {
                         ingestSegment(
                             ingestStart,

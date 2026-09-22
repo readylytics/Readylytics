@@ -9,6 +9,7 @@ import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.model.WorkoutRoutePoint
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
 import app.readylytics.health.core.model.domain.repository.PermissionStatus
 import app.readylytics.health.core.model.domain.repository.ReadOutcome
@@ -20,9 +21,11 @@ import app.readylytics.health.core.model.domain.sync.CompleteTypeScan
 import app.readylytics.health.core.model.domain.sync.HealthIngestionBatch
 import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
 import app.readylytics.health.core.model.domain.sync.HeartRateInput
+import app.readylytics.health.core.model.domain.sync.HistoricalRunIdentity
 import app.readylytics.health.core.model.domain.sync.HrvInput
 import app.readylytics.health.core.model.domain.sync.ResyncCheckpoint
 import app.readylytics.health.core.model.domain.sync.ResyncPhase
+import app.readylytics.health.core.model.domain.sync.ScanStagingStore
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.sync.SelectedSourcePruner
 import app.readylytics.health.core.model.domain.sync.SleepSessionInput
@@ -60,7 +63,8 @@ class ResyncDeletionConvergenceTest {
     private val selectedSourcePruner = mockk<SelectedSourcePruner>(relaxed = true)
     private val checkpointStore = InMemoryResyncCheckpointStore()
     private val transactionRunner = RecordingTransactionRunner()
-    private val fakeStore = FakeReconcilingHealthIngestionStore()
+    private val staging = InMemoryScanStagingStore()
+    private val fakeStore = FakeReconcilingHealthIngestionStore(staging)
 
     private val fixedClock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC"))
 
@@ -69,6 +73,7 @@ class ResyncDeletionConvergenceTest {
     @Before
     fun setup() {
         fakeStore.clear()
+        staging.clearAll()
         coEvery { changeSynchronizer.applyPendingChanges() } returns HealthChangeSyncOutcome(emptySet(), false)
         coEvery { changeSynchronizer.captureChangesTokens() } returns emptyMap()
         coEvery { changeSynchronizer.commitTokens(any()) } returns Unit
@@ -110,8 +115,9 @@ class ResyncDeletionConvergenceTest {
                 healthIngestionStore = fakeStore,
                 ingestion =
                     ResyncIngestionDependencies(
-                        ingestionCoordinator = HealthIngestionCoordinator(hcRepo, fakeStore),
+                        ingestionCoordinator = HealthIngestionCoordinator(hcRepo, fakeStore, staging = staging),
                         stepCountFetcher = StepCountFetcher(hcRepo),
+                        staging = staging,
                     ),
                 recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner),
                 ioDispatcher = Dispatchers.Unconfined,
@@ -434,29 +440,19 @@ class ResyncDeletionConvergenceTest {
                         DomainHeartRateSample(time = Instant.parse("2026-06-02T13:00:00Z"), beatsPerMinute = 70),
                     ),
                 )
-
-            val hrSamplePage1Record =
-                DomainHeartRateRecord(
-                    id = "hr-page-1-sample",
-                    deviceName = "Pixel Watch",
-                    samples = listOf(
-                        DomainHeartRateSample(time = Instant.parse("2026-06-02T12:00:00Z"), beatsPerMinute = 65),
-                    ),
-                )
-
             setupMidstreamHrCheckpoint(startDate, endDate, "token-page-2")
 
             coEvery {
                 hcRepo.readHeartRateSamplesPaged(
                     from = any(),
                     to = any(),
-                    startPageToken = null,
+                    startPageToken = "token-page-2",
                     onPage = any(),
                 )
             } coAnswers {
                 @Suppress("UNCHECKED_CAST")
                 val onPage = it.invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
-                onPage(listOf(hrSamplePage1Record, hrSamplePage2), null)
+                onPage(listOf(hrSamplePage2), null)
                 ReadOutcome.Available(Unit)
             }
 
@@ -470,6 +466,58 @@ class ResyncDeletionConvergenceTest {
             assertTrue(
                 "Page 2 sample must be persisted",
                 fakeStore.heartRateSamples.values.any { it.beatsPerMinute == 70 },
+            )
+        }
+
+    @Test
+    fun `checkpoint token without staging replays all HR pages before deletion reconciliation`() =
+        runTest {
+            val startDate = LocalDate.of(2026, 6, 1)
+            val endDate = LocalDate.of(2026, 6, 5)
+            val page1Input = createHeartRateInput("hr-migrated-page-1", "2026-06-02T12:00:00Z", 65)
+            fakeStore.heartRateSamples[page1Input.id] = page1Input
+            val page1 =
+                DomainHeartRateRecord(
+                    id = page1Input.id,
+                    deviceName = "Pixel Watch",
+                    samples = listOf(
+                        DomainHeartRateSample(time = Instant.parse("2026-06-02T12:00:00Z"), beatsPerMinute = 65),
+                    ),
+                )
+            val page2 =
+                DomainHeartRateRecord(
+                    id = "hr-migrated-page-2",
+                    deviceName = "Pixel Watch",
+                    samples = listOf(
+                        DomainHeartRateSample(time = Instant.parse("2026-06-02T13:00:00Z"), beatsPerMinute = 70),
+                    ),
+                )
+            setupMidstreamHrCheckpoint(startDate, endDate, "token-page-2")
+            staging.clearAll()
+
+            val capturedStartTokens = mutableListOf<String?>()
+            coEvery {
+                hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any())
+            } coAnswers {
+                val token = invocation.args[2] as String?
+                capturedStartTokens.add(token)
+                val onPage = invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
+                if (token == null) {
+                    onPage(listOf(page1), "token-page-2")
+                    onPage(listOf(page2), null)
+                } else {
+                    onPage(listOf(page2), null)
+                }
+                ReadOutcome.Available(Unit)
+            }
+
+            val result = useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
+
+            assertTrue("Resync must succeed", result.isSuccess)
+            assertEquals(listOf(null), capturedStartTokens)
+            assertEquals(
+                setOf(page1Input.id, page2.id),
+                fakeStore.heartRateSamples.values.map { it.sourceId }.toSet(),
             )
         }
 
@@ -537,20 +585,38 @@ class ResyncDeletionConvergenceTest {
         endDate: LocalDate,
         token: String,
     ) {
+        val prefs = UserPreferences()
+        val runIdentity =
+            HistoricalRunIdentity.create(
+                runId = "test-run",
+                mode = HistoricalRunIdentity.MODE_FULL_INGEST,
+                startDate = startDate,
+                endDate = endDate,
+                zoneId = prefs.scoringZone(),
+                prefs = prefs,
+                resolvedHrMax = (208 - 0.7 * prefs.age).toFloat(),
+                startedAtEpochMs = fixedClock.millis(),
+            )
+        val scanIdentity = ScanIdentities.historical(runIdentity.runId, startDate)
+        staging.beginTypeScan(scanIdentity, HealthDataType.HEART_RATE, resume = false)
+        staging.stageIds(scanIdentity, HealthDataType.HEART_RATE, listOf("hr-page-1-sample"))
         checkpointStore.save(
             ResyncCheckpoint(
                 startDate = startDate,
                 endDate = endDate,
                 phase = ResyncPhase.INGEST,
                 nextDate = startDate,
-                selectionHash = "",
+                selectionHash = runIdentity.scoringSnapshotId,
                 baselineChangeTokens = mapOf(HealthDataType.SLEEP to "token-1"),
                 hrPageToken = token,
+                runIdentity = runIdentity,
             ),
         )
     }
 
-    private class FakeReconcilingHealthIngestionStore : HealthIngestionStore {
+    private class FakeReconcilingHealthIngestionStore(
+        private val staging: InMemoryScanStagingStore? = null,
+    ) : HealthIngestionStore {
         val sleepSessions = mutableMapOf<String, SleepSessionInput>()
         val workouts = mutableMapOf<String, WorkoutInput>()
         val weights = mutableMapOf<String, WeightInput>()
@@ -594,14 +660,15 @@ class ResyncDeletionConvergenceTest {
         override suspend fun reconcileWindow(
             scan: CompleteTypeScan,
             zoneId: ZoneId,
-        ): ScoreInvalidation.AffectedRange? =
-            when (scan.type) {
+        ): ScoreInvalidation.AffectedRange? {
+            val scannedIds = staging?.stagedIds(scan.scan, scan.type) ?: scan.ids
+            return when (scan.type) {
                 HealthDataType.SLEEP ->
                     reconcileItems(
                         map = sleepSessions,
                         windowStartMs = scan.windowStartMs,
                         windowEndMs = scan.windowEndExclusiveMs,
-                        hcIds = scan.ids,
+                        hcIds = scannedIds,
                         zoneId = zoneId,
                         getStart = { it.startTime },
                         getEnd = { it.endTime },
@@ -611,7 +678,7 @@ class ResyncDeletionConvergenceTest {
                         map = workouts,
                         windowStartMs = scan.windowStartMs,
                         windowEndMs = scan.windowEndExclusiveMs,
-                        hcIds = scan.ids,
+                        hcIds = scannedIds,
                         zoneId = zoneId,
                         getStart = { it.startTime },
                         getEnd = { it.endTime },
@@ -621,7 +688,7 @@ class ResyncDeletionConvergenceTest {
                         map = weights,
                         windowStartMs = scan.windowStartMs,
                         windowEndMs = scan.windowEndExclusiveMs,
-                        hcIds = scan.ids,
+                        hcIds = scannedIds,
                         zoneId = zoneId,
                         getStart = { it.timestampMs },
                         getEnd = { it.timestampMs },
@@ -631,7 +698,7 @@ class ResyncDeletionConvergenceTest {
                         map = heartRateSamples,
                         windowStartMs = scan.windowStartMs,
                         windowEndMs = scan.windowEndExclusiveMs,
-                        hcIds = scan.ids,
+                        hcIds = scannedIds,
                         zoneId = zoneId,
                         getStart = { it.timestampMs },
                         getEnd = { it.timestampMs },
@@ -639,6 +706,7 @@ class ResyncDeletionConvergenceTest {
                     )
                 else -> null
             }
+        }
 
         private fun <T> reconcileItems(
             map: MutableMap<String, T>,

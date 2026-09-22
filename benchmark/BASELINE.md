@@ -253,3 +253,148 @@ adb devices
 4. **Scoring Recompute (PERF-002):** Calibrated daily summary recompute for day $D$ must not re-scan or expand unneeded historical raw samples, completing within $\le 50$ ms per scored day.
 5. **Rollup & Export Streaming (PERF-003):** Hot-to-warm rollup and backup export must maintain chunked page boundaries (500 rows/page) with zero full-table heap buffering.
 
+## Phase 2 — query plans and index cost (Task 10)
+
+`Phase2QueryPlanTest` (`core/database/src/test/kotlin/app/readylytics/health/core/database/data/local/Phase2QueryPlanTest.kt`) runs real SQLite `EXPLAIN QUERY PLAN` against the five performance-sensitive predicates Tasks 3/5/8/9 of the Phase 2 HC/DB scalability plan added, using each predicate's real SQL copied verbatim from the owning `@Query`. An index is kept only when a plan proved a scan or a temp sort; three of the five predicates already passed on the indexes those earlier tasks shipped, with no schema change.
+
+| Query (owning DAO method) | Predicate under test | Result without change |
+|---|---|---|
+| `ScanStagingDao.countSeen` | staged-id lookup by `(runId, chunkId, recordType)` | PASS — served by the composite PRIMARY KEY, no change |
+| `SleepSessionDao.deleteSessionsNotStaged` | anti-join delete of unstaged sleep sessions | PASS — `index_sleep_sessions_endTime` outer side, PK-covered subquery |
+| `SourceRecordDao.pageUnstagedAuthoritativeSources` | unstaged authoritative-source keyset page | PASS — `index_health_source_records_recordType_metadataState_recordStartMs` |
+| `HeartRateDao.pagePlausibleSamplesForRollup` | Task 8 rollup streamer's keyset page | **FAILED** — `USE TEMP B-TREE FOR RIGHT PART OF ORDER BY` |
+| `SourceRecordDao.pageUnreferencedSourceIds` | Task 9 GC's 5-way existence check | **FAILED** — bare `SCAN TABLE scan_seen_ids` (no index at all) |
+
+Two indexes were added to `Migration22To23` (still unreleased at this point in the phase, so extended rather than versioned to v24) after the plan proved each necessary:
+
+### 1. `heart_rate_records(timestampMs, sourceRecordRef)` — `index_hr_v10_timestamp_source`
+
+- **Statement:** `SELECT * FROM heart_rate_records WHERE timestampMs >= :fromMs AND timestampMs < :toMs AND beatsPerMinute BETWEEN 30 AND 230 AND (timestampMs > :afterTs OR (timestampMs = :afterTs AND sourceRecordRef > :afterRef)) ORDER BY timestampMs ASC, sourceRecordRef ASC LIMIT :limit`
+- **Plan before:** `SEARCH TABLE heart_rate_records USING INDEX index_hr_v10_timestamp (timestampMs>? AND timestampMs<?), USE TEMP B-TREE FOR RIGHT PART OF ORDER BY`. The pre-existing single-column `index_hr_v10_timestamp` (from Migration9To10, 2024-era) satisfied the range filter and the primary sort key, but SQLite still had to materialize and sort every matching row to break `timestampMs` ties on `sourceRecordRef`, defeating the keyset page's bounded-memory intent for a dense multi-device day.
+- **Plan after:** `SEARCH TABLE heart_rate_records USING INDEX index_hr_v10_timestamp_source (timestampMs>? AND timestampMs<?)` — no temp sort; the index's own order satisfies `ORDER BY timestampMs ASC, sourceRecordRef ASC` directly.
+- **Index size (measured):** built the identical Room-generated table + all five real indexes in a standalone SQLite file (`sqlite3`, page_size=4096) and loaded 8,640 rows (the same dense-parent scale as the OD-1 baseline above: 720 minutes × 12 samples/min). `index_hr_v10_timestamp_source` measured **118,784 bytes / 29 pages** via `dbstat` — **13.75 B/row**, identical footprint to the existing `index_hr_v10_source_time` at the same row count (same two-INTEGER-column shape).
+- **Write-cost delta:** one more 2-column INTEGER B-tree insert per raw HR row alongside the four indexes already maintained per write (Task 5's `PersistenceBatchingTest` batches raw HR writes in 500-row transactional chunks; this adds one more index page write per row within that same existing transaction boundary — no new transaction, no new batching tier). The pre-existing single-column `index_hr_v10_timestamp` was left in place rather than dropped/replaced: the migration is additive-only per the plan's constraint, and it remains a valid (if now largely redundant) index for any future single-column `timestampMs`-only query.
+
+### 2. `scan_seen_ids(sourceId)` — `index_scan_seen_ids_sourceId`
+
+- **Statement (5-way existence check, one branch shown):** `... AND NOT EXISTS (SELECT 1 FROM scan_seen_ids WHERE sourceId = health_source_records.sourceRecordId) ...` inside `SourceRecordDao.pageUnreferencedSourceIds`, evaluated once per GC page candidate (up to 500 rows/page, `SourceMetadataGc.PAGE_SIZE`).
+- **Plan before:** `... CORRELATED SCALAR SUBQUERY 5, SCAN TABLE scan_seen_ids`. Both existing indexes on `scan_seen_ids` — the composite PRIMARY KEY `(runId, chunkId, recordType, sourceId)` and `index_scan_seen_ids_runId_chunkId_recordType` — lead with `runId`, which this GC predicate has no value for, so neither could seek and SQLite fell back to a full unindexed table scan, run once per GC candidate row (up to 10,000 rows/run, `SourceMetadataGc.LIMIT_PER_RUN`).
+- **Plan after:** `... CORRELATED SCALAR SUBQUERY 5, SEARCH TABLE scan_seen_ids USING COVERING INDEX index_scan_seen_ids_sourceId (sourceId=?)` — an index seek instead of a scan.
+- **Index size (measured):** same standalone-file measurement, 8,640 synthetic staged rows (one dense scan chunk's worth). `index_scan_seen_ids_sourceId` measured **196,608 bytes / 48 pages** — **22.75 B/row** (wider than the HR index above because `sourceId` is a Health Connect UUID string, ~14+ bytes, versus two INTEGERs).
+- **Write-cost delta:** one more single-TEXT-column index insert per row inserted into `scan_seen_ids` by `ScanStagingDao.insertSeenIds`. `scan_seen_ids` is transient operational state cleared per run/chunk (`deleteSeenForRun`/`deleteSeenForOtherChunks`), not a durable historical table, so this cost does not accumulate across a user's lifetime the way a raw-sample index would.
+
+### Not changed: `staged_hr_sources` full existence-check scan
+
+The same Task 9 query's `NOT EXISTS (SELECT 1 FROM staged_hr_sources WHERE sourceId = health_source_records.sourceRecordId)` branch plans as `SCAN TABLE staged_hr_sources USING COVERING INDEX sqlite_autoindex_staged_hr_sources_1` — a full scan of the table's own composite-PRIMARY-KEY covering index (PK is `(runId, sourceId)`, also `runId`-led), not a seek. Per the discipline this task enforces, an index-covering scan is not proof of a missing index the way a bare `SCAN TABLE <table>` is: `staged_hr_sources` is transient in-flight refresh state (WP-17 Step 4), bounded to a handful of rows per active authorized refresh rather than accumulating with history, so a full scan of its own PK index carries negligible real cost. No index was added for it — adding one here would have been the speculative kind of change this task's rule explicitly forbids.
+
+---
+
+## Phase 2 — WP-18/WP-19 (Task 11)
+
+**IMPORTANT — read before trusting any number below:** this environment has no connected Android
+device or emulator (`adb devices` returns empty) and none could be started. Every row in this
+section that requires an actual device/instrumented run is marked **PENDING — requires a connected
+device, not yet run**. Those cells are placeholders describing the shape of the measurement to be
+taken, not measurements. Do not treat a PENDING cell as a passing or failing result — it is simply
+unmeasured. This matches the controller's explicit instruction for this task: report failures as
+failures, and never call an unmeasured plan validated.
+
+### What actually ran in this environment
+
+`ScanStagingScaleBenchmark` and the `HealthParentFixture.pageBoundaryExtremes` shape it exercises
+live in `database-benchmark`, an `com.android.test` Gradle module. That module has no local/unit-test
+variant (`com.android.test` targets only produce `connectedBenchmarkAndroidTest`-style instrumented
+tests; there is no Robolectric dependency and no `testDebugUnitTest`/JVM path), so none of the three
+new `@Test` methods below could execute in this session. What *did* run:
+
+- `./gradlew :database-benchmark:tasks --all | grep -i benchmark` — confirms the real device task
+  name at HEAD: **`connectedBenchmarkAndroidTest`** (matches the brief's Step 3 exactly; no rename).
+- `./gradlew :database-benchmark:compileBenchmarkKotlin` — the closest available proxy for "does the
+  new code compile." This module was already failing to compile *before* Task 11 touched it, for
+  reasons unrelated to Phase 2 (see "Pre-existing compile blocker" below). After Task 11's changes,
+  the delta against that pre-existing baseline error set is **zero new errors** — i.e. every line
+  this task added (`HealthParentFixture.pageBoundaryExtremes`/`chunkBoundary`,
+  `ScanStagingScaleBenchmark`'s four `@Test` methods and their helpers) type-checks cleanly against
+  the real, current production signatures (`HealthIngestionCoordinator.ingestWindow`,
+  `RoomHealthIngestionStore`, `RoomScanStagingStore`, `DataRollupManager.rollupExpiredHotTier`,
+  `MinuteRollupStreamer`, `RetentionCleanup.deleteBefore`, `SourceRecordDao.pageAfter` /
+  `pageUnreferencedSourceIds`). This is compiler-verified structural soundness, not a device run.
+
+**Pre-existing compile blocker (not a Phase 2 defect):** `database-benchmark`'s existing
+`ScoringBenchmarkHelper.createScoringRepository`/`seedCalibratedHistory` and
+`HealthPipelineBaselineBenchmark`'s stage-7 export helper reference scoring-domain APIs
+(`WorkoutRecordEntity` fields, `ComputeWorkoutLoadMetricsUseCase`'s constructor,
+`TrainingReadinessConfig`-related use cases, `DailySummaryEntity` fields) that no longer match the
+production shape. `git branch --contains` / `git merge-base --is-ancestor` confirm the commit that
+introduced this drift (`5b2c8936`, "Code Review (#287)") is an **ancestor of `feat/phase2`'s branch
+point** (`082e29fd`) — i.e. this module was already broken before any Task 1–10 work started, and is
+invisible to the standard release gate because a `com.android.test` module has no `assembleDebug`/
+`testDebugUnitTest` task for the root gate to pick up. Per this task's own scope boundary ("Scoring
+math is OFF-LIMITS") this was **not** repaired — fixing it correctly would mean inventing semantics
+for scoring/training-readiness wiring this task has no context for. Three narrow, mechanical,
+non-scoring fixes *were* made because they were both safe and necessary to prove the new Task 11
+code compiles cleanly against the rest of its own module: `BenchmarkFakes.kt` (added the 9
+`has*Permission()` stub overrides `HealthConnectPermissionChecker` now declares, and
+`updateTrainingReadinessConfig` on the settings fake — both mechanical interface-completion stubs,
+all returning `true`/`Unit`), `HealthDatasetMatrixVerificationTest.kt` (`source.dataType` →
+`source.recordType`, a one-line rename), and `ScoringBenchmarkHelper.createRoomHealthIngestionStore`
+(added the `scanTypeStateDao` constructor argument `RoomHealthIngestionStore` gained in this phase's
+own Task 1–4 work — this one *is* Phase 2's own gap, now closed). None of these touch scoring
+formulas, thresholds, or any file this phase's docs/exit-criteria treat as scoring-owned.
+This blocker, and the two untouched scoring-adjacent call sites, should be flagged to a human for a
+separate follow-up outside this phase's scope.
+
+### Fixture shapes and seed (Task 11 / §11 Step 1)
+
+All three required shapes are deterministic functions of integer indices — no randomness, no health
+values, reproducible byte-for-byte given the same arguments:
+
+| Shape | Generator call | Used by |
+|---|---|---|
+| >1m one-sample parents | `HealthParentFixture.pages(parentCount = 1_000_000, samplesPerParent = 1, pageSize = 1_000)` | `benchmarkMillionParentIngestPlateau` |
+| >1m nested samples, few dense parents | Directly-seeded `HeartRateRecordEntity` rows: 3 sources × 72 samples/minute/source × 1,440 minutes/day = 311,040 rows/day, uniform per-minute density, deterministic BPM `55 + (s % 30)` | `benchmarkDenseDayRollupMemory` |
+| Page-boundary extremes | `HealthParentFixture.pageBoundaryExtremes(fillerParentCount = 200, pageSize = 64)` — last parent's two samples sit at `chunkBoundary() - 1ms` and `chunkBoundary()`, which is simultaneously a minute boundary (30-day window is an exact multiple of 60,000 ms) | `verifyPageBoundaryExtremeShape` (shape-correctness assertion; the resumption behavior itself is Tasks 3/4's `PagedIngestResumptionTest` territory, not re-implemented here) |
+
+Fixed epoch anchors used as the seed: `HealthParentFixture`'s existing `start = 2026-01-01T00:00:00Z`,
+`WINDOW_MS = 30 days`; `ScanStagingScaleBenchmark`'s dense-day fixture uses `2026-02-01T00:00:00Z`
+(day one) and `2026-02-02T00:00:00Z` (day two, interruption-safety test). Million-source fixture uses
+1,000 referenced source ids (`bench-referenced-source-0..999`) and 999,000 orphaned source ids
+(`bench-orphan-source-0..998999`).
+
+### `HEAP_PLATEAU_BUDGET_BYTES` — provisional, not measured
+
+`benchmark/BASELINE.md` had no prior heap-plateau figure to inherit (grepped for "heap" across this
+file before writing this section — the only pre-existing hit is PERF-003's "zero full-table heap
+buffering" budget line, a design statement, not a byte figure). Per the brief: "if BASELINE.md has no
+comparable figure, record the first run as the baseline and state that in the same commit." This
+environment cannot produce that first run (no device), so `ScanStagingScaleBenchmark` currently uses
+a **provisional engineering budget of 300 MiB** (`300L * 1024 * 1024`, defined as a private constant
+in the benchmark file with a comment pointing back here), chosen as a conservative ceiling well under
+typical Android app heap limits, not derived from any measurement. **This constant must be replaced
+with the first real device run's measured post-GC heap figure once one exists**, and this note should
+be removed once that happens.
+
+### Device measurements — PENDING
+
+| Field | Value |
+|---|---|
+| Device model | **PENDING — requires a connected device, not yet run** |
+| OS / API level | **PENDING — requires a connected device, not yet run** |
+| Build variant | `benchmark` (confirmed at HEAD via `:database-benchmark:tasks --all`; `connectedBenchmarkAndroidTest` is the real task name, unchanged from the brief) |
+| Dataset shape and seed | See "Fixture shapes and seed" above (already fixed, not device-dependent) |
+
+| Stage | Median | P90 | P99 | Transactions | Statements | Peak heap | WAL growth | Thermal/compilation conditions |
+|---|---|---|---|---|---|---|---|---|
+| `ingest.1m.parents` (`benchmarkMillionParentIngestPlateau`) | PENDING | PENDING | PENDING | PENDING (assert target: `< 50,000`) | PENDING | PENDING (budget: provisional 300 MiB, see above) | PENDING | PENDING |
+| `rollup.dense.day` (`benchmarkDenseDayRollupMemory`, steady-state pass) | PENDING | PENDING | PENDING | PENDING | PENDING | PENDING (budget: provisional 300 MiB) | PENDING | PENDING |
+| `rollup.dense.day` (interruption-safety pass) | n/a (structural assertion, not timed) | — | — | — | — | — | — | PENDING — confirms published minutes are raw-deleted and unpublished minutes are fully intact after mid-pass cancellation |
+| `backup.1m.sources.beforeGc` (`benchmarkMillionSourceBackupAfterGc`) | PENDING | PENDING | PENDING | n/a (read-only paging) | PENDING | PENDING (budget: provisional 300 MiB) | n/a | PENDING |
+| `backup.1m.sources.afterGc` | PENDING | PENDING | PENDING | n/a (read-only paging) | PENDING | PENDING (budget: provisional 300 MiB) | n/a | PENDING; must show a smaller `rowCount` than the `beforeGc` row |
+
+All "PENDING" cells require `./gradlew :database-benchmark:connectedBenchmarkAndroidTest` on a
+connected device or emulator, repeated across several runs for the median/P90/P99 columns, with
+`benchmark/build/outputs/connected_android_test_additional_output/...` JSON extracted per the
+existing "Baseline Execution Instructions" pattern earlier in this file. Do not uninstall
+`app.readylytics.health` to make a device run work — the benchmark app installs under its own
+`app.readylytics.health.benchmark` package.
+

@@ -40,10 +40,10 @@ interface HealthIngestionStore {
     )
 
     /**
-     * WP-06: Reconciles local database records against the set of Health Connect record IDs
-     * fetched in [scan]. Records in that window absent from [CompleteTypeScan.ids]
-     * are deleted within a transaction, and the bounding [ScoreInvalidation.AffectedRange] of deleted
-     * dates is returned (or null if no deletions occurred).
+     * WP-18: Reconciles local database records against the set of Health Connect record IDs
+     * staged under [CompleteTypeScan.scan]. Records in that window absent from the staged scan
+     * are deleted within a transaction via anti-join, and the bounding [ScoreInvalidation.AffectedRange] of deleted
+     * dates is returned (or null if no deletions occurred or the scan is not COMPLETE).
      */
     suspend fun reconcileWindow(
         scan: CompleteTypeScan,

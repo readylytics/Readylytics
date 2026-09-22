@@ -34,4 +34,33 @@ class RetryWithBackoffTest {
             retryWithBackoff { throw CancellationException("cancel") }
         }
     }
+
+    // Regression for the maxAttempts^2 amplification this task fixes: two nested
+    // retryWithBackoff invocations sharing one budget must draw from the same attempt count,
+    // not each get their own independent maxAttempts.
+    @Test
+    fun retryWithBackoffSharedBudgetDoesNotExceedBudgetAcrossTwoNestedInvocations() = runTest {
+        val budget = ReadRetryBudget(delayFn = {})
+        var firstCalls = 0
+        var secondCalls = 0
+
+        runCatching {
+            retryWithBackoff(budget = budget) {
+                firstCalls++
+                throw IOException("boom")
+            }
+        }
+        assertFailsWith<IOException> {
+            retryWithBackoff(budget = budget) {
+                secondCalls++
+                throw IOException("boom")
+            }
+        }
+
+        // 5 total calls for the shared budget (HealthConnectRetryPolicy's default maxAttempts),
+        // not 5 for the first invocation plus another independent 5 for the second (10).
+        assertEquals(5, firstCalls)
+        assertEquals(0, secondCalls)
+        assertEquals(5, firstCalls + secondCalls)
+    }
 }

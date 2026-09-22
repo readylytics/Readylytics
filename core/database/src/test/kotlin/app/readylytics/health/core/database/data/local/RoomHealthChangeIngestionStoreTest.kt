@@ -3,11 +3,15 @@ package app.readylytics.health.core.database.data.local
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.readylytics.health.core.databaseschema.data.local.dao.ScanTypeStateDao
+import app.readylytics.health.core.databaseschema.data.local.entity.ScanSeenIdEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.ScanTypeStateEntity
 import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.sync.CompleteTypeScan
 import app.readylytics.health.core.model.domain.sync.HealthIngestionBatch
 import app.readylytics.health.core.model.domain.sync.HeartRateInput
 import app.readylytics.health.core.model.domain.sync.HrvInput
+import app.readylytics.health.core.model.domain.sync.ScanIdentity
 import app.readylytics.health.core.model.domain.sync.SleepSessionInput
 import app.readylytics.health.core.model.domain.sync.SourceMetadata
 import app.readylytics.health.core.model.domain.sync.SourcePayload
@@ -69,6 +73,7 @@ class RoomHealthChangeIngestionStoreTest {
                 dailySummaryDao = database.dailySummaryDao(),
                 transactionRunner = RoomTransactionRunner(database),
                 vo2MaxRecordDao = database.vo2MaxRecordDao(),
+                scanTypeStateDao = database.scanTypeStateDao(),
             )
         changeStore = RoomHealthChangeIngestionStore(daos = daos, vo2MaxRecordDao = database.vo2MaxRecordDao())
     }
@@ -372,13 +377,15 @@ class RoomHealthChangeIngestionStoreTest {
                 ),
             )
             val dayStart = vo2Time.atZone(ZoneId.of("UTC")).toLocalDate().atStartOfDay(ZoneId.of("UTC")).toInstant()
+            val scanId = ScanIdentity("change-test-1", "0")
+            stage(scanId, HealthDataType.VO2_MAX, emptyList())
             val scan =
                 CompleteTypeScan(
                     type = HealthDataType.VO2_MAX,
                     windowStartMs = dayStart.toEpochMilli(),
                     windowEndExclusiveMs = dayStart.plusSeconds(86_400).toEpochMilli(),
                     sourceSelectionId = "",
-                    ids = emptySet(),
+                    scan = scanId,
                 )
 
             val affected = seedStore.reconcileWindow(scan, ZoneId.of("UTC"))
@@ -412,13 +419,15 @@ class RoomHealthChangeIngestionStoreTest {
                 ),
             )
             val dayStart = sharedTime.atZone(ZoneId.of("UTC")).toLocalDate().atStartOfDay(ZoneId.of("UTC")).toInstant()
+            val scanId = ScanIdentity("change-test-2", "0")
+            stage(scanId, HealthDataType.VO2_MAX, listOf("hc-vo2-keep"))
             val scan =
                 CompleteTypeScan(
                     type = HealthDataType.VO2_MAX,
                     windowStartMs = dayStart.toEpochMilli(),
                     windowEndExclusiveMs = dayStart.plusSeconds(86_400).toEpochMilli(),
                     sourceSelectionId = "",
-                    ids = setOf("hc-vo2-keep"),
+                    scan = scanId,
                 )
 
             seedStore.reconcileWindow(scan, ZoneId.of("UTC"))
@@ -453,13 +462,15 @@ class RoomHealthChangeIngestionStoreTest {
                 ),
             )
             val dayStart = sampleTime.atZone(ZoneId.of("UTC")).toLocalDate().atStartOfDay(ZoneId.of("UTC")).toInstant()
+            val scanId = ScanIdentity("change-test-3", "0")
+            stage(scanId, HealthDataType.VO2_MAX, emptyList())
             val scan =
                 CompleteTypeScan(
                     type = HealthDataType.VO2_MAX,
                     windowStartMs = dayStart.toEpochMilli(),
                     windowEndExclusiveMs = dayStart.plusSeconds(86_400).toEpochMilli(),
                     sourceSelectionId = "",
-                    ids = emptySet(),
+                    scan = scanId,
                 )
 
             seedStore.reconcileWindow(scan, ZoneId.of("UTC"))
@@ -597,6 +608,27 @@ class RoomHealthChangeIngestionStoreTest {
         bloodPressureSamples = emptyList(), oxygenSaturationSamples = emptyList(),
         bodyTemperatureSamples = emptyList(), stepRecords = stepRecords, vo2MaxSamples = vo2MaxSamples,
     )
+
+    private suspend fun stage(
+        scanId: ScanIdentity,
+        type: HealthDataType,
+        ids: List<String>,
+        complete: Boolean = true,
+    ) {
+        database.scanStagingDao().insertSeenIds(
+            ids.map { ScanSeenIdEntity(scanId.runId, scanId.chunkId, type.name, it) },
+        )
+        database.scanTypeStateDao().upsertState(
+            ScanTypeStateEntity(
+                runId = scanId.runId,
+                chunkId = scanId.chunkId,
+                recordType = type.name,
+                state = if (complete) ScanTypeStateDao.STATE_COMPLETE else ScanTypeStateDao.STATE_SCANNING,
+                stagedCount = ids.size,
+                updatedAtMs = 0L,
+            ),
+        )
+    }
 
     private companion object {
         const val START_MS = 1_700_000_000_000L
