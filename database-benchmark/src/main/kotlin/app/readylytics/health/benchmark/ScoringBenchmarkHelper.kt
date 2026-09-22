@@ -222,6 +222,7 @@ object ScoringBenchmarkHelper {
             dailySummaryDao = db.dailySummaryDao(),
             transactionRunner = transactionRunner,
             vo2MaxRecordDao = db.vo2MaxRecordDao(),
+            scanTypeStateDao = db.scanTypeStateDao(),
         )
     }
 

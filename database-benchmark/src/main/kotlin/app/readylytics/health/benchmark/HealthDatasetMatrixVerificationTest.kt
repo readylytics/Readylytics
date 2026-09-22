@@ -319,7 +319,7 @@ class HealthDatasetMatrixVerificationTest {
         val sources = database.sourceRecordDao().getAll()
         for (source in sources) {
             hash = 31L * hash + source.sourceRecordId.hashCode()
-            hash = 31L * hash + source.dataType.hashCode()
+            hash = 31L * hash + source.recordType.hashCode()
         }
         return hash
     }

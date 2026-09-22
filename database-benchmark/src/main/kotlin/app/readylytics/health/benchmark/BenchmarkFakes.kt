@@ -17,6 +17,7 @@ import app.readylytics.health.core.model.domain.repository.HealthConnectReposito
 import app.readylytics.health.core.model.domain.repository.PermissionStatus
 import app.readylytics.health.core.model.domain.repository.ReadOutcome
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
+import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
 import app.readylytics.health.core.model.domain.security.EncryptionManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -47,6 +48,8 @@ class BenchmarkFakeSettingsRepository(
         goalSleepHours: Float,
         hypersomniaOnsetPercent: Int,
     ) = Unit
+
+    override suspend fun updateTrainingReadinessConfig(config: TrainingReadinessConfig) = Unit
 }
 
 class BenchmarkFakeEncryptionManager : EncryptionManager {
@@ -68,9 +71,23 @@ class BenchmarkFakeHealthConnectRepository(
 
     override suspend fun checkPermissions(): PermissionStatus = PermissionStatus.Granted
 
-    override fun hasPermission(permission: String): Boolean = true
+    override suspend fun hasBodyTemperaturePermission(): Boolean = true
 
-    override fun hasAllPermissions(permissions: Set<String>): Boolean = true
+    override suspend fun hasStepsPermission(): Boolean = true
+
+    override suspend fun hasWeightPermission(): Boolean = true
+
+    override suspend fun hasDistancePermission(): Boolean = true
+
+    override suspend fun hasBodyFatPermission(): Boolean = true
+
+    override suspend fun hasBloodPressurePermission(): Boolean = true
+
+    override suspend fun hasOxygenSaturationPermission(): Boolean = true
+
+    override suspend fun hasExerciseRoutesPermission(): Boolean = true
+
+    override suspend fun hasVo2MaxPermission(): Boolean = true
 
     override suspend fun readSleepSessions(
         from: Instant,
