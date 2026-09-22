@@ -93,14 +93,20 @@ class RootNavigationTest {
         listOf("Sleep", "Vitals", "Workouts", "Settings").forEach(::selectTab)
     }
 
+    // Re-clicks inside the wait loop: a single click issued while the freshly launched activity is
+    // still settling can be dropped, and waiting alone never recovers from a lost click. Clicking an
+    // already-selected tab is a no-op, so retrying is safe.
     private fun selectTab(label: String) {
-        composeRule.onNode(isTabWithText(label)).performClick()
+        val tab = composeRule.onNode(isTabWithText(label))
         composeRule.waitUntil(timeoutMillis = TAB_SELECTION_TIMEOUT_MILLIS) {
-            runCatching {
-                composeRule.onNode(isTabWithText(label)).assertIsSelected()
-            }.isSuccess
+            if (runCatching { tab.assertIsSelected() }.isSuccess) {
+                true
+            } else {
+                runCatching { tab.performClick() }
+                false
+            }
         }
-        composeRule.onNode(isTabWithText(label)).assertIsSelected()
+        tab.assertIsSelected()
     }
 
     private fun isTabWithText(label: String): SemanticsMatcher =
