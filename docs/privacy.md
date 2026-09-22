@@ -113,8 +113,8 @@ Readylytics limits locally stored history using a retention setting. By
 default, retention is enabled at 365 days, and you can adjust it in Settings
 to any value between 180 days and 3 years (1095 days). State retention
 applies to every imported health-record table. If you turn retention
-limiting off, Readylytics keeps history up to a 10-year (3650-day) ceiling
-rather than indefinitely. Backups contain only records present in the local
+limiting off, Readylytics disables periodic age-based cleanup and keeps existing local history without a time limit. The separate 10-year (3650-day) Health Connect import horizon only bounds how far a resync attempts to read; it is not
+an automatic deletion ceiling for data already stored locally. Backups contain only records present in the local
 database at backup time. Since heart-rate history older than 90 days is stored as
 one-minute summaries rather than individual samples, an encrypted local backup now also
 includes the per-minute coverage records that say which device or app each summarised
