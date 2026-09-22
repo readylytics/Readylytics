@@ -22,7 +22,7 @@ class RetentionCleanup
         private val daos: HealthRecordDaos,
         private val dailySummaryDao: DailySummaryDao,
         private val vo2MaxRecordDao: Vo2MaxRecordDao,
-        private val coordinator: HealthMutationCoordinator? = null,
+        private val coordinator: HealthMutationCoordinator,
         private val dirtyRangeDao: DirtyRangeDao? = null,
         private val healthMutationStateDao: HealthMutationStateDao? = null,
     ) {
@@ -30,12 +30,7 @@ class RetentionCleanup
             cutoffMs: Long,
             runContext: ScoringRunContext,
         ): ScoreInvalidation.AffectedRange? {
-            val runner: suspend () -> ScoreInvalidation.AffectedRange? = { doDeleteBefore(cutoffMs, runContext) }
-            return if (coordinator != null) {
-                coordinator.withMutation { runner() }
-            } else {
-                runner()
-            }
+            return coordinator.withMutation { doDeleteBefore(cutoffMs, runContext) }
         }
 
         private suspend fun doDeleteBefore(
@@ -99,7 +94,11 @@ class RetentionCleanup
             if (dirtyRangeDao == null || healthMutationStateDao == null) return
             val effectiveEarliest = earliestMs ?: (cutoffMs - DAY_MS)
             val startDate = Instant.ofEpochMilli(effectiveEarliest).atZone(runContext.zoneId).toLocalDate()
-            val endInclusive = maxOf(runContext.today, Instant.ofEpochMilli(cutoffMs).atZone(runContext.zoneId).toLocalDate())
+            val endInclusive =
+                maxOf(
+                    runContext.today,
+                    Instant.ofEpochMilli(cutoffMs).atZone(runContext.zoneId).toLocalDate(),
+                )
 
             healthMutationStateDao.incrementGeneration()
             val currentGen = healthMutationStateDao.current().sourceGeneration

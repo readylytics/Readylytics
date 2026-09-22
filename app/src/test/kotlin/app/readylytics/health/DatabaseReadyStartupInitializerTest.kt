@@ -1,12 +1,12 @@
 package app.readylytics.health
 
 import android.content.Context
-import app.readylytics.health.core.healthconnect.domain.sync.HealthSyncUseCase
 import app.readylytics.health.core.model.data.preferences.BackupSchedule
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.repository.WorkoutTrimpBackfillStatus
+import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.core.scoring.domain.scoring.BackfillHistoricalBaselinesUseCase
 import app.readylytics.health.data.backup.RestoreMaintenanceCoordinator
@@ -42,9 +42,9 @@ import java.time.ZoneOffset
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DatabaseReadyStartupInitializerTest {
-    private val healthSyncUseCase = mockk<HealthSyncUseCase>()
+    private val mutationCoordinator = mockk<HealthMutationCoordinator>()
     private val backfill = mockk<BackfillHistoricalBaselinesUseCase>()
-    private val healthSyncLazy = mockk<Lazy<HealthSyncUseCase>>()
+    private val mutationCoordinatorLazy = mockk<Lazy<HealthMutationCoordinator>>()
     private val backfillLazy = mockk<Lazy<BackfillHistoricalBaselinesUseCase>>()
     private val settingsRepository = mockk<SettingsRepository>()
     private val settingsRepositoryLazy = mockk<Lazy<SettingsRepository>>()
@@ -59,7 +59,7 @@ class DatabaseReadyStartupInitializerTest {
 
             initializer.initializeIfReady(DatabaseReadiness.MigrationRequired(fromVersion = 6))
 
-            verify(exactly = 0) { healthSyncLazy.get() }
+            verify(exactly = 0) { mutationCoordinatorLazy.get() }
             verify(exactly = 0) { backfillLazy.get() }
             verify(exactly = 0) { settingsRepositoryLazy.get() }
             verify(exactly = 0) { physiologyPreferencesLazy.get() }
@@ -72,12 +72,12 @@ class DatabaseReadyStartupInitializerTest {
     @Test
     fun `ready startup resolves Room-backed lazies and initializes exactly once`() =
         runTest {
-            every { healthSyncLazy.get() } returns healthSyncUseCase
+            every { mutationCoordinatorLazy.get() } returns mutationCoordinator
             every { backfillLazy.get() } returns backfill
             every { settingsRepository.backupSchedule } returns flowOf(BackupSchedule.DAILY)
             every { settingsRepository.backgroundSyncEnabled } returns flowOf(true)
             every { settingsRepository.backgroundSyncIntervalMinutes } returns flowOf(30)
-            coEvery { healthSyncUseCase.withSyncLock<Int>(any()) } coAnswers {
+            coEvery { mutationCoordinator.withMutation<Int>(any()) } coAnswers {
                 firstArg<suspend () -> Int>().invoke()
             }
             coEvery { backfill.execute() } returns 3
@@ -86,7 +86,7 @@ class DatabaseReadyStartupInitializerTest {
             initializer.initializeIfReady(DatabaseReadiness.Ready)
             initializer.initializeIfReady(DatabaseReadiness.Ready)
 
-            verify(exactly = 1) { healthSyncLazy.get() }
+            verify(exactly = 1) { mutationCoordinatorLazy.get() }
             verify(exactly = 1) { backfillLazy.get() }
             verify(exactly = 1) { settingsRepositoryLazy.get() }
             coVerify(exactly = 1) { backfill.execute() }
@@ -100,11 +100,11 @@ class DatabaseReadyStartupInitializerTest {
     @Test
     fun `ready startup cancels periodic sync when background sync is disabled`() =
         runTest {
-            every { healthSyncLazy.get() } returns healthSyncUseCase
+            every { mutationCoordinatorLazy.get() } returns mutationCoordinator
             every { backfillLazy.get() } returns backfill
             every { settingsRepository.backupSchedule } returns flowOf(BackupSchedule.WEEKLY)
             every { settingsRepository.backgroundSyncEnabled } returns flowOf(false)
-            coEvery { healthSyncUseCase.withSyncLock<Int>(any()) } coAnswers {
+            coEvery { mutationCoordinator.withMutation<Int>(any()) } coAnswers {
                 firstArg<suspend () -> Int>().invoke()
             }
             coEvery { backfill.execute() } returns 0
@@ -123,7 +123,7 @@ class DatabaseReadyStartupInitializerTest {
     fun `cancellation while reading settings resets guard so a later Ready retries`() =
         runTest {
             var enabledReads = 0
-            every { healthSyncLazy.get() } returns healthSyncUseCase
+            every { mutationCoordinatorLazy.get() } returns mutationCoordinator
             every { backfillLazy.get() } returns backfill
             every { settingsRepository.backupSchedule } returns flowOf(BackupSchedule.DAILY)
             every {
@@ -135,7 +135,7 @@ class DatabaseReadyStartupInitializerTest {
                     emit(true)
                 }
             every { settingsRepository.backgroundSyncIntervalMinutes } returns flowOf(30)
-            coEvery { healthSyncUseCase.withSyncLock<Int>(any()) } coAnswers {
+            coEvery { mutationCoordinator.withMutation<Int>(any()) } coAnswers {
                 firstArg<suspend () -> Int>().invoke()
             }
             coEvery { backfill.execute() } returns 0
@@ -150,7 +150,7 @@ class DatabaseReadyStartupInitializerTest {
             assertTrue(cancellationRethrown)
             initializer.initializeIfReady(DatabaseReadiness.Ready)
 
-            verify(exactly = 2) { healthSyncLazy.get() }
+            verify(exactly = 2) { mutationCoordinatorLazy.get() }
             verify(exactly = 2) { backfillLazy.get() }
             coVerify(exactly = 2) { backfill.execute() }
             verify(exactly = 1) { workerScheduler.scheduleBackupWorker(BackupSchedule.DAILY) }
@@ -163,7 +163,7 @@ class DatabaseReadyStartupInitializerTest {
     fun `stable Ready state retries an ordinary settings failure and completes startup`() =
         runTest {
             var backupScheduleReads = 0
-            every { healthSyncLazy.get() } returns healthSyncUseCase
+            every { mutationCoordinatorLazy.get() } returns mutationCoordinator
             every { backfillLazy.get() } returns backfill
             every {
                 settingsRepository.backupSchedule
@@ -175,7 +175,7 @@ class DatabaseReadyStartupInitializerTest {
                 }
             every { settingsRepository.backgroundSyncEnabled } returns flowOf(true)
             every { settingsRepository.backgroundSyncIntervalMinutes } returns flowOf(30)
-            coEvery { healthSyncUseCase.withSyncLock<Int>(any()) } coAnswers {
+            coEvery { mutationCoordinator.withMutation<Int>(any()) } coAnswers {
                 firstArg<suspend () -> Int>().invoke()
             }
             coEvery { backfill.execute() } returns 0
@@ -192,7 +192,7 @@ class DatabaseReadyStartupInitializerTest {
             }
             advanceUntilIdle()
 
-            verify(exactly = 2) { healthSyncLazy.get() }
+            verify(exactly = 2) { mutationCoordinatorLazy.get() }
             verify(exactly = 1) { workerScheduler.scheduleBackupWorker(BackupSchedule.DAILY) }
             verify(exactly = 1) { workerScheduler.scheduleBirthdayWorker() }
             verify(exactly = 1) { workerScheduler.scheduleDataCleanupWorker() }
@@ -202,12 +202,12 @@ class DatabaseReadyStartupInitializerTest {
     @Test
     fun `retry stops when readiness becomes non-Ready`() =
         runTest {
-            every { healthSyncLazy.get() } returns healthSyncUseCase
+            every { mutationCoordinatorLazy.get() } returns mutationCoordinator
             every { backfillLazy.get() } returns backfill
             every {
                 settingsRepository.backupSchedule
             } returns flow { error("persistent settings failure") }
-            coEvery { healthSyncUseCase.withSyncLock<Int>(any()) } coAnswers {
+            coEvery { mutationCoordinator.withMutation<Int>(any()) } coAnswers {
                 firstArg<suspend () -> Int>().invoke()
             }
             coEvery { backfill.execute() } returns 0
@@ -229,7 +229,7 @@ class DatabaseReadyStartupInitializerTest {
             }
             advanceUntilIdle()
 
-            verify(exactly = 1) { healthSyncLazy.get() }
+            verify(exactly = 1) { mutationCoordinatorLazy.get() }
             verify(exactly = 0) { workerScheduler.scheduleBackupWorker(any()) }
             verify(exactly = 0) { workerScheduler.schedulePeriodicSync(any()) }
         }
@@ -237,12 +237,12 @@ class DatabaseReadyStartupInitializerTest {
     @Test
     fun `cancelling readiness observation stops a pending retry`() =
         runTest {
-            every { healthSyncLazy.get() } returns healthSyncUseCase
+            every { mutationCoordinatorLazy.get() } returns mutationCoordinator
             every { backfillLazy.get() } returns backfill
             every {
                 settingsRepository.backupSchedule
             } returns flow { error("persistent settings failure") }
-            coEvery { healthSyncUseCase.withSyncLock<Int>(any()) } coAnswers {
+            coEvery { mutationCoordinator.withMutation<Int>(any()) } coAnswers {
                 firstArg<suspend () -> Int>().invoke()
             }
             coEvery { backfill.execute() } returns 0
@@ -266,7 +266,7 @@ class DatabaseReadyStartupInitializerTest {
             observation.cancelAndJoin()
 
             assertTrue(observation.isCancelled)
-            verify(exactly = 1) { healthSyncLazy.get() }
+            verify(exactly = 1) { mutationCoordinatorLazy.get() }
             verify(exactly = 0) { workerScheduler.scheduleBackupWorker(any()) }
             verify(exactly = 0) { workerScheduler.schedulePeriodicSync(any()) }
         }
@@ -284,11 +284,11 @@ class DatabaseReadyStartupInitializerTest {
                 val context = mockk<Context>()
                 every { context.cacheDir } returns cacheDir
 
-                every { healthSyncLazy.get() } returns healthSyncUseCase
+                every { mutationCoordinatorLazy.get() } returns mutationCoordinator
                 every { backfillLazy.get() } returns backfill
                 every { settingsRepository.backupSchedule } returns flowOf(BackupSchedule.DAILY)
                 every { settingsRepository.backgroundSyncEnabled } returns flowOf(false)
-                coEvery { healthSyncUseCase.withSyncLock<Int>(any()) } coAnswers {
+                coEvery { mutationCoordinator.withMutation<Int>(any()) } coAnswers {
                     firstArg<suspend () -> Int>().invoke()
                 }
                 coEvery { backfill.execute() } returns 0
@@ -310,11 +310,11 @@ class DatabaseReadyStartupInitializerTest {
             coEvery { restoreCoordinator.recoverInterruptedRestoreOnStartup() } returns true
             coEvery { restoreCoordinator.isMaintenancePending() } returns false
 
-            every { healthSyncLazy.get() } returns healthSyncUseCase
+            every { mutationCoordinatorLazy.get() } returns mutationCoordinator
             every { backfillLazy.get() } returns backfill
             every { settingsRepository.backupSchedule } returns flowOf(BackupSchedule.DAILY)
             every { settingsRepository.backgroundSyncEnabled } returns flowOf(false)
-            coEvery { healthSyncUseCase.withSyncLock<Int>(any()) } coAnswers {
+            coEvery { mutationCoordinator.withMutation<Int>(any()) } coAnswers {
                 firstArg<suspend () -> Int>().invoke()
             }
             coEvery { backfill.execute() } returns 0
@@ -337,11 +337,11 @@ class DatabaseReadyStartupInitializerTest {
             val restoreCoordinator = mockk<RestoreMaintenanceCoordinator>()
             coEvery { restoreCoordinator.recoverInterruptedRestoreOnStartup() } returns false
             coEvery { restoreCoordinator.isMaintenancePending() } returns true
-            every { healthSyncLazy.get() } returns healthSyncUseCase
+            every { mutationCoordinatorLazy.get() } returns mutationCoordinator
             every { backfillLazy.get() } returns backfill
             every { settingsRepository.backupSchedule } returns flowOf(BackupSchedule.DAILY)
             every { settingsRepository.backgroundSyncEnabled } returns flowOf(false)
-            coEvery { healthSyncUseCase.withSyncLock<Int>(any()) } coAnswers {
+            coEvery { mutationCoordinator.withMutation<Int>(any()) } coAnswers {
                 firstArg<suspend () -> Int>().invoke()
             }
             coEvery { backfill.execute() } returns 0
@@ -373,7 +373,7 @@ class DatabaseReadyStartupInitializerTest {
                 ),
             )
         return DatabaseReadyStartupInitializer(
-            healthSyncUseCase = healthSyncLazy,
+            healthMutationCoordinator = mutationCoordinatorLazy,
             backfillHistoricalBaselines = backfillLazy,
             settingsRepository = settingsRepositoryLazy,
             physiologyPreferences = physiologyPreferencesLazy,

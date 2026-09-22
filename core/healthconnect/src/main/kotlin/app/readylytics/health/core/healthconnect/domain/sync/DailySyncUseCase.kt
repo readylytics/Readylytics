@@ -37,7 +37,7 @@ import javax.inject.Singleton
  * Foreground daily sync / recalculation over a recent window. Re-reads the recent Health Connect
  * window, reconciles HR/HRV session linkage, then walk-forward recomputes each day's scores via the
  * unchanged scoring-engine formulas. Serialized against the historical resync by the shared
- * `syncMutex` owned by [HealthSyncUseCase] — callers must invoke this under that lock.
+ * the application-wide [HealthMutationCoordinator] — callers must invoke this under that coordinator.
  */
 @Singleton
 class DailySyncUseCase

@@ -53,6 +53,7 @@ class AuthoritativeHeartRateReaderEquivalenceTest {
         runBlocking { database.healthMutationStateDao().getOrCreate() }
         rollupManager =
             DataRollupManager(
+                coordinator = TestHealthMutationCoordinator,
                 minuteCoverageDao = database.minuteCoverageDao(),
                 heartRateDao = database.heartRateDao(),
                 publisher =

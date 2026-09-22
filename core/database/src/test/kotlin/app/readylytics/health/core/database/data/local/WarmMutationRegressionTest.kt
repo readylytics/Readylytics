@@ -129,10 +129,11 @@ class WarmMutationRegressionTest {
             val oldContribution = database.minuteCoverageDao().getContributionsForMinute(0L).first()
             database.minuteCoverageDao().upsertContributions(listOf(oldContribution.copy(generation = 99L)))
             RetentionCleanup(
-                RoomTransactionRunner(database),
-                daos,
-                database.dailySummaryDao(),
-                database.vo2MaxRecordDao(),
+                coordinator = TestHealthMutationCoordinator,
+                transactionRunner = RoomTransactionRunner(database),
+                daos = daos,
+                dailySummaryDao = database.dailySummaryDao(),
+                vo2MaxRecordDao = database.vo2MaxRecordDao(),
             ).deleteBefore(
                 120_000L,
                 ScoringRunContext.capture(UserPreferences(), Instant.parse("2026-08-31T12:00:00Z")),
@@ -268,10 +269,11 @@ class WarmMutationRegressionTest {
             ),
         )
         DataRollupManager(
-            database.minuteCoverageDao(),
-            database.heartRateDao(),
-            publisher,
-            RoomTransactionRunner(database),
+            coordinator = TestHealthMutationCoordinator,
+            minuteCoverageDao = database.minuteCoverageDao(),
+            heartRateDao = database.heartRateDao(),
+            publisher = publisher,
+            transactionRunner = RoomTransactionRunner(database),
             dirtyRangeDao = database.dirtyRangeDao(),
             healthMutationStateDao = database.healthMutationStateDao(),
         ).rollupExpiredHotTier(minute + 60_000L)

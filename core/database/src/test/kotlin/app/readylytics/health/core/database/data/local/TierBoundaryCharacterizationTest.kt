@@ -234,6 +234,7 @@ class TierBoundaryCharacterizationTest {
     private fun rollUp(cutoffMs: Long) {
         runBlocking {
             DataRollupManager(
+                coordinator = TestHealthMutationCoordinator,
                 minuteCoverageDao = database.minuteCoverageDao(),
                 publisher = MinuteCoveragePublisher(database.minuteBucketDao(), database.minuteCoverageDao()),
                 heartRateDao = database.heartRateDao(),

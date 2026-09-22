@@ -159,6 +159,7 @@ class OdOneContributionCostMeasurementTest {
         database: HealthDatabase,
         txRunner: TransactionRunner,
     ) = DataRollupManager(
+        coordinator = TestHealthMutationCoordinator,
         minuteCoverageDao = database.minuteCoverageDao(),
         heartRateDao = database.heartRateDao(),
         publisher =

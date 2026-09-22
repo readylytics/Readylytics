@@ -59,6 +59,7 @@ class WarmTierRelinkTest {
             )
         rollupManager =
             DataRollupManager(
+                coordinator = TestHealthMutationCoordinator,
                 minuteCoverageDao = database.minuteCoverageDao(),
                 heartRateDao = database.heartRateDao(),
                 publisher = publisher,

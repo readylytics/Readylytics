@@ -97,19 +97,6 @@ class DataRollupWorkerTest {
         }
 
     @Test
-    fun `doWork retries when maintenance is pending`() =
-        runBlocking {
-            val coordinator = mockk<app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator>()
-            io.mockk.coEvery { coordinator.isMaintenancePending() } returns true
-
-            val worker = createWorker(coordinator)
-            val result = worker.doWork()
-
-            assertEquals(ListenableWorker.Result.retry(), result)
-            coVerify(exactly = 0) { rollupManager.rollupExpiredHotTier(any()) }
-        }
-
-    @Test
     fun `rollup uses the stored scoring zone for cutoff and invalidation cap`() =
         runBlocking {
             val prefs =
@@ -138,15 +125,13 @@ class DataRollupWorkerTest {
             }
         }
 
-    private fun createWorker(
-        coordinator: app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator? = null,
-    ) = DataRollupWorker(
-        context = ApplicationProvider.getApplicationContext(),
-        params = workerParams,
-        rollupManager = rollupManagerLazy,
-        workerScheduler = workerSchedulerLazy,
-        settingsRepo = settingsRepo,
-        clock = fixedClock,
-        healthMutationCoordinator = coordinator?.let { Lazy { it } },
-    )
+    private fun createWorker() =
+        DataRollupWorker(
+            context = ApplicationProvider.getApplicationContext(),
+            params = workerParams,
+            rollupManager = rollupManagerLazy,
+            workerScheduler = workerSchedulerLazy,
+            settingsRepo = settingsRepo,
+            clock = fixedClock,
+        )
 }

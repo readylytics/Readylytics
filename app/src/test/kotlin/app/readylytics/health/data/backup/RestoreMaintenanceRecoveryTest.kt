@@ -1,20 +1,13 @@
 package app.readylytics.health.data.backup
 
 import android.net.Uri
-import androidx.work.ListenableWorker
-import androidx.work.WorkerParameters
 import app.readylytics.health.core.databaseschema.data.local.entity.HealthMutationStateEntity
 import app.readylytics.health.core.model.domain.backup.RestorePhase
 import app.readylytics.health.core.model.domain.backup.RestoreResult
 import app.readylytics.health.core.model.domain.backup.RestoreStage
-import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
-import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspector
 import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
-import app.readylytics.health.workers.HealthResyncWorker
-import dagger.Lazy
 import io.mockk.coEvery
 import io.mockk.coVerify
-import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.json.JSONArray
@@ -32,6 +25,14 @@ import java.time.Instant
 
 @RunWith(RobolectricTestRunner::class)
 class RestoreMaintenanceRecoveryTest : LocalRestoreManagerTestBase() {
+    private suspend fun assertMaintenancePending() {
+        assertNotNull(db.healthMutationStateDao().current().maintenanceOperationId)
+    }
+
+    private suspend fun assertMaintenanceCleared() {
+        assertNull(db.healthMutationStateDao().current().maintenanceOperationId)
+    }
+
     private suspend fun seedInitialSession() {
         val seedZip = createBackupZipFile("seed.zip", createValidBackupJson())
         assertTrue(manager.applyRestore(Uri.fromFile(seedZip)) is RestoreResult.SuccessRequiresRestart)
@@ -79,7 +80,7 @@ class RestoreMaintenanceRecoveryTest : LocalRestoreManagerTestBase() {
             assertNull(state.maintenanceOperationId)
             assertNull(state.maintenancePhase)
             assertNull(restoreJournal.read())
-            assertFalse(mutationCoordinator.isMaintenancePending())
+            assertMaintenanceCleared()
 
             archive.delete()
         }
@@ -110,7 +111,7 @@ class RestoreMaintenanceRecoveryTest : LocalRestoreManagerTestBase() {
             assertEquals(RestorePhase.DATABASE_COMMITTED, journalData!!.phase)
             assertEquals(dbState.maintenanceOperationId, journalData.operationId)
 
-            assertTrue(mutationCoordinator.isMaintenancePending())
+            assertMaintenancePending()
             var blocked = false
             try {
                 mutationCoordinator.withMutation {
@@ -145,7 +146,7 @@ class RestoreMaintenanceRecoveryTest : LocalRestoreManagerTestBase() {
 
             val restoreResult = manager.applyRestore(Uri.fromFile(archive))
             assertTrue(restoreResult is RestoreResult.PartialSuccessRequiresRestart)
-            assertTrue(mutationCoordinator.isMaintenancePending())
+            assertMaintenancePending()
 
             // Unblock settingsRepo
             coEvery { settingsRepo.batchUpdate(capture(builderSlot)) } returns Unit
@@ -165,7 +166,7 @@ class RestoreMaintenanceRecoveryTest : LocalRestoreManagerTestBase() {
             assertNull(dbState.maintenanceOperationId)
             assertNull(dbState.maintenancePhase)
 
-            assertFalse(mutationCoordinator.isMaintenancePending())
+            assertMaintenanceCleared()
             val mutationValue = mutationCoordinator.withMutation { 42 }
             assertEquals(42, mutationValue)
 
@@ -197,7 +198,7 @@ class RestoreMaintenanceRecoveryTest : LocalRestoreManagerTestBase() {
                 ),
             )
 
-            assertTrue(mutationCoordinator.isMaintenancePending())
+            assertMaintenancePending()
 
             val recovered = restoreMaintenanceCoordinator.recoverInterruptedRestoreOnStartup()
             assertFalse(recovered)
@@ -206,7 +207,7 @@ class RestoreMaintenanceRecoveryTest : LocalRestoreManagerTestBase() {
             val dbState = db.healthMutationStateDao().current()
             assertNull(dbState.maintenanceOperationId)
             assertNull(dbState.maintenancePhase)
-            assertFalse(mutationCoordinator.isMaintenancePending())
+            assertMaintenanceCleared()
         }
 
     @Test
@@ -224,10 +225,10 @@ class RestoreMaintenanceRecoveryTest : LocalRestoreManagerTestBase() {
                 }
 
             assertTrue(result is RestoreResult.Failure)
-            assertTrue(mutationCoordinator.isMaintenancePending())
+            assertMaintenancePending()
             assertEquals(RestorePhase.COMPLETE, restoreJournal.read()?.phase)
             assertTrue(restoreMaintenanceCoordinator.recoverInterruptedRestoreOnStartup())
-            assertFalse(mutationCoordinator.isMaintenancePending())
+            assertMaintenanceCleared()
             assertNull(restoreJournal.read())
             assertFalse(restoreMaintenanceCoordinator.recoverInterruptedRestoreOnStartup())
         }
@@ -241,9 +242,9 @@ class RestoreMaintenanceRecoveryTest : LocalRestoreManagerTestBase() {
             assertFalse(coordinatorWithInterruptedRelease().recoverInterruptedRestoreOnStartup())
 
             assertEquals(RestorePhase.COMPLETE, restoreJournal.read()?.phase)
-            assertTrue(mutationCoordinator.isMaintenancePending())
+            assertMaintenancePending()
             assertTrue(restoreMaintenanceCoordinator.recoverInterruptedRestoreOnStartup())
-            assertFalse(mutationCoordinator.isMaintenancePending())
+            assertMaintenanceCleared()
             assertNull(restoreJournal.read())
         }
 
@@ -253,7 +254,7 @@ class RestoreMaintenanceRecoveryTest : LocalRestoreManagerTestBase() {
             writeCompletedJournal()
 
             assertTrue(restoreMaintenanceCoordinator.recoverInterruptedRestoreOnStartup())
-            assertFalse(mutationCoordinator.isMaintenancePending())
+            assertMaintenanceCleared()
             assertNull(restoreJournal.read())
             assertFalse(restoreMaintenanceCoordinator.recoverInterruptedRestoreOnStartup())
         }
@@ -292,41 +293,4 @@ class RestoreMaintenanceRecoveryTest : LocalRestoreManagerTestBase() {
             recommendationCoverageChecker = mockk(relaxed = true),
         )
     }
-
-    @Test
-    fun healthResyncWorker_retriesWhenMaintenanceIsPending() =
-        runTest {
-            db.healthMutationStateDao().upsert(
-                HealthMutationStateEntity(
-                    id = 1,
-                    sourceGeneration = 1L,
-                    maintenanceOperationId = "restore_in_progress",
-                    maintenancePhase = "DATABASE_COMMITTED",
-                    backfillAfterSourceRef = 0,
-                ),
-            )
-
-            assertTrue(mutationCoordinator.isMaintenancePending())
-
-            val workerParams = mockk<WorkerParameters>(relaxed = true)
-            every { workerParams.taskExecutor } returns mockk(relaxed = true)
-            every { workerParams.inputData } returns androidx.work.Data.EMPTY
-
-            val readinessGate = mockk<DatabaseReadinessInspector>()
-            every { readinessGate.inspect() } returns DatabaseReadiness.Ready
-
-            val worker =
-                HealthResyncWorker(
-                    appContext = context,
-                    params = workerParams,
-                    fullHistoricalResyncUseCase = mockk(relaxed = true),
-                    foregroundSyncController = mockk(relaxed = true),
-                    databaseReadinessGate = readinessGate,
-                    settingsRepository = mockk(relaxed = true),
-                    healthMutationCoordinator = Lazy { mutationCoordinator },
-                )
-
-            val result = worker.doWork()
-            assertEquals(ListenableWorker.Result.retry(), result)
-        }
 }

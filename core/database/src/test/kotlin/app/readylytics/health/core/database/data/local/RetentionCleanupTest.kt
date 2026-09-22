@@ -69,6 +69,7 @@ class RetentionCleanupTest {
         val transactionRunner = RoomTransactionRunner(database)
         retentionCleanup =
             RetentionCleanup(
+                coordinator = TestHealthMutationCoordinator,
                 transactionRunner = transactionRunner,
                 daos =
                     HealthRecordDaos(
@@ -486,6 +487,7 @@ class RetentionCleanupTest {
 
     private fun buildRetentionCleanup(transactionRunner: TransactionRunner): RetentionCleanup =
         RetentionCleanup(
+            coordinator = TestHealthMutationCoordinator,
             transactionRunner = transactionRunner,
             daos =
                 HealthRecordDaos(
@@ -600,6 +602,7 @@ class RetentionCleanupTest {
             coEvery { mutationStateDao.current() } returns HealthMutationStateEntity(sourceGeneration = 7)
             val cleanup =
                 RetentionCleanup(
+                    coordinator = TestHealthMutationCoordinator,
                     transactionRunner = RoomTransactionRunner(database),
                     daos =
                         HealthRecordDaos(

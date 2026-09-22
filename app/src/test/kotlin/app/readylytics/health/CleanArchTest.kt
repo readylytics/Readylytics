@@ -456,7 +456,10 @@ class CleanArchTest {
         val directFactories =
             productionSources.filter { it.text.contains("HealthConnectClient.getOrCreate") }
         org.junit.Assert.assertEquals(
-            listOf("core/healthconnect/src/main/kotlin/app/readylytics/health/core/healthconnect/di/HealthConnectModule.kt"),
+            listOf(
+                "core/healthconnect/src/main/kotlin/app/readylytics/health/core/healthconnect/di/" +
+                    "HealthConnectModule.kt",
+            ),
             directFactories.map { file ->
                 val path = file.path.replace('\\', '/')
                 "core/healthconnect/src/main/" + path.substringAfter("/core/healthconnect/src/main/")
@@ -465,6 +468,35 @@ class CleanArchTest {
         org.junit.Assert.assertTrue(
             "Health Connect readers must not retain mutable client overrides",
             productionSources.none { it.text.contains("clientOverride") },
+        )
+    }
+
+    @Test
+    fun `health mutation ownership has no local lock or optional coordinator fallback`() {
+        val productionSources =
+            Konsist
+                .scopeFromProject()
+                .files
+                .filter { file ->
+                    val path = file.path.replace('\\', '/')
+                    path.contains("/src/main/") && path.endsWith(".kt")
+                }
+        val forbiddenTokens =
+            listOf(
+                "withSyncLock",
+                "NoOpHealthMutationCoordinator",
+                "HealthMutationCoordinator? = null",
+            )
+        val violations =
+            productionSources.flatMap { file ->
+                forbiddenTokens
+                    .filter { token -> file.text.contains(token) }
+                    .map { token -> "${file.name}: $token" }
+            }
+        org.junit.Assert.assertTrue(
+            "Mutation ownership must use the injected application coordinator. Violations:\n" +
+                violations.joinToString("\n"),
+            violations.isEmpty(),
         )
     }
 }

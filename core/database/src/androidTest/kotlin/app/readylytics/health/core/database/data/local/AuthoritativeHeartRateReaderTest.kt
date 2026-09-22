@@ -185,6 +185,7 @@ class AuthoritativeHeartRateReaderTest {
 
     private fun rollupManager(db: HealthDatabase) =
         DataRollupManager(
+            coordinator = HealthMutationCoordinatorImpl(db.healthMutationStateDao()),
             minuteCoverageDao = db.minuteCoverageDao(),
             heartRateDao = db.heartRateDao(),
             publisher =

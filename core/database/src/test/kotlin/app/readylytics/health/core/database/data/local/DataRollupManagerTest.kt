@@ -31,6 +31,7 @@ class DataRollupManagerTest {
                 .build()
         rollupManager =
             DataRollupManager(
+                coordinator = TestHealthMutationCoordinator,
                 minuteCoverageDao = database.minuteCoverageDao(),
                 publisher = MinuteCoveragePublisher(database.minuteBucketDao(), database.minuteCoverageDao()),
                 heartRateDao = database.heartRateDao(),
@@ -186,6 +187,7 @@ class DataRollupManagerTest {
 
             val manager =
                 DataRollupManager(
+                    coordinator = TestHealthMutationCoordinator,
                     minuteCoverageDao = database.minuteCoverageDao(),
                     publisher = MinuteCoveragePublisher(database.minuteBucketDao(), database.minuteCoverageDao()),
                     heartRateDao = database.heartRateDao(),
@@ -232,6 +234,7 @@ class DataRollupManagerTest {
 
             val crashingManager =
                 DataRollupManager(
+                    coordinator = TestHealthMutationCoordinator,
                     minuteCoverageDao = database.minuteCoverageDao(),
                     publisher = MinuteCoveragePublisher(database.minuteBucketDao(), database.minuteCoverageDao()),
                     heartRateDao = database.heartRateDao(),
@@ -278,6 +281,7 @@ class DataRollupManagerTest {
 
             fun manager(db: HealthDatabase) =
                 DataRollupManager(
+                    coordinator = TestHealthMutationCoordinator,
                     minuteCoverageDao = db.minuteCoverageDao(),
                     heartRateDao = db.heartRateDao(),
                     publisher = MinuteCoveragePublisher(db.minuteBucketDao(), db.minuteCoverageDao()),

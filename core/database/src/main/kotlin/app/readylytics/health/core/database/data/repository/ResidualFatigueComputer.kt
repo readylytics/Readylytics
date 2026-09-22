@@ -101,7 +101,7 @@ class ResidualFatigueComputer(
         evaluationTimeMs: Long,
         prefs: UserPreferences,
         retentionStartMs: Long,
-    ): Float? = computeSingleDayFallback(evaluationTimeMs, clampedConfig(prefs), prefs, retentionStartMs)
+    ): Float? = computeSingleDayFallback(evaluationTimeMs, clampedConfig(prefs), retentionStartMs)
 
     /** [computeAt] at the current instant, for the live dashboard card. */
     suspend fun computeLive(
@@ -126,7 +126,6 @@ class ResidualFatigueComputer(
     private suspend fun computeSingleDayFallback(
         evalMs: Long,
         config: ResidualFatigueConfig,
-        prefs: UserPreferences,
         retentionStartMs: Long,
         stagedFatigueInputs: List<FatigueWorkoutInput> = emptyList(),
         stagedWorkouts: List<WorkoutRecordEntity> = emptyList(),

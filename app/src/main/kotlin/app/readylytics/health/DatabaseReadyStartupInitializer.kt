@@ -1,12 +1,12 @@
 package app.readylytics.health
 
 import android.content.Context
-import app.readylytics.health.core.healthconnect.domain.sync.HealthSyncUseCase
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.WorkoutTrimpBackfillStatus
 import app.readylytics.health.core.model.domain.sync.DirtyRangeStore
+import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
@@ -27,12 +27,12 @@ import java.time.Clock
 import java.util.concurrent.atomic.AtomicBoolean
 
 internal class DatabaseReadyStartupInitializer(
-    private val healthSyncUseCase: Lazy<HealthSyncUseCase>,
     private val backfillHistoricalBaselines: Lazy<BackfillHistoricalBaselinesUseCase>,
     private val settingsRepository: Lazy<SettingsRepository>,
     private val physiologyPreferences: Lazy<PhysiologyPreferences>,
     private val workerScheduler: WorkerScheduler,
     private val workoutTrimpBackfillStatus: Lazy<WorkoutTrimpBackfillStatus>,
+    private val healthMutationCoordinator: Lazy<HealthMutationCoordinator>,
     private val context: Context? = null,
     private val dirtyRangeStore: Lazy<DirtyRangeStore>? = null,
     private val restoreMaintenanceCoordinator: Lazy<RestoreMaintenanceCoordinator>? = null,
@@ -70,7 +70,7 @@ internal class DatabaseReadyStartupInitializer(
 
             runNonFatal("Historical baseline backfill") {
                 val backfilled =
-                    healthSyncUseCase.get().withSyncLock {
+                    healthMutationCoordinator.get().withMutation {
                         backfillHistoricalBaselines.get().execute()
                     }
                 if (backfilled > 0) {

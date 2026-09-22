@@ -12,11 +12,11 @@ import androidx.work.Configuration
 import app.readylytics.health.BuildConfig
 import app.readylytics.health.benchmark.BenchmarkDataSeeder
 import app.readylytics.health.core.database.data.security.SqlCipherKeyManager
-import app.readylytics.health.core.healthconnect.domain.sync.HealthSyncUseCase
 import app.readylytics.health.core.model.di.ApplicationScope
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.repository.WorkoutTrimpBackfillStatus
 import app.readylytics.health.core.model.domain.sync.DirtyRangeStore
+import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 import app.readylytics.health.core.model.domain.util.DomainLogSink
 import app.readylytics.health.core.model.domain.util.DomainLogger
 import app.readylytics.health.core.model.domain.util.LogContext
@@ -66,13 +66,13 @@ class HealthDashboardApplication :
     lateinit var workoutTrimpBackfillStatus: Lazy<WorkoutTrimpBackfillStatus>
 
     @Inject
-    lateinit var healthSyncUseCase: Lazy<HealthSyncUseCase>
-
-    @Inject
     lateinit var dirtyRangeStore: Lazy<DirtyRangeStore>
 
     @Inject
     lateinit var restoreMaintenanceCoordinator: Lazy<RestoreMaintenanceCoordinator>
+
+    @Inject
+    lateinit var healthMutationCoordinator: Lazy<HealthMutationCoordinator>
 
     @Inject
     lateinit var clock: Clock
@@ -135,7 +135,6 @@ class HealthDashboardApplication :
 
         val startupInitializer =
             DatabaseReadyStartupInitializer(
-                healthSyncUseCase = healthSyncUseCase,
                 backfillHistoricalBaselines = backfillHistoricalBaselines,
                 settingsRepository = settingsRepo,
                 physiologyPreferences = physiologyPreferences,
@@ -145,6 +144,7 @@ class HealthDashboardApplication :
                 dirtyRangeStore = dirtyRangeStore,
                 restoreMaintenanceCoordinator = restoreMaintenanceCoordinator,
                 clock = clock,
+                healthMutationCoordinator = healthMutationCoordinator,
             )
         val startupCoordinator = DatabaseReadyStartupCoordinator(startupInitializer)
         val preferencesPrewarmer = PreferencesPrewarmer(settingsRepo)

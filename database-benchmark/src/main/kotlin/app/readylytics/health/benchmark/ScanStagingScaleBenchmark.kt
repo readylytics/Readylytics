@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.core.database.data.local.DataRollupManager
 import app.readylytics.health.core.database.data.local.HealthDatabase
+import app.readylytics.health.core.database.data.local.HealthMutationCoordinatorImpl
 import app.readylytics.health.core.database.data.local.HealthRecordDaos
 import app.readylytics.health.core.database.data.local.MinuteCoveragePublisher
 import app.readylytics.health.core.database.data.local.RetentionCleanup
@@ -259,6 +260,7 @@ class ScanStagingScaleBenchmark {
 
     private fun buildRollupManager(): DataRollupManager =
         DataRollupManager(
+            coordinator = HealthMutationCoordinatorImpl(db.healthMutationStateDao()),
             minuteCoverageDao = db.minuteCoverageDao(),
             heartRateDao = db.heartRateDao(),
             publisher = MinuteCoveragePublisher(db.minuteBucketDao(), db.minuteCoverageDao()),
@@ -360,6 +362,7 @@ class ScanStagingScaleBenchmark {
             )
         val retentionCleanup =
             RetentionCleanup(
+                coordinator = HealthMutationCoordinatorImpl(db.healthMutationStateDao()),
                 transactionRunner = countingTxRunner,
                 daos = daos,
                 dailySummaryDao = db.dailySummaryDao(),

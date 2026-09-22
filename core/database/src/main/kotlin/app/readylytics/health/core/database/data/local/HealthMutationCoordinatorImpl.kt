@@ -39,8 +39,4 @@ class HealthMutationCoordinatorImpl
                 result
             }
 
-        override suspend fun isMaintenancePending(): Boolean =
-            mutex.withLock {
-                stateDao.get()?.maintenanceOperationId != null
-            }
     }

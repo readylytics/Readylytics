@@ -13,6 +13,12 @@ import kotlinx.serialization.Serializable
 
 const val PRIMARY_DEVICE_KEY = "__PRIMARY_DEVICE__"
 
+private fun captureSourceSelection(prefs: UserPreferences): Map<String, String> =
+    buildMap<String, String> {
+        prefs.deviceByDataType.toSortedMap().forEach { (key, value) -> put(key, value) }
+        prefs.primaryDeviceName?.let { put(PRIMARY_DEVICE_KEY, it) }
+    }.toSortedMap()
+
 @Serializable
 data class ScoringRunSnapshot(
     val part1: ScoringSnapshotPart1,
@@ -127,12 +133,6 @@ data class ScoringRunSnapshot(
                 resolvedHrMax = resolvedHrMax,
                 sourceSelection = captureSourceSelection(prefs),
             )
-
-        private fun captureSourceSelection(prefs: UserPreferences): Map<String, String> =
-            buildMap<String, String> {
-                prefs.deviceByDataType.toSortedMap().forEach { (k, v) -> put(k, v) }
-                prefs.primaryDeviceName?.let { put(PRIMARY_DEVICE_KEY, it) }
-            }.toSortedMap()
 
         private fun capturePart1(prefs: UserPreferences) = ScoringSnapshotPart1(
             goalSleepHours = prefs.goalSleepHours,

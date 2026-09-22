@@ -80,7 +80,7 @@ class DataRollupManager
         private val heartRateDao: HeartRateDao,
         private val publisher: MinuteCoveragePublisher,
         private val transactionRunner: TransactionRunner,
-        private val coordinator: HealthMutationCoordinator? = null,
+        private val coordinator: HealthMutationCoordinator,
         private val dirtyRangeDao: DirtyRangeDao? = null,
         private val healthMutationStateDao: HealthMutationStateDao? = null,
         private val streamer: MinuteRollupStreamer = MinuteRollupStreamer(heartRateDao),
@@ -101,12 +101,8 @@ class DataRollupManager
             pageSize: Int = MinuteRollupStreamer.SAMPLE_PAGE_SIZE,
             groupMinuteBudget: Int = MinuteRollupStreamer.GROUP_MINUTE_BUDGET,
         ): ScoreInvalidation.AffectedRange? {
-            val runner: suspend () -> ScoreInvalidation.AffectedRange? =
-                { doRollupExpiredHotTier(cutoffMs, pageSize, groupMinuteBudget) }
-            return if (coordinator != null) {
-                coordinator.withMutation { runner() }
-            } else {
-                runner()
+            return coordinator.withMutation {
+                doRollupExpiredHotTier(cutoffMs, pageSize, groupMinuteBudget)
             }
         }
 

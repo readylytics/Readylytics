@@ -1,6 +1,5 @@
 package app.readylytics.health
 
-import app.readylytics.health.core.healthconnect.domain.sync.HealthSyncUseCase
 import app.readylytics.health.core.model.data.preferences.BackupSchedule
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.data.preferences.UserPreferences
@@ -8,6 +7,7 @@ import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.repository.WorkoutTrimpBackfillStatus
 import app.readylytics.health.core.model.domain.sync.DirtyRangeStore
 import app.readylytics.health.core.model.domain.sync.DirtyTicket
+import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 import app.readylytics.health.core.model.domain.util.RetentionBounds
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.core.scoring.domain.scoring.BackfillHistoricalBaselinesUseCase
@@ -297,14 +297,18 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
         dirtyRangeStore: DirtyRangeStore? = null,
         clock: Clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneOffset.UTC),
     ): DatabaseReadyStartupInitializer {
-        val healthSyncUseCase = mockk<HealthSyncUseCase>()
-        coEvery { healthSyncUseCase.withSyncLock<Int>(any()) } coAnswers {
-            firstArg<suspend () -> Int>().invoke()
-        }
+        val healthMutationCoordinator =
+            object : HealthMutationCoordinator {
+                override suspend fun <T> withMutation(block: suspend () -> T): T = block()
+
+                override suspend fun <T> withMaintenance(
+                    operationId: String,
+                    block: suspend () -> T,
+                ): T = block()
+            }
         val backfill = mockk<BackfillHistoricalBaselinesUseCase>()
         coEvery { backfill.execute() } returns 0
 
-        val healthSyncLazy = Lazy { healthSyncUseCase }
         val backfillLazy = Lazy { backfill }
         val physiologyLazy = Lazy { physiology }
 
@@ -321,7 +325,6 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
             }
 
         return DatabaseReadyStartupInitializer(
-            healthSyncUseCase = healthSyncLazy,
             backfillHistoricalBaselines = backfillLazy,
             settingsRepository = settingsLazy,
             physiologyPreferences = physiologyLazy,
@@ -329,6 +332,7 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
             workoutTrimpBackfillStatus = Lazy { backfillStatus },
             dirtyRangeStore = dirtyRangeLazy,
             clock = clock,
+            healthMutationCoordinator = Lazy { healthMutationCoordinator },
         )
     }
 

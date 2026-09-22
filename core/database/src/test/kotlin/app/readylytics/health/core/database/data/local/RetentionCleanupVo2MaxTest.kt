@@ -24,6 +24,7 @@ class RetentionCleanupVo2MaxTest {
 
         val cleanup =
             RetentionCleanup(
+                coordinator = TestHealthMutationCoordinator,
                 transactionRunner = transactionRunner,
                 daos = mockk(relaxed = true),
                 dailySummaryDao = mockk(relaxed = true),
