@@ -21,6 +21,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
 import app.readylytics.health.MainActivity
+import app.readylytics.health.core.ui.R as CoreUiR
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assume.assumeTrue
@@ -46,6 +47,13 @@ class RootNavigationTest {
     val composeRule = createEmptyComposeRule()
 
     private lateinit var scenario: ActivityScenario<MainActivity>
+
+    private val continueInBackgroundLabel: String by lazy {
+        InstrumentationRegistry
+            .getInstrumentation()
+            .targetContext
+            .getString(CoreUiR.string.sync_progress_continue_in_background)
+    }
 
     @Before
     fun launchActivity() {
@@ -96,12 +104,19 @@ class RootNavigationTest {
     // Re-clicks inside the wait loop: a single click issued while the freshly launched activity is
     // still settling can be dropped, and waiting alone never recovers from a lost click. Clicking an
     // already-selected tab is a no-op, so retrying is safe.
+    //
+    // A fresh install starts with scoringVersion 0, so startup enqueues the recompute-only historical
+    // resync. While it runs, opening Settings auto-redirects to the full-screen SyncProgress
+    // destination, which hides the navigation bar; dismiss it via "Continue in background" (the
+    // user-facing escape hatch, which also suppresses re-redirects for this run) and retry.
     private fun selectTab(label: String) {
         val tab = composeRule.onNode(isTabWithText(label))
+        val continueInBackground = composeRule.onNode(hasText(continueInBackgroundLabel))
         composeRule.waitUntil(timeoutMillis = TAB_SELECTION_TIMEOUT_MILLIS) {
             if (runCatching { tab.assertIsSelected() }.isSuccess) {
                 true
             } else {
+                runCatching { continueInBackground.performClick() }
                 runCatching { tab.performClick() }
                 false
             }
