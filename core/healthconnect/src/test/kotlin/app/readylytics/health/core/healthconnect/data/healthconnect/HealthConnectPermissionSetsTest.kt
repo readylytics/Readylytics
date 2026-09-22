@@ -18,15 +18,16 @@ import kotlin.test.assertTrue
  */
 class HealthConnectPermissionSetsTest {
     private val context = mockk<Context>(relaxed = true)
+    private val client = mockk<HealthConnectClient>(relaxed = true)
     private val ioDispatcher = Dispatchers.Unconfined
     private val repo =
         HealthConnectRepositoryImpl(
             context = context,
             ioDispatcher = ioDispatcher,
-            stepRecordReader = StepRecordReader(context = context, ioDispatcher = ioDispatcher),
-            intervalTotalsReader = IntervalTotalsReader(context = context, ioDispatcher = ioDispatcher),
+            stepRecordReader = StepRecordReader(context = context, ioDispatcher = ioDispatcher, client = client),
+            intervalTotalsReader = IntervalTotalsReader(context = context, ioDispatcher = ioDispatcher, client = client),
             clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
-            client = mockk<HealthConnectClient>(relaxed = true),
+            client = client,
         )
 
     private val permissionPrefix = "android.permission.health."

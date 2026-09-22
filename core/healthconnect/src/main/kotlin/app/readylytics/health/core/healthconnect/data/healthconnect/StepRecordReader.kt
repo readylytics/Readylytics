@@ -35,15 +35,10 @@ class StepRecordReader
     constructor(
         @param:ApplicationContext private val context: Context,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+        private val client: HealthConnectClient,
     ) {
-        internal var clientOverride: HealthConnectClient? = null
-
-        private val client: HealthConnectClient
-            get() = clientOverride ?: HealthConnectClient.getOrCreate(context)
-
         private fun isSdkAvailable(): Boolean =
-            clientOverride != null ||
-                HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE
+            HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE
 
         private suspend fun hasStepsPermission(): Boolean =
             if (!isSdkAvailable()) {

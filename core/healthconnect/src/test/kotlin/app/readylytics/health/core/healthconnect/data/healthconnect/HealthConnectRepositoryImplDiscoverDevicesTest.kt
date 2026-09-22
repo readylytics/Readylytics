@@ -102,9 +102,9 @@ class HealthConnectRepositoryImplDiscoverDevicesTest {
 
         val ioDispatcher = Dispatchers.Unconfined
         val stepRecordReader =
-            StepRecordReader(context = context, ioDispatcher = ioDispatcher)
+            StepRecordReader(context = context, ioDispatcher = ioDispatcher, client = client)
         val intervalTotalsReader =
-            IntervalTotalsReader(context = context, ioDispatcher = ioDispatcher)
+            IntervalTotalsReader(context = context, ioDispatcher = ioDispatcher, client = client)
         repo =
             HealthConnectRepositoryImpl(
                 context = context,
