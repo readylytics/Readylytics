@@ -86,6 +86,7 @@ class SourceReplacementInstrumentedTest {
                     dailySummaryDao = database.dailySummaryDao(),
                     transactionRunner = transactionRunner,
                     vo2MaxRecordDao = database.vo2MaxRecordDao(),
+                    scanTypeStateDao = database.scanTypeStateDao(),
                 )
 
             val payload =
