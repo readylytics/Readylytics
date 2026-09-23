@@ -199,5 +199,8 @@ class RestoreMaintenanceCoordinator
                 }
             }
 
-        suspend fun isMaintenancePending(): Boolean = healthMutationCoordinator.isMaintenancePending()
+        suspend fun isMaintenancePending(): Boolean =
+            restoreMutex.withLock {
+                healthDatabase.healthMutationStateDao().get()?.maintenanceOperationId != null
+            }
     }

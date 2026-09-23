@@ -59,6 +59,7 @@ class DocumentationDriftTest {
         }.joinToString("\n")
     private val customizationMd = readRepoFile("docs/customization.md")
     private val dataFlowMd = readRepoFile("internal-docs/DATA_FLOW.md")
+    private val privacyMd = readRepoFile("docs/privacy.md")
     private val settingsStringsXml = readRepoFile("feature/settings/src/main/res/values/strings.xml")
     private val coreUiStringsXml = readRepoFile("core/ui/src/main/res/values/strings.xml")
     private val buildGradleKts = readRepoFile("app/build.gradle.kts")
@@ -642,6 +643,21 @@ class DocumentationDriftTest {
         assertTrue(dataFlowMd.contains("prefs.scoringZone()"))
         assertTrue(dataFlowMd.contains("ZoneId.systemDefault()"))
         assertTrue(dataFlowMd.contains("R2-CACHE-002"))
+    }
+
+    @Test
+    fun `retention docs distinguish local cleanup from import horizon`() {
+        assertTrue(privacyMd.contains("keeps existing local history without a time limit"))
+        assertTrue(privacyMd.contains("10-year (3650-day) Health Connect import horizon"))
+        assertFalse(privacyMd.contains("keeps history up to a 10-year (3650-day) ceiling"))
+    }
+
+    @Test
+    fun `determinism docs distinguish within-tier replay from cross-tier approximation`() {
+        listOf(aboutMd, publicAboutMd).forEach { text ->
+            assertTrue(text.contains("repeatable within the same storage tier"))
+            assertTrue(text.contains("raw-to-minute-summary recomputation can differ slightly"))
+        }
     }
 
     /** Collapses whitespace runs (including line wraps) to a single space for wrap-tolerant matching. */

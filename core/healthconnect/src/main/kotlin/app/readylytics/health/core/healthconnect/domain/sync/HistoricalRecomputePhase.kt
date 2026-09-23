@@ -11,6 +11,7 @@ import app.readylytics.health.core.model.domain.sync.ResyncCheckpoint
 import app.readylytics.health.core.model.domain.sync.ResyncCheckpointStore
 import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import app.readylytics.health.core.model.domain.sync.StepAttribution
+import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import app.readylytics.health.core.model.domain.util.logD
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -27,6 +28,7 @@ data class RecomputePhaseContext(
     val endDate: LocalDate,
     val zoneId: ZoneId,
     val prefs: UserPreferences,
+    val runContext: ScoringRunContext,
     val chunkDays: Int,
     val totalDays: Int,
     val completedDays: Int,
@@ -130,7 +132,8 @@ class HistoricalRecomputePhase
                         recomputeSupport.buildWalkForwardFatigueContext(
                             context.recomputeStartDate,
                             context.endDate,
-                            context.zoneId,
+                            context.prefs,
+                            context.runContext,
                         ),
                     vo2Max =
                         recomputeSupport.buildWalkForwardVo2MaxContext(
@@ -181,6 +184,7 @@ class HistoricalRecomputePhase
                             stepsForDay,
                             context.prefs,
                             contexts,
+                            context.runContext,
                         )
                     if (dayResult is Result.Failure) {
                         logD(TELEMETRY_TAG) { "[RECOMPUTE] Failed at day $day: ${dayResult.reason}" }

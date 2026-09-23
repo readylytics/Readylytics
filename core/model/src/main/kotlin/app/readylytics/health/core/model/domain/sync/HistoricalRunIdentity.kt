@@ -32,7 +32,7 @@ data class HistoricalRunIdentity(
     fun effectivePreferences(): UserPreferences? = decodeScoringSnapshot()?.toPreferencesOrNull()
 
     companion object {
-        const val CURRENT_PROTOCOL_VERSION: Int = 2
+        const val CURRENT_PROTOCOL_VERSION: Int = 3
         const val FULL_INGEST: String = "FULL_INGEST"
         const val RECOMPUTE_ONLY: String = "RECOMPUTE_ONLY"
         const val MODE_FULL_INGEST: String = FULL_INGEST

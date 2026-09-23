@@ -8,11 +8,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import io.mockk.slot
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.time.Clock
@@ -26,6 +22,12 @@ class HealthSyncUseCaseTest {
     private val dailySyncUseCase = mockk<DailySyncUseCase>(relaxed = true)
     private val resyncRangeUseCase = mockk<ResyncRangeUseCase>(relaxed = true)
     private val settingsRepo = mockk<SettingsRepository>(relaxed = true)
+    private val coordinator =
+        object : HealthMutationCoordinator {
+            override suspend fun <T> withMutation(block: suspend () -> T): T = block()
+
+            override suspend fun <T> withMaintenance(operationId: String, block: suspend () -> T): T = block()
+        }
     private val fixedClock = Clock.fixed(Instant.parse("2024-06-15T12:00:00Z"), ZoneId.of("UTC"))
 
     private val useCase = HealthSyncUseCase(
@@ -33,6 +35,7 @@ class HealthSyncUseCaseTest {
         resyncRangeUseCase = resyncRangeUseCase,
         settingsRepo = settingsRepo,
         clock = fixedClock,
+        coordinator = coordinator,
     )
 
     @Test
@@ -73,6 +76,7 @@ class HealthSyncUseCaseTest {
             resyncRangeUseCase = resyncRangeUseCase,
             settingsRepo = settingsRepo,
             clock = historicalClock,
+            coordinator = coordinator,
         )
         val prefs = UserPreferences(lastSyncTimestamp = 0L, scoringZoneId = "UTC")
         coEvery { settingsRepo.userPreferences } returns flowOf(prefs)
@@ -138,44 +142,4 @@ class HealthSyncUseCaseTest {
         assertEquals("SYNC_ERROR", result.code)
     }
 
-    @Test
-    fun withSyncLock_returnsTheBlocksResult() = runTest {
-        val result = useCase.withSyncLock { "value" }
-
-        assertEquals("value", result)
-    }
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    @Test
-    fun withSyncLock_serializesAgainstAConcurrentSync() = runTest {
-        // SCORE-003: withSyncLock must share the same mutex sync()/resyncRange() use, so a caller
-        // like the app-start baseline backfill can never run concurrently with a sync/resync.
-        val syncStarted = CompletableDeferred<Unit>()
-        val releaseSync = CompletableDeferred<Unit>()
-        coEvery { dailySyncUseCase.run(any(), any()) } coAnswers {
-            syncStarted.complete(Unit)
-            releaseSync.await()
-            Result.success(Unit)
-        }
-        val order = mutableListOf<String>()
-
-        val syncJob = launch {
-            useCase.sync(windowDays = 3)
-            order += "sync-done"
-        }
-        syncStarted.await()
-
-        val lockJob =
-            launch {
-                useCase.withSyncLock { order += "lock-acquired" }
-            }
-        advanceUntilIdle()
-        assertTrue(order.isEmpty(), "withSyncLock must not proceed while sync() holds the mutex")
-
-        releaseSync.complete(Unit)
-        syncJob.join()
-        lockJob.join()
-
-        assertEquals(listOf("sync-done", "lock-acquired"), order)
-    }
 }

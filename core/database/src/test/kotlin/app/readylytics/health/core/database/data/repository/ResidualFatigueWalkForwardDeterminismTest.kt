@@ -2,6 +2,7 @@ package app.readylytics.health.core.database.data.repository
 
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.FatigueWorkoutInput
+import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import io.mockk.every
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -163,7 +164,9 @@ class ResidualFatigueWalkForwardDeterminismTest : ResidualFatigueWalkForwardTest
             val workouts = workoutInputs()
             stubFatigueWorkouts(workouts)
 
-            val context = repo.fetchWalkForwardFatigueContext(day0, day2, zoneId)
+            val prefs = UserPreferences(scoringZoneId = zoneId.id)
+            val runContext = ScoringRunContext.capture(prefs, day0.atStartOfDay(zoneId).toInstant())
+            val context = repo.fetchWalkForwardFatigueContext(day0, day2, prefs, runContext)
 
             assertEquals(
                 workouts.map { it.endTimeMs },

@@ -97,6 +97,8 @@ class ScoringRunSnapshotTest {
             hypersomniaOnsetPercent = 125,
             residualFatigueHalfLifeHours = 40f,
             residualFatigueGain = 1.2f,
+            retentionDaysEnabled = true,
+            retentionDays = 540,
             trainingReadinessResidualFatigueScale = 140f,
             trainingReadinessLoadBalanceWeight = 0.85f,
             lastAppliedTrainingReadinessResidualFatigueScale = 135f,
@@ -177,6 +179,8 @@ class ScoringRunSnapshotTest {
         )
         assertEquals(original.vo2MaxSourceMode, restored.vo2MaxSourceMode)
         assertEquals(original.vo2MaxEstimationMethod, restored.vo2MaxEstimationMethod)
+        assertEquals(original.retentionDaysEnabled, restored.retentionDaysEnabled)
+        assertEquals(original.retentionDays, restored.retentionDays)
         assertEquals(original.primaryDeviceName, restored.primaryDeviceName)
         assertEquals(original.deviceByDataType, restored.deviceByDataType)
     }

@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.core.database.data.local.DataRollupManager
 import app.readylytics.health.core.database.data.local.HealthDatabase
+import app.readylytics.health.core.database.data.local.HealthMutationCoordinatorImpl
 import app.readylytics.health.core.database.data.local.HealthRecordDaos
 import app.readylytics.health.core.database.data.local.MinuteCoveragePublisher
 import app.readylytics.health.core.database.data.local.RetentionCleanup
@@ -17,6 +18,7 @@ import app.readylytics.health.core.healthconnect.domain.sync.IngestionWindowResu
 import app.readylytics.health.core.model.domain.model.RecordType
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.sync.HeartRateInput
+import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import app.readylytics.health.core.model.domain.sync.SourceMetadata
 import app.readylytics.health.core.model.domain.sync.SourcePayload
 import app.readylytics.health.databasebenchmark.data.migration.CurrentSchemaBenchmarkFixture
@@ -258,6 +260,7 @@ class ScanStagingScaleBenchmark {
 
     private fun buildRollupManager(): DataRollupManager =
         DataRollupManager(
+            coordinator = HealthMutationCoordinatorImpl(db.healthMutationStateDao()),
             minuteCoverageDao = db.minuteCoverageDao(),
             heartRateDao = db.heartRateDao(),
             publisher = MinuteCoveragePublisher(db.minuteBucketDao(), db.minuteCoverageDao()),
@@ -359,6 +362,7 @@ class ScanStagingScaleBenchmark {
             )
         val retentionCleanup =
             RetentionCleanup(
+                coordinator = HealthMutationCoordinatorImpl(db.healthMutationStateDao()),
                 transactionRunner = countingTxRunner,
                 daos = daos,
                 dailySummaryDao = db.dailySummaryDao(),
@@ -367,7 +371,10 @@ class ScanStagingScaleBenchmark {
         // cutoffMs = 0 deletes no raw rows (every fixture timestamp here is > 0) -- this call
         // exercises only RetentionCleanup's trailing source-metadata GC pass, which is the real
         // production entry point for that internal-visibility collector.
-        retentionCleanup.deleteBefore(0L)
+        retentionCleanup.deleteBefore(
+            0L,
+            ScoringRunContext.capture(UserPreferences(), Instant.parse("2026-08-31T12:00:00Z")),
+        )
     }
 
     private suspend fun exportSources(referencedIds: Set<String>): SourceExportResult {

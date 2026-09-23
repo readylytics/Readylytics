@@ -3,6 +3,7 @@ package app.readylytics.health.core.database.data.repository
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
+import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
 import app.readylytics.health.core.scoring.domain.scoring.components.Phase
@@ -62,6 +63,7 @@ class CalibrationGateTest {
                     currentDate = date,
                 ),
             prefs = prefs,
+            runContext = ScoringRunContext.capture(prefs, date.atStartOfDay(zone).toInstant()),
         )
 
     private fun frozenSummary(

@@ -26,6 +26,7 @@ import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineCo
 import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
 import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.core.model.domain.scoring.ResidualFatigueConfig
+import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import app.readylytics.health.core.scoring.domain.cardio.UthVo2MaxCalculator
 import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxSourceResolver
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
@@ -283,7 +284,8 @@ abstract class ResidualFatigueWalkForwardTestBase {
         prefs: UserPreferences,
         persisted: List<DailySummaryEntity>,
     ): Float {
-        val fatigueContext = repo.fetchWalkForwardFatigueContext(day0, day0, zoneId)
+        val runContext = ScoringRunContext.capture(prefs, day0.atStartOfDay(zoneId).toInstant())
+        val fatigueContext = repo.fetchWalkForwardFatigueContext(day0, day0, prefs, runContext)
         repo.computeAndPersistDailySummary(
             day0,
             null,
@@ -293,6 +295,7 @@ abstract class ResidualFatigueWalkForwardTestBase {
                 WalkForwardBaselineContext(emptyList()),
                 fatigueContext,
             ),
+            runContext,
         )
         return requireNotNull(persisted.last().residualFatigue)
     }
@@ -396,17 +399,18 @@ abstract class ResidualFatigueWalkForwardTestBase {
         endDate: LocalDate,
         prefs: UserPreferences,
     ): Map<LocalDate, Float?> {
+        val runContext = ScoringRunContext.capture(prefs, startDate.atStartOfDay(zoneId).toInstant())
         val contexts =
             WalkForwardContexts(
                 trimp = WalkForwardTrimpContext(TreeMap(), TreeMap()),
                 baseline = WalkForwardBaselineContext(emptyList()),
-                fatigue = repo.fetchWalkForwardFatigueContext(startDate, endDate, zoneId),
+                fatigue = repo.fetchWalkForwardFatigueContext(startDate, endDate, prefs, runContext),
             )
         val persisted = mutableListOf<DailySummaryEntity>()
         coEvery { dailySummaryDao.upsert(capture(persisted)) } returns Unit
         var day = startDate
         while (!day.isAfter(endDate)) {
-            repo.computeAndPersistDailySummary(day, null, prefs, contexts)
+            repo.computeAndPersistDailySummary(day, null, prefs, contexts, runContext)
             day = day.plusDays(1)
         }
         return persisted.associate {

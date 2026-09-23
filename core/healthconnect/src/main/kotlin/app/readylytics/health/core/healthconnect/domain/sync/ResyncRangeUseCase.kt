@@ -16,6 +16,7 @@ import app.readylytics.health.core.model.domain.sync.ResyncCheckpoint
 import app.readylytics.health.core.model.domain.sync.ResyncCheckpointStore
 import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import app.readylytics.health.core.model.domain.sync.SelectedSourcePruner
+import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logI
@@ -24,6 +25,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
@@ -35,6 +37,7 @@ private data class ResyncExecutionPlan(
     val requestedRun: HistoricalRunIdentity,
     val runIdentity: HistoricalRunIdentity,
     val effectivePrefs: UserPreferences,
+    val runContext: ScoringRunContext,
     val runStartDate: LocalDate,
     val runEndDate: LocalDate,
     val runZoneId: ZoneId,
@@ -63,6 +66,12 @@ private data class ResyncExecutionPlan(
             skipIngestAndPrune: Boolean,
         ): ResyncExecutionPlan {
             val effectivePrefs = activeRun.effectivePreferences() ?: prefs
+            val runContext =
+                ScoringRunContext.capture(
+                    effectivePrefs,
+                    Instant.ofEpochMilli(activeRun.startedAtEpochMs),
+                )
+            check(runContext.zoneId.id == activeRun.zoneId) { "Historical run zone mismatch" }
             val runCompletedTypes = when {
                 checkpoint?.completedTypesRecorded == true -> checkpoint.completedTypes
                 skipIngestAndPrune -> emptySet()
@@ -88,6 +97,7 @@ private data class ResyncExecutionPlan(
                 requestedRun = requestedRun,
                 runIdentity = activeRun,
                 effectivePrefs = effectivePrefs,
+                runContext = runContext,
                 runStartDate = runStartDate,
                 runEndDate = runEndDate,
                 runZoneId = runZoneId,
@@ -454,6 +464,7 @@ class ResyncRangeUseCase
                     endDate = plan.runEndDate,
                     zoneId = plan.runZoneId,
                     prefs = plan.effectivePrefs,
+                    runContext = plan.runContext,
                     recomputeStartDate = recomputeStartDate,
                     completedDays = completedDays,
                     totalDays = plan.totalDays,

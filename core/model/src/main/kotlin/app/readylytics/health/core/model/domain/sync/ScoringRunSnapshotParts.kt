@@ -89,3 +89,9 @@ data class ScoringSnapshotPart8(
     val vo2MaxSourceMode: String,
     val vo2MaxEstimationMethod: String,
 )
+
+@Serializable
+data class ScoringSnapshotPart9(
+    val retentionDaysEnabled: Boolean,
+    val retentionDays: Int,
+)

@@ -1,6 +1,5 @@
 package app.readylytics.health
 
-import app.readylytics.health.core.healthconnect.domain.sync.HealthSyncUseCase
 import app.readylytics.health.core.model.data.preferences.BackupSchedule
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.data.preferences.UserPreferences
@@ -8,6 +7,7 @@ import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.repository.WorkoutTrimpBackfillStatus
 import app.readylytics.health.core.model.domain.sync.DirtyRangeStore
 import app.readylytics.health.core.model.domain.sync.DirtyTicket
+import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 import app.readylytics.health.core.model.domain.util.RetentionBounds
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.core.scoring.domain.scoring.BackfillHistoricalBaselinesUseCase
@@ -25,8 +25,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.IOException
+import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.TimeZone
 
 class DatabaseReadyStartupInitializerScoringVersionTest {
@@ -152,28 +154,26 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
                     )
                 val backfillStatus = CapturingBackfillStatus()
                 val scheduler = FakeWorkerScheduler()
-                val before = Instant.now()
+                val fixedInstant = Instant.parse("2026-08-31T12:30:00Z")
 
                 initializerWith(
                     storedScoringVersion = prefs.scoringVersion,
                     scheduler = scheduler,
                     backfillStatus = backfillStatus,
                     userPreferences = prefs,
+                    clock = Clock.fixed(fixedInstant, ZoneOffset.UTC),
                 ).initializeIfReady(DatabaseReadiness.Ready)
 
-                val after = Instant.now()
-                val validScoringBoundaries =
-                    listOf(before, after).mapTo(mutableSetOf()) { instant ->
-                        RetentionBounds
-                            .resolveResyncStartDate(prefs, instant.atZone(scoringZone).toLocalDate())
-                            .atStartOfDay(scoringZone)
-                            .toInstant()
-                            .toEpochMilli()
-                    }
+                val expectedBoundary =
+                    RetentionBounds
+                        .resolveResyncStartDate(prefs, fixedInstant.atZone(scoringZone).toLocalDate())
+                        .atStartOfDay(scoringZone)
+                        .toInstant()
+                        .toEpochMilli()
                 assertTrue(
-                    "Startup boundary ${backfillStatus.retentionStartMs} must match $validScoringBoundaries, " +
+                    "Startup boundary ${backfillStatus.retentionStartMs} must match $expectedBoundary, " +
                         "not system-zone midnight in $systemZone",
-                    backfillStatus.retentionStartMs in validScoringBoundaries,
+                    backfillStatus.retentionStartMs == expectedBoundary,
                 )
                 assertEquals(1, scheduler.recomputeOnlyRequests)
             } finally {
@@ -295,15 +295,20 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
         backfillStatus: WorkoutTrimpBackfillStatus = FakeBackfillStatus(hasUnbackfilled = false),
         userPreferences: UserPreferences = UserPreferences(scoringVersion = storedScoringVersion),
         dirtyRangeStore: DirtyRangeStore? = null,
+        clock: Clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneOffset.UTC),
     ): DatabaseReadyStartupInitializer {
-        val healthSyncUseCase = mockk<HealthSyncUseCase>()
-        coEvery { healthSyncUseCase.withSyncLock<Int>(any()) } coAnswers {
-            firstArg<suspend () -> Int>().invoke()
-        }
+        val healthMutationCoordinator =
+            object : HealthMutationCoordinator {
+                override suspend fun <T> withMutation(block: suspend () -> T): T = block()
+
+                override suspend fun <T> withMaintenance(
+                    operationId: String,
+                    block: suspend () -> T,
+                ): T = block()
+            }
         val backfill = mockk<BackfillHistoricalBaselinesUseCase>()
         coEvery { backfill.execute() } returns 0
 
-        val healthSyncLazy = Lazy { healthSyncUseCase }
         val backfillLazy = Lazy { backfill }
         val physiologyLazy = Lazy { physiology }
 
@@ -320,13 +325,14 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
             }
 
         return DatabaseReadyStartupInitializer(
-            healthSyncUseCase = healthSyncLazy,
             backfillHistoricalBaselines = backfillLazy,
             settingsRepository = settingsLazy,
             physiologyPreferences = physiologyLazy,
             workerScheduler = scheduler,
             workoutTrimpBackfillStatus = Lazy { backfillStatus },
             dirtyRangeStore = dirtyRangeLazy,
+            clock = clock,
+            healthMutationCoordinator = Lazy { healthMutationCoordinator },
         )
     }
 

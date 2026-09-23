@@ -6,14 +6,18 @@ import androidx.health.connect.client.aggregate.AggregationResultGroupedByPeriod
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.StepsRecord
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.After
 import org.junit.Test
 import java.io.IOException
 import java.time.Instant
@@ -40,9 +44,15 @@ class StepRecordReaderTest {
             StepRecordReader(
                 context = mockk(relaxed = true),
                 ioDispatcher = ioDispatcher,
-            ).apply {
-                clientOverride = client
-            }
+                client = client,
+            )
+        mockkObject(HealthConnectClient)
+        every { HealthConnectClient.getSdkStatus(any()) } returns HealthConnectClient.SDK_AVAILABLE
+    }
+
+    @After
+    fun tearDown() {
+        unmockkObject(HealthConnectClient)
     }
 
     private fun mockStepsRecord(id: String, count: Long, start: Instant, end: Instant): StepsRecord =
@@ -74,6 +84,17 @@ class StepRecordReaderTest {
 
             val result = reader.readSteps(t0, t1)
             assertEquals(app.readylytics.health.core.model.domain.repository.ReadOutcome.Denied, result)
+        }
+
+    @Test
+    fun `readSteps returns Unsupported without invoking client when provider is unavailable`() =
+        runTest {
+            every { HealthConnectClient.getSdkStatus(any()) } returns HealthConnectClient.SDK_UNAVAILABLE
+
+            val result = reader.readSteps(t0, t1)
+
+            assertEquals(app.readylytics.health.core.model.domain.repository.ReadOutcome.Unsupported, result)
+            coVerify(exactly = 0) { client.aggregate(any()) }
         }
 
     @Test

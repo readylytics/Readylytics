@@ -5,17 +5,18 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import app.readylytics.health.core.database.data.local.DataRollupManager
-import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
+import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import app.readylytics.health.core.model.domain.util.RetentionBounds
 import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.model.workers.WorkerScheduler
+import app.readylytics.health.data.preferences.SettingsRepository
 import dagger.Lazy
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
 import java.time.Clock
-import java.time.LocalDate
 
 /**
  * Periodic hot→warm rollup: folds raw heart-rate samples older than the fixed 90-day hot tier into
@@ -35,18 +36,17 @@ class DataRollupWorker
         @Assisted params: WorkerParameters,
         private val rollupManager: Lazy<DataRollupManager>,
         private val workerScheduler: Lazy<WorkerScheduler>,
+        private val settingsRepo: SettingsRepository,
         private val clock: Clock,
-        private val healthMutationCoordinator: Lazy<HealthMutationCoordinator>? = null,
     ) : CoroutineWorker(context, params) {
-        override suspend fun doWork(): Result {
-            if (healthMutationCoordinator?.get()?.isMaintenancePending() == true) {
-                return Result.retry()
-            }
-            return try {
+        override suspend fun doWork(): Result =
+            try {
+                val prefs = settingsRepo.userPreferences.first()
+                val runContext = ScoringRunContext.capture(prefs, clock.instant())
                 val touched =
-                    rollupManager.get().rollupExpiredHotTier(RetentionBounds.resolveHotTierCutoffMs(clock.instant()))
+                    rollupManager.get().rollupExpiredHotTier(RetentionBounds.resolveHotTierCutoffMs(runContext.instant))
                 if (touched != null) {
-                    val affected = ScoreInvalidation.affectedRange(touched, LocalDate.now(clock))
+                    val affected = ScoreInvalidation.affectedRange(touched, runContext.today)
                     workerScheduler.get().scheduleResyncWorker(
                         recomputeOnly = true,
                         startDate = affected.start,
@@ -60,5 +60,4 @@ class DataRollupWorker
                 logE("DataRollupWorker", e) { "Data rollup failed" }
                 Result.retry()
             }
-        }
     }

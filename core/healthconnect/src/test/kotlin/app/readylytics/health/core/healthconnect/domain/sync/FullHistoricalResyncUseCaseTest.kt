@@ -24,6 +24,7 @@ import kotlin.test.assertEquals
 class FullHistoricalResyncUseCaseTest {
     private val settingsRepo = mockk<SettingsRepository>()
     private val healthSyncUseCase = mockk<HealthSyncUseCase>()
+    private val healthMutationCoordinator = mockk<HealthMutationCoordinator>()
     private val trainingReadinessProjectionRecomputeUseCase = mockk<TrainingReadinessProjectionRecomputeUseCase>()
     private val clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC"))
     private val useCase =
@@ -32,6 +33,7 @@ class FullHistoricalResyncUseCaseTest {
             healthSyncUseCase,
             trainingReadinessProjectionRecomputeUseCase,
             clock = clock,
+            healthMutationCoordinator = healthMutationCoordinator,
         )
 
     private val today = LocalDate.ofInstant(clock.instant(), ZoneId.of("UTC"))
@@ -193,12 +195,12 @@ class FullHistoricalResyncUseCaseTest {
         }
 
     /**
-     * [HealthSyncUseCase.withSyncLock] just runs the passed suspend block and returns its result --
+     * [HealthMutationCoordinator.withMutation] just runs the passed suspend block and returns its result --
      * stub it that way so `executeTrainingReadinessProjection` tests exercise the real delegation
      * instead of hanging on an unstubbed mock.
      */
     private fun stubWithSyncLockToRunBlock() {
-        coEvery { healthSyncUseCase.withSyncLock<Result<Unit>>(any()) } coAnswers {
+        coEvery { healthMutationCoordinator.withMutation<Result<Unit>>(any()) } coAnswers {
             firstArg<suspend () -> Result<Unit>>().invoke()
         }
     }
@@ -283,12 +285,12 @@ class FullHistoricalResyncUseCaseTest {
         }
 
     @Test
-    fun `executeTrainingReadinessProjection serializes the projection through withSyncLock`() =
+    fun `executeTrainingReadinessProjection serializes the projection through withMutation`() =
         runTest {
             every { settingsRepo.userPreferences } returns
                 flowOf(UserPreferences(retentionDaysEnabled = true, retentionDays = 200))
             var lockHeldDuringProjection = false
-            coEvery { healthSyncUseCase.withSyncLock<Result<Unit>>(any()) } coAnswers {
+            coEvery { healthMutationCoordinator.withMutation<Result<Unit>>(any()) } coAnswers {
                 lockHeldDuringProjection = true
                 try {
                     firstArg<suspend () -> Result<Unit>>().invoke()
@@ -308,10 +310,9 @@ class FullHistoricalResyncUseCaseTest {
             val result = useCase.executeTrainingReadinessProjection(TrainingReadinessConfig.fromStored(40f, 0.7f))
 
             assertEquals(Result.success(Unit), result)
-            coVerify(exactly = 1) { healthSyncUseCase.withSyncLock<Result<Unit>>(any()) }
+            coVerify(exactly = 1) { healthMutationCoordinator.withMutation<Result<Unit>>(any()) }
             coVerify(exactly = 1) {
                 trainingReadinessProjectionRecomputeUseCase.execute(any(), any(), any(), any(), any())
             }
         }
 }
-

@@ -6,11 +6,14 @@ import androidx.work.WorkerParameters
 import app.readylytics.health.core.database.data.local.DataRollupManager
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.workers.WorkerScheduler
+import app.readylytics.health.data.preferences.SettingsRepository
 import dagger.Lazy
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -28,6 +31,7 @@ class DataRollupWorkerTest {
     private val rollupManagerLazy = mockk<Lazy<DataRollupManager>>()
     private val workerScheduler = mockk<WorkerScheduler>(relaxed = true)
     private val workerSchedulerLazy = mockk<Lazy<WorkerScheduler>>()
+    private val settingsRepo = mockk<SettingsRepository>()
     private val workerParams = mockk<WorkerParameters>(relaxed = true)
     private val fixedClock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC"))
 
@@ -36,6 +40,11 @@ class DataRollupWorkerTest {
         every { workerParams.taskExecutor } returns mockk(relaxed = true)
         every { rollupManagerLazy.get() } returns rollupManager
         every { workerSchedulerLazy.get() } returns workerScheduler
+        every { settingsRepo.userPreferences } returns
+            flowOf(
+                app.readylytics.health.core.model.domain.preferences
+                    .UserPreferences(),
+            )
     }
 
     @Test
@@ -88,26 +97,41 @@ class DataRollupWorkerTest {
         }
 
     @Test
-    fun `doWork retries when maintenance is pending`() =
+    fun `rollup uses the stored scoring zone for cutoff and invalidation cap`() =
         runBlocking {
-            val coordinator = mockk<app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator>()
-            io.mockk.coEvery { coordinator.isMaintenancePending() } returns true
+            val prefs =
+                app.readylytics.health.core.model.domain.preferences.UserPreferences(
+                    scoringZoneId = "Pacific/Kiritimati",
+                )
+            every { settingsRepo.userPreferences } returns flowOf(prefs)
+            val cutoffSlot = slot<Long>()
+            coEvery { rollupManager.rollupExpiredHotTier(capture(cutoffSlot)) } returns
+                ScoreInvalidation.AffectedRange(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31))
 
-            val worker = createWorker(coordinator)
-            val result = worker.doWork()
+            createWorker().doWork()
 
-            assertEquals(ListenableWorker.Result.retry(), result)
-            coVerify(exactly = 0) { rollupManager.rollupExpiredHotTier(any()) }
+            assertEquals(
+                app.readylytics.health.core.model.domain.util.RetentionBounds.resolveHotTierCutoffMs(
+                    fixedClock.instant(),
+                ),
+                cutoffSlot.captured,
+            )
+            coVerify {
+                workerScheduler.scheduleResyncWorker(
+                    recomputeOnly = true,
+                    startDate = LocalDate.of(2026, 8, 1),
+                    endDate = LocalDate.of(2026, 9, 1),
+                )
+            }
         }
 
-    private fun createWorker(
-        coordinator: app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator? = null,
-    ) = DataRollupWorker(
-        context = ApplicationProvider.getApplicationContext(),
-        params = workerParams,
-        rollupManager = rollupManagerLazy,
-        workerScheduler = workerSchedulerLazy,
-        clock = fixedClock,
-        healthMutationCoordinator = coordinator?.let { Lazy { it } },
-    )
+    private fun createWorker() =
+        DataRollupWorker(
+            context = ApplicationProvider.getApplicationContext(),
+            params = workerParams,
+            rollupManager = rollupManagerLazy,
+            workerScheduler = workerSchedulerLazy,
+            settingsRepo = settingsRepo,
+            clock = fixedClock,
+        )
 }

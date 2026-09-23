@@ -22,7 +22,6 @@ import app.readylytics.health.core.model.domain.repository.HealthConnectPermissi
 import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
 import app.readylytics.health.core.model.domain.sync.DirtyRangeStore
 import app.readylytics.health.core.model.domain.sync.DirtyTicket
-import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.util.RetentionBounds
@@ -64,15 +63,12 @@ class HealthResyncWorker
                     override suspend fun pending(limit: Int): List<DirtyTicket> = emptyList()
                 }
             },
-        private val healthMutationCoordinator: Lazy<HealthMutationCoordinator>? = null,
     ) : CoroutineWorker(appContext, params) {
         // Progress notifications (posted from runNormalRecompute/runTrainingReadinessProjection)
         // are best-effort (wrapped in runCatching); POST_NOTIFICATIONS is declared in the manifest
         // and a missing runtime grant simply drops the update.
         override suspend fun doWork(): Result {
-            if (databaseReadinessGate.inspect() != DatabaseReadiness.Ready ||
-                healthMutationCoordinator?.get()?.isMaintenancePending() == true
-            ) {
+            if (databaseReadinessGate.inspect() != DatabaseReadiness.Ready) {
                 return Result.retry()
             }
             val resyncUseCase = fullHistoricalResyncUseCase.get()

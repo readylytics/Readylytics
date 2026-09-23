@@ -39,6 +39,7 @@ class FullHistoricalResyncUseCase
         private val healthSyncUseCase: HealthSyncUseCase,
         private val trainingReadinessProjectionRecomputeUseCase: TrainingReadinessProjectionRecomputeUseCase,
         private val clock: Clock,
+        private val healthMutationCoordinator: HealthMutationCoordinator,
     ) {
         suspend fun execute(
             recomputeOnly: Boolean = false,
@@ -83,8 +84,8 @@ class FullHistoricalResyncUseCase
          * explicit "Recalculate" action (task 5) after S/w change -- never by a normal sync/resync
          * pass. Retention-bounded like [execute], and delegates its actual read-modify-write work to
          * [TrainingReadinessProjectionRecomputeUseCase]: no Health Connect I/O, no raw ingestion, no
-         * TRIMP/residual-fatigue reconstruction. It still serializes through
-         * [HealthSyncUseCase.withSyncLock], though, because it reads and rewrites full
+         * TRIMP/residual-fatigue reconstruction. It still serializes through the application
+         * mutation coordinator because it reads and rewrites full
          * `daily_summaries` rows the same way [app.readylytics.health.DatabaseReadyStartupInitializer]'s
          * baseline backfill does -- a concurrent daily sync/resync updating those same rows mid-write
          * could otherwise be clobbered by (or clobber) this stale full-row projection.
@@ -95,7 +96,7 @@ class FullHistoricalResyncUseCase
         ): Result<Unit> {
             val prefs = settingsRepo.userPreferences.first()
             val historicalWindow = RetentionBounds.resolveHistoricalWindow(prefs, clock.instant())
-            return healthSyncUseCase.withSyncLock {
+            return healthMutationCoordinator.withMutation {
                 trainingReadinessProjectionRecomputeUseCase.execute(
                     startDate = historicalWindow.startDate,
                     endDate = historicalWindow.endDate,

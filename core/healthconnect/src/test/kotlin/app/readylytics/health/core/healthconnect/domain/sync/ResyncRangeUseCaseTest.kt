@@ -72,7 +72,7 @@ class ResyncRangeUseCaseTest {
         // A relaxed mock would return null here, and the recompute loop's non-null-context guard
         // would then silently fall back to the 3-arg recomputeDay (no fatigue computed) -- stub it
         // so the walk-forward actually exercises the 6-arg path.
-        coEvery { scoringRepository.fetchWalkForwardFatigueContext(any(), any(), any()) } returns
+        coEvery { scoringRepository.fetchWalkForwardFatigueContext(any(), any(), any(), any()) } returns
             WalkForwardFatigueContext(emptyList())
         coEvery { hcRepo.readSleepSessions(any(), any()) } returns ReadOutcome.Available(emptyList())
         coEvery { hcRepo.readExerciseSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
@@ -326,7 +326,7 @@ class ResyncRangeUseCaseTest {
                 onProgress = null,
             )
 
-            coVerify { scoringRepository.computeAndPersistDailySummary(date, 0L, any(), any()) }
+            coVerify { scoringRepository.computeAndPersistDailySummary(date, 0L, any(), any(), any()) }
         }
 
     @Test
@@ -413,13 +413,14 @@ class ResyncRangeUseCaseTest {
 
             coVerifyOrder {
                 healthIngestionStore.clearFrozenBaselines(startDate, endDate.plusDays(1), zoneId)
-                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any())
                 scoringRepository.computeAndPersistDailySummary(
                     startDate.plusDays(1),
                     any(),
                     any(),
+                    any(),
                     any())
-                scoringRepository.computeAndPersistDailySummary(endDate, any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(endDate, any(), any(), any(), any())
             }
         }
 
@@ -435,6 +436,7 @@ class ResyncRangeUseCaseTest {
                 scoringRepository.computeAndPersistDailySummary(
                     any(),
                     captureNullable(stepOverrides),
+                    any(),
                     any(),
                     any())
             } returns Unit
@@ -460,7 +462,7 @@ class ResyncRangeUseCaseTest {
             coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }
             coVerify(exactly = 1) { sessionLinkReconciler.reconcile(any(), any(), any()) }
             coVerify(exactly = 2) {
-                scoringRepository.computeAndPersistDailySummary(any(), null, any(), any())
+                scoringRepository.computeAndPersistDailySummary(any(), null, any(), any(), any())
             }
         }
 
@@ -482,6 +484,7 @@ class ResyncRangeUseCaseTest {
                     any(),
                     any(),
                     capture(capturedPrefs),
+                    any(),
                     any())
             } returns Unit
 
@@ -507,7 +510,7 @@ class ResyncRangeUseCaseTest {
             coVerifyOrder {
                 selectedSourcePruner.prune(startDate, endDate, any(), any())
                 sessionLinkReconciler.reconcile(any(), any(), any())
-                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any())
             }
         }
 
@@ -595,6 +598,7 @@ class ResyncRangeUseCaseTest {
                     startDate.plusDays(34),
                     any(),
                     any(),
+                    any(),
                     any())
             } throws IllegalStateException("scoring failed")
 
@@ -617,10 +621,10 @@ class ResyncRangeUseCaseTest {
             useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
 
             coVerify(exactly = 1) {
-                scoringRepository.fetchWalkForwardFatigueContext(any(), any(), any())
+                scoringRepository.fetchWalkForwardFatigueContext(any(), any(), any(), any())
             }
             coVerify(exactly = 65) {
-                scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any(), any())
             }
         }
 }

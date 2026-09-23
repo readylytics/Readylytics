@@ -6,17 +6,15 @@ import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.RetentionBounds
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import java.time.Clock
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Public entry point for the two health-sync flows. A thin facade that owns the shared [syncMutex]
- * — so the foreground daily sync and the historical resync stay mutually serialized — and delegates
- * the actual work to [DailySyncUseCase] and [ResyncRangeUseCase].
+ * Public entry point for the two health-sync flows. The application-scoped mutation coordinator
+ * serializes the foreground daily sync and historical resync, while this facade delegates the
+ * actual work to [DailySyncUseCase] and [ResyncRangeUseCase].
  *
  * The two flows are deliberately separate (see `.claude/CLAUDE.md` two-flow contract): pull-to-
  * refresh is current-day-only via [sync]; the Settings "Resync Health Connect data" full historical
@@ -31,23 +29,8 @@ class HealthSyncUseCase
         private val resyncRangeUseCase: ResyncRangeUseCase,
         private val settingsRepo: SettingsRepository,
         private val clock: Clock,
-        private val coordinator: HealthMutationCoordinator = NoOpHealthMutationCoordinator,
+        private val coordinator: HealthMutationCoordinator,
     ) {
-        private val syncMutex = Mutex()
-
-        /**
-         * Serializes [block] against the daily sync / resync flows above. Used by callers outside
-         * this facade that must not run concurrently with a sync or resync — e.g. the app-start
-         * baseline backfill (SCORE-003), which reads/writes `daily_summaries` rows a concurrent
-         * walk-forward recompute could be mid-write on.
-         */
-        suspend fun <T> withSyncLock(block: suspend () -> T): T =
-            syncMutex.withLock {
-                coordinator.withMutation {
-                    block()
-                }
-            }
-
         /**
          * Runs the foreground sync / recalculation over a recent [windowDays] window.
          *
@@ -66,32 +49,28 @@ class HealthSyncUseCase
             windowDays: Int,
             onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)? = null,
         ): Result<Unit> =
-            syncMutex.withLock {
-                coordinator.withMutation {
-                    dailySyncUseCase.run(windowDays, onProgress)
-                }
+            coordinator.withMutation {
+                dailySyncUseCase.run(windowDays, onProgress)
             }
 
         suspend fun catchUpSync(
             onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)? = null,
         ): Result<Unit> =
-            syncMutex.withLock {
-                coordinator.withMutation {
-                    val prefs = settingsRepo.userPreferences.first()
-                    if (prefs.lastSyncTimestamp > 0L) {
-                        logD("HealthSyncUseCase") {
-                            "Catch-up sync skipped: lastSyncTimestamp is already set (${prefs.lastSyncTimestamp})"
-                        }
-                        return@withMutation Result.success(Unit)
+            coordinator.withMutation {
+                val prefs = settingsRepo.userPreferences.first()
+                if (prefs.lastSyncTimestamp > 0L) {
+                    logD("HealthSyncUseCase") {
+                        "Catch-up sync skipped: lastSyncTimestamp is already set (${prefs.lastSyncTimestamp})"
                     }
-                    val historicalWindow = RetentionBounds.resolveHistoricalWindow(prefs, clock.instant())
-                    resyncRangeUseCase.run(
-                        startDate = historicalWindow.startDate,
-                        endDate = historicalWindow.endDate,
-                        chunkDays = 30,
-                        onProgress = onProgress,
-                    )
+                    return@withMutation Result.success(Unit)
                 }
+                val historicalWindow = RetentionBounds.resolveHistoricalWindow(prefs, clock.instant())
+                resyncRangeUseCase.run(
+                    startDate = historicalWindow.startDate,
+                    endDate = historicalWindow.endDate,
+                    chunkDays = 30,
+                    onProgress = onProgress,
+                )
             }
 
         /**
@@ -108,16 +87,14 @@ class HealthSyncUseCase
             onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)? = null,
             requestedRunId: String? = null,
         ): Result<Unit> =
-            syncMutex.withLock {
-                coordinator.withMutation {
-                    resyncRangeUseCase.run(
-                        startDate = startDate,
-                        endDate = endDate,
-                        chunkDays = chunkDays,
-                        onProgress = onProgress,
-                        requestedRunId = requestedRunId,
-                    )
-                }
+            coordinator.withMutation {
+                resyncRangeUseCase.run(
+                    startDate = startDate,
+                    endDate = endDate,
+                    chunkDays = chunkDays,
+                    onProgress = onProgress,
+                    requestedRunId = requestedRunId,
+                )
             }
 
         /**
@@ -134,22 +111,14 @@ class HealthSyncUseCase
             onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)? = null,
             requestedRunId: String? = null,
         ): Result<Unit> =
-            syncMutex.withLock {
-                coordinator.withMutation {
-                    resyncRangeUseCase.run(
-                        startDate = startDate,
-                        endDate = endDate,
-                        chunkDays = 30,
-                        onProgress = onProgress,
-                        skipIngestAndPrune = true,
-                        requestedRunId = requestedRunId,
-                    )
-                }
+            coordinator.withMutation {
+                resyncRangeUseCase.run(
+                    startDate = startDate,
+                    endDate = endDate,
+                    chunkDays = 30,
+                    onProgress = onProgress,
+                    skipIngestAndPrune = true,
+                    requestedRunId = requestedRunId,
+                )
             }
-    }
-
-private object NoOpHealthMutationCoordinator : HealthMutationCoordinator {
-    override suspend fun <T> withMutation(block: suspend () -> T): T = block()
-
-    override suspend fun <T> withMaintenance(operationId: String, block: suspend () -> T): T = block()
 }

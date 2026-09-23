@@ -11,7 +11,6 @@ import app.readylytics.health.core.healthconnect.domain.sync.HealthSyncUseCase
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspector
 import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
-import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import dagger.Lazy
@@ -40,13 +39,10 @@ class PeriodicHealthSyncWorker
         private val foregroundSyncController: Lazy<ForegroundSyncController>,
         private val workerScheduler: WorkerScheduler,
         private val databaseReadinessGate: DatabaseReadinessInspector,
-        private val healthMutationCoordinator: Lazy<HealthMutationCoordinator>? = null,
     ) : CoroutineWorker(appContext, params) {
         @SuppressLint("MissingPermission")
         override suspend fun doWork(): Result {
-            if (databaseReadinessGate.inspect() != DatabaseReadiness.Ready ||
-                healthMutationCoordinator?.get()?.isMaintenancePending() == true
-            ) {
+            if (databaseReadinessGate.inspect() != DatabaseReadiness.Ready) {
                 return Result.retry()
             }
             val syncUseCase = healthSyncUseCase.get()

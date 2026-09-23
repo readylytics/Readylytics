@@ -4,6 +4,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.readylytics.health.core.database.data.local.MinuteCoveragePublisher
 import app.readylytics.health.core.database.data.local.DataRollupManager
+import app.readylytics.health.core.database.data.local.TestHealthMutationCoordinator
 import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.database.data.local.RoomTransactionRunner
 import app.readylytics.health.core.databaseschema.data.local.dao.getOrCreateSourceRef
@@ -42,6 +43,7 @@ class ScoringEquivalenceGoldenTest {
                 .build()
         rollupManager =
             DataRollupManager(
+                coordinator = TestHealthMutationCoordinator,
                 minuteCoverageDao = database.minuteCoverageDao(),
                 publisher = MinuteCoveragePublisher(database.minuteBucketDao(), database.minuteCoverageDao()),
                 heartRateDao = database.heartRateDao(),

@@ -12,12 +12,14 @@ import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardVo2MaxContext
+import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
+import java.time.Clock
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -34,6 +36,7 @@ class DailyRecomputeSupport
         private val scoringRepository: ScoringRepository,
         private val settingsRepo: SettingsRepository,
         private val transactionRunner: TransactionRunner,
+        private val clock: Clock = Clock.systemDefaultZone(),
     ) {
         /**
          * Recomputes and persists the daily summary for [day]. Already invoked from an IO context;
@@ -46,7 +49,10 @@ class DailyRecomputeSupport
         suspend fun recomputeDay(
             day: LocalDate,
             steps: Long?,
-        ): Result<Unit> = recomputeDay(day, steps, settingsRepo.userPreferences.first())
+        ): Result<Unit> {
+            val prefs = settingsRepo.userPreferences.first()
+            return recomputeDay(day, steps, prefs, runContext = ScoringRunContext.capture(prefs, clock.instant()))
+        }
 
         /**
          * Same as the two-arg overload, but with a preferences snapshot supplied by the caller.
@@ -65,9 +71,16 @@ class DailyRecomputeSupport
             steps: Long?,
             prefs: UserPreferences,
             contexts: WalkForwardContexts = WalkForwardContexts(),
+            runContext: ScoringRunContext,
         ): Result<Unit> =
             try {
-                scoringRepository.computeAndPersistDailySummary(day, steps, prefs, contexts)
+                scoringRepository.computeAndPersistDailySummary(
+                    targetDate = day,
+                    steps = steps,
+                    prefs = prefs,
+                    contexts = contexts,
+                    runContext = runContext,
+                )
                 logD("DailyRecomputeSupport") {
                     "Day $day: scored atomically (steps=${steps?.toString() ?: "preserved"})"
                 }
@@ -110,8 +123,10 @@ class DailyRecomputeSupport
         suspend fun buildWalkForwardFatigueContext(
             startDate: LocalDate,
             endDate: LocalDate,
-            zoneId: ZoneId,
-        ): WalkForwardFatigueContext = scoringRepository.fetchWalkForwardFatigueContext(startDate, endDate, zoneId)
+            prefs: UserPreferences,
+            runContext: ScoringRunContext,
+        ): WalkForwardFatigueContext =
+            scoringRepository.fetchWalkForwardFatigueContext(startDate, endDate, prefs, runContext)
 
         /**
          * PERF: fetches the shared wearable-VO2-Max context once for the whole

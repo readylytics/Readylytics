@@ -32,12 +32,8 @@ class IntervalTotalsReader
     constructor(
         @param:ApplicationContext private val context: Context,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+        private val client: HealthConnectClient,
     ) {
-        internal var clientOverride: HealthConnectClient? = null
-
-        private val client: HealthConnectClient
-            get() = clientOverride ?: HealthConnectClient.getOrCreate(context)
-
         suspend fun readDistanceTotals(
             from: Instant,
             to: Instant,
@@ -72,8 +68,7 @@ class IntervalTotalsReader
         ): ReadOutcome<List<DomainIntervalTotal>> =
             withContext(ioDispatcher) {
                 val isSdkAvailable =
-                    clientOverride != null ||
-                        HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE
+                    HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE
                 if (!isSdkAvailable) {
                     return@withContext ReadOutcome.Unsupported
                 }

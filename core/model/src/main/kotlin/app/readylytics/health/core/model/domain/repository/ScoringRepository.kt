@@ -3,6 +3,7 @@ package app.readylytics.health.core.model.domain.repository
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.model.ReadinessResult
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -19,13 +20,15 @@ interface ScoringRepository {
      * [fetchWalkForwardFatigueContext]) instead of re-querying their own lookback windows per day.
      * The same [contexts] instance must be handed to every day of the run, oldest day first, so the
      * fatigue accumulator decays and adds impulses in the correct order. The default (all null) is
-     * the single-day case.
+     * the single-day case. [runContext] freezes the run's clock, scoring zone, and retention
+     * boundary; the repository captures one when a caller does not supply one.
      */
     suspend fun computeAndPersistDailySummary(
         targetDate: LocalDate,
         steps: Long? = null,
         prefs: UserPreferences? = null,
         contexts: WalkForwardContexts = WalkForwardContexts(),
+        runContext: ScoringRunContext? = null,
     )
 
     /**
@@ -53,14 +56,16 @@ interface ScoringRepository {
 
     /**
      * PERF-002/WP-27: prefetches historical seed impulses (workouts with startTime before startDate)
-     * needed for exact retained-history reconstruction across `[startDate, endDate]`. The caller holds
-     * the returned mutable [WalkForwardFatigueContext] across the whole walk-forward and passes it to every
+     * needed for exact retained-history reconstruction across `[startDate, endDate]`. [prefs] and
+     * [runContext] must describe the same immutable run. The caller holds the returned mutable
+     * [WalkForwardFatigueContext] across the whole walk-forward and passes it to every
      * [computeAndPersistDailySummary] call in that run.
      */
     suspend fun fetchWalkForwardFatigueContext(
         startDate: LocalDate,
         endDate: LocalDate,
-        zoneId: ZoneId,
+        prefs: UserPreferences,
+        runContext: ScoringRunContext,
     ): WalkForwardFatigueContext
 
     /**

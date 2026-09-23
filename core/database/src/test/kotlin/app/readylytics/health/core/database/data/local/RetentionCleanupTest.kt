@@ -5,13 +5,17 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.readylytics.health.core.databaseschema.data.local.dao.*
 import app.readylytics.health.core.databaseschema.data.local.entity.*
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
+import app.readylytics.health.core.model.domain.sync.ScoringRunContext
+import io.mockk.*
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.Instant
 
 @RunWith(AndroidJUnit4::class)
 class RetentionCleanupTest {
@@ -32,6 +36,11 @@ class RetentionCleanupTest {
     private lateinit var minuteBucketMaintenanceDao: MinuteBucketMaintenanceDao
     private lateinit var vo2MaxDao: Vo2MaxRecordDao
     private lateinit var retentionCleanup: RetentionCleanup
+    private val runContext =
+        ScoringRunContext.capture(
+            UserPreferences(scoringZoneId = "UTC", retentionDaysEnabled = true, retentionDays = 30),
+            Instant.parse("2026-08-31T12:00:00Z"),
+        )
 
     @Before
     fun setup() {
@@ -60,6 +69,7 @@ class RetentionCleanupTest {
         val transactionRunner = RoomTransactionRunner(database)
         retentionCleanup =
             RetentionCleanup(
+                coordinator = TestHealthMutationCoordinator,
                 transactionRunner = transactionRunner,
                 daos =
                     HealthRecordDaos(
@@ -399,7 +409,7 @@ class RetentionCleanupTest {
             )
 
             // Execute cleanup
-            val touched = retentionCleanup.deleteBefore(cutoffMs)
+            val touched = retentionCleanup.deleteBefore(cutoffMs, runContext)
 
             // Earliest HR row is at cutoffMs - 1 (1970-01-01 UTC); cutoffMs itself is also
             // 1970-01-01 UTC (well under a day in epoch millis).
@@ -477,6 +487,7 @@ class RetentionCleanupTest {
 
     private fun buildRetentionCleanup(transactionRunner: TransactionRunner): RetentionCleanup =
         RetentionCleanup(
+            coordinator = TestHealthMutationCoordinator,
             transactionRunner = transactionRunner,
             daos =
                 HealthRecordDaos(
@@ -550,7 +561,7 @@ class RetentionCleanupTest {
             val countingRunner = CountingTransactionRunner(RoomTransactionRunner(database))
             val cleanupWithCountingRunner = buildRetentionCleanup(countingRunner)
 
-            cleanupWithCountingRunner.deleteBefore(cutoffMs)
+            cleanupWithCountingRunner.deleteBefore(cutoffMs, runContext)
 
             // 1 batch each for HR and HRV (single row < limit terminates the loop immediately) +
             // 1 final transaction for the 9 remaining low-volume tables = 3. Before this change,
@@ -566,7 +577,70 @@ class RetentionCleanupTest {
     @Test
     fun testDeleteBeforeReturnsNullWhenNothingToDelete() =
         runTest {
-            val touched = retentionCleanup.deleteBefore(1_000_000L)
+            val touched = retentionCleanup.deleteBefore(1_000_000L, runContext)
             assertEquals(null, touched)
+        }
+
+    @Test
+    fun `dirty journal uses the captured scoring zone across a DST boundary`() =
+        runTest {
+            seedSourceRecordParents(11L)
+            val oldMs = Instant.parse("2026-10-31T02:00:00Z").toEpochMilli()
+            val cutoffMs = Instant.parse("2026-11-01T03:30:00Z").toEpochMilli()
+            heartRateDao.upsertAll(
+                listOf(
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 11L,
+                        timestampMs = oldMs,
+                        beatsPerMinute = 70,
+                        recordType = "RESTING",
+                    ),
+                ),
+            )
+            val dirtyRangeDao = mockk<DirtyRangeDao>(relaxed = true)
+            val mutationStateDao = mockk<HealthMutationStateDao>(relaxed = true)
+            coEvery { mutationStateDao.current() } returns HealthMutationStateEntity(sourceGeneration = 7)
+            val cleanup =
+                RetentionCleanup(
+                    coordinator = TestHealthMutationCoordinator,
+                    transactionRunner = RoomTransactionRunner(database),
+                    daos =
+                        HealthRecordDaos(
+                            sleepSessionDao = sleepDao,
+                            sleepStageDao = sleepStageDao,
+                            heartRateDao = heartRateDao,
+                            hrvDao = hrvDao,
+                            workoutDao = workoutDao,
+                            workoutRoutePointDao = database.workoutRoutePointDao(),
+                            weightRecordDao = weightDao,
+                            bodyFatRecordDao = bodyFatDao,
+                            bloodPressureRecordDao = bloodPressureDao,
+                            oxygenSaturationRecordDao = oxygenSaturationDao,
+                            bodyTemperatureRecordDao = bodyTemperatureDao,
+                            stepRecordDao = stepRecordDao,
+                            sourceRecordDao = database.sourceRecordDao(),
+                            minuteBucketMaintenanceDao = minuteBucketMaintenanceDao,
+                        ),
+                    dailySummaryDao = dailySummaryDao,
+                    vo2MaxRecordDao = vo2MaxDao,
+                    dirtyRangeDao = dirtyRangeDao,
+                    healthMutationStateDao = mutationStateDao,
+                )
+            val runContext =
+                ScoringRunContext.capture(
+                    UserPreferences(scoringZoneId = "America/New_York", retentionDays = 30),
+                    Instant.parse("2026-11-01T03:30:00Z"),
+                )
+            val journalSlot = io.mockk.slot<DirtyRangeEntity>()
+
+            cleanup.deleteBefore(cutoffMs, runContext)
+
+            coVerify { dirtyRangeDao.insert(capture(journalSlot)) }
+            assertEquals(
+                Instant.ofEpochMilli(oldMs).atZone(runContext.zoneId).toLocalDate().toEpochDay(),
+                journalSlot.captured.startEpochDay,
+            )
+            assertEquals(runContext.today.toEpochDay(), journalSlot.captured.endEpochDayInclusive)
+            assertEquals(7, journalSlot.captured.sourceGeneration)
         }
 }

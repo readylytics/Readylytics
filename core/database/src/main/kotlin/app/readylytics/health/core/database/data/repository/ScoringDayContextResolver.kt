@@ -5,6 +5,7 @@ import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
+import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ScoringConfig
 import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
@@ -22,8 +23,10 @@ data class ScoringDayContext(
     val initialBaselines: ResolveDailyBaselinesUseCase.InitialBaselines,
     val scoringConfig: ScoringConfig,
     val prefs: UserPreferences,
+    val runContext: ScoringRunContext,
 )
 
+/** Translates one immutable run context into the date-scoped inputs consumed by scoring loaders. */
 class ScoringDayContextResolver(
     private val scoringConfigFactory: ScoringConfigFactory,
     private val resolveDailyBaselinesUseCase: ResolveDailyBaselinesUseCase,
@@ -42,8 +45,12 @@ class ScoringDayContextResolver(
         targetDate: LocalDate,
         prefs: UserPreferences,
         baselineContext: WalkForwardBaselineContext?,
+        runContext: ScoringRunContext,
     ): ScoringDayContext {
-        val zoneId = prefs.scoringZone()
+        require(runContext.zoneId == prefs.scoringZone()) {
+            "Scoring run context zone must match the preferences snapshot"
+        }
+        val zoneId = runContext.zoneId
         val dayMidnightMs = targetDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
         val nextDayMidnightMs = targetDate.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
         val sleepDayPolicy = createSleepDayPolicy(prefs, zoneId)
@@ -74,6 +81,7 @@ class ScoringDayContextResolver(
             initialBaselines = initialBaselines,
             scoringConfig = scoringConfig,
             prefs = prefs,
+            runContext = runContext,
         )
     }
 }

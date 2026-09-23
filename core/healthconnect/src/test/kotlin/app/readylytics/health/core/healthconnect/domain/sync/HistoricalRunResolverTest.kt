@@ -9,6 +9,7 @@ import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertSame
 import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneId
@@ -113,9 +114,9 @@ class HistoricalRunResolverTest {
     }
 
     @Test
-    fun `resolve returns request when existing protocolVersion is not 2`() {
+    fun `resolve returns request when existing protocolVersion is not current`() {
         val legacyRun = createRun(protocolVersion = 1)
-        val request = createRun(protocolVersion = 2)
+        val request = createRun(protocolVersion = HistoricalRunIdentity.CURRENT_PROTOCOL_VERSION)
 
         assertEquals(request, HistoricalRunResolver.resolve(legacyRun, request))
     }
@@ -123,9 +124,18 @@ class HistoricalRunResolverTest {
     @Test
     fun `resolve returns request when requested protocolVersion differs`() {
         val savedRun = createRun(protocolVersion = 2)
-        val request = createRun(protocolVersion = 3)
+        val request = createRun(protocolVersion = HistoricalRunIdentity.CURRENT_PROTOCOL_VERSION)
 
         assertEquals(request, HistoricalRunResolver.resolve(savedRun, request))
+    }
+
+    @Test
+    fun `retention change creates a new snapshot identity and restarts`() {
+        val old = createRun(prefs = UserPreferences(retentionDays = 365))
+        val requested = createRun(prefs = UserPreferences(retentionDays = 730))
+
+        assertNotEquals(old.scoringSnapshotId, requested.scoringSnapshotId)
+        assertSame(requested, HistoricalRunResolver.resolve(old, requested))
     }
 
     @Test

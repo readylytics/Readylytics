@@ -16,9 +16,8 @@ import javax.inject.Inject
 
 /**
  * Resolves the current 14-day trailing body-temperature baseline for one date at a time —
- * mirrors how [app.readylytics.health.core.scoring.domain.scoring.HrvBaselineProvider] is consumed (a single
- * current value keyed off the target date), but with a plain trailing average instead of scoring's
- * log-normal EWMA. Never touches the domain.scoring package.
+ * mirrors the scoring baseline services' single current value keyed off the target date, but with a
+ * plain trailing average instead of scoring's log-normal EWMA. Never touches the domain.scoring package.
  */
 class BodyTemperatureBaselineProvider
     @Inject

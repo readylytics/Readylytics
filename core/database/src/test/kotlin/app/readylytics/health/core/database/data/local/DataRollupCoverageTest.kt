@@ -38,6 +38,7 @@ class DataRollupCoverageTest {
         runBlocking { database.healthMutationStateDao().getOrCreate() }
         rollupManager =
             DataRollupManager(
+                coordinator = TestHealthMutationCoordinator,
                 minuteCoverageDao = database.minuteCoverageDao(),
                 heartRateDao = database.heartRateDao(),
                 publisher =
@@ -272,6 +273,7 @@ class DataRollupCoverageTest {
 
             val manager =
                 DataRollupManager(
+                    coordinator = TestHealthMutationCoordinator,
                     minuteCoverageDao = database.minuteCoverageDao(),
                     heartRateDao = database.heartRateDao(),
                     publisher =

@@ -26,6 +26,7 @@ class CompleteMinuteRollupTest {
             HealthDatabase::class.java,
         ).allowMainThreadQueries().build()
         rollupManager = DataRollupManager(
+            coordinator = TestHealthMutationCoordinator,
             minuteCoverageDao = database.minuteCoverageDao(),
             publisher = MinuteCoveragePublisher(database.minuteBucketDao(), database.minuteCoverageDao()),
             heartRateDao = database.heartRateDao(),

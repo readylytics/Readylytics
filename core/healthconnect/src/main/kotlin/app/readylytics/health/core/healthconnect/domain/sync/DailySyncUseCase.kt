@@ -37,7 +37,7 @@ import javax.inject.Singleton
  * Foreground daily sync / recalculation over a recent window. Re-reads the recent Health Connect
  * window, reconciles HR/HRV session linkage, then walk-forward recomputes each day's scores via the
  * unchanged scoring-engine formulas. Serialized against the historical resync by the shared
- * `syncMutex` owned by [HealthSyncUseCase] — callers must invoke this under that lock.
+ * the application-wide [HealthMutationCoordinator] — callers must invoke this under that coordinator.
  */
 @Singleton
 class DailySyncUseCase
@@ -153,8 +153,9 @@ class DailySyncUseCase
                     // Resolve day boundaries via the stored scoring timezone (falls back to the
                     // device zone when un-seeded) so the recompute window stays aligned with the
                     // scoring engine even if the device timezone changes.
-                    val zoneId = prefs.scoringZone()
-                    val today = java.time.LocalDate.now(clock.withZone(zoneId))
+                    val runContext = ScoringRunContext.capture(prefs, clock.instant())
+                    val zoneId = runContext.zoneId
+                    val today = runContext.today
 
                     val outcome = changeSynchronizer.applyPendingChanges()
                     if (outcome.requiresFullResync) {
@@ -280,7 +281,12 @@ class DailySyncUseCase
                     // walk-forward (exact retained history). Mutable state accumulator, advanced once
                     // per recomputed day in the chronological loop below.
                     val fatigueContext =
-                        recomputeSupport.buildWalkForwardFatigueContext(oldestTargetDay, today, zoneId)
+                        recomputeSupport.buildWalkForwardFatigueContext(
+                            oldestTargetDay,
+                            today,
+                            prefs,
+                            runContext,
+                        )
                     // PERF: fetch the wearable-VO2-Max series once for the whole walk-forward,
                     // same batched-once shape as trimpContext/baselineContext/fatigueContext above.
                     val vo2MaxContext =
@@ -321,6 +327,7 @@ class DailySyncUseCase
                                     steps,
                                     prefs,
                                     WalkForwardContexts(trimpContext, baselineContext, fatigueContext, vo2MaxContext),
+                                    runContext,
                                 )
                             }
 

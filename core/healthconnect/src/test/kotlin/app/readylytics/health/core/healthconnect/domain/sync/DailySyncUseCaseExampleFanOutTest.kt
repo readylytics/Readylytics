@@ -60,7 +60,7 @@ class DailySyncUseCaseExampleFanOutTest {
         coEvery { changeSynchronizer.applyPendingChanges() } returns HealthChangeSyncOutcome(emptySet(), false)
         coJustRun { changeSynchronizer.commitTokens(any()) }
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
-        coEvery { scoringRepository.fetchWalkForwardFatigueContext(any(), any(), any()) } returns
+        coEvery { scoringRepository.fetchWalkForwardFatigueContext(any(), any(), any(), any()) } returns
             WalkForwardFatigueContext(emptyList())
         coEvery { hcRepo.readSleepSessions(any(), any()) } returns ReadOutcome.Available(emptyList())
         coEvery { hcRepo.readExerciseSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
@@ -112,7 +112,7 @@ class DailySyncUseCaseExampleFanOutTest {
                     nextTokens = nextTokens,
                 )
             coJustRun {
-                scoringRepository.computeAndPersistDailySummary(capture(scoredDays), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(capture(scoredDays), any(), any(), any(), any())
             }
 
             val result = useCase.run(windowDays = 1, onProgress = null)
