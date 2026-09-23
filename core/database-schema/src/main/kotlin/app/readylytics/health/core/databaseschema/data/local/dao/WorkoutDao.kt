@@ -156,8 +156,11 @@ interface WorkoutDao {
     @Query(
         // Retention-bounded self-heal gate: rows older than the retention start can never be
         // reached by the recompute-only resync, so counting them would re-enqueue on every launch.
+        // Only never-evaluated rows (modelTrimpQuality IS NULL) count: a workout without HR samples
+        // is evaluated to modelTrimp = NULL / quality UNAVAILABLE, which no recompute can change, so
+        // counting it would re-enqueue a full retained-history recompute on every cold start.
         "SELECT COUNT(*) FROM workout_records " +
-            "WHERE startTime >= :retentionStartMs AND modelTrimp IS NULL",
+            "WHERE startTime >= :retentionStartMs AND modelTrimp IS NULL AND modelTrimpQuality IS NULL",
     )
     suspend fun countUnbackfilledSince(retentionStartMs: Long): Int
 

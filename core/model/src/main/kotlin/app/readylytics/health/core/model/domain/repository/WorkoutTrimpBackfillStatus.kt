@@ -8,8 +8,12 @@ package app.readylytics.health.core.model.domain.repository
  * keeps `modelTrimp = NULL` indefinitely. Such a row still contributes to ATL/CTL through
  * `COALESCE(modelTrimp, trimp)` but contributes nothing to Residual Fatigue, which is
  * canonical-only. Startup uses this port to detect that state and enqueue the existing
- * recompute-only resync, which converges: a recompute writes `modelTrimp` for every workout it
- * touches (including `0f`), so the count reaches zero and the gate stops firing.
+ * recompute-only resync, which converges: a recompute evaluates every workout it touches and
+ * persists its `modelTrimpQuality` (a value, including `0f`, or `NULL` with quality `UNAVAILABLE`
+ * when the workout has no HR samples), so the never-evaluated count reaches zero and the gate stops
+ * firing. `UNAVAILABLE` rows are terminal -- no recompute can fill them -- and are deliberately not
+ * counted; otherwise every HR-less workout would re-enqueue a full retained-history recompute on
+ * every cold start.
  *
  * Convergence only holds because the residual-fatigue seed gate never looks further back than this
  * one does. See [app.readylytics.health.core.model.domain.scoring.FatigueHorizon.gateStartMs]: a
@@ -20,9 +24,9 @@ package app.readylytics.health.core.model.domain.repository
  */
 interface WorkoutTrimpBackfillStatus {
     /**
-     * True when at least one workout starting at or after [retentionStartMs] has a NULL
-     * `modelTrimp`. Bounded by the retention window so a resync that can never reach older rows is
-     * not re-enqueued on every launch.
+     * True when at least one workout starting at or after [retentionStartMs] has never been
+     * evaluated (NULL `modelTrimp` and NULL `modelTrimpQuality`). Bounded by the retention window
+     * so a resync that can never reach older rows is not re-enqueued on every launch.
      */
     suspend fun hasUnbackfilledWorkouts(retentionStartMs: Long): Boolean
 }

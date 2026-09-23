@@ -10,6 +10,7 @@ import app.readylytics.health.core.model.domain.sync.DirtyRangeStore
 import app.readylytics.health.core.model.domain.util.RetentionBounds
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
+import app.readylytics.health.core.model.domain.util.logI
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.core.scoring.domain.scoring.BackfillHistoricalBaselinesUseCase
 import app.readylytics.health.crashreport.CachePrune
@@ -153,7 +154,7 @@ internal class DatabaseReadyStartupInitializer(
             }
         if (!needsVersionRecompute && !needsBackfillRecompute && !hasPendingDirty) return
 
-        logD(TAG) {
+        logI(TAG) {
             "Enqueueing recompute-only resync (staleVersion=$needsVersionRecompute " +
                 "stored=$storedScoringVersion current=${SettingsDefaults.CURRENT_SCORING_VERSION}, " +
                 "unbackfilledCanonicalTrimp=$needsBackfillRecompute, pendingDirty=$hasPendingDirty)"
