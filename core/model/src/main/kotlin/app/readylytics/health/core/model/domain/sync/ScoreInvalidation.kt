@@ -29,6 +29,84 @@ object ScoreInvalidation {
     data class AffectedRange(val start: LocalDate, val endInclusive: LocalDate)
 
     /**
+     * WP-21 (CACHE-002): Reason for score invalidation.
+     *
+     * In Readylytics scoring, changes to baselines, workouts, vitals, or source records propagate
+     * forward through subsequent days without a finite fatigue cutoff. All scoring reasons except
+     * [RECOMMENDATION_EXAMPLES] invalidate the full retained suffix through today.
+     * [RECOMMENDATION_EXAMPLES] is an additive recommendation-example eligibility lookback
+     * bounded to 30 days.
+     */
+    enum class Reason {
+        UNKNOWN,
+        BASELINE,
+        WORKOUT,
+        LATEST_VALUE,
+        SOURCE_DELETION,
+        SOURCE_REPLACEMENT,
+        RECOMMENDATION_EXAMPLES,
+        HOT_TIER_ROLLUP,
+        RETENTION_CLEANUP,
+        RECORD_DELETION,
+        INTERVAL_CORRECTION,
+        RESTORE_REGENERATE,
+        AUTHORITATIVE_SOURCE_REPLACEMENT,
+    }
+
+    /**
+     * Converts a stored or persisted reason string to a [Reason], mapping unknown or legacy
+     * values conservatively to [Reason.UNKNOWN] so they receive the full retained suffix
+     * rather than an under-covering range.
+     */
+    fun reasonFromStored(value: String): Reason =
+        when (value) {
+            "BASELINE" -> Reason.BASELINE
+            "WORKOUT" -> Reason.WORKOUT
+            "LATEST_VALUE" -> Reason.LATEST_VALUE
+            "SOURCE_DELETION" -> Reason.SOURCE_DELETION
+            "SOURCE_REPLACEMENT" -> Reason.SOURCE_REPLACEMENT
+            "RECOMMENDATION_EXAMPLES" -> Reason.RECOMMENDATION_EXAMPLES
+            "HOT_TIER_ROLLUP" -> Reason.HOT_TIER_ROLLUP
+            "RETENTION_CLEANUP" -> Reason.RETENTION_CLEANUP
+            "RECORD_DELETION" -> Reason.RECORD_DELETION
+            "INTERVAL_CORRECTION" -> Reason.INTERVAL_CORRECTION
+            "RESTORE_REGENERATE" -> Reason.RESTORE_REGENERATE
+            "AUTHORITATIVE_SOURCE_REPLACEMENT" -> Reason.AUTHORITATIVE_SOURCE_REPLACEMENT
+            "UNKNOWN" -> Reason.UNKNOWN
+            else -> Reason.UNKNOWN
+        }
+
+    /**
+     * Bounds the conservative forward dependency closure for an affected data range [changed]
+     * triggered by [reason], intersected with the retained scoring window `[retentionStart, today]`.
+     *
+     * In Readylytics, baseline changes affect subsequent workout TRIMP, which feeds subsequent
+     * chronic training load and residual fatigue without a finite cutoff. Consequently,
+     * all reasons except [Reason.RECOMMENDATION_EXAMPLES] invalidate the complete retained suffix
+     * through [today]. [Reason.RECOMMENDATION_EXAMPLES] is bounded to a 30-day candidate selection
+     * fan-out window `[changed.start, changed.endInclusive + 30]`, capped at [today].
+     *
+     * Returns null when the resulting intersection is empty (e.g. changes exclusively in the future
+     * or recommendation fan-out predating retention).
+     */
+    fun dependencyClosure(
+        changed: AffectedRange,
+        reason: Reason,
+        retentionStart: LocalDate,
+        today: LocalDate,
+    ): AffectedRange? {
+        if (changed.start.isAfter(changed.endInclusive)) return null
+        val start = maxOf(changed.start, retentionStart)
+        val end =
+            when (reason) {
+                Reason.RECOMMENDATION_EXAMPLES ->
+                    minOf(changed.endInclusive.plusDays(EXAMPLE_SELECTION_LOOKBACK_DAYS), today)
+                else -> today
+            }
+        return if (start.isAfter(end)) null else AffectedRange(start, end)
+    }
+
+    /**
      * Widens [changed] forward by [MAX_DEPENDENT_WINDOW_DAYS] so every scoring lookback that could
      * have read the changed data is covered, capped so the result never extends past [today].
      */
