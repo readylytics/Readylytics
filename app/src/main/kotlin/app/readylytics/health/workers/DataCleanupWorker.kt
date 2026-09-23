@@ -5,9 +5,9 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import app.readylytics.health.core.database.data.local.RetentionCleanup
+import app.readylytics.health.core.database.data.local.RoomDirtyRangeStore
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspector
-import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.model.workers.WorkerScheduler
@@ -19,13 +19,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import java.time.Clock
 
-/**
- * R2-CACHE-001: when [RetentionCleanup.deleteBefore] actually deleted data, this enqueues a
- * bounded recompute-only resync (`WorkerScheduler.scheduleResyncWorker(recomputeOnly = true,
- * startDate, endDate)`) over `ScoreInvalidation.affectedRange` of the touched range -- the raw
- * data `daily_summaries` was derived from just changed underneath it. A no-op cleanup enqueues
- * nothing.
- */
 @HiltWorker
 class DataCleanupWorker
     @AssistedInject
@@ -33,6 +26,7 @@ class DataCleanupWorker
         @Assisted context: Context,
         @Assisted params: WorkerParameters,
         private val retentionCleanup: Lazy<RetentionCleanup>,
+        private val dirtyRangeStore: RoomDirtyRangeStore,
         private val settingsRepo: SettingsRepository,
         private val databaseReadinessGate: DatabaseReadinessInspector,
         private val workerScheduler: Lazy<WorkerScheduler>,
@@ -48,13 +42,14 @@ class DataCleanupWorker
                 val runContext = ScoringRunContext.capture(prefs, clock.instant())
                 if (!prefs.retentionDaysEnabled) return Result.success()
 
-                val touched = cleanup.deleteBefore(runContext.retentionStartMs, runContext)
-                if (touched != null) {
-                    val affected = ScoreInvalidation.affectedRange(touched, runContext.today)
+                cleanup.deleteBefore(runContext.retentionStartMs, runContext)
+
+                val pending = dirtyRangeStore.pending(100)
+                if (pending.isNotEmpty()) {
                     workerScheduler.get().scheduleResyncWorker(
                         recomputeOnly = true,
-                        startDate = affected.start,
-                        endDate = affected.endInclusive,
+                        startDate = pending.minOf { it.nextDay },
+                        endDate = pending.maxOf { it.endInclusive },
                     )
                 }
 

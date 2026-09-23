@@ -60,13 +60,13 @@ class CompleteMinuteRollupTest {
         // Mid-minute cutoff (90,000ms). Cutoff becomes 60,000ms.
         // We have samples at 65_000, 95_000, 120_000. All >= 60,000.
         // So no bucket created.
-        val touched1 = rollupManager.rollupExpiredHotTier(90_000L)
+        val touched1 = rollupManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(90_000L)), 90_000L)
         assertNull(touched1)
         assertEquals(3, heartRateDao.count())
         assertEquals(0, minuteBucketDao.getBucketsInTimeRange(0L, 200_000L).size)
 
         // Cutoff exactly at minute boundary (120,000ms).
-        val touched2 = rollupManager.rollupExpiredHotTier(120_000L)
+        val touched2 = rollupManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(120_000L)), 120_000L)
         assertEquals(LocalDate.of(1970, 1, 1), touched2?.start)
         assertEquals(LocalDate.of(1970, 1, 1), touched2?.endInclusive)
 
@@ -82,7 +82,7 @@ class CompleteMinuteRollupTest {
         assertEquals(2, bucket.sampleCount)
 
         // Replay with same cutoff
-        val touched3 = rollupManager.rollupExpiredHotTier(120_000L)
+        val touched3 = rollupManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(120_000L)), 120_000L)
         assertNull(touched3)
         assertEquals(1, heartRateDao.count())
         assertEquals(1, minuteBucketDao.getBucketsInTimeRange(0L, 200_000L).size)

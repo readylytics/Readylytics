@@ -72,7 +72,7 @@ class DataRollupCoverageTest {
                 ),
             )
 
-            rollupManager.rollupExpiredHotTier(MINUTE_MS)
+            rollupManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(MINUTE_MS)), MINUTE_MS)
 
             val coverage = database.minuteCoverageDao().getCoverageInRange(0L, MINUTE_MS).single()
             assertEquals(TIER_WARM, coverage.tier)
@@ -104,7 +104,7 @@ class DataRollupCoverageTest {
                 ),
             )
 
-            rollupManager.rollupExpiredHotTier(2 * MINUTE_MS)
+            rollupManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(2 * MINUTE_MS)), 2 * MINUTE_MS)
 
             val legacy = database.minuteCoverageDao().getCoverageInRange(0L, MINUTE_MS).single()
             assertEquals("LEGACY_WARM", legacy.tier)
@@ -141,7 +141,7 @@ class DataRollupCoverageTest {
                 ),
             )
 
-            rollupManager.rollupExpiredHotTier(3 * MINUTE_MS)
+            rollupManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(3 * MINUTE_MS)), 3 * MINUTE_MS)
 
             val coverage = database.minuteCoverageDao().getCoverageInRange(0L, 3 * MINUTE_MS)
             assertEquals(3, coverage.size)
@@ -184,12 +184,12 @@ class DataRollupCoverageTest {
         runBlocking {
             val ref = seedSource("src-a")
             database.heartRateDao().upsertAll(listOf(hr(ref, 1_000L, 60)))
-            rollupManager.rollupExpiredHotTier(MINUTE_MS)
+            rollupManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(MINUTE_MS)), MINUTE_MS)
             val firstGeneration =
                 database.minuteCoverageDao().getCoverageInRange(0L, MINUTE_MS).single().visibleGeneration
 
             database.heartRateDao().upsertAll(listOf(hr(ref, 2_000L, 66)))
-            rollupManager.rollupExpiredHotTier(MINUTE_MS)
+            rollupManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(MINUTE_MS)), MINUTE_MS)
 
             val coverage = database.minuteCoverageDao().getCoverageInRange(0L, MINUTE_MS).single()
             assertTrue(coverage.visibleGeneration > firstGeneration)
@@ -223,7 +223,7 @@ class DataRollupCoverageTest {
                     hr(database.sourceRecordDao().getSourceRef("src-b")!!, 2_000L, 90),
                 ),
             )
-            rollupManager.rollupExpiredHotTier(MINUTE_MS)
+            rollupManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(MINUTE_MS)), MINUTE_MS)
             assertEquals(2, database.minuteCoverageDao().getContributionsForMinute(0L).size)
 
             val deleted = database.sourceRecordDao().deleteBySourceRecordId("src-a")
@@ -290,7 +290,7 @@ class DataRollupCoverageTest {
 
             // Must NOT throw -- the conflict is caught inside rollupDayChunk and the pass stops
             // cleanly, returning whatever was already published.
-            val touched = manager.rollupExpiredHotTier(cutoffMs = 2 * MINUTE_MS, groupMinuteBudget = 1)
+            val touched = manager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(2 * MINUTE_MS)), 2 * MINUTE_MS, groupMinuteBudget = 1)
 
             // Group 1 (minute 0) committed before the injected conflict.
             val coverage = database.minuteCoverageDao().getCoverageInRange(0L, 2 * MINUTE_MS)

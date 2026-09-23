@@ -100,7 +100,7 @@ class AuthoritativeHeartRateReaderEquivalenceTest {
         runBlocking {
             val ref = seedSource("src-a")
             database.heartRateDao().upsertAll(listOf(hr(ref, 1_000L, 60), hr(ref, 2_000L, 62)))
-            rollupManager.rollupExpiredHotTier(MINUTE_MS)
+            rollupManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(MINUTE_MS)), MINUTE_MS)
 
             val range = reader.rangeIn(0L, MINUTE_MS - 1)
             assertTrue("Rolled-up raw rows must not resurface", range.rawSamples.isEmpty())
@@ -125,7 +125,7 @@ class AuthoritativeHeartRateReaderEquivalenceTest {
             seedLegacyMinute(bucketStartMs = 0L, sampleCount = 10, avgBpm = 60.0)
             database.heartRateDao().upsertAll(listOf(hr(ref, 1_000L, 200)))
 
-            rollupManager.rollupExpiredHotTier(MINUTE_MS)
+            rollupManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(MINUTE_MS)), MINUTE_MS)
 
             // Precondition: the quarantine really did leave a raw row behind under the cutoff.
             assertEquals(1, database.heartRateDao().countInRange(0L, MINUTE_MS - 1))
@@ -151,7 +151,7 @@ class AuthoritativeHeartRateReaderEquivalenceTest {
                 ),
             )
             // Cutoff inside minute 1: minute 0 rolls up, minute 1 stays raw.
-            rollupManager.rollupExpiredHotTier(90_000L)
+            rollupManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(90_000L)), 90_000L)
 
             val range = reader.rangeIn(0L, 2 * MINUTE_MS - 1)
             assertEquals(2, range.rawSamples.size)
@@ -173,7 +173,7 @@ class AuthoritativeHeartRateReaderEquivalenceTest {
         runBlocking {
             val ref = seedSource("src-a")
             database.heartRateDao().upsertAll(listOf(hr(ref, 1_000L, 60), hr(ref, 2_000L, 62)))
-            rollupManager.rollupExpiredHotTier(MINUTE_MS)
+            rollupManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(MINUTE_MS)), MINUTE_MS)
             val visibleGeneration =
                 database.minuteCoverageDao().getCoverageInRange(0L, MINUTE_MS).single().visibleGeneration
 
@@ -215,7 +215,7 @@ class AuthoritativeHeartRateReaderEquivalenceTest {
                 ),
             )
             // Only minute 0 rolls up; minute 1 stays raw. Both must still be counted exactly once.
-            rollupManager.rollupExpiredHotTier(MINUTE_MS)
+            rollupManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(MINUTE_MS)), MINUTE_MS)
 
             val projection = reader.sleepProjectionForSessions(listOf("sleep-1"))
             assertEquals(3, projection.size)
@@ -250,7 +250,7 @@ class AuthoritativeHeartRateReaderEquivalenceTest {
             val ref = seedSource("src-a")
             seedLegacyMinute(bucketStartMs = 0L, sampleCount = 10, avgBpm = 60.0)
             database.heartRateDao().upsertAll(listOf(hr(ref, 1_000L, 200)))
-            rollupManager.rollupExpiredHotTier(MINUTE_MS)
+            rollupManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(MINUTE_MS)), MINUTE_MS)
 
             // Preconditions: the raw row survived the rollup and is invisible to the raw side.
             assertEquals(1, database.heartRateDao().countInRange(0L, MINUTE_MS - 1))
@@ -290,7 +290,7 @@ class AuthoritativeHeartRateReaderEquivalenceTest {
                 ),
             )
             // Minute 0 rolls up; minute 1 stays raw. Both must arrive keyed to the sleep session.
-            rollupManager.rollupExpiredHotTier(MINUTE_MS)
+            rollupManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(MINUTE_MS)), MINUTE_MS)
 
             val scoringHistory =
                 ScoringHistoryRepositoryImpl(
@@ -319,7 +319,7 @@ class AuthoritativeHeartRateReaderEquivalenceTest {
         runBlocking {
             val ref = seedSource("src-a")
             database.heartRateDao().upsertAll(listOf(hr(ref, 1_000L, 60), hr(ref, 2_000L, 62)))
-            rollupManager.rollupExpiredHotTier(MINUTE_MS)
+            rollupManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(MINUTE_MS)), MINUTE_MS)
             // Precondition: warm is authoritative and raw is hidden.
             assertTrue(reader.rangeIn(0L, MINUTE_MS - 1).rawSamples.isEmpty())
             // Re-insert the raw rows the rollup consumed, then simulate a restore that landed the
@@ -374,7 +374,7 @@ class AuthoritativeHeartRateReaderEquivalenceTest {
             seedLegacyMinute(bucketStartMs = 0L, sampleCount = 10, avgBpm = 60.0)
             val ref = seedSource("src-a")
             database.heartRateDao().upsertAll(listOf(hr(ref, 65_000L, 70)))
-            rollupManager.rollupExpiredHotTier(2 * MINUTE_MS)
+            rollupManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(2 * MINUTE_MS)), 2 * MINUTE_MS)
 
             assertEquals(1, reader.legacyApproximateMinutes(0L, 2 * MINUTE_MS))
         }

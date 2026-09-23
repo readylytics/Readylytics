@@ -239,7 +239,7 @@ class TierBoundaryCharacterizationTest {
                 publisher = MinuteCoveragePublisher(database.minuteBucketDao(), database.minuteCoverageDao()),
                 heartRateDao = database.heartRateDao(),
                 transactionRunner = RoomTransactionRunner(database),
-            ).rollupExpiredHotTier(cutoffMs)
+            ).rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(cutoffMs)), cutoffMs)
         }
     }
 

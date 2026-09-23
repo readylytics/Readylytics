@@ -54,13 +54,27 @@ class RoomHealthChangeIngestionStore
                     } ?: emptySet()
                 HealthDataType.HEART_RATE ->
                     daos.sourceRecordDao.getSourceRef(hcRecordId)?.let { ref ->
-                        daos.heartRateDao.getBySourceRecordRef(ref)
-                            .mapTo(mutableSetOf()) { dateFor(it.timestampMs, zoneId) }
+                        val dates = mutableSetOf<LocalDate>()
+                        daos.heartRateDao.getBySourceRecordRef(ref).forEach { r ->
+                            dates.add(dateFor(r.timestampMs, zoneId))
+                            r.sessionId?.let { sid ->
+                                daos.sleepSessionDao.getById(sid)?.let { s -> dates.add(dateFor(s.startTime, zoneId)) }
+                                daos.workoutDao.getById(sid)?.let { w -> dates.add(dateFor(w.startTime, zoneId)) }
+                            }
+                        }
+                        dates
                     } ?: emptySet()
                 HealthDataType.HRV ->
                     daos.sourceRecordDao.getSourceRef(hcRecordId)?.let { ref ->
-                        daos.hrvDao.getBySourceRecordRef(ref)
-                            .mapTo(mutableSetOf()) { dateFor(it.timestampMs, zoneId) }
+                        val dates = mutableSetOf<LocalDate>()
+                        daos.hrvDao.getBySourceRecordRef(ref).forEach { r ->
+                            dates.add(dateFor(r.timestampMs, zoneId))
+                            r.sessionId?.let { sid ->
+                                daos.sleepSessionDao.getById(sid)?.let { s -> dates.add(dateFor(s.startTime, zoneId)) }
+                                daos.workoutDao.getById(sid)?.let { w -> dates.add(dateFor(w.startTime, zoneId)) }
+                            }
+                        }
+                        dates
                     } ?: emptySet()
                 HealthDataType.EXERCISE ->
                     daos.workoutDao.getById(hcRecordId)?.let {
@@ -117,14 +131,24 @@ class RoomHealthChangeIngestionStore
                 val affected = affectedDatesForRecord(type, hcRecordId, zoneId)
                 if (affected.isNotEmpty() && dirtyRangeStore != null && healthMutationStateDao != null) {
                     val earliest = affected.minOrNull()!!
-                    val end = maxOf(today, affected.maxOrNull()!!)
-                    healthMutationStateDao.incrementGeneration()
-                    dirtyRangeStore.append(
-                        start = earliest,
-                        endInclusive = end,
-                        reason = reason,
-                        snapshotId = snapshotId,
+                    val latest = affected.maxOrNull()!!
+                    val prefs = settingsRepo?.userPreferences?.first()
+                    val retentionStart = prefs?.let { app.readylytics.health.core.model.domain.util.RetentionBounds.resolveResyncStartDate(it, today) } ?: today
+                    val closure = app.readylytics.health.core.model.domain.sync.ScoreInvalidation.dependencyClosure(
+                        changed = app.readylytics.health.core.model.domain.sync.ScoreInvalidation.AffectedRange(earliest, latest),
+                        reason = app.readylytics.health.core.model.domain.sync.ScoreInvalidation.reasonFromStored(reason),
+                        retentionStart = retentionStart,
+                        today = today,
                     )
+                    if (closure != null) {
+                        healthMutationStateDao.incrementGeneration()
+                        dirtyRangeStore.append(
+                            start = closure.start,
+                            endInclusive = closure.endInclusive,
+                            reason = reason,
+                            snapshotId = snapshotId,
+                        )
+                    }
                 }
                 deleteFromDaos(daos, vo2MaxRecordDao, type, hcRecordId)
                 affected
@@ -208,14 +232,25 @@ class RoomHealthChangeIngestionStore
                 if (dirtyDates.isNotEmpty() && dirtyRangeStore != null && healthMutationStateDao != null) {
                     val today = LocalDate.now(clock)
                     val earliest = dirtyDates.minOrNull()!!
-                    val end = maxOf(today, dirtyDates.maxOrNull()!!)
-                    healthMutationStateDao.incrementGeneration()
-                    dirtyRangeStore.append(
-                        start = earliest,
-                        endInclusive = end,
-                        reason = "INTERVAL_CORRECTION",
-                        snapshotId = "ACTIVE",
+                    val latest = dirtyDates.maxOrNull()!!
+                    
+                    val prefs = settingsRepo?.userPreferences?.first()
+                    val retentionStart = prefs?.let { app.readylytics.health.core.model.domain.util.RetentionBounds.resolveResyncStartDate(it, today) } ?: today
+                    val closure = app.readylytics.health.core.model.domain.sync.ScoreInvalidation.dependencyClosure(
+                        changed = app.readylytics.health.core.model.domain.sync.ScoreInvalidation.AffectedRange(earliest, latest),
+                        reason = app.readylytics.health.core.model.domain.sync.ScoreInvalidation.reasonFromStored("INTERVAL_CORRECTION"),
+                        retentionStart = retentionStart,
+                        today = today,
                     )
+                    if (closure != null) {
+                        healthMutationStateDao.incrementGeneration()
+                        dirtyRangeStore.append(
+                            start = closure.start,
+                            endInclusive = closure.endInclusive,
+                            reason = "INTERVAL_CORRECTION",
+                            snapshotId = "ACTIVE",
+                        )
+                    }
                 }
             }
         }

@@ -94,7 +94,7 @@ class OdOneContributionCostMeasurementTest {
 
                 val txRunner = CountingTransactionRunner(RoomTransactionRunner(storage))
                 val startedNanos = System.nanoTime()
-                rollupManager(storage, txRunner).rollupExpiredHotTier(WINDOW_MS)
+                rollupManager(storage, txRunner).rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(WINDOW_MS)), WINDOW_MS)
                 val rollupNanos = System.nanoTime() - startedNanos
                 val peakWalBytes = walBytes(storageFile)
                 checkpoint(storage)
@@ -118,7 +118,7 @@ class OdOneContributionCostMeasurementTest {
                 // the contribution rows are still intact when it runs.
                 seedSources(deletion, sourceCount)
                 seedSamples(deletion, oneSourcePerSample)
-                rollupManager(deletion, RoomTransactionRunner(deletion)).rollupExpiredHotTier(WINDOW_MS)
+                rollupManager(deletion, RoomTransactionRunner(deletion)).rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(WINDOW_MS)), WINDOW_MS)
                 checkpoint(deletion)
                 val beforeSourceDelete = pageBytes(deletion)
                 val contributionsBeforeDelete = deletion.minuteCoverageMaintenanceDao().countContributions()

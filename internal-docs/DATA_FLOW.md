@@ -2704,3 +2704,8 @@ Key components:
 ---
 
 Keep this document synchronized with the source.
+
+## Dirty Tickets and Resync Behavior (Phase 4 Incremental Recalculation)
+- **Reason-to-Closure Mapping:** In `ScoreInvalidation.dependencyClosure`, most ingestion modifications (`HOT_TIER_ROLLUP`, `RETENTION_CLEANUP`, `RECORD_DELETION`, `INTERVAL_CORRECTION`, `RESTORE_REGENERATE`, `AUTHORITATIVE_SOURCE_REPLACEMENT`) propagate to the entire retained suffix up through today. Legacy/unknown reasons are treated as `UNKNOWN` and mapped conservatively to the full suffix. The only reason with a bounded cutoff is `RECOMMENDATION_EXAMPLES` (30 days).
+- **Score-Day Attribution:** Modified source records tied to a workout or sleep session infer their start day from the session's localized score day, rather than inferring strictly from UTC midnight.
+- **Acknowledgment Behavior:** Dirty tickets are drained implicitly via `HealthResyncWorker` loops and other workers. Pending tickets are only removed from the dirty ranges table upon successful publication (acknowledgment) of recomputed days. Failure to acknowledge leaves the tickets safely intact, and if the DB schema/generation changes, work resumes from a new immutable snapshot.

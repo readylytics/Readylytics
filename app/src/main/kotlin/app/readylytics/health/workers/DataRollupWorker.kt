@@ -5,7 +5,7 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import app.readylytics.health.core.database.data.local.DataRollupManager
-import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
+import app.readylytics.health.core.database.data.local.RoomDirtyRangeStore
 import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import app.readylytics.health.core.model.domain.util.RetentionBounds
 import app.readylytics.health.core.model.domain.util.logE
@@ -25,8 +25,7 @@ import java.time.Clock
  *
  * R2-CACHE-001: when the rollup actually touched data, it enqueues a bounded recompute-only resync
  * (`WorkerScheduler.scheduleResyncWorker(recomputeOnly = true, startDate, endDate)`) over
- * `ScoreInvalidation.affectedRange` of the touched range -- the raw data `daily_summaries` was
- * derived from just changed underneath it. A no-op rollup (nothing to touch) enqueues nothing.
+ * pending dirty ranges.
  */
 @HiltWorker
 class DataRollupWorker
@@ -36,6 +35,7 @@ class DataRollupWorker
         @Assisted params: WorkerParameters,
         private val rollupManager: Lazy<DataRollupManager>,
         private val workerScheduler: Lazy<WorkerScheduler>,
+        private val dirtyRangeStore: RoomDirtyRangeStore,
         private val settingsRepo: SettingsRepository,
         private val clock: Clock,
     ) : CoroutineWorker(context, params) {
@@ -43,14 +43,17 @@ class DataRollupWorker
             try {
                 val prefs = settingsRepo.userPreferences.first()
                 val runContext = ScoringRunContext.capture(prefs, clock.instant())
-                val touched =
-                    rollupManager.get().rollupExpiredHotTier(RetentionBounds.resolveHotTierCutoffMs(runContext.instant))
-                if (touched != null) {
-                    val affected = ScoreInvalidation.affectedRange(touched, runContext.today)
+                rollupManager.get().rollupExpiredHotTier(
+                    runContext,
+                    RetentionBounds.resolveHotTierCutoffMs(runContext.instant),
+                )
+
+                val pending = dirtyRangeStore.pending(100)
+                if (pending.isNotEmpty()) {
                     workerScheduler.get().scheduleResyncWorker(
                         recomputeOnly = true,
-                        startDate = affected.start,
-                        endDate = affected.endInclusive,
+                        startDate = pending.minOf { it.nextDay },
+                        endDate = pending.maxOf { it.endInclusive },
                     )
                 }
                 Result.success()

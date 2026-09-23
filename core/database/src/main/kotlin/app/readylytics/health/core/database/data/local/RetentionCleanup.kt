@@ -93,21 +93,24 @@ class RetentionCleanup
         ) {
             if (dirtyRangeDao == null || healthMutationStateDao == null) return
             val effectiveEarliest = earliestMs ?: (cutoffMs - DAY_MS)
-            val startDate = Instant.ofEpochMilli(effectiveEarliest).atZone(runContext.zoneId).toLocalDate()
-            val endInclusive =
-                maxOf(
-                    runContext.today,
-                    Instant.ofEpochMilli(cutoffMs).atZone(runContext.zoneId).toLocalDate(),
-                )
+            val earliest = Instant.ofEpochMilli(effectiveEarliest).atZone(runContext.zoneId).toLocalDate()
+            val latest = Instant.ofEpochMilli(cutoffMs).atZone(runContext.zoneId).toLocalDate()
+
+            val closure = ScoreInvalidation.dependencyClosure(
+                changed = ScoreInvalidation.AffectedRange(earliest, latest),
+                reason = ScoreInvalidation.Reason.RETENTION_CLEANUP,
+                retentionStart = runContext.startDate,
+                today = runContext.today,
+            ) ?: return
 
             healthMutationStateDao.incrementGeneration()
             val currentGen = healthMutationStateDao.current().sourceGeneration
             dirtyRangeDao.insert(
                 DirtyRangeEntity(
                     sourceGeneration = currentGen,
-                    startEpochDay = startDate.toEpochDay(),
-                    endEpochDayInclusive = endInclusive.toEpochDay(),
-                    nextEpochDay = startDate.toEpochDay(),
+                    startEpochDay = closure.start.toEpochDay(),
+                    endEpochDayInclusive = closure.endInclusive.toEpochDay(),
+                    nextEpochDay = closure.start.toEpochDay(),
                     reason = "RETENTION_CLEANUP",
                     scoringSnapshotId = "ACTIVE",
                 ),

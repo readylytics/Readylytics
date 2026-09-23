@@ -102,6 +102,7 @@ class SourcePayloadWriter
                 newTimestamps = newRows.map { it.timestampMs },
                 startMs = source.startMs,
                 endExclusiveMs = source.endExclusiveMs,
+                sourceRef = sourceRef,
             )
             warmRefresh?.publish(sourceRef, warmContributions, newRows)
         }
@@ -134,6 +135,7 @@ class SourcePayloadWriter
                 newTimestamps = newRows.map { it.timestampMs },
                 startMs = source.startMs,
                 endExclusiveMs = source.endExclusiveMs,
+                sourceRef = sourceRef,
             )
         }
 
@@ -199,6 +201,7 @@ class SourcePayloadWriter
             newTimestamps: List<Long>,
             startMs: Long,
             endExclusiveMs: Long,
+            sourceRef: Long,
         ) {
             val zoneId = resolveZoneId()
             val today = LocalDate.now(clock.withZone(zoneId))
@@ -214,16 +217,37 @@ class SourcePayloadWriter
             val endInclusiveMs = maxOf(startMs, endExclusiveMs - 1L)
             affectedDates.add(Instant.ofEpochMilli(endInclusiveMs).atZone(zoneId).toLocalDate())
 
+            // Resolve session dates for records
+            val hrSessionIds = daos.heartRateDao.getBySourceRecordRef(sourceRef).mapNotNull { it.sessionId }
+            val hrvSessionIds = daos.hrvDao.getBySourceRecordRef(sourceRef).mapNotNull { it.sessionId }
+            val sessionIds = (hrSessionIds + hrvSessionIds).toSet()
+            for (sessionId in sessionIds) {
+                daos.sleepSessionDao.getById(sessionId)?.let { affectedDates.add(Instant.ofEpochMilli(it.startTime).atZone(zoneId).toLocalDate()) }
+                daos.workoutDao.getById(sessionId)?.let { affectedDates.add(Instant.ofEpochMilli(it.startTime).atZone(zoneId).toLocalDate()) }
+            }
+
             if (affectedDates.isNotEmpty() && healthMutationStateDao != null && dirtyRangeStore != null) {
-                healthMutationStateDao.incrementGeneration()
                 val earliest = affectedDates.minOrNull()!!
-                val end = maxOf(today, affectedDates.maxOrNull()!!)
-                dirtyRangeStore.append(
-                    start = earliest,
-                    endInclusive = end,
-                    reason = REASON_AUTHORITATIVE_SOURCE_REPLACEMENT,
-                    snapshotId = SNAPSHOT_ACTIVE,
+                val latest = affectedDates.maxOrNull()!!
+                val prefs = settingsRepo?.userPreferences?.first()
+                val retentionStart = prefs?.let { app.readylytics.health.core.model.domain.util.RetentionBounds.resolveResyncStartDate(it, today) } ?: today
+                
+                val closure = app.readylytics.health.core.model.domain.sync.ScoreInvalidation.dependencyClosure(
+                    changed = app.readylytics.health.core.model.domain.sync.ScoreInvalidation.AffectedRange(earliest, latest),
+                    reason = app.readylytics.health.core.model.domain.sync.ScoreInvalidation.reasonFromStored(REASON_AUTHORITATIVE_SOURCE_REPLACEMENT),
+                    retentionStart = retentionStart,
+                    today = today,
                 )
+                
+                if (closure != null) {
+                    healthMutationStateDao.incrementGeneration()
+                    dirtyRangeStore.append(
+                        start = closure.start,
+                        endInclusive = closure.endInclusive,
+                        reason = REASON_AUTHORITATIVE_SOURCE_REPLACEMENT,
+                        snapshotId = SNAPSHOT_ACTIVE,
+                    )
+                }
             }
         }
 

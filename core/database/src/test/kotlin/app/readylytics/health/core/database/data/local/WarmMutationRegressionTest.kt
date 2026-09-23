@@ -276,6 +276,6 @@ class WarmMutationRegressionTest {
             transactionRunner = RoomTransactionRunner(database),
             dirtyRangeDao = database.dirtyRangeDao(),
             healthMutationStateDao = database.healthMutationStateDao(),
-        ).rollupExpiredHotTier(minute + 60_000L)
+        ).rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(minute + 60_000L)), minute + 60_000L)
     }
 }
