@@ -15,9 +15,16 @@ echo "==> Running instrumented tests..."
 # Keep the timeout scoped to device execution. A clean CI checkout can spend more than
 # 15 minutes compiling every module before the first instrumented suite finishes, which
 # previously killed a healthy build and forced the retry to reuse half-built outputs.
+# CI-only daemon heap: packaging every module's test APK in parallel on a cold build exhausted the
+# default 4 GB heap (OutOfMemoryError in packageDebugAndroidTest) on the shared runner that also
+# hosts the emulator. Both Gradle invocations pass the same jvmargs so the test run reuses the
+# prebuild daemon; --max-workers bounds concurrent APK packaging during the prebuild only.
+CI_GRADLE_JVMARGS="-Dorg.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1g -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8"
+
 echo "==> Prebuilding debug app and test APKs..."
 prebuild_status=0
-./gradlew assembleDebug assembleDebugAndroidTest --stacktrace --console=plain || prebuild_status=$?
+./gradlew "${CI_GRADLE_JVMARGS}" assembleDebug assembleDebugAndroidTest --max-workers=2 \
+    --stacktrace --console=plain || prebuild_status=$?
 if [ "${prebuild_status}" -ne 0 ]; then
     echo "==> APK prebuild failed with exit code: ${prebuild_status}"
     exit "${prebuild_status}"
@@ -45,7 +52,7 @@ while [ "${attempt}" -le "${max_attempts}" ]; do
     # are suppressed; such a benchmark still executes and asserts correctness, just without
     # trustworthy timing numbers on this runner. NOT-AOT-COMPILED is included because the
     # CI emulator has no profile-installer/root support to AOT-compile the app under test.
-    timeout --signal=TERM --kill-after=30s 15m ./gradlew connectedDebugAndroidTest \
+    timeout --signal=TERM --kill-after=30s 15m ./gradlew "${CI_GRADLE_JVMARGS}" connectedDebugAndroidTest \
         -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=ACTIVITY-MISSING,DEBUGGABLE,EMULATOR,NOT-AOT-COMPILED \
         --stacktrace --console=plain || test_status=$?
 
