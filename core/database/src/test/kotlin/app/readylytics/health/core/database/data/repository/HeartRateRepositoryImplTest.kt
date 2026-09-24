@@ -127,17 +127,102 @@ class HeartRateRepositoryImplTest {
             assertEquals(series.points.map { it.timestampMs }, series.points.map { it.timestampMs }.sorted())
         }
 
+    @Test
+    fun `observeSleepHrTimelineForSession is RAW when the session has only raw-tier samples`() =
+        runTest {
+            every { heartRateDao.observeSleepHrTimelineForSession("s1") } returns
+                flowOf(
+                    listOf(
+                        heartRateEntityFixture(
+                            timestampMs = 1_000L,
+                            beatsPerMinute = 55,
+                            recordType = "SLEEP",
+                            sessionId = "s1",
+                        ),
+                    ),
+                )
+            coEvery { minuteBucketDao.getVisibleBucketsForSession("SLEEP", "s1") } returns emptyList()
+
+            val series = repository.observeSleepHrTimelineForSession("s1").first()
+
+            assertEquals(HeartRateResolution.RAW, series.resolution)
+            assertEquals(1, series.points.size)
+        }
+
+    @Test
+    fun `observeSleepHrTimelineForSession reconstructs a fully rolled-up historical session`() =
+        runTest {
+            // Regression for R2-UI-002: a sleep session older than DataRollupManager's hot/warm
+            // cutoff has no raw rows left at all. The chart must still populate from the warm tier.
+            every { heartRateDao.observeSleepHrTimelineForSession("s1") } returns flowOf(emptyList())
+            coEvery { minuteBucketDao.getVisibleBucketsForSession("SLEEP", "s1") } returns
+                listOf(
+                    minuteBucketFixture(
+                        bucketStartMs = 1_000L,
+                        bucketEndMs = 60_999L,
+                        avgBpm = 50.0,
+                        minBpm = 48,
+                        maxBpm = 52,
+                        sampleCount = 2,
+                        recordType = "SLEEP",
+                        sessionId = "s1",
+                    ),
+                )
+
+            val series = repository.observeSleepHrTimelineForSession("s1").first()
+
+            assertEquals(HeartRateResolution.RECONSTRUCTED, series.resolution)
+            assertEquals(2, series.points.size)
+        }
+
+    @Test
+    fun `observeSleepHrTimelineForSession merges a session straddling the rollup cutoff in order`() =
+        runTest {
+            every { heartRateDao.observeSleepHrTimelineForSession("s1") } returns
+                flowOf(
+                    listOf(
+                        heartRateEntityFixture(
+                            timestampMs = 120_000L,
+                            beatsPerMinute = 58,
+                            recordType = "SLEEP",
+                            sessionId = "s1",
+                        ),
+                    ),
+                )
+            coEvery { minuteBucketDao.getVisibleBucketsForSession("SLEEP", "s1") } returns
+                listOf(
+                    minuteBucketFixture(
+                        bucketStartMs = 1_000L,
+                        bucketEndMs = 60_999L,
+                        avgBpm = 50.0,
+                        minBpm = 48,
+                        maxBpm = 52,
+                        sampleCount = 2,
+                        recordType = "SLEEP",
+                        sessionId = "s1",
+                    ),
+                )
+
+            val series = repository.observeSleepHrTimelineForSession("s1").first()
+
+            assertEquals(HeartRateResolution.RECONSTRUCTED, series.resolution)
+            assertEquals(3, series.points.size)
+            assertEquals(series.points.map { it.timestampMs }, series.points.map { it.timestampMs }.sorted())
+        }
+
     private fun heartRateEntityFixture(
         timestampMs: Long,
         beatsPerMinute: Int,
         sourceRecordRef: Long = 1L,
         recordType: String = "RESTING",
+        sessionId: String? = null,
     ): HeartRateRecordEntity =
         HeartRateRecordEntity(
             sourceRecordRef = sourceRecordRef,
             timestampMs = timestampMs,
             beatsPerMinute = beatsPerMinute,
             recordType = recordType,
+            sessionId = sessionId,
         )
 
     private fun minuteBucketFixture(

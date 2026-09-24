@@ -7,7 +7,8 @@ import app.readylytics.health.core.model.domain.date.SelectedDateStore
 import app.readylytics.health.core.model.domain.model.DailyMetrics
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
-import app.readylytics.health.core.model.domain.repository.HeartRateRecordData
+import app.readylytics.health.core.model.domain.repository.HeartRateResolution
+import app.readylytics.health.core.model.domain.repository.HeartRateSeries
 import app.readylytics.health.core.model.domain.repository.HrvRecordData
 import app.readylytics.health.core.model.domain.repository.SleepSessionData
 import app.readylytics.health.core.model.domain.repository.SleepStageData
@@ -149,7 +150,7 @@ class SleepViewModel
                     val hrSamplesFlow =
                         sessionFlow.flatMapLatest { session ->
                             if (session == null) {
-                                flowOf(emptyList())
+                                flowOf(HeartRateSeries(emptyList(), HeartRateResolution.RAW))
                             } else {
                                 repositories.heartRate.observeSleepHrTimelineForSession(session.id)
                             }
@@ -198,7 +199,7 @@ class SleepViewModel
                         val yesterdaySummary = array[5] as DailySummary?
 
                         @Suppress("UNCHECKED_CAST")
-                        val hrSamples = array[6] as List<HeartRateRecordData>
+                        val hrSeries = array[6] as HeartRateSeries
 
                         @Suppress("UNCHECKED_CAST")
                         val hrvSamples = array[7] as List<HrvRecordData>
@@ -227,7 +228,8 @@ class SleepViewModel
                                     goalSleepHours = prefs.goalSleepHours,
                                 ),
                             yesterdaySleepScoreRounded = yesterdaySummary?.sleepScore?.roundToInt(),
-                            sleepHrSamples = hrSamples,
+                            sleepHrSamples = hrSeries.points,
+                            sleepHrResolution = hrSeries.resolution,
                             sleepHrvSamples = hrvSamples,
                         )
                     }.distinctUntilChanged()

@@ -39,7 +39,15 @@ interface HeartRateRepository {
         endTimeMs: Long,
     ): List<HeartRateRecordData>
 
-    fun observeSleepHrTimelineForSession(sessionId: String): Flow<List<HeartRateRecordData>>
+    /**
+     * WP-17/R2-UI-002: hot ∪ warm-tier heart-rate samples for one sleep session, matching
+     * [observeTimelineWithResolution]'s tier-merge contract but scoped to a session id instead of
+     * a time range. The raw side stays deliberately unfiltered (OD-3: implausible spikes still
+     * render, since this backs the as-sensor-recorded chart). A session whose raw rows have all
+     * rolled off past [DataRollupManager]'s hot/warm cutoff previously rendered an empty chart;
+     * this merges in the warm-tier reconstruction instead, labelled [HeartRateResolution.RECONSTRUCTED].
+     */
+    fun observeSleepHrTimelineForSession(sessionId: String): Flow<HeartRateSeries>
 
     fun observeSleepHrvSince(fromMs: Long): Flow<List<HrvRecordData>>
 

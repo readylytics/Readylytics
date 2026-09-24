@@ -8,6 +8,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity
 import app.readylytics.health.core.model.domain.model.HrRangeAggregate
+import app.readylytics.health.core.model.domain.model.RecordType
 import app.readylytics.health.core.model.domain.repository.HeartRateRecordData
 import app.readylytics.health.core.model.domain.repository.HeartRateRepository
 import app.readylytics.health.core.model.domain.repository.HeartRateResolution
@@ -52,8 +53,18 @@ class HeartRateRepositoryImpl
         ): List<HeartRateRecordData> =
             authoritativeReader.rangeIn(startTimeMs, endTimeMs).mergedSamples().map { mapToDomain(it) }
 
-        override fun observeSleepHrTimelineForSession(sessionId: String): Flow<List<HeartRateRecordData>> =
-            heartRateDao.observeSleepHrTimelineForSession(sessionId).map { list -> list.map { mapToDomain(it) } }
+        override fun observeSleepHrTimelineForSession(sessionId: String): Flow<HeartRateSeries> =
+            heartRateDao.observeSleepHrTimelineForSession(sessionId).map { raw ->
+                val warm = authoritativeReader.warmSessionSamples(RecordType.SLEEP.name, sessionId)
+                if (warm.isEmpty()) {
+                    HeartRateSeries(raw.map { mapToDomain(it) }, HeartRateResolution.RAW)
+                } else {
+                    HeartRateSeries(
+                        points = (raw + warm).sortedBy { it.timestampMs }.map { mapToDomain(it) },
+                        resolution = HeartRateResolution.RECONSTRUCTED,
+                    )
+                }
+            }.distinctUntilChanged()
 
         override fun observeSleepHrvSince(fromMs: Long): Flow<List<HrvRecordData>> =
             hrvDao.observeSleepHrvSince(fromMs).map { list ->

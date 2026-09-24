@@ -5,6 +5,7 @@ import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.domain.model.DailyMetrics
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.repository.HeartRateRecordData
+import app.readylytics.health.core.model.domain.repository.HeartRateResolution
 import app.readylytics.health.core.model.domain.repository.HrvRecordData
 import app.readylytics.health.core.model.domain.repository.SleepSessionData
 import app.readylytics.health.core.model.domain.repository.SleepStageData
@@ -25,6 +26,7 @@ data class SleepUiState(
     val latestSession: SleepSessionData? = null,
     val stageTimeline: List<SleepStageData> = emptyList(),
     val sleepHrSamples: List<HeartRateRecordData> = emptyList(),
+    val sleepHrResolution: HeartRateResolution = HeartRateResolution.RAW,
     val sleepHrvSamples: List<HrvRecordData> = emptyList(),
     val selectedDate: LocalDate,
     val isLoading: Boolean = false,
