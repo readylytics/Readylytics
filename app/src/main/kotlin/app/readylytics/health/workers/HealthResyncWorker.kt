@@ -21,6 +21,7 @@ import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
 import app.readylytics.health.core.model.domain.sync.DirtyRangeStore
+import app.readylytics.health.core.model.domain.sync.DirtyTicket
 import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.util.RetentionBounds
@@ -52,7 +53,7 @@ class HealthResyncWorker
             val resyncUseCase = fullHistoricalResyncUseCase.get()
             val syncController = foregroundSyncController.get()
             SyncNotifications.ensureChannel(appContext)
-            runCatching { setForeground(buildForegroundInfo(null, 0, 0)) }
+            runCatching { setForeground(buildForegroundInfo(appContext, null, 0, 0)) }
 
             syncController.onBackgroundRecalcStarted()
             var success = false
@@ -82,9 +83,17 @@ class HealthResyncWorker
             syncController: ForegroundSyncController,
             onSuccessChanged: (Boolean) -> Unit,
         ): Result {
-            val scale = inputData.getString(KEY_TRAINING_READINESS_SCALE) ?: return Result.failure()
-            val weight = inputData.getString(KEY_TRAINING_READINESS_WEIGHT) ?: return Result.failure()
-            val config = TrainingReadinessConfig(scale, weight)
+            val config =
+                TrainingReadinessConfig.fromStored(
+                    inputData.getFloat(
+                        KEY_TRAINING_READINESS_SCALE,
+                        SettingsDefaults.TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE,
+                    ),
+                    inputData.getFloat(
+                        KEY_TRAINING_READINESS_WEIGHT,
+                        SettingsDefaults.TRAINING_READINESS_LOAD_BALANCE_WEIGHT,
+                    ),
+                )
 
             val result =
                 resyncUseCase.executeTrainingReadinessProjection(config) { current, total ->
@@ -122,57 +131,74 @@ class HealthResyncWorker
         ): Result {
             val recomputeOnly = inputData.getBoolean(KEY_RECOMPUTE_ONLY, false)
             val runId = inputData.getString(KEY_RUN_ID)
-            val prefs = settingsRepository.get().userPreferences.first()
-            val retentionStart = RetentionBounds.resolveResyncStartDate(prefs, LocalDate.now(prefs.scoringZone()))
-            dirtyRangeStore.get().discardBefore(retentionStart)
+            discardExpiredDirtyRanges()
 
-            while (true) {
-                val rangeOverride = resolveRecomputeRange(recomputeOnly)
-                if (recomputeOnly && rangeOverride == null) {
-                    break
-                }
+            val explicitRange = resolveExplicitRange(inputData)
+            val hasExplicitRange = explicitRange != null
+
+            var iterated = false
+            var keepDraining = true
+            var lastPendingState: List<Pair<Long, LocalDate>>? = null
+
+            while (keepDraining) {
+                val pending =
+                    if (recomputeOnly && !hasExplicitRange) {
+                        dirtyRangeStore.get().pending(DIRTY_RANGE_BATCH_SIZE)
+                    } else {
+                        emptyList()
+                    }
+                val step =
+                    resolveNextRange(
+                        hasExplicitRange = hasExplicitRange,
+                        explicitRange = explicitRange,
+                        recomputeOnly = recomputeOnly,
+                        iterated = iterated,
+                        lastPendingState = lastPendingState,
+                        pending = pending,
+                    ) ?: break
+
+                lastPendingState = step.nextPendingState
+                iterated = true
 
                 val result =
                     resyncUseCase.execute(
                         recomputeOnly = recomputeOnly,
-                        rangeOverride = rangeOverride,
+                        rangeOverride = step.rangeOverride,
                         runId = runId,
                     ) { phase, current, total ->
-                        setProgressAsync(workDataOf(KEY_CURRENT to current, KEY_TOTAL to total))
-                        syncController.onBackgroundRecalcProgress(phase, current, total)
-                        runCatching {
-                            NotificationManagerCompat
-                                .from(appContext)
-                                .notify(
-                                    SyncNotifications.NOTIFICATION_ID,
-                                    SyncNotifications.buildProgressNotification(appContext, phase, current, total),
-                                )
-                        }
+                        notifyProgress(syncController, phase, current, total)
                     }
 
-                if (result.isSuccess) {
-                    persistPostRecomputeState(recomputeOnly = recomputeOnly, rangeOverride = rangeOverride)
-                    if (!recomputeOnly) break
-                } else {
-                    return Result.retry()
-                }
+                if (!result.isSuccess) return Result.retry()
+
+                persistPostRecomputeState(recomputeOnly = recomputeOnly, rangeOverride = step.rangeOverride)
+                keepDraining = recomputeOnly && !hasExplicitRange && step.rangeOverride != null
             }
             onSuccessChanged(true)
             return Result.success()
         }
 
-        private suspend fun resolveRecomputeRange(recomputeOnly: Boolean): ScoreInvalidation.AffectedRange? {
-            val explicitStart = inputData.getLong(KEY_RECOMPUTE_START_EPOCH_DAY, -1L)
-            if (explicitStart >= 0) {
-                val end = inputData.getLong(KEY_RECOMPUTE_END_EPOCH_DAY, explicitStart)
-                return ScoreInvalidation.AffectedRange(LocalDate.ofEpochDay(explicitStart), LocalDate.ofEpochDay(end))
-            }
-            val pending = if (recomputeOnly) dirtyRangeStore.get().pending(100) else emptyList()
-            return pending.takeIf { it.isNotEmpty() }?.let {
-                ScoreInvalidation.AffectedRange(
-                    it.minOf { ticket -> ticket.nextDay },
-                    it.maxOf { ticket -> ticket.endInclusive },
-                )
+        private suspend fun discardExpiredDirtyRanges() {
+            val prefs = settingsRepository.get().userPreferences.first()
+            val retentionStart = RetentionBounds.resolveResyncStartDate(prefs, LocalDate.now(prefs.scoringZone()))
+            dirtyRangeStore.get().discardBefore(retentionStart)
+        }
+
+        private fun notifyProgress(
+            syncController: ForegroundSyncController,
+            phase: ResyncPhase,
+            current: Int,
+            total: Int,
+        ) {
+            setProgressAsync(workDataOf(KEY_CURRENT to current, KEY_TOTAL to total))
+            syncController.onBackgroundRecalcProgress(phase, current, total)
+            runCatching {
+                NotificationManagerCompat
+                    .from(appContext)
+                    .notify(
+                        SyncNotifications.NOTIFICATION_ID,
+                        SyncNotifications.buildProgressNotification(appContext, phase, current, total),
+                    )
             }
         }
 
@@ -205,41 +231,13 @@ class HealthResyncWorker
             }
         }
 
-        private fun coversRetainedHistory(
-            recomputeOnly: Boolean,
-            rangeOverride: ScoreInvalidation.AffectedRange?,
-            prefs: UserPreferences,
-        ): Boolean {
-            if (!recomputeOnly || rangeOverride == null) return true
-            val today = LocalDate.now(prefs.scoringZone())
-            val retentionStart = RetentionBounds.resolveResyncStartDate(prefs, today)
-            return !rangeOverride.start.isAfter(retentionStart) && !rangeOverride.endInclusive.isBefore(today)
-        }
-
         override suspend fun getForegroundInfo(): ForegroundInfo {
             SyncNotifications.ensureChannel(appContext)
-            return buildForegroundInfo(null, 0, 0)
+            return buildForegroundInfo(appContext, null, 0, 0)
         }
 
-        private fun buildForegroundInfo(
-            phase: ResyncPhase?,
-            current: Int,
-            total: Int,
-        ): ForegroundInfo =
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                ForegroundInfo(
-                    SyncNotifications.NOTIFICATION_ID,
-                    SyncNotifications.buildProgressNotification(appContext, phase, current, total),
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
-                )
-            } else {
-                ForegroundInfo(
-                    SyncNotifications.NOTIFICATION_ID,
-                    SyncNotifications.buildProgressNotification(appContext, phase, current, total),
-                )
-            }
-
         companion object {
+            private const val DIRTY_RANGE_BATCH_SIZE = 100
             private const val TAG = "HealthResyncWorker"
             const val KEY_CURRENT = "current"
             const val KEY_TOTAL = "total"
@@ -252,4 +250,74 @@ class HealthResyncWorker
             const val KEY_TRAINING_READINESS_SCALE = "training_readiness_scale"
             const val KEY_TRAINING_READINESS_WEIGHT = "training_readiness_weight"
         }
+    }
+
+private data class NextRecomputeStep(
+    val rangeOverride: ScoreInvalidation.AffectedRange?,
+    val nextPendingState: List<Pair<Long, LocalDate>>?,
+)
+
+private fun resolveExplicitRange(inputData: androidx.work.Data): ScoreInvalidation.AffectedRange? {
+    val explicitStart = inputData.getLong(HealthResyncWorker.KEY_RECOMPUTE_START_EPOCH_DAY, -1L)
+    if (explicitStart < 0) return null
+    val end = inputData.getLong(HealthResyncWorker.KEY_RECOMPUTE_END_EPOCH_DAY, explicitStart)
+    return ScoreInvalidation.AffectedRange(LocalDate.ofEpochDay(explicitStart), LocalDate.ofEpochDay(end))
+}
+
+private fun resolveNextRange(
+    hasExplicitRange: Boolean,
+    explicitRange: ScoreInvalidation.AffectedRange?,
+    recomputeOnly: Boolean,
+    iterated: Boolean,
+    lastPendingState: List<Pair<Long, LocalDate>>?,
+    pending: List<DirtyTicket>,
+): NextRecomputeStep? =
+    when {
+        hasExplicitRange -> NextRecomputeStep(explicitRange, null)
+        !recomputeOnly -> NextRecomputeStep(null, null)
+        else -> {
+            val currentState = pending.map { it.id to it.nextDay }
+            when {
+                pending.isEmpty() || currentState == lastPendingState ->
+                    if (iterated) null else NextRecomputeStep(null, currentState)
+                else ->
+                    NextRecomputeStep(
+                        ScoreInvalidation.AffectedRange(
+                            pending.minOf { it.nextDay },
+                            pending.maxOf { it.endInclusive },
+                        ),
+                        currentState,
+                    )
+            }
+        }
+    }
+
+private fun coversRetainedHistory(
+    recomputeOnly: Boolean,
+    rangeOverride: ScoreInvalidation.AffectedRange?,
+    prefs: UserPreferences,
+): Boolean {
+    if (!recomputeOnly || rangeOverride == null) return true
+    val today = LocalDate.now(prefs.scoringZone())
+    val retentionStart = RetentionBounds.resolveResyncStartDate(prefs, today)
+    return !rangeOverride.start.isAfter(retentionStart) && !rangeOverride.endInclusive.isBefore(today)
+}
+
+private fun buildForegroundInfo(
+    context: Context,
+    phase: ResyncPhase?,
+    current: Int,
+    total: Int,
+): ForegroundInfo =
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+        ForegroundInfo(
+            SyncNotifications.NOTIFICATION_ID,
+            SyncNotifications.buildProgressNotification(context, phase, current, total),
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
+        )
+    } else {
+        ForegroundInfo(
+            SyncNotifications.NOTIFICATION_ID,
+            SyncNotifications.buildProgressNotification(context, phase, current, total),
+        )
     }

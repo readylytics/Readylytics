@@ -50,19 +50,34 @@ class DataRollupWorkerTest {
     @Test
     fun `doWork triggers rollup and returns success`() =
         runBlocking {
-            coEvery { rollupManager.rollupExpiredHotTier(any()) } returns
+            coEvery {
+                rollupManager.rollupExpiredHotTier(
+                    any<app.readylytics.health.core.model.domain.sync.ScoringRunContext>(),
+                    any<Long>(),
+                )
+            } returns
                 ScoreInvalidation.AffectedRange(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 2))
 
             val result = createWorker().doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
-            coVerify(exactly = 1) { rollupManager.rollupExpiredHotTier(any()) }
+            coVerify(exactly = 1) {
+                rollupManager.rollupExpiredHotTier(
+                    any<app.readylytics.health.core.model.domain.sync.ScoringRunContext>(),
+                    any<Long>(),
+                )
+            }
         }
 
     @Test
     fun `a rollup that touched days enqueues exactly one bounded recompute`() =
         runBlocking {
-            coEvery { rollupManager.rollupExpiredHotTier(any()) } returns
+            coEvery {
+                rollupManager.rollupExpiredHotTier(
+                    any<app.readylytics.health.core.model.domain.sync.ScoringRunContext>(),
+                    any<Long>(),
+                )
+            } returns
                 ScoreInvalidation.AffectedRange(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 10))
 
             createWorker().doWork()
@@ -79,7 +94,12 @@ class DataRollupWorkerTest {
     @Test
     fun `a no-op rollup enqueues nothing`() =
         runBlocking {
-            coEvery { rollupManager.rollupExpiredHotTier(any()) } returns null
+            coEvery {
+                rollupManager.rollupExpiredHotTier(
+                    any<app.readylytics.health.core.model.domain.sync.ScoringRunContext>(),
+                    any<Long>(),
+                )
+            } returns null
 
             createWorker().doWork()
 
@@ -89,7 +109,12 @@ class DataRollupWorkerTest {
     @Test
     fun `doWork retries when rollup throws`() =
         runBlocking {
-            coEvery { rollupManager.rollupExpiredHotTier(any()) } throws RuntimeException("boom")
+            coEvery {
+                rollupManager.rollupExpiredHotTier(
+                    any<app.readylytics.health.core.model.domain.sync.ScoringRunContext>(),
+                    any<Long>(),
+                )
+            } throws RuntimeException("boom")
 
             val result = createWorker().doWork()
 
@@ -105,7 +130,12 @@ class DataRollupWorkerTest {
                 )
             every { settingsRepo.userPreferences } returns flowOf(prefs)
             val cutoffSlot = slot<Long>()
-            coEvery { rollupManager.rollupExpiredHotTier(capture(cutoffSlot)) } returns
+            coEvery {
+                rollupManager.rollupExpiredHotTier(
+                    any<app.readylytics.health.core.model.domain.sync.ScoringRunContext>(),
+                    capture(cutoffSlot),
+                )
+            } returns
                 ScoreInvalidation.AffectedRange(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31))
 
             createWorker().doWork()
@@ -125,13 +155,18 @@ class DataRollupWorkerTest {
             }
         }
 
-    private fun createWorker() =
-        DataRollupWorker(
-            context = ApplicationProvider.getApplicationContext(),
-            params = workerParams,
-            rollupManager = rollupManagerLazy,
-            workerScheduler = workerSchedulerLazy,
-            settingsRepo = settingsRepo,
-            clock = fixedClock,
-        )
+    private fun createWorker(
+        dirtyRangeStore: app.readylytics.health.core.database.data.local.RoomDirtyRangeStore =
+            io.mockk.mockk(
+                relaxed = true,
+            ),
+    ) = DataRollupWorker(
+        context = ApplicationProvider.getApplicationContext(),
+        params = workerParams,
+        rollupManager = rollupManagerLazy,
+        workerScheduler = workerSchedulerLazy,
+        settingsRepo = settingsRepo,
+        dirtyRangeStore = dirtyRangeStore,
+        clock = fixedClock,
+    )
 }

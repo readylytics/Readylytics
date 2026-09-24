@@ -67,7 +67,7 @@ class DataRollupManagerTest {
                 ),
             )
 
-            val touched = rollupManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(120_000L)), 120_000L)
+            val touched = rollupManager.rollupExpiredHotTier(cutoffMs = 120_000L)
 
             // All 5 rolled-up samples (ts 0..90_000ms) fall on the same 1970-01-01 UTC day.
             assertEquals(LocalDate.of(1970, 1, 1), touched?.start)
@@ -98,7 +98,7 @@ class DataRollupManagerTest {
                 (0 until 12).map { i -> hr(ref, i * 5_000L, 50 + i, "SLEEP", "s-percentile") },
             )
 
-            rollupManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(60_000L)), 60_000L)
+            rollupManager.rollupExpiredHotTier(cutoffMs = 60_000L)
 
             val buckets = minuteBucketDao.getBucketsForSession("SLEEP", "s-percentile")
             assertEquals(1, buckets.size)
@@ -138,7 +138,7 @@ class DataRollupManagerTest {
                 ),
             )
 
-            val touched = rollupManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(3 * dayMs)), 3 * dayMs)
+            val touched = rollupManager.rollupExpiredHotTier(cutoffMs = 3 * dayMs)
 
             // Merged across three day-chunks: earliest sample's day .. latest sample's day.
             assertEquals(LocalDate.of(1970, 1, 1), touched?.start)
@@ -154,7 +154,7 @@ class DataRollupManagerTest {
     @Test
     fun rollupExpiredHotTierReturnsNullWhenThereIsNothingToRollUp() =
         runBlocking {
-            val touched = rollupManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(120_000L)), 120_000L)
+            val touched = rollupManager.rollupExpiredHotTier(cutoffMs = 120_000L)
             assertNull(touched)
         }
 
@@ -194,7 +194,7 @@ class DataRollupManagerTest {
                     transactionRunner = countingRunner,
                 )
 
-            val touched = manager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(3 * dayMs)), 3 * dayMs)
+            val touched = manager.rollupExpiredHotTier(cutoffMs = 3 * dayMs)
 
             assertEquals(LocalDate.of(1970, 1, 1), touched?.start)
             assertEquals(LocalDate.of(1970, 1, 3), touched?.endInclusive)
@@ -242,7 +242,7 @@ class DataRollupManagerTest {
                 )
 
             try {
-                crashingManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(3 * dayMs)), 3 * dayMs)
+                crashingManager.rollupExpiredHotTier(cutoffMs = 3 * dayMs)
             } catch (_: IllegalStateException) {
                 // Expected crash
             }
@@ -252,7 +252,7 @@ class DataRollupManagerTest {
             assertEquals(1, minuteBucketDao.getBucketsForSession("RESTING", "").size)
 
             // Resume with normal manager
-            val resumedTouched = rollupManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(3 * dayMs)), 3 * dayMs)
+            val resumedTouched = rollupManager.rollupExpiredHotTier(cutoffMs = 3 * dayMs)
             assertEquals(LocalDate.of(1970, 1, 2), resumedTouched?.start)
             assertEquals(LocalDate.of(1970, 1, 3), resumedTouched?.endInclusive)
             assertEquals(0, heartRateDao.count())
@@ -317,7 +317,7 @@ class DataRollupManagerTest {
                 groupMinuteBudget = MinuteRollupStreamer.GROUP_MINUTE_BUDGET,
             )
             // Forced multi-page (7 rows/page against 63 total) and one group per minute.
-            manager(manyPagesDb).rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(3 * 60_000L)), 3 * 60_000L, pageSize = 7, groupMinuteBudget = 1)
+            manager(manyPagesDb).rollupExpiredHotTier(cutoffMs = 3 * 60_000L, pageSize = 7, groupMinuteBudget = 1)
 
             val singlePageBuckets =
                 singlePageDb.minuteBucketDao().getBucketsInTimeRange(0L, 3 * 60_000L).sortedBy { it.bucketStartMs }
@@ -360,7 +360,7 @@ class DataRollupManagerTest {
                 ),
             )
 
-            val touched = rollupManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(60_000L)), 60_000L)
+            val touched = rollupManager.rollupExpiredHotTier(cutoffMs = 60_000L)
 
             assertNull("an implausible-only day publishes nothing", touched)
             assertEquals(0, heartRateDao.count())

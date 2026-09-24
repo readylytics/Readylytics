@@ -301,7 +301,7 @@ class HealthResyncWorkerScoringVersionTest {
             coVerify(exactly = 0) { settingsRepository.updateTrainingReadinessConfig(any()) }
         }
 
-    private fun createWorker() =
+    private fun createWorker(dirtyRangeStore: app.readylytics.health.core.model.domain.sync.DirtyRangeStore? = null) =
         HealthResyncWorker(
             appContext = context,
             params = workerParams,
@@ -309,5 +309,13 @@ class HealthResyncWorkerScoringVersionTest {
             foregroundSyncController = foregroundSyncControllerLazy,
             databaseReadinessGate = databaseReadinessGate,
             settingsRepository = settingsRepositoryLazy,
+            dirtyRangeStore =
+                dagger.Lazy {
+                    dirtyRangeStore ?: object : app.readylytics.health.core.model.domain.sync.DirtyRangeStore {
+                        override suspend fun pending(
+                            limit: Int,
+                        ): List<app.readylytics.health.core.model.domain.sync.DirtyTicket> = emptyList()
+                    }
+                },
         )
 }

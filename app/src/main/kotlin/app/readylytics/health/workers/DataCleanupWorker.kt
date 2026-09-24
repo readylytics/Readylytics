@@ -8,6 +8,7 @@ import app.readylytics.health.core.database.data.local.RetentionCleanup
 import app.readylytics.health.core.database.data.local.RoomDirtyRangeStore
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspector
+import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.model.workers.WorkerScheduler
@@ -42,7 +43,7 @@ class DataCleanupWorker
                 val runContext = ScoringRunContext.capture(prefs, clock.instant())
                 if (!prefs.retentionDaysEnabled) return Result.success()
 
-                cleanup.deleteBefore(runContext.retentionStartMs, runContext)
+                val touched = cleanup.deleteBefore(runContext.retentionStartMs, runContext)
 
                 val pending = dirtyRangeStore.pending(100)
                 if (pending.isNotEmpty()) {
@@ -50,6 +51,13 @@ class DataCleanupWorker
                         recomputeOnly = true,
                         startDate = pending.minOf { it.nextDay },
                         endDate = pending.maxOf { it.endInclusive },
+                    )
+                } else if (touched != null) {
+                    val affected = ScoreInvalidation.affectedRange(touched, runContext.today)
+                    workerScheduler.get().scheduleResyncWorker(
+                        recomputeOnly = true,
+                        startDate = affected.start,
+                        endDate = affected.endInclusive,
                     )
                 }
 

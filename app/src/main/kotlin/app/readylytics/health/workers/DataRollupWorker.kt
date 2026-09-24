@@ -6,6 +6,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import app.readylytics.health.core.database.data.local.DataRollupManager
 import app.readylytics.health.core.database.data.local.RoomDirtyRangeStore
+import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import app.readylytics.health.core.model.domain.util.RetentionBounds
 import app.readylytics.health.core.model.domain.util.logE
@@ -43,10 +44,11 @@ class DataRollupWorker
             try {
                 val prefs = settingsRepo.userPreferences.first()
                 val runContext = ScoringRunContext.capture(prefs, clock.instant())
-                rollupManager.get().rollupExpiredHotTier(
-                    runContext,
-                    RetentionBounds.resolveHotTierCutoffMs(runContext.instant),
-                )
+                val touched =
+                    rollupManager.get().rollupExpiredHotTier(
+                        runContext,
+                        RetentionBounds.resolveHotTierCutoffMs(runContext.instant),
+                    )
 
                 val pending = dirtyRangeStore.pending(100)
                 if (pending.isNotEmpty()) {
@@ -54,6 +56,13 @@ class DataRollupWorker
                         recomputeOnly = true,
                         startDate = pending.minOf { it.nextDay },
                         endDate = pending.maxOf { it.endInclusive },
+                    )
+                } else if (touched != null) {
+                    val affected = ScoreInvalidation.affectedRange(touched, runContext.today)
+                    workerScheduler.get().scheduleResyncWorker(
+                        recomputeOnly = true,
+                        startDate = affected.start,
+                        endDate = affected.endInclusive,
                     )
                 }
                 Result.success()

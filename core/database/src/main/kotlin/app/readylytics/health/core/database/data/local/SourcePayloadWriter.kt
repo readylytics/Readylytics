@@ -8,12 +8,15 @@ import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRec
 import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity
 import app.readylytics.health.core.model.data.preferences.scoringZone
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.sync.HeartRateInput
 import app.readylytics.health.core.model.domain.sync.HrvInput
+import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.sync.SourceMetadata
 import app.readylytics.health.core.model.domain.sync.SourcePayload
 import app.readylytics.health.core.model.domain.sync.completeMinuteCutoff
+import app.readylytics.health.core.model.domain.util.RetentionBounds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -222,22 +225,27 @@ class SourcePayloadWriter
             val hrvSessionIds = daos.hrvDao.getBySourceRecordRef(sourceRef).mapNotNull { it.sessionId }
             val sessionIds = (hrSessionIds + hrvSessionIds).toSet()
             for (sessionId in sessionIds) {
-                daos.sleepSessionDao.getById(sessionId)?.let { affectedDates.add(Instant.ofEpochMilli(it.startTime).atZone(zoneId).toLocalDate()) }
-                daos.workoutDao.getById(sessionId)?.let { affectedDates.add(Instant.ofEpochMilli(it.startTime).atZone(zoneId).toLocalDate()) }
+                daos.sleepSessionDao.getById(sessionId)?.let { session ->
+                    affectedDates.add(Instant.ofEpochMilli(session.startTime).atZone(zoneId).toLocalDate())
+                }
+                daos.workoutDao.getById(sessionId)?.let { workout ->
+                    affectedDates.add(Instant.ofEpochMilli(workout.startTime).atZone(zoneId).toLocalDate())
+                }
             }
 
             if (affectedDates.isNotEmpty() && healthMutationStateDao != null && dirtyRangeStore != null) {
                 val earliest = affectedDates.minOrNull()!!
                 val latest = affectedDates.maxOrNull()!!
                 val prefs = settingsRepo?.userPreferences?.first()
-                val retentionStart = prefs?.let { app.readylytics.health.core.model.domain.util.RetentionBounds.resolveResyncStartDate(it, today) } ?: today
-                
-                val closure = app.readylytics.health.core.model.domain.sync.ScoreInvalidation.dependencyClosure(
-                    changed = app.readylytics.health.core.model.domain.sync.ScoreInvalidation.AffectedRange(earliest, latest),
-                    reason = app.readylytics.health.core.model.domain.sync.ScoreInvalidation.reasonFromStored(REASON_AUTHORITATIVE_SOURCE_REPLACEMENT),
-                    retentionStart = retentionStart,
-                    today = today,
-                )
+                val retentionStart = RetentionBounds.resolveResyncStartDate(prefs ?: UserPreferences(), today)
+
+                val closure =
+                    ScoreInvalidation.dependencyClosure(
+                        changed = ScoreInvalidation.AffectedRange(earliest, latest),
+                        reason = ScoreInvalidation.reasonFromStored(REASON_AUTHORITATIVE_SOURCE_REPLACEMENT),
+                        retentionStart = retentionStart,
+                        today = today,
+                    )
                 
                 if (closure != null) {
                     healthMutationStateDao.incrementGeneration()

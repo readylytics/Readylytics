@@ -162,14 +162,19 @@ class DataCleanupWorkerTest {
             }
         }
 
-    private fun createWorker() =
-        DataCleanupWorker(
-            context = context,
-            params = workerParams,
-            retentionCleanup = retentionCleanupLazy,
-            settingsRepo = settingsRepo,
-            databaseReadinessGate = databaseReadinessGate,
-            workerScheduler = workerSchedulerLazy,
-            clock = fixedClock,
-        )
+    private fun createWorker(
+        dirtyRangeStore: app.readylytics.health.core.database.data.local.RoomDirtyRangeStore =
+            io.mockk.mockk(
+                relaxed = true,
+            ),
+    ) = DataCleanupWorker(
+        context = context,
+        params = workerParams,
+        retentionCleanup = retentionCleanupLazy,
+        settingsRepo = settingsRepo,
+        databaseReadinessGate = databaseReadinessGate,
+        workerScheduler = workerSchedulerLazy,
+        dirtyRangeStore = dirtyRangeStore,
+        clock = fixedClock,
+    )
 }

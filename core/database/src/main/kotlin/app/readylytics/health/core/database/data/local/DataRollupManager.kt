@@ -9,6 +9,7 @@ import app.readylytics.health.core.databaseschema.data.local.entity.DirtyRangeEn
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrSourceMinuteContributionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.MinuteCoverageEntity
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
@@ -109,6 +110,18 @@ class DataRollupManager
             }
         }
 
+        suspend fun rollupExpiredHotTier(
+            cutoffMs: Long,
+            pageSize: Int = MinuteRollupStreamer.SAMPLE_PAGE_SIZE,
+            groupMinuteBudget: Int = MinuteRollupStreamer.GROUP_MINUTE_BUDGET,
+        ): ScoreInvalidation.AffectedRange? =
+            rollupExpiredHotTier(
+                runContext = ScoringRunContext.capture(UserPreferences(), Instant.ofEpochMilli(cutoffMs)),
+                cutoffMs = cutoffMs,
+                pageSize = pageSize,
+                groupMinuteBudget = groupMinuteBudget,
+            )
+
         private suspend fun doRollupExpiredHotTier(
             runContext: ScoringRunContext,
             cutoffMs: Long,
@@ -179,7 +192,10 @@ class DataRollupManager
             return DayChunkResult(chunkRange, stoppedOnConflict = false)
         }
 
-        private suspend fun publishGroup(group: RollupGroup, runContext: ScoringRunContext): ScoreInvalidation.AffectedRange? {
+        private suspend fun publishGroup(
+            group: RollupGroup,
+            runContext: ScoringRunContext,
+        ): ScoreInvalidation.AffectedRange? {
             val quarantinedMinutes =
                 minuteCoverageDao
                     .getLegacyMinutesInRange(group.minuteStartMs, group.minuteEndExclusiveMs)
@@ -294,40 +310,24 @@ class DataRollupManager
             if (dirtyRangeDao == null || healthMutationStateDao == null) return null
             val earliest = utcDateOf(minMs)
             val latest = utcDateOf(maxMs)
-            
-            val closure = ScoreInvalidation.dependencyClosure(
-                changed = ScoreInvalidation.AffectedRange(earliest, latest),
-                reason = ScoreInvalidation.Reason.HOT_TIER_ROLLUP,
-                retentionStart = runContext.startDate,
-                today = runContext.today,
-            ) ?: return null
-            
-            return DirtyRangeEntity(
-                sourceGeneration = generation,
-                startEpochDay = closure.start.toEpochDay(),
-                endEpochDayInclusive = closure.endInclusive.toEpochDay(),
-                nextEpochDay = closure.start.toEpochDay(),
-                reason = "HOT_TIER_ROLLUP",
-                scoringSnapshotId = "ACTIVE",
-            )
-        }
-
-        private fun utcDateOf(epochMs: Long): LocalDate =
-            Instant.ofEpochMilli(epochMs).atZone(ZoneOffset.UTC).toLocalDate()
-
-        private fun mergeRanges(
-            a: ScoreInvalidation.AffectedRange?,
-            b: ScoreInvalidation.AffectedRange?,
-        ): ScoreInvalidation.AffectedRange? =
-            when {
-                a == null -> b
-                b == null -> a
-                else ->
-                    ScoreInvalidation.AffectedRange(
-                        start = minOf(a.start, b.start),
-                        endInclusive = maxOf(a.endInclusive, b.endInclusive),
-                    )
+            val closure =
+                ScoreInvalidation.dependencyClosure(
+                    changed = ScoreInvalidation.AffectedRange(earliest, latest),
+                    reason = ScoreInvalidation.Reason.HOT_TIER_ROLLUP,
+                    retentionStart = runContext.startDate,
+                    today = runContext.today,
+                )
+            return closure?.let {
+                DirtyRangeEntity(
+                    sourceGeneration = generation,
+                    startEpochDay = it.start.toEpochDay(),
+                    endEpochDayInclusive = it.endInclusive.toEpochDay(),
+                    nextEpochDay = it.start.toEpochDay(),
+                    reason = "HOT_TIER_ROLLUP",
+                    scoringSnapshotId = "ACTIVE",
+                )
             }
+        }
 
         /** Outcome of streaming and publishing one UTC day chunk's groups. */
         private data class DayChunkResult(
@@ -339,4 +339,21 @@ class DataRollupManager
             private const val DAY_MS = 86_400_000L
             private const val TAG = "DataRollupManager"
         }
+    }
+
+private fun utcDateOf(epochMs: Long): LocalDate =
+    Instant.ofEpochMilli(epochMs).atZone(ZoneOffset.UTC).toLocalDate()
+
+private fun mergeRanges(
+    a: ScoreInvalidation.AffectedRange?,
+    b: ScoreInvalidation.AffectedRange?,
+): ScoreInvalidation.AffectedRange? =
+    when {
+        a == null -> b
+        b == null -> a
+        else ->
+            ScoreInvalidation.AffectedRange(
+                start = minOf(a.start, b.start),
+                endInclusive = maxOf(a.endInclusive, b.endInclusive),
+            )
     }

@@ -6,6 +6,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
+import androidx.work.workDataOf
 import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.database.data.local.RoomDirtyRangeStore
 import app.readylytics.health.core.databaseschema.data.local.entity.HealthMutationStateEntity
@@ -26,6 +27,7 @@ import dagger.Lazy
 import io.mockk.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -554,4 +556,57 @@ class HealthResyncWorkerTest {
                     }
                 },
         )
+
+    @Test
+    fun `worker repeatedly drains pending dirty tickets beyond the limit`() =
+        runTest {
+            val callCount =
+                java.util.concurrent.atomic
+                    .AtomicInteger(0)
+            val dirtyStore =
+                object : DirtyRangeStore {
+                    override suspend fun pending(limit: Int): List<DirtyTicket> {
+                        val current = callCount.getAndIncrement()
+                        return if (current == 0) {
+                            listOf(
+                                DirtyTicket(
+                                    1,
+                                    1,
+                                    java.time.LocalDate.of(2026, 1, 1),
+                                    java.time.LocalDate.of(2026, 1, 1),
+                                    "snap",
+                                ),
+                            )
+                        } else if (current == 1) {
+                            listOf(
+                                DirtyTicket(
+                                    2,
+                                    1,
+                                    java.time.LocalDate.of(2026, 1, 2),
+                                    java.time.LocalDate.of(2026, 1, 2),
+                                    "snap",
+                                ),
+                            )
+                        } else {
+                            emptyList()
+                        }
+                    }
+                }
+            val worker = createWorker(dirtyStore)
+            every { workerParams.inputData } returns workDataOf(HealthResyncWorker.KEY_RECOMPUTE_ONLY to true)
+            coEvery { useCase.execute(any(), any(), any(), any()) } returns
+                app.readylytics.health.core.model.domain.model.Result
+                    .Success(Unit)
+
+            val result = worker.doWork()
+
+            assertEquals(
+                androidx.work.ListenableWorker.Result
+                    .success(),
+                result,
+            )
+            // Expected to execute twice, once for each batch, plus one check that returns empty
+            assertEquals(3, callCount.get())
+            coVerify(exactly = 2) { useCase.execute(any(), any(), any(), any()) }
+        }
 }

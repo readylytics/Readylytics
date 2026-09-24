@@ -378,7 +378,7 @@ class WarmTierRelinkTest {
                     it.copy(sourceRecordRef = ref, recordType = "EXERCISE", sessionId = "workout-1")
                 },
             )
-            rollupManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(3 * MINUTE_MS)), 3 * MINUTE_MS)
+            rollupManager.rollupExpiredHotTier(3 * MINUTE_MS)
             assertEquals("workout HR must be warm-only for this test", 0, database.heartRateDao().count())
 
             val zoneThresholds = ZoneThresholds.create()
@@ -478,7 +478,7 @@ class WarmTierRelinkTest {
                 )
             },
         )
-        rollupManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(5 * MINUTE_MS)), 5 * MINUTE_MS)
+        rollupManager.rollupExpiredHotTier(5 * MINUTE_MS)
         assertEquals("fixture must be fully rolled up", 0, database.heartRateDao().count())
     }
 

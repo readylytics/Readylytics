@@ -225,14 +225,18 @@ class FirstSetupDummyIngestionFlowTest {
 
         return DailySyncUseCase(
             settingsRepo = settingsRepo,
-            sessionLinkReconciler = sessionLinkReconciler,
             rasSourceModeBootstrapUseCase = rasBootstrap,
-            changeSynchronizer = changeSynchronizer,
-            healthIngestionStore = ingestionStore,
-            ingestionCoordinator = HealthIngestionCoordinator(hcRepo, ingestionStore, FakeScanStagingStore()),
-            stepCountFetcher = StepCountFetcher(hcRepo),
             recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, RecordingTransactionRunner()),
+            dirtyRangeStore = FakeDirtyRangeStore(),
             walDiagnostics = mockk<WalDiagnostics>(relaxed = true),
+            ingestion =
+                DailySyncIngestionCollaborators(
+                    sessionLinkReconciler = sessionLinkReconciler,
+                    changeSynchronizer = changeSynchronizer,
+                    healthIngestionStore = ingestionStore,
+                    ingestionCoordinator = HealthIngestionCoordinator(hcRepo, ingestionStore, FakeScanStagingStore()),
+                    stepCountFetcher = StepCountFetcher(hcRepo),
+                ),
             ioDispatcher = Dispatchers.Unconfined,
             // The fixture data below is keyed to fixed epoch millis (2026-06-28/29), independent
             // of the sync window boundaries, so a fixed clock in that era is used for determinism

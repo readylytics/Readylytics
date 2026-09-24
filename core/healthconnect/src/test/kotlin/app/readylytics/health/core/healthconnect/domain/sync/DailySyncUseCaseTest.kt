@@ -56,6 +56,7 @@ abstract class DailySyncUseCaseTestFixture {
     protected val changeSynchronizer = mockk<HealthChangeSynchronizer>(relaxed = true)
     protected val transactionRunner = RecordingTransactionRunner()
     protected val walDiagnostics = mockk<WalDiagnostics>(relaxed = true)
+    protected val dirtyRangeStore = mockk<DirtyRangeStore>(relaxed = true)
 
     // Fixed rather than Clock.systemDefaultZone() so every "today" computed below is deterministic
     // (DI-002): production resolves "today" via clock.withZone(zoneId), so this must be the same
@@ -68,6 +69,8 @@ abstract class DailySyncUseCaseTestFixture {
     fun setup() {
         coEvery { changeSynchronizer.applyPendingChanges() } returns HealthChangeSyncOutcome(emptySet(), false)
         coJustRun { changeSynchronizer.commitTokens(any()) }
+        coEvery { dirtyRangeStore.pending(any()) } returns emptyList()
+        coJustRun { dirtyRangeStore.discardBefore(any()) }
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
         // WP-27: the daily walk-forward builds one mutable fatigue accumulator per run; give the
         // relaxed mock a real (empty) context so recomputeDay receives a non-null instance.
@@ -91,14 +94,23 @@ abstract class DailySyncUseCaseTestFixture {
         useCase =
             DailySyncUseCase(
                 settingsRepo = settingsRepo,
-                sessionLinkReconciler = sessionLinkReconciler,
                 rasSourceModeBootstrapUseCase = rasSourceModeBootstrapUseCase,
-                changeSynchronizer = changeSynchronizer,
-                healthIngestionStore = healthIngestionStore,
-                ingestionCoordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore, FakeScanStagingStore()),
-                stepCountFetcher = StepCountFetcher(hcRepo),
                 recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner),
+                dirtyRangeStore = dirtyRangeStore,
                 walDiagnostics = walDiagnostics,
+                ingestion =
+                    DailySyncIngestionCollaborators(
+                        sessionLinkReconciler = sessionLinkReconciler,
+                        changeSynchronizer = changeSynchronizer,
+                        healthIngestionStore = healthIngestionStore,
+                        ingestionCoordinator =
+                            HealthIngestionCoordinator(
+                                hcRepo,
+                                healthIngestionStore,
+                                FakeScanStagingStore(),
+                            ),
+                        stepCountFetcher = StepCountFetcher(hcRepo),
+                    ),
                 ioDispatcher = Dispatchers.Unconfined,
                 clock = fixedClock,
             )
@@ -508,6 +520,30 @@ class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
             assertEquals(today.minusDays(2).atStartOfDay(zoneId).toInstant(), hrFromSlot.captured)
             assertTrue(result is app.readylytics.health.core.model.domain.model.Result.Success)
             coVerify(exactly = 1) { changeSynchronizer.commitTokens(nextTokens) }
+        }
+
+    @Test
+    fun `daily sync requests historical resync when pending tickets exist beyond inline window`() =
+        runTest {
+            val zoneId = ZoneId.systemDefault()
+            val today = LocalDate.now(fixedClock.withZone(zoneId))
+            val oldestTargetDay = today.minusDays(60)
+
+            coEvery { dirtyRangeStore.pending(any()) } returns listOf(
+                app.readylytics.health.core.model.domain.sync.DirtyTicket(
+                    id = 1L,
+                    sourceGeneration = 1L,
+                    nextDay = oldestTargetDay.minusDays(10), // before inlineFloor
+                    endInclusive = oldestTargetDay.plusDays(5),
+                    scoringSnapshotId = "ACTIVE"
+                )
+            )
+
+            val result = useCase.run(windowDays = 1, onProgress = null)
+
+            assertTrue(result is app.readylytics.health.core.model.domain.model.Result.Failure)
+            val failure = result as app.readylytics.health.core.model.domain.model.Result.Failure
+            assertEquals("REQUIRES_HISTORICAL_RESYNC", failure.code)
         }
 
 }

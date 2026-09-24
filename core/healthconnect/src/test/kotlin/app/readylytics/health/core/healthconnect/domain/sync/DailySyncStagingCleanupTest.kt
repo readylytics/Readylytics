@@ -81,14 +81,18 @@ class DailySyncStagingCleanupTest {
             val useCase =
                 DailySyncUseCase(
                     settingsRepo = settingsRepo,
-                    sessionLinkReconciler = sessionLinkReconciler,
                     rasSourceModeBootstrapUseCase = rasSourceModeBootstrapUseCase,
-                    changeSynchronizer = changeSynchronizer,
-                    healthIngestionStore = healthIngestionStore,
-                    ingestionCoordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore, staging),
-                    stepCountFetcher = StepCountFetcher(hcRepo),
                     recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner),
+                    dirtyRangeStore = FakeDirtyRangeStore(),
                     walDiagnostics = walDiagnostics,
+                    ingestion =
+                        DailySyncIngestionCollaborators(
+                            sessionLinkReconciler = sessionLinkReconciler,
+                            changeSynchronizer = changeSynchronizer,
+                            healthIngestionStore = healthIngestionStore,
+                            ingestionCoordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore, staging),
+                            stepCountFetcher = StepCountFetcher(hcRepo),
+                        ),
                     ioDispatcher = Dispatchers.Unconfined,
                     clock = fixedClock,
                 )

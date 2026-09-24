@@ -87,7 +87,7 @@ class ScoringEquivalenceGoldenTest {
 
             val rawBuckets = heartRateDao.getMinuteBuckets(dayStart, dayEnd)
 
-            rollupManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(dayEnd)), dayEnd)
+            rollupManager.rollupExpiredHotTier(dayEnd)
 
             val warmBuckets = minuteBucketDao.getMinuteBuckets(dayStart, dayEnd)
 
@@ -127,7 +127,7 @@ class ScoringEquivalenceGoldenTest {
 
             val rawSleepSamples = heartRateDao.getSleepHrSamplesForSession("s1").sorted()
 
-            rollupManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(dayEnd)), dayEnd)
+            rollupManager.rollupExpiredHotTier(dayEnd)
 
             val warmSleepSamples =
                 minuteBucketDao.getBucketsForSession("SLEEP", "s1").reconstruct().sorted()
@@ -166,7 +166,7 @@ class ScoringEquivalenceGoldenTest {
 
             val rawSleepSamples = heartRateDao.getSleepHrSamplesForSession("s1").sorted()
 
-            rollupManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(dayEnd)), dayEnd)
+            rollupManager.rollupExpiredHotTier(dayEnd)
 
             val warmSleepSamples =
                 minuteBucketDao.getBucketsForSession("SLEEP", "s1").reconstruct().sorted()
@@ -210,7 +210,7 @@ class ScoringEquivalenceGoldenTest {
             val rawMetrics =
                 ZoneThresholds.computeMetrics(workoutStartMs, workoutEndMs, rawDomainSamples, thresholds)
 
-            rollupManager.rollupExpiredHotTier(app.readylytics.health.core.model.domain.sync.ScoringRunContext.capture(app.readylytics.health.core.model.domain.preferences.UserPreferences(), java.time.Instant.ofEpochMilli(workoutEndMs + 60_000L)), workoutEndMs + 60_000L)
+            rollupManager.rollupExpiredHotTier(workoutEndMs + 60_000L)
 
             val warmBuckets = minuteBucketDao.getBucketsForSession("EXERCISE", "w1")
             val reconstructedSamples =

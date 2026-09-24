@@ -44,18 +44,19 @@ class DailySyncUseCase
     @Inject
     constructor(
         private val settingsRepo: SettingsRepository,
-        private val sessionLinkReconciler: SessionLinkReconciler,
         private val rasSourceModeBootstrapUseCase: RasSourceModeBootstrapUseCase,
-        private val changeSynchronizer: HealthChangeSynchronizer,
-        private val healthIngestionStore: HealthIngestionStore,
-        private val ingestionCoordinator: HealthIngestionCoordinator,
-        private val stepCountFetcher: StepCountFetcher,
         private val recomputeSupport: DailyRecomputeSupport,
         private val dirtyRangeStore: DirtyRangeStore,
         private val walDiagnostics: WalDiagnostics,
+        private val ingestion: DailySyncIngestionCollaborators,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
         private val clock: Clock,
     ) {
+        private val sessionLinkReconciler get() = ingestion.sessionLinkReconciler
+        private val changeSynchronizer get() = ingestion.changeSynchronizer
+        private val healthIngestionStore get() = ingestion.healthIngestionStore
+        private val ingestionCoordinator get() = ingestion.ingestionCoordinator
+        private val stepCountFetcher get() = ingestion.stepCountFetcher
         private suspend fun ingestSegment(
             startMs: Instant,
             endMs: Instant,

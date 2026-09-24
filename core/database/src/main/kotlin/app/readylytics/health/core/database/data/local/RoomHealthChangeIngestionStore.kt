@@ -9,6 +9,7 @@ import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.model.RouteState
 import app.readylytics.health.core.model.domain.model.WorkoutRoutePoint
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.ReadOutcome
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.repository.map
@@ -17,10 +18,12 @@ import app.readylytics.health.core.model.domain.sync.HealthChangeIngestionStore
 import app.readylytics.health.core.model.domain.sync.IntervalKind
 import app.readylytics.health.core.model.domain.sync.IntervalSourceRecord
 import app.readylytics.health.core.model.domain.sync.PreparedWorkout
+import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.sync.SessionSpans
 import app.readylytics.health.core.model.domain.sync.WorkoutInput
 import app.readylytics.health.core.model.domain.sync.mergeEnrichment
 import app.readylytics.health.core.model.domain.sync.overlaps
+import app.readylytics.health.core.model.domain.util.RetentionBounds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import java.time.Clock
@@ -53,29 +56,21 @@ class RoomHealthChangeIngestionStore
                         datesBetween(it.startTime, it.endTime, zoneId)
                     } ?: emptySet()
                 HealthDataType.HEART_RATE ->
-                    daos.sourceRecordDao.getSourceRef(hcRecordId)?.let { ref ->
-                        val dates = mutableSetOf<LocalDate>()
-                        daos.heartRateDao.getBySourceRecordRef(ref).forEach { r ->
-                            dates.add(dateFor(r.timestampMs, zoneId))
-                            r.sessionId?.let { sid ->
-                                daos.sleepSessionDao.getById(sid)?.let { s -> dates.add(dateFor(s.startTime, zoneId)) }
-                                daos.workoutDao.getById(sid)?.let { w -> dates.add(dateFor(w.startTime, zoneId)) }
-                            }
-                        }
-                        dates
-                    } ?: emptySet()
+                    datesForSourceRef(
+                        sourceRef = daos.sourceRecordDao.getSourceRef(hcRecordId),
+                        fetchRecords = { ref ->
+                            daos.heartRateDao.getBySourceRecordRef(ref).map { it.timestampMs to it.sessionId }
+                        },
+                        zoneId = zoneId,
+                    )
                 HealthDataType.HRV ->
-                    daos.sourceRecordDao.getSourceRef(hcRecordId)?.let { ref ->
-                        val dates = mutableSetOf<LocalDate>()
-                        daos.hrvDao.getBySourceRecordRef(ref).forEach { r ->
-                            dates.add(dateFor(r.timestampMs, zoneId))
-                            r.sessionId?.let { sid ->
-                                daos.sleepSessionDao.getById(sid)?.let { s -> dates.add(dateFor(s.startTime, zoneId)) }
-                                daos.workoutDao.getById(sid)?.let { w -> dates.add(dateFor(w.startTime, zoneId)) }
-                            }
-                        }
-                        dates
-                    } ?: emptySet()
+                    datesForSourceRef(
+                        sourceRef = daos.sourceRecordDao.getSourceRef(hcRecordId),
+                        fetchRecords = { ref ->
+                            daos.hrvDao.getBySourceRecordRef(ref).map { it.timestampMs to it.sessionId }
+                        },
+                        zoneId = zoneId,
+                    )
                 HealthDataType.EXERCISE ->
                     daos.workoutDao.getById(hcRecordId)?.let {
                         datesBetween(it.startTime, it.endTime, zoneId)
@@ -107,6 +102,20 @@ class RoomHealthChangeIngestionStore
                         ?: emptySet()
             }
 
+        private suspend fun datesForSourceRef(
+            sourceRef: Long?,
+            fetchRecords: suspend (Long) -> List<Pair<Long, String?>>,
+            zoneId: ZoneId,
+        ): Set<LocalDate> {
+            val ref = sourceRef ?: return emptySet()
+            val dates = mutableSetOf<LocalDate>()
+            fetchRecords(ref).forEach { (timestampMs, sessionId) ->
+                dates.add(dateFor(timestampMs, zoneId))
+                dates.addAll(sessionDatesFor(daos, sessionId, zoneId))
+            }
+            return dates
+        }
+
         override suspend fun deleteRecord(type: HealthDataType, hcRecordId: String) {
             val zoneId =
                 try {
@@ -133,13 +142,14 @@ class RoomHealthChangeIngestionStore
                     val earliest = affected.minOrNull()!!
                     val latest = affected.maxOrNull()!!
                     val prefs = settingsRepo?.userPreferences?.first()
-                    val retentionStart = prefs?.let { app.readylytics.health.core.model.domain.util.RetentionBounds.resolveResyncStartDate(it, today) } ?: today
-                    val closure = app.readylytics.health.core.model.domain.sync.ScoreInvalidation.dependencyClosure(
-                        changed = app.readylytics.health.core.model.domain.sync.ScoreInvalidation.AffectedRange(earliest, latest),
-                        reason = app.readylytics.health.core.model.domain.sync.ScoreInvalidation.reasonFromStored(reason),
-                        retentionStart = retentionStart,
-                        today = today,
-                    )
+                    val retentionStart = RetentionBounds.resolveResyncStartDate(prefs ?: UserPreferences(), today)
+                    val closure =
+                        ScoreInvalidation.dependencyClosure(
+                            changed = ScoreInvalidation.AffectedRange(earliest, latest),
+                            reason = ScoreInvalidation.reasonFromStored(reason),
+                            retentionStart = retentionStart,
+                            today = today,
+                        )
                     if (closure != null) {
                         healthMutationStateDao.incrementGeneration()
                         dirtyRangeStore.append(
@@ -235,13 +245,14 @@ class RoomHealthChangeIngestionStore
                     val latest = dirtyDates.maxOrNull()!!
                     
                     val prefs = settingsRepo?.userPreferences?.first()
-                    val retentionStart = prefs?.let { app.readylytics.health.core.model.domain.util.RetentionBounds.resolveResyncStartDate(it, today) } ?: today
-                    val closure = app.readylytics.health.core.model.domain.sync.ScoreInvalidation.dependencyClosure(
-                        changed = app.readylytics.health.core.model.domain.sync.ScoreInvalidation.AffectedRange(earliest, latest),
-                        reason = app.readylytics.health.core.model.domain.sync.ScoreInvalidation.reasonFromStored("INTERVAL_CORRECTION"),
-                        retentionStart = retentionStart,
-                        today = today,
-                    )
+                    val retentionStart = RetentionBounds.resolveResyncStartDate(prefs ?: UserPreferences(), today)
+                    val closure =
+                        ScoreInvalidation.dependencyClosure(
+                            changed = ScoreInvalidation.AffectedRange(earliest, latest),
+                            reason = ScoreInvalidation.reasonFromStored("INTERVAL_CORRECTION"),
+                            retentionStart = retentionStart,
+                            today = today,
+                        )
                     if (closure != null) {
                         healthMutationStateDao.incrementGeneration()
                         dirtyRangeStore.append(
@@ -346,5 +357,16 @@ private suspend fun deleteFromDaos(
         HealthDataType.STEPS -> daos.stepRecordDao.deleteById(hcRecordId)
         HealthDataType.VO2_MAX -> vo2MaxRecordDao?.deleteById(hcRecordId)
     }
+}
+
+private suspend fun sessionDatesFor(
+    daos: HealthRecordDaos,
+    sessionId: String?,
+    zoneId: ZoneId,
+): List<LocalDate> {
+    val sid = sessionId ?: return emptyList()
+    val sleepDate = daos.sleepSessionDao.getById(sid)?.let { dateFor(it.startTime, zoneId) }
+    val workoutDate = daos.workoutDao.getById(sid)?.let { dateFor(it.startTime, zoneId) }
+    return listOfNotNull(sleepDate, workoutDate)
 }
 
