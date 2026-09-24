@@ -92,13 +92,21 @@ class LocalBackupViewModelTest {
             }
 
             viewModel = createViewModel()
-            val collectJob = launch { viewModel.uiState.collect {} }
+            val observedStates = mutableListOf<LocalBackupState>()
+            val collectJob = launch { viewModel.uiState.collect { observedStates.add(it) } }
             testDispatcher.scheduler.advanceUntilIdle()
             assertEquals(listOf(backup("a1")), viewModel.uiState.value.availableBackups)
 
             prefsFlow.value = UserPreferences(backupDirectoryUri = "content://dirB")
             testDispatcher.scheduler.runCurrent()
 
+            // Regression pin for UI-001: no emitted frame may ever pair the new directory with
+            // the previous directory's backup list -- this is what `listingIsCurrent` prevents.
+            assertTrue(
+                observedStates.none {
+                    it.backupDirectory == "content://dirB" && it.availableBackups.isNotEmpty()
+                },
+            )
             assertTrue(viewModel.uiState.value.isLoadingBackups)
             assertEquals(emptyList<BackupFileRef>(), viewModel.uiState.value.availableBackups)
 
