@@ -525,7 +525,7 @@ A few smaller modifiers shape the numbers behind the scenes. We list them here f
 
 ## Determinism & timezone
 
-Your scores are computed against a stored scoring timezone, so the same underlying health data and settings always produce the same scores — recomputing your history (e.g., after a resync) reproduces identical numbers, and scores remain consistent if you travel or change your device's timezone.
+Your scores are computed against a stored scoring timezone, so the same underlying health data and settings always produce the same scores, and scores remain consistent if you travel or change your device's timezone. Recomputing your history (e.g., after a resync) reproduces identical numbers while the underlying heart-rate samples are still stored raw; once that history has moved to the compact per-minute summary (see Honest limitations), recomputation is a measured, close approximation rather than a bit-identical replay.
 
 ---
 
