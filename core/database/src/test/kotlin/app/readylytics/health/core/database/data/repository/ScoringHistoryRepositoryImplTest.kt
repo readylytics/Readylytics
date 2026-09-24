@@ -124,6 +124,7 @@ class ScoringHistoryRepositoryImplTest {
         coEvery { sleepSessionDao.getBetween(any(), any()) } returns sessions
         coEvery { hrvDao.getSleepRmssdForSessionsMap(any()) } returns rmssdBySession
         coEvery { heartRateDao.getVisibleSleepHrProjectionForSessions(any()) } returns emptyList()
+        coEvery { heartRateDao.getVisibleSleepHrSummaryForSessions(any()) } returns emptyList()
         return ScoringHistoryRepositoryImpl(heartRateDao, hrvDao, sleepSessionDao, dailySummaryDao, minuteBucketDao)
     }
 
@@ -180,6 +181,44 @@ class ScoringHistoryRepositoryImplTest {
             assertEquals(1, result[day1])
             assertEquals(2, result[day2])
             assertEquals(3, result[day3])
+        }
+
+    @Test
+    fun `getAvgSleepHrForSessions reads visible warm buckets in at most two batch calls for 501 IDs`() =
+        runTest {
+            var warmBatchQueryCount = 0
+            val heartRateDao = mockk<HeartRateDao>(relaxed = true)
+            val hrvDao = mockk<HrvDao>(relaxed = true)
+            val sleepSessionDao = mockk<SleepSessionDao>(relaxed = true)
+            val dailySummaryDao = mockk<DailySummaryDao>(relaxed = true)
+            val minuteBucketDao = mockk<MinuteBucketDao>()
+
+            coEvery { minuteBucketDao.getVisibleBucketsForSessions(any(), any()) } answers {
+                warmBatchQueryCount++
+                emptyList()
+            }
+            coEvery { minuteBucketDao.getVisibleBucketsForSession(any(), any()) } answers {
+                warmBatchQueryCount++
+                emptyList()
+            }
+            coEvery { heartRateDao.getVisibleSleepHrSummaryForSessions(any()) } returns emptyList()
+
+            val repo =
+                ScoringHistoryRepositoryImpl(
+                    heartRateDao = heartRateDao,
+                    hrvDao = hrvDao,
+                    sleepSessionDao = sleepSessionDao,
+                    dailySummaryDao = dailySummaryDao,
+                    minuteBucketDao = minuteBucketDao,
+                )
+
+            val ids = (1..501).map { "sleep-$it" }
+            repo.getAvgSleepHrForSessions(ids)
+
+            org.junit.Assert.assertTrue(
+                "Expected at most 2 warm batch calls, but got $warmBatchQueryCount",
+                warmBatchQueryCount in 1..2,
+            )
         }
 
     @Suppress("UNCHECKED_CAST")

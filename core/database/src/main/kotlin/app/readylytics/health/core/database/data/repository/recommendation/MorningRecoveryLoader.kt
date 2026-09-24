@@ -9,6 +9,7 @@ import app.readylytics.health.core.model.domain.model.SleepSession
 import app.readylytics.health.core.model.domain.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.domain.repository.SleepSessionData
 import app.readylytics.health.core.model.domain.repository.SleepSessionRepository
+import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.model.domain.util.logW
 import app.readylytics.health.core.scoring.domain.recommendation.WorkoutRecommendationInput
@@ -153,6 +154,7 @@ class MorningRecoveryLoader
             context: ScoringDayContext,
             session: SleepSession,
             sessions: List<SleepSessionData>? = null,
+            fatigueContext: WalkForwardFatigueContext? = null,
         ): WorkoutRecommendationInput? {
             val prefs = context.prefs
             val wakeTimeMs = session.endTime
@@ -180,6 +182,17 @@ class MorningRecoveryLoader
                     hasSession = true,
                 )
 
+            val residualFatigue =
+                if (fatigueContext != null && wakeTimeMs > fatigueContext.morningCursor.lastEvaluationTimeMs) {
+                    fatigueContext.morningCursor.previewThrough(wakeTimeMs).fatigue
+                } else {
+                    residualFatigueComputer.computeAt(
+                        evaluationTimeMs = wakeTimeMs,
+                        prefs = prefs,
+                        retentionStartMs = context.runContext.retentionStartMs,
+                    )
+                }
+
             return WorkoutRecommendationInput(
                 hasSleep = true,
                 nightlyHrv = hrv.mean,
@@ -189,12 +202,7 @@ class MorningRecoveryLoader
                 lowHrvBound = thresholds.illnessZHrvThreshold,
                 highHrvBound = thresholds.strongRecoveryZHrvThreshold,
                 sleepScore = morningSummary.sleepScore,
-                residualFatigue =
-                    residualFatigueComputer.computeAt(
-                        evaluationTimeMs = wakeTimeMs,
-                        prefs = prefs,
-                        retentionStartMs = context.runContext.retentionStartMs,
-                    ),
+                residualFatigue = residualFatigue,
                 fatigueGain = prefs.residualFatigueGain,
                 recoveryFlags = morningSummary.recoveryFlags,
             )

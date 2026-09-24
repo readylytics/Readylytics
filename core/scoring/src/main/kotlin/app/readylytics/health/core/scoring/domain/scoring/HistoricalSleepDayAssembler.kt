@@ -3,6 +3,7 @@ package app.readylytics.health.core.scoring.domain.scoring
 import app.readylytics.health.core.model.domain.model.SleepHrSample
 import app.readylytics.health.core.model.domain.model.SleepSession
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
+import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayAggregator
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayPolicy
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDaySegment
@@ -36,12 +37,23 @@ internal class HistoricalSleepDayAssembler(
     suspend fun filterValidBaselineSessions(
         sessions: List<SleepSession>,
         assumeCoverageValid: Boolean = false,
+        baselineContext: WalkForwardBaselineContext? = null,
+        sourceGen: Long = 0L,
+        snapshotId: String = "",
     ): List<String> {
         if (sessions.isEmpty()) return emptyList()
 
-        val sessionIds = sessions.map { it.id }
-        val hrvMap = scoringHistoryRepository.getSleepRmssdForSessionsMap(sessionIds)
-        val hrMap = scoringHistoryRepository.getAvgSleepHrForSessions(sessionIds)
+        val hrvMap: Map<String, List<Float>>
+        val hrMap: Map<String, Int?>
+        if (baselineContext != null) {
+            val nightValues = baselineContext.nightValuesForSessions(sessions, sourceGen, snapshotId)
+            hrvMap = nightValues.mapValues { it.value.rmssdSamples }
+            hrMap = nightValues.mapValues { it.value.averageBpm }
+        } else {
+            val sessionIds = sessions.map { it.id }
+            hrvMap = scoringHistoryRepository.getSleepRmssdForSessionsMap(sessionIds)
+            hrMap = scoringHistoryRepository.getAvgSleepHrForSessions(sessionIds)
+        }
 
         return sessions
             .filter { s ->
@@ -78,15 +90,27 @@ internal class HistoricalSleepDayAssembler(
         zoneId: ZoneId,
         sleepDayPolicy: SleepDayPolicy? = null,
         assumeCoverageValid: Boolean = false,
+        baselineContext: WalkForwardBaselineContext? = null,
+        sourceGen: Long = 0L,
+        snapshotId: String = "",
     ): List<HistoricalSleepDay> {
         if (sessions.isEmpty()) return emptyList()
 
-        val sessionIds = sessions.map { it.id }
-        val rmssdBySession = scoringHistoryRepository.getSleepRmssdForSessionsMap(sessionIds)
-        val hrProjectionBySession =
-            scoringHistoryRepository
-                .getSleepHrProjectionForSessions(sessionIds)
-                .groupBy { it.sessionId }
+        val rmssdBySession: Map<String, List<Float>>
+        val hrSamplesBySession: Map<String, List<Int>>
+        if (baselineContext != null) {
+            val nightValues = baselineContext.nightValuesForSessions(sessions, sourceGen, snapshotId)
+            rmssdBySession = nightValues.mapValues { it.value.rmssdSamples }
+            hrSamplesBySession = nightValues.mapValues { it.value.orderedBpm }
+        } else {
+            val sessionIds = sessions.map { it.id }
+            rmssdBySession = scoringHistoryRepository.getSleepRmssdForSessionsMap(sessionIds)
+            hrSamplesBySession =
+                scoringHistoryRepository
+                    .getSleepHrProjectionForSessions(sessionIds)
+                    .groupBy { it.sessionId }
+                    .mapValues { (_, samples) -> samples.map { it.beatsPerMinute } }
+        }
 
         return if (sleepDayPolicy == null) {
             buildDirectFromSessions(
@@ -95,7 +119,7 @@ internal class HistoricalSleepDayAssembler(
                 zoneId,
                 assumeCoverageValid,
                 rmssdBySession,
-                hrProjectionBySession,
+                hrSamplesBySession,
             )
         } else {
             buildFromPolicy(
@@ -104,7 +128,7 @@ internal class HistoricalSleepDayAssembler(
                 sleepDayPolicy,
                 assumeCoverageValid,
                 rmssdBySession,
-                hrProjectionBySession,
+                hrSamplesBySession,
             )
         }
     }
@@ -115,15 +139,11 @@ internal class HistoricalSleepDayAssembler(
         zoneId: ZoneId,
         assumeCoverageValid: Boolean,
         rmssdBySession: Map<String, List<Float>>,
-        hrProjectionBySession: Map<String, List<SleepHrSample>>,
+        hrSamplesBySession: Map<String, List<Int>>,
     ): List<HistoricalSleepDay> =
         sessions.map { session ->
             val hrvMean = rmssdBySession[session.id].orEmpty().takeIf { it.isNotEmpty() }?.mean()
-            val hrSamples =
-                hrProjectionBySession[session.id]
-                    .orEmpty()
-                    .map { it.beatsPerMinute }
-                    .sorted()
+            val hrSamples = hrSamplesBySession[session.id].orEmpty().sorted()
             historicalSleepDay(
                 scoreDay = Instant.ofEpochMilli(session.endTime).atZone(zoneId).toLocalDate(),
                 coreSessionIds = listOf(session.id),
@@ -143,7 +163,7 @@ internal class HistoricalSleepDayAssembler(
         sleepDayPolicy: SleepDayPolicy,
         assumeCoverageValid: Boolean,
         rmssdBySession: Map<String, List<Float>>,
-        hrProjectionBySession: Map<String, List<SleepHrSample>>,
+        hrSamplesBySession: Map<String, List<Int>>,
     ): List<HistoricalSleepDay> =
         SleepDayAggregator
             .aggregate(
@@ -159,8 +179,7 @@ internal class HistoricalSleepDayAssembler(
                         ?.mean()
                 val hrSamples =
                     coreSessionIds
-                        .flatMap { hrProjectionBySession[it].orEmpty() }
-                        .map { it.beatsPerMinute }
+                        .flatMap { hrSamplesBySession[it].orEmpty() }
                         .sorted()
                 historicalSleepDay(
                     scoreDay = aggregate.scoreDay,
@@ -174,6 +193,7 @@ internal class HistoricalSleepDayAssembler(
                     assumeCoverageValid = assumeCoverageValid,
                 )
             }
+
 
     private fun historicalSleepDay(
         scoreDay: LocalDate,

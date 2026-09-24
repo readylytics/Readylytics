@@ -1,9 +1,12 @@
 package app.readylytics.health.workers
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
@@ -35,19 +38,6 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 
-/**
- * Durable, long-running worker performing one of: a full historical Health Connect resync
- * (Settings "Resync Health Connect data" button), a recompute-only pass (SCORE-007: a
- * historical-scope settings change like the TRIMP model or HR zones, signaled via
- * [KEY_RECOMPUTE_ONLY] input data — see [FullHistoricalResyncUseCase]), or a durable,
- * parameter-only Training Readiness projection recompute (task 4: [KEY_RECOMPUTE_MODE] ==
- * [MODE_TRAINING_READINESS] — see [runTrainingReadinessProjection]). Runs as a foreground service
- * (data-sync type) so it survives the app being backgrounded, shows a determinate "day X of Y"
- * notification, publishes progress for the in-app banner via [ForegroundSyncController], and
- * exposes progress through WorkInfo so the Settings screen can render it. Retries resume from the
- * persisted resync checkpoint (the training-readiness path is idempotent by construction and has
- * no checkpoint of its own).
- */
 @HiltWorker
 class HealthResyncWorker
     @AssistedInject
@@ -66,9 +56,6 @@ class HealthResyncWorker
             },
         private val diagnosticRecorder: RecalcDiagnosticRecorder? = null,
     ) : CoroutineWorker(appContext, params) {
-        // Progress notifications (posted from runNormalRecompute/runTrainingReadinessProjection)
-        // are best-effort (wrapped in runCatching); POST_NOTIFICATIONS is declared in the manifest
-        // and a missing runtime grant simply drops the update.
         override suspend fun doWork(): Result {
             if (databaseReadinessGate.inspect() != DatabaseReadiness.Ready) {
                 return Result.retry()
@@ -76,7 +63,7 @@ class HealthResyncWorker
             val resyncUseCase = fullHistoricalResyncUseCase.get()
             val syncController = foregroundSyncController.get()
             SyncNotifications.ensureChannel(appContext)
-            runCatching { setForeground(buildForegroundInfo(null, 0, 0)) }
+            runCatching { setForeground(buildForegroundInfo(appContext, null, 0, 0)) }
 
             syncController.onBackgroundRecalcStarted()
             var success = false
@@ -101,90 +88,6 @@ class HealthResyncWorker
             }
         }
 
-        /**
-         * Today's [KEY_RECOMPUTE_ONLY]-driven path (full resync or a bounded settings recompute) --
-         * unchanged behavior, extracted out of [doWork] so [MODE_TRAINING_READINESS] can share this
-         * worker/unique work chain without touching this branch (task 4). Progress notifications
-         * are best-effort (wrapped in runCatching); see the class-level POST_NOTIFICATIONS note.
-         */
-        @SuppressLint("MissingPermission")
-        private suspend fun runNormalRecompute(
-            resyncUseCase: FullHistoricalResyncUseCase,
-            syncController: ForegroundSyncController,
-            onSuccessChanged: (Boolean) -> Unit,
-        ): Result {
-            val recomputeOnly = inputData.getBoolean(KEY_RECOMPUTE_ONLY, false)
-            val runId = inputData.getString(KEY_RUN_ID)
-            val prefs = settingsRepository.get().userPreferences.first()
-            val retentionStart = RetentionBounds.resolveResyncStartDate(prefs, LocalDate.now(prefs.scoringZone()))
-            dirtyRangeStore.get().discardBefore(retentionStart)
-            dirtyRangeStore.get().discardRetiredAgingTickets()
-            val rangeOverride = resolveRecomputeRange(recomputeOnly)
-            // Recorded before running so a run that is killed mid-way is still attributed.
-            diagnosticRecorder?.recordIfLarge(
-                trigger = RecalcTrigger.fromName(inputData.getString(KEY_TRIGGER)),
-                triggerDetail = inputData.getString(KEY_TRIGGER_DETAIL),
-                recomputeOnly = recomputeOnly,
-            ) { resyncUseCase.resolveExecutionRange(recomputeOnly, rangeOverride) }
-            val result =
-                resyncUseCase.execute(
-                    recomputeOnly = recomputeOnly,
-                    rangeOverride = rangeOverride,
-                    runId = runId,
-                ) { phase, current, total ->
-                    setProgressAsync(workDataOf(KEY_CURRENT to current, KEY_TOTAL to total))
-                    syncController.onBackgroundRecalcProgress(phase, current, total)
-                    runCatching {
-                        NotificationManagerCompat
-                            .from(appContext)
-                            .notify(
-                                SyncNotifications.NOTIFICATION_ID,
-                                SyncNotifications.buildProgressNotification(appContext, phase, current, total),
-                            )
-                    }
-                }
-
-            return if (result.isSuccess) {
-                onSuccessChanged(true)
-                persistPostRecomputeState(recomputeOnly = recomputeOnly, rangeOverride = rangeOverride)
-                Result.success()
-            } else {
-                // Transient HC/IO failure: let WorkManager retry with its backoff policy.
-                Result.retry()
-            }
-        }
-
-        private suspend fun resolveRecomputeRange(recomputeOnly: Boolean): ScoreInvalidation.AffectedRange? {
-            val explicitStart = inputData.getLong(KEY_RECOMPUTE_START_EPOCH_DAY, -1L)
-            if (explicitStart >= 0) {
-                val end = inputData.getLong(KEY_RECOMPUTE_END_EPOCH_DAY, explicitStart)
-                return ScoreInvalidation.AffectedRange(LocalDate.ofEpochDay(explicitStart), LocalDate.ofEpochDay(end))
-            }
-            val pending = if (recomputeOnly) dirtyRangeStore.get().pending(100) else emptyList()
-            return pending.takeIf { it.isNotEmpty() }?.let {
-                ScoreInvalidation.AffectedRange(
-                    it.minOf { ticket ->
-                        ticket.nextDay
-                    },
-                    it.maxOf { ticket -> ticket.endInclusive },
-                )
-            }
-        }
-
-        /**
-         * Task 4: durable, parameter-only Training Readiness projection recompute (Settings
-         * explicit "Recalculate" action, task 5). Decodes the requested S/w pair from input data via
-         * [TrainingReadinessConfig.fromStored] (repairs corrupt values rather than failing) and
-         * delegates to [FullHistoricalResyncUseCase.executeTrainingReadinessProjection] -- no Health
-         * Connect I/O, no [persistPostRecomputeState]. Only after the projection transaction commits
-         * does this unconditionally advance the *applied* preference pair to the requested
-         * [TrainingReadinessConfig]; a failure here -- including the preference write itself --
-         * falls through to [doWork]'s outer catch/retry, leaving the previously applied
-         * configuration (and the Settings screen's pending indicator) untouched. Progress
-         * notifications are best-effort (wrapped in runCatching); see the class-level
-         * POST_NOTIFICATIONS note.
-         */
-        @SuppressLint("MissingPermission")
         private suspend fun runTrainingReadinessProjection(
             resyncUseCase: FullHistoricalResyncUseCase,
             syncController: ForegroundSyncController,
@@ -201,23 +104,10 @@ class HealthResyncWorker
                         SettingsDefaults.TRAINING_READINESS_LOAD_BALANCE_WEIGHT,
                     ),
                 )
+
             val result =
                 resyncUseCase.executeTrainingReadinessProjection(config) { current, total ->
-                    setProgressAsync(workDataOf(KEY_CURRENT to current, KEY_TOTAL to total))
-                    syncController.onBackgroundRecalcProgress(ResyncPhase.RECOMPUTE, current, total)
-                    runCatching {
-                        NotificationManagerCompat
-                            .from(appContext)
-                            .notify(
-                                SyncNotifications.NOTIFICATION_ID,
-                                SyncNotifications.buildProgressNotification(
-                                    appContext,
-                                    ResyncPhase.RECOMPUTE,
-                                    current,
-                                    total,
-                                ),
-                            )
-                    }
+                    notifyProgress(syncController, ResyncPhase.RECOMPUTE, current, total)
                 }
 
             return if (result.isSuccess) {
@@ -229,19 +119,101 @@ class HealthResyncWorker
             }
         }
 
-        /**
-         * Records that this run actually applied to history: bump [UserPreferences.scoringVersion]
-         * when stale AND snapshot the sleep-scoring inputs into the `last_recalc_*` baseline. This is
-         * best-effort and idempotent — a failure here cannot corrupt already-recomputed scores, and the
-         * next successful resync re-runs it. The startup initializer intentionally no longer bumps the
-         * version, so a killed worker leaves the stale version in place and the next launch re-enqueues.
-         *
-         * The version bump is additionally gated on [coversRetainedHistory]: [CURRENT_SCORING_VERSION]
-         * asserts that a *full* retained-history recompute happened (every retained day now carries a
-         * recommendation), so a bounded pass -- a settings-driven range, [DataCleanupWorker]'s
-         * retention-shrink fan-out, or a correction's example fan-out -- must never be allowed to mark
-         * it complete merely because it happened to run while the stored version was stale.
-         */
+        @SuppressLint("MissingPermission")
+        private suspend fun runNormalRecompute(
+            resyncUseCase: FullHistoricalResyncUseCase,
+            syncController: ForegroundSyncController,
+            onSuccessChanged: (Boolean) -> Unit,
+        ): Result {
+            val recomputeOnly = inputData.getBoolean(KEY_RECOMPUTE_ONLY, false)
+            val runId = inputData.getString(KEY_RUN_ID)
+            discardExpiredDirtyRanges()
+
+            val explicitRange = resolveExplicitRange(inputData)
+            val hasExplicitRange = explicitRange != null
+
+            // Recorded before running so a run that is killed mid-way is still attributed.
+            diagnosticRecorder?.recordIfLarge(
+                trigger = RecalcTrigger.fromName(inputData.getString(KEY_TRIGGER)),
+                triggerDetail = inputData.getString(KEY_TRIGGER_DETAIL),
+                recomputeOnly = recomputeOnly,
+            ) { resyncUseCase.resolveExecutionRange(recomputeOnly, explicitRange) }
+
+            var iterated = false
+            var keepDraining = true
+            var lastPendingState: List<Pair<Long, LocalDate>>? = null
+
+            while (keepDraining) {
+                val pending =
+                    if (recomputeOnly && !hasExplicitRange) {
+                        dirtyRangeStore.get().pending(DIRTY_RANGE_BATCH_SIZE)
+                    } else {
+                        emptyList()
+                    }
+                val step =
+                    resolveNextRange(
+                        hasExplicitRange = hasExplicitRange,
+                        explicitRange = explicitRange,
+                        recomputeOnly = recomputeOnly,
+                        iterated = iterated,
+                        lastPendingState = lastPendingState,
+                        pending = pending,
+                    ) ?: break
+
+                lastPendingState = step.nextPendingState
+                iterated = true
+
+                val result =
+                    resyncUseCase.execute(
+                        recomputeOnly = recomputeOnly,
+                        rangeOverride = step.rangeOverride,
+                        runId = runId,
+                    ) { phase, current, total ->
+                        notifyProgress(syncController, phase, current, total)
+                    }
+
+                if (!result.isSuccess) return Result.retry()
+
+                persistPostRecomputeState(recomputeOnly = recomputeOnly, rangeOverride = step.rangeOverride)
+                keepDraining = recomputeOnly && !hasExplicitRange && step.rangeOverride != null
+            }
+            onSuccessChanged(true)
+            return Result.success()
+        }
+
+        private suspend fun discardExpiredDirtyRanges() {
+            val prefs = settingsRepository.get().userPreferences.first()
+            val retentionStart = RetentionBounds.resolveResyncStartDate(prefs, LocalDate.now(prefs.scoringZone()))
+            dirtyRangeStore.get().discardBefore(retentionStart)
+            dirtyRangeStore.get().discardRetiredAgingTickets()
+        }
+
+        private fun notifyProgress(
+            syncController: ForegroundSyncController,
+            phase: ResyncPhase,
+            current: Int,
+            total: Int,
+        ) {
+            setProgressAsync(workDataOf(KEY_CURRENT to current, KEY_TOTAL to total))
+            syncController.onBackgroundRecalcProgress(phase, current, total)
+            if (ContextCompat.checkSelfPermission(
+                    appContext,
+                    Manifest.permission.POST_NOTIFICATIONS,
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
+                try {
+                    NotificationManagerCompat
+                        .from(appContext)
+                        .notify(
+                            SyncNotifications.NOTIFICATION_ID,
+                            SyncNotifications.buildProgressNotification(appContext, phase, current, total),
+                        )
+                } catch (_: SecurityException) {
+                    // Ignore if notification permission revoked concurrently
+                }
+            }
+        }
+
         private suspend fun persistPostRecomputeState(
             recomputeOnly: Boolean,
             rangeOverride: ScoreInvalidation.AffectedRange?,
@@ -271,92 +243,95 @@ class HealthResyncWorker
             }
         }
 
-        /**
-         * True when this successful run's recompute range provably spans the entire retained
-         * history, i.e. it is safe to mark [SettingsDefaults.CURRENT_SCORING_VERSION] complete:
-         * - A full Health Connect resync ([recomputeOnly] false) always recomputes
-         *   [RetentionBounds.resolveHistoricalWindow]'s full `[startDate, endDate]` regardless of
-         *   any [rangeOverride] (see [FullHistoricalResyncUseCase.execute]) -- always true.
-         * - A recompute-only pass with no [rangeOverride] also covers the full retention window
-         *   (the override only ever *narrows* a recompute-only pass) -- also true.
-         * - A recompute-only pass with a [rangeOverride] is bounded to whatever range its caller
-         *   computed (a settings change, [DataCleanupWorker]'s retention fan-out, or a correction's
-         *   example fan-out via [ScoreInvalidation.exampleFanOutRange]) -- true only if that range
-         *   still happens to span the full retention window through today.
-         */
-        private fun coversRetainedHistory(
-            recomputeOnly: Boolean,
-            rangeOverride: ScoreInvalidation.AffectedRange?,
-            prefs: UserPreferences,
-        ): Boolean {
-            if (!recomputeOnly || rangeOverride == null) return true
-            val today = LocalDate.now(prefs.scoringZone())
-            val retentionStart = RetentionBounds.resolveResyncStartDate(prefs, today)
-            return !rangeOverride.start.isAfter(retentionStart) && !rangeOverride.endInclusive.isBefore(today)
-        }
-
         override suspend fun getForegroundInfo(): ForegroundInfo {
             SyncNotifications.ensureChannel(appContext)
-            return buildForegroundInfo(null, 0, 0)
+            return buildForegroundInfo(appContext, null, 0, 0)
         }
 
-        private fun buildForegroundInfo(
-            phase: ResyncPhase?,
-            current: Int,
-            total: Int,
-        ): ForegroundInfo =
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                ForegroundInfo(
-                    SyncNotifications.NOTIFICATION_ID,
-                    SyncNotifications.buildProgressNotification(appContext, phase, current, total),
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
-                )
-            } else {
-                ForegroundInfo(
-                    SyncNotifications.NOTIFICATION_ID,
-                    SyncNotifications.buildProgressNotification(appContext, phase, current, total),
-                )
-            }
-
         companion object {
+            private const val DIRTY_RANGE_BATCH_SIZE = 100
             private const val TAG = "HealthResyncWorker"
             const val KEY_CURRENT = "current"
             const val KEY_TOTAL = "total"
-
-            /** Input data key: true routes this run through the SCORE-007 recompute-only path. */
             const val KEY_RECOMPUTE_ONLY = "recompute_only"
-
-            /**
-             * Optional input data keys naming why this run was enqueued ([RecalcTrigger] name) and
-             * a free-text cause. Absent (work enqueued by an older build) decodes to a non-reported
-             * trigger; see [RecalcDiagnosticRecorder].
-             */
             const val KEY_TRIGGER = "trigger"
             const val KEY_TRIGGER_DETAIL = "trigger_detail"
-
-            /** WP-10: optional input data key referencing the immutable historical run ID. */
             const val KEY_RUN_ID = "run_id"
-
-            /**
-             * R2-CACHE-001: optional input data keys carrying a bounded recompute-only date-range
-             * override (epoch days). Absent (or [KEY_RECOMPUTE_START_EPOCH_DAY] negative) means "no
-             * override" -- a recompute-only pass covers the full retention window, as before.
-             */
             const val KEY_RECOMPUTE_START_EPOCH_DAY = "recompute_start_epoch_day"
             const val KEY_RECOMPUTE_END_EPOCH_DAY = "recompute_end_epoch_day"
-
-            /**
-             * Task 4: input data key routing this run through [runTrainingReadinessProjection]
-             * instead of the [KEY_RECOMPUTE_ONLY]-based [runNormalRecompute] path when its value is
-             * exactly [MODE_TRAINING_READINESS]. Absent, `null`, or any other value is treated as
-             * "absent" and falls through to the unchanged normal-recompute branch -- a malformed
-             * mode never accidentally becomes a training-readiness run.
-             */
             const val KEY_RECOMPUTE_MODE = "recompute_mode"
             const val MODE_TRAINING_READINESS = "TRAINING_READINESS"
-
-            /** Task 4: the requested (not yet applied) Training Readiness S/w pair to project. */
             const val KEY_TRAINING_READINESS_SCALE = "training_readiness_scale"
             const val KEY_TRAINING_READINESS_WEIGHT = "training_readiness_weight"
         }
+    }
+
+private data class NextRecomputeStep(
+    val rangeOverride: ScoreInvalidation.AffectedRange?,
+    val nextPendingState: List<Pair<Long, LocalDate>>?,
+)
+
+private fun resolveExplicitRange(inputData: androidx.work.Data): ScoreInvalidation.AffectedRange? {
+    val explicitStart = inputData.getLong(HealthResyncWorker.KEY_RECOMPUTE_START_EPOCH_DAY, -1L)
+    if (explicitStart < 0) return null
+    val end = inputData.getLong(HealthResyncWorker.KEY_RECOMPUTE_END_EPOCH_DAY, explicitStart)
+    return ScoreInvalidation.AffectedRange(LocalDate.ofEpochDay(explicitStart), LocalDate.ofEpochDay(end))
+}
+
+private fun resolveNextRange(
+    hasExplicitRange: Boolean,
+    explicitRange: ScoreInvalidation.AffectedRange?,
+    recomputeOnly: Boolean,
+    iterated: Boolean,
+    lastPendingState: List<Pair<Long, LocalDate>>?,
+    pending: List<DirtyTicket>,
+): NextRecomputeStep? =
+    when {
+        hasExplicitRange -> NextRecomputeStep(explicitRange, null)
+        !recomputeOnly -> NextRecomputeStep(null, null)
+        else -> {
+            val currentState = pending.map { it.id to it.nextDay }
+            when {
+                pending.isEmpty() || currentState == lastPendingState ->
+                    if (iterated) null else NextRecomputeStep(null, currentState)
+                else ->
+                    NextRecomputeStep(
+                        ScoreInvalidation.AffectedRange(
+                            pending.minOf { it.nextDay },
+                            pending.maxOf { it.endInclusive },
+                        ),
+                        currentState,
+                    )
+            }
+        }
+    }
+
+private fun coversRetainedHistory(
+    recomputeOnly: Boolean,
+    rangeOverride: ScoreInvalidation.AffectedRange?,
+    prefs: UserPreferences,
+): Boolean {
+    if (!recomputeOnly || rangeOverride == null) return true
+    val today = LocalDate.now(prefs.scoringZone())
+    val retentionStart = RetentionBounds.resolveResyncStartDate(prefs, today)
+    return !rangeOverride.start.isAfter(retentionStart) && !rangeOverride.endInclusive.isBefore(today)
+}
+
+private fun buildForegroundInfo(
+    context: Context,
+    phase: ResyncPhase?,
+    current: Int,
+    total: Int,
+): ForegroundInfo =
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+        ForegroundInfo(
+            SyncNotifications.NOTIFICATION_ID,
+            SyncNotifications.buildProgressNotification(context, phase, current, total),
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
+        )
+    } else {
+        ForegroundInfo(
+            SyncNotifications.NOTIFICATION_ID,
+            SyncNotifications.buildProgressNotification(context, phase, current, total),
+        )
     }

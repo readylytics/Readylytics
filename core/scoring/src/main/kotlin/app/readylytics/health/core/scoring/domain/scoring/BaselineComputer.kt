@@ -3,6 +3,7 @@ package app.readylytics.health.core.scoring.domain.scoring
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.model.SleepSession
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
+import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.scoring.domain.scoring.components.Phase
@@ -102,6 +103,10 @@ class BaselineComputer
             percentile: Int,
             zoneId: ZoneId,
             sleepDayPolicy: SleepDayPolicy? = null,
+            prefetchedSessions: List<SleepSession>? = null,
+            baselineContext: WalkForwardBaselineContext? = null,
+            sourceGen: Long = 0L,
+            snapshotId: String = "",
         ): List<Int> {
             val inclusiveToMs = (toMs - 1).coerceAtLeast(0)
             val baselineFromMs =
@@ -110,10 +115,7 @@ class BaselineComputer
                     .minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
                     .toEpochMilli()
             val sessions =
-                scoringHistoryRepository.getSleepSessionsBetween(
-                    baselineFromMs.coerceAtLeast(0),
-                    inclusiveToMs,
-                )
+                sessionsBetween(prefetchedSessions, baselineFromMs.coerceAtLeast(0), inclusiveToMs)
             val historicalSleepDays =
                 sleepDayAssembler.buildHistoricalSleepDays(
                     sessions = sessions,
@@ -121,6 +123,9 @@ class BaselineComputer
                     zoneId = zoneId,
                     sleepDayPolicy = sleepDayPolicy,
                     assumeCoverageValid = true,
+                    baselineContext = baselineContext,
+                    sourceGen = sourceGen,
+                    snapshotId = snapshotId,
                 )
             // WP-11: same RHR membership selector as the backfill and adaptive-baseline paths, so
             // this "display percentile" population (ungated by canContributeToBaseline, same as
@@ -183,6 +188,9 @@ class BaselineComputer
             sleepDayPolicy: SleepDayPolicy? = null,
             prefetchedSessions: List<SleepSession>? = null,
             ignoreFrozenSnapshot: Boolean = false,
+            baselineContext: WalkForwardBaselineContext? = null,
+            sourceGen: Long = 0L,
+            snapshotId: String = "",
         ): Float? {
             val inclusiveToMs = (toMs - 1).coerceAtLeast(0)
             if (!ignoreFrozenSnapshot && isBaselineFrozen(fromMs, zoneId)) return null
@@ -201,6 +209,9 @@ class BaselineComputer
                     zoneId = zoneId,
                     sleepDayPolicy = sleepDayPolicy,
                     assumeCoverageValid = true,
+                    baselineContext = baselineContext,
+                    sourceGen = sourceGen,
+                    snapshotId = snapshotId,
                 )
             // WP-11: resolve the requested score day and apply the same membership selector the
             // backfill path uses (historicalRhrWindow), so live and backfill never disagree on
@@ -322,6 +333,9 @@ class BaselineComputer
             zoneId: ZoneId,
             sleepDayPolicy: SleepDayPolicy? = null,
             prefetchedSessions: List<SleepSession>? = null,
+            baselineContext: WalkForwardBaselineContext? = null,
+            sourceGen: Long = 0L,
+            snapshotId: String = "",
         ): Int? =
             hrvBaselineOverride?.roundToInt() ?: run {
                 val frozenSummary =
@@ -348,6 +362,9 @@ class BaselineComputer
                             zoneId = zoneId,
                             sleepDayPolicy = sleepDayPolicy,
                             assumeCoverageValid = true,
+                            baselineContext = baselineContext,
+                            sourceGen = sourceGen,
+                            snapshotId = snapshotId,
                         )
                     val nightlyAverages =
                         historicalSleepDays
@@ -373,6 +390,9 @@ class BaselineComputer
             sleepDayPolicy: SleepDayPolicy? = null,
             prefetchedSessions: List<SleepSession>? = null,
             ignoreFrozenSnapshot: Boolean = false,
+            baselineContext: WalkForwardBaselineContext? = null,
+            sourceGen: Long = 0L,
+            snapshotId: String = "",
         ): HrvWindows? {
             val inclusiveToMs = (toMs - 1).coerceAtLeast(0)
             if (!ignoreFrozenSnapshot && isBaselineFrozen(fromMs, zoneId)) return null
@@ -392,6 +412,9 @@ class BaselineComputer
                     zoneId = zoneId,
                     sleepDayPolicy = sleepDayPolicy,
                     assumeCoverageValid = true,
+                    baselineContext = baselineContext,
+                    sourceGen = sourceGen,
+                    snapshotId = snapshotId,
                 )
             val targetScoreDay = Instant.ofEpochMilli(fromMs).atZone(zoneId).toLocalDate()
             val priorHistoricalSleepDays =

@@ -8,12 +8,15 @@ import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRec
 import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity
 import app.readylytics.health.core.model.data.preferences.scoringZone
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.sync.HeartRateInput
 import app.readylytics.health.core.model.domain.sync.HrvInput
+import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.sync.SourceMetadata
 import app.readylytics.health.core.model.domain.sync.SourcePayload
 import app.readylytics.health.core.model.domain.sync.completeMinuteCutoff
+import app.readylytics.health.core.model.domain.util.RetentionBounds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -80,6 +83,7 @@ class SourcePayloadWriter
             val existingSource = resolved.existing
             val sourceRef = resolved.ref
             val oldTimestamps = daos.heartRateDao.readTimestampsKeyset(sourceRef)
+            val oldSessionIds = daos.heartRateDao.getBySourceRecordRef(sourceRef).mapNotNull { it.sessionId }
             val warmContributions = warmRefresh?.contributionsFor(sourceRef).orEmpty()
             val warmMinutes = warmContributions.map { it.bucketStartMs }.toSet()
             val expectedRawRows = newRows.filter { completeMinuteCutoff(it.timestampMs) !in warmMinutes }
@@ -102,6 +106,7 @@ class SourcePayloadWriter
                 newTimestamps = newRows.map { it.timestampMs },
                 startMs = source.startMs,
                 endExclusiveMs = source.endExclusiveMs,
+                sessionIds = oldSessionIds + newRows.mapNotNull { it.sessionId },
             )
             warmRefresh?.publish(sourceRef, warmContributions, newRows)
         }
@@ -116,6 +121,7 @@ class SourcePayloadWriter
             val existingSource = resolved.existing
             val sourceRef = resolved.ref
             val oldTimestamps = daos.hrvDao.readTimestampsKeyset(sourceRef)
+            val oldSessionIds = daos.hrvDao.getBySourceRecordRef(sourceRef).mapNotNull { it.sessionId }
 
             if (!isMetadataChanged(existingSource, source) &&
                 areHrvRowsIdentical(daos.hrvDao, sourceRef, oldTimestamps, newRows)
@@ -134,6 +140,7 @@ class SourcePayloadWriter
                 newTimestamps = newRows.map { it.timestampMs },
                 startMs = source.startMs,
                 endExclusiveMs = source.endExclusiveMs,
+                sessionIds = oldSessionIds + newRows.mapNotNull { it.sessionId },
             )
         }
 
@@ -199,6 +206,7 @@ class SourcePayloadWriter
             newTimestamps: List<Long>,
             startMs: Long,
             endExclusiveMs: Long,
+            sessionIds: List<String>,
         ) {
             val zoneId = resolveZoneId()
             val today = LocalDate.now(clock.withZone(zoneId))
@@ -214,16 +222,39 @@ class SourcePayloadWriter
             val endInclusiveMs = maxOf(startMs, endExclusiveMs - 1L)
             affectedDates.add(Instant.ofEpochMilli(endInclusiveMs).atZone(zoneId).toLocalDate())
 
+            // Resolve both pre-mutation and replacement session links to their score days.
+            for (sessionId in sessionIds.toSet()) {
+                daos.sleepSessionDao.getById(sessionId)?.let { session ->
+                    affectedDates.add(Instant.ofEpochMilli(session.endTime).atZone(zoneId).toLocalDate())
+                }
+                daos.workoutDao.getById(sessionId)?.let { workout ->
+                    affectedDates.add(Instant.ofEpochMilli(workout.startTime).atZone(zoneId).toLocalDate())
+                }
+            }
+
             if (affectedDates.isNotEmpty() && healthMutationStateDao != null && dirtyRangeStore != null) {
-                healthMutationStateDao.incrementGeneration()
                 val earliest = affectedDates.minOrNull()!!
-                val end = maxOf(today, affectedDates.maxOrNull()!!)
-                dirtyRangeStore.append(
-                    start = earliest,
-                    endInclusive = end,
-                    reason = REASON_AUTHORITATIVE_SOURCE_REPLACEMENT,
-                    snapshotId = SNAPSHOT_ACTIVE,
-                )
+                val latest = affectedDates.maxOrNull()!!
+                val prefs = settingsRepo?.userPreferences?.first()
+                val retentionStart = RetentionBounds.resolveResyncStartDate(prefs ?: UserPreferences(), today)
+
+                val closure =
+                    ScoreInvalidation.dependencyClosure(
+                        changed = ScoreInvalidation.AffectedRange(earliest, latest),
+                        reason = ScoreInvalidation.reasonFromStored(REASON_AUTHORITATIVE_SOURCE_REPLACEMENT),
+                        retentionStart = retentionStart,
+                        today = today,
+                    )
+                
+                if (closure != null) {
+                    healthMutationStateDao.incrementGeneration()
+                    dirtyRangeStore.append(
+                        start = closure.start,
+                        endInclusive = closure.endInclusive,
+                        reason = REASON_AUTHORITATIVE_SOURCE_REPLACEMENT,
+                        snapshotId = SNAPSHOT_ACTIVE,
+                    )
+                }
             }
         }
 

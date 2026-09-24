@@ -76,6 +76,7 @@ class RetentionCleanup
             )
         }
 
+
         private suspend fun deleteLowVolumeTables(cutoffMs: Long): Int =
             daos.sleepSessionDao.deleteBeforeTimestamp(cutoffMs) +
                 daos.minuteBucketMaintenanceDao.deleteBeforeTimestamp(cutoffMs) +

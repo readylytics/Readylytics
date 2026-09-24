@@ -141,10 +141,16 @@ class HistoricalRecomputePhase
                             context.endDate,
                             context.zoneId,
                         ),
+                    ras =
+                        recomputeSupport.buildWalkForwardRasContext(
+                            context.recomputeStartDate,
+                            context.zoneId,
+                        ),
                 )
             } else {
-                WalkForwardContexts(null, null, null, null)
+                WalkForwardContexts(null, null, null, null, null)
             }
+
 
         private suspend fun clearFrozenBaselinesIfNeeded(context: RecomputePhaseContext) {
             if (context.checkpoint == null || context.checkpoint.phase != ResyncPhase.RECOMPUTE) {
@@ -164,21 +170,20 @@ class HistoricalRecomputePhase
             stepsMap: Map<LocalDate, Long>,
             contexts: WalkForwardContexts,
             onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)?,
-        ): Result.Failure? =
-            recomputeSupport.inRecomputeTransaction {
-                var day = chunkStartDay
-                var failure: Result.Failure? = null
-                var daysDone = daysBeforeChunk
-                while (!day.isAfter(chunkEndDay)) {
-                    currentCoroutineContext().ensureActive()
-                    val stepsForDay =
-                        StepAttribution.resolve(
-                            day,
-                            stepsMap,
-                            stepsDeviceSelected = context.stepsDevice != null,
-                            recomputeOnly = context.skipIngestAndPrune,
-                        )
-                    val dayResult =
+        ): Result.Failure? {
+            var day = chunkStartDay
+            var daysDone = daysBeforeChunk
+            while (!day.isAfter(chunkEndDay)) {
+                currentCoroutineContext().ensureActive()
+                val stepsForDay =
+                    StepAttribution.resolve(
+                        day,
+                        stepsMap,
+                        stepsDeviceSelected = context.stepsDevice != null,
+                        recomputeOnly = context.skipIngestAndPrune,
+                    )
+                val dayResult =
+                    recomputeSupport.inRecomputeTransaction {
                         recomputeSupport.recomputeDay(
                             day,
                             stepsForDay,
@@ -186,18 +191,18 @@ class HistoricalRecomputePhase
                             contexts,
                             context.runContext,
                         )
-                    if (dayResult is Result.Failure) {
-                        logD(TELEMETRY_TAG) { "[RECOMPUTE] Failed at day $day: ${dayResult.reason}" }
-                        failure = dayResult
-                        break
                     }
-                    daysDone++
-                    onProgress?.invoke(ResyncPhase.RECOMPUTE, daysDone, context.totalDays)
-                    day = day.plusDays(1)
-                    yield()
+                if (dayResult is Result.Failure) {
+                    logD(TELEMETRY_TAG) { "[RECOMPUTE] Failed at day $day: ${dayResult.reason}" }
+                    return dayResult
                 }
-                failure
+                daysDone++
+                onProgress?.invoke(ResyncPhase.RECOMPUTE, daysDone, context.totalDays)
+                day = day.plusDays(1)
+                yield()
             }
+            return null
+        }
 
         private suspend fun saveChunkCheckpoint(
             context: RecomputePhaseContext,

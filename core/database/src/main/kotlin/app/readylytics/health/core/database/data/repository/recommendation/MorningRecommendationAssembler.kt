@@ -6,6 +6,7 @@ import app.readylytics.health.core.model.domain.recommendation.WorkoutRecommenda
 import app.readylytics.health.core.model.domain.recommendation.WorkoutRecommendationState
 import app.readylytics.health.core.model.domain.repository.SleepSessionData
 import app.readylytics.health.core.model.domain.repository.SleepSessionRepository
+import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.scoring.domain.recommendation.ComputeWorkoutRecommendationUseCase
 import app.readylytics.health.core.scoring.domain.recommendation.SelectMorningSleepSession
 import app.readylytics.health.core.scoring.domain.recommendation.SelectWorkoutRecommendationExamples
@@ -88,6 +89,7 @@ class MorningRecommendationAssembler
         suspend fun assemble(
             context: ScoringDayContext,
             previous: WorkoutRecommendationSnapshot? = null,
+            fatigueContext: WalkForwardFatigueContext? = null,
         ): WorkoutRecommendationSnapshot? {
             val history = sleepSessionRepository.loadCircadianHistory(context)
             val session = resolveMorningSession(context, history, previous)
@@ -99,7 +101,7 @@ class MorningRecommendationAssembler
                     decision = evaluator.compute(noSleepInput(context)),
                 )
             } else {
-                assembleForSession(context, session, history)
+                assembleForSession(context, session, history, fatigueContext)
             }
         }
 
@@ -108,9 +110,11 @@ class MorningRecommendationAssembler
             context: ScoringDayContext,
             session: SleepSession,
             history: List<SleepSessionData>,
+            fatigueContext: WalkForwardFatigueContext? = null,
         ): WorkoutRecommendationSnapshot? {
             val wakeTimeMs = session.endTime
-            val recovery = recoveryLoader.load(context, session, history) ?: return null
+            val recovery = recoveryLoader.load(context, session, history, fatigueContext) ?: return null
+
             val decision = evaluator.compute(recovery)
             val examples =
                 if (decision.state in EXAMPLE_STATES) {

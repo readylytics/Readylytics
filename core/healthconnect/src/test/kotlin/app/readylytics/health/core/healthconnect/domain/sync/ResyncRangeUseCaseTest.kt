@@ -557,17 +557,16 @@ class ResyncRangeUseCaseTest {
         }
 
     @Test
-    fun `recompute opens one transaction per thirty-day chunk`() =
+    fun `recompute opens one transaction per day`() =
         runTest {
-            // 65 days => chunks of 30 + 30 + 5. One transaction each: bounded enough that a kill
-            // loses at most one chunk, coalesced enough that the resync doesn't fire 65 separate
-            // daily_summaries invalidation rounds at the UI.
+            // 65 days => 65 per-day transactions: bounded so a kill or failure leaves previously
+            // calculated days committed and avoids holding the database writer lock for 30 days.
             val startDate = LocalDate.of(2024, 6, 1)
             val endDate = startDate.plusDays(64)
 
             useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
 
-            assertEquals(3, transactionRunner.transactionCount)
+            assertEquals(65, transactionRunner.transactionCount)
             assertEquals(1, transactionRunner.maxDepth)
         }
 
@@ -599,14 +598,15 @@ class ResyncRangeUseCaseTest {
                     any(),
                     any(),
                     any(),
-                    any())
+                    any(),
+                )
             } throws IllegalStateException("scoring failed")
 
             val result =
                 useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
 
             assertEquals(false, result.isSuccess)
-            assertEquals(2, transactionRunner.transactionCount)
+            assertEquals(35, transactionRunner.transactionCount)
             assertEquals(ResyncPhase.RECOMPUTE, checkpointStore.value?.phase)
             assertEquals(startDate.plusDays(30), checkpointStore.value?.nextDate)
             coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }

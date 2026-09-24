@@ -81,14 +81,22 @@ class DailySyncUseCaseExampleFanOutTest {
         useCase =
             DailySyncUseCase(
                 settingsRepo = settingsRepo,
-                sessionLinkReconciler = sessionLinkReconciler,
                 rasSourceModeBootstrapUseCase = rasSourceModeBootstrapUseCase,
-                changeSynchronizer = changeSynchronizer,
-                healthIngestionStore = healthIngestionStore,
-                ingestionCoordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore, FakeScanStagingStore()),
-                stepCountFetcher = StepCountFetcher(hcRepo),
                 recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner),
                 walDiagnostics = walDiagnostics,
+                ingestion =
+                    DailySyncIngestionCollaborators(
+                        sessionLinkReconciler = sessionLinkReconciler,
+                        changeSynchronizer = changeSynchronizer,
+                        healthIngestionStore = healthIngestionStore,
+                        ingestionCoordinator =
+                            HealthIngestionCoordinator(
+                                hcRepo,
+                                healthIngestionStore,
+                                FakeScanStagingStore(),
+                            ),
+                        stepCountFetcher = StepCountFetcher(hcRepo),
+                    ),
                 ioDispatcher = Dispatchers.Unconfined,
                 clock = fixedClock,
             )

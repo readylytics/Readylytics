@@ -25,6 +25,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao
 import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
 import app.readylytics.health.core.databaseschema.data.local.dao.OxygenSaturationRecordDao
+import app.readylytics.health.core.databaseschema.data.local.dao.SleepHrRawSummary
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepHrSample
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepStageDao
@@ -179,6 +180,7 @@ class ScoringRepositoryN1Test {
         coEvery { heartRateDao.getVisibleSleepHrSamplesForSession(any()) } returns listOf(48, 50, 52, 54, 56, 58, 60)
         coEvery { heartRateDao.getSleepHrSamplesForSessions(any()) } returns emptyList()
         coEvery { heartRateDao.getVisibleSleepHrProjectionForSessions(any()) } returns emptyList()
+        coEvery { heartRateDao.getVisibleSleepHrSummaryForSessions(any()) } returns emptyList()
 
         coEvery { dailySummaryDao.getByDate(any()) } returns null
         coEvery { dailySummaryDao.getByDates(any()) } returns emptyList()
@@ -441,6 +443,9 @@ class ScoringRepositoryN1Test {
             coEvery { sleepSessionDao.getBetween(any(), any()) } returns sessions
             coEvery { hrvDao.getSleepRmssdForSessionsMap(any()) } returns sessions.associate { it.id to listOf(60f) }
             coEvery { heartRateDao.getAvgSleepHrForSessions(any()) } returns sessions.associate { it.id to 55 }
+            coEvery {
+                heartRateDao.getVisibleSleepHrSummaryForSessions(any())
+            } returns sessions.map { SleepHrRawSummary(it.id, 55L * 10, 10) }
 
             repo.computeAndPersistDailySummary(today)
 

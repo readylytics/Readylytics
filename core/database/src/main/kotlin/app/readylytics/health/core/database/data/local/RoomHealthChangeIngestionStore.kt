@@ -9,6 +9,7 @@ import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.model.RouteState
 import app.readylytics.health.core.model.domain.model.WorkoutRoutePoint
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.ReadOutcome
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.repository.map
@@ -17,10 +18,12 @@ import app.readylytics.health.core.model.domain.sync.HealthChangeIngestionStore
 import app.readylytics.health.core.model.domain.sync.IntervalKind
 import app.readylytics.health.core.model.domain.sync.IntervalSourceRecord
 import app.readylytics.health.core.model.domain.sync.PreparedWorkout
+import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.sync.SessionSpans
 import app.readylytics.health.core.model.domain.sync.WorkoutInput
 import app.readylytics.health.core.model.domain.sync.mergeEnrichment
 import app.readylytics.health.core.model.domain.sync.overlaps
+import app.readylytics.health.core.model.domain.util.RetentionBounds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import java.time.Clock
@@ -53,15 +56,21 @@ class RoomHealthChangeIngestionStore
                         datesBetween(it.startTime, it.endTime, zoneId)
                     } ?: emptySet()
                 HealthDataType.HEART_RATE ->
-                    daos.sourceRecordDao.getSourceRef(hcRecordId)?.let { ref ->
-                        daos.heartRateDao.getBySourceRecordRef(ref)
-                            .mapTo(mutableSetOf()) { dateFor(it.timestampMs, zoneId) }
-                    } ?: emptySet()
+                    datesForSourceRef(
+                        sourceRef = daos.sourceRecordDao.getSourceRef(hcRecordId),
+                        fetchRecords = { ref ->
+                            daos.heartRateDao.getBySourceRecordRef(ref).map { it.timestampMs to it.sessionId }
+                        },
+                        zoneId = zoneId,
+                    )
                 HealthDataType.HRV ->
-                    daos.sourceRecordDao.getSourceRef(hcRecordId)?.let { ref ->
-                        daos.hrvDao.getBySourceRecordRef(ref)
-                            .mapTo(mutableSetOf()) { dateFor(it.timestampMs, zoneId) }
-                    } ?: emptySet()
+                    datesForSourceRef(
+                        sourceRef = daos.sourceRecordDao.getSourceRef(hcRecordId),
+                        fetchRecords = { ref ->
+                            daos.hrvDao.getBySourceRecordRef(ref).map { it.timestampMs to it.sessionId }
+                        },
+                        zoneId = zoneId,
+                    )
                 HealthDataType.EXERCISE ->
                     daos.workoutDao.getById(hcRecordId)?.let {
                         datesBetween(it.startTime, it.endTime, zoneId)
@@ -93,6 +102,20 @@ class RoomHealthChangeIngestionStore
                         ?: emptySet()
             }
 
+        private suspend fun datesForSourceRef(
+            sourceRef: Long?,
+            fetchRecords: suspend (Long) -> List<Pair<Long, String?>>,
+            zoneId: ZoneId,
+        ): Set<LocalDate> {
+            val ref = sourceRef ?: return emptySet()
+            val dates = mutableSetOf<LocalDate>()
+            fetchRecords(ref).forEach { (timestampMs, sessionId) ->
+                dates.add(dateFor(timestampMs, zoneId))
+                dates.addAll(sessionDatesFor(daos, sessionId, zoneId))
+            }
+            return dates
+        }
+
         override suspend fun deleteRecord(type: HealthDataType, hcRecordId: String) {
             val zoneId =
                 try {
@@ -117,14 +140,25 @@ class RoomHealthChangeIngestionStore
                 val affected = affectedDatesForRecord(type, hcRecordId, zoneId)
                 if (affected.isNotEmpty() && dirtyRangeStore != null && healthMutationStateDao != null) {
                     val earliest = affected.minOrNull()!!
-                    val end = maxOf(today, affected.maxOrNull()!!)
-                    healthMutationStateDao.incrementGeneration()
-                    dirtyRangeStore.append(
-                        start = earliest,
-                        endInclusive = end,
-                        reason = reason,
-                        snapshotId = snapshotId,
-                    )
+                    val latest = affected.maxOrNull()!!
+                    val prefs = settingsRepo?.userPreferences?.first()
+                    val retentionStart = RetentionBounds.resolveResyncStartDate(prefs ?: UserPreferences(), today)
+                    val closure =
+                        ScoreInvalidation.dependencyClosure(
+                            changed = ScoreInvalidation.AffectedRange(earliest, latest),
+                            reason = ScoreInvalidation.reasonFromStored(reason),
+                            retentionStart = retentionStart,
+                            today = today,
+                        )
+                    if (closure != null) {
+                        healthMutationStateDao.incrementGeneration()
+                        dirtyRangeStore.append(
+                            start = closure.start,
+                            endInclusive = closure.endInclusive,
+                            reason = reason,
+                            snapshotId = snapshotId,
+                        )
+                    }
                 }
                 deleteFromDaos(daos, vo2MaxRecordDao, type, hcRecordId)
                 affected
@@ -208,14 +242,26 @@ class RoomHealthChangeIngestionStore
                 if (dirtyDates.isNotEmpty() && dirtyRangeStore != null && healthMutationStateDao != null) {
                     val today = LocalDate.now(clock)
                     val earliest = dirtyDates.minOrNull()!!
-                    val end = maxOf(today, dirtyDates.maxOrNull()!!)
-                    healthMutationStateDao.incrementGeneration()
-                    dirtyRangeStore.append(
-                        start = earliest,
-                        endInclusive = end,
-                        reason = "INTERVAL_CORRECTION",
-                        snapshotId = "ACTIVE",
-                    )
+                    val latest = dirtyDates.maxOrNull()!!
+                    
+                    val prefs = settingsRepo?.userPreferences?.first()
+                    val retentionStart = RetentionBounds.resolveResyncStartDate(prefs ?: UserPreferences(), today)
+                    val closure =
+                        ScoreInvalidation.dependencyClosure(
+                            changed = ScoreInvalidation.AffectedRange(earliest, latest),
+                            reason = ScoreInvalidation.reasonFromStored("INTERVAL_CORRECTION"),
+                            retentionStart = retentionStart,
+                            today = today,
+                        )
+                    if (closure != null) {
+                        healthMutationStateDao.incrementGeneration()
+                        dirtyRangeStore.append(
+                            start = closure.start,
+                            endInclusive = closure.endInclusive,
+                            reason = "INTERVAL_CORRECTION",
+                            snapshotId = "ACTIVE",
+                        )
+                    }
                 }
             }
         }
@@ -313,3 +359,13 @@ private suspend fun deleteFromDaos(
     }
 }
 
+private suspend fun sessionDatesFor(
+    daos: HealthRecordDaos,
+    sessionId: String?,
+    zoneId: ZoneId,
+): List<LocalDate> {
+    val sid = sessionId ?: return emptyList()
+    val sleepDate = daos.sleepSessionDao.getById(sid)?.let { dateFor(it.endTime, zoneId) }
+    val workoutDate = daos.workoutDao.getById(sid)?.let { dateFor(it.startTime, zoneId) }
+    return listOfNotNull(sleepDate, workoutDate)
+}

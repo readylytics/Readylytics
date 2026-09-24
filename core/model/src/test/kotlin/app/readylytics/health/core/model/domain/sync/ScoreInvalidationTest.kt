@@ -17,11 +17,170 @@ class ScoreInvalidationTest {
     }
 
     @Test
-    fun `affected range extends the full 84 days when today is far enough away`() {
-        val changed = ScoreInvalidation.AffectedRange(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 10))
-        val today = LocalDate.of(2026, 12, 1)
-        val result = ScoreInvalidation.affectedRange(changed, today)
-        assertEquals(LocalDate.of(2026, 1, 10).plusDays(84), result.endInclusive)
+    fun `dependency closure repairs retained suffix through today across scoring reasons`() {
+        val changedDay = LocalDate.of(2025, 1, 1)
+        val retentionStart = LocalDate.of(2024, 1, 1)
+        val today = LocalDate.of(2026, 9, 23)
+        val changed = ScoreInvalidation.AffectedRange(changedDay, changedDay)
+
+        val reasons =
+            listOf(
+                ScoreInvalidation.Reason.BASELINE,
+                ScoreInvalidation.Reason.WORKOUT,
+                ScoreInvalidation.Reason.LATEST_VALUE,
+                ScoreInvalidation.Reason.SOURCE_DELETION,
+                ScoreInvalidation.Reason.SOURCE_REPLACEMENT,
+                ScoreInvalidation.Reason.UNKNOWN,
+            )
+
+        reasons.forEach { reason ->
+            val result =
+                ScoreInvalidation.dependencyClosure(
+                    changed = changed,
+                    reason = reason,
+                    retentionStart = retentionStart,
+                    today = today,
+                )
+            assertEquals(
+                "Reason $reason must repair the full retained suffix through today",
+                ScoreInvalidation.AffectedRange(changedDay, today),
+                result,
+            )
+        }
+    }
+
+    @Test
+    fun `dependency closure for pre-retention correction returns the retained suffix`() {
+        val retentionStart = LocalDate.of(2024, 1, 1)
+        val today = LocalDate.of(2026, 9, 23)
+
+        assertEquals(
+            ScoreInvalidation.AffectedRange(retentionStart, today),
+            ScoreInvalidation.dependencyClosure(
+                ScoreInvalidation.AffectedRange(retentionStart.minusDays(10), retentionStart),
+                ScoreInvalidation.Reason.WORKOUT,
+                retentionStart,
+                today,
+            ),
+        )
+
+        assertEquals(
+            ScoreInvalidation.AffectedRange(retentionStart, today),
+            ScoreInvalidation.dependencyClosure(
+                ScoreInvalidation.AffectedRange(retentionStart.minusDays(20), retentionStart.minusDays(5)),
+                ScoreInvalidation.Reason.WORKOUT,
+                retentionStart,
+                today,
+            ),
+        )
+    }
+
+    @Test
+    fun `dependency closure for future-only correction returns null`() {
+        val retentionStart = LocalDate.of(2024, 1, 1)
+        val today = LocalDate.of(2026, 9, 23)
+        val futureChanged = ScoreInvalidation.AffectedRange(today.plusDays(1), today.plusDays(5))
+
+        assertEquals(
+            null,
+            ScoreInvalidation.dependencyClosure(
+                futureChanged,
+                ScoreInvalidation.Reason.WORKOUT,
+                retentionStart,
+                today,
+            ),
+        )
+        assertEquals(
+            null,
+            ScoreInvalidation.dependencyClosure(
+                futureChanged,
+                ScoreInvalidation.Reason.RECOMMENDATION_EXAMPLES,
+                retentionStart,
+                today,
+            ),
+        )
+
+        val invertedChanged = ScoreInvalidation.AffectedRange(today, today.minusDays(1))
+        assertEquals(
+            null,
+            ScoreInvalidation.dependencyClosure(
+                invertedChanged,
+                ScoreInvalidation.Reason.WORKOUT,
+                retentionStart,
+                today,
+            ),
+        )
+    }
+
+    @Test
+    fun `dependency closure for recommendation-only case ends at day plus 30`() {
+        val changedDay = LocalDate.of(2025, 1, 1)
+        val retentionStart = LocalDate.of(2024, 1, 1)
+        val today = LocalDate.of(2026, 9, 23)
+
+        assertEquals(
+            ScoreInvalidation.AffectedRange(changedDay, changedDay.plusDays(30)),
+            ScoreInvalidation.dependencyClosure(
+                ScoreInvalidation.AffectedRange(changedDay, changedDay),
+                ScoreInvalidation.Reason.RECOMMENDATION_EXAMPLES,
+                retentionStart,
+                today,
+            ),
+        )
+
+        val recentChanged = today.minusDays(10)
+        assertEquals(
+            ScoreInvalidation.AffectedRange(recentChanged, today),
+            ScoreInvalidation.dependencyClosure(
+                ScoreInvalidation.AffectedRange(recentChanged, recentChanged),
+                ScoreInvalidation.Reason.RECOMMENDATION_EXAMPLES,
+                retentionStart,
+                today,
+            ),
+        )
+
+        val oldChanged = LocalDate.of(2020, 1, 1)
+        assertEquals(
+            null,
+            ScoreInvalidation.dependencyClosure(
+                ScoreInvalidation.AffectedRange(oldChanged, oldChanged.plusDays(5)),
+                ScoreInvalidation.Reason.RECOMMENDATION_EXAMPLES,
+                retentionStart,
+                today,
+            ),
+        )
+    }
+
+    @Test
+    fun `reasonFromStored maps recognized strings and falls back to UNKNOWN`() {
+        val reasons =
+            listOf(
+                "BASELINE" to ScoreInvalidation.Reason.BASELINE,
+                "WORKOUT" to ScoreInvalidation.Reason.WORKOUT,
+                "LATEST_VALUE" to ScoreInvalidation.Reason.LATEST_VALUE,
+                "SOURCE_DELETION" to ScoreInvalidation.Reason.SOURCE_DELETION,
+                "SOURCE_REPLACEMENT" to ScoreInvalidation.Reason.SOURCE_REPLACEMENT,
+                "RECOMMENDATION_EXAMPLES" to ScoreInvalidation.Reason.RECOMMENDATION_EXAMPLES,
+                "HOT_TIER_ROLLUP" to ScoreInvalidation.Reason.HOT_TIER_ROLLUP,
+                "RETENTION_CLEANUP" to ScoreInvalidation.Reason.RETENTION_CLEANUP,
+                "RECORD_DELETION" to ScoreInvalidation.Reason.RECORD_DELETION,
+                "INTERVAL_CORRECTION" to ScoreInvalidation.Reason.INTERVAL_CORRECTION,
+                "RESTORE_REGENERATE" to ScoreInvalidation.Reason.RESTORE_REGENERATE,
+                "AUTHORITATIVE_SOURCE_REPLACEMENT" to ScoreInvalidation.Reason.AUTHORITATIVE_SOURCE_REPLACEMENT,
+                "UNKNOWN" to ScoreInvalidation.Reason.UNKNOWN,
+            )
+
+        reasons.forEach { (stored, expected) ->
+            assertEquals(
+                "Stored string '$stored' must map to $expected",
+                expected,
+                ScoreInvalidation.reasonFromStored(stored),
+            )
+        }
+
+        assertEquals(ScoreInvalidation.Reason.UNKNOWN, ScoreInvalidation.reasonFromStored("OLDER_APP_REASON"))
+        assertEquals(ScoreInvalidation.Reason.UNKNOWN, ScoreInvalidation.reasonFromStored("unrecognized"))
+        assertEquals(ScoreInvalidation.Reason.UNKNOWN, ScoreInvalidation.reasonFromStored(""))
     }
 
     @Test

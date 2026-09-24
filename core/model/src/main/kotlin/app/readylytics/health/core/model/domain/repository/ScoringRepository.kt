@@ -79,6 +79,14 @@ interface ScoringRepository {
         zoneId: ZoneId,
     ): WalkForwardVo2MaxContext
 
+    /**
+     * PERF-002/WP-22: seeds the rolling 6-day RAS window from summaries prior to [startDate].
+     */
+    suspend fun fetchWalkForwardRasContext(
+        startDate: LocalDate,
+        zoneId: ZoneId,
+    ): WalkForwardRasWindow
+
     suspend fun computeDailySummary(targetDate: LocalDate): DailySummary
 
     /**
