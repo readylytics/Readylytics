@@ -227,7 +227,6 @@ class FirstSetupDummyIngestionFlowTest {
             settingsRepo = settingsRepo,
             rasSourceModeBootstrapUseCase = rasBootstrap,
             recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, RecordingTransactionRunner()),
-            dirtyRangeStore = FakeDirtyRangeStore(),
             walDiagnostics = mockk<WalDiagnostics>(relaxed = true),
             ingestion =
                 DailySyncIngestionCollaborators(

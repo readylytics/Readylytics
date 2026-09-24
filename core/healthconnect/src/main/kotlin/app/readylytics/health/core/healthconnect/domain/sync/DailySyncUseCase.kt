@@ -46,7 +46,6 @@ class DailySyncUseCase
         private val settingsRepo: SettingsRepository,
         private val rasSourceModeBootstrapUseCase: RasSourceModeBootstrapUseCase,
         private val recomputeSupport: DailyRecomputeSupport,
-        private val dirtyRangeStore: DirtyRangeStore,
         private val walDiagnostics: WalDiagnostics,
         private val ingestion: DailySyncIngestionCollaborators,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
@@ -177,18 +176,7 @@ class DailySyncUseCase
                     // Only changes older than the inline bound (which would make one foreground HC
                     // read + recompute too large) escalate to the durable historical resync.
                     val inlineFloor = today.minusDays(MAX_INLINE_RECOMPUTE_DAYS.toLong())
-                    val pending = dirtyRangeStore.pending(100)
-                    val combinedDates = outcome.affectedDates.toMutableSet()
-                    if (pending.isNotEmpty()) {
-                        val pendingStart = pending.minOf { it.nextDay }
-                        val pendingEnd = pending.maxOf { it.endInclusive }
-                        var cur = pendingStart
-                        while (!cur.isAfter(pendingEnd) && !cur.isAfter(today)) {
-                            combinedDates.add(cur)
-                            cur = cur.plusDays(1)
-                        }
-                    }
-                    val outOfWindowAffected = combinedDates.filter { it.isBefore(standardOldest) }
+                    val outOfWindowAffected = outcome.affectedDates.filter { it.isBefore(standardOldest) }
                     val requiresHistoricalResync = outOfWindowAffected.any { it.isBefore(inlineFloor) }
                     val oldestTargetDay =
                         if (requiresHistoricalResync) {

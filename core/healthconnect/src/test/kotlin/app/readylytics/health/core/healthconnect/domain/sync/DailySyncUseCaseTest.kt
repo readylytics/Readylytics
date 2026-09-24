@@ -106,7 +106,6 @@ abstract class DailySyncUseCaseTestFixture {
                     transactionRunner,
                     dirtyRangeStore = effectiveDirtyRangeStore,
                 ),
-            dirtyRangeStore = effectiveDirtyRangeStore,
             walDiagnostics = walDiagnostics,
             ingestion =
                 DailySyncIngestionCollaborators(
@@ -578,29 +577,4 @@ class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
             assertTrue(result is app.readylytics.health.core.model.domain.model.Result.Success)
             coVerify(exactly = 1) { changeSynchronizer.commitTokens(nextTokens) }
         }
-
-    @Test
-    fun `daily sync requests historical resync when pending tickets exist beyond inline window`() =
-        runTest {
-            val zoneId = ZoneId.systemDefault()
-            val today = LocalDate.now(fixedClock.withZone(zoneId))
-            val oldestTargetDay = today.minusDays(60)
-
-            coEvery { dirtyRangeStore.pending(any()) } returns listOf(
-                app.readylytics.health.core.model.domain.sync.DirtyTicket(
-                    id = 1L,
-                    sourceGeneration = 1L,
-                    nextDay = oldestTargetDay.minusDays(10), // before inlineFloor
-                    endInclusive = oldestTargetDay.plusDays(5),
-                    scoringSnapshotId = "ACTIVE"
-                )
-            )
-
-            val result = useCase.run(windowDays = 1, onProgress = null)
-
-            assertTrue(result is app.readylytics.health.core.model.domain.model.Result.Failure)
-            val failure = result as app.readylytics.health.core.model.domain.model.Result.Failure
-            assertEquals("REQUIRES_HISTORICAL_RESYNC", failure.code)
-        }
-
 }
