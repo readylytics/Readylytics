@@ -72,6 +72,7 @@
 <string name="backup_directory_label">Backup directory</string>
 <string name="backup_encryption_disabled">Encryption is disabled.</string>
 <string name="backup_encryption_enabled">Encryption is enabled.</string>
+<string name="backup_loading_message">Loading backups…</string>
 <string name="backup_new_password_label">New password</string>
 <string name="backup_none_found">No backups found.</string>
 <string name="backup_password_label">Backup password</string>

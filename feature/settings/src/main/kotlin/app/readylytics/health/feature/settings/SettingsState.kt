@@ -93,6 +93,7 @@ data class LocalBackupState(
     val restoreSuccess: Boolean = false,
     val pendingRestoreFile: BackupFileInfo? = null,
     val availableBackups: List<BackupFileInfo> = emptyList(),
+    val isLoadingBackups: Boolean = false,
     val passwordVerificationResult: Boolean? = null,
     val operationState: BackupOperationState = BackupOperationState(),
 )
