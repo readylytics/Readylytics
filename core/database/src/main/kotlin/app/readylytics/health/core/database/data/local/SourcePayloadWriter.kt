@@ -83,6 +83,7 @@ class SourcePayloadWriter
             val existingSource = resolved.existing
             val sourceRef = resolved.ref
             val oldTimestamps = daos.heartRateDao.readTimestampsKeyset(sourceRef)
+            val oldSessionIds = daos.heartRateDao.getBySourceRecordRef(sourceRef).mapNotNull { it.sessionId }
             val warmContributions = warmRefresh?.contributionsFor(sourceRef).orEmpty()
             val warmMinutes = warmContributions.map { it.bucketStartMs }.toSet()
             val expectedRawRows = newRows.filter { completeMinuteCutoff(it.timestampMs) !in warmMinutes }
@@ -105,7 +106,7 @@ class SourcePayloadWriter
                 newTimestamps = newRows.map { it.timestampMs },
                 startMs = source.startMs,
                 endExclusiveMs = source.endExclusiveMs,
-                sourceRef = sourceRef,
+                sessionIds = oldSessionIds + newRows.mapNotNull { it.sessionId },
             )
             warmRefresh?.publish(sourceRef, warmContributions, newRows)
         }
@@ -120,6 +121,7 @@ class SourcePayloadWriter
             val existingSource = resolved.existing
             val sourceRef = resolved.ref
             val oldTimestamps = daos.hrvDao.readTimestampsKeyset(sourceRef)
+            val oldSessionIds = daos.hrvDao.getBySourceRecordRef(sourceRef).mapNotNull { it.sessionId }
 
             if (!isMetadataChanged(existingSource, source) &&
                 areHrvRowsIdentical(daos.hrvDao, sourceRef, oldTimestamps, newRows)
@@ -138,7 +140,7 @@ class SourcePayloadWriter
                 newTimestamps = newRows.map { it.timestampMs },
                 startMs = source.startMs,
                 endExclusiveMs = source.endExclusiveMs,
-                sourceRef = sourceRef,
+                sessionIds = oldSessionIds + newRows.mapNotNull { it.sessionId },
             )
         }
 
@@ -204,7 +206,7 @@ class SourcePayloadWriter
             newTimestamps: List<Long>,
             startMs: Long,
             endExclusiveMs: Long,
-            sourceRef: Long,
+            sessionIds: List<String>,
         ) {
             val zoneId = resolveZoneId()
             val today = LocalDate.now(clock.withZone(zoneId))
@@ -220,13 +222,10 @@ class SourcePayloadWriter
             val endInclusiveMs = maxOf(startMs, endExclusiveMs - 1L)
             affectedDates.add(Instant.ofEpochMilli(endInclusiveMs).atZone(zoneId).toLocalDate())
 
-            // Resolve session dates for records
-            val hrSessionIds = daos.heartRateDao.getBySourceRecordRef(sourceRef).mapNotNull { it.sessionId }
-            val hrvSessionIds = daos.hrvDao.getBySourceRecordRef(sourceRef).mapNotNull { it.sessionId }
-            val sessionIds = (hrSessionIds + hrvSessionIds).toSet()
-            for (sessionId in sessionIds) {
+            // Resolve both pre-mutation and replacement session links to their score days.
+            for (sessionId in sessionIds.toSet()) {
                 daos.sleepSessionDao.getById(sessionId)?.let { session ->
-                    affectedDates.add(Instant.ofEpochMilli(session.startTime).atZone(zoneId).toLocalDate())
+                    affectedDates.add(Instant.ofEpochMilli(session.endTime).atZone(zoneId).toLocalDate())
                 }
                 daos.workoutDao.getById(sessionId)?.let { workout ->
                     affectedDates.add(Instant.ofEpochMilli(workout.startTime).atZone(zoneId).toLocalDate())

@@ -243,7 +243,7 @@ class AuthoritativeHeartRateReader
                 val rawCount = raw?.sampleCount ?: 0L
 
                 val warmBuckets = warmBucketsBySession[sessionId]
-                val warmSum = warmBuckets?.sumOf { it.avgBpm * it.sampleCount } ?: 0.0
+                val warmSum = warmBuckets?.reconstructSampleValues()?.sumOf { it.toDouble() } ?: 0.0
                 val warmCount = warmBuckets?.sumOf { it.sampleCount.toLong() } ?: 0L
 
                 val totalCount = rawCount + warmCount

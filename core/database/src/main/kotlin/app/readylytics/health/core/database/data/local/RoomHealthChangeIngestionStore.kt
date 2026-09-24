@@ -365,8 +365,7 @@ private suspend fun sessionDatesFor(
     zoneId: ZoneId,
 ): List<LocalDate> {
     val sid = sessionId ?: return emptyList()
-    val sleepDate = daos.sleepSessionDao.getById(sid)?.let { dateFor(it.startTime, zoneId) }
+    val sleepDate = daos.sleepSessionDao.getById(sid)?.let { dateFor(it.endTime, zoneId) }
     val workoutDate = daos.workoutDao.getById(sid)?.let { dateFor(it.startTime, zoneId) }
     return listOfNotNull(sleepDate, workoutDate)
 }
-
