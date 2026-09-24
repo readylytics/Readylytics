@@ -12,4 +12,7 @@
     <cache-path
         name="diagnostic_logs"
         path="diagnostic_logs/" />
+    <cache-path
+        name="recalc_diagnostics"
+        path="recalc_diagnostics/" />
 </paths>

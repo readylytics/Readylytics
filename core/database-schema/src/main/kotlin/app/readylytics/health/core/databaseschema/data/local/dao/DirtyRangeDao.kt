@@ -45,6 +45,10 @@ interface DirtyRangeDao : DirtyRangeRetentionQueries {
         trimExpiredPrefixes(cutoffDay)
     }
 
+    /** Drops pending work journaled for [reasons] (e.g. retired aging tickets); returns rows deleted. */
+    @Query("DELETE FROM dirty_ranges WHERE reason IN (:reasons)")
+    suspend fun deleteByReasons(reasons: List<String>): Int
+
     @Query("SELECT COUNT(*) FROM dirty_ranges")
     suspend fun count(): Int
 

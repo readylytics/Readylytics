@@ -37,6 +37,8 @@ import app.readylytics.health.crashreport.buildOversizedFallbackIntent
 @Composable
 fun CrashReportPrompt(viewModel: CrashReportViewModel = hiltViewModel()) {
     val showPrompt by viewModel.showPrompt.collectAsStateWithLifecycle()
+    val promptKind by viewModel.promptKind.collectAsStateWithLifecycle()
+    val copy = startupReportCopy(promptKind)
     val context = LocalContext.current
 
     var pendingOversized by remember { mutableStateOf<GithubIssueIntentResult.Oversized?>(null) }
@@ -52,7 +54,7 @@ fun CrashReportPrompt(viewModel: CrashReportViewModel = hiltViewModel()) {
                     .writeReport(context, uri, oversized.fullReport)
                     .getOrElse { oversized.suggestedFilename }
             context.startActivity(buildOversizedFallbackIntent(context, oversized, filename))
-            viewModel.consumeReport()
+            viewModel.consumePromptReport()
         }
 
     if (showPrompt) {
@@ -60,10 +62,10 @@ fun CrashReportPrompt(viewModel: CrashReportViewModel = hiltViewModel()) {
 
         AlertDialog(
             onDismissRequest = viewModel::dismiss,
-            title = { Text(stringResource(R.string.crash_report_dialog_title)) },
+            title = { Text(copy.dialogTitle) },
             text = {
                 Column {
-                    Text(stringResource(R.string.crash_report_dialog_body))
+                    Text(copy.dialogBody)
                     Spacer(Modifier.height(MaterialTheme.spacing.small))
                     SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                         ReportChannel.entries.forEachIndexed { index, channel ->
@@ -94,14 +96,28 @@ fun CrashReportPrompt(viewModel: CrashReportViewModel = hiltViewModel()) {
                 TextButton(onClick = {
                     when (selectedChannel) {
                         ReportChannel.EMAIL -> {
-                            context.startActivity(buildCrashReportShareIntent(context, viewModel.reportFile()))
-                            viewModel.consumeReport()
+                            context.startActivity(
+                                buildCrashReportShareIntent(
+                                    context,
+                                    viewModel.promptReportFile(),
+                                    subject = copy.reportTitle,
+                                    body = copy.emailBody,
+                                ),
+                            )
+                            viewModel.consumePromptReport()
                         }
                         ReportChannel.GITHUB -> {
-                            when (val result = buildGithubIssueIntent(context, viewModel.reportText())) {
+                            val result =
+                                buildGithubIssueIntent(
+                                    context,
+                                    viewModel.promptReportText(),
+                                    title = copy.reportTitle,
+                                    filenamePrefix = copy.filenamePrefix,
+                                )
+                            when (result) {
                                 is GithubIssueIntentResult.Ready -> {
                                     context.startActivity(result.intent)
-                                    viewModel.consumeReport()
+                                    viewModel.consumePromptReport()
                                 }
                                 is GithubIssueIntentResult.Oversized -> {
                                     pendingOversized = result
@@ -117,7 +133,7 @@ fun CrashReportPrompt(viewModel: CrashReportViewModel = hiltViewModel()) {
             dismissButton = {
                 FlowRow {
                     TextButton(
-                        onClick = viewModel::clearReport,
+                        onClick = viewModel::consumePromptReport,
                         colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                     ) {
                         Text(stringResource(R.string.crash_report_dialog_clear))
@@ -143,3 +159,32 @@ fun CrashReportPrompt(viewModel: CrashReportViewModel = hiltViewModel()) {
         suggestedFilename = pendingOversized?.suggestedFilename ?: "",
     )
 }
+
+/** Dialog and share copy for the report the startup prompt is offering. */
+private data class StartupReportCopy(
+    val dialogTitle: String,
+    val dialogBody: String,
+    val reportTitle: String,
+    val emailBody: String,
+    val filenamePrefix: String,
+)
+
+@Composable
+private fun startupReportCopy(kind: StartupReportKind?): StartupReportCopy =
+    if (kind == StartupReportKind.RECALC_DIAGNOSTIC) {
+        StartupReportCopy(
+            dialogTitle = stringResource(R.string.recalc_diagnostic_dialog_title),
+            dialogBody = stringResource(R.string.recalc_diagnostic_dialog_body),
+            reportTitle = stringResource(R.string.recalc_diagnostic_report_title),
+            emailBody = stringResource(R.string.recalc_diagnostic_email_body),
+            filenamePrefix = "readylytics_recalc_report",
+        )
+    } else {
+        StartupReportCopy(
+            dialogTitle = stringResource(R.string.crash_report_dialog_title),
+            dialogBody = stringResource(R.string.crash_report_dialog_body),
+            reportTitle = stringResource(R.string.crash_report_title),
+            emailBody = stringResource(R.string.crash_report_email_body),
+            filenamePrefix = "readylytics_crash_report",
+        )
+    }

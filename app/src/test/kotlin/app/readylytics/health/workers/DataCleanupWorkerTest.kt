@@ -10,7 +10,6 @@ import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspe
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.sync.ScoringRunContext
-import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.data.preferences.SettingsRepository
 import dagger.Lazy
 import io.mockk.coEvery
@@ -39,8 +38,6 @@ class DataCleanupWorkerTest {
     private val retentionCleanupLazy = mockk<Lazy<RetentionCleanup>>()
     private val databaseReadinessGate = mockk<DatabaseReadinessInspector>()
     private val settingsRepo = mockk<SettingsRepository>()
-    private val workerScheduler = mockk<WorkerScheduler>(relaxed = true)
-    private val workerSchedulerLazy = mockk<Lazy<WorkerScheduler>>()
     private val fixedClock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC"))
 
     @Before
@@ -50,7 +47,6 @@ class DataCleanupWorkerTest {
         every { workerParams.taskExecutor } returns mockk(relaxed = true)
         every { retentionCleanupLazy.get() } returns retentionCleanup
         every { databaseReadinessGate.inspect() } returns DatabaseReadiness.Ready
-        every { workerSchedulerLazy.get() } returns workerScheduler
     }
 
     @Test
@@ -77,7 +73,6 @@ class DataCleanupWorkerTest {
 
             assertEquals(ListenableWorker.Result.success(), result)
             coVerify(exactly = 0) { retentionCleanup.deleteBefore(any(), any()) }
-            coVerify(exactly = 0) { workerScheduler.scheduleResyncWorker(any(), any(), any()) }
         }
 
     @Test
@@ -105,38 +100,21 @@ class DataCleanupWorkerTest {
         }
 
     @Test
-    fun `a cleanup that touched data enqueues exactly one bounded recompute`() =
+    fun `a cleanup that touched data still succeeds without scheduling a recompute`() =
         runBlocking {
             val prefs = UserPreferences(retentionDaysEnabled = true, retentionDays = 30)
             every { settingsRepo.userPreferences } returns flowOf(prefs)
             coEvery { retentionCleanup.deleteBefore(any(), any()) } returns
                 ScoreInvalidation.AffectedRange(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31))
 
-            createWorker().doWork()
+            val result = createWorker().doWork()
 
-            coVerify(exactly = 1) {
-                workerScheduler.scheduleResyncWorker(
-                    recomputeOnly = true,
-                    startDate = LocalDate.of(2026, 1, 1),
-                    endDate = LocalDate.of(2026, 1, 31).plusDays(ScoreInvalidation.MAX_DEPENDENT_WINDOW_DAYS),
-                )
-            }
+            assertEquals(ListenableWorker.Result.success(), result)
+            coVerify(exactly = 1) { retentionCleanup.deleteBefore(any(), any()) }
         }
 
     @Test
-    fun `a no-op cleanup enqueues nothing`() =
-        runBlocking {
-            val prefs = UserPreferences(retentionDaysEnabled = true, retentionDays = 30)
-            every { settingsRepo.userPreferences } returns flowOf(prefs)
-            coEvery { retentionCleanup.deleteBefore(any(), any()) } returns null
-
-            createWorker().doWork()
-
-            coVerify(exactly = 0) { workerScheduler.scheduleResyncWorker(any(), any(), any()) }
-        }
-
-    @Test
-    fun `cleanup uses the stored scoring zone for its run context and invalidation cap`() =
+    fun `cleanup uses the stored scoring zone for its run context`() =
         runBlocking {
             val prefs =
                 UserPreferences(
@@ -153,13 +131,6 @@ class DataCleanupWorkerTest {
 
             assertEquals(LocalDate.of(2026, 9, 1), contextSlot.captured.today)
             assertEquals(ZoneId.of("Pacific/Kiritimati"), contextSlot.captured.zoneId)
-            coVerify {
-                workerScheduler.scheduleResyncWorker(
-                    recomputeOnly = true,
-                    startDate = LocalDate.of(2026, 8, 31),
-                    endDate = LocalDate.of(2026, 9, 1),
-                )
-            }
         }
 
     private fun createWorker() =
@@ -169,7 +140,6 @@ class DataCleanupWorkerTest {
             retentionCleanup = retentionCleanupLazy,
             settingsRepo = settingsRepo,
             databaseReadinessGate = databaseReadinessGate,
-            workerScheduler = workerSchedulerLazy,
             clock = fixedClock,
         )
 }

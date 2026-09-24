@@ -12,6 +12,7 @@ import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardVo2MaxContext
+import app.readylytics.health.core.model.domain.sync.DirtyRangeStore
 import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
 import app.readylytics.health.core.model.domain.util.logD
@@ -37,6 +38,7 @@ class DailyRecomputeSupport
         private val settingsRepo: SettingsRepository,
         private val transactionRunner: TransactionRunner,
         private val clock: Clock = Clock.systemDefaultZone(),
+        private val dirtyRangeStore: DirtyRangeStore? = null,
     ) {
         /**
          * Recomputes and persists the daily summary for [day]. Already invoked from an IO context;
@@ -140,6 +142,31 @@ class DailyRecomputeSupport
         ): WalkForwardVo2MaxContext = scoringRepository.fetchWalkForwardVo2MaxContext(startDate, endDate, zoneId)
 
         /**
+         * The day a recent-window walk-forward must start from so it also drains pending dirty
+         * tickets it can cheaply reach: the earliest ticket cursor (`nextDay`) in
+         * `[inlineFloor, oldestTargetDay)`, else [oldestTargetDay].
+         *
+         * `DirtySummaryPublisher` only advances a ticket when the day equal to its cursor is
+         * published. The daily ingest reaches one day before [oldestTargetDay] (the overnight
+         * back-day), so a source that changed on that day journals a ticket starting there; without
+         * this, that ticket never advances and every later process start enqueued a background
+         * recompute for it. Tickets older than [inlineFloor] stay with the durable resync worker.
+         */
+        suspend fun resolveRecomputeStartDay(
+            oldestTargetDay: LocalDate,
+            inlineFloor: LocalDate,
+        ): LocalDate {
+            val store = dirtyRangeStore ?: return oldestTargetDay
+            val earliestReachable =
+                store
+                    .pending(PENDING_TICKET_SCAN_LIMIT)
+                    .map { it.nextDay }
+                    .filter { !it.isBefore(inlineFloor) && it.isBefore(oldestTargetDay) }
+                    .minOrNull()
+            return earliestReachable ?: oldestTargetDay
+        }
+
+        /**
          * F7: runs a whole walk-forward's worth of [recomputeDay] calls inside ONE Room
          * transaction.
          *
@@ -174,5 +201,9 @@ class DailyRecomputeSupport
                     settingsRepo.updateMaxHeartRate(calculatedMaxHr)
                 }
             }
+        }
+
+        private companion object {
+            const val PENDING_TICKET_SCAN_LIMIT = 100
         }
     }

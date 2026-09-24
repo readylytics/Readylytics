@@ -64,7 +64,6 @@ class AuthoritativeHeartRateReaderEquivalenceTest {
                         healthMutationStateDao = database.healthMutationStateDao(),
                     ),
                 transactionRunner = RoomTransactionRunner(database),
-                dirtyRangeDao = database.dirtyRangeDao(),
                 healthMutationStateDao = database.healthMutationStateDao(),
             )
         reader =

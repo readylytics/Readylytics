@@ -64,6 +64,14 @@
     <string name="crash_report_dialog_body">Send a report to help fix it? It only contains
         sanitized error details and basic device info, never your health data or raw error
         messages. Email is private; a GitHub issue is posted publicly.</string>
+    <string name="recalc_diagnostic_dialog_title">Unexpected background recalculation</string>
+    <string name="recalc_diagnostic_dialog_body">Readylytics recalculated a larger part of your
+        history in the background than a normal sync would. Send the log to help find out why? It
+        only contains dates, trigger names and basic app info, never your health data. Email is
+        private; a GitHub issue is posted publicly.</string>
+    <string name="recalc_diagnostic_report_title">Readylytics background recalculation report</string>
+    <string name="recalc_diagnostic_email_body">A background recalculation log is attached. Feel
+        free to add any details about what you were doing before it happened.</string>
     <string name="crash_report_dialog_send_email">Email</string>
     <string name="crash_report_dialog_send_github">GitHub Issue</string>
     <string name="crash_report_dialog_dismiss">Not now</string>

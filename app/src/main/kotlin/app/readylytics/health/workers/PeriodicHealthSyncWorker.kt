@@ -11,6 +11,7 @@ import app.readylytics.health.core.healthconnect.domain.sync.HealthSyncUseCase
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspector
 import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
+import app.readylytics.health.core.model.domain.sync.RecalcTrigger
 import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import dagger.Lazy
@@ -67,7 +68,10 @@ class PeriodicHealthSyncWorker
                     }
                     result is DomainResult.Failure &&
                         result.code == REQUIRES_HISTORICAL_RESYNC -> {
-                        workerScheduler.scheduleResyncWorker()
+                        workerScheduler.scheduleResyncWorker(
+                            trigger = RecalcTrigger.PERIODIC_SYNC_ESCALATION,
+                            triggerDetail = result.reason,
+                        )
                         Result.success()
                     }
                     else -> Result.retry()

@@ -2,6 +2,7 @@ package app.readylytics.health.core.model.workers
 
 import app.readylytics.health.core.model.data.preferences.BackupSchedule
 import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
+import app.readylytics.health.core.model.domain.sync.RecalcTrigger
 import java.time.LocalDate
 
 interface WorkerScheduler {
@@ -28,6 +29,9 @@ interface WorkerScheduler {
      *   (default) keeps the existing full-retention-window recompute behavior.
      * @param endDate R2-CACHE-001: optional inclusive end of the bounded recompute-only range.
      *   `null` (default) keeps the existing full-retention-window recompute behavior.
+     * @param trigger why this pass is enqueued; recorded in diagnostics when an unexpected trigger
+     *   resolves to a large range. Defaults to [RecalcTrigger.SETTINGS_CHANGE].
+     * @param triggerDetail optional free-text cause (e.g. the Health Connect escalation reason).
      *
      * WP-10 review fix: `suspend` so the implementation can read the currently saved
      * [app.readylytics.health.core.model.domain.sync.ResyncCheckpointStore] checkpoint (if any) and
@@ -39,6 +43,8 @@ interface WorkerScheduler {
         recomputeOnly: Boolean = false,
         startDate: LocalDate? = null,
         endDate: LocalDate? = null,
+        trigger: RecalcTrigger = RecalcTrigger.SETTINGS_CHANGE,
+        triggerDetail: String? = null,
     )
     fun cancelResyncWorker()
 

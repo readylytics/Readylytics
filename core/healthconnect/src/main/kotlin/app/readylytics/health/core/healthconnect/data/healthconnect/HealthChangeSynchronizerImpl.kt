@@ -23,6 +23,7 @@ import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.core.model.domain.sync.mappers.*
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
+import app.readylytics.health.core.model.domain.util.logI
 import kotlinx.coroutines.flow.first
 import java.time.Clock
 import java.time.LocalDate
@@ -56,14 +57,10 @@ class HealthChangeSynchronizerImpl
             val affectedDates = mutableSetOf<LocalDate>()
             val nextTokens = mutableMapOf<HealthDataType, String>()
 
-            val grantedPermissions: Set<String> =
-                try {
-                    client.permissionController.getGrantedPermissions()
-                } catch (e: kotlinx.coroutines.CancellationException) {
-                    throw e
-                } catch (_: Exception) {
-                    emptySet()
-                }
+            // A failed lookup must fail this sync (the caller retries), never read as "nothing
+            // granted": that would suspend -- i.e. delete -- every change token, and the next sync
+            // would find them missing and escalate to a full historical resync.
+            val grantedPermissions: Set<String> = client.permissionController.getGrantedPermissions()
 
             for (dataType in HealthDataType.entries) {
                 val typePermissions =
@@ -75,7 +72,7 @@ class HealthChangeSynchronizerImpl
 
                 if (!isGranted) {
                     if (!token.isNullOrBlank()) {
-                        logD("HealthChangeSynchronizer") { "Permission revoked for $dataType: suspending token" }
+                        logI("HealthChangeSynchronizer") { "Permission revoked for $dataType: suspending token" }
                         tokenStore.suspendType(dataType)
                     }
                     logD("HealthChangeSynchronizer") { "Skipping $dataType: permission not granted" }
@@ -83,8 +80,8 @@ class HealthChangeSynchronizerImpl
                 }
 
                 if (token.isNullOrBlank()) {
-                    logD("HealthChangeSynchronizer") { "Token for $dataType is missing, requesting full resync" }
-                    return HealthChangeSyncOutcome(emptySet(), requiresFullResync = true)
+                    logI("HealthChangeSynchronizer") { "Token for $dataType is missing, requesting full resync" }
+                    return HealthChangeSyncOutcome.fullResync("Missing change token for $dataType")
                 }
 
                 applyChangesForType(
@@ -130,10 +127,7 @@ class HealthChangeSynchronizerImpl
                         logD("HealthChangeSynchronizer") {
                             "Token for $dataType is expired, requesting full resync"
                         }
-                        return HealthChangeSyncOutcome(
-                            affectedDates = emptySet(),
-                            requiresFullResync = true,
-                        )
+                        return HealthChangeSyncOutcome.fullResync("Change token expired for $dataType")
                     }
 
                     val selectedDevice = deviceByType[dataType.name]?.takeIf { it.isNotBlank() }
@@ -162,30 +156,37 @@ class HealthChangeSynchronizerImpl
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: SecurityException) {
-                logE("HealthChangeSynchronizer", e) {
-                    "SecurityException reading changes for $dataType: suspending type"
-                }
-                tokenStore.suspendType(dataType)
-                null
+                skipTypeKeepingToken(dataType, e)
             } catch (e: Exception) {
                 if (e.asHealthConnectSecurityCause() != null) {
-                    logE("HealthChangeSynchronizer", e) {
-                        "SecurityException reading changes for $dataType: suspending type"
-                    }
-                    tokenStore.suspendType(dataType)
-                    null
+                    skipTypeKeepingToken(dataType, e)
                 } else if (isTokenExpiredException(e)) {
-                    logD("HealthChangeSynchronizer") {
+                    logI("HealthChangeSynchronizer") {
                         "Change token expired for $dataType"
                     }
-                    HealthChangeSyncOutcome(
-                        affectedDates = emptySet(),
-                        requiresFullResync = true,
-                    )
+                    HealthChangeSyncOutcome.fullResync("Change token expired for $dataType")
                 } else {
                     throw e
                 }
             }
+
+        /**
+         * [applyPendingChanges] only reaches a type whose read permission is still listed as
+         * granted, so a `SecurityException` from `getChanges` here is transient -- e.g. Health
+         * Connect refusing a read while the app is in the background. Skip the type for this run
+         * and keep its token: suspending would delete the token, and the next sync would find it
+         * missing and escalate to a full historical resync. A real revocation is caught by the
+         * granted-permission check on the next run, which suspends the type then.
+         */
+        private fun skipTypeKeepingToken(
+            dataType: HealthDataType,
+            e: Exception,
+        ): HealthChangeSyncOutcome? {
+            logE("HealthChangeSynchronizer", e) {
+                "SecurityException reading changes for $dataType while granted: skipping this run, keeping token"
+            }
+            return null
+        }
 
         override suspend fun commitTokens(tokens: Map<HealthDataType, String>) {
             if (tokens.isNotEmpty()) {
@@ -309,10 +310,7 @@ class HealthChangeSynchronizerImpl
                         logD("HealthChangeSynchronizer") {
                             "Token for ${tokenType.tokenKey} is expired, requesting full resync"
                         }
-                        return HealthChangeSyncOutcome(
-                            affectedDates = emptySet(),
-                            requiresFullResync = true,
-                        )
+                        return HealthChangeSyncOutcome.fullResync("Change token expired for ${tokenType.tokenKey}")
                     }
 
                     val intervalChanges = response.changes.mapNotNull { toIntervalChange(it, intervalKind) }
@@ -345,10 +343,7 @@ class HealthChangeSynchronizerImpl
                     logD("HealthChangeSynchronizer") {
                         "Change token expired for ${tokenType.tokenKey}"
                     }
-                    HealthChangeSyncOutcome(
-                        affectedDates = emptySet(),
-                        requiresFullResync = true,
-                    )
+                    HealthChangeSyncOutcome.fullResync("Change token expired for ${tokenType.tokenKey}")
                 } else {
                     throw e
                 }

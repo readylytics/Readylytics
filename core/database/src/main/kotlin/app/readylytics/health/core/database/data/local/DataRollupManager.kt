@@ -1,11 +1,9 @@
 package app.readylytics.health.core.database.data.local
 
 import android.util.Log
-import app.readylytics.health.core.databaseschema.data.local.dao.DirtyRangeDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HealthMutationStateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.MinuteCoverageDao
-import app.readylytics.health.core.databaseschema.data.local.entity.DirtyRangeEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrSourceMinuteContributionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.MinuteCoverageEntity
@@ -81,7 +79,6 @@ class DataRollupManager
         private val publisher: MinuteCoveragePublisher,
         private val transactionRunner: TransactionRunner,
         private val coordinator: HealthMutationCoordinator,
-        private val dirtyRangeDao: DirtyRangeDao? = null,
         private val healthMutationStateDao: HealthMutationStateDao? = null,
         private val streamer: MinuteRollupStreamer = MinuteRollupStreamer(heartRateDao),
     ) {
@@ -89,8 +86,9 @@ class DataRollupManager
          * Aggregates and deletes raw heart-rate rows older than [cutoffMs]. R2-CACHE-001: returns
          * the [ScoreInvalidation.AffectedRange] the rollup actually published (the min/max dates of
          * every raw sample that got aggregated into a visible bucket, merged across day-chunks), or
-         * `null` when no chunk published any plausible sample -- a no-op rollup enqueues no
-         * recompute. Minutes quarantined by the OD-1 legacy-coverage rule are not part of it.
+         * `null` when no chunk published any plausible sample. The range is informational only:
+         * aging raw samples into the warm tier never journals dirty work or invalidates retained
+         * summaries. Minutes quarantined by the OD-1 legacy-coverage rule are not part of it.
          *
          * [pageSize]/[groupMinuteBudget] default to [MinuteRollupStreamer.SAMPLE_PAGE_SIZE] /
          * [MinuteRollupStreamer.GROUP_MINUTE_BUDGET] and exist mainly so tests can force multiple
@@ -209,7 +207,6 @@ class DataRollupManager
                         publishableSamples
                             .aggregateIntoMinuteBuckets()
                             .map { it.copy(generation = generation) },
-                    dirtyRange = dirtyRangeFor(minMs, maxMs, generation),
                 )
 
             // `publisher.publish` re-validates `capturedGeneration` inside this transaction; on
@@ -279,24 +276,6 @@ class DataRollupManager
                     )
                 }
             }
-
-        private fun dirtyRangeFor(
-            minMs: Long,
-            maxMs: Long,
-            generation: Long,
-        ): DirtyRangeEntity? {
-            if (dirtyRangeDao == null || healthMutationStateDao == null) return null
-            val startDate = utcDateOf(minMs)
-            val endInclusive = maxOf(LocalDate.now(ZoneOffset.UTC), utcDateOf(maxMs))
-            return DirtyRangeEntity(
-                sourceGeneration = generation,
-                startEpochDay = startDate.toEpochDay(),
-                endEpochDayInclusive = endInclusive.toEpochDay(),
-                nextEpochDay = startDate.toEpochDay(),
-                reason = "HOT_TIER_ROLLUP",
-                scoringSnapshotId = "ACTIVE",
-            )
-        }
 
         private fun utcDateOf(epochMs: Long): LocalDate =
             Instant.ofEpochMilli(epochMs).atZone(ZoneOffset.UTC).toLocalDate()

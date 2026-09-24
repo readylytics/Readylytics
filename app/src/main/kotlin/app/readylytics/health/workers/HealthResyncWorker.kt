@@ -22,6 +22,7 @@ import app.readylytics.health.core.model.domain.repository.HealthConnectPermissi
 import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
 import app.readylytics.health.core.model.domain.sync.DirtyRangeStore
 import app.readylytics.health.core.model.domain.sync.DirtyTicket
+import app.readylytics.health.core.model.domain.sync.RecalcTrigger
 import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.util.RetentionBounds
@@ -63,6 +64,7 @@ class HealthResyncWorker
                     override suspend fun pending(limit: Int): List<DirtyTicket> = emptyList()
                 }
             },
+        private val diagnosticRecorder: RecalcDiagnosticRecorder? = null,
     ) : CoroutineWorker(appContext, params) {
         // Progress notifications (posted from runNormalRecompute/runTrainingReadinessProjection)
         // are best-effort (wrapped in runCatching); POST_NOTIFICATIONS is declared in the manifest
@@ -116,7 +118,14 @@ class HealthResyncWorker
             val prefs = settingsRepository.get().userPreferences.first()
             val retentionStart = RetentionBounds.resolveResyncStartDate(prefs, LocalDate.now(prefs.scoringZone()))
             dirtyRangeStore.get().discardBefore(retentionStart)
+            dirtyRangeStore.get().discardRetiredAgingTickets()
             val rangeOverride = resolveRecomputeRange(recomputeOnly)
+            // Recorded before running so a run that is killed mid-way is still attributed.
+            diagnosticRecorder?.recordIfLarge(
+                trigger = RecalcTrigger.fromName(inputData.getString(KEY_TRIGGER)),
+                triggerDetail = inputData.getString(KEY_TRIGGER_DETAIL),
+                recomputeOnly = recomputeOnly,
+            ) { resyncUseCase.resolveExecutionRange(recomputeOnly, rangeOverride) }
             val result =
                 resyncUseCase.execute(
                     recomputeOnly = recomputeOnly,
@@ -316,6 +325,14 @@ class HealthResyncWorker
 
             /** Input data key: true routes this run through the SCORE-007 recompute-only path. */
             const val KEY_RECOMPUTE_ONLY = "recompute_only"
+
+            /**
+             * Optional input data keys naming why this run was enqueued ([RecalcTrigger] name) and
+             * a free-text cause. Absent (work enqueued by an older build) decodes to a non-reported
+             * trigger; see [RecalcDiagnosticRecorder].
+             */
+            const val KEY_TRIGGER = "trigger"
+            const val KEY_TRIGGER_DETAIL = "trigger_detail"
 
             /** WP-10: optional input data key referencing the immutable historical run ID. */
             const val KEY_RUN_ID = "run_id"
