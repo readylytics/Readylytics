@@ -398,3 +398,63 @@ existing "Baseline Execution Instructions" pattern earlier in this file. Do not 
 `app.readylytics.health` to make a device run work — the benchmark app installs under its own
 `app.readylytics.health.benchmark` package.
 
+---
+
+## Phase 4 — Incremental Recalculation Performance & Bounded Publication (WP-20, WP-21, WP-22)
+
+### 1. 205-Day Golden Equivalence Proof (`WalkForwardCorrectionEquivalenceTest`)
+
+- **Harness & Seed:** `WalkForwardCorrectionEquivalenceTest.kt` in `:core:database`, using deterministic PRNG (`Random(42L)`). Zero device dependency (runs cleanly under Robolectric host JVM).
+- **Dataset Matrix:** 205 calendar days (`2025-01-01` to `2025-07-24`). Models realistic sparse health patterns:
+  - 144 sleep sessions with complete sleep stage intervals (REM, Deep, Light, Awake) and continuous overnight HR samples (50–70 BPM).
+  - 82 workouts across diverse activity types (Running, Cycling, HIIT) with associated HR sample series (120–165 BPM).
+  - Intermittent rest days, missing sleep days, and unexercised periods.
+- **Equivalence Assertions & Results:**
+  - Evaluates full walk-forward replay (`fullReplay` from day 1 to 205) vs incremental correction replays seeded with prior valid state up to an anchor date:
+    - **Early Anchor (Day 25, `2025-01-26`):** 180 days incrementally recomputed.
+    - **Middle Anchor (Day 100, `2025-04-11`):** 105 days incrementally recomputed.
+    - **Recent Anchor (Day 185, `2025-07-04`):** 20 days incrementally recomputed.
+  - **Daily Summaries Equivalence:** Bit-identical match (`expected == actual`) across all 205 days for every scoring field (Sleep Score, Duration, Restoration, WASO, Readiness Score, Load Score, Strain Ratio, Acute Load, Chronic Load, Workout-Only / Everyday-HR TRIMP, Daily RAS, Residual Fatigue, and confidence indicators). Zero numeric drift (`delta = 0.0`).
+  - **Workout Canonical Metrics Equivalence:** Bit-identical match for every persisted workout's `modelTrimp`, `avgHeartRate`, and heart-rate zone distributions (`zone1Seconds` through `zone5Seconds`).
+  - **Result:** **PASSED** (0 failures, 0 errors, delta = 0.0 across all 205 days and 82 workouts).
+
+### 2. Publication Boundary & Failure-Injection Verification (`PublicationBoundaryFailureInjectionTest`)
+
+- **Harness:** `PublicationBoundaryFailureInjectionTest.kt` in `:core:database`. Exercises transactional publication boundaries, dirty ticket cursor progression, and crash/rollback semantics under simulated failures.
+- **Shortened Publication Units:** Historical walk-forward recompute transactions shortened from coarse 30-day chunks to 1-day atomic publication units in `HistoricalRecomputePhase.kt`, coordinating with `DirtySummaryPublisher.publishDay`. Checkpoints advance at 30-day intervals (`RECOMPUTE_CHECKPOINT_INTERVAL_DAYS = 30`).
+- **Failure Injection Scenarios & Observed Behaviors:**
+  1. **Abort Before Publication:**
+     - *Scenario:* Failure injected during daily summary computation before `persistDayAssembly` / `publishDay`.
+     - *Observed Outcome:* Prior valid summary remains intact in Room; dirty range ticket cursor remains at target day (`nextEpochDay == day`).
+  2. **Failure After Summary Write Before Ticket Advance:**
+     - *Scenario:* Summary write succeeds, but an unhandled failure occurs before dirty ticket advancement inside `DirtySummaryPublisher.publishDay`.
+     - *Observed Outcome:* Atomic Room transaction rolls back; neither the modified summary nor ticket progression commits to SQLite. Reopened database retains previous valid summary.
+  3. **Process Crash Between Committed Day and Checkpoint Save:**
+     - *Scenario:* Mid-chunk crash (e.g. at day 15 of a 30-day chunk) after day transaction commits, before 30-day chunk checkpoint is saved.
+     - *Observed Outcome:* Days 1–14 remain committed and durable in Room. Dirty tickets for days 1–14 are advanced. Resumption from the checkpoint re-evaluates days idempotently; already advanced tickets are not replayed.
+  4. **Cooperative Cancellation After Committed Day:**
+     - *Scenario:* Coroutine cancellation occurs immediately after a day's publication transaction commits.
+     - *Observed Outcome:* Completed day remains committed. Cancellation propagates cooperatively without tearing state. Subsequent recompute seamlessly resumes and completes the remaining range.
+  5. **Incremental Room Invalidation Emissions:**
+     - *Scenario:* Observer tracks `InvalidationTracker` notifications during a 30-day recompute window.
+     - *Observed Outcome:* Emits 30 distinct per-day invalidations rather than a single delayed 30-day burst, enabling immediate responsive UI score updates and smooth progress reporting.
+
+### 3. Execution Pipeline & Algorithmic Optimizations (WP-20, WP-22)
+
+- **Run-Owned Night Caching:**
+  - `WalkForwardBaselineContext` introduces `NightCacheKey(sessionId, sourceGeneration, scoringSnapshotId)`.
+  - Memoizes ordered sample BPM (`List<Int>`) and average BPM per sleep session during the walk-forward run.
+  - Eliminates repeated database queries and raw sample re-expansions across overlapping 56-day baseline lookback windows.
+- **Rolling 6-Day RAS Window:**
+  - `WalkForwardRasWindow` maintains prior six daily summaries in an in-memory queue seeded at run start.
+  - Appends each committed day's summary and evicts the oldest strictly after successful publication.
+  - Eliminates daily historical queries for previous days' RAS scores.
+- **Dual-Cursor Preview/Commit Fatigue Ordering:**
+  - `WalkForwardFatigueContext` decouples morning recovery evaluation (`morningCursor.previewThrough(wakeTimeMs)`) from day-end evaluation (`dayEndCursor.previewThrough(nextDayMidnightMs)`).
+  - Previewing calculates candidates without mutating committed state.
+  - Cursors are committed (`commitWalkForwardContexts`) strictly *after* `persistDayAssembly` succeeds and the 1-day Room transaction commits, preventing failed/unavailable calculations from corrupting accumulator state.
+- **Quality & Static Analysis:**
+  - Zero detekt issues across `:core:model`, `:core:scoring`, `:core:database`, `:core:healthconnect`, and `:app`.
+  - Zero `@Suppress` annotations or baseline additions introduced.
+
+

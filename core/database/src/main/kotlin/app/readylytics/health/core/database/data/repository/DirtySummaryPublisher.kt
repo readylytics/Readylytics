@@ -53,6 +53,7 @@ class DirtySummaryPublisher
                     ) {
                         throw PublishAbortedException()
                     }
+                    write()
                     publication.tickets.forEach { ticket ->
                         val updated =
                             dirtyRangeDao.advance(
@@ -64,7 +65,6 @@ class DirtySummaryPublisher
                         if (updated != 1) throw PublishAbortedException()
                         dirtyRangeDao.deleteCompleted(ticket.id, ticket.sourceGeneration)
                     }
-                    write()
                     true
                 }
             } catch (_: PublishAbortedException) {

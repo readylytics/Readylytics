@@ -1,9 +1,12 @@
 package app.readylytics.health.workers
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
@@ -97,21 +100,7 @@ class HealthResyncWorker
 
             val result =
                 resyncUseCase.executeTrainingReadinessProjection(config) { current, total ->
-                    setProgressAsync(workDataOf(KEY_CURRENT to current, KEY_TOTAL to total))
-                    syncController.onBackgroundRecalcProgress(ResyncPhase.RECOMPUTE, current, total)
-                    runCatching {
-                        NotificationManagerCompat
-                            .from(appContext)
-                            .notify(
-                                SyncNotifications.NOTIFICATION_ID,
-                                SyncNotifications.buildProgressNotification(
-                                    appContext,
-                                    ResyncPhase.RECOMPUTE,
-                                    current,
-                                    total,
-                                ),
-                            )
-                    }
+                    notifyProgress(syncController, ResyncPhase.RECOMPUTE, current, total)
                 }
 
             return if (result.isSuccess) {
@@ -192,13 +181,21 @@ class HealthResyncWorker
         ) {
             setProgressAsync(workDataOf(KEY_CURRENT to current, KEY_TOTAL to total))
             syncController.onBackgroundRecalcProgress(phase, current, total)
-            runCatching {
-                NotificationManagerCompat
-                    .from(appContext)
-                    .notify(
-                        SyncNotifications.NOTIFICATION_ID,
-                        SyncNotifications.buildProgressNotification(appContext, phase, current, total),
-                    )
+            if (ContextCompat.checkSelfPermission(
+                    appContext,
+                    Manifest.permission.POST_NOTIFICATIONS,
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
+                try {
+                    NotificationManagerCompat
+                        .from(appContext)
+                        .notify(
+                            SyncNotifications.NOTIFICATION_ID,
+                            SyncNotifications.buildProgressNotification(appContext, phase, current, total),
+                        )
+                } catch (_: SecurityException) {
+                    // Ignore if notification permission revoked concurrently
+                }
             }
         }
 
