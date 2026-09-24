@@ -18,6 +18,8 @@ import java.io.File
 fun buildCrashReportShareIntent(
     context: Context,
     reportFile: File,
+    subject: String = context.getString(R.string.crash_report_title),
+    body: String = context.getString(R.string.crash_report_email_body),
 ): Intent {
     val uri =
         FileProvider.getUriForFile(
@@ -29,8 +31,8 @@ fun buildCrashReportShareIntent(
         Intent(Intent.ACTION_SEND).apply {
             type = "message/rfc822"
             putExtra(Intent.EXTRA_EMAIL, arrayOf(context.getString(R.string.crash_report_email_address)))
-            putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.crash_report_title))
-            putExtra(Intent.EXTRA_TEXT, context.getString(R.string.crash_report_email_body))
+            putExtra(Intent.EXTRA_SUBJECT, subject)
+            putExtra(Intent.EXTRA_TEXT, body)
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
@@ -124,12 +126,14 @@ private fun githubIssueResult(
 fun buildGithubIssueIntent(
     context: Context,
     reportText: String,
+    title: String = context.getString(R.string.crash_report_title),
+    filenamePrefix: String = "readylytics_crash_report",
 ): GithubIssueIntentResult =
     githubIssueResult(
-        title = context.getString(R.string.crash_report_title),
+        title = title,
         labels = null,
         fullBody = buildGithubIssueBodyFull(reportText),
-        filenamePrefix = "readylytics_crash_report",
+        filenamePrefix = filenamePrefix,
     )
 
 fun buildBugReportIntent(

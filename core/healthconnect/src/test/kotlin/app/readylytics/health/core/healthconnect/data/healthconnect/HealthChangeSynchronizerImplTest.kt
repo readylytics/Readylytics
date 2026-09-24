@@ -29,6 +29,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.TimeZone
+import kotlin.test.assertFailsWith
 
 class HealthChangeSynchronizerImplTest {
     private val tokenStore = mockk<HealthChangeTokenStore>(relaxed = true)
@@ -118,7 +119,7 @@ class HealthChangeSynchronizerImplTest {
         }
 
     @Test
-    fun `applyPendingChanges suspends type and avoids full resync on SecurityException`() =
+    fun `transient SecurityException for a granted type keeps its token and avoids full resync`() =
         runTest {
             val allPerms =
                 HealthDataType.entries.flatMap { current ->
@@ -128,12 +129,25 @@ class HealthChangeSynchronizerImplTest {
                 }.toSet()
             coEvery { client.permissionController.getGrantedPermissions() } returns allPerms
             coEvery { tokenStore.get(any()) } returns "token"
-            coEvery { client.getChanges(any()) } throws SecurityException("Revoked")
+            coEvery { client.getChanges(any()) } throws SecurityException("Background read refused")
 
             val outcome = synchronizer.applyPendingChanges()
 
             assertFalse(outcome.requiresFullResync)
-            coVerify(atLeast = 1) { tokenStore.suspendType(any()) }
+            // Suspending would delete the token, and the next sync would escalate to a full resync.
+            coVerify(exactly = 0) { tokenStore.suspendType(any()) }
+            assertTrue(outcome.nextTokens.isEmpty())
+        }
+
+    @Test
+    fun `failed permission lookup fails the sync instead of suspending every token`() =
+        runTest {
+            coEvery { tokenStore.get(any()) } returns "token"
+            coEvery { client.permissionController.getGrantedPermissions() } throws
+                java.io.IOException("Health Connect unavailable")
+
+            assertFailsWith<java.io.IOException> { synchronizer.applyPendingChanges() }
+            coVerify(exactly = 0) { tokenStore.suspendType(any()) }
         }
 
     @Test

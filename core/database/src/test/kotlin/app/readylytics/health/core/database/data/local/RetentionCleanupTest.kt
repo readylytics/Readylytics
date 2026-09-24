@@ -8,7 +8,6 @@ import app.readylytics.health.core.databaseschema.data.local.entity.*
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.sync.ScoringRunContext
-import io.mockk.*
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -572,8 +571,7 @@ class RetentionCleanupTest {
             assertEquals(emptyList<String>(), workoutDao.getSince(0).map { it.id })
         }
 
-    // R2-CACHE-001: nothing older than the cutoff in either heart_rate_records or
-    // hr_minute_buckets must return null, so DataCleanupWorker enqueues no recompute.
+    // Nothing older than the cutoff in either heart_rate_records or hr_minute_buckets returns null.
     @Test
     fun testDeleteBeforeReturnsNullWhenNothingToDelete() =
         runTest {
@@ -582,7 +580,7 @@ class RetentionCleanupTest {
         }
 
     @Test
-    fun `dirty journal uses the captured scoring zone across a DST boundary`() =
+    fun `cleanup journals no dirty work and reports the touched range in the scoring zone`() =
         runTest {
             seedSourceRecordParents(11L)
             val oldMs = Instant.parse("2026-10-31T02:00:00Z").toEpochMilli()
@@ -597,9 +595,6 @@ class RetentionCleanupTest {
                     ),
                 ),
             )
-            val dirtyRangeDao = mockk<DirtyRangeDao>(relaxed = true)
-            val mutationStateDao = mockk<HealthMutationStateDao>(relaxed = true)
-            coEvery { mutationStateDao.current() } returns HealthMutationStateEntity(sourceGeneration = 7)
             val cleanup =
                 RetentionCleanup(
                     coordinator = TestHealthMutationCoordinator,
@@ -623,24 +618,18 @@ class RetentionCleanupTest {
                         ),
                     dailySummaryDao = dailySummaryDao,
                     vo2MaxRecordDao = vo2MaxDao,
-                    dirtyRangeDao = dirtyRangeDao,
-                    healthMutationStateDao = mutationStateDao,
                 )
             val runContext =
                 ScoringRunContext.capture(
                     UserPreferences(scoringZoneId = "America/New_York", retentionDays = 30),
                     Instant.parse("2026-11-01T03:30:00Z"),
                 )
-            val journalSlot = io.mockk.slot<DirtyRangeEntity>()
+            val touched = cleanup.deleteBefore(cutoffMs, runContext)
 
-            cleanup.deleteBefore(cutoffMs, runContext)
-
-            coVerify { dirtyRangeDao.insert(capture(journalSlot)) }
+            assertEquals(0, database.dirtyRangeDao().count())
             assertEquals(
-                Instant.ofEpochMilli(oldMs).atZone(runContext.zoneId).toLocalDate().toEpochDay(),
-                journalSlot.captured.startEpochDay,
+                Instant.ofEpochMilli(oldMs).atZone(runContext.zoneId).toLocalDate(),
+                touched?.start,
             )
-            assertEquals(runContext.today.toEpochDay(), journalSlot.captured.endEpochDayInclusive)
-            assertEquals(7, journalSlot.captured.sourceGeneration)
         }
 }

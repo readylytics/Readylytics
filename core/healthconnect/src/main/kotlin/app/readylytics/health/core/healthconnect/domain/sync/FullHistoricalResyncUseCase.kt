@@ -47,36 +47,41 @@ class FullHistoricalResyncUseCase
             runId: String? = null,
             onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)? = null,
         ): Result<Unit> {
-            val prefs = settingsRepo.userPreferences.first()
-            val historicalWindow = RetentionBounds.resolveHistoricalWindow(prefs, clock.instant())
-            // rangeOverride only narrows a recompute-only pass -- a full resync must always cover the
-            // whole retention window regardless. Clamp to the retention window in case retention
-            // shrank between when the range was computed (worker enqueue time) and now (worker run
-            // time).
-            val startDate =
-                rangeOverride?.takeIf { recomputeOnly }?.start?.coerceAtLeast(historicalWindow.startDate)
-                    ?: historicalWindow.startDate
-            val endDate =
-                rangeOverride?.takeIf { recomputeOnly }?.endInclusive?.coerceAtMost(historicalWindow.endDate)
-                    ?: historicalWindow.endDate
-            if (startDate.isAfter(endDate)) {
-                return Result.success(Unit)
-            }
+            val range = resolveExecutionRange(recomputeOnly, rangeOverride) ?: return Result.success(Unit)
             return if (recomputeOnly) {
                 healthSyncUseCase.recomputeRange(
-                    startDate = startDate,
-                    endDate = endDate,
+                    startDate = range.start,
+                    endDate = range.endInclusive,
                     onProgress = onProgress,
                     requestedRunId = runId,
                 )
             } else {
                 healthSyncUseCase.resyncRange(
-                    startDate = historicalWindow.startDate,
-                    endDate = historicalWindow.endDate,
+                    startDate = range.start,
+                    endDate = range.endInclusive,
                     onProgress = onProgress,
                     requestedRunId = runId,
                 )
             }
+        }
+
+        /**
+         * The inclusive range [execute] would process right now, or null when it would be a no-op.
+         * [rangeOverride] only narrows a recompute-only pass -- a full resync always covers the whole
+         * retention window regardless. The override is clamped to the retention window in case
+         * retention shrank between when the range was computed (worker enqueue time) and now
+         * (worker run time).
+         */
+        suspend fun resolveExecutionRange(
+            recomputeOnly: Boolean,
+            rangeOverride: ScoreInvalidation.AffectedRange?,
+        ): ScoreInvalidation.AffectedRange? {
+            val prefs = settingsRepo.userPreferences.first()
+            val historicalWindow = RetentionBounds.resolveHistoricalWindow(prefs, clock.instant())
+            val override = rangeOverride?.takeIf { recomputeOnly }
+            val startDate = override?.start?.coerceAtLeast(historicalWindow.startDate) ?: historicalWindow.startDate
+            val endDate = override?.endInclusive?.coerceAtMost(historicalWindow.endDate) ?: historicalWindow.endDate
+            return if (startDate.isAfter(endDate)) null else ScoreInvalidation.AffectedRange(startDate, endDate)
         }
 
         /**

@@ -54,7 +54,7 @@ class HealthDataRefreshAdapterTest {
             val configSlot = slot<TrainingReadinessConfig>()
             verify(exactly = 1) { workerScheduler.scheduleTrainingReadinessRecompute(capture(configSlot)) }
             assertEquals(requested, configSlot.captured)
-            coVerify(exactly = 0) { workerScheduler.scheduleResyncWorker(any(), any(), any()) }
+            coVerify(exactly = 0) { workerScheduler.scheduleResyncWorker(any(), any(), any(), any(), any()) }
         }
 
     @Test

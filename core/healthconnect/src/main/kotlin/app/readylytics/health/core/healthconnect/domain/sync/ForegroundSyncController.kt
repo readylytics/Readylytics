@@ -109,7 +109,10 @@ class ForegroundSyncController
                     "Catch-up window ($uncappedWindowDays days) exceeds the inline cap " +
                         "($MAX_INLINE_RECOMPUTE_DAYS); ran the capped window and enqueued the resync worker"
                 }
-                workerScheduler.get().scheduleResyncWorker()
+                workerScheduler.get().scheduleResyncWorker(
+                    trigger = RecalcTrigger.CATCH_UP_CAP,
+                    triggerDetail = "Catch-up window $uncappedWindowDays days",
+                )
             }
         }
 
@@ -165,6 +168,16 @@ class ForegroundSyncController
             return (daysSince + 1).coerceAtLeast(1)
         }
 
+        private suspend fun escalateToHistoricalResync(reason: String) {
+            app.readylytics.health.core.model.domain.util.logI("ForegroundSyncController") {
+                "Sync requires historical resync, enqueuing worker: $reason"
+            }
+            workerScheduler.get().scheduleResyncWorker(
+                trigger = RecalcTrigger.FOREGROUND_SYNC_ESCALATION,
+                triggerDetail = reason,
+            )
+        }
+
         private suspend fun executeSync(
             isFirstSync: Boolean,
             windowDays: Int? = null,
@@ -197,10 +210,7 @@ class ForegroundSyncController
                 if (result is app.readylytics.health.core.model.domain.model.Result.Failure &&
                     result.code == "REQUIRES_HISTORICAL_RESYNC"
                 ) {
-                    app.readylytics.health.core.model.domain.util.logI("ForegroundSyncController") {
-                        "Sync requires historical resync, enqueuing worker"
-                    }
-                    workerScheduler.get().scheduleResyncWorker()
+                    escalateToHistoricalResync(result.reason)
                 } else if (result is app.readylytics.health.core.model.domain.model.Result.Failure &&
                     result.code == "DEFERRED_DAILY_SYNC"
                 ) {

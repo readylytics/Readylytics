@@ -162,7 +162,7 @@ class DailySyncUseCase
                     val outcome = changeSynchronizer.applyPendingChanges()
                     if (outcome.requiresFullResync) {
                         return@withContext Result.failure(
-                            "Requires historical resync",
+                            "Requires historical resync: ${outcome.fullResyncReason}",
                             "REQUIRES_HISTORICAL_RESYNC",
                         )
                     }
@@ -274,9 +274,20 @@ class DailySyncUseCase
                         "RECONCILE completed in ${clock.millis() - reconcileStartedAt}ms"
                     }
 
+                    // Drain dirty tickets this run can cheaply reach (typically the overnight
+                    // back-day the ingest above reaches into): the walk-forward must publish a
+                    // ticket's cursor day for it to advance, or it lingers and re-enqueues a
+                    // background recompute on every later process start.
+                    val recomputeStartDay = recomputeSupport.resolveRecomputeStartDay(oldestTargetDay, inlineFloor)
                     val stepsDevice =
                         prefs.deviceByDataType[HealthDataType.STEPS.name]?.takeIf { it.isNotBlank() }
-                    val totalDays = ChronoUnit.DAYS.between(oldestTargetDay, today).toInt() + 1
+                    val totalDays = ChronoUnit.DAYS.between(recomputeStartDay, today).toInt() + 1
+                    if (totalDays > LARGE_INLINE_WINDOW_DAYS) {
+                        logI("DailySyncUseCase") {
+                            "Inline recompute widened to $totalDays days ($recomputeStartDay..$today): " +
+                                "window=$windowDays, outOfWindowAffected=${outOfWindowAffected.sorted()}"
+                        }
+                    }
                     val stepsMap = stepCountFetcher.fetchWindow(today, totalDays, zoneId, stepsDevice)
 
                     // PERF-002/WP-20/WP-22 on the daily path: fetch the workout-only/everyday-HR
@@ -284,18 +295,18 @@ class DailySyncUseCase
                     // walk-forward, instead of every recomputed day independently re-querying its
                     // own 84-/56-day lookback. Same batched-once shape as stepsMap above, and the
                     // same contexts ResyncRangeUseCase already builds. Built over the *widened*
-                    // [oldestTargetDay, today] range so a day absorbed from outcome.affectedDates
+                    // [recomputeStartDay, today] range so a day absorbed from outcome.affectedDates
                     // sees a complete series.
                     val trimpContext =
-                        recomputeSupport.buildWalkForwardTrimpContext(oldestTargetDay, today, zoneId)
+                        recomputeSupport.buildWalkForwardTrimpContext(recomputeStartDay, today, zoneId)
                     val baselineContext =
-                        recomputeSupport.buildWalkForwardBaselineContext(oldestTargetDay, today, zoneId)
+                        recomputeSupport.buildWalkForwardBaselineContext(recomputeStartDay, today, zoneId)
                     // WP-27: prefetch historical seed impulses once for the whole
                     // walk-forward (exact retained history). Mutable state accumulator, advanced once
                     // per recomputed day in the chronological loop below.
                     val fatigueContext =
                         recomputeSupport.buildWalkForwardFatigueContext(
-                            oldestTargetDay,
+                            recomputeStartDay,
                             today,
                             prefs,
                             runContext,
@@ -303,9 +314,9 @@ class DailySyncUseCase
                     // PERF: fetch the wearable-VO2-Max series once for the whole walk-forward,
                     // same batched-once shape as trimpContext/baselineContext/fatigueContext above.
                     val vo2MaxContext =
-                        recomputeSupport.buildWalkForwardVo2MaxContext(oldestTargetDay, today, zoneId)
+                        recomputeSupport.buildWalkForwardVo2MaxContext(recomputeStartDay, today, zoneId)
                     val rasContext =
-                        recomputeSupport.buildWalkForwardRasContext(oldestTargetDay, zoneId)
+                        recomputeSupport.buildWalkForwardRasContext(recomputeStartDay, zoneId)
 
                     var processedDays = 0
                     onProgress?.invoke(ResyncPhase.RECOMPUTE, processedDays, totalDays)
@@ -320,11 +331,11 @@ class DailySyncUseCase
                     val recomputeStartedAt = clock.millis()
                     // 1. Initial transaction: clear frozen baselines for the full window
                     recomputeSupport.inRecomputeTransaction {
-                        healthIngestionStore.clearFrozenBaselines(oldestTargetDay, today.plusDays(1), zoneId)
+                        healthIngestionStore.clearFrozenBaselines(recomputeStartDay, today.plusDays(1), zoneId)
                     }
 
                     // 2. Per-day transactions: commit each day's recompute individually
-                    var dayToScore = oldestTargetDay
+                    var dayToScore = recomputeStartDay
                     while (!dayToScore.isAfter(today)) {
                         ensureActive()
                         val currentDay = dayToScore
@@ -383,8 +394,10 @@ class DailySyncUseCase
                         )
                     }
                     if (requiresHistoricalResync) {
+                        val staleDates =
+                            outOfWindowAffected.filter { it.isBefore(inlineFloor) }.sorted().take(MAX_REPORTED_DATES)
                         Result.failure(
-                            "Requires historical resync",
+                            "Requires historical resync: Health Connect changes before $inlineFloor on $staleDates",
                             "REQUIRES_HISTORICAL_RESYNC",
                         )
                     } else {

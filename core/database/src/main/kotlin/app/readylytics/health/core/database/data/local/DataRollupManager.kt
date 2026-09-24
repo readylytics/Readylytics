@@ -1,20 +1,15 @@
 package app.readylytics.health.core.database.data.local
 
 import android.util.Log
-import app.readylytics.health.core.databaseschema.data.local.dao.DirtyRangeDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HealthMutationStateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.MinuteCoverageDao
-import app.readylytics.health.core.databaseschema.data.local.entity.DirtyRangeEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrSourceMinuteContributionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.MinuteCoverageEntity
-import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
-import app.readylytics.health.core.model.domain.sync.ScoringRunContext
-
 import app.readylytics.health.core.model.domain.sync.completeMinuteCutoff
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -84,7 +79,6 @@ class DataRollupManager
         private val publisher: MinuteCoveragePublisher,
         private val transactionRunner: TransactionRunner,
         private val coordinator: HealthMutationCoordinator,
-        private val dirtyRangeDao: DirtyRangeDao? = null,
         private val healthMutationStateDao: HealthMutationStateDao? = null,
         private val streamer: MinuteRollupStreamer = MinuteRollupStreamer(heartRateDao),
     ) {
@@ -92,38 +86,25 @@ class DataRollupManager
          * Aggregates and deletes raw heart-rate rows older than [cutoffMs]. R2-CACHE-001: returns
          * the [ScoreInvalidation.AffectedRange] the rollup actually published (the min/max dates of
          * every raw sample that got aggregated into a visible bucket, merged across day-chunks), or
-         * `null` when no chunk published any plausible sample -- a no-op rollup enqueues no
-         * recompute. Minutes quarantined by the OD-1 legacy-coverage rule are not part of it.
+         * `null` when no chunk published any plausible sample. The range is informational only:
+         * aging raw samples into the warm tier never journals dirty work or invalidates retained
+         * summaries. Minutes quarantined by the OD-1 legacy-coverage rule are not part of it.
          *
          * [pageSize]/[groupMinuteBudget] default to [MinuteRollupStreamer.SAMPLE_PAGE_SIZE] /
          * [MinuteRollupStreamer.GROUP_MINUTE_BUDGET] and exist mainly so tests can force multiple
          * pages/groups over the same fixture to assert byte-identical bucket output (PERF-003).
          */
         suspend fun rollupExpiredHotTier(
-            runContext: ScoringRunContext,
             cutoffMs: Long,
             pageSize: Int = MinuteRollupStreamer.SAMPLE_PAGE_SIZE,
             groupMinuteBudget: Int = MinuteRollupStreamer.GROUP_MINUTE_BUDGET,
         ): ScoreInvalidation.AffectedRange? {
             return coordinator.withMutation {
-                doRollupExpiredHotTier(runContext, cutoffMs, pageSize, groupMinuteBudget)
+                doRollupExpiredHotTier(cutoffMs, pageSize, groupMinuteBudget)
             }
         }
 
-        suspend fun rollupExpiredHotTier(
-            cutoffMs: Long,
-            pageSize: Int = MinuteRollupStreamer.SAMPLE_PAGE_SIZE,
-            groupMinuteBudget: Int = MinuteRollupStreamer.GROUP_MINUTE_BUDGET,
-        ): ScoreInvalidation.AffectedRange? =
-            rollupExpiredHotTier(
-                runContext = ScoringRunContext.capture(UserPreferences(), Instant.ofEpochMilli(cutoffMs)),
-                cutoffMs = cutoffMs,
-                pageSize = pageSize,
-                groupMinuteBudget = groupMinuteBudget,
-            )
-
         private suspend fun doRollupExpiredHotTier(
-            runContext: ScoringRunContext,
             cutoffMs: Long,
             pageSize: Int,
             groupMinuteBudget: Int,
@@ -136,7 +117,7 @@ class DataRollupManager
                 currentCoroutineContext().ensureActive()
                 val dayStart = Math.floorDiv(cursorMs, DAY_MS) * DAY_MS
                 val dayEnd = minOf(dayStart + DAY_MS, completeCutoff)
-                val chunk = rollupDayChunk(runContext, dayStart, dayEnd, pageSize, groupMinuteBudget)
+                val chunk = rollupDayChunk(dayStart, dayEnd, pageSize, groupMinuteBudget)
                 touched = mergeRanges(touched, chunk.range)
                 // A generation conflict means another writer mutated sources mid-pass; stop the
                 // whole pass cleanly here rather than continuing to chunk against a moving target
@@ -154,7 +135,6 @@ class DataRollupManager
         }
 
         private suspend fun rollupDayChunk(
-            runContext: ScoringRunContext,
             fromMs: Long,
             toMs: Long,
             pageSize: Int,
@@ -163,7 +143,7 @@ class DataRollupManager
             var chunkRange: ScoreInvalidation.AffectedRange? = null
             try {
                 streamer.streamGroups(fromMs, toMs, pageSize, groupMinuteBudget) { group ->
-                    chunkRange = mergeRanges(chunkRange, publishGroup(group, runContext))
+                    chunkRange = mergeRanges(chunkRange, publishGroup(group))
                 }
             } catch (e: SourceGenerationConflictException) {
                 Log.w(
@@ -192,10 +172,7 @@ class DataRollupManager
             return DayChunkResult(chunkRange, stoppedOnConflict = false)
         }
 
-        private suspend fun publishGroup(
-            group: RollupGroup,
-            runContext: ScoringRunContext,
-        ): ScoreInvalidation.AffectedRange? {
+        private suspend fun publishGroup(group: RollupGroup): ScoreInvalidation.AffectedRange? {
             val quarantinedMinutes =
                 minuteCoverageDao
                     .getLegacyMinutesInRange(group.minuteStartMs, group.minuteEndExclusiveMs)
@@ -230,7 +207,6 @@ class DataRollupManager
                         publishableSamples
                             .aggregateIntoMinuteBuckets()
                             .map { it.copy(generation = generation) },
-                    dirtyRange = dirtyRangeFor(minMs, maxMs, generation, runContext),
                 )
 
             // `publisher.publish` re-validates `capturedGeneration` inside this transaction; on
@@ -301,33 +277,22 @@ class DataRollupManager
                 }
             }
 
-        private fun dirtyRangeFor(
-            minMs: Long,
-            maxMs: Long,
-            generation: Long,
-            runContext: ScoringRunContext,
-        ): DirtyRangeEntity? {
-            if (dirtyRangeDao == null || healthMutationStateDao == null) return null
-            val earliest = utcDateOf(minMs)
-            val latest = utcDateOf(maxMs)
-            val closure =
-                ScoreInvalidation.dependencyClosure(
-                    changed = ScoreInvalidation.AffectedRange(earliest, latest),
-                    reason = ScoreInvalidation.Reason.HOT_TIER_ROLLUP,
-                    retentionStart = runContext.startDate,
-                    today = runContext.today,
-                )
-            return closure?.let {
-                DirtyRangeEntity(
-                    sourceGeneration = generation,
-                    startEpochDay = it.start.toEpochDay(),
-                    endEpochDayInclusive = it.endInclusive.toEpochDay(),
-                    nextEpochDay = it.start.toEpochDay(),
-                    reason = "HOT_TIER_ROLLUP",
-                    scoringSnapshotId = "ACTIVE",
-                )
+        private fun utcDateOf(epochMs: Long): LocalDate =
+            Instant.ofEpochMilli(epochMs).atZone(ZoneOffset.UTC).toLocalDate()
+
+        private fun mergeRanges(
+            a: ScoreInvalidation.AffectedRange?,
+            b: ScoreInvalidation.AffectedRange?,
+        ): ScoreInvalidation.AffectedRange? =
+            when {
+                a == null -> b
+                b == null -> a
+                else ->
+                    ScoreInvalidation.AffectedRange(
+                        start = minOf(a.start, b.start),
+                        endInclusive = maxOf(a.endInclusive, b.endInclusive),
+                    )
             }
-        }
 
         /** Outcome of streaming and publishing one UTC day chunk's groups. */
         private data class DayChunkResult(
@@ -339,21 +304,4 @@ class DataRollupManager
             private const val DAY_MS = 86_400_000L
             private const val TAG = "DataRollupManager"
         }
-    }
-
-private fun utcDateOf(epochMs: Long): LocalDate =
-    Instant.ofEpochMilli(epochMs).atZone(ZoneOffset.UTC).toLocalDate()
-
-private fun mergeRanges(
-    a: ScoreInvalidation.AffectedRange?,
-    b: ScoreInvalidation.AffectedRange?,
-): ScoreInvalidation.AffectedRange? =
-    when {
-        a == null -> b
-        b == null -> a
-        else ->
-            ScoreInvalidation.AffectedRange(
-                start = minOf(a.start, b.start),
-                endInclusive = maxOf(a.endInclusive, b.endInclusive),
-            )
     }

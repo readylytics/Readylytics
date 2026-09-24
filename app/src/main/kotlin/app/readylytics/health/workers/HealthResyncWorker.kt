@@ -25,6 +25,7 @@ import app.readylytics.health.core.model.domain.repository.HealthConnectPermissi
 import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
 import app.readylytics.health.core.model.domain.sync.DirtyRangeStore
 import app.readylytics.health.core.model.domain.sync.DirtyTicket
+import app.readylytics.health.core.model.domain.sync.RecalcTrigger
 import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.util.RetentionBounds
@@ -47,7 +48,13 @@ class HealthResyncWorker
         private val foregroundSyncController: Lazy<ForegroundSyncController>,
         private val databaseReadinessGate: DatabaseReadinessInspector,
         private val settingsRepository: Lazy<SettingsRepository>,
-        private val dirtyRangeStore: Lazy<DirtyRangeStore>,
+        private val dirtyRangeStore: Lazy<DirtyRangeStore> =
+            Lazy {
+                object : DirtyRangeStore {
+                    override suspend fun pending(limit: Int): List<DirtyTicket> = emptyList()
+                }
+            },
+        private val diagnosticRecorder: RecalcDiagnosticRecorder? = null,
     ) : CoroutineWorker(appContext, params) {
         override suspend fun doWork(): Result {
             if (databaseReadinessGate.inspect() != DatabaseReadiness.Ready) {
@@ -125,6 +132,13 @@ class HealthResyncWorker
             val explicitRange = resolveExplicitRange(inputData)
             val hasExplicitRange = explicitRange != null
 
+            // Recorded before running so a run that is killed mid-way is still attributed.
+            diagnosticRecorder?.recordIfLarge(
+                trigger = RecalcTrigger.fromName(inputData.getString(KEY_TRIGGER)),
+                triggerDetail = inputData.getString(KEY_TRIGGER_DETAIL),
+                recomputeOnly = recomputeOnly,
+            ) { resyncUseCase.resolveExecutionRange(recomputeOnly, explicitRange) }
+
             var iterated = false
             var keepDraining = true
             var lastPendingState: List<Pair<Long, LocalDate>>? = null
@@ -171,6 +185,7 @@ class HealthResyncWorker
             val prefs = settingsRepository.get().userPreferences.first()
             val retentionStart = RetentionBounds.resolveResyncStartDate(prefs, LocalDate.now(prefs.scoringZone()))
             dirtyRangeStore.get().discardBefore(retentionStart)
+            dirtyRangeStore.get().discardRetiredAgingTickets()
         }
 
         private fun notifyProgress(
@@ -239,6 +254,8 @@ class HealthResyncWorker
             const val KEY_CURRENT = "current"
             const val KEY_TOTAL = "total"
             const val KEY_RECOMPUTE_ONLY = "recompute_only"
+            const val KEY_TRIGGER = "trigger"
+            const val KEY_TRIGGER_DETAIL = "trigger_detail"
             const val KEY_RUN_ID = "run_id"
             const val KEY_RECOMPUTE_START_EPOCH_DAY = "recompute_start_epoch_day"
             const val KEY_RECOMPUTE_END_EPOCH_DAY = "recompute_end_epoch_day"

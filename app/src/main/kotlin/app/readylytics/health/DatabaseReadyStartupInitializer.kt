@@ -6,7 +6,9 @@ import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.WorkoutTrimpBackfillStatus
 import app.readylytics.health.core.model.domain.sync.DirtyRangeStore
+import app.readylytics.health.core.model.domain.sync.DirtyTicket
 import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
+import app.readylytics.health.core.model.domain.sync.RecalcTrigger
 import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
@@ -143,28 +145,49 @@ internal class DatabaseReadyStartupInitializer(
         val retentionStartMs = runContext.retentionStartMs
         val needsBackfillRecompute =
             workoutTrimpBackfillStatus.get().hasUnbackfilledWorkouts(retentionStartMs)
-        val hasPendingDirty =
-            try {
-                dirtyRangeStore?.get()?.pending(100)?.isNotEmpty() == true
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Exception) {
-                false
-            }
-        if (!needsVersionRecompute && !needsBackfillRecompute && !hasPendingDirty) return
+        val pendingDirty = pendingDirtyTickets()
+        if (!needsVersionRecompute && !needsBackfillRecompute && pendingDirty.isEmpty()) return
 
-        logI(TAG) {
-            "Enqueueing recompute-only resync (staleVersion=$needsVersionRecompute " +
+        val detail =
+            "staleVersion=$needsVersionRecompute " +
                 "stored=$storedScoringVersion current=${SettingsDefaults.CURRENT_SCORING_VERSION}, " +
-                "unbackfilledCanonicalTrimp=$needsBackfillRecompute, pendingDirty=$hasPendingDirty)"
-        }
+                "unbackfilledCanonicalTrimp=$needsBackfillRecompute, " +
+                "pendingDirty=${pendingDirty.joinToString(prefix = "[", postfix = "]") { it.describe() }}"
+        logI(TAG) { "Enqueueing recompute-only resync ($detail)" }
+        val trigger =
+            when {
+                needsVersionRecompute -> RecalcTrigger.STARTUP_SCORING_VERSION
+                needsBackfillRecompute -> RecalcTrigger.STARTUP_TRIMP_BACKFILL
+                else -> RecalcTrigger.STARTUP_PENDING_DIRTY
+            }
         // The worker owns the version bump (HealthResyncWorker.persistPostRecomputeState, on
         // success only). Never bump here: a killed worker must leave the stale version in
         // place so the next launch re-enqueues idempotently. The backfill gate converges the same
         // way: a recompute writes modelTrimp for every workout it touches, so the count drops to
         // zero and the gate stops firing.
-        workerScheduler.scheduleResyncWorker(recomputeOnly = true)
+        workerScheduler.scheduleResyncWorker(recomputeOnly = true, trigger = trigger, triggerDetail = detail)
     }
+
+    /**
+     * Pending dirty work, after dropping tickets written by the retired rollup/retention journaling
+     * (older builds): those would otherwise re-enqueue a multi-week recompute on every start. Any
+     * failure reads as "nothing pending" so a locked database never blocks startup.
+     */
+    private suspend fun pendingDirtyTickets(): List<DirtyTicket> {
+        val store = dirtyRangeStore?.get() ?: return emptyList()
+        return try {
+            val discarded = store.discardRetiredAgingTickets()
+            if (discarded > 0) logI(TAG) { "Discarded $discarded retired aging dirty tickets" }
+            store.pending(PENDING_TICKET_LIMIT)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logE(TAG, e) { "Pending dirty range query failed" }
+            emptyList()
+        }
+    }
+
+    private fun DirtyTicket.describe(): String = "$reason:$nextDay..$endInclusive"
 
     private suspend fun runNonFatal(
         actionName: String,
@@ -182,6 +205,7 @@ internal class DatabaseReadyStartupInitializer(
 
     private companion object {
         const val TAG = "HealthDashboardApplication"
+        const val PENDING_TICKET_LIMIT = 100
     }
 }
 

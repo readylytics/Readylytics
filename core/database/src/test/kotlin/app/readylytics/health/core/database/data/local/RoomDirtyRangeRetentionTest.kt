@@ -80,6 +80,20 @@ class RoomDirtyRangeRetentionTest {
         }
 
     @Test
+    fun retiredAgingTicketsAreDiscardedWhileSyncWorkSurvives() =
+        runBlocking {
+            store.append(cutoff, cutoff.plusDays(60), "HOT_TIER_ROLLUP", "ACTIVE")
+            store.append(cutoff, cutoff.plusDays(60), "RETENTION_CLEANUP", "ACTIVE")
+            val syncId = store.append(cutoff, cutoff.plusDays(1), "AUTHORITATIVE_SOURCE_REPLACEMENT", "ACTIVE")
+
+            assertEquals(2, store.discardRetiredAgingTickets())
+
+            val pending = store.pending(100).single()
+            assertEquals(syncId, pending.id)
+            assertEquals("AUTHORITATIVE_SOURCE_REPLACEMENT", pending.reason)
+        }
+
+    @Test
     fun expiredPrefixAdvancesToFirstRetainedDayWithoutAcknowledgingIt() =
         runBlocking {
             val id = store.append(cutoff.minusDays(10), cutoff.plusDays(2), "OVERLAP", "snapshot")

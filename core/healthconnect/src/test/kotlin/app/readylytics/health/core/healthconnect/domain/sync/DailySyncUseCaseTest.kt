@@ -91,33 +91,90 @@ abstract class DailySyncUseCaseTestFixture {
         coEvery { hcRepo.readVo2MaxRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
         coEvery { hcRepo.hasVo2MaxPermission() } returns false
 
-        useCase =
-            DailySyncUseCase(
-                settingsRepo = settingsRepo,
-                rasSourceModeBootstrapUseCase = rasSourceModeBootstrapUseCase,
-                recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner),
-                dirtyRangeStore = dirtyRangeStore,
-                walDiagnostics = walDiagnostics,
-                ingestion =
-                    DailySyncIngestionCollaborators(
-                        sessionLinkReconciler = sessionLinkReconciler,
-                        changeSynchronizer = changeSynchronizer,
-                        healthIngestionStore = healthIngestionStore,
-                        ingestionCoordinator =
-                            HealthIngestionCoordinator(
-                                hcRepo,
-                                healthIngestionStore,
-                                FakeScanStagingStore(),
-                            ),
-                        stepCountFetcher = StepCountFetcher(hcRepo),
-                    ),
-                ioDispatcher = Dispatchers.Unconfined,
-                clock = fixedClock,
-            )
+        useCase = buildUseCase()
+    }
+
+    protected fun buildUseCase(dirtyRangeStore: DirtyRangeStore? = null): DailySyncUseCase {
+        val effectiveDirtyRangeStore = dirtyRangeStore ?: this.dirtyRangeStore
+        return DailySyncUseCase(
+            settingsRepo = settingsRepo,
+            rasSourceModeBootstrapUseCase = rasSourceModeBootstrapUseCase,
+            recomputeSupport =
+                DailyRecomputeSupport(
+                    scoringRepository,
+                    settingsRepo,
+                    transactionRunner,
+                    dirtyRangeStore = effectiveDirtyRangeStore,
+                ),
+            dirtyRangeStore = effectiveDirtyRangeStore,
+            walDiagnostics = walDiagnostics,
+            ingestion =
+                DailySyncIngestionCollaborators(
+                    sessionLinkReconciler = sessionLinkReconciler,
+                    changeSynchronizer = changeSynchronizer,
+                    healthIngestionStore = healthIngestionStore,
+                    ingestionCoordinator =
+                        HealthIngestionCoordinator(
+                            hcRepo,
+                            healthIngestionStore,
+                            FakeScanStagingStore(),
+                        ),
+                    stepCountFetcher = StepCountFetcher(hcRepo),
+                ),
+            ioDispatcher = Dispatchers.Unconfined,
+            clock = fixedClock,
+        )
     }
 
 }
 class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
+    private fun pendingTicketsAt(vararg cursorDays: LocalDate): DirtyRangeStore =
+        object : DirtyRangeStore {
+            override suspend fun pending(limit: Int): List<DirtyTicket> =
+                cursorDays.mapIndexed { index, day ->
+                    DirtyTicket(
+                        id = index.toLong() + 1,
+                        sourceGeneration = 1L,
+                        nextDay = day,
+                        endInclusive = day.plusDays(30),
+                        scoringSnapshotId = "ACTIVE",
+                    )
+                }
+        }
+
+    @Test
+    fun `sync starts at a pending ticket on the ingest back-day so the ticket can advance`() =
+        runTest {
+            val today = LocalDate.now(fixedClock.withZone(ZoneId.systemDefault()))
+            val backDay = today.minusDays(1)
+
+            buildUseCase(pendingTicketsAt(backDay)).run(windowDays = 1, onProgress = null)
+
+            coVerifyOrder {
+                scoringRepository.computeAndPersistDailySummary(backDay, any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(today, any(), any(), any(), any())
+            }
+        }
+
+    @Test
+    fun `sync leaves tickets older than the inline floor to the durable worker`() =
+        runTest {
+            val today = LocalDate.now(fixedClock.withZone(ZoneId.systemDefault()))
+            val staleDay = today.minusDays(MAX_INLINE_RECOMPUTE_DAYS.toLong() + 1)
+
+            buildUseCase(pendingTicketsAt(staleDay)).run(windowDays = 1, onProgress = null)
+
+            coVerify(exactly = 0) {
+                scoringRepository.computeAndPersistDailySummary(staleDay, any(), any(), any(), any())
+            }
+            coVerify(exactly = 0) {
+                scoringRepository.computeAndPersistDailySummary(today.minusDays(1), any(), any(), any(), any())
+            }
+            coVerify(exactly = 1) {
+                scoringRepository.computeAndPersistDailySummary(today, any(), any(), any(), any())
+            }
+        }
+
     @Test
     fun `sync processes days in chronological order`() =
         runTest {

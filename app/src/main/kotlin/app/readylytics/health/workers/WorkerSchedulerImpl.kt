@@ -12,6 +12,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import app.readylytics.health.core.model.data.preferences.BackupSchedule
 import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
+import app.readylytics.health.core.model.domain.sync.RecalcTrigger
 import app.readylytics.health.core.model.domain.sync.ResyncCheckpointStore
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import dagger.Lazy
@@ -36,6 +37,9 @@ class WorkerSchedulerImpl
             const val RESYNC_WORK_NAME = WorkerScheduler.RESYNC_WORK_NAME
             const val PERIODIC_SYNC_WORK_NAME = WorkerScheduler.PERIODIC_SYNC_WORK_NAME
             const val DATABASE_MIGRATION_WORK_NAME = WorkerScheduler.DATABASE_MIGRATION_WORK_NAME
+
+            /** WorkManager input `Data` is capped at 10 KB; a diagnostic detail never needs more. */
+            private const val MAX_DETAIL_CHARS = 1_000
         }
 
         override fun scheduleDatabaseMigration() {
@@ -75,8 +79,17 @@ class WorkerSchedulerImpl
             recomputeOnly: Boolean,
             startDate: LocalDate?,
             endDate: LocalDate?,
+            trigger: RecalcTrigger,
+            triggerDetail: String?,
         ) {
-            val dataBuilder = Data.Builder().putBoolean(HealthResyncWorker.KEY_RECOMPUTE_ONLY, recomputeOnly)
+            val dataBuilder =
+                Data
+                    .Builder()
+                    .putBoolean(HealthResyncWorker.KEY_RECOMPUTE_ONLY, recomputeOnly)
+                    .putString(HealthResyncWorker.KEY_TRIGGER, trigger.name)
+            triggerDetail?.let {
+                dataBuilder.putString(HealthResyncWorker.KEY_TRIGGER_DETAIL, it.take(MAX_DETAIL_CHARS))
+            }
             startDate?.let { dataBuilder.putLong(HealthResyncWorker.KEY_RECOMPUTE_START_EPOCH_DAY, it.toEpochDay()) }
             endDate?.let { dataBuilder.putLong(HealthResyncWorker.KEY_RECOMPUTE_END_EPOCH_DAY, it.toEpochDay()) }
             resyncCheckpointStore.get().checkpoint.first()?.runIdentity?.runId?.let {

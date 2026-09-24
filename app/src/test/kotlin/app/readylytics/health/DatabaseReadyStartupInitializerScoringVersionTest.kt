@@ -8,6 +8,7 @@ import app.readylytics.health.core.model.domain.repository.WorkoutTrimpBackfillS
 import app.readylytics.health.core.model.domain.sync.DirtyRangeStore
 import app.readylytics.health.core.model.domain.sync.DirtyTicket
 import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
+import app.readylytics.health.core.model.domain.sync.RETIRED_AGING_DIRTY_REASONS
 import app.readylytics.health.core.model.domain.util.RetentionBounds
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.core.scoring.domain.scoring.BackfillHistoricalBaselinesUseCase
@@ -263,6 +264,50 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
             initializer.initializeIfReady(DatabaseReadiness.Ready)
 
             assertEquals(1, scheduler.recomputeOnlyRequests)
+            assertEquals(
+                app.readylytics.health.core.model.domain.sync.RecalcTrigger.STARTUP_PENDING_DIRTY,
+                scheduler.lastTrigger,
+            )
+        }
+
+    @Test
+    fun `retired aging tickets are discarded and do not trigger a recompute`() =
+        runTest {
+            val scheduler = FakeWorkerScheduler()
+            val dirtyStore =
+                object : DirtyRangeStore {
+                    var tickets =
+                        listOf(
+                            DirtyTicket(
+                                id = 1L,
+                                sourceGeneration = 1L,
+                                nextDay = java.time.LocalDate.of(2026, 7, 1),
+                                endInclusive = java.time.LocalDate.of(2026, 8, 31),
+                                scoringSnapshotId = "ACTIVE",
+                                reason = "HOT_TIER_ROLLUP",
+                            ),
+                        )
+
+                    override suspend fun discardRetiredAgingTickets(): Int {
+                        val before = tickets.size
+                        tickets = tickets.filterNot { it.reason in RETIRED_AGING_DIRTY_REASONS }
+                        return before - tickets.size
+                    }
+
+                    override suspend fun pending(limit: Int): List<DirtyTicket> = tickets
+                }
+            val initializer =
+                initializerWith(
+                    storedScoringVersion = SettingsDefaults.CURRENT_SCORING_VERSION,
+                    scheduler = scheduler,
+                    backfillStatus = FakeBackfillStatus(hasUnbackfilled = false),
+                    dirtyRangeStore = dirtyStore,
+                )
+
+            initializer.initializeIfReady(DatabaseReadiness.Ready)
+
+            assertEquals(0, scheduler.recomputeOnlyRequests)
+            assertEquals(emptyList<DirtyTicket>(), dirtyStore.tickets)
         }
 
     @Test
@@ -355,6 +400,8 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
     private class FakeWorkerScheduler : WorkerScheduler {
         var recomputeOnlyRequests = 0
             private set
+        var lastTrigger: app.readylytics.health.core.model.domain.sync.RecalcTrigger? = null
+            private set
 
         override fun scheduleDatabaseMigration() { /* no-op */ }
 
@@ -362,9 +409,12 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
             recomputeOnly: Boolean,
             startDate: java.time.LocalDate?,
             endDate: java.time.LocalDate?,
+            trigger: app.readylytics.health.core.model.domain.sync.RecalcTrigger,
+            triggerDetail: String?,
         ) {
             if (recomputeOnly) {
                 recomputeOnlyRequests++
+                lastTrigger = trigger
             }
         }
 
