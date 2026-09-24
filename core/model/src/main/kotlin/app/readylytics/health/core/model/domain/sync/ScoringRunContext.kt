@@ -10,6 +10,8 @@ import java.time.ZoneId
 data class ScoringRunContext(
     val instant: Instant,
     val historicalWindow: RetentionBounds.HistoricalWindow,
+    val sourceGeneration: Long = 0L,
+    val scoringSnapshotId: String = "",
 ) {
     val zoneId: ZoneId
         get() = historicalWindow.zoneId
@@ -27,10 +29,14 @@ data class ScoringRunContext(
         fun capture(
             prefs: UserPreferences,
             instant: Instant,
+            sourceGeneration: Long = 0L,
+            scoringSnapshotId: String = "",
         ): ScoringRunContext =
             ScoringRunContext(
                 instant = instant,
                 historicalWindow = RetentionBounds.resolveHistoricalWindow(prefs, instant),
+                sourceGeneration = sourceGeneration,
+                scoringSnapshotId = scoringSnapshotId,
             )
     }
 }

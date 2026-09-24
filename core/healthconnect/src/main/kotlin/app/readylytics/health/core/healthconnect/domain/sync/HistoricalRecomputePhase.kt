@@ -141,10 +141,16 @@ class HistoricalRecomputePhase
                             context.endDate,
                             context.zoneId,
                         ),
+                    ras =
+                        recomputeSupport.buildWalkForwardRasContext(
+                            context.recomputeStartDate,
+                            context.zoneId,
+                        ),
                 )
             } else {
-                WalkForwardContexts(null, null, null, null)
+                WalkForwardContexts(null, null, null, null, null)
             }
+
 
         private suspend fun clearFrozenBaselinesIfNeeded(context: RecomputePhaseContext) {
             if (context.checkpoint == null || context.checkpoint.phase != ResyncPhase.RECOMPUTE) {

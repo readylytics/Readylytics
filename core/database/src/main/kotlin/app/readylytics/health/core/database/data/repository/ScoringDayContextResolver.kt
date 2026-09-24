@@ -64,6 +64,9 @@ class ScoringDayContextResolver(
                 dailySummary = dailySummary,
                 sleepDayPolicy = sleepDayPolicy,
                 prefetchedSessions = baselineContext?.sessions,
+                baselineContext = baselineContext,
+                sourceGen = runContext.sourceGeneration,
+                snapshotId = runContext.scoringSnapshotId,
             )
         val scoringConfig =
             scoringConfigFactory.build(

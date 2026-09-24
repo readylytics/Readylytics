@@ -35,6 +35,7 @@ class ResidualFatigueComputer(
         startDate: LocalDate,
         zoneId: ZoneId,
         retentionStartMs: Long,
+        prefs: UserPreferences? = null,
     ): WalkForwardFatigueContext {
         val boundaryMs = startDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
         val seedInputs = dataLoader.loadCanonicalFatigueSeed(boundaryMs)
@@ -43,11 +44,27 @@ class ResidualFatigueComputer(
                 retentionStartMs = retentionStartMs,
                 startBeforeMs = boundaryMs,
             )
+        val config = prefs?.let(::clampedConfig) ?: ResidualFatigueConfig()
+        val advancer: (Double, Long, Long, List<FatigueWorkoutInput>) -> Pair<Double, Long> = { acc, last, curr, imp ->
+            computeResidualFatigueUseCase.advanceAccumulator(
+                accumulatedFatigue = acc,
+                lastEvalMs = last,
+                currentEvalMs = curr,
+                newImpulses =
+                    imp.map {
+                        ComputeResidualFatigueUseCase.FatigueWorkoutInput(it.endTimeMs, it.trimp)
+                    },
+                config = config,
+            )
+        }
         return WalkForwardFatigueContext(
             seedInputs = seedInputs,
             seedIncomplete = unbackfilledCount > 0,
+            config = config,
+            advancer = advancer,
         )
     }
+
 
     private fun clampedConfig(prefs: UserPreferences): ResidualFatigueConfig =
         // Coerce rather than require: a stored pref outside the validated range should degrade the
@@ -80,7 +97,7 @@ class ResidualFatigueComputer(
                     stagedFatigueInputs = stagedFatigueInputs,
                     stagedWorkouts = stagedWorkouts,
                 )
-            else -> computeWalkForward(fatigueContext, evalMs, config)
+            else -> computeWalkForward(fatigueContext, evalMs)
         }
     }
 
@@ -114,12 +131,11 @@ class ResidualFatigueComputer(
     private fun computeWalkForward(
         fatigueContext: WalkForwardFatigueContext,
         evalMs: Long,
-        config: ResidualFatigueConfig,
     ): Float? =
         if (fatigueContext.seedIncomplete) {
             null
         } else {
-            advanceAccumulator(fatigueContext, evalMs, config)
+            fatigueContext.dayEndCursor.previewThrough(evalMs).fatigue
         }
 
     private suspend fun computeSingleDayFallback(
@@ -154,36 +170,5 @@ class ResidualFatigueComputer(
             config,
         )
     }
-
-    /**
-     * Advances the shared walk-forward accumulator by one day: decays the accumulated fatigue from
-     * the previous evaluation time to [evalMs], adds every new impulse with end time in
-     * `(lastEvaluationTimeMs, evalMs]` (single-pass cursor walk), and stores the result back into
-     * [fatigueContext]. Delegates to [ComputeResidualFatigueUseCase.advanceAccumulator] so the
-     * accumulator and the summation fallback stay one source of truth.
-     */
-    private fun advanceAccumulator(
-        fatigueContext: WalkForwardFatigueContext,
-        evalMs: Long,
-        config: ResidualFatigueConfig,
-    ): Float {
-        val newImpulses =
-            fatigueContext.takeImpulsesThrough(evalMs).map {
-                ComputeResidualFatigueUseCase.FatigueWorkoutInput(
-                    it.endTimeMs,
-                    it.trimp,
-                )
-            }
-        val (fatigue, advancedEvalMs) =
-            computeResidualFatigueUseCase.advanceAccumulator(
-                accumulatedFatigue = fatigueContext.accumulatedFatigue,
-                lastEvalMs = fatigueContext.lastEvaluationTimeMs,
-                currentEvalMs = evalMs,
-                newImpulses = newImpulses,
-                config = config,
-            )
-        fatigueContext.accumulatedFatigue = fatigue
-        fatigueContext.lastEvaluationTimeMs = advancedEvalMs
-        return fatigue.toFloat()
-    }
 }
+

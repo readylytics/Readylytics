@@ -1,6 +1,7 @@
 package app.readylytics.health.core.database.data.repository
 
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
+import app.readylytics.health.core.model.domain.repository.WalkForwardRasWindow
 import app.readylytics.health.core.scoring.domain.scoring.RasCalculator
 import java.time.LocalDate
 import java.time.ZoneId
@@ -28,11 +29,16 @@ class RasTotalsComputer
             scalingFactor: Float,
             targetDate: LocalDate,
             zoneId: ZoneId,
+            rasWindow: WalkForwardRasWindow? = null,
         ): RasTotals {
             val dailyRas = round(RasCalculator.calculateDailyRas(dailyTrimpRaw, scalingFactor) * 10f) / 10f
             val dailyRasEverydayHr = round(RasCalculator.calculateDailyRas(trimpEverydayHr, scalingFactor) * 10f) / 10f
-            val last6DaysRasWorkoutOnly = sumRasLastSixDays(targetDate, zoneId) { it.rasWorkoutOnly }
-            val last6DaysRasEverydayHr = sumRasLastSixDays(targetDate, zoneId) { it.rasEverydayHr }
+            val last6DaysRasWorkoutOnly =
+                rasWindow?.sumWorkoutOnlyBefore(targetDate)
+                    ?: sumRasLastSixDays(targetDate, zoneId) { it.rasWorkoutOnly }
+            val last6DaysRasEverydayHr =
+                rasWindow?.sumEverydayHrBefore(targetDate)
+                    ?: sumRasLastSixDays(targetDate, zoneId) { it.rasEverydayHr }
             return RasTotals(
                 dailyRas = dailyRas,
                 dailyRasEverydayHr = dailyRasEverydayHr,
@@ -41,6 +47,7 @@ class RasTotalsComputer
                 last6DaysRasWorkoutOnly = last6DaysRasWorkoutOnly,
             )
         }
+
 
         private suspend fun sumRasLastSixDays(
             targetDate: LocalDate,

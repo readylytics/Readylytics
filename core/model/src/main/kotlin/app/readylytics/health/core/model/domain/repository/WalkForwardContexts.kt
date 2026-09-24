@@ -16,4 +16,6 @@ data class WalkForwardContexts(
     val baseline: WalkForwardBaselineContext? = null,
     val fatigue: WalkForwardFatigueContext? = null,
     val vo2Max: WalkForwardVo2MaxContext? = null,
+    val ras: WalkForwardRasWindow? = null,
 )
+

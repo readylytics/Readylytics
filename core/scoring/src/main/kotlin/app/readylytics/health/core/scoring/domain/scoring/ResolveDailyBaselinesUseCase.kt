@@ -1,13 +1,10 @@
 package app.readylytics.health.core.scoring.domain.scoring
 
-import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
-import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
-
-import app.readylytics.health.core.model.domain.scoring.ScoringConstants
-
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.model.SleepSession
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayPolicy
 import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
 import java.time.LocalDate
@@ -40,6 +37,9 @@ class ResolveDailyBaselinesUseCase
             dailySummary: DailySummary?,
             sleepDayPolicy: SleepDayPolicy,
             prefetchedSessions: List<SleepSession>?,
+            baselineContext: WalkForwardBaselineContext? = null,
+            sourceGen: Long = 0L,
+            snapshotId: String = "",
         ): InitialBaselines {
             val frozenSnapshot = dailySummary?.takeIf { it.baselineCalculatedAtDate != null }
             val frozenHrMax = frozenSnapshot?.hrMax
@@ -56,6 +56,9 @@ class ResolveDailyBaselinesUseCase
                         zoneId = sleepDayPolicy.scoringZoneId,
                         sleepDayPolicy = sleepDayPolicy,
                         prefetchedSessions = prefetchedSessions,
+                        baselineContext = baselineContext,
+                        sourceGen = sourceGen,
+                        snapshotId = snapshotId,
                     )?.takeIf { it > 0f }
                     ?: ScoringConstants.DEFAULT_RHR_BPM
 

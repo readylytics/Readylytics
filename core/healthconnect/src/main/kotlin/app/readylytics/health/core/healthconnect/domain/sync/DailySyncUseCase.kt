@@ -304,6 +304,8 @@ class DailySyncUseCase
                     // same batched-once shape as trimpContext/baselineContext/fatigueContext above.
                     val vo2MaxContext =
                         recomputeSupport.buildWalkForwardVo2MaxContext(oldestTargetDay, today, zoneId)
+                    val rasContext =
+                        recomputeSupport.buildWalkForwardRasContext(oldestTargetDay, zoneId)
 
                     var processedDays = 0
                     onProgress?.invoke(ResyncPhase.RECOMPUTE, processedDays, totalDays)
@@ -339,10 +341,17 @@ class DailySyncUseCase
                                     currentDay,
                                     steps,
                                     prefs,
-                                    WalkForwardContexts(trimpContext, baselineContext, fatigueContext, vo2MaxContext),
+                                    WalkForwardContexts(
+                                        trimp = trimpContext,
+                                        baseline = baselineContext,
+                                        fatigue = fatigueContext,
+                                        vo2Max = vo2MaxContext,
+                                        ras = rasContext,
+                                    ),
                                     runContext,
                                 )
                             }
+
 
                         when (result) {
                             is Result.Success -> {

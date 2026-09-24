@@ -10,6 +10,7 @@ import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
+import app.readylytics.health.core.model.domain.repository.WalkForwardRasWindow
 import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardVo2MaxContext
 import app.readylytics.health.core.model.domain.sync.ScoringRunContext
@@ -138,6 +139,16 @@ class DailyRecomputeSupport
             endDate: LocalDate,
             zoneId: ZoneId,
         ): WalkForwardVo2MaxContext = scoringRepository.fetchWalkForwardVo2MaxContext(startDate, endDate, zoneId)
+
+        /**
+         * PERF-002/WP-22: fetches the shared 6-day rolling RAS window context once for the whole
+         * `[startDate, endDate]` walk-forward.
+         */
+        suspend fun buildWalkForwardRasContext(
+            startDate: LocalDate,
+            zoneId: ZoneId,
+        ): WalkForwardRasWindow = scoringRepository.fetchWalkForwardRasContext(startDate, zoneId)
+
 
         /**
          * F7: runs a whole walk-forward's worth of [recomputeDay] calls inside ONE Room

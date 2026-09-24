@@ -163,7 +163,7 @@ class ResidualFatigueExactReconstructionTest {
         workouts: List<FatigueWorkoutInput>,
         startTimes: Map<String, Long>,
     ): Float {
-        val fatigueContext = computer.fetchWalkForwardContext(startDate, zoneId, retentionStartMs(prefs))
+        val fatigueContext = computer.fetchWalkForwardContext(startDate, zoneId, retentionStartMs(prefs), prefs)
         var day = startDate
         var fatigue = 0f
         while (!day.isAfter(endDate)) {
@@ -173,6 +173,7 @@ class ResidualFatigueExactReconstructionTest {
                 workouts.filter { startTimes.getValue(it.workoutId) in dayStartMs until nextDayStartMs },
             )
             fatigue = requireNotNull(computer.compute(scoringContext(day), fatigueContext))
+            fatigueContext.dayEndCursor.lastCandidate?.let { fatigueContext.dayEndCursor.commit(it) }
             day = day.plusDays(1)
         }
         return fatigue
