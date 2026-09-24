@@ -9,6 +9,7 @@ import app.readylytics.health.core.healthconnect.domain.sync.HealthSyncUseCase
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspector
 import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
+import app.readylytics.health.core.model.domain.sync.RecalcTrigger
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import dagger.Lazy
 import io.mockk.coEvery
@@ -105,7 +106,15 @@ class PeriodicHealthSyncWorkerTest {
 
             val result = createWorker().doWork()
 
-            coVerify(exactly = 1) { workerScheduler.scheduleResyncWorker() }
+            coVerify(exactly = 1) {
+                workerScheduler.scheduleResyncWorker(
+                    recomputeOnly = false,
+                    startDate = null,
+                    endDate = null,
+                    trigger = RecalcTrigger.PERIODIC_SYNC_ESCALATION,
+                    triggerDetail = "Requires historical resync",
+                )
+            }
             verify(exactly = 1) { foregroundSyncController.onBackgroundRecalcFinished(false) }
             assertEquals(ListenableWorker.Result.success(), result)
         }

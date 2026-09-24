@@ -125,7 +125,7 @@ class RestoreMaintenanceRecoveryTest : LocalRestoreManagerTestBase() {
             assertTrue("Expected withMutation to be blocked by maintenance", blocked)
 
             coVerify(exactly = 0) {
-                workerScheduler.scheduleResyncWorker(any(), any(), any())
+                workerScheduler.scheduleResyncWorker(any(), any(), any(), any(), any())
             }
 
             archive.delete()

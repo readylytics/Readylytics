@@ -49,7 +49,6 @@ class DataRollupCoverageTest {
                         healthMutationStateDao = database.healthMutationStateDao(),
                     ),
                 transactionRunner = RoomTransactionRunner(database),
-                dirtyRangeDao = database.dirtyRangeDao(),
                 healthMutationStateDao = database.healthMutationStateDao(),
             )
     }
@@ -87,6 +86,8 @@ class DataRollupCoverageTest {
             val histogramA = BpmHistogram.decode(contributions.single { it.sourceRecordRef == refA }.bpmHistogram)
             assertEquals(mapOf(60 to 1, 62 to 1), histogramA.bins)
             assertEquals(0, database.heartRateDao().count())
+            // Aging into the warm tier never journals dirty work: retained summaries stay frozen.
+            assertEquals(0, database.dirtyRangeDao().count())
         }
 
     // C4: an ordinary rollup is not the authorized complete refresh OD-1 requires before legacy
@@ -284,7 +285,6 @@ class DataRollupCoverageTest {
                             healthMutationStateDao = database.healthMutationStateDao(),
                         ),
                     transactionRunner = conflictInjectingRunner,
-                    dirtyRangeDao = database.dirtyRangeDao(),
                     healthMutationStateDao = database.healthMutationStateDao(),
                 )
 

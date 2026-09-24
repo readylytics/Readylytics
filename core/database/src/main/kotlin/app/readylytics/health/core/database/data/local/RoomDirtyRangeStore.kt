@@ -5,6 +5,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.HealthMutationS
 import app.readylytics.health.core.databaseschema.data.local.entity.DirtyRangeEntity
 import app.readylytics.health.core.model.domain.sync.DirtyRangeStore
 import app.readylytics.health.core.model.domain.sync.DirtyTicket
+import app.readylytics.health.core.model.domain.sync.RETIRED_AGING_DIRTY_REASONS
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -24,12 +25,16 @@ class RoomDirtyRangeStore
                     nextDay = LocalDate.ofEpochDay(entity.nextEpochDay),
                     endInclusive = LocalDate.ofEpochDay(entity.endEpochDayInclusive),
                     scoringSnapshotId = entity.scoringSnapshotId,
+                    reason = entity.reason,
                 )
             }
 
         override suspend fun discardBefore(retentionStart: LocalDate) {
             dirtyRangeDao.discardBefore(retentionStart.toEpochDay())
         }
+
+        override suspend fun discardRetiredAgingTickets(): Int =
+            dirtyRangeDao.deleteByReasons(RETIRED_AGING_DIRTY_REASONS)
 
         suspend fun append(
             start: LocalDate,

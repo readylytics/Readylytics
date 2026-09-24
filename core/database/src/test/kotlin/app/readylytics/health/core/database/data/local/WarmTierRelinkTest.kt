@@ -64,7 +64,6 @@ class WarmTierRelinkTest {
                 heartRateDao = database.heartRateDao(),
                 publisher = publisher,
                 transactionRunner = RoomTransactionRunner(database),
-                dirtyRangeDao = database.dirtyRangeDao(),
                 healthMutationStateDao = database.healthMutationStateDao(),
             )
         relinker =

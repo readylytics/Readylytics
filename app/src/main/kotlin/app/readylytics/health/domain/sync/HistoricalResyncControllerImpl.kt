@@ -4,6 +4,7 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import app.readylytics.health.core.model.domain.sync.HistoricalResyncController
 import app.readylytics.health.core.model.domain.sync.HistoricalResyncState
+import app.readylytics.health.core.model.domain.sync.RecalcTrigger
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.workers.HealthResyncWorker
 import kotlinx.coroutines.flow.Flow
@@ -33,7 +34,7 @@ class HistoricalResyncControllerImpl
                 }
 
         override suspend fun requestHistoricalResync() {
-            workerScheduler.scheduleResyncWorker()
+            workerScheduler.scheduleResyncWorker(trigger = RecalcTrigger.USER_RESYNC)
         }
 
         override suspend fun requestScoreRecompute() {

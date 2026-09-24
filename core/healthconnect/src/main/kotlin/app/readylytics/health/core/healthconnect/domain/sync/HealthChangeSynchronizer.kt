@@ -15,4 +15,11 @@ data class HealthChangeSyncOutcome(
     val affectedDates: Set<LocalDate>,
     val requiresFullResync: Boolean,
     val nextTokens: Map<HealthDataType, String> = emptyMap(),
-)
+    /** Why [requiresFullResync] was set (diagnostics only; empty when it is false). */
+    val fullResyncReason: String = "",
+) {
+    companion object {
+        fun fullResync(reason: String): HealthChangeSyncOutcome =
+            HealthChangeSyncOutcome(affectedDates = emptySet(), requiresFullResync = true, fullResyncReason = reason)
+    }
+}

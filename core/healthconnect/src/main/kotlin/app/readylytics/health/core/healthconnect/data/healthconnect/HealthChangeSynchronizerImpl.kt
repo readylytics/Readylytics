@@ -84,7 +84,7 @@ class HealthChangeSynchronizerImpl
 
                 if (token.isNullOrBlank()) {
                     logD("HealthChangeSynchronizer") { "Token for $dataType is missing, requesting full resync" }
-                    return HealthChangeSyncOutcome(emptySet(), requiresFullResync = true)
+                    return HealthChangeSyncOutcome.fullResync("Missing change token for $dataType")
                 }
 
                 applyChangesForType(
@@ -130,10 +130,7 @@ class HealthChangeSynchronizerImpl
                         logD("HealthChangeSynchronizer") {
                             "Token for $dataType is expired, requesting full resync"
                         }
-                        return HealthChangeSyncOutcome(
-                            affectedDates = emptySet(),
-                            requiresFullResync = true,
-                        )
+                        return HealthChangeSyncOutcome.fullResync("Change token expired for $dataType")
                     }
 
                     val selectedDevice = deviceByType[dataType.name]?.takeIf { it.isNotBlank() }
@@ -178,10 +175,7 @@ class HealthChangeSynchronizerImpl
                     logD("HealthChangeSynchronizer") {
                         "Change token expired for $dataType"
                     }
-                    HealthChangeSyncOutcome(
-                        affectedDates = emptySet(),
-                        requiresFullResync = true,
-                    )
+                    HealthChangeSyncOutcome.fullResync("Change token expired for $dataType")
                 } else {
                     throw e
                 }
@@ -309,10 +303,7 @@ class HealthChangeSynchronizerImpl
                         logD("HealthChangeSynchronizer") {
                             "Token for ${tokenType.tokenKey} is expired, requesting full resync"
                         }
-                        return HealthChangeSyncOutcome(
-                            affectedDates = emptySet(),
-                            requiresFullResync = true,
-                        )
+                        return HealthChangeSyncOutcome.fullResync("Change token expired for ${tokenType.tokenKey}")
                     }
 
                     val intervalChanges = response.changes.mapNotNull { toIntervalChange(it, intervalKind) }
@@ -345,10 +336,7 @@ class HealthChangeSynchronizerImpl
                     logD("HealthChangeSynchronizer") {
                         "Change token expired for ${tokenType.tokenKey}"
                     }
-                    HealthChangeSyncOutcome(
-                        affectedDates = emptySet(),
-                        requiresFullResync = true,
-                    )
+                    HealthChangeSyncOutcome.fullResync("Change token expired for ${tokenType.tokenKey}")
                 } else {
                     throw e
                 }

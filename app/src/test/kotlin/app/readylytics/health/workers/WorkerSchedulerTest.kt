@@ -9,6 +9,7 @@ import androidx.work.WorkManager
 import app.readylytics.health.core.model.data.preferences.BackupSchedule
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.sync.HistoricalRunIdentity
+import app.readylytics.health.core.model.domain.sync.RecalcTrigger
 import app.readylytics.health.core.model.domain.sync.ResyncCheckpoint
 import app.readylytics.health.core.model.domain.sync.ResyncCheckpointStore
 import app.readylytics.health.core.model.domain.sync.ResyncPhase
@@ -206,6 +207,28 @@ class WorkerSchedulerTest {
             val input = request.captured.workSpec.input
             assertEquals(-1L, input.getLong(HealthResyncWorker.KEY_RECOMPUTE_START_EPOCH_DAY, -1L))
             assertEquals(-1L, input.getLong(HealthResyncWorker.KEY_RECOMPUTE_END_EPOCH_DAY, -1L))
+        }
+
+    @Test
+    fun `resync request carries its trigger and detail as input data`() =
+        runTest {
+            val request = slot<OneTimeWorkRequest>()
+
+            scheduler.scheduleResyncWorker(
+                trigger = RecalcTrigger.PERIODIC_SYNC_ESCALATION,
+                triggerDetail = "Change token expired for HEART_RATE",
+            )
+
+            verify {
+                workManager.enqueueUniqueWork(
+                    WorkerScheduler.RESYNC_WORK_NAME,
+                    ExistingWorkPolicy.KEEP,
+                    capture(request),
+                )
+            }
+            val input = request.captured.workSpec.input
+            assertEquals("PERIODIC_SYNC_ESCALATION", input.getString(HealthResyncWorker.KEY_TRIGGER))
+            assertEquals("Change token expired for HEART_RATE", input.getString(HealthResyncWorker.KEY_TRIGGER_DETAIL))
         }
 
     @Test

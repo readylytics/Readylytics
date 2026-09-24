@@ -274,7 +274,6 @@ class WarmMutationRegressionTest {
             heartRateDao = database.heartRateDao(),
             publisher = publisher,
             transactionRunner = RoomTransactionRunner(database),
-            dirtyRangeDao = database.dirtyRangeDao(),
             healthMutationStateDao = database.healthMutationStateDao(),
         ).rollupExpiredHotTier(minute + 60_000L)
     }

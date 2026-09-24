@@ -12,6 +12,16 @@ package app.readylytics.health.core.healthconnect.domain.sync
 const val MAX_INLINE_RECOMPUTE_DAYS = 7
 
 /**
+ * A daily-sync walk-forward longer than this many days is unusual (the normal periodic window is
+ * 2 days plus at most one absorbed back-day ticket) and is logged with the dates that widened it,
+ * so a report of unexpected background recalculation can be traced from logcat.
+ */
+const val LARGE_INLINE_WINDOW_DAYS = 3
+
+/** Caps how many affected dates a sync escalation reason lists, so the message stays readable. */
+const val MAX_REPORTED_DATES = 10
+
+/**
  * Window used by [app.readylytics.health.core.healthconnect.domain.sync.HealthDataRefresh.refreshAffectedWindow]
  * callers today (HC-009): every scoring-relevant settings change currently triggers this same
  * fixed foreground refresh, regardless of whether the setting actually invalidates the whole
