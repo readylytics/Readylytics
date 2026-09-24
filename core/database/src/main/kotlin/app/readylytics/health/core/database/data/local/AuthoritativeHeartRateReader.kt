@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.round
 
 /**
  * One time range's authoritative heart-rate evidence. [rawSamples] and [warmBuckets] are
@@ -193,19 +194,65 @@ class AuthoritativeHeartRateReader
          */
         suspend fun sleepProjectionForSessions(sessionIds: List<String>): List<SleepHrSample> {
             if (sessionIds.isEmpty()) return emptyList()
-            val hot = heartRateDao.getVisibleSleepHrProjectionForSessions(sessionIds)
-            val warm =
-                sessionIds.flatMap { sessionId ->
-                    minuteBucketDao
-                        .getVisibleBucketsForSession(RecordType.SLEEP.name, sessionId)
-                        .reconstructSampleValues()
-                        .map { SleepHrSample(sessionId = sessionId, beatsPerMinute = it) }
+            val distinctIds = sessionIds.distinct()
+            val hot =
+                distinctIds.chunked(BATCH_CHUNK_SIZE).flatMap { chunk ->
+                    heartRateDao.getVisibleSleepHrProjectionForSessions(chunk)
                 }
+            val warmBuckets =
+                distinctIds.chunked(BATCH_CHUNK_SIZE).flatMap { chunk ->
+                    minuteBucketDao.getVisibleBucketsForSessions(RecordType.SLEEP.name, chunk)
+                }
+            val warm =
+                warmBuckets
+                    .groupBy { it.sessionId }
+                    .flatMap { (sessionId, buckets) ->
+                        buckets
+                            .reconstructSampleValues()
+                            .map { SleepHrSample(sessionId = sessionId, beatsPerMinute = it) }
+                    }
             return if (warm.isEmpty()) {
-                hot
+                hot.sortedWith(compareBy({ it.sessionId }, { it.beatsPerMinute }))
             } else {
                 (hot + warm).sortedWith(compareBy({ it.sessionId }, { it.beatsPerMinute }))
             }
+        }
+
+        /**
+         * Tier-authoritative mean heart rate for several sleep sessions at once, rounded to the
+         * nearest integer. Raw rows and warm bucket slices are grouped by session and aggregated
+         * without reconstructing sample rows.
+         */
+        suspend fun sleepMeanForSessions(sessionIds: List<String>): Map<String, Int> {
+            if (sessionIds.isEmpty()) return emptyMap()
+            val distinctIds = sessionIds.distinct()
+            val rawSummaries =
+                distinctIds.chunked(BATCH_CHUNK_SIZE).flatMap { chunk ->
+                    heartRateDao.getVisibleSleepHrSummaryForSessions(chunk)
+                }.associateBy { it.sessionId }
+
+            val warmBucketsBySession =
+                distinctIds.chunked(BATCH_CHUNK_SIZE).flatMap { chunk ->
+                    minuteBucketDao.getVisibleBucketsForSessions(RecordType.SLEEP.name, chunk)
+                }.groupBy { it.sessionId }
+
+            val result = mutableMapOf<String, Int>()
+            for (sessionId in distinctIds) {
+                val raw = rawSummaries[sessionId]
+                val rawSum = raw?.sumBpm ?: 0L
+                val rawCount = raw?.sampleCount ?: 0L
+
+                val warmBuckets = warmBucketsBySession[sessionId]
+                val warmSum = warmBuckets?.sumOf { it.avgBpm * it.sampleCount } ?: 0.0
+                val warmCount = warmBuckets?.sumOf { it.sampleCount.toLong() } ?: 0L
+
+                val totalCount = rawCount + warmCount
+                if (totalCount > 0L) {
+                    val totalSum = rawSum.toDouble() + warmSum
+                    result[sessionId] = round(totalSum / totalCount).toInt()
+                }
+            }
+            return result
         }
 
         /** Ascending sleep-HR sample values of one session across both tiers. */
@@ -258,6 +305,7 @@ class AuthoritativeHeartRateReader
         private companion object {
             const val MIN_PLAUSIBLE_BPM = 30
             const val MAX_PLAUSIBLE_BPM = 230
+            const val BATCH_CHUNK_SIZE = 500
         }
     }
 

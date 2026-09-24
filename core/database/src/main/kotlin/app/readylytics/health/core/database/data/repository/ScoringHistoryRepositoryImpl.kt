@@ -93,9 +93,7 @@ class ScoringHistoryRepositoryImpl
             }
 
         override suspend fun getAvgSleepHrForSessions(sessionIds: List<String>): Map<String, Int> =
-            getSleepHrProjectionForSessions(sessionIds)
-                .groupBy { it.sessionId }
-                .mapValues { (_, samples) -> round(samples.map { it.beatsPerMinute }.average()).toInt() }
+            authoritativeReader.sleepMeanForSessions(sessionIds)
 
         override suspend fun getMinHrTimestamp(sessionId: String): Long? = heartRateDao.getMinHrTimestamp(sessionId)
 

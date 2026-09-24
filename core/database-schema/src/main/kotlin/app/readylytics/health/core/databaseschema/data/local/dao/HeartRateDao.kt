@@ -308,6 +308,24 @@ interface HeartRateDao {
     )
     suspend fun getVisibleSleepHrProjectionForSessions(sessionIds: List<String>): List<SleepHrSample>
 
+    /** Tier-authoritative grouped raw projection for sleep sessions. */
+    @Query(
+        "SELECT h.sessionId AS sessionId, " +
+            "SUM(h.beatsPerMinute) AS sumBpm, " +
+            "COUNT(*) AS sampleCount " +
+            "FROM heart_rate_records h " +
+            "LEFT JOIN minute_coverage c ON c.bucketStartMs = " +
+            "((h.timestampMs / 60000) - (CASE WHEN h.timestampMs % 60000 < 0 THEN 1 ELSE 0 END)) * 60000 " +
+            "WHERE h.sessionId IN (:sessionIds) AND h.recordType = 'SLEEP' " +
+            "AND h.beatsPerMinute BETWEEN 30 AND 230 " +
+            "AND (c.bucketStartMs IS NULL OR c.tier = 'HOT' " +
+            "OR (c.tier IN ('WARM', 'LEGACY_WARM') AND NOT EXISTS (" +
+            "SELECT 1 FROM hr_minute_buckets b2 WHERE b2.bucketStartMs = c.bucketStartMs " +
+            "AND b2.generation = c.visibleGeneration))) " +
+            "GROUP BY h.sessionId",
+    )
+    suspend fun getVisibleSleepHrSummaryForSessions(sessionIds: List<String>): List<SleepHrRawSummary>
+
     /** Tier-authoritative equivalent of [getSleepHrSamplesForSession]. */
     @Query(
         "SELECT h.beatsPerMinute FROM heart_rate_records h " +

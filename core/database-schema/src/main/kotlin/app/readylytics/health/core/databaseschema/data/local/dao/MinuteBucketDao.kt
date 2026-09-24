@@ -54,9 +54,6 @@ interface MinuteBucketDao {
     )
     suspend fun getBucketsInTimeRange(startMs: Long, endMs: Long): List<HrMinuteBucketEntity>
 
-    @Query("DELETE FROM hr_minute_buckets WHERE bucketStartMs >= :startMs AND bucketStartMs < :endMs")
-    suspend fun deleteInRange(startMs: Long, endMs: Long)
-
     /**
      * WP-17: drops every visible bucket slice of exactly the listed minutes. `upsertBuckets` only
      * replaces rows whose full `(bucketStartMs, recordType, sessionId, deviceName)` key matches, so
@@ -130,6 +127,22 @@ interface MinuteBucketDao {
     suspend fun getVisibleBucketsForSession(
         recordType: String,
         sessionId: String,
+    ): List<HrMinuteBucketEntity>
+
+    /** Tier-authoritative batched equivalent of [getVisibleBucketsForSession]. */
+    @Query(
+        "SELECT b.* FROM hr_minute_buckets b " +
+            "LEFT JOIN minute_coverage c ON c.bucketStartMs = b.bucketStartMs " +
+            "WHERE b.recordType = :recordType AND b.sessionId IN (:sessionIds) " +
+            "AND ((c.tier IN ('WARM', 'LEGACY_WARM') AND c.visibleGeneration = b.generation) " +
+            "OR (c.bucketStartMs IS NULL AND NOT EXISTS (" +
+            "SELECT 1 FROM heart_rate_records h WHERE h.timestampMs >= b.bucketStartMs " +
+            "AND h.timestampMs < b.bucketStartMs + 60000))) " +
+            "ORDER BY b.sessionId ASC, b.bucketStartMs ASC",
+    )
+    suspend fun getVisibleBucketsForSessions(
+        recordType: String,
+        sessionIds: List<String>,
     ): List<HrMinuteBucketEntity>
 
     /** Tier-authoritative equivalent of [getBucketsInTimeRange] (same overlap semantics). */
