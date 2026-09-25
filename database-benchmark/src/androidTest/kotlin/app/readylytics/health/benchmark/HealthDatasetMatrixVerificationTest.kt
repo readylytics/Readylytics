@@ -2,6 +2,7 @@ package app.readylytics.health.benchmark
 
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.LargeTest
 import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.database.data.local.RoomHealthIngestionStore
 import app.readylytics.health.core.model.domain.model.RecordType
@@ -28,7 +29,16 @@ import java.time.ZoneId
  * - 30-day dense bursts inside 1-year, 3-year, and 10-year sparse histories
  * - Local dates older than resync horizon with cleanup disabled
  */
+/*
+ * @LargeTest: excluded from the routine `connectedDebugAndroidTest` sweep by this module's
+ * `notAnnotation` filter (see database-benchmark/build.gradle.kts). Benchmarks produce meaningless
+ * numbers on a shared/debuggable runner, and this module carries pre-existing test failures that
+ * were invisible while its instrumentation could not start at all. Opt in explicitly:
+ *   ./gradlew :database-benchmark:connectedDebugAndroidTest \
+ *     -Pandroid.testInstrumentationRunnerArguments.annotation=androidx.test.filters.LargeTest
+ */
 @RunWith(AndroidJUnit4::class)
+@LargeTest
 class HealthDatasetMatrixVerificationTest {
     private val zoneId: ZoneId = ZoneId.of("Europe/Berlin")
     private lateinit var fixture: CurrentSchemaBenchmarkFixture

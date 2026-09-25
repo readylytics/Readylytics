@@ -50,6 +50,15 @@ jobs:
         if: ${{ !cancelled() }}
         run: ./gradlew lint lintRelease
 
+      # Guards against the drift that left :database-benchmark uncompilable and its benchmarks
+      # silently not running. `assembleDebug` does not build any module's androidTest sources, and
+      # the two benchmark modules were not built by ANY CI step, so 35 compile errors accumulated
+      # there unnoticed across several phases. Compiling the instrumentation sources on every PR is
+      # cheap and would have caught all of them.
+      - name: Compile instrumented test sources (incl. benchmark modules)
+        if: ${{ !cancelled() }}
+        run: ./gradlew assembleDebugAndroidTest :benchmark:assembleBenchmarkBenchmark
+
       - name: Run unit tests
         if: ${{ !cancelled() }}
         run: ./gradlew testDebugUnitTest

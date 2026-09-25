@@ -15,7 +15,7 @@ import java.util.concurrent.Executors
  * Extracted separately from the legacy v6/v7 migration driver to ensure current-schema
  * benchmarking exercises the real Room architecture with SQLCipher encryption enabled.
  */
-internal class CurrentSchemaBenchmarkFixture(
+class CurrentSchemaBenchmarkFixture(
     private val context: Context,
 ) {
     private val createdNames = mutableSetOf<String>()
@@ -108,7 +108,7 @@ internal class CurrentSchemaBenchmarkFixture(
     }
 }
 
-internal data class CurrentSchemaFixtureInstance(
+data class CurrentSchemaFixtureInstance(
     val name: String,
     val file: File,
     val useSqlCipher: Boolean,

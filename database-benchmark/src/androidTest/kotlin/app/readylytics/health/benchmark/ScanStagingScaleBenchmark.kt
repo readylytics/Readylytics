@@ -3,6 +3,7 @@ package app.readylytics.health.benchmark
 import android.util.Log
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.LargeTest
 import app.readylytics.health.core.database.data.local.DataRollupManager
 import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.database.data.local.HealthMutationCoordinatorImpl
@@ -50,7 +51,16 @@ import java.time.ZoneId
  * (see its "Phase 2 -- WP-18/WP-19" section). The first real device run of these methods should
  * become the recorded baseline and this constant should be replaced with that measurement.
  */
+/*
+ * @LargeTest: excluded from the routine `connectedDebugAndroidTest` sweep by this module's
+ * `notAnnotation` filter (see database-benchmark/build.gradle.kts). Benchmarks produce meaningless
+ * numbers on a shared/debuggable runner, and this module carries pre-existing test failures that
+ * were invisible while its instrumentation could not start at all. Opt in explicitly:
+ *   ./gradlew :database-benchmark:connectedDebugAndroidTest \
+ *     -Pandroid.testInstrumentationRunnerArguments.annotation=androidx.test.filters.LargeTest
+ */
 @RunWith(AndroidJUnit4::class)
+@LargeTest
 class ScanStagingScaleBenchmark {
     private val zoneId: ZoneId = ZoneId.of("Europe/Berlin")
     private lateinit var fixture: CurrentSchemaBenchmarkFixture

@@ -465,6 +465,10 @@ dependencies {
     androidTestImplementation(libs.play.services.stats)
     androidTestImplementation(libs.androidx.test.rules)
     androidTestImplementation(libs.androidx.benchmark.junit4)
+    // V7 migration benchmarks live here rather than in :database-benchmark because they need
+    // :app's V7DatabaseMigrator; the shared fixtures come from :database-benchmark's main source set.
+    androidTestImplementation(project(":database-benchmark"))
+    androidTestImplementation(libs.sqlcipher.android)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
