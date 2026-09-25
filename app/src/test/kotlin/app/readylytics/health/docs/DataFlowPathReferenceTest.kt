@@ -61,6 +61,41 @@ class DataFlowPathReferenceTest {
         assertTrue(moduleRelative.isNotEmpty(), "fixture assumption broken: no module-relative paths found")
     }
 
+    /**
+     * Module-relative citations (`ui/sync/SyncViewModel.kt`) omit the module and package prefix, so
+     * they are resolved by suffix match instead of direct existence. A citation that matches nothing
+     * is a reference to a file that has been renamed or deleted.
+     */
+    @Test
+    fun `module relative kotlin paths in DATA_FLOW resolve to a source file`() {
+        val moduleRelative =
+            backtickedKotlinPaths
+                .filterNot { path -> repoRootedPrefixes.any { path.startsWith(it) } }
+                .filterNot { it.contains("...") }
+                .filter { it.contains('/') }
+
+        val sourceRoots = listOf("app", "core", "feature").map { resolveRepoDir(it) }
+        val allSources =
+            sourceRoots.flatMap { root ->
+                root
+                    .walkTopDown()
+                    .filter { it.isFile && it.extension == "kt" }
+                    .filterNot { it.path.contains("/build/") }
+                    .map { it.invariantSeparatorsPath }
+                    .toList()
+            }
+
+        val unresolved = moduleRelative.filter { rel -> allSources.none { it.endsWith("/$rel") } }.sorted()
+        assertTrue(
+            unresolved.isEmpty(),
+            "DATA_FLOW.md cites ${unresolved.size} module-relative path(s) that match no source file:\n" +
+                unresolved.joinToString("\n") { "  $it" },
+        )
+    }
+
+    private fun resolveRepoDir(name: String): File =
+        listOf(File(name), File("../$name"), File("../../$name")).first { it.isDirectory }
+
     private fun repoFileExists(pathFromRepoRoot: String): Boolean =
         listOf(File(pathFromRepoRoot), File("../$pathFromRepoRoot"), File("../../$pathFromRepoRoot"))
             .any { it.exists() }
