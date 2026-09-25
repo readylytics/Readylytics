@@ -302,6 +302,186 @@ git commit -m "test(docs): resolve module-relative DATA_FLOW.md citations"
 
 ---
 
+## Task 2d: Triage the pre-existing benchmark test failures
+
+**Added 2026-09-25, after execution revealed them.** `:database-benchmark` could not start its
+instrumentation at all (see Tasks 2b/2c), so none of its tests had ever run. Making the module
+self-instrumenting took it from **0 tests executing to 16**, and the failures below surfaced for the
+first time. None is a regression from Phase 0 work; all are pre-existing, and every later
+measurement task runs against this same harness, so they are triaged before the measurements are
+trusted.
+
+**Files:**
+- Modify: `database-benchmark/src/androidTest/kotlin/app/readylytics/health/benchmark/HealthDatasetMatrixVerificationTest.kt`
+- Modify: `database-benchmark/src/androidTest/kotlin/app/readylytics/health/benchmark/HealthPipelineBaselineBenchmark.kt`
+- Modify: `database-benchmark/build.gradle.kts` (suppressErrors argument)
+- Possibly: `core/database` / `core/scoring` production code, **only** if triage proves a production
+  defect rather than a fixture defect. Any such change leaves Phase 0's no-production-change
+  constraint behind and must be called out explicitly in its commit.
+
+**Interfaces:**
+- Consumes: the working instrumentation from Task 2c.
+- Produces: a green `:database-benchmark` suite, or a documented, ticketed reason why a given test
+  stays red.
+
+**How to run these (the module filters benchmarks out of the routine sweep):**
+
+```bash
+adb shell input keyevent KEYCODE_WAKEUP
+adb shell settings put global window_animation_scale 0
+adb shell settings put global transition_animation_scale 0
+adb shell settings put global animator_duration_scale 0   # IsolationActivity times out otherwise
+
+./gradlew :database-benchmark:connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.notAnnotation=androidx.test.filters.FlakyTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=<fully.qualified.TestClass>
+```
+
+Passing `notAnnotation` on the command line is what overrides the module's own
+`notAnnotation=LargeTest` filter. Passing `annotation=LargeTest` does **not** work — `notAnnotation`
+still applies and the intersection is empty, which silently yields `tests="0"`.
+
+### Measured starting state (isolated runs, SM-A576B, 2026-09-25)
+
+| Class | Result |
+|---|---|
+| `HealthDatasetMatrixVerificationTest` | 6 tests, **1 failure** |
+| `HealthPipelineBaselineBenchmark` | 4 tests, **2 failures** |
+
+Note the difference from a whole-module run, which reported more failures. `pageInterruptionAndResume`
+**fails in the full sweep but passes in isolation** — see finding D.
+
+- [ ] **Step 1: Finding A — `denseBurstsInsideSparseHistories` expects 365, gets 366**
+
+```
+java.lang.AssertionError: expected:<365> but was:<366>
+  at app.readylytics.health.benchmark.HealthDatasetMatrixVerificationTest$denseBurstsInsideSparseHistories$1.invokeSuspend
+```
+
+An off-by-one over a day range. Before changing anything, decide which side is wrong: read the test
+to see whether 365 is a hand-written constant or derived, and whether the range it counts is
+inclusive at both ends. `HealthParentFixture` spans exactly `30L * 24 * 60 * 60 * 1000` ms from
+`2026-01-01T00:00:00Z`, but this test builds its own sparse history — establish its intended span
+first.
+
+Two plausible causes, and they need different fixes:
+- the **fixture** produces 366 days (an inclusive end date, or a DST/leap boundary), and the
+  assertion is right → fix the fixture;
+- the **assertion** hard-codes 365 for a range that is legitimately 366 days → fix the test.
+
+Do not "fix" this by changing 365 to 366 until you can say which of the two it is. A test that was
+adjusted to match observed output asserts nothing.
+
+- [ ] **Step 2: Finding B — `measurePipelineStagesSeparately` cannot score a day**
+
+```
+app.readylytics.health.core.database.data.repository.DayAssemblyUnavailableException:
+  Day assembly unavailable: WORKOUT_LOAD_UNAVAILABLE
+  at ScoringRepositoryImpl.computeAndPersistDailySummary(ScoringRepositoryImpl.kt:167)
+```
+
+This is the **highest-value** of the three: it is the scoring pipeline refusing to assemble a day
+from a seeded fixture, not a harness detail. `ScoringRepositoryImpl:167` is the
+`if (!persisted) throw DayAssemblyUnavailableException(...)` branch, so the day's assembly came back
+unavailable with reason `WORKOUT_LOAD_UNAVAILABLE`.
+
+Determine which it is:
+- **Fixture too thin** — `ScoringBenchmarkHelper.seedCalibratedHistory(db, zoneId, targetDate, historyDays = 30)`
+  may not seed the workout/TRIMP inputs the load path needs, in which case the benchmark's fixture
+  is incomplete and the production behaviour is correct. Check what `WORKOUT_LOAD_UNAVAILABLE` is
+  raised on and whether the seed supplies it.
+- **Production defect** — a day with no workouts should degrade, not refuse. If a realistic day
+  legitimately has no workout load and the pipeline still refuses, that is a scoring-path bug and
+  belongs in the remediation plan's findings register, not in this benchmark fix.
+
+Record which, with the evidence, before editing. If it is the second, **stop and report** rather
+than patching the fixture to hide it.
+
+- [ ] **Step 3: Finding C — the `suppressErrors` argument is not reaching the runner**
+
+```
+java.lang.AssertionError: ERRORS (not suppressed): DEBUGGABLE NOT-AOT-COMPILED
+(Suppressed errors: ACTIVITY-MISSING)
+```
+
+`database-benchmark/build.gradle.kts` sets
+
+```kotlin
+testInstrumentationRunnerArguments["androidx.benchmark.suppressErrors"] =
+    "ACTIVITY-MISSING,DEBUGGABLE,EMULATOR,NOT-AOT-COMPILED,UNLOCKED"
+```
+
+yet only `ACTIVITY-MISSING` is suppressed at runtime. Something drops the rest. Leading hypothesis:
+`UNLOCKED` is not a valid androidx.benchmark error name and the parse discards the tail — verify by
+removing it and re-running, and check the value actually delivered with
+
+```bash
+adb shell am instrument -w -r -e class <TestClass> \
+  app.readylytics.health.databasebenchmark.test/androidx.benchmark.junit4.AndroidBenchmarkRunner
+```
+
+Fix by setting only names androidx.benchmark defines. The sibling `:benchmark` module sets just
+`DEBUGGABLE`; `scripts/run-instrumented-tests.sh` uses
+`ACTIVITY-MISSING,DEBUGGABLE,EMULATOR,NOT-AOT-COMPILED`. Prefer that exact set — it is already
+proven in CI.
+
+- [ ] **Step 4: Finding D — the suite is order-dependent**
+
+`pageInterruptionAndResume` fails in a whole-module run and passes when its class runs alone. Two
+classes sharing one device therefore share state that one of them does not reset.
+
+Every fixture in this module names its database (`fixture.createDatabase("current-benchmark-<suffix>.db")`)
+and `CurrentSchemaBenchmarkFixture.cleanUp()` deletes the names it created — but only the ones **that
+instance** created. Two test classes construct separate fixture instances, so a database left behind
+by a crashed or killed test is not cleaned by the next class.
+
+Confirm by running the two classes in one invocation and then in isolation, then make the cleanup
+unconditional: delete by name prefix (`current-benchmark-`) in `@Before`, not only the instance's own
+set in `@After`. A benchmark that silently inherits another test's database measures the wrong thing,
+so this matters beyond the failing assertion.
+
+- [ ] **Step 5: Re-run both classes in isolation and together**
+
+```bash
+./gradlew :database-benchmark:connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.notAnnotation=androidx.test.filters.FlakyTest
+```
+
+Expected: every test passes, and the totals are identical whether classes run alone or together.
+Record the before/after counts in the ledger.
+
+- [ ] **Step 6: Decide whether these tests should gate PRs**
+
+Task 2c excluded the benchmark classes from the routine sweep via the module's `notAnnotation`
+filter, because they were red. Once green, `HealthDatasetMatrixVerificationTest` is a **correctness**
+test, not a benchmark, and there is a case for letting it gate PRs: drop its `@LargeTest`, leave the
+three timing-sensitive benchmark classes annotated. Weigh its runtime on the CI emulator before
+doing so, and say in the commit which way you went and why.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add database-benchmark/
+git commit -m "fix(benchmark): repair the test failures exposed by making the module runnable"
+```
+
+**Acceptance:**
+1. `:database-benchmark`'s suite is green in isolation and as a whole module, with identical totals.
+2. Each of findings A-D has a recorded cause — fixture defect, test defect, production defect, or
+   shared-state defect — not just a passing test.
+3. Any production-code change is called out explicitly and, if it is a scoring defect, raised as a
+   finding against `ARCHITECTURE_HEALTH_DATA_SCORING_REMEDIATION_PLAN.md` rather than absorbed here.
+4. The `suppressErrors` set contains only names androidx.benchmark defines.
+
+**Validation:** the two isolated runs above, plus the whole-module run; then the repo gate
+(`ktlintCheck`, `detekt`, `assembleDebug`, `testDebugUnitTest`) and the CI guard command
+(`assembleDebugAndroidTest :benchmark:assembleBenchmarkBenchmark`).
+
+**Depends on:** Task 2c. **Blocks:** trusting any measurement from Tasks 3-11 — a harness with
+order-dependent state cannot produce comparable numbers.
+
+---
+
 ## Task 3: Scale points and fixture size guard
 
 **Files:**
