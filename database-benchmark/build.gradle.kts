@@ -45,7 +45,7 @@ android {
         // A real measurement run uses the connected release-shaped device build. Mirrors the
         // sibling :benchmark module and scripts/run-instrumented-tests.sh.
         testInstrumentationRunnerArguments["androidx.benchmark.suppressErrors"] =
-            "ACTIVITY-MISSING,DEBUGGABLE,EMULATOR,NOT-AOT-COMPILED,UNLOCKED"
+            "ACTIVITY-MISSING,DEBUGGABLE,EMULATOR,NOT-AOT-COMPILED"
     }
 
     compileOptions {

@@ -274,8 +274,13 @@ class HealthDatasetMatrixVerificationTest {
             store.replaceHeartRateSources(asSourcePayloads(denseBurst))
             assertEquals(365 + 1500, db.heartRateDao().count())
 
-            // Historical sparse data before the burst must remain intact
-            val historicalCount = db.heartRateDao().countInRange(baseMs, burstBaseMs)
+            // Historical sparse data before the burst must remain intact.
+            // `countInRange` is inclusive at BOTH ends (`timestampMs >= :startMs AND <= :endMs`),
+            // and the dense burst's first sample sits exactly on `burstBaseMs`, so passing
+            // `burstBaseMs` as the end counts that sample too and yields 366. Stop one millisecond
+            // short so the assertion means what it says: the 365 historical samples, and nothing
+            // from the burst.
+            val historicalCount = db.heartRateDao().countInRange(baseMs, burstBaseMs - 1)
             assertEquals(365, historicalCount)
         }
 
