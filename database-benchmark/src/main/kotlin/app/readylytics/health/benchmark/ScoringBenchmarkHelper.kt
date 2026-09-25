@@ -396,6 +396,30 @@ object ScoringBenchmarkHelper {
                         trimp = 65f,
                         avgHr = 150f,
                     )
+
+                // EXERCISE-tagged samples across the workout window. Without them
+                // DailyTrimpComputer -> CanonicalWorkoutResolver has no samples to integrate and no
+                // prior canonical metadata to reuse, so every workout resolves to
+                // WorkoutHrQuality.UNAVAILABLE, the day's raw TRIMP comes back null, and
+                // ScoringRepositoryImpl correctly returns DayAssembly.Unavailable with
+                // WORKOUT_LOAD_UNAVAILABLE -- which is a deliberate, unit-tested contract
+                // (ScoringRepositoryImplAssemblyStatusTest), not a bug. The stored `trimp`/`avgHr`
+                // columns above are Edwards-style values and are NOT inputs to canonical TRIMP, so
+                // seeding them is not enough on its own.
+                var workoutSampleTime = workoutStart
+                var workoutSampleIdx = 0
+                while (workoutSampleTime < workoutEnd) {
+                    heartRateRows +=
+                        HeartRateRecordEntity(
+                            sourceRecordRef = hrSourceRef,
+                            timestampMs = workoutSampleTime,
+                            beatsPerMinute = 135 + (workoutSampleIdx % 25),
+                            recordType = RecordType.EXERCISE.name,
+                            sessionId = workoutId,
+                        )
+                    workoutSampleTime += 60_000L
+                    workoutSampleIdx++
+                }
             }
 
             currentDay = currentDay.plusDays(1)
