@@ -130,7 +130,7 @@ class HeartRateRepositoryImplTest {
     @Test
     fun `observeSleepHrTimelineForSession is RAW when the session has only raw-tier samples`() =
         runTest {
-            every { heartRateDao.observeVisibleSleepHrTimelineForSession("s1") } returns
+            every { heartRateDao._observeVisibleSleepHrTimelineForSession("s1") } returns
                 flowOf(
                     listOf(
                         heartRateEntityFixture(
@@ -154,7 +154,7 @@ class HeartRateRepositoryImplTest {
         runTest {
             // Regression for R2-UI-002: a sleep session older than DataRollupManager's hot/warm
             // cutoff has no raw rows left at all. The chart must still populate from the warm tier.
-            every { heartRateDao.observeVisibleSleepHrTimelineForSession("s1") } returns flowOf(emptyList())
+            every { heartRateDao._observeVisibleSleepHrTimelineForSession("s1") } returns flowOf(emptyList())
             coEvery { minuteBucketDao.getVisibleBucketsForSession("SLEEP", "s1") } returns
                 listOf(
                     minuteBucketFixture(
@@ -178,7 +178,7 @@ class HeartRateRepositoryImplTest {
     @Test
     fun `observeSleepHrTimelineForSession merges a session straddling the rollup cutoff in order`() =
         runTest {
-            every { heartRateDao.observeVisibleSleepHrTimelineForSession("s1") } returns
+            every { heartRateDao._observeVisibleSleepHrTimelineForSession("s1") } returns
                 flowOf(
                     listOf(
                         heartRateEntityFixture(

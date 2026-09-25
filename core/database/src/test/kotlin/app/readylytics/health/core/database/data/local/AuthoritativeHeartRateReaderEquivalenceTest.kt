@@ -12,8 +12,11 @@ import app.readylytics.health.core.databaseschema.data.local.entity.MinuteCovera
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.model.domain.model.HrMinuteBucketRow
 import app.readylytics.health.core.model.domain.repository.HeartRateResolution
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -172,6 +175,44 @@ class AuthoritativeHeartRateReaderEquivalenceTest {
                 merged.none { it.beatsPerMinute == 200 },
             )
             assertEquals(60.0, merged.map { it.beatsPerMinute }.average(), TOLERANCE)
+        }
+
+    @Test
+    fun `sleep session observation refreshes when a visible warm bucket changes without raw rows`() =
+        runBlocking {
+            seedLegacyMinute(
+                bucketStartMs = 0L,
+                sampleCount = 2,
+                avgBpm = 60.0,
+                recordType = "SLEEP",
+                sessionId = "sleep-1",
+            )
+            val emissions = Channel<AuthoritativeHrRange>(Channel.UNLIMITED)
+            val collection = launch {
+                reader.observeSleepSession("sleep-1").collect { emissions.send(it) }
+            }
+            try {
+                val initial = withTimeout(5_000L) { emissions.receive() }
+                assertTrue(initial.rawSamples.isEmpty())
+                assertEquals(60.0, initial.warmBuckets.single().avgBpm, TOLERANCE)
+
+                database.minuteBucketDao().upsertBuckets(
+                    listOf(
+                        initial.warmBuckets.single().copy(
+                            minBpm = 80,
+                            maxBpm = 80,
+                            avgBpm = 80.0,
+                        ),
+                    ),
+                )
+
+                val updated = withTimeout(5_000L) { emissions.receive() }
+                assertTrue(updated.rawSamples.isEmpty())
+                assertEquals(80.0, updated.warmBuckets.single().avgBpm, TOLERANCE)
+            } finally {
+                collection.cancel()
+                emissions.close()
+            }
         }
 
     @Test

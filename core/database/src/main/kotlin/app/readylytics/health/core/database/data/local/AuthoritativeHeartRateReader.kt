@@ -322,7 +322,9 @@ class AuthoritativeHeartRateReader
  * extension -- and any future one added for the same reason -- can reach them from the same module.
  */
 internal fun AuthoritativeHeartRateReader.observeSleepSession(sessionId: String): Flow<AuthoritativeHrRange> =
-    heartRateDao.observeVisibleSleepHrTimelineForSession(sessionId).map { raw ->
+    // Room invalidates this query for warm-bucket and coverage changes too. The DAO's
+    // distinctUntilChanged wrapper would discard those invalidations when raw rows stay empty.
+    heartRateDao._observeVisibleSleepHrTimelineForSession(sessionId).map { raw ->
         AuthoritativeHrRange(
             rawSamples = raw,
             warmBuckets = minuteBucketDao.getVisibleBucketsForSession(RecordType.SLEEP.name, sessionId),
