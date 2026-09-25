@@ -152,7 +152,26 @@ fun LocalBackupSection(
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.extraSmall))
 
-        if (uiState.availableBackups.isEmpty()) {
+        if (uiState.isLoadingBackups) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier =
+                    Modifier.padding(
+                        horizontal = MaterialTheme.spacing.medium,
+                        vertical = MaterialTheme.spacing.small,
+                    ),
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(MaterialTheme.dimens.iconSmall),
+                    strokeWidth = MaterialTheme.dimens.progressStrokeWidth,
+                )
+                Text(
+                    text = stringResource(R.string.backup_loading_message),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(start = MaterialTheme.spacing.small),
+                )
+            }
+        } else if (uiState.availableBackups.isEmpty()) {
             Text(
                 text = stringResource(R.string.backup_none_found),
                 style = MaterialTheme.typography.bodyMedium,

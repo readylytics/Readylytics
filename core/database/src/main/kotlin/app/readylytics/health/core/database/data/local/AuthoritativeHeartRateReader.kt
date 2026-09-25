@@ -92,8 +92,8 @@ data class AuthoritativeHrRange(
 class AuthoritativeHeartRateReader
     @Inject
     constructor(
-        private val heartRateDao: HeartRateDao,
-        private val minuteBucketDao: MinuteBucketDao,
+        internal val heartRateDao: HeartRateDao,
+        internal val minuteBucketDao: MinuteBucketDao,
         private val coverageSelectionDao: MinuteCoverageSelectionDao? = null,
     ) {
         /**
@@ -307,6 +307,28 @@ class AuthoritativeHeartRateReader
             const val MAX_PLAUSIBLE_BPM = 230
             const val BATCH_CHUNK_SIZE = 500
         }
+    }
+
+/**
+ * Authoritative session-scoped hot∪warm evidence, deliberately unfiltered by plausibility on the
+ * raw side (OD-3: this backs the as-sensor-recorded sleep-HR chart, the one plausibility exception
+ * in this class) but still tier-visibility-filtered like every other read here -- a minute already
+ * reconstructed into a visible warm bucket does not also contribute its raw rows.
+ *
+ * Top-level extension rather than a member so [AuthoritativeHeartRateReader]'s function count
+ * stays under detekt's `TooManyFunctions` threshold (the same rationale as [mergeMinuteBucketRows]
+ * below); [AuthoritativeHeartRateReader.heartRateDao] and
+ * [AuthoritativeHeartRateReader.minuteBucketDao] are `internal` rather than `private` so this
+ * extension -- and any future one added for the same reason -- can reach them from the same module.
+ */
+internal fun AuthoritativeHeartRateReader.observeSleepSession(sessionId: String): Flow<AuthoritativeHrRange> =
+    // Room invalidates this query for warm-bucket and coverage changes too. The DAO's
+    // distinctUntilChanged wrapper would discard those invalidations when raw rows stay empty.
+    heartRateDao._observeVisibleSleepHrTimelineForSession(sessionId).map { raw ->
+        AuthoritativeHrRange(
+            rawSamples = raw,
+            warmBuckets = minuteBucketDao.getVisibleBucketsForSession(RecordType.SLEEP.name, sessionId),
+        )
     }
 
 /**

@@ -2,6 +2,7 @@ package app.readylytics.health.core.database.data.repository
 
 import app.readylytics.health.core.database.data.local.AuthoritativeHeartRateReader
 import app.readylytics.health.core.database.data.local.AuthoritativeHrRange
+import app.readylytics.health.core.database.data.local.observeSleepSession
 import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao
 import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
@@ -52,8 +53,10 @@ class HeartRateRepositoryImpl
         ): List<HeartRateRecordData> =
             authoritativeReader.rangeIn(startTimeMs, endTimeMs).mergedSamples().map { mapToDomain(it) }
 
-        override fun observeSleepHrTimelineForSession(sessionId: String): Flow<List<HeartRateRecordData>> =
-            heartRateDao.observeSleepHrTimelineForSession(sessionId).map { list -> list.map { mapToDomain(it) } }
+        override fun observeSleepHrTimelineForSession(sessionId: String): Flow<HeartRateSeries> =
+            authoritativeReader.observeSleepSession(sessionId).map { range ->
+                HeartRateSeries(range.mergedSamples().map { mapToDomain(it) }, range.resolution)
+            }.distinctUntilChanged()
 
         override fun observeSleepHrvSince(fromMs: Long): Flow<List<HrvRecordData>> =
             hrvDao.observeSleepHrvSince(fromMs).map { list ->

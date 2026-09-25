@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -62,17 +63,30 @@ class LocalBackupViewModel
 
         private val transientState = MutableStateFlow(TransientBackupState())
 
-        private val availableBackupsFlow: StateFlow<List<BackupFileInfo>> =
-            transientState
-                .map { it.refreshTrigger }
-                .distinctUntilChanged()
-                .flatMapLatest {
-                    flow { emit(backupService.listBackups()) }
-                        .flowOn(ioDispatcher)
+        private data class BackupListing(
+            val directoryUri: String?,
+            val backups: List<BackupFileInfo>,
+            val isLoading: Boolean,
+        )
+
+        private val availableBackupsFlow: StateFlow<BackupListing> =
+            combine(
+                settingsRepo.userPreferences.map { it.backupDirectoryUri }.distinctUntilChanged(),
+                transientState.map { it.refreshTrigger }.distinctUntilChanged(),
+            ) { directoryUri, _ -> directoryUri }
+                .flatMapLatest { directoryUri ->
+                    flow {
+                        emit(BackupListing(directoryUri, emptyList(), isLoading = true))
+                        emit(BackupListing(directoryUri, backupService.listBackups(), isLoading = false))
+                    }.flowOn(ioDispatcher)
+                        .catch { e ->
+                            logE("LocalBackupViewModel", e) { "Failed to list backups" }
+                            emit(BackupListing(directoryUri, emptyList(), isLoading = false))
+                        }
                 }.stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5000),
-                    initialValue = emptyList(),
+                    initialValue = BackupListing(directoryUri = null, backups = emptyList(), isLoading = true),
                 )
 
         val uiState: StateFlow<LocalBackupState> =
@@ -81,10 +95,11 @@ class LocalBackupViewModel
                 transientState,
                 availableBackupsFlow,
                 backupService.operationState,
-            ) { prefs, transient, backups, operation ->
+            ) { prefs, transient, listing, operation ->
                 val isRotating =
                     operation.phase != BackupOperationPhase.IDLE &&
                         operation.phase != BackupOperationPhase.COMPLETE
+                val listingIsCurrent = listing.directoryUri == prefs.backupDirectoryUri
                 LocalBackupState(
                     lastBackupTimestamp = prefs.lastBackupTimestamp,
                     backupSchedule = prefs.backupSchedule,
@@ -98,14 +113,15 @@ class LocalBackupViewModel
                     backupError = transient.backupError,
                     restoreSuccess = transient.restoreSuccess,
                     pendingRestoreFile = transient.pendingRestoreFile,
-                    availableBackups = backups,
+                    availableBackups = if (listingIsCurrent) listing.backups else emptyList(),
+                    isLoadingBackups = listing.isLoading || !listingIsCurrent,
                     passwordVerificationResult = transient.passwordVerificationResult,
                     operationState = operation,
                 )
             }.stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5000),
-                initialValue = LocalBackupState(),
+                initialValue = LocalBackupState(isLoadingBackups = true),
             )
 
         fun onEvent(event: SettingsEvent) {

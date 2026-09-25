@@ -11,6 +11,8 @@ import app.readylytics.health.core.model.domain.repository.DailyMetricsRepositor
 import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
 import app.readylytics.health.core.model.domain.repository.HeartRateRecordData
 import app.readylytics.health.core.model.domain.repository.HeartRateRepository
+import app.readylytics.health.core.model.domain.repository.HeartRateResolution
+import app.readylytics.health.core.model.domain.repository.HeartRateSeries
 import app.readylytics.health.core.model.domain.repository.SleepSessionData
 import app.readylytics.health.core.model.domain.repository.SleepSessionRepository
 import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
@@ -200,7 +202,8 @@ class SleepViewModelTest {
                 DailySummary(date = selectedDate, sleepDurationMinutes = 480)
             every { sleepSessionRepository.observeFirstSessionEndingInRange(any(), any()) } returns flowOf(session)
             every { sleepSessionRepository.observeSessionStages(session.id) } returns flowOf(emptyList())
-            every { heartRateRepository.observeSleepHrTimelineForSession(session.id) } returns flowOf(emptyList())
+            every { heartRateRepository.observeSleepHrTimelineForSession(session.id) } returns
+                flowOf(HeartRateSeries(emptyList(), HeartRateResolution.RAW))
             every { settingsRepo.userPreferences } returns flowOf(UserPreferences(goalSleepHours = 8f))
 
             viewModel = createViewModel()
@@ -222,13 +225,33 @@ class SleepViewModelTest {
 
             every { sleepSessionRepository.observeFirstSessionEndingInRange(any(), any()) } returns flowOf(session)
             every { sleepSessionRepository.observeSessionStages(session.id) } returns flowOf(emptyList())
-            every { heartRateRepository.observeSleepHrTimelineForSession(session.id) } returns flowOf(hrSamples)
+            every { heartRateRepository.observeSleepHrTimelineForSession(session.id) } returns
+                flowOf(HeartRateSeries(hrSamples, HeartRateResolution.RAW))
 
             viewModel = createViewModel()
             testDispatcher.scheduler.advanceUntilIdle()
 
             val state = viewModel.uiState.first { !it.isLoading && it.latestSession != null }
             assertEquals(hrSamples, state.sleepHrSamples)
+            assertEquals(HeartRateResolution.RAW, state.sleepHrResolution)
+        }
+
+    @Test
+    fun `ui state exposes RECONSTRUCTED resolution when the repository reports a warm-merged session`() =
+        runTest(testDispatcher) {
+            val zoneId = ZoneId.systemDefault()
+            val selectedDate = LocalDate.of(2026, 6, 11)
+            val session = buildSleepSessionWithHr(selectedDate, zoneId)
+            every { sleepSessionRepository.observeFirstSessionEndingInRange(any(), any()) } returns flowOf(session)
+            every { sleepSessionRepository.observeSessionStages(session.id) } returns flowOf(emptyList())
+            every { heartRateRepository.observeSleepHrTimelineForSession(session.id) } returns
+                flowOf(HeartRateSeries(emptyList(), HeartRateResolution.RECONSTRUCTED))
+
+            viewModel = createViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val state = viewModel.uiState.first { !it.isLoading && it.latestSession != null }
+            assertEquals(HeartRateResolution.RECONSTRUCTED, state.sleepHrResolution)
         }
 
     @Test
@@ -624,7 +647,8 @@ class SleepViewModelTest {
                     .copy(sleepScore = 85f)
             every { sleepSessionRepository.observeFirstSessionEndingInRange(any(), any()) } returns flowOf(session)
             every { sleepSessionRepository.observeSessionStages(session.id) } returns flowOf(emptyList())
-            every { heartRateRepository.observeSleepHrTimelineForSession(session.id) } returns flowOf(emptyList())
+            every { heartRateRepository.observeSleepHrTimelineForSession(session.id) } returns
+                flowOf(HeartRateSeries(emptyList(), HeartRateResolution.RAW))
             // Also feed the same session into the trend query (observeSince), which is what
             // isLoading is now based on -- without this, the trend list stays empty (setUp()
             // default) and isLoading would (correctly, per the fix) be true while syncing, since
