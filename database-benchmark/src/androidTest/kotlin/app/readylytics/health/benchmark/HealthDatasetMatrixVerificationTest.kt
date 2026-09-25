@@ -28,14 +28,12 @@ import java.time.ZoneId
  * - HR/HRV page interruption and idempotent resume
  * - 30-day dense bursts inside 1-year, 3-year, and 10-year sparse histories
  * - Local dates older than resync horizon with cleanup disabled
- */
-/*
- * @LargeTest: excluded from the routine `connectedDebugAndroidTest` sweep by this module's
- * `notAnnotation` filter (see database-benchmark/build.gradle.kts). Benchmarks produce meaningless
- * numbers on a shared/debuggable runner, and this module carries pre-existing test failures that
- * were invisible while its instrumentation could not start at all. Opt in explicitly:
- *   ./gradlew :database-benchmark:connectedDebugAndroidTest \
- *     -Pandroid.testInstrumentationRunnerArguments.annotation=androidx.test.filters.LargeTest
+ *
+ * `@LargeTest`: excluded from the routine `connectedDebugAndroidTest` sweep by this module's
+ * `notAnnotation` filter (see `database-benchmark/build.gradle.kts`). Benchmarks produce
+ * meaningless numbers on a shared/debuggable runner, and this module carries pre-existing test
+ * failures that were invisible while its instrumentation could not start at all. Opt in with
+ * `-Pandroid.testInstrumentationRunnerArguments.annotation=androidx.test.filters.LargeTest`.
  */
 @RunWith(AndroidJUnit4::class)
 @LargeTest

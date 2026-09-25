@@ -50,14 +50,12 @@ import java.time.ZoneId
  * `benchmark/BASELINE.md` had no comparable heap measurement to inherit when this file was written
  * (see its "Phase 2 -- WP-18/WP-19" section). The first real device run of these methods should
  * become the recorded baseline and this constant should be replaced with that measurement.
- */
-/*
- * @LargeTest: excluded from the routine `connectedDebugAndroidTest` sweep by this module's
- * `notAnnotation` filter (see database-benchmark/build.gradle.kts). Benchmarks produce meaningless
- * numbers on a shared/debuggable runner, and this module carries pre-existing test failures that
- * were invisible while its instrumentation could not start at all. Opt in explicitly:
- *   ./gradlew :database-benchmark:connectedDebugAndroidTest \
- *     -Pandroid.testInstrumentationRunnerArguments.annotation=androidx.test.filters.LargeTest
+ *
+ * `@LargeTest`: excluded from the routine `connectedDebugAndroidTest` sweep by this module's
+ * `notAnnotation` filter (see `database-benchmark/build.gradle.kts`). Benchmarks produce
+ * meaningless numbers on a shared/debuggable runner, and this module carries pre-existing test
+ * failures that were invisible while its instrumentation could not start at all. Opt in with
+ * `-Pandroid.testInstrumentationRunnerArguments.annotation=androidx.test.filters.LargeTest`.
  */
 @RunWith(AndroidJUnit4::class)
 @LargeTest
