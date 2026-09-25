@@ -120,6 +120,29 @@ interface HeartRateDao {
     fun observeSleepHrTimelineForSession(sessionId: String): Flow<List<HeartRateRecordEntity>> =
         _observeSleepHrTimelineForSession(sessionId).distinctUntilChanged()
 
+    /**
+     * Tier-authoritative, OD-3-unfiltered equivalent of [observeSleepHrTimelineForSession]: same
+     * session/type scope and the same deliberate plausibility exception, but excludes a raw row
+     * whose minute has already rolled into a visible warm-tier bucket -- the same predicate
+     * [getVisibleByTimeRange] applies, scoped by session instead of time range. Backs
+     * `AuthoritativeHeartRateReader.observeSleepSession`.
+     */
+    @Query(
+        "SELECT h.* FROM heart_rate_records h " +
+            "LEFT JOIN minute_coverage c ON c.bucketStartMs = " +
+            "((h.timestampMs / 60000) - (CASE WHEN h.timestampMs % 60000 < 0 THEN 1 ELSE 0 END)) * 60000 " +
+            "WHERE h.sessionId = :sessionId AND h.recordType = 'SLEEP' " +
+            "AND (c.bucketStartMs IS NULL OR c.tier = 'HOT' " +
+            "OR (c.tier IN ('WARM', 'LEGACY_WARM') AND NOT EXISTS (" +
+            "SELECT 1 FROM hr_minute_buckets b2 WHERE b2.bucketStartMs = c.bucketStartMs " +
+            "AND b2.generation = c.visibleGeneration))) " +
+            "ORDER BY h.timestampMs ASC, h.sourceRecordRef ASC",
+    )
+    fun _observeVisibleSleepHrTimelineForSession(sessionId: String): Flow<List<HeartRateRecordEntity>>
+
+    fun observeVisibleSleepHrTimelineForSession(sessionId: String): Flow<List<HeartRateRecordEntity>> =
+        _observeVisibleSleepHrTimelineForSession(sessionId).distinctUntilChanged()
+
     @Query(
         "SELECT MIN(beatsPerMinute) FROM heart_rate_records " +
             "WHERE timestampMs >= :startTimeMs AND timestampMs <= :endTimeMs " +

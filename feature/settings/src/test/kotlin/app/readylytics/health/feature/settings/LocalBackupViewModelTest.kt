@@ -107,6 +107,10 @@ class LocalBackupViewModelTest {
                     it.backupDirectory == "content://dirB" && it.availableBackups.isNotEmpty()
                 },
             )
+            // Positive counterpart (final review, Finding 4): the `none {}` check above passes
+            // vacuously if a dirB frame was never observed at all. Confirm the race was actually
+            // exercised -- a dirB frame did land before the deferred listBackups() completed.
+            assertTrue(observedStates.any { it.backupDirectory == "content://dirB" })
             assertTrue(viewModel.uiState.value.isLoadingBackups)
             assertEquals(emptyList<BackupFileRef>(), viewModel.uiState.value.availableBackups)
 
@@ -116,6 +120,19 @@ class LocalBackupViewModelTest {
             assertTrue(!viewModel.uiState.value.isLoadingBackups)
 
             collectJob.cancel()
+        }
+
+    @Test
+    fun `first observed frame is loading, not an empty-backups flash`() =
+        runTest(testDispatcher) {
+            val neverCompletes = CompletableDeferred<List<BackupFileRef>>()
+            coEvery { backupService.listBackups() } coAnswers { neverCompletes.await() }
+
+            viewModel = createViewModel()
+            testDispatcher.scheduler.runCurrent()
+
+            assertTrue(viewModel.uiState.value.isLoadingBackups)
+            assertEquals(emptyList<BackupFileRef>(), viewModel.uiState.value.availableBackups)
         }
 
     @Test

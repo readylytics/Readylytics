@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -78,6 +79,10 @@ class LocalBackupViewModel
                         emit(BackupListing(directoryUri, emptyList(), isLoading = true))
                         emit(BackupListing(directoryUri, backupService.listBackups(), isLoading = false))
                     }.flowOn(ioDispatcher)
+                        .catch { e ->
+                            logE("LocalBackupViewModel", e) { "Failed to list backups" }
+                            emit(BackupListing(directoryUri, emptyList(), isLoading = false))
+                        }
                 }.stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5000),
@@ -116,7 +121,7 @@ class LocalBackupViewModel
             }.stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5000),
-                initialValue = LocalBackupState(),
+                initialValue = LocalBackupState(isLoadingBackups = true),
             )
 
         fun onEvent(event: SettingsEvent) {

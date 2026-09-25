@@ -12,6 +12,7 @@ import app.readylytics.health.core.databaseschema.data.local.entity.MinuteCovera
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.model.domain.model.HrMinuteBucketRow
 import app.readylytics.health.core.model.domain.repository.HeartRateResolution
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -135,6 +136,42 @@ class AuthoritativeHeartRateReaderEquivalenceTest {
 
             assertMinuteProjection(expectedCount = 10, expectedMean = 60.0)
             assertCrossReaderAgreement()
+        }
+
+    // Finding 2 (final review): the session-scoped mirror of the test above. Before the fix,
+    // `AuthoritativeHeartRateReader.observeSleepSession` paired an UNFILTERED raw session read with
+    // the tier-visibility-filtered warm session read, so this exact overlap state doubled the
+    // minute's sample count on the sleep-HR chart instead of resolving to one tier.
+    @Test
+    fun `legacy overlap minute never concatenates its quarantined raw rows into a sleep session`() =
+        runBlocking {
+            val ref = seedSource("src-a")
+            database.sleepSessionDao().upsertAll(listOf(sleepSession("sleep-1", 0L, MINUTE_MS - 1)))
+            seedLegacyMinute(
+                bucketStartMs = 0L,
+                sampleCount = 10,
+                avgBpm = 60.0,
+                recordType = "SLEEP",
+                sessionId = "sleep-1",
+            )
+            database.heartRateDao().upsertAll(listOf(sleepHr(ref, 1_000L, 200, "sleep-1")))
+
+            rollupManager.rollupExpiredHotTier(MINUTE_MS)
+
+            // Precondition: the quarantine really did leave a raw row behind under the cutoff.
+            assertEquals(1, database.heartRateDao().countInRange(0L, MINUTE_MS - 1))
+
+            val range = reader.observeSleepSession("sleep-1").first()
+            assertTrue("Quarantined raw rows must stay invisible", range.rawSamples.isEmpty())
+            assertEquals(1, range.warmBuckets.size)
+
+            val merged = range.mergedSamples()
+            assertEquals("the minute must resolve to exactly one tier's evidence", 10, merged.size)
+            assertTrue(
+                "the quarantined raw sample must stay hidden, not concatenated",
+                merged.none { it.beatsPerMinute == 200 },
+            )
+            assertEquals(60.0, merged.map { it.beatsPerMinute }.average(), TOLERANCE)
         }
 
     @Test
@@ -519,6 +556,8 @@ class AuthoritativeHeartRateReaderEquivalenceTest {
         bucketStartMs: Long,
         sampleCount: Int,
         avgBpm: Double,
+        recordType: String = "RESTING",
+        sessionId: String = "",
     ) {
         database.minuteBucketDao().upsertBuckets(
             listOf(
@@ -529,7 +568,8 @@ class AuthoritativeHeartRateReaderEquivalenceTest {
                     maxBpm = 70,
                     avgBpm = avgBpm,
                     sampleCount = sampleCount,
-                    recordType = "RESTING",
+                    recordType = recordType,
+                    sessionId = sessionId,
                     deviceName = "legacy-device",
                 ),
             ),

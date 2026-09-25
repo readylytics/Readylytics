@@ -612,8 +612,13 @@ skipped by the restore reader's `else -> skipValue()` branch.
   everyday-HR load reads both filter implausible samples (`beatsPerMinute BETWEEN 30 AND 230`); the
   hot-path sleep-RHR reads apply the same predicate (`HeartRateDao.getSleepHrSamplesForSession`,
   `getSleepHrProjectionForSessions`, `getAvgSleepHrForSessions`) so the sleep percentile RHR and avg RHR
-  are bit-consistent whether read from raw or reconstructed warm samples. `observeSleepHrTimelineForSession`
-  (UI chart) intentionally stays unfiltered. `observeSleepHrvTimelineForSession`
+  are bit-consistent whether read from raw or reconstructed warm samples. `HeartRateDao.observeSleepHrTimelineForSession`
+  (raw tier only) intentionally stays unfiltered by plausibility; the repository-level
+  `HeartRateRepositoryImpl.observeSleepHrTimelineForSession` (UI chart) merges this with the
+  session's visible warm-tier buckets via `AuthoritativeHeartRateReader.observeSleepSession`,
+  labelling the result `HeartRateResolution.RECONSTRUCTED` once any warm bucket contributes, so a
+  session whose raw rows have fully rolled off past the hot/warm cutoff still renders instead of
+  showing empty. `observeSleepHrvTimelineForSession`
   (UI chart, HRV overnight timeline) is likewise unfiltered — it feeds the sleep-tab HRV chart
   via `HeartRateRepository.observeSleepHrvTimelineForSession(sessionId)` → `SleepViewModel` and is never
   used by the scoring pipeline.
