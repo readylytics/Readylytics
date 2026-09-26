@@ -1,7 +1,5 @@
 package app.readylytics.health.core.database.di
 
-import app.readylytics.health.core.database.data.local.HealthMutationCoordinatorImpl
-import app.readylytics.health.core.database.data.local.RoomDirtyRangeStore
 import app.readylytics.health.core.database.data.local.RoomHealthChangeIngestionStore
 import app.readylytics.health.core.database.data.local.RoomHealthIngestionStore
 import app.readylytics.health.core.database.data.local.SelectedSourcePrunerImpl
@@ -10,14 +8,14 @@ import app.readylytics.health.core.database.data.repository.ScoringHistoryReposi
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.core.database.data.repository.SelectedDateRepository
 import app.readylytics.health.core.database.data.repository.WorkoutTrimpBackfillStatusImpl
+import app.readylytics.health.core.database.domain.scoring.RecomputeTodayUseCase
 import app.readylytics.health.core.model.domain.date.SelectedDateStore
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.model.domain.repository.ScoringRepository
 import app.readylytics.health.core.model.domain.repository.WorkoutTrimpBackfillStatus
-import app.readylytics.health.core.model.domain.sync.DirtyRangeStore
+import app.readylytics.health.core.model.domain.scoring.RecomputeToday
 import app.readylytics.health.core.model.domain.sync.HealthChangeIngestionStore
 import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
-import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 import app.readylytics.health.core.model.domain.sync.SelectedSourcePruner
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
 import dagger.Binds
@@ -65,9 +63,5 @@ abstract class ScoringSyncBindingsModule {
 
     @Binds
     @Singleton
-    abstract fun bindDirtyRangeStore(impl: RoomDirtyRangeStore): DirtyRangeStore
-
-    @Binds
-    @Singleton
-    abstract fun bindHealthMutationCoordinator(impl: HealthMutationCoordinatorImpl): HealthMutationCoordinator
+    abstract fun bindRecomputeToday(impl: RecomputeTodayUseCase): RecomputeToday
 }

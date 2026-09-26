@@ -3,6 +3,8 @@ package app.readylytics.health.core.database.data.local
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.readylytics.health.core.database.data.local.HealthDatabase
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -40,6 +42,26 @@ class HealthMutationCoordinatorImplTest {
     @After
     fun tearDown() {
         database.close()
+    }
+
+    @Test
+    fun nestedMutationInSameCoroutineCompletes() = runBlocking {
+        withTimeout(1000) {
+            assertEquals(42, coordinator.withMutation { coordinator.withMutation { 42 } })
+        }
+    }
+
+    @Test
+    fun childJobCannotBypassParentsMutationLock() = runBlocking {
+        var entered = false
+        coordinator.withMutation {
+            val child = async(start = CoroutineStart.UNDISPATCHED) {
+                coordinator.withMutation { entered = true }
+            }
+            assertFalse(entered)
+            child.cancelAndJoin()
+        }
+        assertEquals(42, coordinator.withMutation { 42 })
     }
 
     @Test

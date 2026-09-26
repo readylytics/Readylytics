@@ -6,13 +6,14 @@ import app.readylytics.health.core.model.domain.circadian.CircadianThresholdValu
 import app.readylytics.health.core.model.domain.preferences.CircadianThresholdPreferences
 import app.readylytics.health.core.model.domain.preferences.ThresholdSettings
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
-import app.readylytics.health.core.model.domain.repository.ScoringRepository
+import app.readylytics.health.core.model.domain.scoring.RecomputeToday
 import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.model.domain.validation.SettingsValidators
 import app.readylytics.health.core.model.domain.validation.ValidationResult
 import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.feature.settings.R
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -30,7 +31,7 @@ class ThresholdSettingsViewModel
     constructor(
         private val settingsReader: UserPreferencesReader,
         private val thresholdSettings: ThresholdSettings,
-        private val scoringRepository: ScoringRepository,
+        private val recomputeToday: RecomputeToday,
         private val circadianThresholdPreferences: CircadianThresholdPreferences,
         private val clock: Clock,
     ) : ViewModel() {
@@ -124,7 +125,7 @@ class ThresholdSettingsViewModel
                                 .onSuccess { _ ->
                                     transientState.update { it.copy(isUpdating = true, error = null) }
                                     circadianThresholdPreferences.setOverride(minutes = event.minutes)
-                                    scoringRepository.computeAndPersistDailySummary(LocalDate.now(clock))
+                                    recomputeToday.execute(LocalDate.now(clock))
                                     transientState.update { it.copy(isUpdating = false) }
                                 }.onFailure { _ ->
                                     transientState.update {
@@ -134,6 +135,8 @@ class ThresholdSettingsViewModel
                                         )
                                     }
                                 }
+                        } catch (e: CancellationException) {
+                            throw e
                         } catch (e: Exception) {
                             logE("ThresholdViewModel", e) { "Failed to update threshold" }
                             try {

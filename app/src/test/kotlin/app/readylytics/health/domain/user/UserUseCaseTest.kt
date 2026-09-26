@@ -1,12 +1,14 @@
 package app.readylytics.health.domain.user
 
 import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
-import app.readylytics.health.core.model.domain.repository.ScoringRepository
+import app.readylytics.health.core.model.domain.scoring.RecomputeToday
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import io.mockk.coEvery
 import io.mockk.coJustRun
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CancellationException
@@ -24,9 +26,9 @@ import kotlin.test.assertFailsWith
 class UserUseCaseTest {
     private val settingsRepo = mockk<SettingsRepository>(relaxed = true)
     private val workerScheduler = mockk<WorkerScheduler>(relaxed = true)
-    private val scoringRepository = mockk<ScoringRepository>(relaxed = true)
+    private val recomputeToday = mockk<RecomputeToday>(relaxed = true)
     private val testClock = Clock.fixed(Instant.parse("2026-08-27T00:00:00Z"), ZoneOffset.UTC)
-    private val useCase = UserUseCase(settingsRepo, workerScheduler, scoringRepository, testClock)
+    private val useCase = UserUseCase(settingsRepo, workerScheduler, recomputeToday, testClock)
     private val birthday = LocalDate.of(1990, 6, 15)
 
     @Test
@@ -48,10 +50,16 @@ class UserUseCaseTest {
                 flowOf(UserPreferences(autoCalculateMaxHr = true))
             coJustRun { settingsRepo.updateBirthday(birthday) }
             coJustRun { settingsRepo.updateMaxHeartRate(any()) }
-            coJustRun { scoringRepository.computeAndPersistDailySummary(any()) }
+            coEvery { recomputeToday.execute(any()) } returns Result.success(Unit)
 
             useCase.updateBirthday(birthday)
 
+            coVerifyOrder {
+                settingsRepo.updateBirthday(birthday)
+                settingsRepo.updateMaxHeartRate(any())
+                recomputeToday.execute(LocalDate.now(testClock))
+                workerScheduler.scheduleResyncWorker(recomputeOnly = true)
+            }
             coVerify(exactly = 1) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
         }
 
@@ -61,10 +69,16 @@ class UserUseCaseTest {
             every { settingsRepo.userPreferences } returns
                 flowOf(UserPreferences(autoCalculateMaxHr = false))
             coJustRun { settingsRepo.updateBirthday(birthday) }
-            coJustRun { scoringRepository.computeAndPersistDailySummary(any()) }
+            coEvery { recomputeToday.execute(any()) } returns Result.success(Unit)
 
             useCase.updateBirthday(birthday)
 
+            coVerifyOrder {
+                settingsRepo.updateBirthday(birthday)
+                recomputeToday.execute(LocalDate.now(testClock))
+                workerScheduler.scheduleResyncWorker(recomputeOnly = true)
+            }
+            coVerify(exactly = 0) { settingsRepo.updateMaxHeartRate(any()) }
             coVerify(exactly = 1) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
         }
 
