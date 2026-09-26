@@ -32,7 +32,7 @@ data class HistoricalRunIdentity(
     fun effectivePreferences(): UserPreferences? = decodeScoringSnapshot()?.toPreferencesOrNull()
 
     companion object {
-        const val CURRENT_PROTOCOL_VERSION: Int = 3
+        const val CURRENT_PROTOCOL_VERSION: Int = 4
         const val FULL_INGEST: String = "FULL_INGEST"
         const val RECOMPUTE_ONLY: String = "RECOMPUTE_ONLY"
         const val MODE_FULL_INGEST: String = FULL_INGEST
@@ -45,11 +45,10 @@ data class HistoricalRunIdentity(
             endDate: LocalDate,
             zoneId: ZoneId,
             prefs: UserPreferences,
-            resolvedHrMax: Float,
             startedAtEpochMs: Long,
             algorithmRevision: Int = SettingsDefaults.CURRENT_SCORING_VERSION,
         ): HistoricalRunIdentity {
-            val snapshot = ScoringRunSnapshot.capture(prefs, resolvedHrMax)
+            val snapshot = ScoringRunSnapshot.capture(prefs)
             val snapshotJson = Json.encodeToString(snapshot)
             val snapshotId = sha256Hex(snapshotJson)
             val sourceSelectionId =
@@ -73,8 +72,8 @@ data class HistoricalRunIdentity(
             )
         }
 
-        fun computeSnapshotId(prefs: UserPreferences, resolvedHrMax: Float): String {
-            val snapshot = ScoringRunSnapshot.capture(prefs, resolvedHrMax)
+        fun computeSnapshotId(prefs: UserPreferences): String {
+            val snapshot = ScoringRunSnapshot.capture(prefs)
             val snapshotJson = Json.encodeToString(snapshot)
             return sha256Hex(snapshotJson)
         }

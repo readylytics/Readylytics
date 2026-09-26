@@ -14,6 +14,7 @@ import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -22,13 +23,18 @@ class ScoringRunSnapshotTest {
     @Test
     fun `capture and toPreferences round trips every listed property`() {
         val originalPrefs = createFullPreferences()
-        val resolvedHrMax = 185f
-        val snapshot = ScoringRunSnapshot.capture(originalPrefs, resolvedHrMax)
+        val snapshot = ScoringRunSnapshot.capture(originalPrefs)
         val restoredPrefs = snapshot.toPreferences()
 
         assertPart1To4Matches(originalPrefs, restoredPrefs)
         assertPart5To8Matches(originalPrefs, restoredPrefs)
-        assertEquals(resolvedHrMax, snapshot.resolvedHrMax)
+    }
+
+    @Test
+    fun `serialized snapshot JSON contains no resolvedHrMax key`() {
+        val snapshot = ScoringRunSnapshot.capture(createFullPreferences())
+        val json = Json.encodeToString(snapshot)
+        assertFalse(json.contains("resolvedHrMax"))
     }
 
     private fun createFullPreferences(): UserPreferences =
@@ -197,7 +203,7 @@ class ScoringRunSnapshotTest {
                         "SLEEP" to "Device B",
                     ),
             )
-        val snapshot = ScoringRunSnapshot.capture(prefs, 180f)
+        val snapshot = ScoringRunSnapshot.capture(prefs)
 
         assertEquals("Watch 1", snapshot.sourceSelection[PRIMARY_DEVICE_KEY])
         val keys = snapshot.sourceSelection.keys.toList()
@@ -224,7 +230,6 @@ class ScoringRunSnapshotTest {
                 endDate = LocalDate.of(2025, 1, 31),
                 zoneId = ZoneId.of("UTC"),
                 prefs = prefs1,
-                resolvedHrMax = 180f,
                 startedAtEpochMs = 1000L,
             )
         val run2 =
@@ -235,7 +240,6 @@ class ScoringRunSnapshotTest {
                 endDate = LocalDate.of(2025, 1, 31),
                 zoneId = ZoneId.of("UTC"),
                 prefs = prefs2,
-                resolvedHrMax = 180f,
                 startedAtEpochMs = 1000L,
             )
 

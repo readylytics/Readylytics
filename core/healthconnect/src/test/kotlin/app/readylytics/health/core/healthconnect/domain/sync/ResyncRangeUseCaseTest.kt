@@ -3,8 +3,10 @@ package app.readylytics.health.core.healthconnect.domain.sync
 import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.core.database.domain.sync.DailyRecomputeSupport
 import app.readylytics.health.core.model.domain.model.HealthDataType
+import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
 import app.readylytics.health.core.model.domain.repository.ReadOutcome
@@ -24,9 +26,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.io.File
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -388,7 +392,6 @@ class ResyncRangeUseCaseTest {
                             endDate = endDate,
                             zoneId = java.time.ZoneId.systemDefault(),
                             prefs = app.readylytics.health.core.model.data.preferences.UserPreferences(),
-                            resolvedHrMax = 187f,
                             startedAtEpochMs = 1000L,
                         ),
                 )
@@ -627,4 +630,78 @@ class ResyncRangeUseCaseTest {
                 scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any(), any())
             }
         }
+
+    @Test
+    fun `snapshot identity is unified across resync and direct producers`() =
+        runTest {
+            val startDate = LocalDate.of(2026, 3, 1)
+            val endDate = LocalDate.of(2026, 3, 28)
+
+            for (autoMaxHr in listOf(true, false)) {
+                for (age in 18..90) {
+                    val basePrefs =
+                        UserPreferences(
+                            age = age,
+                            autoCalculateMaxHr = autoMaxHr,
+                            maxHeartRate = 190,
+                        )
+                    every { settingsRepo.userPreferences } returns flowOf(basePrefs)
+
+                    val (requestedRun, prefs) =
+                        useCase.prepareRequestedRun(
+                            startDate = startDate,
+                            endDate = endDate,
+                            skipIngestAndPrune = false,
+                            requestedRunId = "test-run",
+                        )
+
+                    val expectedSnapshotId = HistoricalRunIdentity.computeSnapshotId(prefs)
+                    val createdRun =
+                        HistoricalRunIdentity.create(
+                            runId = "test-run",
+                            mode = HistoricalRunIdentity.MODE_FULL_INGEST,
+                            startDate = startDate,
+                            endDate = endDate,
+                            zoneId = prefs.scoringZone(),
+                            prefs = prefs,
+                            startedAtEpochMs = 1000L,
+                        )
+
+                    assertEquals(
+                        "Mismatch for age=$age, autoMaxHr=$autoMaxHr",
+                        expectedSnapshotId,
+                        requestedRun.scoringSnapshotId,
+                    )
+                    assertEquals(
+                        "Created run snapshot mismatch for age=$age, autoMaxHr=$autoMaxHr",
+                        expectedSnapshotId,
+                        createdRun.scoringSnapshotId,
+                    )
+                }
+            }
+        }
+
+    @Test
+    fun `ResyncRangeUseCase source contains no duplicate Tanaka arithmetic`() {
+        val pkgPath = "app/readylytics/health/core/healthconnect/domain/sync"
+        val relPath = "src/main/kotlin/$pkgPath/ResyncRangeUseCase.kt"
+        val candidatePaths =
+            listOf(
+                File(relPath),
+                File("core/healthconnect", relPath),
+                File("../core/healthconnect", relPath),
+            )
+        val sourceFile =
+            candidatePaths.firstOrNull { it.exists() }
+                ?: error("ResyncRangeUseCase.kt source not found in candidate paths: $candidatePaths")
+        val source = sourceFile.readText()
+        assertFalse(
+            "ResyncRangeUseCase should not contain Tanaka base 208",
+            source.contains("208"),
+        )
+        assertFalse(
+            "ResyncRangeUseCase should not contain Tanaka factor 0.7",
+            source.contains("0.7"),
+        )
+    }
 }

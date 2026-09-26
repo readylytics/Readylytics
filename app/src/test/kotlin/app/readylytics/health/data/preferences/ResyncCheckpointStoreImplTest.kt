@@ -189,4 +189,44 @@ class ResyncCheckpointStoreImplTest {
         val domain = proto.toDomain()
         assertNull(domain.runIdentity)
     }
+
+    @Test
+    fun `round trips stored v3 identity preserving protocol version and fields`() {
+        val v3Identity =
+            HistoricalRunIdentity(
+                protocolVersion = 3,
+                runId = "run-uuid-v3",
+                mode = "FULL_INGEST",
+                startEpochDay = LocalDate.of(2024, 1, 1).toEpochDay(),
+                endEpochDayInclusive = LocalDate.of(2024, 1, 31).toEpochDay(),
+                zoneId = "Europe/Berlin",
+                startedAtEpochMs = 1704067200000L,
+                sourceSelectionId = "v3-source-selection-hash",
+                algorithmRevision = 5,
+                scoringSnapshotJson =
+                    """{"part1":{"goalSleepHours":8.0},"resolvedHrMax":183.0,""" +
+                        """"part9":{"retentionDaysEnabled":true,"retentionDays":540}}""",
+                scoringSnapshotId = "v3-snapshot-hash-789",
+            )
+        val checkpoint =
+            ResyncCheckpoint(
+                startDate = LocalDate.of(2024, 1, 1),
+                endDate = LocalDate.of(2024, 1, 31),
+                phase = ResyncPhase.RECOMPUTE,
+                nextDate = LocalDate.of(2024, 1, 15),
+                selectionHash = "v3-snapshot-hash-789",
+                baselineChangeTokens = mapOf(HealthDataType.HEART_RATE to "token-hr"),
+                runIdentity = v3Identity,
+            )
+
+        val proto = checkpoint.toProto()
+        assertEquals(3, proto.runIdentity.protocolVersion)
+        assertEquals("v3-snapshot-hash-789", proto.runIdentity.scoringSnapshotId)
+
+        val restored = proto.toDomain()
+        assertEquals(v3Identity, restored.runIdentity)
+        assertEquals(3, restored.runIdentity?.protocolVersion)
+        assertEquals("v3-snapshot-hash-789", restored.runIdentity?.scoringSnapshotId)
+        assertEquals(checkpoint, restored)
+    }
 }

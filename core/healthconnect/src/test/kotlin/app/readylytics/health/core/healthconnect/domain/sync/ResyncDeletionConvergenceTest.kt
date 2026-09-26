@@ -594,7 +594,6 @@ class ResyncDeletionConvergenceTest {
                 endDate = endDate,
                 zoneId = prefs.scoringZone(),
                 prefs = prefs,
-                resolvedHrMax = (208 - 0.7 * prefs.age).toFloat(),
                 startedAtEpochMs = fixedClock.millis(),
             )
         val scanIdentity = ScanIdentities.historical(runIdentity.runId, startDate)

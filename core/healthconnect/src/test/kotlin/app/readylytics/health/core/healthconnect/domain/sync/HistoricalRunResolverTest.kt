@@ -9,6 +9,7 @@ import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Test
 import java.time.LocalDate
@@ -35,7 +36,6 @@ class HistoricalRunResolverTest {
                 endDate = endDate,
                 zoneId = zoneId,
                 prefs = prefs,
-                resolvedHrMax = 187.0f,
                 algorithmRevision = algorithmRevision,
                 startedAtEpochMs = startedAtEpochMs,
             )
@@ -114,11 +114,67 @@ class HistoricalRunResolverTest {
     }
 
     @Test
+    fun `current protocol version is 4`() {
+        assertEquals(4, HistoricalRunIdentity.CURRENT_PROTOCOL_VERSION)
+    }
+
+    @Test
     fun `resolve returns request when existing protocolVersion is not current`() {
         val legacyRun = createRun(protocolVersion = 1)
         val request = createRun(protocolVersion = HistoricalRunIdentity.CURRENT_PROTOCOL_VERSION)
 
         assertEquals(request, HistoricalRunResolver.resolve(legacyRun, request))
+    }
+
+    @Test
+    fun `resolve returns request when existing protocolVersion is 3`() {
+        val v3Run = createRun(protocolVersion = 3)
+        val request = createRun(protocolVersion = HistoricalRunIdentity.CURRENT_PROTOCOL_VERSION)
+
+        assertEquals(request, HistoricalRunResolver.resolve(v3Run, request))
+    }
+
+    @Test
+    fun `resolveEffectiveCheckpoint returns null for saved v3 checkpoints in all phases`() {
+        val startDate = LocalDate.of(2026, 3, 1)
+        val endDate = LocalDate.of(2026, 3, 28)
+        val v3Run = createRun(protocolVersion = 3, startDate = startDate, endDate = endDate)
+        val currentRun =
+            createRun(
+                runId = "new-run",
+                protocolVersion = HistoricalRunIdentity.CURRENT_PROTOCOL_VERSION,
+                startDate = startDate,
+                endDate = endDate,
+            )
+
+        val phases =
+            listOf(
+                ResyncPhase.INGEST,
+                ResyncPhase.PRUNE,
+                ResyncPhase.RECONCILE,
+                ResyncPhase.RECOMPUTE,
+            )
+
+        for (phase in phases) {
+            val checkpoint =
+                ResyncCheckpoint(
+                    startDate = startDate,
+                    endDate = endDate,
+                    phase = phase,
+                    nextDate = startDate.plusDays(5),
+                    selectionHash = v3Run.scoringSnapshotId,
+                    runIdentity = v3Run,
+                )
+            val resolved =
+                HistoricalRunResolver.resolveEffectiveCheckpoint(
+                    savedCheckpoint = checkpoint,
+                    runIdentity = currentRun,
+                    isSameRun = false,
+                    skipIngestAndPrune = false,
+                    runStartDate = startDate,
+                )
+            assertNull("Phase $phase should return null for saved v3 checkpoint", resolved)
+        }
     }
 
     @Test

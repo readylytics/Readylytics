@@ -57,7 +57,7 @@ class GetWorkoutDisplayMetricsUseCase
 
             val frozenHrMax = summary?.hrMax ?: HeartRateFormulas.resolveMaxHeartRate(prefs)
             val rhrBaseline = summary?.rhrBpm ?: prefs.rhrBaselineOverride ?: ScoringConstants.DEFAULT_RHR_BPM
-            val scoringSnapshotId = HistoricalRunIdentity.computeSnapshotId(prefs, frozenHrMax)
+            val scoringSnapshotId = HistoricalRunIdentity.computeSnapshotId(prefs)
             val identity =
                 WorkoutScoringIdentity(
                     sourceRevision =

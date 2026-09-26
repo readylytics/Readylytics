@@ -678,12 +678,6 @@ class PagedIngestResumptionTest {
         mode: String = HistoricalRunIdentity.MODE_FULL_INGEST,
         prefs: UserPreferences = UserPreferences(),
     ): HistoricalRunIdentity {
-        val resolvedHrMax =
-            if (prefs.autoCalculateMaxHr) {
-                (208 - 0.7 * prefs.age).toFloat()
-            } else {
-                prefs.maxHeartRate.toFloat()
-            }
         return HistoricalRunIdentity.create(
             runId = "test-run",
             mode = mode,
@@ -691,7 +685,6 @@ class PagedIngestResumptionTest {
             endDate = endDate,
             zoneId = prefs.scoringZone(),
             prefs = prefs,
-            resolvedHrMax = resolvedHrMax,
             startedAtEpochMs = 1_000_000L,
         )
     }

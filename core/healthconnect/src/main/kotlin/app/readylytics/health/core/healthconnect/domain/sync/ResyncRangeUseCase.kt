@@ -284,7 +284,7 @@ class ResyncRangeUseCase
             )
         }
 
-        private suspend fun prepareRequestedRun(
+        internal suspend fun prepareRequestedRun(
             startDate: LocalDate,
             endDate: LocalDate,
             skipIngestAndPrune: Boolean,
@@ -294,12 +294,6 @@ class ResyncRangeUseCase
             recomputeSupport.refreshAutoMaxHr(initialPrefs)
             val prefs = settingsRepo.userPreferences.first()
             val zoneId = prefs.scoringZone()
-            val resolvedHrMax =
-                if (prefs.autoCalculateMaxHr) {
-                    (TANAKA_BASE - TANAKA_FACTOR * prefs.age).toFloat()
-                } else {
-                    prefs.maxHeartRate.toFloat()
-                }
             val mode =
                 if (skipIngestAndPrune) {
                     HistoricalRunIdentity.MODE_RECOMPUTE_ONLY
@@ -314,7 +308,6 @@ class ResyncRangeUseCase
                     endDate = endDate,
                     zoneId = zoneId,
                     prefs = prefs,
-                    resolvedHrMax = resolvedHrMax,
                     startedAtEpochMs = clock.millis(),
                     algorithmRevision = SettingsDefaults.CURRENT_SCORING_VERSION,
                 )
@@ -505,7 +498,5 @@ class ResyncRangeUseCase
         companion object {
             private const val TAG = "ResyncRangeUseCase"
             private const val TELEMETRY_TAG = "ResyncTelemetry"
-            private const val TANAKA_BASE = 208
-            private const val TANAKA_FACTOR = 0.7
         }
     }

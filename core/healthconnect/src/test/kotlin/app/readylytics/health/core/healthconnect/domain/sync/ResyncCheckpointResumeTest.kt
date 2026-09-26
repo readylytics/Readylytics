@@ -112,12 +112,6 @@ class ResyncCheckpointResumeTest {
         mode: String = HistoricalRunIdentity.MODE_FULL_INGEST,
         prefs: UserPreferences = UserPreferences(),
     ): HistoricalRunIdentity {
-        val resolvedHrMax =
-            if (prefs.autoCalculateMaxHr) {
-                (208 - 0.7 * prefs.age).toFloat()
-            } else {
-                prefs.maxHeartRate.toFloat()
-            }
         return HistoricalRunIdentity.create(
             runId = "test-run",
             mode = mode,
@@ -125,7 +119,6 @@ class ResyncCheckpointResumeTest {
             endDate = endDate,
             zoneId = ZoneId.systemDefault(),
             prefs = prefs,
-            resolvedHrMax = resolvedHrMax,
             startedAtEpochMs = 1000L,
         )
     }
