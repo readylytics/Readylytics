@@ -160,6 +160,14 @@ android {
         versionName = computedVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Routine `connectedDebugAndroidTest` sweep (CI and local) runs fast correctness tests
+        // only. @LargeTest opts out heavy/perf-measurement instrumented tests (HealthConnectSeederTest,
+        // the V7 migration microbenchmarks in databasebenchmark/) that either need a real Health
+        // Connect provider or can never pass androidx.benchmark's environment checks under this
+        // module's plain AndroidJUnitRunner. Run them explicitly, e.g.
+        //   ./gradlew :app:connectedDebugAndroidTest \
+        //     -Pandroid.testInstrumentationRunnerArguments.annotation=androidx.test.filters.LargeTest
+        testInstrumentationRunnerArguments["notAnnotation"] = "androidx.test.filters.LargeTest"
 
         testOptions {
             // Unstubbed Android framework calls must throw, not silently return 0/null — a frozen
