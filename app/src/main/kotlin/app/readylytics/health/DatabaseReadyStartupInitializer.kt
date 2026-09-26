@@ -81,16 +81,17 @@ internal class DatabaseReadyStartupInitializer(
                 }
             }
 
-            val migrationCompleted =
+            val trimpDefaultsMigrationSucceeded =
                 runNonFatal("TRIMP normalization migration") {
                     physiologyPreferences.get().migrateTrimpDefaultsIfNeeded()
                 }
 
             val settings = settingsRepository.get()
-            if (migrationCompleted) {
-                runNonFatal("Recompute-only resync check") {
-                    scheduleRecomputeResyncIfNeeded(settings.userPreferences.first())
-                }
+            if (!trimpDefaultsMigrationSucceeded) {
+                logI(TAG) { "Checking recompute gates after TRIMP normalization migration failure" }
+            }
+            runNonFatal("Recompute-only resync check") {
+                scheduleRecomputeResyncIfNeeded(settings.userPreferences.first())
             }
 
             scheduleStartupWorkers(settings)
@@ -126,9 +127,10 @@ internal class DatabaseReadyStartupInitializer(
     }
 
     /**
-     * Two gates share one enqueue: a stale scoring version, and retained workouts whose canonical
-     * `modelTrimp` was never backfilled (HIGH-2). Both are healed by the same recompute-only
-     * resync, so they are evaluated together and enqueued at most once per launch.
+     * Three gates share one enqueue: a stale scoring version, retained workouts whose canonical
+     * `modelTrimp` was never backfilled (HIGH-2), and pending dirty tickets. They are healed by
+     * the same recompute-only resync, so they are evaluated together and enqueued at most once
+     * per launch, independently of the TRIMP defaults preference migration.
      *
      * Task 5: version 5 marks that a full retained-history recompute has run, which -- since
      * Task 4 wired `MorningRecommendationAssembler` into every `computeDailySummary` call -- now

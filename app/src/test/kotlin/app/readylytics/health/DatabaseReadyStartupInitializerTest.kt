@@ -160,6 +160,36 @@ class DatabaseReadyStartupInitializerTest {
         }
 
     @Test
+    fun `cancellation during trimp migration resets guard and is rethrown`() =
+        runTest {
+            every { mutationCoordinatorLazy.get() } returns mutationCoordinator
+            every { backfillLazy.get() } returns backfill
+            every { settingsRepository.backupSchedule } returns flowOf(BackupSchedule.DAILY)
+            every { settingsRepository.backgroundSyncEnabled } returns flowOf(false)
+            coEvery { mutationCoordinator.withMutation<Int>(any()) } coAnswers {
+                firstArg<suspend () -> Int>().invoke()
+            }
+            coEvery { backfill.execute() } returns 0
+            var migrationCalls = 0
+            coEvery { physiologyPreferences.migrateTrimpDefaultsIfNeeded() } coAnswers {
+                migrationCalls++
+                if (migrationCalls == 1) throw CancellationException("migration cancelled")
+            }
+            val initializer = createInitializer()
+
+            var cancellationRethrown = false
+            try {
+                initializer.initializeIfReady(DatabaseReadiness.Ready)
+            } catch (_: CancellationException) {
+                cancellationRethrown = true
+            }
+            assertTrue(cancellationRethrown)
+            assertEquals(StartupInitializationResult.COMPLETE, initializer.initializeIfReady(DatabaseReadiness.Ready))
+            assertEquals(2, migrationCalls)
+            verify(exactly = 1) { workerScheduler.scheduleBackupWorker(BackupSchedule.DAILY) }
+        }
+
+    @Test
     fun `stable Ready state retries an ordinary settings failure and completes startup`() =
         runTest {
             var backupScheduleReads = 0
