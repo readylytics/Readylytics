@@ -28,15 +28,19 @@ import app.readylytics.health.core.model.domain.model.RecordType
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.security.EncryptionManager
+import app.readylytics.health.core.scoring.domain.cardio.UthVo2MaxCalculator
+import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxSourceResolver
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
 import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
 import app.readylytics.health.core.scoring.domain.scoring.BuildLoadSeriesUseCase
+import app.readylytics.health.core.scoring.domain.scoring.CanonicalWorkoutResolver
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.core.scoring.domain.scoring.CompositeScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutLoadMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.GetWorkoutDisplayMetricsUseCase
@@ -129,6 +133,7 @@ object ScoringBenchmarkHelper {
                 db.bloodPressureRecordDao(),
                 db.oxygenSaturationRecordDao(),
                 db.bodyTemperatureRecordDao(),
+                db.vo2MaxRecordDao(),
             )
         val seriesLoader = ScoringSeriesLoader(db.workoutDao(), db.dailySummaryDao())
         val buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator)
@@ -157,10 +162,10 @@ object ScoringBenchmarkHelper {
                 settingsRepo = settingsRepo,
                 computeWorkoutLoadMetricsUseCase =
                     ComputeWorkoutLoadMetricsUseCase(
-                        ComputeWorkoutTrimpUseCase(),
                         scoringCalculator,
                         WorkoutLoadClassifier(),
                     ),
+                canonicalWorkoutResolver = CanonicalWorkoutResolver(ComputeWorkoutTrimpUseCase()),
             )
         return ScoringRepositoryImpl(
             loaders =
@@ -168,7 +173,7 @@ object ScoringBenchmarkHelper {
                     day = dataLoader,
                     bodyMetrics = bodyMetricsDataLoader,
                     series = seriesLoader,
-                    heartRate = ScoringHeartRateDataLoader(database.heartRateDao(), database.minuteBucketDao()),
+                    heartRate = ScoringHeartRateDataLoader(db.heartRateDao(), db.minuteBucketDao()),
                 ),
             settingsRepo = settingsRepo,
             baselineComputer = baselineComputer,
@@ -179,6 +184,9 @@ object ScoringBenchmarkHelper {
                     computeResidualFatigue = ComputeResidualFatigueUseCase(),
                     resolveDailyBaselines = resolveDailyBaselinesUseCase,
                     assembleEverydayLoadInput = AssembleEverydayLoadInputUseCase(),
+                    computeTrainingReadiness = ComputeTrainingReadinessUseCase(scoringCalculator),
+                    uthVo2MaxCalculator = UthVo2MaxCalculator(),
+                    vo2MaxSourceResolver = Vo2MaxSourceResolver(),
                 ),
             scoringHistoryRepository = scoringHistoryRepository,
             readinessSummaryCoordinator = readinessSummaryCoordinator,
@@ -301,10 +309,34 @@ object ScoringBenchmarkHelper {
                 )
             sleepStages +=
                 listOf(
-                    SleepStageEntity(sessionId, "LIGHT", bedTime, bedTime + 120 * 60_000L, 120),
-                    SleepStageEntity(sessionId, "DEEP", bedTime + 120 * 60_000L, bedTime + 220 * 60_000L, 100),
-                    SleepStageEntity(sessionId, "REM", bedTime + 220 * 60_000L, bedTime + 330 * 60_000L, 110),
-                    SleepStageEntity(sessionId, "LIGHT", bedTime + 330 * 60_000L, wakeTime, 120),
+                    SleepStageEntity(
+                        sessionId = sessionId,
+                        stageType = "LIGHT",
+                        startTime = bedTime,
+                        endTime = bedTime + 120 * 60_000L,
+                        durationMinutes = 120,
+                    ),
+                    SleepStageEntity(
+                        sessionId = sessionId,
+                        stageType = "DEEP",
+                        startTime = bedTime + 120 * 60_000L,
+                        endTime = bedTime + 220 * 60_000L,
+                        durationMinutes = 100,
+                    ),
+                    SleepStageEntity(
+                        sessionId = sessionId,
+                        stageType = "REM",
+                        startTime = bedTime + 220 * 60_000L,
+                        endTime = bedTime + 330 * 60_000L,
+                        durationMinutes = 110,
+                    ),
+                    SleepStageEntity(
+                        sessionId = sessionId,
+                        stageType = "LIGHT",
+                        startTime = bedTime + 330 * 60_000L,
+                        endTime = wakeTime,
+                        durationMinutes = 120,
+                    ),
                 )
 
             // Sleep resting HR (every 5 min)
@@ -356,15 +388,38 @@ object ScoringBenchmarkHelper {
                         endTime = workoutEnd,
                         exerciseType = "RUNNING",
                         durationMinutes = 45,
-                        trimpScore = 65f,
-                        avgHeartRate = 150,
-                        maxHeartRate = 175,
-                        zone1Minutes = 5,
-                        zone2Minutes = 15,
-                        zone3Minutes = 20,
-                        zone4Minutes = 5,
-                        zone5Minutes = 0,
+                        zone1Minutes = 5f,
+                        zone2Minutes = 15f,
+                        zone3Minutes = 20f,
+                        zone4Minutes = 5f,
+                        zone5Minutes = 0f,
+                        trimp = 65f,
+                        avgHr = 150f,
                     )
+
+                // EXERCISE-tagged samples across the workout window. Without them
+                // DailyTrimpComputer -> CanonicalWorkoutResolver has no samples to integrate and no
+                // prior canonical metadata to reuse, so every workout resolves to
+                // WorkoutHrQuality.UNAVAILABLE, the day's raw TRIMP comes back null, and
+                // ScoringRepositoryImpl correctly returns DayAssembly.Unavailable with
+                // WORKOUT_LOAD_UNAVAILABLE -- which is a deliberate, unit-tested contract
+                // (ScoringRepositoryImplAssemblyStatusTest), not a bug. The stored `trimp`/`avgHr`
+                // columns above are Edwards-style values and are NOT inputs to canonical TRIMP, so
+                // seeding them is not enough on its own.
+                var workoutSampleTime = workoutStart
+                var workoutSampleIdx = 0
+                while (workoutSampleTime < workoutEnd) {
+                    heartRateRows +=
+                        HeartRateRecordEntity(
+                            sourceRecordRef = hrSourceRef,
+                            timestampMs = workoutSampleTime,
+                            beatsPerMinute = 135 + (workoutSampleIdx % 25),
+                            recordType = RecordType.EXERCISE.name,
+                            sessionId = workoutId,
+                        )
+                    workoutSampleTime += 60_000L
+                    workoutSampleIdx++
+                }
             }
 
             currentDay = currentDay.plusDays(1)

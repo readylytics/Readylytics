@@ -50,6 +50,22 @@ jobs:
         if: ${{ !cancelled() }}
         run: ./gradlew lint lintRelease
 
+      # Guards against the drift that left :database-benchmark uncompilable and its benchmarks
+      # silently not running. `assembleDebug` does not build any module's androidTest sources, and
+      # the two benchmark modules were not built by ANY CI step, so 35 compile errors accumulated
+      # there unnoticed across several phases. Compiling the instrumentation sources on every PR is
+      # cheap and would have caught all of them.
+      # Bounded heap/worker count and a hard timeout: an unbounded cold multi-module androidTest
+      # compile has previously OOM'd forked Kotlin/KSP workers on this shared 2-core runner
+      # (see scripts/run-instrumented-tests.sh), which leaves the Gradle daemon waiting on a
+      # dead worker forever with no further log output. Fail fast instead of hanging for hours.
+      - name: Compile instrumented test sources (incl. benchmark modules)
+        if: ${{ !cancelled() }}
+        run: |
+          timeout --signal=TERM --kill-after=30s 20m ./gradlew \
+            "-Dorg.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1g -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8" \
+            assembleDebugAndroidTest :benchmark:assembleBenchmarkBenchmark --max-workers=2 --stacktrace --console=plain
+
       - name: Run unit tests
         if: ${{ !cancelled() }}
         run: ./gradlew testDebugUnitTest

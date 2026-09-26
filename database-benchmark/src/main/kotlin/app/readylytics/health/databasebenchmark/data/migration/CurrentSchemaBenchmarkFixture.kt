@@ -10,15 +10,24 @@ import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.util.concurrent.Executors
 
+private const val BENCHMARK_DATABASE_PREFIX = "current-benchmark-"
+
 /**
  * Fixture factory for current-schema (Room v19) database benchmarks.
  * Extracted separately from the legacy v6/v7 migration driver to ensure current-schema
  * benchmarking exercises the real Room architecture with SQLCipher encryption enabled.
  */
-internal class CurrentSchemaBenchmarkFixture(
+class CurrentSchemaBenchmarkFixture(
     private val context: Context,
 ) {
     private val createdNames = mutableSetOf<String>()
+
+    // Every database this fixture opened. `cleanUp()` must close them before deleting the files:
+    // Context.deleteDatabase() cannot remove a database that still has open connections, so a test
+    // that left one open leaked its rows into the next test which opened the same name. That is how
+    // `denseBurstsInsideSparseHistories` saw 366 rows after inserting 365 -- the surviving row came
+    // from `editedValuesOnExistingKey`, which asserts a row count of exactly 1.
+    private val openDatabases = mutableListOf<HealthDatabase>()
 
     fun createDatabase(
         name: String,
@@ -39,7 +48,7 @@ internal class CurrentSchemaBenchmarkFixture(
         if (queryCallback != null) {
             builder.setQueryCallback(queryCallback, Executors.newSingleThreadExecutor())
         }
-        return builder.build()
+        return builder.build().also(openDatabases::add)
     }
 
     fun createTemplate(
@@ -87,7 +96,7 @@ internal class CurrentSchemaBenchmarkFixture(
         if (queryCallback != null) {
             builder.setQueryCallback(queryCallback, Executors.newSingleThreadExecutor())
         }
-        return builder.build()
+        return builder.build().also(openDatabases::add)
     }
 
     private fun checkpointWal(database: HealthDatabase) {
@@ -98,17 +107,33 @@ internal class CurrentSchemaBenchmarkFixture(
 
     fun delete(fixture: CurrentSchemaFixtureInstance) {
         fixture.database.close()
+        openDatabases -= fixture.database
         context.deleteDatabase(fixture.name)
         createdNames -= fixture.name
     }
 
+    /**
+     * Closes every database this fixture opened before deleting its files, then sweeps any
+     * `current-benchmark-` database left behind by an earlier test class or a killed run.
+     *
+     * Both halves matter. Deleting without closing silently fails while connections are open, and
+     * deleting only this instance's own names leaves another class's databases in place -- two test
+     * classes construct separate fixtures, so neither cleans the other's files. A benchmark that
+     * inherits another test's rows measures the wrong dataset.
+     */
     fun cleanUp() {
+        openDatabases.forEach { runCatching { it.close() } }
+        openDatabases.clear()
         createdNames.forEach(context::deleteDatabase)
         createdNames.clear()
+        context
+            .databaseList()
+            .filter { it.startsWith(BENCHMARK_DATABASE_PREFIX) }
+            .forEach(context::deleteDatabase)
     }
 }
 
-internal data class CurrentSchemaFixtureInstance(
+data class CurrentSchemaFixtureInstance(
     val name: String,
     val file: File,
     val useSqlCipher: Boolean,

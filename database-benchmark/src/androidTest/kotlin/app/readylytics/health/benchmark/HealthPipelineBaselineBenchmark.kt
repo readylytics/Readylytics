@@ -7,12 +7,14 @@ import androidx.benchmark.junit4.measureRepeated
 import androidx.room.RoomDatabase
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.LargeTest
 import app.readylytics.health.core.database.data.local.AuthoritativeHeartRateReader
 import app.readylytics.health.core.database.data.local.DataRollupManager
 import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.database.data.local.HealthMutationCoordinatorImpl
 import app.readylytics.health.core.database.data.local.MinuteCoveragePublisher
 import app.readylytics.health.core.database.data.local.RoomHealthIngestionStore
+import app.readylytics.health.core.database.data.local.RoomScanStagingStore
 import app.readylytics.health.core.database.data.local.RoomTransactionRunner
 import app.readylytics.health.core.database.data.local.SessionLinkReconcilerImpl
 import app.readylytics.health.core.healthconnect.domain.sync.HealthIngestionCoordinator
@@ -21,7 +23,6 @@ import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.sync.mappers.HeartRateMapper
 import app.readylytics.health.databasebenchmark.data.migration.CurrentSchemaBenchmarkFixture
-import app.readylytics.health.databasebenchmark.data.migration.CurrentSchemaFixtureInstance
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -43,8 +44,15 @@ import java.util.concurrent.atomic.AtomicLong
  * rollup, and streaming backup export.
  *
  * Instruments TransactionRunner and Room query callbacks with counters only (never logging SQL values).
+ *
+ * `@LargeTest`: excluded from the routine `connectedDebugAndroidTest` sweep by this module's
+ * `notAnnotation` filter (see `database-benchmark/build.gradle.kts`). Benchmarks produce
+ * meaningless numbers on a shared/debuggable runner, and this module carries pre-existing test
+ * failures that were invisible while its instrumentation could not start at all. Opt in with
+ * `-Pandroid.testInstrumentationRunnerArguments.annotation=androidx.test.filters.LargeTest`.
  */
 @RunWith(AndroidJUnit4::class)
+@LargeTest
 class HealthPipelineBaselineBenchmark {
     @get:Rule
     val benchmarkRule = BenchmarkRule()
@@ -53,7 +61,6 @@ class HealthPipelineBaselineBenchmark {
     private lateinit var fixture: CurrentSchemaBenchmarkFixture
     private lateinit var queryCounter: CountingQueryCallback
     private lateinit var countingTxRunner: CountingTransactionRunner
-    private lateinit var defaultInstance: CurrentSchemaFixtureInstance
     private lateinit var db: HealthDatabase
     private lateinit var store: RoomHealthIngestionStore
 
@@ -61,8 +68,11 @@ class HealthPipelineBaselineBenchmark {
     fun setUp() {
         fixture = CurrentSchemaBenchmarkFixture(ApplicationProvider.getApplicationContext())
         queryCounter = CountingQueryCallback()
-        defaultInstance = fixture.createTemplate("pipeline-default", useSqlCipher = true)
-        db = defaultInstance.database
+        // The counter must be attached to the database it measures. Before this it was constructed
+        // and asserted on but never wired to `db`, so `statementCount` was always 0 and
+        // `measurePipelineStagesSeparately` could not pass -- invisible while the module's tests
+        // were not running at all.
+        db = fixture.createDatabase("current-benchmark-pipeline-default.db", true, queryCounter)
         countingTxRunner = CountingTransactionRunner(RoomTransactionRunner(db))
         store = ScoringBenchmarkHelper.createRoomHealthIngestionStore(db, countingTxRunner)
     }
@@ -79,7 +89,51 @@ class HealthPipelineBaselineBenchmark {
         assertEquals(1_000_001, parents.sumOf { it.size })
         val dense = HealthParentFixture.pages(1001, 1000, 100)
         assertEquals(1_001_000, dense.sumOf { page -> page.sumOf { it.samples.size } })
+
+        // Phase 0: each scale point must produce exactly its nominal sample count in both shapes,
+        // so a measurement at 250k/500k/1M is comparing like with like.
+        for (total in BaselineScalePoints.SAMPLE_COUNTS) {
+            assertEquals(
+                total,
+                BaselineScalePoints.densePages(total).sumOf { page -> page.sumOf { it.samples.size } },
+            )
+            assertEquals(
+                total,
+                BaselineScalePoints.sparsePages(total).sumOf { page -> page.sumOf { it.samples.size } },
+            )
+        }
     }
+
+    /**
+     * Review Focus 3: a 1M-row SQLCipher template plus one copy per benchmark iteration can exhaust
+     * device storage or the instrumentation timeout. Measure the template once and fail with a clear
+     * message rather than letting a later benchmark die opaquely.
+     */
+    @Test
+    fun verifyLargestFixtureFitsOnDevice() =
+        runBlocking {
+            val largest = BaselineScalePoints.SAMPLE_COUNTS.max()
+            val template =
+                fixture.createTemplate("scale-guard", useSqlCipher = true) { database ->
+                    val guardStore =
+                        ScoringBenchmarkHelper.createRoomHealthIngestionStore(
+                            database,
+                            RoomTransactionRunner(database),
+                        )
+                    BaselineScalePoints.densePages(largest).forEach { page ->
+                        guardStore.replaceHeartRateSources(
+                            HeartRateMapper.mapToInputs(page, emptyList(), emptyList()),
+                        )
+                    }
+                }
+            val bytes = template.file.length()
+            Log.i("Phase0Metrics", "METRIC=fixture_template_bytes, SCALE=$largest, VALUE=$bytes")
+            assertTrue(
+                "1M template is ${bytes / 1_000_000}MB; free space or timeout budget must be re-checked",
+                bytes in 1..2_000_000_000,
+            )
+            fixture.delete(template)
+        }
 
     /**
      * Benchmark feeding parent pages through HealthConnectRepository and HealthIngestionCoordinator
@@ -105,7 +159,15 @@ class HealthPipelineBaselineBenchmark {
                 BenchmarkFakeHealthConnectRepository(
                     pagesSequence = HealthParentFixture.pages(parentCount = 500, samplesPerParent = 10, pageSize = 50),
                 )
-            val coordinator = HealthIngestionCoordinator(fakeRepo, iterStore)
+            val coordinator =
+                HealthIngestionCoordinator(
+                    fakeRepo,
+                    iterStore,
+                    RoomScanStagingStore(
+                        instance.database.scanStagingDao(),
+                        instance.database.scanTypeStateDao(),
+                    ),
+                )
 
             runBlocking {
                 coordinator.ingestWindow(windowStart, windowEnd, prefs, reconcileDeletions = false)
@@ -266,7 +328,9 @@ class HealthPipelineBaselineBenchmark {
         var sFirst = true
         for (summary in summaries) {
             if (!sFirst) writer.write(",")
-            writer.write("{\"day\":\"${summary.scoreDate}\",\"score\":${summary.readinessScore}}")
+            writer.write(
+                "{\"day\":${summary.dateMidnightMs},\"score\":${summary.readinessWorkoutOnly}}",
+            )
             sFirst = false
         }
         writer.write("]}}")

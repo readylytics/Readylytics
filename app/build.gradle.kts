@@ -160,6 +160,14 @@ android {
         versionName = computedVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Routine `connectedDebugAndroidTest` sweep (CI and local) runs fast correctness tests
+        // only. @LargeTest opts out heavy/perf-measurement instrumented tests (HealthConnectSeederTest,
+        // the V7 migration microbenchmarks in databasebenchmark/) that either need a real Health
+        // Connect provider or can never pass androidx.benchmark's environment checks under this
+        // module's plain AndroidJUnitRunner. Run them explicitly, e.g.
+        //   ./gradlew :app:connectedDebugAndroidTest \
+        //     -Pandroid.testInstrumentationRunnerArguments.annotation=androidx.test.filters.LargeTest
+        testInstrumentationRunnerArguments["notAnnotation"] = "androidx.test.filters.LargeTest"
 
         testOptions {
             // Unstubbed Android framework calls must throw, not silently return 0/null — a frozen
@@ -465,6 +473,10 @@ dependencies {
     androidTestImplementation(libs.play.services.stats)
     androidTestImplementation(libs.androidx.test.rules)
     androidTestImplementation(libs.androidx.benchmark.junit4)
+    // V7 migration benchmarks live here rather than in :database-benchmark because they need
+    // :app's V7DatabaseMigrator; the shared fixtures come from :database-benchmark's main source set.
+    androidTestImplementation(project(":database-benchmark"))
+    androidTestImplementation(libs.sqlcipher.android)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

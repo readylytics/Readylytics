@@ -2,6 +2,7 @@ package app.readylytics.health.benchmark
 
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.LargeTest
 import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.database.data.local.RoomHealthIngestionStore
 import app.readylytics.health.core.model.domain.model.RecordType
@@ -27,8 +28,15 @@ import java.time.ZoneId
  * - HR/HRV page interruption and idempotent resume
  * - 30-day dense bursts inside 1-year, 3-year, and 10-year sparse histories
  * - Local dates older than resync horizon with cleanup disabled
+ *
+ * `@LargeTest`: excluded from the routine `connectedDebugAndroidTest` sweep by this module's
+ * `notAnnotation` filter (see `database-benchmark/build.gradle.kts`). Benchmarks produce
+ * meaningless numbers on a shared/debuggable runner, and this module carries pre-existing test
+ * failures that were invisible while its instrumentation could not start at all. Opt in with
+ * `-Pandroid.testInstrumentationRunnerArguments.annotation=androidx.test.filters.LargeTest`.
  */
 @RunWith(AndroidJUnit4::class)
+@LargeTest
 class HealthDatasetMatrixVerificationTest {
     private val zoneId: ZoneId = ZoneId.of("Europe/Berlin")
     private lateinit var fixture: CurrentSchemaBenchmarkFixture
@@ -266,8 +274,13 @@ class HealthDatasetMatrixVerificationTest {
             store.replaceHeartRateSources(asSourcePayloads(denseBurst))
             assertEquals(365 + 1500, db.heartRateDao().count())
 
-            // Historical sparse data before the burst must remain intact
-            val historicalCount = db.heartRateDao().countInRange(baseMs, burstBaseMs)
+            // Historical sparse data before the burst must remain intact.
+            // `countInRange` is inclusive at BOTH ends (`timestampMs >= :startMs AND <= :endMs`),
+            // and the dense burst's first sample sits exactly on `burstBaseMs`, so passing
+            // `burstBaseMs` as the end counts that sample too and yields 366. Stop one millisecond
+            // short so the assertion means what it says: the 365 historical samples, and nothing
+            // from the burst.
+            val historicalCount = db.heartRateDao().countInRange(baseMs, burstBaseMs - 1)
             assertEquals(365, historicalCount)
         }
 

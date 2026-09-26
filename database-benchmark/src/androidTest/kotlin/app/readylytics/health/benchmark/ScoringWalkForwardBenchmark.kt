@@ -4,6 +4,7 @@ import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.LargeTest
 import app.readylytics.health.core.database.data.local.AuthoritativeHeartRateReader
 import app.readylytics.health.core.database.data.local.RoomTransactionRunner
 import app.readylytics.health.core.database.data.local.SessionLinkReconcilerImpl
@@ -28,8 +29,15 @@ import java.time.ZoneId
  *
  * Exercises dedicated named SQLCipher databases with copy-on-write isolation per repetition
  * and pre-allocated batches outside measureRepeated.
+ *
+ * `@LargeTest`: excluded from the routine `connectedDebugAndroidTest` sweep by this module's
+ * `notAnnotation` filter (see `database-benchmark/build.gradle.kts`). Benchmarks produce
+ * meaningless numbers on a shared/debuggable runner, and this module carries pre-existing test
+ * failures that were invisible while its instrumentation could not start at all. Opt in with
+ * `-Pandroid.testInstrumentationRunnerArguments.annotation=androidx.test.filters.LargeTest`.
  */
 @RunWith(AndroidJUnit4::class)
+@LargeTest
 class ScoringWalkForwardBenchmark {
     @get:Rule
     val benchmarkRule = BenchmarkRule()

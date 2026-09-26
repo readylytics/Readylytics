@@ -14,7 +14,7 @@ per cold-start mode. Results JSON:
 The required Baseline Profile median is lower in this run. F14 enforces no
 performance threshold; record and review measured results when regenerating.
 
-**STATUS: PARTIALLY RECORDED** — `vitalsFling`, `vitalsChartPanAndZoom`, `coldStart`, and `warmStart` frame-timing & startup numbers extracted from physical device benchmark run (Samsung SM-A576B, Android API 36). `dashboardVitalsTabSwitch` and `hotStart` remain pending due to SQLCipher key race on tab navigation during clean install runs.
+**STATUS: PARTIALLY RECORDED** — `vitalsFling`, `vitalsChartPanAndZoom`, `coldStart`, and `warmStart` frame-timing & startup numbers extracted from physical device benchmark run (Samsung SM-A576B, Android API 36). `dashboardVitalsTabSwitch` and `hotStart` remain unmeasured. **The SQLCipher key race originally blamed here was fixed and verified in July 2026** — `SqlCipherKeyManager` holds a cross-process `FileLock` plus an in-process `ReentrantLock` around the key critical section, and `SqlCipherKeyManagerTest` / `SqlCipherKeyManagerCrossProcessRaceTest` were re-run green on 2026-09-26. The remaining blocker is environmental: `:benchmark`'s `benchmarkBenchmark` variant inherits release signing, so `:app:verifyReleaseSigningInputs` fails without the `READYLYTICS_UPLOAD_*` secrets (see `internal-docs/RELEASE_SIGNING.md`). Re-run on a machine that has them.
 
 Once connected to a device/emulator after resolving the tab navigation blocker:
 
@@ -35,7 +35,7 @@ lands.
 |---|---|---|---|
 | vitalsFling | 18.05 ms | 20.20 ms | 24.79 ms |
 | vitalsChartPanAndZoom | 21.68 ms | 25.98 ms | 35.70 ms |
-| dashboardVitalsTabSwitch | Pending (blocked by SQLCipher race, see above) | Pending (blocked by SQLCipher race, see above) | Pending (blocked by SQLCipher race, see above) |
+| dashboardVitalsTabSwitch | Unmeasured (needs release signing env, see above) | Unmeasured (needs release signing env, see above) | Unmeasured (needs release signing env, see above) |
 
 ## Startup (StartupBenchmark, same run)
 
@@ -43,7 +43,7 @@ lands.
 |---|---|
 | coldStart | 520.41 ms |
 | warmStart | 184.68 ms |
-| hotStart | Pending (failed intermittently during benchmark run, see note above) |
+| hotStart | Unmeasured (needs release signing env, see note above) |
 
 ## How to record the baseline
 
@@ -457,4 +457,136 @@ existing "Baseline Execution Instructions" pattern earlier in this file. Do not 
   - Zero detekt issues across `:core:model`, `:core:scoring`, `:core:database`, `:core:healthconnect`, and `:app`.
   - Zero `@Suppress` annotations or baseline additions introduced.
 
+---
 
+## Phase 0 Baseline — 2026-09-26
+
+Recorded for `internal-docs/plans/ARCHITECTURE_HEALTH_DATA_SCORING_REMEDIATION_PLAN.md` Phase 0
+(work packages WP-01/WP-02, executed via
+`internal-docs/plans/2026-09-25-phase-0-baseline-and-safety-rails.md`).
+
+**Device:** Samsung SM-A576B, Android API 36, 268 MB heap growth limit.
+**Build:** `:database-benchmark` `debug` variant — **debuggable and not AOT-compiled**.
+**Command:** `scripts/run-database-benchmarks.sh app.readylytics.health.benchmark.Phase0BaselineBenchmark`
+**Fixture:** `HealthParentFixture` / `BaselineScalePoints`, deterministic by parent+sample index,
+fixed 30-day window, dense shape (1,000 samples per parent).
+
+Because the build is debuggable and non-AOT, these numbers are **not release-representative**. They
+are valid for relative before/after comparison at a fixed scale, which is what Phase 2 needs. Peak
+heap comes from `Runtime.totalMemory() - freeMemory()` deltas and includes GC noise — negative values
+mean a collection ran inside the window. Treat peak heap as answering flat-versus-linear only, not as
+an absolute allocation figure.
+
+`scripts/run-database-benchmarks.sh` exists because AGP does not deliver instrumentation-runner
+arguments whose key contains dots, so `androidx.benchmark.suppressErrors` never reaches the runner
+from Gradle. See the script header.
+
+### Heart-rate upsert — `SourcePayloadWriter` → `HeartRateDao.upsertAll` (PERF-102)
+
+Logcat metric key: `hr_upsert`
+
+| Samples | Duration | Statements | Transactions | Peak heap delta |
+|---:|---:|---:|---:|---:|
+| 250,000 | 66,879 ms | 1,502,598 | 50 | 10.9 MB |
+| 500,000 | 137,202 ms | 3,005,197 | 100 | 0 MB |
+| 1,000,000 | 277,565 ms | 6,010,400 | 200 | 116.1 MB |
+
+**≈6 statements per row, not one** — worse than the audit assumed. Wall time is linear in row count.
+This is PERF-102's before-number; the multi-row-upsert rewrite is measured against it.
+
+### Idempotent re-ingest
+
+Logcat metric key: `hr_reingest`
+
+| Samples | Duration | Statements | Row count changed |
+|---:|---:|---:|---:|
+| 250,000 | 2,755 ms | 1,646 | no |
+
+Re-ingesting identical data touches 1,646 statements instead of 1.5M and changes no rows, confirming
+`conflictTargetedUpsert`'s no-op suppression predicate works. PERF-102's rewrite must preserve this.
+
+### `ingestWindow` end to end — dense 30-day chunk, `reconcileDeletions = true`
+
+Logcat metric key: `ingest_window`
+
+| Samples | Duration | Statements | Transactions | Peak heap delta |
+|---:|---:|---:|---:|---:|
+| 250,000 | 67,969 ms | 1,503,286 | 62 | 28.2 MB |
+| 500,000 | 135,759 ms | 3,006,134 | 112 | 16.2 MB |
+| 1,000,000 | 268,351 ms | 6,011,841 | 212 | 4.5 MB |
+
+**§7.3 criterion 1 is SUPPORTED for the heart-rate ingest path**: peak heap does not grow across a 4×
+data increase (it falls, i.e. the variation is GC noise), while wall time is linear. HC-105's
+magnitude is therefore **not** demonstrated for heart rate and remains *suspected* for the dense bulk
+types (steps, distance, elevation), which this fixture does not exercise.
+
+### Unfiltered range read at a 45-day cluster span (PERF-101)
+
+Logcat metric key: `workout_hr_fetch`
+
+| Samples | Duration | Max result set | Peak heap delta |
+|---:|---:|---:|---:|
+| 250,000 | 56,920 ms | 250,000 | −0.7 MB |
+| 500,000 | 366,194 ms | 500,000 | −31.5 MB |
+| 1,000,000 | **OutOfMemoryError** | — | 208.5 MB |
+
+**PERF-101 confirmed and quantified.** The max result set equals the scale *exactly* at both
+completing scales: this read returns the entire range, as the finding claims. Wall time grows **6.4×
+for 2× the data**. At 1,000,000 the device runs out of memory.
+
+One honest qualification: the failing allocation was in the measurement's own seeding
+(`HeartRateMapper.mapToInputs`), not inside `rangeIn`. The correct claim is therefore *"a 1M-row
+unfiltered read plus its fixture does not fit in a 268 MB heap"* — not *"`rangeIn` itself OOMs"*. The
+test records the OOM as `EXTRA=-1` rather than failing, because the OOM is the datum.
+
+### Walk-forward recompute
+
+Logcat metric key: `walk_forward_recompute`
+
+| Days | Duration | Days scored | Peak heap delta |
+|---:|---:|---:|---:|
+| 365 | 73,639 ms | 366 | 9.6 MB |
+
+### CHANGES-1K per-record write (OD-6 sizing input, HC-103)
+
+Logcat metric key: `changes_1k_per_record_write`
+
+| Records | Duration | Statements | Transactions |
+|---:|---:|---:|---:|
+| 1,000 | 4,648 ms | 25,996 | 1,000 |
+
+**HC-103 confirmed:** exactly one transaction per record, ≈26 statements each. This covers only the
+per-record *write* cost that `processChangesPage` pays; it does not drive
+`HealthChangeSynchronizerImpl` itself, which needs a `HealthConnectClient` the module does not depend
+on. So 4,648 ms is a **floor** on the real phase cost. Size `DEFAULT_CHANGES_APPLY_BUDGET_MS` with
+that in view.
+
+### Query plans (§7.3 criterion 7)
+
+Logcat metric key: `query_plan`
+
+Captured with `QueryPlanRecorder` after seeding 10,000 rows and running `ANALYZE` — SQLite prefers a
+scan on a table it knows is tiny, so a plan taken on an empty table would be meaningless.
+
+| Query | Plan |
+|---|---|
+| `getVisibleByTimeRange` | `SEARCH h USING INDEX index_hr_v10_timestamp_source (timestampMs>? AND timestampMs<?)` \| `SEARCH c USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN` |
+| `getVisibleByTypeAndTimeRange` | `SEARCH h USING INDEX index_hr_v10_type_timestamp (recordType=? AND timestampMs>? AND timestampMs<?)` \| `SEARCH c USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN` |
+| `pagePlausibleSamplesForRollup` | `SEARCH heart_rate_records USING INDEX index_hr_v10_timestamp_source (timestampMs>? AND timestampMs<?)` |
+| `getKeysetPage` | `SEARCH heart_rate_records USING INDEX index_hr_v10_timestamp_source (timestampMs>? AND timestampMs<?)` |
+
+**§7.3 criterion 7 is SATISFIED**: every hot query is index-backed, none scans `heart_rate_records`,
+and none needs a temp B-tree for its `ORDER BY`. PERF-104's suspected per-row coverage-join cost is
+*not* visible as a plan problem — if it is real, it is a constant factor, not a plan defect, and the
+wall times above are where to look for it.
+
+### Deviations from the planned measurement set
+
+- **1,000,000-sample range read did not complete** (OutOfMemoryError). Recorded as the measurement;
+  see the PERF-101 table above.
+- **`dashboardVitalsTabSwitch` and `hotStart` still unmeasured.** The SQLCipher key race they were
+  attributed to was fixed in July 2026 and its guards were re-run green on 2026-09-26. The current
+  blocker is environmental — `:benchmark`'s variant inherits release signing and
+  `:app:verifyReleaseSigningInputs` needs the `READYLYTICS_UPLOAD_*` secrets, which this machine does
+  not have. The stale blocker text above has been corrected.
+- **No CI-emulator numbers.** Every figure here is from the physical SM-A576B.
