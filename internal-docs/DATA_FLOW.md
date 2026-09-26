@@ -1080,8 +1080,8 @@ out of `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/
 | Component                                          | Path                                                   | Model / inputs                                                                                                                                                                                                                                                                                                                                                                                                        |
 | :------------------------------------------------- | :----------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `SleepPercentileRhrCalculator`                     | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/sleep/SleepPercentileRhrCalculator.kt` | `collect(session, dayMidnight, percentile)` — sorts overnight sleep HR samples and takes the configured **percentile** as the nightly resting nadir; baseline = median of historical nightly percentile values over a 30-day sleep-session window. Default percentile = `SettingsDefaults.RESTING_HR_PERCENTILE` (**5th**; user-configurable, validator range **1–15** in `domain/validation/SettingsValidators.kt`). |
-| `BaselineComputer.computeAdaptiveBaselineRhrBpm()` | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/BaselineComputer.kt`                   | Live recompute variant of the same 30-day / percentile logic, filtering invalid sessions (insufficient samples / failed sleep validation). WP-11: membership over the 30-day window is resolved via `historicalRhrWindow` (§2.4, below the backfill discussion), shared with the backfill path; its historical-fallback read (no persisted baseline row yet) is bounded to the requested date's own scoring-zone day end, never `Clock.now()`/the system zone. |
-| `historicalRhrWindow()`                            | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/HistoricalRhrWindow.kt`                | Pure, internal selector: `days.filter { it.scoreDay >= scoreDay - BASELINE_DAYS && it.scoreDay <= scoreDay }`. The single membership rule shared by backfill (`computeDayBackfillBaseline`) and every live RHR path (`computeAdaptiveBaselineRhrBpm(Between)`, `rhrHistoryBetween`) — see §2.4's WP-11 note for why the batched backfill needs it. Includes the current day `D`; does not apply to or unify with HRV's separate `priorSleepDays` (strictly `< scoreDay`) — OD-5 keeps those populations distinct. |
+| `BaselineComputer.computeAdaptiveBaselineRhrBpmBetween()` | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/BaselineComputer.kt`                   | Live recompute variant of the 30-day / percentile logic, filtering invalid sessions (insufficient samples / failed sleep validation). WP-11: membership over the 30-day window is resolved via `historicalRhrWindow` (§2.4, below the backfill discussion), shared with the backfill path; its historical-fallback read (no persisted baseline row yet) is bounded to the requested date's own scoring-zone day end, never `Clock.now()`/the system zone. |
+| `historicalRhrWindow()`                            | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/HistoricalRhrWindow.kt`                | Pure, internal selector: `days.filter { it.scoreDay >= scoreDay - BASELINE_DAYS && it.scoreDay <= scoreDay }`. The single membership rule shared by backfill (`computeDayBackfillBaseline`) and every live RHR path (`computeAdaptiveBaselineRhrBpmBetween`, `rhrHistoryBetween`) — see §2.4's WP-11 note for why the batched backfill needs it. Includes the current day `D`; does not apply to or unify with HRV's separate `priorSleepDays` (strictly `< scoreDay`) — OD-5 keeps those populations distinct. |
 
 ### 2.3 Training Impulse (TRIMP) — multi-model engine
 
@@ -1402,7 +1402,7 @@ frozen `hrvMuMssd` (mean of `ln(nightly RMSSD)`) — this matches the statistic 
 z-scores are computed against. `HrvBaselineProvider.getPreciseHrvBaseline`/
 `getRoundedHrvBaseline` and `DailyMetricsMapper.hrvBaselineRounded` both resolve
 `exp(hrvMuMssd)` first, falling back to `prefs.hrvBaselineOverride`, then to
-`BaselineComputer.computeHrvBaseline`'s arithmetic median (ms) only as a last resort when
+`BaselineComputer.computeHrvBaselineBetween`'s arithmetic median (ms) only as a last resort when
 no geometric `mu` is available yet (e.g. very early calibration). The arithmetic median
 stored on `DailySummary.hrvBaseline` is never the primary display source.
 
@@ -1433,7 +1433,7 @@ to freeze `rhrSigma` for later RHR z-score restoration (guarded by equivalence t
 UPDATEs are collapsed into a single transaction by the backfill use-case.
 
 **WP-11 (RHR window membership):** every RHR-window-consuming method above -- the batched
-backfill's `computeDayBackfillBaseline`, the live `computeAdaptiveBaselineRhrBpm(Between)`, and the
+backfill's `computeDayBackfillBaseline`, the live `computeAdaptiveBaselineRhrBpmBetween`, and the
 `rhrHistoryBetween` "display percentile" assembly -- derives its nadir/percentile population from
 one pure, internal selector, `historicalRhrWindow(days, scoreDay)` (same package as
 `BaselineComputer`): the last `BASELINE_DAYS` (30) days up to and **including** `scoreDay` itself.
@@ -1448,7 +1448,7 @@ the ungated display-percentile population remain exactly as distinct as before, 
 `priorSleepDays` (strictly `< scoreDay`, no override toward inclusion) is untouched -- RHR and HRV
 remain two deliberately different populations per decision gate OD-5. The same task also bounded
 the historical-baseline **fallback** reads inside `BaselineComputer.rhrHistory`/
-`computeAdaptiveBaselineRhrBpm`/`computeHrvBaseline` (reached from `RhrBaselineProvider`/
+`computeAdaptiveBaselineRhrBpmBetween`/`computeHrvBaselineBetween` (reached from `RhrBaselineProvider`/
 `HrvBaselineProvider` when no persisted baseline row exists yet): these previously read via
 `ScoringHistoryRepository.getSleepSessionsSince(fromMs)`, an unbounded-above query, so a fallback
 lookup for a past date could read sessions dated after it. They now call the bounded
@@ -1464,10 +1464,9 @@ touch days that never had the bug manifest in their data.
 **PERF-002/WP-22 (resync/daily-sync walk-forward baselines):** the sleep-session-to-per-day
 aggregation machinery (`filterValidBaselineSessions`, `buildHistoricalSleepDays`, and the
 `HistoricalSleepDay` per-night data class) is extracted out of `BaselineComputer` into
-`HistoricalSleepDayAssembler` (same package), shared by every windowed (`*Between`) and live
-(`dayMidnight`-anchored) baseline method. `computeAdaptiveBaselineRhrBpmBetween`/
-`computeHrvBaselineBetween`/`computeHrvWindowsBetween` each gained an optional `prefetchedSessions`
-parameter (default `null`, behavior unchanged): the RECOMPUTE walk-forward calls
+`HistoricalSleepDayAssembler` (same package), shared by every windowed (`*Between`) baseline method.
+`computeAdaptiveBaselineRhrBpmBetween`/`computeHrvBaselineBetween`/`computeHrvWindowsBetween` each gained
+an optional `prefetchedSessions` parameter (default `null`, behavior unchanged): the RECOMPUTE walk-forward calls
 `BaselineComputer.prefetchWalkForwardSessions(startDate, endDate, zoneId)` once (covering the
 widest lookback, `maxOf(56, 60)` = 60 days, covering both the 56-day HRV sigma window and the
 60-day circadian consistency window) and passes the same in-memory list to every recomputed day,

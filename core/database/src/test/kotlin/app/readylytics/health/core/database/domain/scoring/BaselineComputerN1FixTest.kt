@@ -28,7 +28,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
- * Tests for N+1 query fix in BaselineComputer.computeAdaptiveBaselineRhrBpm()
+ * Tests for N+1 query fix in BaselineComputer.computeAdaptiveBaselineRhrBpmBetween()
  *
  * Verifies:
  * 1. Output equivalence before/after refactoring
@@ -96,16 +96,17 @@ class BaselineComputerN1FixTest {
     }
 
     @Test
-    fun `computeAdaptiveBaselineRhrBpm returns override when provided`() =
+    fun `computeAdaptiveBaselineRhrBpmBetween returns override when provided`() =
         runTest {
             val dayMidnight = Instant.now()
             val override = 65f
             val result =
-                baselineComputer.computeAdaptiveBaselineRhrBpm(
-                    dayMidnight,
-                    override,
-                    SettingsDefaults.RESTING_HR_PERCENTILE,
+                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(
+                    fromMs = dayMidnight.toEpochMilli(),
+                    toMs = dayMidnight.plus(1, ChronoUnit.DAYS).toEpochMilli(),
+                    percentile = SettingsDefaults.RESTING_HR_PERCENTILE,
                     zoneId = zone,
+                    rhrBaselineOverride = override,
                 )
             // Override path returns before DAO freeze check, so result is non-null
             assertEquals(override, result)
@@ -115,7 +116,7 @@ class BaselineComputerN1FixTest {
         }
 
     @Test
-    fun `computeAdaptiveBaselineRhrBpm correctly computes nadir for 30-day window`() =
+    fun `computeAdaptiveBaselineRhrBpmBetween correctly computes nadir for 30-day window`() =
         runTest {
             val dayMidnight = Instant.now().truncatedTo(ChronoUnit.DAYS)
             val baselineFromMs = dayMidnight.minus(30, ChronoUnit.DAYS).toEpochMilli()
@@ -168,11 +169,12 @@ class BaselineComputerN1FixTest {
             coEvery { heartRateDao.getVisibleSleepHrProjectionForSessions(any()) } returns allHrSamples
 
             val result =
-                baselineComputer.computeAdaptiveBaselineRhrBpm(
-                    dayMidnight,
-                    null,
-                    SettingsDefaults.RESTING_HR_PERCENTILE,
+                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(
+                    fromMs = dayMidnight.toEpochMilli(),
+                    toMs = dayMidnight.plus(1, ChronoUnit.DAYS).toEpochMilli(),
+                    percentile = SettingsDefaults.RESTING_HR_PERCENTILE,
                     zoneId = zone,
+                    rhrBaselineOverride = null,
                 )
 
             // Verify result is within expected range (non-frozen DAO returns null -> live recompute)
@@ -189,7 +191,7 @@ class BaselineComputerN1FixTest {
         }
 
     @Test
-    fun `computeAdaptiveBaselineRhrBpm filters sessions with less than 10 samples`() =
+    fun `computeAdaptiveBaselineRhrBpmBetween filters sessions with less than 10 samples`() =
         runTest {
             val dayMidnight = Instant.now().truncatedTo(ChronoUnit.DAYS)
             val baselineFromMs = dayMidnight.minus(30, ChronoUnit.DAYS).toEpochMilli()
@@ -222,11 +224,12 @@ class BaselineComputerN1FixTest {
             coEvery { heartRateDao.getVisibleSleepHrProjectionForSessions(any()) } returns hrSamples
 
             val result =
-                baselineComputer.computeAdaptiveBaselineRhrBpm(
-                    dayMidnight,
-                    null,
-                    SettingsDefaults.RESTING_HR_PERCENTILE,
+                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(
+                    fromMs = dayMidnight.toEpochMilli(),
+                    toMs = dayMidnight.plus(1, ChronoUnit.DAYS).toEpochMilli(),
+                    percentile = SettingsDefaults.RESTING_HR_PERCENTILE,
                     zoneId = zone,
+                    rhrBaselineOverride = null,
                 )
 
             // Result should be around session_1's nadir (non-frozen path -> non-null)
@@ -235,25 +238,26 @@ class BaselineComputerN1FixTest {
         }
 
     @Test
-    fun `computeAdaptiveBaselineRhrBpm returns default when no valid sessions`() =
+    fun `computeAdaptiveBaselineRhrBpmBetween returns default when no valid sessions`() =
         runTest {
             val dayMidnight = Instant.now().truncatedTo(ChronoUnit.DAYS)
 
             coEvery { sleepSessionDao.getBetween(any(), any()) } returns emptyList()
 
             val result =
-                baselineComputer.computeAdaptiveBaselineRhrBpm(
-                    dayMidnight,
-                    null,
-                    SettingsDefaults.RESTING_HR_PERCENTILE,
+                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(
+                    fromMs = dayMidnight.toEpochMilli(),
+                    toMs = dayMidnight.plus(1, ChronoUnit.DAYS).toEpochMilli(),
+                    percentile = SettingsDefaults.RESTING_HR_PERCENTILE,
                     zoneId = zone,
+                    rhrBaselineOverride = null,
                 )
 
             assertEquals(ScoringConstants.DEFAULT_RHR_BPM, result)
         }
 
     @Test
-    fun `computeAdaptiveBaselineRhrBpm adapts percentile based on sample count`() =
+    fun `computeAdaptiveBaselineRhrBpmBetween adapts percentile based on sample count`() =
         runTest {
             val dayMidnight = Instant.now().truncatedTo(ChronoUnit.DAYS)
             val baselineFromMs = dayMidnight.minus(30, ChronoUnit.DAYS).toEpochMilli()
@@ -300,11 +304,12 @@ class BaselineComputerN1FixTest {
             coEvery { heartRateDao.getVisibleSleepHrProjectionForSessions(any()) } returns hrSamples
 
             val result =
-                baselineComputer.computeAdaptiveBaselineRhrBpm(
-                    dayMidnight,
-                    null,
-                    SettingsDefaults.RESTING_HR_PERCENTILE,
+                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(
+                    fromMs = dayMidnight.toEpochMilli(),
+                    toMs = dayMidnight.plus(1, ChronoUnit.DAYS).toEpochMilli(),
+                    percentile = SettingsDefaults.RESTING_HR_PERCENTILE,
                     zoneId = zone,
+                    rhrBaselineOverride = null,
                 )
 
             assertNotNull(result)
@@ -361,8 +366,9 @@ class BaselineComputerN1FixTest {
             coEvery { heartRateDao.getVisibleSleepHrProjectionForSessions(any()) } returns allHrSamples
 
             val startTime = System.currentTimeMillis()
-            baselineComputer.computeAdaptiveBaselineRhrBpm(
-                dayMidnight = dayMidnight,
+            baselineComputer.computeAdaptiveBaselineRhrBpmBetween(
+                fromMs = dayMidnight.toEpochMilli(),
+                toMs = dayMidnight.plus(1, ChronoUnit.DAYS).toEpochMilli(),
                 rhrBaselineOverride = null,
                 percentile = SettingsDefaults.RESTING_HR_PERCENTILE,
                 zoneId = zone,

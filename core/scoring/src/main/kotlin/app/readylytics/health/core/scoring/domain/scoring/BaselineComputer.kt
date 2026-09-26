@@ -27,7 +27,7 @@ import kotlin.math.roundToInt
  * (RHR median, HRV mu/sigma windows) from orchestration concerns.
  * REF: plan_scoring.md §15 — Extract BaselineComputer.
  *
- * Freeze enforcement (US-B6): [computeHrvWindows] and [computeAdaptiveBaselineRhrBpm]
+ * Freeze enforcement (US-B6): [computeHrvWindows] and [computeAdaptiveBaselineRhrBpmBetween]
  * return null when the DailySummary for [dayMidnight] already has a frozen baseline
  * (i.e. baselineCalculatedAtDate is set). Callers must interpret null as "use stored
  * baseline, do not recompute."
@@ -191,80 +191,21 @@ class BaselineComputer
             baselineContext: WalkForwardBaselineContext? = null,
             sourceGen: Long = 0L,
             snapshotId: String = "",
-        ): Float? {
-            val inclusiveToMs = (toMs - 1).coerceAtLeast(0)
-            if (!ignoreFrozenSnapshot && isBaselineFrozen(fromMs, zoneId)) return null
-            val baselineFromMs =
-                Instant
-                    .ofEpochMilli(
-                        fromMs,
-                    ).minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
-                    .toEpochMilli()
-            val sessions =
-                sessionsBetween(prefetchedSessions, baselineFromMs.coerceAtLeast(0), inclusiveToMs)
-            val historicalSleepDays =
-                sleepDayAssembler.buildHistoricalSleepDays(
-                    sessions = sessions,
-                    percentile = percentile,
-                    zoneId = zoneId,
-                    sleepDayPolicy = sleepDayPolicy,
-                    assumeCoverageValid = true,
-                    baselineContext = baselineContext,
-                    sourceGen = sourceGen,
-                    snapshotId = snapshotId,
-                )
-            // WP-11: resolve the requested score day and apply the same membership selector the
-            // backfill path uses (historicalRhrWindow), so live and backfill never disagree on
-            // which nights count -- even though the session query above is already bounded.
-            val targetScoreDay = Instant.ofEpochMilli(fromMs).atZone(zoneId).toLocalDate()
-            val nadirs =
-                historicalRhrWindow(historicalSleepDays, targetScoreDay)
-                    .filter { it.canContributeToBaseline }
-                    .mapNotNull { it.nadirBpm }
-            return nadirs.takeIf { it.isNotEmpty() }?.median() ?: ScoringConstants.DEFAULT_RHR_BPM
-        }
-
-        /**
-         * Computes the RHR baseline using intra-session adaptive percentiles.
-         * Finds the true physiological nadir rather than the session-average median.
-         * Percentile adapts to sensor data density to avoid noise artifacts.
-         * Falls back to [ScoringConstants.DEFAULT_RHR_BPM] when data is insufficient.
-         *
-         * Optimization (Phase 1.3): Uses batch query instead of per-session queries.
-         * Before: 1 + N*2 queries (1 for session IDs + 2 per session)
-         * After:  2 queries (1 for sessions + 1 for all HR samples batched)
-         * Performance: 5-10x faster for 30-day window (30 sessions)
-         */
-        suspend fun computeAdaptiveBaselineRhrBpm(
-            dayMidnight: Instant,
-            rhrBaselineOverride: Float?,
-            percentile: Int,
-            zoneId: ZoneId,
-            sleepDayPolicy: SleepDayPolicy? = null,
+            rhrBaselineOverride: Float? = null,
         ): Float? =
             rhrBaselineOverride ?: run {
-                val frozenSummary =
-                    scoringHistoryRepository.getDailySummaryByDate(
-                        dayMidnight.toEpochMilli(),
-                        zoneId,
-                    )
-                if (frozenSummary?.baselineCalculatedAtDate != null) {
-                    logD(TAG) {
-                        "Baseline frozen for date=${frozenSummary.baselineCalculatedAtDate}; " +
-                            "rhrBpm=${frozenSummary.rhrBpm} — skipping RHR recompute"
-                    }
+                val inclusiveToMs = (toMs - 1).coerceAtLeast(0)
+                if (!ignoreFrozenSnapshot && isBaselineFrozen(fromMs, zoneId)) {
                     null
                 } else {
                     val baselineFromMs =
-                        dayMidnight
-                            .minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
+                        Instant
+                            .ofEpochMilli(
+                                fromMs,
+                            ).minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
                             .toEpochMilli()
-                    // WP-11: bound the fallback read to dayMidnight's own scoring-zone day end --
-                    // never Clock.now()/system zone -- so a request for a past day never reads
-                    // sessions dated after it.
-                    val dayEndMs = dayMidnight.plus(1, ChronoUnit.DAYS).toEpochMilli() - 1
                     val sessions =
-                        scoringHistoryRepository.getSleepSessionsBetween(baselineFromMs.coerceAtLeast(0), dayEndMs)
+                        sessionsBetween(prefetchedSessions, baselineFromMs.coerceAtLeast(0), inclusiveToMs)
                     val historicalSleepDays =
                         sleepDayAssembler.buildHistoricalSleepDays(
                             sessions = sessions,
@@ -272,52 +213,21 @@ class BaselineComputer
                             zoneId = zoneId,
                             sleepDayPolicy = sleepDayPolicy,
                             assumeCoverageValid = true,
+                            baselineContext = baselineContext,
+                            sourceGen = sourceGen,
+                            snapshotId = snapshotId,
                         )
-                    val scoreDay = dayMidnight.atZone(zoneId).toLocalDate()
+                    // WP-11: resolve the requested score day and apply the same membership selector the
+                    // backfill path uses (historicalRhrWindow), so live and backfill never disagree on
+                    // which nights count -- even though the session query above is already bounded.
+                    val targetScoreDay = Instant.ofEpochMilli(fromMs).atZone(zoneId).toLocalDate()
                     val nadirs =
-                        historicalRhrWindow(historicalSleepDays, scoreDay)
+                        historicalRhrWindow(historicalSleepDays, targetScoreDay)
                             .filter { it.canContributeToBaseline }
                             .mapNotNull { it.nadirBpm }
-
                     nadirs.takeIf { it.isNotEmpty() }?.median() ?: ScoringConstants.DEFAULT_RHR_BPM
                 }
             }
-
-        /**
-         * Computed HRV baseline (median of valid-night RMSSD daily averages within
-         * [ScoringConstants.BASELINE_DAYS]) honoring user override.
-         * Returns null when no valid samples and no override exist.
-         */
-        suspend fun computeHrvBaseline(
-            dayMidnight: Instant,
-            hrvBaselineOverride: Float?,
-        ): Int? {
-            if (hrvBaselineOverride != null) return hrvBaselineOverride.roundToInt()
-            val baselineFromMs =
-                dayMidnight
-                    .minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
-                    .toEpochMilli()
-            // WP-11: bound the fallback read to dayMidnight's own scoring-zone day end -- never
-            // Clock.now()/system zone -- so a request for a past day never reads sessions dated
-            // after it.
-            val dayEndMs = dayMidnight.plus(1, ChronoUnit.DAYS).toEpochMilli() - 1
-            val historicalSessions =
-                scoringHistoryRepository.getSleepSessionsBetween(baselineFromMs.coerceAtLeast(0), dayEndMs)
-            val validIds = sleepDayAssembler.filterValidBaselineSessions(historicalSessions)
-            if (validIds.isEmpty()) return null
-            val hrvMap = scoringHistoryRepository.getSleepRmssdForSessionsMap(validIds)
-            val nightlyAverages =
-                validIds.mapNotNull { sessionId ->
-                    val samples = hrvMap[sessionId] ?: return@mapNotNull null
-                    if (samples.isEmpty()) return@mapNotNull null
-                    samples.mean()
-                }
-            return if (nightlyAverages.isEmpty()) {
-                null
-            } else {
-                nightlyAverages.median().roundToInt()
-            }
-        }
 
         /**
          * Computes the 30-day HRV baseline (median of nightly RMSSD averages) point-in-time correctly.
