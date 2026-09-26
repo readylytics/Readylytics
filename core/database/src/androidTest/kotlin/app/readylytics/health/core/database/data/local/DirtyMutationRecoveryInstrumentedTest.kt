@@ -101,6 +101,33 @@ class DirtyMutationRecoveryInstrumentedTest {
     }
 
     @Test
+    fun invalidDirtyRowsRemainReadableAndRetentionRepairsThem() = runBlocking {
+        database.seedDefaultMutationState()
+        val sql = database.openHelper.writableDatabase
+        fun insert(start: Long, end: Long, next: Long) {
+            sql.execSQL(
+                "INSERT INTO dirty_ranges (sourceGeneration, startEpochDay, endEpochDayInclusive, " +
+                    "nextEpochDay, reason, scoringSnapshotId) VALUES (0, $start, $end, $next, 'TEST', 'snap')",
+            )
+        }
+        insert(12, 11, 12)
+        insert(10, 12, 9)
+        insert(10, 12, 14)
+        insert(10, 12, 13)
+        insert(10, Long.MAX_VALUE, Long.MAX_VALUE)
+
+        assertEquals(5, database.dirtyRangeDao().pending(10).size)
+        database.dirtyRangeDao().discardBefore(10)
+        val retainedRows = database.dirtyRangeDao().pending(10)
+        assertEquals(2, retainedRows.size)
+        val retained = retainedRows.first()
+        assertEquals(10L, retained.startEpochDay)
+        assertEquals(12L, retained.endEpochDayInclusive)
+        assertEquals(13L, retained.nextEpochDay)
+        assertEquals(Long.MAX_VALUE, retainedRows.last().nextEpochDay)
+    }
+
+    @Test
     fun mutationInterruptionLeavesSourceAbsentAndJournalSurvives() =
         runBlocking {
             database.seedDefaultMutationState(0L)

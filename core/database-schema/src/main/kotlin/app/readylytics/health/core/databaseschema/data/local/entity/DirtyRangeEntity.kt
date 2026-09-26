@@ -20,16 +20,4 @@ data class DirtyRangeEntity(
     val reason: String,
     /** Diagnostic metadata only; publication is fenced by source generation and the captured ticket cursor. */
     val scoringSnapshotId: String,
-) {
-    init {
-        require(startEpochDay <= endEpochDayInclusive) {
-            "startEpochDay ($startEpochDay) cannot be after endEpochDayInclusive ($endEpochDayInclusive)"
-        }
-        require(startEpochDay <= nextEpochDay) {
-            "startEpochDay ($startEpochDay) must be <= nextEpochDay ($nextEpochDay)"
-        }
-        require(nextEpochDay <= endEpochDayInclusive + 1) {
-            "nextEpochDay ($nextEpochDay) must be <= endEpochDayInclusive + 1 (${endEpochDayInclusive + 1})"
-        }
-    }
-}
+)
