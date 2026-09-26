@@ -1,5 +1,6 @@
 package app.readylytics.health.benchmark
 
+import android.os.SystemClock
 import android.util.Log
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -285,11 +286,27 @@ class ScanStagingScaleBenchmark {
                 launch {
                     rollupManager.rollupExpiredHotTier(cutoffMs, groupMinuteBudget = INTERRUPTION_GROUP_MINUTES)
                 }
-            delay(INTERRUPTION_DELAY_MS)
+            // Wait for the rollup to have published at least one minute, then interrupt. A fixed
+            // `delay` here was a race: on a slower device nothing had been published yet when the
+            // cancellation landed, and the assertion below failed with "must actually publish
+            // something to be meaningful" -- a false negative about interruption safety, not a real
+            // finding. Polling for the precondition makes the test deterministic and keeps its
+            // intent: cancel *mid-rollup*, with some work committed and some still outstanding.
+            var published =
+                db.minuteCoverageDao().getCoverageInRange(DAY_TWO_START_MS, DAY_TWO_START_MS + DAY_MS)
+            val deadline = SystemClock.elapsedRealtime() + INTERRUPTION_PUBLISH_TIMEOUT_MS
+            while (published.isEmpty() && SystemClock.elapsedRealtime() < deadline) {
+                delay(INTERRUPTION_POLL_MS)
+                published = db.minuteCoverageDao().getCoverageInRange(DAY_TWO_START_MS, DAY_TWO_START_MS + DAY_MS)
+            }
             job.cancelAndJoin()
 
-            val published = db.minuteCoverageDao().getCoverageInRange(DAY_TWO_START_MS, DAY_TWO_START_MS + DAY_MS)
-            assertTrue("interruption test must actually publish something to be meaningful", published.isNotEmpty())
+            published = db.minuteCoverageDao().getCoverageInRange(DAY_TWO_START_MS, DAY_TWO_START_MS + DAY_MS)
+            assertTrue(
+                "rollup published nothing within ${INTERRUPTION_PUBLISH_TIMEOUT_MS}ms, so this run " +
+                    "cannot say anything about interruption safety",
+                published.isNotEmpty(),
+            )
             val publishedStarts = published.mapTo(HashSet()) { it.bucketStartMs }
             val expectedPerMinute = sourceRefs.size * SAMPLES_PER_MINUTE_PER_SOURCE
             var checkedUnpublished = 0
@@ -453,7 +470,8 @@ class ScanStagingScaleBenchmark {
         val DAY_ONE_START_MS: Long = Instant.parse("2026-02-01T00:00:00Z").toEpochMilli()
         val DAY_TWO_START_MS: Long = Instant.parse("2026-02-02T00:00:00Z").toEpochMilli()
         const val INTERRUPTION_GROUP_MINUTES = 5
-        const val INTERRUPTION_DELAY_MS = 50L
+        const val INTERRUPTION_POLL_MS = 25L
+        const val INTERRUPTION_PUBLISH_TIMEOUT_MS = 60_000L
 
         const val TOTAL_SOURCES = 1_000_000
         const val REFERENCED_SOURCES = 1_000
