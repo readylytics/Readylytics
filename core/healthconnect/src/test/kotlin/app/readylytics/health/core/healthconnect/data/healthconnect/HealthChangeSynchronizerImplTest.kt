@@ -6,6 +6,9 @@ import androidx.health.connect.client.changes.DeletionChange
 import androidx.health.connect.client.changes.UpsertionChange
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.*
+import androidx.health.connect.client.records.metadata.DataOrigin
+import androidx.health.connect.client.records.metadata.Device
+import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.ChangesTokenRequest
 import androidx.health.connect.client.response.ChangesResponse
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
@@ -365,6 +368,47 @@ class HealthChangeSynchronizerImplTest {
             coVerify(exactly = 0) {
                 healthIngestionStore.persist(any())
             }
+        }
+
+    @Test
+    fun `excluded exercise upsertion deletes stored workout and marks its day affected`() =
+        runTest {
+            every { settingsRepo.userPreferences } returns
+                flowOf(UserPreferences(deviceByDataType = mapOf(HealthDataType.EXERCISE.name to "WatchA")))
+            seedTokens()
+            val recordId = "workout-1"
+            val storedDay = LocalDate.parse("2026-06-19")
+            val record = exerciseRecord(recordId, "WatchB")
+            routeOneChange(HealthDataType.EXERCISE, UpsertionChange(record))
+            coEvery {
+                changeIngestionStore.affectedDatesForRecord(HealthDataType.EXERCISE, recordId, any())
+            } returns setOf(storedDay)
+
+            val outcome = synchronizer.applyPendingChanges()
+
+            assertEquals(setOf(storedDay), outcome.affectedDates)
+            coVerifyOrder {
+                changeIngestionStore.affectedDatesForRecord(HealthDataType.EXERCISE, recordId, any())
+                changeIngestionStore.deleteRecord(HealthDataType.EXERCISE, recordId)
+            }
+            coVerify(exactly = 0) { changeIngestionStore.persistPreparedWorkouts(any()) }
+            coVerify(exactly = 0) { healthIngestionStore.persist(any()) }
+        }
+
+    private fun exerciseRecord(recordId: String, deviceModel: String): ExerciseSessionRecord =
+        mockk<ExerciseSessionRecord>(relaxed = true) {
+            every { metadata } returns
+                mockk<Metadata> {
+                    every { id } returns recordId
+                    every { device } returns mockk<Device> {
+                        every { model } returns deviceModel
+                        every { manufacturer } returns null
+                    }
+                    every { dataOrigin } returns mockk<DataOrigin> { every { packageName } returns "pkg" }
+                }
+            every { startTime } returns Instant.parse("2026-06-19T10:00:00Z")
+            every { endTime } returns Instant.parse("2026-06-19T11:00:00Z")
+            every { exerciseType } returns ExerciseSessionRecord.EXERCISE_TYPE_RUNNING
         }
 
     @Test

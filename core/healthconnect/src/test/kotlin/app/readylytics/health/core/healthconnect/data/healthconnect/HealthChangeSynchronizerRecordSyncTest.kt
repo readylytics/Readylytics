@@ -6,6 +6,7 @@ import androidx.health.connect.client.changes.UpsertionChange
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.records.metadata.DataOrigin
+import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.response.ChangesResponse
 import app.readylytics.health.core.model.data.preferences.UserPreferences
@@ -470,24 +471,52 @@ class HealthChangeSynchronizerRecordSyncTest {
         }
 
     @Test
-    fun `EXERCISE upsertion never deletes the record it is about to update in place`() =
+    fun `selected EXERCISE upsertion never deletes the record it is about to update in place`() =
         runTest {
-            // H5/WP-09: deleteRecord(EXERCISE, id) on the upsertion path would both discard the
-            // merge-against-existing semantics and cascade-delete route points a Denied re-read
-            // must preserve -- it must never be called for EXERCISE upsertions.
+            // H5/WP-09: matching-device workouts preserve merge-against-existing semantics and
+            // route points when a re-read is Denied.
             seedTokens()
+            every { settingsRepo.userPreferences } returns
+                flowOf(UserPreferences(deviceByDataType = mapOf(HealthDataType.EXERCISE.name to "WatchA")))
             val exerciseRecord =
                 createMockExerciseRecord(
                     "exercise-no-delete",
                     Instant.parse("2026-06-01T10:00:00Z"),
                     Instant.parse("2026-06-01T11:00:00Z"),
                 )
+            every { exerciseRecord.metadata.device } returns mockk<Device> {
+                every { model } returns "WatchA"
+                every { manufacturer } returns null
+            }
             routeOneChange(HealthDataType.EXERCISE, UpsertionChange(exerciseRecord))
 
             synchronizer.applyPendingChanges()
 
             coVerify(exactly = 0) { changeIngestionStore.deleteRecord(HealthDataType.EXERCISE, any()) }
             coVerify { changeIngestionStore.persistPreparedWorkouts(any()) }
+        }
+
+    @Test
+    fun `EXERCISE DeletionChange deletes the stored workout`() =
+        runTest {
+            seedTokens()
+            val recordId = "exercise-deleted"
+            val storedDay = LocalDate.of(2026, 6, 1)
+            coEvery {
+                changeIngestionStore.affectedDatesForRecord(HealthDataType.EXERCISE, recordId, any())
+            } returns setOf(storedDay)
+            routeOneChange(
+                HealthDataType.EXERCISE,
+                mockk<DeletionChange> { every { this@mockk.recordId } returns recordId },
+            )
+
+            val outcome = synchronizer.applyPendingChanges()
+
+            assertEquals(setOf(storedDay), outcome.affectedDates)
+            coVerifyOrder {
+                changeIngestionStore.affectedDatesForRecord(HealthDataType.EXERCISE, recordId, any())
+                changeIngestionStore.deleteRecord(HealthDataType.EXERCISE, recordId)
+            }
         }
 
     @Test
