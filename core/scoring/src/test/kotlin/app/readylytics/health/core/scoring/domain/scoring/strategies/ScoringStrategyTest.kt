@@ -426,4 +426,30 @@ class LoadScoringStrategyTest {
             )
         assertEquals(1.66667f, result!!, 0.001f)
     }
+
+    @Test
+    fun `rhrZScore fallback respects floor of 1 when 0_05 times mu is less than 1`() {
+        val result =
+            loadStrategy.computeRhrZScore(
+                currentRhrBpm = 12f,
+                rhrHistory = listOf(10),
+                baselineOverride = null,
+                frozenSigma = null,
+            )
+        // mu = 10, 0.05 * 10 = 0.5 < 1 -> sigma = 1f -> (12 - 10) / 1 = 2f
+        assertEquals(2.0f, result!!, 0.001f)
+    }
+
+    @Test
+    fun `rhrZScore fallback uses 0_05 times mu when greater than 1`() {
+        val result =
+            loadStrategy.computeRhrZScore(
+                currentRhrBpm = 84f,
+                rhrHistory = listOf(80),
+                baselineOverride = null,
+                frozenSigma = null,
+            )
+        // mu = 80, 0.05 * 80 = 4 > 1 -> sigma = 4f -> (84 - 80) / 4 = 1f
+        assertEquals(1.0f, result!!, 0.001f)
+    }
 }

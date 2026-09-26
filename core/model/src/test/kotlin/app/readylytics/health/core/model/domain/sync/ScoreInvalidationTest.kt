@@ -8,12 +8,28 @@ import java.time.LocalDate
 
 class ScoreInvalidationTest {
     @Test
-    fun `affected range extends 84 days past the changed range but never past today`() {
+    fun `dependency closure reaches today for baseline and source deletion`() {
         val changed = ScoreInvalidation.AffectedRange(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 10))
+        val retentionStart = LocalDate.of(2025, 1, 1)
         val today = LocalDate.of(2026, 2, 1)
-        val result = ScoreInvalidation.affectedRange(changed, today)
-        assertEquals(LocalDate.of(2026, 1, 1), result.start)
-        assertEquals(LocalDate.of(2026, 2, 1), result.endInclusive)
+
+        val baselineResult =
+            ScoreInvalidation.dependencyClosure(
+                changed = changed,
+                reason = ScoreInvalidation.Reason.BASELINE,
+                retentionStart = retentionStart,
+                today = today,
+            )
+        assertEquals(ScoreInvalidation.AffectedRange(LocalDate.of(2026, 1, 1), today), baselineResult)
+
+        val deletionResult =
+            ScoreInvalidation.dependencyClosure(
+                changed = changed,
+                reason = ScoreInvalidation.Reason.SOURCE_DELETION,
+                retentionStart = retentionStart,
+                today = today,
+            )
+        assertEquals(ScoreInvalidation.AffectedRange(LocalDate.of(2026, 1, 1), today), deletionResult)
     }
 
     @Test
