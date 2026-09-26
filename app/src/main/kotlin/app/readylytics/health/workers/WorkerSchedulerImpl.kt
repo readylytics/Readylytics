@@ -64,7 +64,7 @@ class WorkerSchedulerImpl
          * a request. Expedited so it starts promptly when explicitly requested.
          *
          * R2-CACHE-001: [startDate]/[endDate], when both provided, carry a bounded recompute-only
-         * range (e.g. from `ScoreInvalidation.affectedRange`) through to
+         * range (e.g. from `ScoreInvalidation.dependencyClosure`) through to
          * [HealthResyncWorker]/`FullHistoricalResyncUseCase`. Left `null` (the default), the
          * recompute-only pass keeps its prior full-retention-window behavior.
          *

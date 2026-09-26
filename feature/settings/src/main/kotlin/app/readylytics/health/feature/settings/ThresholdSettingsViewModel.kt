@@ -141,6 +141,8 @@ class ThresholdSettingsViewModel
                             logE("ThresholdViewModel", e) { "Failed to update threshold" }
                             try {
                                 circadianThresholdPreferences.setOverride(minutes = previousValue)
+                            } catch (rollbackError: CancellationException) {
+                                throw rollbackError
                             } catch (rollbackError: Exception) {
                                 logE("ThresholdViewModel", rollbackError) { "Threshold rollback failed" }
                             }
