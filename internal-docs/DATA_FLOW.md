@@ -889,7 +889,8 @@ The architecture couples health data changes to durable rescoring via two distin
    - A single Room transaction checks that source generation is unchanged and maintenance is idle,
      writes the daily summary and canonical workout metadata, advances every captured ticket using
      its original ID/generation/cursor, and deletes completed tickets. A failed cursor check or write
-     rolls the entire transaction back. The typed single-ticket publisher remains available for direct callers.
+     rolls the entire transaction back. `captureDay`/`publishDay` is the sole publication protocol;
+     `dirty_ranges.scoringSnapshotId` remains diagnostic metadata and is not a publication fence.
    - Before selecting work, the resync worker discards wholly expired dirty tickets and trims expired
      prefixes to the shared retention boundary. This prevents aged tickets outside the permitted
      recompute window from occupying the scheduling batch indefinitely.
@@ -907,7 +908,7 @@ close this gap:
 - **`DayAssembly`** (`core/model/.../domain/scoring/DayAssembly.kt`) is the explicit tri-state
   result of assembling one day, threaded through the whole chain —
   `FinalSummaryAssembler.assemble` → `ScoringRepositoryImpl.computeDay`/`finalizeAssembly` →
-  `ScoringDayDataLoader.persistDayAssembly` / `DirtySummaryPublisher.publish` — replacing the old
+  `ScoringDayDataLoader.persistDayAssembly` / `DirtySummaryPublisher.publishDay` — replacing the old
   `assemble(...) ?: previous` fallback pattern:
   - `Computed(summary)` — the day's required source input (its sleep session) was present. A full
     derived candidate, safe to publish and to seed the next day's walk-forward state.

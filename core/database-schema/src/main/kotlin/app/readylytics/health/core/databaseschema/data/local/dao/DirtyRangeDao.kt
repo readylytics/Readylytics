@@ -52,16 +52,6 @@ interface DirtyRangeDao : DirtyRangeRetentionQueries {
     @Query("SELECT COUNT(*) FROM dirty_ranges")
     suspend fun count(): Int
 
-    @Query(
-        "UPDATE dirty_ranges SET scoringSnapshotId = :newSnapshotId " +
-            "WHERE id = :id AND sourceGeneration = :generation",
-    )
-    suspend fun updateSnapshotId(
-        id: Long,
-        generation: Long,
-        newSnapshotId: String,
-    ): Int
-
     @Query("DELETE FROM dirty_ranges")
     suspend fun deleteAll(): Int
 }

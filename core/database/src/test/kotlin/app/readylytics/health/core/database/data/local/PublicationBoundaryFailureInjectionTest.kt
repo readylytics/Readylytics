@@ -60,8 +60,6 @@ class PublicationBoundaryFailureInjectionTest {
                 transactionRunner = transactionRunner,
                 healthMutationStateDao = database.healthMutationStateDao(),
                 dirtyRangeDao = database.dirtyRangeDao(),
-                dailySummaryDao = database.dailySummaryDao(),
-                workoutDao = database.workoutDao(),
             )
     }
 
@@ -134,8 +132,6 @@ class PublicationBoundaryFailureInjectionTest {
                     transactionRunner = transactionRunner,
                     healthMutationStateDao = database.healthMutationStateDao(),
                     dirtyRangeDao = failingDirtyDao,
-                    dailySummaryDao = database.dailySummaryDao(),
-                    workoutDao = database.workoutDao(),
                 )
             val loader = productionLoader(failingPublisher)
             val publication = loader.captureDayPublication(day)

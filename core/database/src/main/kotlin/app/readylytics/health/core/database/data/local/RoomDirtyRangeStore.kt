@@ -55,9 +55,4 @@ class RoomDirtyRangeStore
             )
         }
 
-        suspend fun rebindSnapshot(
-            ticketId: Long,
-            generation: Long,
-            newSnapshotId: String,
-        ): Boolean = dirtyRangeDao.updateSnapshotId(ticketId, generation, newSnapshotId) > 0
     }

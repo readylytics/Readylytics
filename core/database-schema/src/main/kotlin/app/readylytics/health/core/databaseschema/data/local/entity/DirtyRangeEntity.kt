@@ -18,6 +18,7 @@ data class DirtyRangeEntity(
     val endEpochDayInclusive: Long,
     val nextEpochDay: Long,
     val reason: String,
+    /** Diagnostic metadata only; publication is fenced by source generation and the captured ticket cursor. */
     val scoringSnapshotId: String,
 ) {
     init {
