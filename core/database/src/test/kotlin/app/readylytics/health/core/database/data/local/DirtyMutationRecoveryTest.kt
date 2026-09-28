@@ -15,7 +15,6 @@ import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecor
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.model.ReadinessResult
-import app.readylytics.health.core.model.domain.sync.DirtyTicket
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -93,8 +92,6 @@ class DirtyMutationRecoveryTest {
                 transactionRunner = transactionRunner,
                 healthMutationStateDao = database.healthMutationStateDao(),
                 dirtyRangeDao = database.dirtyRangeDao(),
-                dailySummaryDao = database.dailySummaryDao(),
-                workoutDao = database.workoutDao(),
             )
     }
 
@@ -204,47 +201,27 @@ class DirtyMutationRecoveryTest {
             val dayMs = day.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
             val oldSummary = createTestDailySummary(day, 70f)
             database.dailySummaryDao().upsert(oldSummary)
-
             database.insertTestWorkout("workout-adv-fail", dayMs)
-
             val ticketId = database.insertTestTicket(day = day)
+            val publication = publisher.captureDay(day)
+            val updatedSummary = oldSummary.copy(sleepScore = 95f)
 
-            val mismatchedTicket =
-                DirtyTicket(
-                    id = ticketId,
-                    sourceGeneration = 1L,
-                    nextDay = day.plusDays(5),
-                    endInclusive = day.plusDays(100),
-                    scoringSnapshotId = "snap-1",
-                )
-
-            val newDomainSummary =
-                DailySummaryMapper.toDomain(oldSummary.copy(sleepScore = 95f), ZoneOffset.UTC)
-            val stagedUpdates =
-                listOf(ComputeDailyTrimpUseCase.WorkoutModelTrimpUpdate("workout-adv-fail", 42f))
-
-            val published =
-                publisher.publish(
-                    ticket = mismatchedTicket,
-                    summary = newDomainSummary,
-                    zoneId = ZoneOffset.UTC,
-                    expectedSourceGeneration = 1L,
-                    stagedWorkoutUpdates = stagedUpdates,
-                    activeSnapshotId = "snap-1",
-                )
-
+            // Another publisher advances the captured cursor before this publication commits.
+            assertEquals(
+                1,
+                database.dirtyRangeDao().advance(ticketId, 1L, day.toEpochDay(), day.plusDays(1).toEpochDay()),
+            )
+            val published = publisher.publishDay(publication) {
+                database.dailySummaryDao().upsert(updatedSummary)
+                val workout = checkNotNull(database.workoutDao().getById("workout-adv-fail"))
+                database.workoutDao().upsertAll(listOf(workout.copy(modelTrimp = 42f)))
+            }
             assertFalse(published)
 
             reopenDatabase()
-            assertEquals(1, database.dirtyRangeDao().pending(100).size)
-            assertEquals(
-                day.toEpochDay(),
-                database
-                    .dirtyRangeDao()
-                    .pending(100)
-                    .first()
-                    .nextEpochDay,
-            )
+            val pending = database.dirtyRangeDao().pending(100)
+            assertEquals(1, pending.size)
+            assertEquals(day.plusDays(1).toEpochDay(), pending.first().nextEpochDay)
             assertEquals(oldSummary, database.dailySummaryDao().getByDate(dayMs))
             assertNull(database.workoutDao().getById("workout-adv-fail")?.modelTrimp)
         }
@@ -257,33 +234,11 @@ class DirtyMutationRecoveryTest {
             val dayMs = day.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
             val oldSummary = createTestDailySummary(day, 70f)
             database.dailySummaryDao().upsert(oldSummary)
+            database.insertTestTicket(day = day)
+            val publication = publisher.captureDay(day)
+            val newSummary = createTestDailySummary(day, 88f)
 
-            val ticketId = database.insertTestTicket(day = day)
-
-            val ticket =
-                DirtyTicket(
-                    id = ticketId,
-                    sourceGeneration = 1L,
-                    nextDay = day,
-                    endInclusive = day.plusDays(100),
-                    scoringSnapshotId = "snap-1",
-                )
-            val newSummary =
-                DailySummary(
-                    date = day,
-                    sleepScore = 88f,
-                    readinessResult = ReadinessResult.EMPTY,
-                    isCalibrating = false,
-                )
-
-            val published =
-                publisher.publish(
-                    ticket = ticket,
-                    summary = newSummary,
-                    zoneId = ZoneOffset.UTC,
-                    expectedSourceGeneration = 1L,
-                )
-            assertTrue(published)
+            assertTrue(publisher.publishDay(publication) { database.dailySummaryDao().upsert(newSummary) })
 
             reopenDatabase()
             val pending = database.dirtyRangeDao().pending(100)
@@ -298,39 +253,26 @@ class DirtyMutationRecoveryTest {
         runBlocking {
             database.seedDefaultMutationState(1L)
             val day = LocalDate.of(2026, 2, 1)
-            val ticketId = database.insertTestTicket(day = day, nextDay = day.plusDays(1))
-
-            val staleTicket =
-                DirtyTicket(
-                    id = ticketId,
-                    sourceGeneration = 1L,
-                    nextDay = day.plusDays(1),
-                    endInclusive = day.plusDays(100),
-                    scoringSnapshotId = "snap-1",
-                )
+            val publishDay = day.plusDays(1)
+            val dayMs = publishDay.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+            val oldSummary = createTestDailySummary(publishDay, 70f)
+            database.dailySummaryDao().upsert(oldSummary)
+            val ticketId = database.insertTestTicket(day = day, nextDay = publishDay)
+            val publication = publisher.captureDay(publishDay)
             database.healthMutationStateDao().incrementGeneration()
             assertEquals(2L, database.healthMutationStateDao().current().sourceGeneration)
 
-            val summary =
-                DailySummary(
-                    date = day.plusDays(1),
-                    sleepScore = 88f,
-                    readinessResult = ReadinessResult.EMPTY,
-                    isCalibrating = false,
-                )
-            val published =
-                publisher.publish(
-                    ticket = staleTicket,
-                    summary = summary,
-                    zoneId = ZoneOffset.UTC,
-                    expectedSourceGeneration = 1L,
-                )
+            val published = publisher.publishDay(publication) {
+                database.dailySummaryDao().upsert(createTestDailySummary(publishDay, 88f))
+            }
             assertFalse(published)
 
             reopenDatabase()
             val pending = database.dirtyRangeDao().pending(100)
             assertEquals(1, pending.size)
-            assertEquals(day.plusDays(1).toEpochDay(), pending.first().nextEpochDay)
+            assertEquals(ticketId, pending.first().id)
+            assertEquals(publishDay.toEpochDay(), pending.first().nextEpochDay)
+            assertEquals(oldSummary, database.dailySummaryDao().getByDate(dayMs))
         }
 
     @Test

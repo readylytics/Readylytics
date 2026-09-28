@@ -25,8 +25,8 @@ interface WorkerScheduler {
      *   durable successor. Rapid settings changes may create redundant local passes, but the final
      *   queued pass captures the newest preferences and no request is silently lost.
      * @param startDate R2-CACHE-001: optional inclusive start of a bounded recompute-only range
-     *   (e.g. from `ScoreInvalidation.affectedRange`). Ignored when [recomputeOnly] is false. `null`
-     *   (default) keeps the existing full-retention-window recompute behavior.
+     *   (e.g. from `ScoreInvalidation.dependencyClosure`). Ignored when [recomputeOnly] is false.
+     *   `null` (default) keeps the existing full-retention-window recompute behavior.
      * @param endDate R2-CACHE-001: optional inclusive end of the bounded recompute-only range.
      *   `null` (default) keeps the existing full-retention-window recompute behavior.
      * @param trigger why this pass is enqueued; recorded in diagnostics when an unexpected trigger

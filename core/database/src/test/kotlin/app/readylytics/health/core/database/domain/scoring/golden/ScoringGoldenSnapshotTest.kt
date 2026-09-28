@@ -17,7 +17,6 @@ import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.scoring.WorkoutHrQuality
 import app.readylytics.health.core.model.domain.sync.HistoricalRunIdentity
 import app.readylytics.health.core.scoring.domain.scoring.WorkoutInputRevision
-import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -192,8 +191,7 @@ class ScoringGoldenSnapshotTest {
             sleepFixtures.seedCalibratedHistory()
 
             val prefs = settingsRepo.userPreferences.first()
-            val hrMax = HeartRateFormulas.resolveMaxHeartRate(prefs)
-            val expectedSnapshotId = HistoricalRunIdentity.computeSnapshotId(prefs, hrMax)
+            val expectedSnapshotId = HistoricalRunIdentity.computeSnapshotId(prefs)
             val workout =
                 WorkoutRecordEntity(
                     id = "workout_case3",

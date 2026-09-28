@@ -3,7 +3,6 @@ package app.readylytics.health.data.backup
 import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 import app.readylytics.health.core.model.domain.sync.HistoricalRunIdentity
-import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
 import app.readylytics.health.data.preferences.SettingsRepository
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.first
@@ -43,8 +42,7 @@ class BackupSnapshotExporter
                     val layouts = captureLayouts()
                     val capturedPreferences = buildUserPreferencesBackup(prefs, layouts)
 
-                    val hrMax = HeartRateFormulas.resolveMaxHeartRate(prefs)
-                    val scoringSnapshotId = HistoricalRunIdentity.computeSnapshotId(prefs, hrMax)
+                    val scoringSnapshotId = HistoricalRunIdentity.computeSnapshotId(prefs)
                     val exportedAtEpochMs = System.currentTimeMillis()
 
                     val identity =

@@ -2,15 +2,17 @@ package app.readylytics.health.feature.settings
 
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.preferences.CircadianThresholdPreferences
 import app.readylytics.health.core.model.domain.preferences.SleepSettings
 import app.readylytics.health.core.model.domain.preferences.ThresholdSettings
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
-import app.readylytics.health.core.model.domain.repository.ScoringRepository
+import app.readylytics.health.core.model.domain.scoring.RecomputeToday
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.core.model.domain.sync.HistoricalResyncController
 import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.feature.settings.R
+import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
@@ -36,7 +38,7 @@ class SleepAndThresholdSettingsViewModelTest {
     private val settingsReader = mockk<UserPreferencesReader>()
     private val sleepSettings = mockk<SleepSettings>(relaxed = true)
     private val thresholdSettings = mockk<ThresholdSettings>(relaxed = true)
-    private val scoringRepo = mockk<ScoringRepository>(relaxed = true)
+    private val recomputeToday = mockk<RecomputeToday>(relaxed = true)
     private val circadianPrefs = mockk<CircadianThresholdPreferences>(relaxed = true)
     private val resyncController = mockk<HistoricalResyncController>(relaxed = true)
     private val testDispatcher = StandardTestDispatcher()
@@ -51,12 +53,13 @@ class SleepAndThresholdSettingsViewModelTest {
         Dispatchers.setMain(testDispatcher)
         every { settingsReader.userPreferences } returns MutableStateFlow(UserPreferences())
         every { circadianPrefs.overrideMinutesFlow } returns MutableStateFlow(null)
+        coEvery { recomputeToday.execute(any()) } returns Result.success(Unit)
 
         sleepViewModel =
             SleepSettingsViewModel(
                 settingsReader,
                 sleepSettings,
-                scoringRepo,
+                recomputeToday,
                 resyncController,
                 kotlinx.coroutines.CoroutineScope(testDispatcher),
                 testClock,
@@ -65,7 +68,7 @@ class SleepAndThresholdSettingsViewModelTest {
             ThresholdSettingsViewModel(
                 settingsReader,
                 thresholdSettings,
-                scoringRepo,
+                recomputeToday,
                 circadianPrefs,
                 testClock,
             )
@@ -83,7 +86,7 @@ class SleepAndThresholdSettingsViewModelTest {
             advanceUntilIdle()
 
             coVerify { sleepSettings.updateHrvBaselineOverride(50f) }
-            coVerify { scoringRepo.computeAndPersistDailySummary(any()) }
+            coVerify { recomputeToday.execute(any()) }
         }
 
     @Test
@@ -93,7 +96,7 @@ class SleepAndThresholdSettingsViewModelTest {
             advanceUntilIdle()
 
             coVerify { sleepSettings.updateRestingHrPercentile(8) }
-            coVerify { scoringRepo.computeAndPersistDailySummary(any()) }
+            coVerify { recomputeToday.execute(any()) }
         }
 
     @Test
@@ -122,7 +125,7 @@ class SleepAndThresholdSettingsViewModelTest {
                 SleepSettingsViewModel(
                     settingsReader,
                     sleepSettings,
-                    scoringRepo,
+                    recomputeToday,
                     resyncController,
                     kotlinx.coroutines.CoroutineScope(testDispatcher),
                     testClock,
@@ -148,7 +151,7 @@ class SleepAndThresholdSettingsViewModelTest {
             advanceUntilIdle()
 
             coVerify { sleepSettings.updateCoreMergeGapMinutes(210) }
-            coVerify { scoringRepo.computeAndPersistDailySummary(any()) }
+            coVerify { recomputeToday.execute(any()) }
         }
 
     @Test
@@ -194,7 +197,7 @@ class SleepAndThresholdSettingsViewModelTest {
             advanceUntilIdle()
 
             coVerify { circadianPrefs.setOverride(30) }
-            coVerify { scoringRepo.computeAndPersistDailySummary(any()) }
+            coVerify { recomputeToday.execute(any()) }
         }
 
     @Test
@@ -223,7 +226,7 @@ class SleepAndThresholdSettingsViewModelTest {
             advanceUntilIdle()
 
             coVerify { sleepSettings.updateSleepScoreWeightProfile(SleepScoreWeightProfile.DURATION_FOCUSED) }
-            coVerify { scoringRepo.computeAndPersistDailySummary(any()) }
+            coVerify { recomputeToday.execute(any()) }
             coVerify(exactly = 0) { resyncController.requestScoreRecompute() }
         }
 
@@ -243,7 +246,7 @@ class SleepAndThresholdSettingsViewModelTest {
             advanceUntilIdle()
 
             coVerify { sleepSettings.updateHypersomniaOnsetPercent(115) }
-            coVerify { scoringRepo.computeAndPersistDailySummary(any()) }
+            coVerify { recomputeToday.execute(any()) }
         }
 
     @Test
@@ -270,7 +273,7 @@ class SleepAndThresholdSettingsViewModelTest {
                 SleepSettingsViewModel(
                     settingsReader,
                     sleepSettings,
-                    scoringRepo,
+                    recomputeToday,
                     resyncController,
                     kotlinx.coroutines.CoroutineScope(testDispatcher),
                     testClock,
@@ -293,7 +296,7 @@ class SleepAndThresholdSettingsViewModelTest {
                 SleepSettingsViewModel(
                     settingsReader,
                     sleepSettings,
-                    scoringRepo,
+                    recomputeToday,
                     resyncController,
                     kotlinx.coroutines.CoroutineScope(testDispatcher),
                     testClock,
@@ -319,7 +322,7 @@ class SleepAndThresholdSettingsViewModelTest {
                 SleepSettingsViewModel(
                     settingsReader,
                     sleepSettings,
-                    scoringRepo,
+                    recomputeToday,
                     resyncController,
                     kotlinx.coroutines.CoroutineScope(testDispatcher),
                     testClock,
@@ -350,7 +353,7 @@ class SleepAndThresholdSettingsViewModelTest {
                 SleepSettingsViewModel(
                     settingsReader,
                     sleepSettings,
-                    scoringRepo,
+                    recomputeToday,
                     resyncController,
                     kotlinx.coroutines.CoroutineScope(testDispatcher),
                     testClock,
@@ -381,7 +384,7 @@ class SleepAndThresholdSettingsViewModelTest {
                 SleepSettingsViewModel(
                     settingsReader,
                     sleepSettings,
-                    scoringRepo,
+                    recomputeToday,
                     resyncController,
                     kotlinx.coroutines.CoroutineScope(testDispatcher),
                     testClock,
@@ -414,7 +417,7 @@ class SleepAndThresholdSettingsViewModelTest {
                 SleepSettingsViewModel(
                     settingsReader,
                     sleepSettings,
-                    scoringRepo,
+                    recomputeToday,
                     resyncController,
                     kotlinx.coroutines.CoroutineScope(testDispatcher),
                     testClock,
@@ -427,6 +430,60 @@ class SleepAndThresholdSettingsViewModelTest {
             advanceUntilIdle()
 
             assertFalse(vm.uiState.value.hasPendingSleepScoreRecalc)
+            job.cancel()
+        }
+
+    @Test
+    fun sleepSettingsViewModel_maintenancePending_doesNotEscapeCoroutine() =
+        runTest {
+            coEvery { recomputeToday.execute(any()) } returns
+                Result.failure(reason = "Maintenance is pending", code = "MAINTENANCE_PENDING")
+
+            sleepViewModel.onEvent(SettingsEvent.GoalSleepHoursChanged(8.5f))
+            advanceUntilIdle()
+
+            coVerify { sleepSettings.updateGoalSleepHours(8.5f) }
+            coVerify { recomputeToday.execute(any()) }
+        }
+
+    @Test
+    fun thresholdSettingsViewModel_maintenancePending_doesNotEscapeCoroutineAndPreservesSetting() =
+        runTest {
+            val job =
+                backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
+                    thresholdViewModel.consolidatedState.collect { }
+                }
+            coEvery { recomputeToday.execute(any()) } returns
+                Result.failure(reason = "Maintenance is pending", code = "MAINTENANCE_PENDING")
+
+            thresholdViewModel.onEvent(SettingsEvent.CircadianThresholdOverrideChanged(30))
+            advanceUntilIdle()
+
+            coVerify { circadianPrefs.setOverride(30) }
+            coVerify { recomputeToday.execute(any()) }
+            assertEquals(null, thresholdViewModel.consolidatedState.value.thresholdError)
+            assertFalse(thresholdViewModel.consolidatedState.value.isUpdatingThreshold)
+            job.cancel()
+        }
+
+    @Test
+    fun thresholdSettingsViewModel_overrideFailure_rollsBackAndSetsError() =
+        runTest {
+            val job =
+                backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
+                    thresholdViewModel.consolidatedState.collect { }
+                }
+            coEvery { circadianPrefs.setOverride(45) } throws IllegalStateException("disk error")
+
+            thresholdViewModel.onEvent(SettingsEvent.CircadianThresholdOverrideChanged(45))
+            advanceUntilIdle()
+
+            coVerify { circadianPrefs.setOverride(null) }
+            assertEquals(
+                UiText.StringRes(R.string.error_threshold_update_failed),
+                thresholdViewModel.consolidatedState.value.thresholdError,
+            )
+            assertFalse(thresholdViewModel.consolidatedState.value.isUpdatingThreshold)
             job.cancel()
         }
 }

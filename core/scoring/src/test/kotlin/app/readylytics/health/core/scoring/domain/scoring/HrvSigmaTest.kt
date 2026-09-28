@@ -29,6 +29,34 @@ class HrvSigmaTest {
     }
 
     @Test
+    fun `empty list returns prior coerced at least MIN_LN_SIGMA`() {
+        val sigmaLow = calculator.hrvSigma(emptyList(), sigmaPrior = 0.01f)
+        assertEquals(ScoringConstants.Restoration.MIN_LN_SIGMA, sigmaLow, DELTA)
+    }
+
+    @Test
+    fun `one-element input returns prior coerced at least MIN_LN_SIGMA`() {
+        val oneElement = listOf(ln(50f))
+        val sigmaNormal = calculator.hrvSigma(oneElement, sigmaPrior = 0.18f)
+        assertEquals(0.18f, sigmaNormal, DELTA)
+
+        val sigmaLow = calculator.hrvSigma(oneElement, sigmaPrior = 0.01f)
+        assertEquals(ScoringConstants.Restoration.MIN_LN_SIGMA, sigmaLow, DELTA)
+    }
+
+    @Test
+    fun `two-element input retains current blend`() {
+        // At n=2, w = ((2 - 7) / 53).coerceIn(0f, 1f) = 0f.
+        // Blended = 0f * stdev + 1f * sigmaPrior = sigmaPrior.
+        val twoElements = listOf(ln(40f), ln(60f))
+        val sigma = calculator.hrvSigma(twoElements, sigmaPrior = 0.18f)
+        assertEquals(0.18f, sigma, DELTA)
+
+        val sigmaLow = calculator.hrvSigma(twoElements, sigmaPrior = 0.01f)
+        assertEquals(ScoringConstants.Restoration.MIN_LN_SIGMA, sigmaLow, DELTA)
+    }
+
+    @Test
     fun `at n=7 w is zero, result is prior`() {
         // w = (7-7)/(60-7) = 0; blended = prior
         val lnList = uniformLnList(50f, 7)

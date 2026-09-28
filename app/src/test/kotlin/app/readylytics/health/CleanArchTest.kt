@@ -451,7 +451,9 @@ class CleanArchTest {
                 .files
                 .filter { file ->
                     val path = file.path.replace('\\', '/')
-                    path.contains("/core/healthconnect/src/main/") && path.endsWith(".kt")
+                    !path.contains("/.worktrees/") &&
+                        path.contains("/core/healthconnect/src/main/") &&
+                        path.endsWith(".kt")
                 }
         val directFactories =
             productionSources.filter { it.text.contains("HealthConnectClient.getOrCreate") }

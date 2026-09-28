@@ -2,7 +2,7 @@ package app.readylytics.health.domain.user
 
 import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
-import app.readylytics.health.core.model.domain.repository.ScoringRepository
+import app.readylytics.health.core.model.domain.scoring.RecomputeToday
 import app.readylytics.health.core.model.domain.user.UserProfileActions
 import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.model.workers.WorkerScheduler
@@ -21,7 +21,7 @@ class UserUseCase
     constructor(
         private val settingsRepo: SettingsRepository,
         private val workerScheduler: WorkerScheduler,
-        private val scoringRepository: ScoringRepository,
+        private val recomputeToday: RecomputeToday,
         private val clock: Clock,
     ) : UserProfileActions {
         override suspend fun updateBirthday(date: LocalDate): Result<Unit> =
@@ -29,13 +29,14 @@ class UserUseCase
                 val age = calculateAge(date)
                 settingsRepo.updateBirthday(date)
 
-                scoringRepository.computeAndPersistDailySummary(LocalDate.now(clock))
-
                 val prefs = settingsRepo.userPreferences.first()
                 if (prefs.autoCalculateMaxHr) {
                     val maxHr = calculateMaxHeartRate(age)
                     settingsRepo.updateMaxHeartRate(maxHr)
                 }
+
+                recomputeToday.execute(LocalDate.now(clock))
+
                 // Birthday changes age-dependent scoring inputs, and automatic hrMax when enabled.
                 // Queue one durable historical pass after every affected preference has been persisted.
                 workerScheduler.scheduleResyncWorker(recomputeOnly = true)

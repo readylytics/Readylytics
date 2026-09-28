@@ -13,6 +13,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -65,6 +66,34 @@ class RoomDirtyRangeRetentionTest {
     @After
     fun tearDown() {
         database.close()
+    }
+
+    @Test
+    fun malformedRowsAreReadableAndDiscardedBeforeRetentionTrim() = runBlocking {
+        val sql = database.openHelper.writableDatabase
+        fun insert(start: Long, end: Long, next: Long) {
+            sql.execSQL(
+                "INSERT INTO dirty_ranges (sourceGeneration, startEpochDay, endEpochDayInclusive, " +
+                    "nextEpochDay, reason, scoringSnapshotId) VALUES (7, $start, $end, $next, 'TEST', 'snap')",
+            )
+        }
+        insert(12, 11, 12)
+        insert(10, 12, 9)
+        insert(10, 12, 14)
+        insert(10, 12, 13)
+        insert(10, Long.MAX_VALUE, Long.MAX_VALUE)
+
+        assertEquals(5, database.dirtyRangeDao().pending(10).size)
+        database.dirtyRangeDao().discardBefore(10)
+        assertEquals(listOf(13L, Long.MAX_VALUE), database.dirtyRangeDao().pending(10).map { it.nextEpochDay })
+    }
+
+    @Test
+    fun appendRejectsReversedDatesBeforeWriting() {
+        assertThrows(IllegalArgumentException::class.java) {
+            runBlocking { store.append(cutoff.plusDays(1), cutoff, "REVERSED", "snap") }
+        }
+        assertEquals(0, runBlocking { database.dirtyRangeDao().count() })
     }
 
     @Test

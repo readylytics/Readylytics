@@ -42,22 +42,29 @@ class RoomDirtyRangeStore
             reason: String,
             snapshotId: String,
         ): Long {
+            val startDay = start.toEpochDay()
+            val endDay = endInclusive.toEpochDay()
+            val nextDay = startDay
+            require(startDay <= endDay) {
+                "startEpochDay ($startDay) cannot be after endEpochDayInclusive ($endDay)"
+            }
+            require(startDay <= nextDay) {
+                "startEpochDay ($startDay) must be <= nextEpochDay ($nextDay)"
+            }
+            require(nextDay <= endDay || (endDay != Long.MAX_VALUE && nextDay == endDay + 1)) {
+                "nextEpochDay ($nextDay) must be <= endEpochDayInclusive + 1"
+            }
             val currentGen = healthMutationStateDao.current().sourceGeneration
             return dirtyRangeDao.insert(
                 DirtyRangeEntity(
                     sourceGeneration = currentGen,
-                    startEpochDay = start.toEpochDay(),
-                    endEpochDayInclusive = endInclusive.toEpochDay(),
-                    nextEpochDay = start.toEpochDay(),
+                    startEpochDay = startDay,
+                    endEpochDayInclusive = endDay,
+                    nextEpochDay = nextDay,
                     reason = reason,
                     scoringSnapshotId = snapshotId,
                 ),
             )
         }
 
-        suspend fun rebindSnapshot(
-            ticketId: Long,
-            generation: Long,
-            newSnapshotId: String,
-        ): Boolean = dirtyRangeDao.updateSnapshotId(ticketId, generation, newSnapshotId) > 0
     }

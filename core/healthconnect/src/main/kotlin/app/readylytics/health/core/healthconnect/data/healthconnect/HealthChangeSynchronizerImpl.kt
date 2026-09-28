@@ -421,15 +421,14 @@ class HealthChangeSynchronizerImpl
                         val id = record.metadata.id
 
                         affectedDates.addAll(changeIngestionStore.affectedDatesForRecord(dataType, id, zoneId))
-                        // EXERCISE is update-in-place through persistPreparedWorkouts (H5/WP-09):
-                        // deleting first would both discard the coalesce-against-existing merge
-                        // and cascade-delete route points a Denied re-read must preserve. Every
-                        // other type keeps the delete-then-conditionally-reinsert pattern.
-                        if (dataType != HealthDataType.EXERCISE) {
+                        val keep = selectedDevice == null || deviceLabel == selectedDevice
+                        // Excluded records are removed for every type. A matching EXERCISE
+                        // record updates in place so Denied re-reads preserve stored route
+                        // points and coalesced enrichment fields.
+                        if (!keep || dataType != HealthDataType.EXERCISE) {
                             changeIngestionStore.deleteRecord(dataType, id)
                         }
-
-                        if (selectedDevice == null || deviceLabel == selectedDevice) {
+                        if (keep) {
                             affectedDates.addAll(getDatesForRecord(record, zoneId))
                             upsertRecord(dataType, record, prefs, spans, preparedWorkouts)
                         }

@@ -2,6 +2,11 @@ package app.readylytics.health.core.database.data.local
 
 import app.readylytics.health.core.databaseschema.data.local.dao.HealthMutationStateDao
 import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.withContext
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
@@ -15,11 +20,27 @@ class HealthMutationCoordinatorImpl
     ) : HealthMutationCoordinator {
         private val mutex = Mutex()
 
-        override suspend fun <T> withMutation(block: suspend () -> T): T =
-            mutex.withLock {
+        override suspend fun <T> withMutation(block: suspend () -> T): T {
+            val context = currentCoroutineContext()
+            val owner = context[MutationOwner]
+            if (owner?.coordinator === this && owner.job === context[Job]) return block()
+            return mutex.withLock {
                 check(stateDao.getOrCreate().maintenanceOperationId == null) { "MAINTENANCE_PENDING" }
-                block()
+                val marker = MutationOwner(this)
+                withContext(marker) {
+                    // withContext installs its own Job; bind ownership inside that exact context.
+                    marker.job = currentCoroutineContext()[Job]
+                    block()
+                }
             }
+        }
+
+        private class MutationOwner(
+            val coordinator: HealthMutationCoordinatorImpl,
+        ) : AbstractCoroutineContextElement(Key) {
+            var job: Job? = null
+            companion object Key : CoroutineContext.Key<MutationOwner>
+        }
 
         override suspend fun <T> withMaintenance(
             operationId: String,

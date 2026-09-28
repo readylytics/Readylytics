@@ -66,9 +66,19 @@ jobs:
             "-Dorg.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1g -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8" \
             assembleDebugAndroidTest :benchmark:assembleBenchmarkBenchmark --max-workers=2 --stacktrace --console=plain
 
+      # Same dead-worker hazard as the instrumented-compile step above: unbounded testDebugUnitTest
+      # across all modules has hung for 28+ min with no further log output on this shared 2-core
+      # runner (vs. ~2 min baseline). Bound heap/workers and fail fast instead of hanging.
+      # Stale daemons from ktlint/detekt/lint/instrumented-compile (each holding their own
+      # -Xmx4096m heap from gradle.properties, or 6g for the prior step) stay resident and stack
+      # with this step's test-executor JVM forks, OOM-killing the run. Stop them first.
       - name: Run unit tests
         if: ${{ !cancelled() }}
-        run: ./gradlew testDebugUnitTest
+        run: |
+          ./gradlew --stop
+          timeout --signal=TERM --kill-after=30s 20m ./gradlew \
+            "-Dorg.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1g -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8" \
+            testDebugUnitTest --max-workers=2 --stacktrace --console=plain
 
       - name: Generate coverage report
         if: ${{ !cancelled() }}

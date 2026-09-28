@@ -9,6 +9,7 @@ import app.readylytics.health.core.model.domain.sync.DirtyRangeStore
 import app.readylytics.health.core.model.domain.sync.DirtyTicket
 import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 import app.readylytics.health.core.model.domain.sync.RETIRED_AGING_DIRTY_REASONS
+import app.readylytics.health.core.model.domain.sync.RecalcTrigger
 import app.readylytics.health.core.model.domain.util.RetentionBounds
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.core.scoring.domain.scoring.BackfillHistoricalBaselinesUseCase
@@ -28,6 +29,7 @@ import org.junit.Test
 import java.io.IOException
 import java.time.Clock
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.util.TimeZone
@@ -103,7 +105,7 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
         }
 
     @Test
-    fun `migration failure suppresses recompute scheduling so a later launch re-enqueues`() =
+    fun `migration failure still enqueues pending dirty recompute`() =
         runTest {
             val scheduler = FakeWorkerScheduler()
             val physiology = mockk<PhysiologyPreferences>(relaxed = true)
@@ -111,15 +113,54 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
                 IOException("datastore unavailable")
             val initializer =
                 initializerWith(
-                    storedScoringVersion = 0,
+                    storedScoringVersion = SettingsDefaults.CURRENT_SCORING_VERSION,
                     scheduler = scheduler,
                     physiology = physiology,
+                    dirtyRangeStore = pendingDirtyStore(),
                 )
 
             val result = initializer.initializeIfReady(DatabaseReadiness.Ready)
 
             assertEquals(StartupInitializationResult.COMPLETE, result)
+            assertEquals(1, scheduler.recomputeOnlyRequests)
+            assertEquals(RecalcTrigger.STARTUP_PENDING_DIRTY, scheduler.lastTrigger)
+        }
+
+    @Test
+    fun `migration failure with all recompute gates clear enqueues nothing`() =
+        runTest {
+            val scheduler = FakeWorkerScheduler()
+            val physiology = mockk<PhysiologyPreferences>(relaxed = true)
+            coEvery { physiology.migrateTrimpDefaultsIfNeeded() } throws IOException("datastore unavailable")
+            val initializer =
+                initializerWith(
+                    storedScoringVersion = SettingsDefaults.CURRENT_SCORING_VERSION,
+                    scheduler = scheduler,
+                    physiology = physiology,
+                )
+
+            assertEquals(StartupInitializationResult.COMPLETE, initializer.initializeIfReady(DatabaseReadiness.Ready))
             assertEquals(0, scheduler.recomputeOnlyRequests)
+        }
+
+    @Test
+    fun `three startup gates select scoring version trigger once after migration failure`() =
+        runTest {
+            val scheduler = FakeWorkerScheduler()
+            val physiology = mockk<PhysiologyPreferences>(relaxed = true)
+            coEvery { physiology.migrateTrimpDefaultsIfNeeded() } throws IOException("datastore unavailable")
+            val initializer =
+                initializerWith(
+                    storedScoringVersion = 0,
+                    scheduler = scheduler,
+                    physiology = physiology,
+                    backfillStatus = FakeBackfillStatus(hasUnbackfilled = true),
+                    dirtyRangeStore = pendingDirtyStore(),
+                )
+
+            assertEquals(StartupInitializationResult.COMPLETE, initializer.initializeIfReady(DatabaseReadiness.Ready))
+            assertEquals(1, scheduler.recomputeOnlyRequests)
+            assertEquals(RecalcTrigger.STARTUP_SCORING_VERSION, scheduler.lastTrigger)
         }
 
     @Test
@@ -386,6 +427,20 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
     ) : WorkoutTrimpBackfillStatus {
         override suspend fun hasUnbackfilledWorkouts(retentionStartMs: Long): Boolean = hasUnbackfilled
     }
+
+    private fun pendingDirtyStore(): DirtyRangeStore =
+        object : DirtyRangeStore {
+            override suspend fun pending(limit: Int): List<DirtyTicket> =
+                listOf(
+                    DirtyTicket(
+                        id = 1L,
+                        sourceGeneration = 1L,
+                        nextDay = LocalDate.of(2026, 9, 1),
+                        endInclusive = LocalDate.of(2026, 9, 5),
+                        scoringSnapshotId = "s1",
+                    ),
+                )
+        }
 
     private class CapturingBackfillStatus : WorkoutTrimpBackfillStatus {
         var retentionStartMs: Long? = null

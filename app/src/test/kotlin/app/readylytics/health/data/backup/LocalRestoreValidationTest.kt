@@ -648,4 +648,22 @@ class LocalRestoreValidationTest : LocalRestoreManagerTestBase() {
             coVerify(exactly = 0) { sleepLayoutRepo.updateSleepMetricCardConfigurations(any()) }
             zipFile.delete()
         }
+
+    @Test
+    fun validate_acceptsV3BackupManifestWithOpaqueSnapshotId() =
+        runTest {
+            val v3SnapshotId = "v3_legacy_snapshot_hash_12345"
+            val json =
+                createValidBackupJson().apply {
+                    put("scoringSnapshotId", v3SnapshotId)
+                }
+            val zipFile = createBackupZipFile("v3_backup.zip", json)
+
+            val result = manager.validate(Uri.fromFile(zipFile))
+
+            assertTrue(result.isSuccess)
+            val manifest = result.getOrNull()
+            assertEquals(v3SnapshotId, manifest?.scoringSnapshotId)
+            zipFile.delete()
+        }
 }

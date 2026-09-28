@@ -41,9 +41,18 @@ interface DirtyRangeDao : DirtyRangeRetentionQueries {
 
     @Transaction
     suspend fun discardBefore(cutoffDay: Long) {
+        deleteInvalid()
         deleteExpired(cutoffDay)
         trimExpiredPrefixes(cutoffDay)
     }
+
+    @Query(
+        "DELETE FROM dirty_ranges WHERE startEpochDay > endEpochDayInclusive " +
+            "OR nextEpochDay < startEpochDay " +
+            "OR (endEpochDayInclusive < 9223372036854775807 " +
+            "AND nextEpochDay > endEpochDayInclusive + 1)",
+    )
+    suspend fun deleteInvalid(): Int
 
     /** Drops pending work journaled for [reasons] (e.g. retired aging tickets); returns rows deleted. */
     @Query("DELETE FROM dirty_ranges WHERE reason IN (:reasons)")
@@ -51,16 +60,6 @@ interface DirtyRangeDao : DirtyRangeRetentionQueries {
 
     @Query("SELECT COUNT(*) FROM dirty_ranges")
     suspend fun count(): Int
-
-    @Query(
-        "UPDATE dirty_ranges SET scoringSnapshotId = :newSnapshotId " +
-            "WHERE id = :id AND sourceGeneration = :generation",
-    )
-    suspend fun updateSnapshotId(
-        id: Long,
-        generation: Long,
-        newSnapshotId: String,
-    ): Int
 
     @Query("DELETE FROM dirty_ranges")
     suspend fun deleteAll(): Int

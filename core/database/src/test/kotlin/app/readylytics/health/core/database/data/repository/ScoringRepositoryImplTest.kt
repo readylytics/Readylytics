@@ -32,7 +32,6 @@ import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
 import app.readylytics.health.core.scoring.domain.scoring.SleepMetricsRequest
 import app.readylytics.health.core.scoring.domain.scoring.WorkoutInputRevision
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepPercentileRhrCalculator
-import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
 import io.mockk.*
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -472,11 +471,7 @@ class ScoringRepositoryImplTest {
             val zoneId = ZoneId.systemDefault()
             val dayStart = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
             val defaultPrefs = UserPreferences()
-            val expectedSnapshotId =
-                HistoricalRunIdentity.computeSnapshotId(
-                    defaultPrefs,
-                    HeartRateFormulas.resolveMaxHeartRate(defaultPrefs),
-                )
+            val expectedSnapshotId = HistoricalRunIdentity.computeSnapshotId(defaultPrefs)
 
             val workout =
                 WorkoutRecordEntity(

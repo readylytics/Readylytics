@@ -52,7 +52,6 @@ class WorkerSchedulerTest {
             endDate = LocalDate.of(2026, 1, 10),
             zoneId = ZoneId.of("Europe/Berlin"),
             prefs = UserPreferences(),
-            resolvedHrMax = 180f,
             startedAtEpochMs = 0L,
         )
 

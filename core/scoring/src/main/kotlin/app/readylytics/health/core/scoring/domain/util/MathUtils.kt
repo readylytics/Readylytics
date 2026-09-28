@@ -32,6 +32,10 @@ fun List<Int>.medianOrNull(): Float? {
     return if (sorted.size % 2 == 0) (sorted[mid - 1] + sorted[mid]) / 2f else sorted[mid].toFloat()
 }
 
+@Deprecated(
+    message = "Use stdevOrNull() with an explicit domain fallback instead of defaulting to 0f",
+    replaceWith = ReplaceWith("stdevOrNull() ?: 0f"),
+)
 fun List<Float>.stdev(): Float = stdevOrNull() ?: 0f
 
 fun List<Float>.stdevOrNull(): Float? {
@@ -42,6 +46,10 @@ fun List<Float>.stdevOrNull(): Float? {
     return sqrt(variance)
 }
 
+@Deprecated(
+    message = "Use stdevOrNull() with an explicit domain fallback instead of defaulting to 0f",
+    replaceWith = ReplaceWith("stdevOrNull() ?: 0f"),
+)
 @JvmName("stdevInt")
 fun List<Int>.stdev(): Float = stdevOrNull() ?: 0f
 

@@ -6,7 +6,7 @@ import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.di.ApplicationScope
 import app.readylytics.health.core.model.domain.preferences.SleepSettings
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
-import app.readylytics.health.core.model.domain.repository.ScoringRepository
+import app.readylytics.health.core.model.domain.scoring.RecomputeToday
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.core.model.domain.sync.HistoricalResyncController
 import app.readylytics.health.core.model.domain.validation.SettingsValidators
@@ -28,7 +28,7 @@ class SleepSettingsViewModel
     constructor(
         private val settingsReader: UserPreferencesReader,
         private val sleepSettings: SleepSettings,
-        private val scoringRepository: ScoringRepository,
+        private val recomputeToday: RecomputeToday,
         private val historicalResyncController: HistoricalResyncController,
         @param:ApplicationScope private val appScope: CoroutineScope,
         private val clock: Clock,
@@ -64,7 +64,7 @@ class SleepSettingsViewModel
                 )
 
         private suspend fun recomputeToday() {
-            scoringRepository.computeAndPersistDailySummary(LocalDate.now(clock))
+            recomputeToday.execute(LocalDate.now(clock))
         }
 
         fun onEvent(event: SettingsEvent) {

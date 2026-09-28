@@ -12,11 +12,12 @@ import app.readylytics.health.core.scoring.domain.scoring.components.RecoveryFla
 import app.readylytics.health.core.scoring.domain.scoring.components.RecoveryFlagEvaluator
 import app.readylytics.health.core.scoring.domain.util.mean
 import app.readylytics.health.core.scoring.domain.util.median
-import app.readylytics.health.core.scoring.domain.util.stdev
+import app.readylytics.health.core.scoring.domain.util.stdevOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.exp
 import kotlin.math.ln
+import kotlin.math.max
 
 @Singleton
 class LoadScoringStrategy
@@ -32,13 +33,16 @@ class LoadScoringStrategy
             lnHrvValues: List<Float>,
             sigmaPrior: Float,
         ): Float {
+            if (lnHrvValues.size < 2) {
+                return sigmaPrior.coerceAtLeast(Restoration.MIN_LN_SIGMA)
+            }
             val n = lnHrvValues.size
             val w =
                 (
                     (n - ScoringConstants.HRV_SIGMA_BLEND_MIN_N).toFloat() /
                         (ScoringConstants.HRV_SIGMA_BLEND_MAX_N - ScoringConstants.HRV_SIGMA_BLEND_MIN_N)
                 ).coerceIn(0f, 1f)
-            val blended = w * lnHrvValues.stdev() + (1f - w) * sigmaPrior
+            val blended = w * (lnHrvValues.stdevOrNull() ?: 0f) + (1f - w) * sigmaPrior
             return blended.coerceAtLeast(Restoration.MIN_LN_SIGMA)
         }
 
@@ -94,8 +98,8 @@ class LoadScoringStrategy
             val sigma =
                 frozenSigma ?: rhrHistory
                     .takeIf { it.size > 1 }
-                    ?.stdev()
-                    ?.takeIf { it > 0f } ?: (mu * 0.05f).coerceAtLeast(1f)
+                    ?.stdevOrNull()
+                    ?.takeIf { it > 0f } ?: max(0.05f * mu, 1f)
             return (currentRhrBpm - mu) / sigma
         }
 

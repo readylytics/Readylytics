@@ -10,7 +10,7 @@ import app.readylytics.health.core.model.domain.repository.ScoringHistoryReposit
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayPolicy
 import app.readylytics.health.core.scoring.domain.scoring.strategies.LoadScoringStrategy
 import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
-import app.readylytics.health.core.scoring.domain.util.stdev
+import app.readylytics.health.core.scoring.domain.util.stdevOrNull
 import javax.inject.Inject
 import kotlin.math.ln
 
@@ -75,7 +75,7 @@ class ComputeHistoricalBaselinesUseCase
             val rhrSigma =
                 windows.rhrHistory
                     .takeIf { it.size > 1 }
-                    ?.stdev()
+                    ?.stdevOrNull()
                     ?.takeIf { it > 0f }
 
             summary.copy(

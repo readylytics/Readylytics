@@ -450,18 +450,19 @@ class BackfillBaselinesUseCaseTest {
                 )
 
             val result =
-                freezeBaselineComputer.computeAdaptiveBaselineRhrBpm(
-                    dayMidnight,
-                    rhrBaselineOverride = null,
+                freezeBaselineComputer.computeAdaptiveBaselineRhrBpmBetween(
+                    fromMs = dayMidnight.toEpochMilli(),
+                    toMs = dayMidnight.plus(1, ChronoUnit.DAYS).toEpochMilli(),
                     percentile = 5,
                     zoneId = testZone,
+                    rhrBaselineOverride = null,
                 )
 
-            assertNull(result, "computeAdaptiveBaselineRhrBpm must return null for a frozen row")
+            assertNull(result, "computeAdaptiveBaselineRhrBpmBetween must return null for a frozen row")
         }
 
     @Test
-    fun `computeAdaptiveBaselineRhrBpm returns DEFAULT_RHR_BPM for unfrozen row with no sessions`() =
+    fun `computeAdaptiveBaselineRhrBpmBetween returns DEFAULT_RHR_BPM for unfrozen row with no sessions`() =
         runTest {
             val dayMidnight = Instant.now().truncatedTo(ChronoUnit.DAYS)
             // No frozen summary — live recompute; no sleep sessions.
@@ -485,11 +486,12 @@ class BackfillBaselinesUseCaseTest {
             val computer = BaselineComputer(scoringHistoryRepository, scoringCalculator)
 
             val result =
-                computer.computeAdaptiveBaselineRhrBpm(
-                    dayMidnight,
-                    rhrBaselineOverride = null,
+                computer.computeAdaptiveBaselineRhrBpmBetween(
+                    fromMs = dayMidnight.toEpochMilli(),
+                    toMs = dayMidnight.plus(1, ChronoUnit.DAYS).toEpochMilli(),
                     percentile = 5,
                     zoneId = testZone,
+                    rhrBaselineOverride = null,
                 )
 
             assertNotNull(result)
@@ -497,17 +499,18 @@ class BackfillBaselinesUseCaseTest {
         }
 
     @Test
-    fun `computeAdaptiveBaselineRhrBpm returns override without any DAO call`() =
+    fun `computeAdaptiveBaselineRhrBpmBetween returns override without any DAO call`() =
         runTest {
             val override = 55f
             val dayMidnight = Instant.now().truncatedTo(ChronoUnit.DAYS)
 
             val result =
-                freezeBaselineComputer.computeAdaptiveBaselineRhrBpm(
-                    dayMidnight,
-                    rhrBaselineOverride = override,
+                freezeBaselineComputer.computeAdaptiveBaselineRhrBpmBetween(
+                    fromMs = dayMidnight.toEpochMilli(),
+                    toMs = dayMidnight.plus(1, ChronoUnit.DAYS).toEpochMilli(),
                     percentile = 5,
                     zoneId = testZone,
+                    rhrBaselineOverride = override,
                 )
 
             assertEquals(override, result)
@@ -532,7 +535,7 @@ class BackfillBaselinesUseCaseTest {
         }
 
     @Test
-    fun `computeAdaptiveBaselineRhrBpm freeze is consistent across multiple calls`() =
+    fun `computeAdaptiveBaselineRhrBpmBetween freeze is consistent across multiple calls`() =
         runTest {
             val dayMidnight = Instant.now().truncatedTo(ChronoUnit.DAYS)
             coEvery { freezeDailySummaryDao.getByDate(dayMidnight.toEpochMilli()) } returns
@@ -544,11 +547,12 @@ class BackfillBaselinesUseCaseTest {
 
             repeat(3) { i ->
                 val result =
-                    freezeBaselineComputer.computeAdaptiveBaselineRhrBpm(
-                        dayMidnight,
-                        rhrBaselineOverride = null,
+                    freezeBaselineComputer.computeAdaptiveBaselineRhrBpmBetween(
+                        fromMs = dayMidnight.toEpochMilli(),
+                        toMs = dayMidnight.plus(1, ChronoUnit.DAYS).toEpochMilli(),
                         percentile = 5,
                         zoneId = testZone,
+                        rhrBaselineOverride = null,
                     )
                 assertNull(result, "Call $i: frozen baseline must consistently return null")
             }
@@ -567,11 +571,12 @@ class BackfillBaselinesUseCaseTest {
             val hrvResult: BaselineComputer.HrvWindows? =
                 freezeBaselineComputer.computeHrvWindows(dayMidnight, testZone, excludeSessionId = null)
             val rhrResult: Float? =
-                freezeBaselineComputer.computeAdaptiveBaselineRhrBpm(
-                    dayMidnight,
-                    rhrBaselineOverride = null,
+                freezeBaselineComputer.computeAdaptiveBaselineRhrBpmBetween(
+                    fromMs = dayMidnight.toEpochMilli(),
+                    toMs = dayMidnight.plus(1, ChronoUnit.DAYS).toEpochMilli(),
                     percentile = 5,
                     zoneId = testZone,
+                    rhrBaselineOverride = null,
                 )
 
             assertNull(hrvResult)

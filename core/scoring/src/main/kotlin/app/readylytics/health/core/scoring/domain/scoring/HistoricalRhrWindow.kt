@@ -14,9 +14,9 @@ import java.time.LocalDate
  *
  * Pure, no I/O -- shared by the historical backfill batch path
  * ([BaselineComputer.computeDayBackfillBaseline]) and the live per-day paths
- * ([BaselineComputer.computeAdaptiveBaselineRhrBpm], [BaselineComputer.computeAdaptiveBaselineRhrBpmBetween],
- * [BaselineComputer.rhrHistoryBetween]) so every RHR-window-consuming code path applies the exact
- * same membership rule regardless of how it assembled its [HistoricalSleepDay] list.
+ * ([BaselineComputer.computeAdaptiveBaselineRhrBpmBetween], [BaselineComputer.rhrHistoryBetween])
+ * so every RHR-window-consuming code path applies the exact same membership rule regardless
+ * of how it assembled its [HistoricalSleepDay] list.
  */
 internal fun historicalRhrWindow(
     days: List<HistoricalSleepDay>,

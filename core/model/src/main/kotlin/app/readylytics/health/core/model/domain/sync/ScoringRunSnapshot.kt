@@ -30,7 +30,6 @@ data class ScoringRunSnapshot(
     val part7: ScoringSnapshotPart7,
     val part8: ScoringSnapshotPart8,
     val part9: ScoringSnapshotPart9,
-    val resolvedHrMax: Float,
     val sourceSelection: Map<String, String>,
 ) {
     fun toPreferences(): UserPreferences {
@@ -118,7 +117,6 @@ data class ScoringRunSnapshot(
     companion object {
         fun capture(
             prefs: UserPreferences,
-            resolvedHrMax: Float,
         ): ScoringRunSnapshot =
             ScoringRunSnapshot(
                 part1 = capturePart1(prefs),
@@ -130,7 +128,6 @@ data class ScoringRunSnapshot(
                 part7 = capturePart7(prefs),
                 part8 = capturePart8(prefs),
                 part9 = capturePart9(prefs),
-                resolvedHrMax = resolvedHrMax,
                 sourceSelection = captureSourceSelection(prefs),
             )
 

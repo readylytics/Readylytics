@@ -10,7 +10,7 @@ import kotlin.test.assertNull
  * P4-4: Baseline freeze enforcement tests.
  *
  * Validates US-B6: When summary.baselineCalculatedAtDate is set (frozen),
- * baseline recomputation is skipped. computeHrvWindows and computeAdaptiveBaselineRhrBpm
+ * baseline recomputation is skipped. computeHrvWindows and computeAdaptiveBaselineRhrBpmBetween
  * must return null when frozen, allowing the stored frozen values to be used.
  *
  * Strategy: Integration-style tests with test data builders.
