@@ -132,12 +132,22 @@ class HealthResyncWorker
             val explicitRange = resolveExplicitRange(inputData)
             val hasExplicitRange = explicitRange != null
 
-            // Recorded before running so a run that is killed mid-way is still attributed.
+            // Recorded before running so a run that is killed mid-way is still attributed. A
+            // recompute-only drain without an explicit range only walks the pending tickets' span
+            // (see resolveNextRange), so report that span rather than the full retained window.
             diagnosticRecorder?.recordIfLarge(
                 trigger = RecalcTrigger.fromName(inputData.getString(KEY_TRIGGER)),
                 triggerDetail = inputData.getString(KEY_TRIGGER_DETAIL),
                 recomputeOnly = recomputeOnly,
-            ) { resyncUseCase.resolveExecutionRange(recomputeOnly, explicitRange) }
+            ) {
+                val drainRange =
+                    if (recomputeOnly && !hasExplicitRange) {
+                        pendingTicketRange(dirtyRangeStore.get().pending(DIRTY_RANGE_BATCH_SIZE))
+                    } else {
+                        null
+                    }
+                resyncUseCase.resolveExecutionRange(recomputeOnly, explicitRange ?: drainRange)
+            }
 
             var iterated = false
             var keepDraining = true
@@ -294,16 +304,17 @@ private fun resolveNextRange(
             when {
                 pending.isEmpty() || currentState == lastPendingState ->
                     if (iterated) null else NextRecomputeStep(null, currentState)
-                else ->
-                    NextRecomputeStep(
-                        ScoreInvalidation.AffectedRange(
-                            pending.minOf { it.nextDay },
-                            pending.maxOf { it.endInclusive },
-                        ),
-                        currentState,
-                    )
+                else -> NextRecomputeStep(pendingTicketRange(pending), currentState)
             }
         }
+    }
+
+/** The span a recompute-only drain walks for [pending]: earliest cursor through latest end, or null. */
+internal fun pendingTicketRange(pending: List<DirtyTicket>): ScoreInvalidation.AffectedRange? =
+    if (pending.isEmpty()) {
+        null
+    } else {
+        ScoreInvalidation.AffectedRange(pending.minOf { it.nextDay }, pending.maxOf { it.endInclusive })
     }
 
 private fun coversRetainedHistory(
