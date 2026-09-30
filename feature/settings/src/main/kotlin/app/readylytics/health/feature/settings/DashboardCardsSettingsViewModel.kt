@@ -161,7 +161,12 @@ class DashboardCardsSettingsViewModel
             )
 
             val currentWorkoutCards = workoutsLayoutRepository.workoutCardConfigurations().first()
-            val updatedWorkoutCards = DashboardCardCatalog.applyGlobalDisplayMode(currentWorkoutCards, mode)
+            val updatedWorkoutCards =
+                DashboardCardCatalog.applyGlobalDisplayMode(
+                    currentWorkoutCards,
+                    mode,
+                    DashboardCardCatalog::workoutsSpec,
+                )
             workoutsLayoutRepository.updateWorkoutCardConfigurations(updatedWorkoutCards)
 
             displaySettings.updateLastGlobalDisplayMode(mode)
