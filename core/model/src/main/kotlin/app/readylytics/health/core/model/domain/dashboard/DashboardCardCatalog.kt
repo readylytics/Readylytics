@@ -7,12 +7,24 @@ object DashboardCardCatalog {
         spec(configuration.cardId)?.resolveRequestedMode(configuration.requestedDisplayMode)
             ?: DashboardCardDisplayMode.VALUE
 
+    /**
+     * Workouts-tab variant of [spec]. The Workouts RAS card is always the weekly breakdown
+     * view, so it is pinned to VALUE there and ignores global/per-card mode switches, while
+     * the Dashboard RAS card keeps every mode.
+     */
+    fun workoutsSpec(cardId: CardId): ModeSpec? = workoutsOverrides[cardId] ?: spec(cardId)
+
+    fun workoutsRequestedMode(configuration: CardConfiguration): DashboardCardDisplayMode =
+        workoutsSpec(configuration.cardId)?.resolveRequestedMode(configuration.requestedDisplayMode)
+            ?: DashboardCardDisplayMode.VALUE
+
     fun applyGlobalDisplayMode(
         configurations: List<CardConfiguration>,
         mode: DashboardCardDisplayMode,
+        specOf: (CardId) -> ModeSpec? = ::spec,
     ): List<CardConfiguration> =
         configurations.map { config ->
-            val supported = spec(config.cardId)?.supportedModes.orEmpty()
+            val supported = specOf(config.cardId)?.supportedModes.orEmpty()
             if (mode in supported) config.copy(requestedDisplayMode = mode) else config
         }
 
@@ -47,5 +59,10 @@ object DashboardCardCatalog {
             CardId.TRAINING_READINESS to ModeSpec(DashboardCardDisplayMode.GAUGE, ALL_MODES),
             CardId.CARDIO_FITNESS to ModeSpec(DashboardCardDisplayMode.VALUE, ALL_MODES),
             CardId.TSB to ModeSpec(DashboardCardDisplayMode.VALUE, ALL_MODES),
+        )
+
+    private val workoutsOverrides: Map<CardId, ModeSpec> =
+        mapOf(
+            CardId.RAS_DAILY to ModeSpec(DashboardCardDisplayMode.VALUE, ONLY_VALUE),
         )
 }

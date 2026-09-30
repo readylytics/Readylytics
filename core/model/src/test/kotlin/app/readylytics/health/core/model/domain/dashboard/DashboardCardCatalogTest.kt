@@ -211,4 +211,41 @@ class DashboardCardCatalogTest {
                 .all { it.position < card.position },
         )
     }
+
+    @Test
+    fun `workouts RAS card is pinned to VALUE while dashboard RAS keeps every mode`() {
+        assertEquals(
+            listOf(DashboardCardDisplayMode.VALUE),
+            DashboardCardCatalog.workoutsSpec(CardId.RAS_DAILY)?.supportedModes,
+        )
+        assertEquals(3, DashboardCardCatalog.spec(CardId.RAS_DAILY)?.supportedModes?.size)
+        assertEquals(
+            DashboardCardCatalog.spec(CardId.STRAIN_RATIO),
+            DashboardCardCatalog.workoutsSpec(CardId.STRAIN_RATIO),
+        )
+        val persistedGauge = CardConfiguration(CardId.RAS_DAILY, requestedDisplayMode = DashboardCardDisplayMode.GAUGE)
+        assertEquals(DashboardCardDisplayMode.VALUE, DashboardCardCatalog.workoutsRequestedMode(persistedGauge))
+    }
+
+    @Test
+    fun `global mode with workouts spec skips RAS but updates other workout cards`() {
+        val configs =
+            listOf(
+                CardConfiguration(CardId.RAS_DAILY, requestedDisplayMode = null),
+                CardConfiguration(CardId.STRAIN_RATIO, requestedDisplayMode = null),
+            )
+
+        val updated =
+            DashboardCardCatalog.applyGlobalDisplayMode(
+                configs,
+                DashboardCardDisplayMode.BAR,
+                DashboardCardCatalog::workoutsSpec,
+            )
+
+        assertNull(updated.first { it.cardId == CardId.RAS_DAILY }.requestedDisplayMode)
+        assertEquals(
+            DashboardCardDisplayMode.BAR,
+            updated.first { it.cardId == CardId.STRAIN_RATIO }.requestedDisplayMode,
+        )
+    }
 }

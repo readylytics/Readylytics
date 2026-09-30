@@ -44,8 +44,13 @@ fun WorkoutsManagementBottomSheet(
                                 key = "card_${card.cardId.name}",
                                 label = stringResource(card.cardId.displayNameResId),
                                 isVisible = card.isVisible,
-                                supportedModes = DashboardCardCatalog.spec(card.cardId)?.supportedModes.orEmpty(),
-                                requestedMode = DashboardCardCatalog.requestedMode(card),
+                                supportedModes =
+                                    DashboardCardCatalog
+                                        .workoutsSpec(card.cardId)
+                                        ?.supportedModes
+                                        ?.takeIf { it.size > 1 }
+                                        .orEmpty(),
+                                requestedMode = DashboardCardCatalog.workoutsRequestedMode(card),
                                 onVisibilityChanged = { onCardVisibilityChanged(card.cardId, it) },
                                 onDisplayModeChanged = { onCardDisplayModeChanged(card.cardId, it) },
                             )

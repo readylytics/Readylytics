@@ -635,15 +635,17 @@ class DashboardCardsSettingsViewModelTest {
         }
 
     @Test
-    fun `apply also sets workout cards`() =
+    fun `apply also sets workout cards but keeps the workouts RAS card on its weekly view`() =
         runTest(testDispatcher) {
             val harness =
                 buildViewModel(
                     noticeDismissed = true,
+                    initialConfigs = listOf(CardConfiguration(cardId = CardId.RAS_DAILY, requestedDisplayMode = null)),
                     initialWorkoutConfigs =
                         listOf(
                             CardConfiguration(cardId = CardId.STRAIN_RATIO, requestedDisplayMode = null),
                             CardConfiguration(cardId = CardId.READINESS, requestedDisplayMode = null),
+                            CardConfiguration(cardId = CardId.RAS_DAILY, requestedDisplayMode = null),
                         ),
                 )
             val job =
@@ -666,6 +668,13 @@ class DashboardCardsSettingsViewModelTest {
                 DashboardCardDisplayMode.GAUGE,
                 harness.workoutConfigs.value
                     .first { it.cardId == CardId.READINESS }
+                    .requestedDisplayMode,
+            )
+            assertNull(harness.workoutConfigs.value.first { it.cardId == CardId.RAS_DAILY }.requestedDisplayMode)
+            assertEquals(
+                DashboardCardDisplayMode.GAUGE,
+                harness.dashboardConfigs.value
+                    .first { it.cardId == CardId.RAS_DAILY }
                     .requestedDisplayMode,
             )
 

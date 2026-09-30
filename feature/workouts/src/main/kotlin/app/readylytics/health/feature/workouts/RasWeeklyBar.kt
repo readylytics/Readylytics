@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,9 +26,11 @@ import app.readylytics.health.core.model.domain.model.MetricStatus
 import app.readylytics.health.core.scoring.domain.util.roundToPercentInt
 import app.readylytics.health.core.ui.components.GOAL_FILL_CAP_FRACTION
 import app.readylytics.health.core.ui.components.M3MetricBar
+import app.readylytics.health.core.ui.components.MetricTooltip
 import app.readylytics.health.core.ui.components.containerColor
 import app.readylytics.health.core.ui.components.gaugeColor
 import app.readylytics.health.feature.workouts.R
+import app.readylytics.health.core.ui.R as CoreUiR
 
 // 100 RAS fills 75% of the bar width
 private const val BAR_MAX = 100f / GOAL_FILL_CAP_FRACTION
@@ -124,20 +127,22 @@ fun RasWeeklyCard(
     totalRas: Int?,
     modifier: Modifier = Modifier,
 ) {
-    androidx.compose.material3.Card(
+    Card(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
     ) {
         Column(modifier = Modifier.padding(MaterialTheme.spacing.medium)) {
+            // Center-aligned so title, total and the 48dp tooltip touch target share one line.
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = stringResource(R.string.workout_stats_ras_title),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f, fill = false),
                 )
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall),
@@ -150,12 +155,10 @@ fun RasWeeklyCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    app.readylytics.health.core.ui.components.MetricTooltip(
-                        description = stringResource(app.readylytics.health.core.ui.R.string.tooltip_ras),
-                    )
+                    MetricTooltip(description = stringResource(CoreUiR.string.tooltip_ras))
                 }
             }
-            Spacer(Modifier.height(MaterialTheme.spacing.smallMedium))
+            // No extra spacer: the tooltip's touch target already pads the header.
             RasWeeklyBar(
                 dailyBreakdown = dailyBreakdown,
                 totalRas = totalRas?.toFloat() ?: 0f,
