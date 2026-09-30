@@ -14,6 +14,10 @@ object DashboardCardCatalog {
      */
     fun workoutsSpec(cardId: CardId): ModeSpec? = workoutsOverrides[cardId] ?: spec(cardId)
 
+    /** Modes the Workouts manage sheet may offer; empty when the card has no real choice. */
+    fun workoutsSelectableModes(cardId: CardId): List<DashboardCardDisplayMode> =
+        workoutsSpec(cardId)?.supportedModes?.takeIf { it.size > 1 }.orEmpty()
+
     fun workoutsRequestedMode(configuration: CardConfiguration): DashboardCardDisplayMode =
         workoutsSpec(configuration.cardId)?.resolveRequestedMode(configuration.requestedDisplayMode)
             ?: DashboardCardDisplayMode.VALUE

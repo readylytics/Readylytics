@@ -248,4 +248,13 @@ class DashboardCardCatalogTest {
             updated.first { it.cardId == CardId.STRAIN_RATIO }.requestedDisplayMode,
         )
     }
+
+    @Test
+    fun `workouts manage sheet offers no mode choice for RAS but keeps it for other cards`() {
+        assertTrue(DashboardCardCatalog.workoutsSelectableModes(CardId.RAS_DAILY).isEmpty())
+        assertEquals(
+            DashboardCardCatalog.spec(CardId.STRAIN_RATIO)?.supportedModes,
+            DashboardCardCatalog.workoutsSelectableModes(CardId.STRAIN_RATIO),
+        )
+    }
 }
