@@ -2,6 +2,7 @@ package app.readylytics.health.feature.workouts
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -131,8 +133,16 @@ fun RasWeeklyCard(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
     ) {
-        Column(modifier = Modifier.padding(MaterialTheme.spacing.medium)) {
-            // Center-aligned so title, total and the 48dp tooltip touch target share one line.
+        Column(
+            modifier =
+                Modifier.padding(
+                    start = MaterialTheme.spacing.medium,
+                    end = MaterialTheme.spacing.medium,
+                    top = MaterialTheme.spacing.smallMedium,
+                    bottom = MaterialTheme.spacing.medium,
+                ),
+        ) {
+            // Center-aligned so title, total and the tooltip icon share one line.
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -155,10 +165,20 @@ fun RasWeeklyCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    MetricTooltip(description = stringResource(CoreUiR.string.tooltip_ras))
+                    // Icon-height slot: the 48dp touch target overflows vertically instead of
+                    // inflating the header, keeping the title aligned with the metric cards.
+                    Box(
+                        modifier =
+                            Modifier
+                                .height(MaterialTheme.dimens.iconStandard)
+                                .wrapContentHeight(unbounded = true),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        MetricTooltip(description = stringResource(CoreUiR.string.tooltip_ras))
+                    }
                 }
             }
-            // No extra spacer: the tooltip's touch target already pads the header.
+            Spacer(Modifier.height(MaterialTheme.spacing.smallMedium))
             RasWeeklyBar(
                 dailyBreakdown = dailyBreakdown,
                 totalRas = totalRas?.toFloat() ?: 0f,
