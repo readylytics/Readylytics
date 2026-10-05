@@ -625,3 +625,19 @@ No after wall time, WAL size, or 1M total statement count is claimed.
 
 - [ ] Measured 1M total statement count ≤120,208 (≥50× vs 6,010,400).
 - [ ] Device wall time and WAL measurement recorded.
+
+
+### 2026-10-05 — Task 3 WP-13 / PERF-103 tier merge allocations
+
+Host JVM `ThreadMXBean.getThreadAllocatedBytes`, actual Kotlin expressions, 30 paired
+warmup iterations and mean over 20 measured calls. Fixture: 100,000 raw rows at even
+millisecond timestamps and 100,000 warm rows at odd timestamps, preconstructed and sorted.
+Old `(raw + warm).sortedBy { it.timestampMs }`: **21,993,085 bytes/call**;
+`mergeSortedSamples(raw, warm)`: **800,072 bytes/call**;
+production ordering expression `mergeSortedSamples(raw, warm.sortedBy { it.timestampMs })`:
+**6,001,989 bytes/call** (72.7% below old). These are allocated bytes, not object counts,
+and exclude reconstruction common to both paths. Warm input is already sorted in this fixture;
+overlapping bucket series retain warm-only stable sorting cost O(warm log warm).
+Temporary JUnit allocation probe was removed before the task gate; reproducible fixture and
+method are recorded in the Task 3 report. Pair with Task 4's WP-13 runtime numbers; this
+host measurement is not Android device performance evidence.

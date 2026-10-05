@@ -10,6 +10,7 @@ import app.readylytics.health.core.model.domain.model.RecordType
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -20,6 +21,32 @@ import kotlin.math.round
 
 @RunWith(RobolectricTestRunner::class)
 class AuthoritativeHeartRateReaderTest {
+    @Test
+    fun overlappingWarmBucketSeriesMatchStableSort() {
+        val buckets = listOf("sleep-a", "sleep-b").mapIndexed { index, session ->
+            HrMinuteBucketEntity(
+                bucketStartMs = 0L,
+                bucketEndMs = 60_000L,
+                minBpm = 60 + index,
+                maxBpm = 70 + index,
+                avgBpm = 65.0 + index,
+                sampleCount = 3,
+                recordType = "SLEEP",
+                sessionId = session,
+                deviceName = "device",
+            )
+        }
+        val raw = listOf(sleepHr(1L, 0L, 80, "raw"), sleepHr(2L, 20_000L, 81, "raw"))
+        val reconstructed = buckets.reconstructAsRecords()
+        assertTrue(reconstructed.zipWithNext().any { (a, b) -> a.timestampMs > b.timestampMs })
+        val expected = (raw + reconstructed).sortedBy { it.timestampMs }
+        val merged = AuthoritativeHrRange(raw, buckets).mergedSamples()
+        assertEquals(expected, merged)
+        assertSame(raw.first(), merged.first())
+        assertSame(raw[1], merged.first { it.timestampMs == 20_000L })
+        assertSame(raw, AuthoritativeHrRange(raw, emptyList()).mergedSamples())
+    }
+
     private lateinit var database: HealthDatabase
     private lateinit var reader: AuthoritativeHeartRateReader
 

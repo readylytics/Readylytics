@@ -689,6 +689,14 @@ raw-only read would withhold the sleep score of any night whose minutes have rol
 OD-1-quarantined. `HeartRateRepositoryImpl.getByTimeRange`/`observeByTimeRange` (workout HR via
 `GetWorkoutDisplayMetricsUseCase` and `WorkoutHeartRateBatcher`) merge for the same reason.
 
+**Authoritative sample ordering (WP-13 / PERF-103).** Raw DAO rows arrive timestamp-sorted.
+Warm reconstruction appends bucket series, whose timestamps can overlap within the same minute;
+`mergedSamples()` therefore stably sorts only reconstructed warm rows, then uses `mergeSortedSamples`
+to merge both sorted tiers in O(raw + warm) time into one pre-sized list. Equal timestamps retain
+raw-first order and original within-tier order, with the same row objects. The empty-warm path
+returns the original raw list. Warm sorting still costs O(warm log warm) and a warm-list copy;
+the whole-range concatenation and sort are removed.
+
 **Warm links are re-derived, not re-tagged (WP-17 Step 4).** A warm minute stores its session link
 *inside* its primary key (`(bucketStartMs, recordType, sessionId, deviceName)`), so when the
 authoritative session list changes it must be re-keyed rather than re-tagged. `WarmTierRelinker`
