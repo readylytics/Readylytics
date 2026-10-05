@@ -54,7 +54,7 @@ class Phase0BaselineBenchmark {
         fixture.cleanUp()
     }
 
-    /** PERF-102 before-number: one SQL statement per row today. */
+    /** PERF-102: retain comparable pipeline totals and report batched insert statements separately. */
     @Test
     fun measureHeartRateUpsertAtEachScalePoint() =
         runBlocking {
@@ -85,6 +85,16 @@ class Phase0BaselineBenchmark {
                         txRunner.transactionCount,
                         peak - before,
                     ),
+                )
+                val insertStatements = callback.heartRateInsertCount
+                assertTrue(
+                    "batched inserts must reduce insert-only statements by at least 50x",
+                    insertStatements > 0 && total / insertStatements >= 50,
+                )
+                val walBytes = java.io.File(database.openHelper.writableDatabase.path + "-wal").length()
+                Log.i(
+                    METRIC_TAG,
+                    "METRIC=hr_upsert_batches samples=$total insertStatements=$insertStatements totalStatements=${callback.statementCount} walBytes=$walBytes",
                 )
                 assertTrue("upsert must execute statements", callback.statementCount > 0)
                 assertEquals("every sample must be persisted", total, database.heartRateDao().count())

@@ -609,3 +609,19 @@ page consumer. These are call-count assertions, not device latency or allocation
 The focused connected repository fixture compiled, but `:app:connectedDebugAndroidTest` could not
 execute: `com.android.builder.testing.api.DeviceException: No connected devices!`. Device acceptance
 for this task remains unmeasured.
+
+
+## 2026-10-05 — Phase 2 Task 2 HR/HRV batch upserts
+
+HR/HRV `upsertAll` now uses at most 100 rows (600 binds) per conflict-targeted INSERT,
+retaining the stable `(sourceRecordRef, timestampMs)` key and exact null-safe no-op predicate.
+The `hr_upsert` fixture reports `insertStatements`, `totalStatements`, elapsed time and WAL bytes.
+Insert-only acceptance is checked separately against the former one INSERT per sample.
+The dated Phase 0 1M baseline above remains 6,010,400 **total** statements; its fixed per-source
+operations mean the insert-only reduction cannot establish the requested total reduction.
+
+Device timing and WAL measurements are blocked: no connected ADB device is available.
+No after wall time, WAL size, or 1M total statement count is claimed.
+
+- [ ] Measured 1M total statement count ≤120,208 (≥50× vs 6,010,400).
+- [ ] Device wall time and WAL measurement recorded.

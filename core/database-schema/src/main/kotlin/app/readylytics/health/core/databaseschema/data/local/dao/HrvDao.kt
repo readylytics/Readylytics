@@ -2,6 +2,9 @@ package app.readylytics.health.core.databaseschema.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.MapColumn
+import androidx.room.Transaction
+import androidx.room.RawQuery
+import androidx.room.RoomRawQuery
 import androidx.room.Query
 import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity
 import kotlinx.coroutines.flow.Flow
@@ -168,17 +171,45 @@ interface HrvDao {
         deviceName: String?,
     ): Long
 
+    @RawQuery
+    suspend fun upsertChunk(query: RoomRawQuery): Int
+
+    @Transaction
     suspend fun upsertAll(records: List<HrvRecordEntity>) {
-        for (record in records) {
-            conflictTargetedUpsert(
-                sourceRecordRef = record.sourceRecordRef,
-                timestampMs = record.timestampMs,
-                rmssdMs = record.rmssdMs,
-                recordType = record.recordType,
-                sessionId = record.sessionId,
-                deviceName = record.deviceName,
-            )
+        for (chunk in records.chunked(UPSERT_ROWS_PER_STATEMENT)) {
+            upsertChunk(buildUpsertQuery(chunk))
         }
+    }
+
+    private fun buildUpsertQuery(records: List<HrvRecordEntity>): RoomRawQuery {
+        val values = records.joinToString(", ") { "(?, ?, ?, ?, ?, ?)" }
+        val sql = "INSERT INTO hrv_records " +
+            "(sourceRecordRef, timestampMs, rmssdMs, recordType, sessionId, deviceName) " +
+            "VALUES $values " +
+            "ON CONFLICT(sourceRecordRef, timestampMs) DO UPDATE SET " +
+            "rmssdMs = excluded.rmssdMs, " +
+            "recordType = excluded.recordType, " +
+            "sessionId = excluded.sessionId, " +
+            "deviceName = excluded.deviceName " +
+            "WHERE (rmssdMs IS NOT excluded.rmssdMs OR " +
+            "recordType IS NOT excluded.recordType OR " +
+            "sessionId IS NOT excluded.sessionId OR deviceName IS NOT excluded.deviceName)"
+        return RoomRawQuery(sql) { statement ->
+            records.forEachIndexed { index, record ->
+                val offset = index * UPSERT_BINDS_PER_ROW
+                statement.bindLong(offset + 1, record.sourceRecordRef)
+                statement.bindLong(offset + 2, record.timestampMs)
+                statement.bindDouble(offset + 3, record.rmssdMs.toDouble())
+                statement.bindText(offset + 4, record.recordType)
+                record.sessionId?.let { statement.bindText(offset + 5, it) } ?: statement.bindNull(offset + 5)
+                record.deviceName?.let { statement.bindText(offset + 6, it) } ?: statement.bindNull(offset + 6)
+            }
+        }
+    }
+
+    companion object {
+        private const val UPSERT_ROWS_PER_STATEMENT = 100
+        private const val UPSERT_BINDS_PER_ROW = 6
     }
 
     @Query("DELETE FROM hrv_records WHERE timestampMs < :beforeMs")

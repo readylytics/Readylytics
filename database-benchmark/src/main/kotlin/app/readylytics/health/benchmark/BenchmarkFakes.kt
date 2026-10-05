@@ -1,6 +1,5 @@
 package app.readylytics.health.benchmark
 
-import app.readylytics.health.core.model.domain.repository.ReadRetryScope
 import app.readylytics.health.core.model.domain.model.DomainBloodPressureRecord
 import app.readylytics.health.core.model.domain.model.DomainBodyFatRecord
 import app.readylytics.health.core.model.domain.model.DomainBodyTemperatureRecord
@@ -17,6 +16,7 @@ import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
 import app.readylytics.health.core.model.domain.repository.PermissionStatus
 import app.readylytics.health.core.model.domain.repository.ReadOutcome
+import app.readylytics.health.core.model.domain.repository.ReadRetryScope
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
 import app.readylytics.health.core.model.domain.security.EncryptionManager

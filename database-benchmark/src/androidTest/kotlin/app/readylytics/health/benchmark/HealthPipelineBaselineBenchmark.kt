@@ -366,9 +366,12 @@ class CountingTransactionRunner(
 class CountingQueryCallback : RoomDatabase.QueryCallback {
     private val counter = AtomicLong(0)
     val statementCount: Long get() = counter.get()
+    private val heartRateInserts = AtomicLong(0)
+    val heartRateInsertCount: Long get() = heartRateInserts.get()
 
     fun reset() {
         counter.set(0)
+        heartRateInserts.set(0)
     }
 
     override fun onQuery(
@@ -376,5 +379,6 @@ class CountingQueryCallback : RoomDatabase.QueryCallback {
         bindArgs: List<Any?>,
     ) {
         counter.incrementAndGet()
+        if (sqlQuery.startsWith("INSERT INTO heart_rate_records")) heartRateInserts.incrementAndGet()
     }
 }
