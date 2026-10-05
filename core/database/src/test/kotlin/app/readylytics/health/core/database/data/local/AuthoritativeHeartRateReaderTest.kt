@@ -298,6 +298,48 @@ class AuthoritativeHeartRateReaderTest {
             assertEquals(individual.sortedBy { it.bucketStartMs }, batched.sortedBy { it.bucketStartMs })
         }
 
+    @Test
+    fun typedPagesMatchAuthoritativeRangeAcrossTiesAndWarmSlices() = runBlocking {
+        val first = seedSource("first")
+        val second = seedSource("second")
+        database.heartRateDao().upsertAll(listOf(
+            HeartRateRecordEntity(first, -1, 120, "EXERCISE"),
+            HeartRateRecordEntity(first, 0, 121, "EXERCISE"),
+            HeartRateRecordEntity(second, 0, 122, "EXERCISE"),
+            HeartRateRecordEntity(first, 1, 220, "RESTING"),
+            HeartRateRecordEntity(first, 120_000, 123, "EXERCISE"),
+        ))
+        val buckets = (0..7).map { index ->
+            HrMinuteBucketEntity(60_000, 120_000, 60 + index, 90 + index, 75.0 + index,
+                if (index == 0) 60_001 else 3, "EXERCISE", "session-${index / 2}", "device-${index % 2}")
+        } + HrMinuteBucketEntity(60_000, 120_000, 220, 220, 220.0, 5, "RESTING")
+        database.minuteBucketDao().upsertBuckets(buckets)
+        val expected = reader.rangeInOfType("EXERCISE", -1, 120_000).mergedSamples()
+        assertEquals(expected.size, reader.countInRangeOfType("EXERCISE", -1, 120_000))
+        for (limit in listOf(3, 50_000)) {
+            val actual = mutableListOf<HeartRateRecordEntity>()
+            reader.typePagesInRange("EXERCISE", -1, 120_000, limit) { page ->
+                assertTrue(page.size <= limit)
+                actual.addAll(page)
+            }
+            assertEquals(expected, actual)
+        }
+        assertTrue(expected.all { it.recordType == "EXERCISE" })
+    }
+
+    @Test
+    fun typedPagesRejectNonPositiveLimits() = runBlocking {
+        for (limit in listOf(0, -1)) {
+            var rejected = false
+            try {
+                reader.typePagesInRange("EXERCISE", 0, 1, limit) { error("Unexpected page") }
+            } catch (_: IllegalArgumentException) {
+                rejected = true
+            }
+            assertTrue(rejected)
+        }
+    }
+
     private suspend fun seedSource(id: String): Long =
         database.sourceRecordDao().getOrCreateSourceRef(id, "HEART_RATE", 0L)
 

@@ -145,45 +145,35 @@ internal fun List<HrMinuteBucketEntity>.reconstructTimestampedSamples(): Timesta
     return TimestampedSamples(timestampsMs, bpmValues)
 }
 
-private fun HrMinuteBucketEntity.fillBucketValues(target: IntArray, offset: Int): Int =
-    when {
-        p50Bpm != null -> fillFromPercentiles(target, offset)
-        sampleCount >= MIN_SAMPLES_FOR_THREE_POINT -> fillThreePoint(target, offset)
-        else -> fillFlatMean(target, offset)
-    }
-
-private fun HrMinuteBucketEntity.fillFlatMean(target: IntArray, offset: Int): Int {
-    val mean = round(avgBpm).toInt()
-    target.fill(mean, offset, offset + sampleCount)
+private fun HrMinuteBucketEntity.fillBucketValues(target: IntArray, offset: Int): Int {
+    val valueAt = sampleValueAtIndex()
+    for (index in 0 until sampleCount) target[offset + index] = valueAt(index)
     return sampleCount
 }
 
-private fun HrMinuteBucketEntity.fillThreePoint(target: IntArray, offset: Int): Int {
-    target[offset] = minBpm
+/** Same reconstruction math, reusable without allocating sampleCount-sized arrays. */
+internal fun HrMinuteBucketEntity.sampleValueAtIndex(): (Int) -> Int {
     val mean = round(avgBpm).toInt()
-    if (sampleCount > 2) {
-        target.fill(mean, offset + 1, offset + sampleCount - 1)
+    if (p50Bpm == null) {
+        return { index ->
+            when {
+                sampleCount < MIN_SAMPLES_FOR_THREE_POINT -> mean
+                index == 0 -> minBpm
+                index == sampleCount - 1 -> maxBpm
+                else -> mean
+            }
+        }
     }
-    target[offset + sampleCount - 1] = maxBpm
-    return sampleCount
-}
-
-private fun HrMinuteBucketEntity.fillFromPercentiles(target: IntArray, offset: Int): Int {
-    val anchors =
-        listOf(
-            0.00 to minBpm,
-            0.05 to requireNotNull(p5Bpm),
-            0.25 to requireNotNull(p25Bpm),
-            0.50 to requireNotNull(p50Bpm),
-            0.75 to requireNotNull(p75Bpm),
-            0.95 to requireNotNull(p95Bpm),
-            1.00 to maxBpm,
-        )
-    for (i in 0 until sampleCount) {
-        val quantile = (i + 0.5) / sampleCount
-        target[offset + i] = interpolateAnchors(anchors, quantile)
-    }
-    return sampleCount
+    val anchors = listOf(
+        0.00 to minBpm,
+        0.05 to requireNotNull(p5Bpm),
+        0.25 to requireNotNull(p25Bpm),
+        0.50 to requireNotNull(p50Bpm),
+        0.75 to requireNotNull(p75Bpm),
+        0.95 to requireNotNull(p95Bpm),
+        1.00 to maxBpm,
+    )
+    return { index -> interpolateAnchors(anchors, (index + 0.5) / sampleCount) }
 }
 
 /**

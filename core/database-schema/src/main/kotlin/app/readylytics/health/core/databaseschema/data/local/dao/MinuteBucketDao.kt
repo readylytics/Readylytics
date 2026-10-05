@@ -12,7 +12,7 @@ import app.readylytics.health.core.model.domain.model.HrMinuteBucketRow
 // "core" warm-tier read/write surface scoring and UI reconstruction actually depend on, and so
 // neither interface trips detekt's TooManyFunctions threshold.
 @Dao
-interface MinuteBucketDao {
+interface MinuteBucketDao : TypedMinuteBucketDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertBuckets(buckets: List<HrMinuteBucketEntity>)
 

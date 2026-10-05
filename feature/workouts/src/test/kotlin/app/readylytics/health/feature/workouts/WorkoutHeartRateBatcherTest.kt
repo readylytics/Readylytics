@@ -45,6 +45,76 @@ class WorkoutHeartRateBatcherTest {
         recordType = "WORKOUT",
     )
 
+    @Test
+    fun clusterRowsAreBounded() =
+        runTest {
+            val rows = (0L..100_000L).map { sample(it) }
+            val workouts = listOf(workout("a", 0, 30_000), workout("b", 20_000, 49_999), workout("c", 70_000, 100_000))
+            val fake = RowTrackingRepository(rows)
+            val referenceMap =
+                workouts.associate { workout ->
+                    workout.id to
+                        rows
+                            .filter { it.timestampMs in workout.startTime..workout.endTime }
+                            .map { HeartRateSample(Instant.ofEpochMilli(it.timestampMs), it.beatsPerMinute) }
+                }
+            val actualMap = fetchHeartRateSamplesByWorkout(workouts, fake.repository)
+            assertEquals(referenceMap, actualMap)
+            assertTrue(fake.maxQueryRows <= 50_000)
+        }
+
+    @Test
+    fun oversizedWorkoutIsExact() =
+        runTest {
+            val rows = (0L..50_000L).map { sample(it) }
+            val fake = RowTrackingRepository(rows)
+            val actualSingleWorkout =
+                fetchHeartRateSamplesByWorkout(
+                    listOf(workout("a", 0, 50_000)),
+                    fake.repository,
+                ).getValue("a")
+            assertEquals(50_001, actualSingleWorkout.size)
+            assertEquals(
+                rows.map { HeartRateSample(Instant.ofEpochMilli(it.timestampMs), it.beatsPerMinute) },
+                actualSingleWorkout,
+            )
+            assertEquals(2, fake.pages)
+            assertTrue(fake.maxQueryRows <= 50_000)
+        }
+
+    private class RowTrackingRepository(
+        private val rows: List<HeartRateRecordData>,
+    ) {
+        var maxQueryRows = 0
+        var pages = 0
+        val repository = mockk<HeartRateRepository>()
+
+        init {
+            coEvery { repository.getByTimeRange(any(), any()) } coAnswers {
+                select(firstArg(), secondArg()).also { maxQueryRows = maxOf(maxQueryRows, it.size) }
+            }
+            coEvery { repository.getByTimeRangeOfType("EXERCISE", any(), any()) } coAnswers {
+                select(secondArg(), thirdArg()).also { maxQueryRows = maxOf(maxQueryRows, it.size) }
+            }
+            coEvery { repository.countInRangeOfType("EXERCISE", any(), any()) } coAnswers {
+                select(secondArg(), thirdArg()).size
+            }
+            coEvery { repository.forEachByTimeRangeOfTypePage("EXERCISE", any(), any(), any(), any()) } coAnswers {
+                val callback = arg<suspend (List<HeartRateRecordData>) -> Unit>(4)
+                for (page in select(secondArg(), thirdArg()).chunked(arg(3))) {
+                    pages++
+                    maxQueryRows = maxOf(maxQueryRows, page.size)
+                    callback(page)
+                }
+            }
+        }
+
+        private fun select(
+            start: Long,
+            end: Long,
+        ) = rows.filter { it.timestampMs in start..end }
+    }
+
     // -- clusterWorkoutsBySpan --
 
     @Test
@@ -146,7 +216,7 @@ class WorkoutHeartRateBatcherTest {
             val result = fetchHeartRateSamplesByWorkout(emptyList(), repo)
 
             assertTrue(result.isEmpty())
-            coVerify(exactly = 0) { repo.getByTimeRange(any(), any()) }
+            coVerify(exactly = 0) { repo.getByTimeRangeOfType("EXERCISE", any(), any()) }
         }
 
     @Test
@@ -155,7 +225,9 @@ class WorkoutHeartRateBatcherTest {
             val w = workout("w1", 1_000L, 2_000L)
             val repo =
                 mockk<HeartRateRepository> {
-                    coEvery { getByTimeRange(1_000L, 2_000L) } returns listOf(sample(1_500L, bpm = 140))
+                    coEvery { countInRangeOfType(any(), any(), any()) } returns 0
+                    coEvery { getByTimeRangeOfType("EXERCISE", 1_000L, 2_000L) } returns
+                        listOf(sample(1_500L, bpm = 140))
                 }
 
             val result = fetchHeartRateSamplesByWorkout(listOf(w), repo)
@@ -164,7 +236,7 @@ class WorkoutHeartRateBatcherTest {
                 listOf(HeartRateSample(timestamp = Instant.ofEpochMilli(1_500L), bpm = 140)),
                 result["w1"],
             )
-            coVerify(exactly = 1) { repo.getByTimeRange(any(), any()) }
+            coVerify(exactly = 1) { repo.getByTimeRangeOfType("EXERCISE", any(), any()) }
         }
 
     @Test
@@ -183,7 +255,8 @@ class WorkoutHeartRateBatcherTest {
                 )
             val repo =
                 mockk<HeartRateRepository> {
-                    coEvery { getByTimeRange(0L, dayMs * 4 + 1_000L) } returns allSamples
+                    coEvery { countInRangeOfType(any(), any(), any()) } returns 0
+                    coEvery { getByTimeRangeOfType("EXERCISE", 0L, dayMs * 4 + 1_000L) } returns allSamples
                 }
 
             val result = fetchHeartRateSamplesByWorkout(listOf(w1, w2, w3), repo)
@@ -191,7 +264,7 @@ class WorkoutHeartRateBatcherTest {
             assertEquals(listOf(100), result.getValue("w1").map { it.bpm })
             assertEquals(listOf(150), result.getValue("w2").map { it.bpm })
             assertEquals(listOf(160), result.getValue("w3").map { it.bpm })
-            coVerify(exactly = 1) { repo.getByTimeRange(any(), any()) }
+            coVerify(exactly = 1) { repo.getByTimeRangeOfType("EXERCISE", any(), any()) }
         }
 
     @Test
@@ -203,8 +276,9 @@ class WorkoutHeartRateBatcherTest {
             val w2 = workout("w2", guard + dayMs, guard + dayMs * 2)
             val repo =
                 mockk<HeartRateRepository> {
-                    coEvery { getByTimeRange(0L, dayMs) } returns listOf(sample(dayMs / 2, bpm = 111))
-                    coEvery { getByTimeRange(guard + dayMs, guard + dayMs * 2) } returns
+                    coEvery { countInRangeOfType(any(), any(), any()) } returns 0
+                    coEvery { getByTimeRangeOfType("EXERCISE", 0L, dayMs) } returns listOf(sample(dayMs / 2, bpm = 111))
+                    coEvery { getByTimeRangeOfType("EXERCISE", guard + dayMs, guard + dayMs * 2) } returns
                         listOf(sample(guard + dayMs + 500L, bpm = 222))
                 }
 
@@ -212,7 +286,7 @@ class WorkoutHeartRateBatcherTest {
 
             assertEquals(listOf(111), result.getValue("w1").map { it.bpm })
             assertEquals(listOf(222), result.getValue("w2").map { it.bpm })
-            coVerify(exactly = 2) { repo.getByTimeRange(any(), any()) }
+            coVerify(exactly = 2) { repo.getByTimeRangeOfType("EXERCISE", any(), any()) }
         }
 
     @Test
@@ -222,7 +296,8 @@ class WorkoutHeartRateBatcherTest {
             val w2 = workout("w2", 5_000L, 15_000L)
             val repo =
                 mockk<HeartRateRepository> {
-                    coEvery { getByTimeRange(0L, 15_000L) } returns
+                    coEvery { countInRangeOfType(any(), any(), any()) } returns 0
+                    coEvery { getByTimeRangeOfType("EXERCISE", 0L, 15_000L) } returns
                         listOf(sample(1_000L, bpm = 100), sample(7_000L, bpm = 110), sample(12_000L, bpm = 120))
                 }
 
@@ -230,6 +305,6 @@ class WorkoutHeartRateBatcherTest {
 
             assertEquals(listOf(100, 110), result.getValue("w1").map { it.bpm })
             assertEquals(listOf(110, 120), result.getValue("w2").map { it.bpm })
-            coVerify(exactly = 1) { repo.getByTimeRange(any(), any()) }
+            coVerify(exactly = 1) { repo.getByTimeRangeOfType("EXERCISE", any(), any()) }
         }
 }

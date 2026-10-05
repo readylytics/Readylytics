@@ -131,6 +131,8 @@ class AuthoritativeHeartRateReader
                 warmBuckets = minuteBucketDao.getVisibleBucketsInTimeRange(startMs, endMs),
             )
 
+
+
         /**
          * Observable form of [rangeIn] with an exclusive `endMs`, matching
          * [HeartRateDao.observeByTimeRange]'s existing convention.
@@ -379,3 +381,26 @@ private fun mergeMinuteBucketRows(
             )
         }
 }
+
+internal suspend fun AuthoritativeHeartRateReader.rangeInOfType(
+    recordType: String, startMs: Long, endMs: Long
+): AuthoritativeHrRange =
+    AuthoritativeHrRange(
+        heartRateDao.getVisibleByTypeAndTimeRange(recordType, startMs, endMs),
+        minuteBucketDao.visibleOfType(recordType, startMs, endMs),
+    )
+
+internal suspend fun AuthoritativeHeartRateReader.countInRangeOfType(
+    recordType: String, startMs: Long, endMs: Long
+): Int =
+    (heartRateDao.countVisibleOfType(recordType, startMs, endMs) +
+        minuteBucketDao.countVisibleOfType(recordType, startMs, endMs))
+        .coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+
+internal suspend fun AuthoritativeHeartRateReader.typePagesInRange(
+    recordType: String,
+    startMs: Long,
+    endMs: Long,
+    limit: Int,
+    onPage: suspend (List<HeartRateRecordEntity>) -> Unit,
+) = readTypePages(TypedHrWindow(recordType, startMs, endMs), limit, onPage)

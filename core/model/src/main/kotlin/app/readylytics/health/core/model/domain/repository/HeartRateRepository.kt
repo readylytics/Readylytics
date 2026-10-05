@@ -28,7 +28,7 @@ data class HeartRateSeries(
     val resolution: HeartRateResolution,
 )
 
-interface HeartRateRepository {
+interface HeartRateRepository : TypedHeartRateRepository {
     suspend fun getMinHrInRange(
         startTimeMs: Long,
         endTimeMs: Long,

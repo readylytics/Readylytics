@@ -92,7 +92,11 @@ class GetWorkoutDisplayMetricsUseCaseTest {
                         recordType = "EXERCISE",
                     ),
                 )
-            coEvery { heartRateRepository.getByTimeRange(workout.startTime, workout.endTime) } returns dbSamples
+            coEvery { 
+                heartRateRepository.getByTimeRangeOfType(
+                    "EXERCISE", workout.startTime, workout.endTime
+                )
+            } returns dbSamples
 
             val loadMetrics =
                 ComputeWorkoutLoadMetricsUseCase.WorkoutLoadMetrics(
@@ -136,7 +140,7 @@ class GetWorkoutDisplayMetricsUseCaseTest {
             coVerify {
                 dailySummaryRepository.getByDate(midnight)
                 dailySummaryRepository.getSince(fortyTwoDaysAgo)
-                heartRateRepository.getByTimeRange(workout.startTime, workout.endTime)
+                heartRateRepository.getByTimeRangeOfType("EXERCISE", workout.startTime, workout.endTime)
             }
         }
 
@@ -179,7 +183,11 @@ class GetWorkoutDisplayMetricsUseCaseTest {
                         recordType = "EXERCISE",
                     ),
                 )
-            coEvery { heartRateRepository.getByTimeRange(workout.startTime, workout.endTime) } returns dbSamples
+            coEvery { 
+                heartRateRepository.getByTimeRangeOfType(
+                    "EXERCISE", workout.startTime, workout.endTime
+                )
+            } returns dbSamples
 
             val loadMetrics =
                 ComputeWorkoutLoadMetricsUseCase.WorkoutLoadMetrics(
@@ -238,7 +246,7 @@ class GetWorkoutDisplayMetricsUseCaseTest {
             every { summary.rhrBpm } returns 55f
             every { summary.hrMax } returns null
             coEvery { dailySummaryRepository.getByDate(midnight) } returns summary
-            coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { heartRateRepository.getByTimeRangeOfType("EXERCISE", any(), any()) } returns emptyList()
 
             val loadMetrics =
                 ComputeWorkoutLoadMetricsUseCase.WorkoutLoadMetrics(
@@ -311,7 +319,7 @@ class GetWorkoutDisplayMetricsUseCaseTest {
             every { summary.rhrBpm } returns 55f
             every { summary.hrMax } returns null
             coEvery { dailySummaryRepository.getByDate(midnight) } returns summary
-            coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { heartRateRepository.getByTimeRangeOfType("EXERCISE", any(), any()) } returns emptyList()
 
             // The DB-backed 42-day window the self-fetch path would return.
             val dbWindow =
@@ -385,6 +393,39 @@ class GetWorkoutDisplayMetricsUseCaseTest {
             assertEquals(selfFetched.gainedStrain, preFetched.gainedStrain)
             assertEquals(selfFetched.gainedStrainDisplay, preFetched.gainedStrainDisplay)
         }
+
+    @Test
+    fun displayTrimpMatchesPersisted() = runTest {
+        val workout = createTestWorkout()
+        val exercise = (0..30).map {
+            HeartRateRecordData("exercise-$it", it * 60_000L, 130, "EXERCISE")
+        }
+        val resting = HeartRateRecordData("resting", 30_000L, 220, "RESTING")
+        coEvery { dailySummaryRepository.getByDate(any()) } returns null
+        coEvery {
+            heartRateRepository.getByTimeRange(any(), any())
+        } returns (exercise + resting).sortedBy { it.timestampMs }
+        coEvery { heartRateRepository.getByTimeRangeOfType("EXERCISE", any(), any()) } returns exercise
+        val realUseCase = GetWorkoutDisplayMetricsUseCase(
+            dailySummaryRepository, heartRateRepository, settingsRepo,
+            ComputeWorkoutLoadMetricsUseCase(mockk(relaxed = true), WorkoutLoadClassifier()),
+            CanonicalWorkoutResolver(ComputeWorkoutTrimpUseCase()),
+        )
+        val prefs = UserPreferences(scoringZoneId = "UTC")
+        val persistedTrimp = realUseCase.execute(
+            workout,
+            samples = exercise.map {
+                ComputeWorkoutTrimpUseCase.HeartRateSample(Instant.ofEpochMilli(it.timestampMs), it.beatsPerMinute)
+            },
+            preferences = prefs,
+            historicalSummaries = emptyList(),
+        ).preciseTrimp
+        val displayTrimp = realUseCase.execute(
+            workout, preferences = prefs, historicalSummaries = emptyList()
+        ).preciseTrimp
+        org.junit.Assert.assertNotNull(persistedTrimp)
+        assertEquals(persistedTrimp, displayTrimp)
+    }
 
     private fun createTestWorkout(
         id: String = "run-1",

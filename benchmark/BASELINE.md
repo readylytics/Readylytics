@@ -641,3 +641,9 @@ overlapping bucket series retain warm-only stable sorting cost O(warm log warm).
 Temporary JUnit allocation probe was removed before the task gate; reproducible fixture and
 method are recorded in the Task 3 report. Pair with Task 4's WP-13 runtime numbers; this
 host measurement is not Android device performance evidence.
+
+### 2026-10-05 — Phase 2 Task 4 WP-13 / PERF-101 row-bounded queries
+
+- **Query plans:** The type-filtered queries use `index_hr_v10_timestamp_source` and `index_hr_v10_type_timestamp`. No `SCAN heart_rate_records`, no temp B-tree.
+- **Heap and result set size (250k/500k/1M):** Due to the lack of a connected device (blocked device measurements), actual peak heap and wall time are not recorded on a physical SM-A576B. The cluster bounds guarantee `MAX_CLUSTER_SAMPLES = 50_000`, so the max result-set size remains capped at 50_001. Over-sized single workouts paginate and process sequentially, yielding a flat peak retained heap across the three fixed-size-workout fixtures in host unit tests.
+- **Metrics exactness:** `displayTrimpMatchesPersisted` asserts the bounded queries do not truncate input or change values, computing exactly identical trimp. 

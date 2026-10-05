@@ -697,6 +697,8 @@ raw-first order and original within-tier order, with the same row objects. The e
 returns the original raw list. Warm sorting still costs O(warm log warm) and a warm-list copy;
 the whole-range concatenation and sort are removed.
 
+**Row-Bounded Workout HR Reads (PERF-101).** `HeartRateRepository.getByTimeRangeOfType` and `forEachByTimeRangeOfTypePage` expose type-filtered hot∪warm reads backed by the `index_hr_v10_type_timestamp` index, applying the type predicate to both tiers before reconstructing them. Wide-range UI queries (e.g. the 180-day Workouts tab) use `WorkoutHeartRateBatcher.fetchHeartRateSamplesByWorkout` to cluster workout queries by an outer `MAX_CLUSTER_SAMPLES` bound (50,000). A cluster exceeding this limit is split, and an individually oversized workout switches to `forEachByTimeRangeOfTypePage` sequential paging, feeding `GetWorkoutDisplayMetricsUseCase` iteratively without ever allocating an unbounded contiguous row list in memory.
+
 **Warm links are re-derived, not re-tagged (WP-17 Step 4).** A warm minute stores its session link
 *inside* its primary key (`(bucketStartMs, recordType, sessionId, deviceName)`), so when the
 authoritative session list changes it must be re-keyed rather than re-tagged. `WarmTierRelinker`
