@@ -102,4 +102,11 @@ interface Vo2MaxRecordDao : Vo2MaxScanReconciliationDao {
      */
     @Query("DELETE FROM vo2_max_records")
     suspend fun deleteAll(): Int
+
+    @Query("SELECT * FROM vo2_max_records WHERE id IN (:ids)")
+    suspend fun getByIds(ids: List<String>): List<app.readylytics.health.core.databaseschema.data.local.entity.Vo2MaxRecordEntity>
+
+    @Query("DELETE FROM vo2_max_records WHERE id IN (:ids)")
+    suspend fun deleteByIds(ids: List<String>): Int
+
 }

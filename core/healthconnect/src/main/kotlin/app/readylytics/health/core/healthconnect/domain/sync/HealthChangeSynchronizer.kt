@@ -14,6 +14,7 @@ interface HealthChangeSynchronizer {
 data class HealthChangeSyncOutcome(
     val affectedDates: Set<LocalDate>,
     val requiresFullResync: Boolean,
+    val continuationRequired: Boolean = false,
     val nextTokens: Map<HealthDataType, String> = emptyMap(),
     /** Why [requiresFullResync] was set (diagnostics only; empty when it is false). */
     val fullResyncReason: String = "",

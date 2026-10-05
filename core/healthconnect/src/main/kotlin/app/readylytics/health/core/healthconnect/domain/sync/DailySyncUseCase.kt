@@ -158,26 +158,44 @@ class DailySyncUseCase
                     val zoneId = runContext.zoneId
                     val today = runContext.today
 
-                    val outcome = changeSynchronizer.applyPendingChanges()
-                    if (outcome.requiresFullResync) {
-                        return@withContext Result.failure(
-                            "Requires historical resync: ${outcome.fullResyncReason}",
-                            "REQUIRES_HISTORICAL_RESYNC",
-                        )
+                    var continuationRequired = true
+                    var requiresHistoricalResync = false
+                    var fullResyncReason: String? = null
+                    val affectedDates = mutableSetOf<java.time.LocalDate>()
+                    val nextTokens = mutableMapOf<
+                        app.readylytics.health.core.model.domain.model.HealthDataType, String>()
+
+                    while (continuationRequired) {
+                        ensureActive()
+                        val outcome = changeSynchronizer.applyPendingChanges()
+                        affectedDates.addAll(outcome.affectedDates)
+                        
+                        if (outcome.requiresFullResync) {
+                            requiresHistoricalResync = true
+                            fullResyncReason = outcome.fullResyncReason.takeIf { it.isNotEmpty() } ?: fullResyncReason
+                            if (!outcome.continuationRequired) {
+                                return@withContext Result.failure(
+                                    "Requires historical resync: ${outcome.fullResyncReason}",
+                                    "REQUIRES_HISTORICAL_RESYNC",
+                                )
+                            }
+                        }
+                        
+                        if (outcome.nextTokens.isNotEmpty()) {
+                            nextTokens.putAll(outcome.nextTokens)
+                        }
+                        
+                        continuationRequired = outcome.continuationRequired
                     }
 
                     val standardDays = (0 until windowDays).map { today.minusDays(it.toLong()) }.toSet()
                     val standardOldest = standardDays.minOrNull() ?: today
 
-                    // HC changes can legitimately touch recent past days (last night's sleep is
-                    // dated yesterday; HR/HRV backfilled for the prior day). Absorb those inline by
-                    // widening the walk-forward down to the earliest recent affected day - contiguous
-                    // to today so frozen baselines and acute/chronic averages propagate correctly.
-                    // Only changes older than the inline bound (which would make one foreground HC
-                    // read + recompute too large) escalate to the durable historical resync.
                     val inlineFloor = today.minusDays(MAX_INLINE_RECOMPUTE_DAYS.toLong())
-                    val outOfWindowAffected = outcome.affectedDates.filter { it.isBefore(standardOldest) }
-                    val requiresHistoricalResync = outOfWindowAffected.any { it.isBefore(inlineFloor) }
+                    val outOfWindowAffected = affectedDates.filter { it.isBefore(standardOldest) }
+                    if (outOfWindowAffected.any { it.isBefore(inlineFloor) }) {
+                        requiresHistoricalResync = true
+                    }
                     val oldestTargetDay =
                         if (requiresHistoricalResync) {
                             standardOldest
@@ -381,6 +399,8 @@ class DailySyncUseCase
                             "SYNC_PARTIAL_FAILURE",
                         )
                     }
+                    changeSynchronizer.commitTokens(nextTokens)
+                    
                     if (requiresHistoricalResync) {
                         val staleDates =
                             outOfWindowAffected.filter { it.isBefore(inlineFloor) }.sorted().take(MAX_REPORTED_DATES)
@@ -389,7 +409,6 @@ class DailySyncUseCase
                             "REQUIRES_HISTORICAL_RESYNC",
                         )
                     } else {
-                        changeSynchronizer.commitTokens(outcome.nextTokens)
                         settingsRepo.updateLastSyncTimestamp(clock.millis())
                         Result.success(Unit)
                     }

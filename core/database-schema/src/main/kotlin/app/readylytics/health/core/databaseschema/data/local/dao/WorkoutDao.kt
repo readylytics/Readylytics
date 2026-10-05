@@ -272,4 +272,8 @@ interface WorkoutDao {
 
     @Query("DELETE FROM workout_records WHERE startTime >= :startMs AND endTime <= :endMs")
     suspend fun deleteBetween(startMs: Long, endMs: Long): Int
+
+    @Query("DELETE FROM workout_records WHERE id IN (:ids)")
+    suspend fun deleteByIds(ids: List<String>): Int
+
 }

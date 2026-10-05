@@ -110,4 +110,11 @@ interface BodyTemperatureRecordDao {
 
     @Query("DELETE FROM body_temperature_records WHERE timestampMs >= :startMs AND timestampMs <= :endMs")
     suspend fun deleteBetween(startMs: Long, endMs: Long): Int
+
+    @Query("SELECT * FROM body_temperature_records WHERE id IN (:sourceRecordIds)")
+    suspend fun getBySourceRecordIds(sourceRecordIds: List<String>): List<app.readylytics.health.core.databaseschema.data.local.entity.BodyTemperatureRecordEntity>
+
+    @Query("DELETE FROM body_temperature_records WHERE id IN (:sourceRecordIds)")
+    suspend fun deleteBySourceRecordIds(sourceRecordIds: List<String>): Int
+
 }

@@ -62,3 +62,6 @@ const val EXTENDED_DAILY_INGEST_BUDGET_MS = 10 * 60_000L
  * exactly one RMSSD value. See [HeartSampleStreamer.sliceBySampleBudget].
  */
 const val TRANSFORM_SAMPLE_BUDGET = 5_000
+
+const val DEFAULT_CHANGES_APPLY_BUDGET_MS = 60_000L
+const val MAX_CHANGE_PAGES_PER_RUN = 20

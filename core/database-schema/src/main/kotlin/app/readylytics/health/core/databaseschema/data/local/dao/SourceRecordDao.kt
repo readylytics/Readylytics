@@ -188,6 +188,13 @@ interface SourceRecordDao : SourceRecordMaintenanceDao, SourceRecordResolutionDa
 
     @Query("DELETE FROM health_source_records WHERE id IN (:ids)")
     suspend fun deleteSourcesByRefs(ids: List<Long>): Int
+
+    @Query("SELECT id FROM health_source_records WHERE sourceRecordId IN (:sourceRecordIds)")
+    suspend fun getSourceRefs(sourceRecordIds: List<String>): List<Long>
+
+    @Query("DELETE FROM health_source_records WHERE sourceRecordId IN (:sourceRecordIds)")
+    suspend fun deleteBySourceRecordIds(sourceRecordIds: List<String>): Int
+
 }
 
 suspend fun SourceRecordDao.getOrCreateSourceRef(
@@ -241,4 +248,5 @@ suspend fun SourceRecordDao.upsertIntervalSourceRecord(
             ),
         )
     }
+
 }

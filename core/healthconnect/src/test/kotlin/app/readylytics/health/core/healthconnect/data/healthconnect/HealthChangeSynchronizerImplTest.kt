@@ -710,21 +710,63 @@ class HealthChangeSynchronizerImplTest {
     private fun stepsPermissions(): Set<String> =
         recordClassesFor(HealthDataType.STEPS).map { HealthPermission.getReadPermission(it) }.toSet()
 
-    private fun setupFakeTokenStore(
-        inMemoryTokens: MutableMap<HealthDataType, String>,
-        suspended: MutableSet<HealthDataType>,
-    ) {
-        coEvery { tokenStore.get(any()) } answers { inMemoryTokens[firstArg()] }
-        coEvery { tokenStore.isSuspended(any()) } answers { firstArg<HealthDataType>() in suspended }
-        coEvery { tokenStore.suspendType(any()) } answers {
-            val type = firstArg<HealthDataType>()
-            suspended.add(type)
-            inMemoryTokens.remove(type)
+
+    @Test
+    fun `thousandChangesUseOnePageTransaction`() = runTest {
+        val fake = FakeStore()
+        val synchronizer = HealthChangeSynchronizerImpl(
+            client = client,
+            tokenStore = tokenStore,
+            settingsRepo = settingsRepo,
+            healthIngestionStore = fake,
+            changeIngestionStore = fake,
+            transactionRunner = fake,
+            clock = Clock.systemDefaultZone(),
+        )
+
+        val changes = (1..1000).map { i ->
+            UpsertionChange(
+                recordId = "id_$i",
+                record = exerciseRecord("id_$i", "Model")
+            )
         }
-        coEvery { tokenStore.putAll(any(), any()) } answers {
-            val tokens = firstArg<Map<HealthDataType, String>>()
-            inMemoryTokens.putAll(tokens)
-            suspended.removeAll(tokens.keys)
-        }
+
+        coEvery { client.getChanges("token_start") } returns changesResponse(changes, "token_end", false)
+        setupFakeTokenStore(mutableMapOf(HealthDataType.EXERCISE to "token_start"), mutableSetOf())
+        
+        synchronizer.applyPendingChanges()
+        
+        assertEquals(1, fake.transactionCount)
+        assertEquals(1, fake.batchPersistCount)
+        assertTrue(fake.affectedDateCalls <= 2)
+        assertTrue(fake.deleteCalls <= 2)
     }
+
+    @Test
+    fun `pageBudgetPreservesCommittedPrefix`() = runTest {
+        val fake = FakeStore()
+        val synchronizer = HealthChangeSynchronizerImpl(
+            client = client,
+            tokenStore = tokenStore,
+            settingsRepo = settingsRepo,
+            healthIngestionStore = fake,
+            changeIngestionStore = fake,
+            transactionRunner = fake,
+            clock = Clock.systemDefaultZone(),
+        )
+
+        for (i in 1..21) {
+            val changes = listOf(UpsertionChange(recordId = "id_$i", record = exerciseRecord("id_$i", "Model")))
+            coEvery { client.getChanges("token_${i-1}") } returns changesResponse(changes, "token_$i", hasMore = true)
+        }
+        setupFakeTokenStore(mutableMapOf(HealthDataType.EXERCISE to "token_0"), mutableSetOf())
+        
+        val outcome = synchronizer.applyPendingChanges()
+        
+        assertEquals(20, fake.pagesApplied)
+        assertEquals("token_20", outcome.nextTokens[HealthDataType.EXERCISE])
+        assertTrue(outcome.continuationRequired)
+        assertTrue(outcome.requiresFullResync)
+    }
+
 }

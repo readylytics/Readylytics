@@ -74,4 +74,11 @@ interface StepRecordDao {
         chunkId: String,
         recordType: String,
     ): Int
+
+    @Query("SELECT * FROM step_records WHERE id IN (:ids)")
+    suspend fun getByIds(ids: List<String>): List<app.readylytics.health.core.databaseschema.data.local.entity.StepRecordEntity>
+
+    @Query("DELETE FROM step_records WHERE id IN (:ids)")
+    suspend fun deleteByIds(ids: List<String>): Int
+
 }

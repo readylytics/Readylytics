@@ -46,10 +46,20 @@ class HealthChangeSynchronizerImpl
         private val workoutEnrichmentRefresher: WorkoutEnrichmentRefresher =
             WorkoutEnrichmentRefresher(client, changeIngestionStore),
     ) : HealthChangeSynchronizer {
+    private class SyncBudget {
+        val startNanos = System.nanoTime()
+        var pagesApplied = 0
+        fun isExhausted(): Boolean {
+            val elapsedMs = (System.nanoTime() - startNanos) / 1_000_000L
+            return elapsedMs >= app.readylytics.health.core.healthconnect.domain.sync.DEFAULT_CHANGES_APPLY_BUDGET_MS || pagesApplied >= app.readylytics.health.core.healthconnect.domain.sync.MAX_CHANGE_PAGES_PER_RUN
+        }
+    }
+
         private val stagedIntervalTokens = mutableMapOf<String, String>()
 
         override suspend fun applyPendingChanges(): HealthChangeSyncOutcome {
             stagedIntervalTokens.clear()
+            val budget = SyncBudget()
             val prefs = settingsRepo.userPreferences.first()
             val zoneId = prefs.scoringZone()
             val deviceByType = prefs.deviceByDataType
@@ -92,6 +102,7 @@ class HealthChangeSynchronizerImpl
                     prefs = prefs,
                     affectedDates = affectedDates,
                     nextTokens = nextTokens,
+                    budget = budget,
                 )?.let { return it }
             }
 
@@ -100,6 +111,7 @@ class HealthChangeSynchronizerImpl
                 grantedPermissions = grantedPermissions,
                 zoneId = zoneId,
                 affectedDates = affectedDates,
+                budget = budget,
             )?.let { return it }
 
             return HealthChangeSyncOutcome(
@@ -113,15 +125,25 @@ class HealthChangeSynchronizerImpl
             dataType: HealthDataType,
             token: String,
             deviceByType: Map<String, String>,
-            zoneId: ZoneId,
-            prefs: UserPreferences,
-            affectedDates: MutableSet<LocalDate>,
+            zoneId: java.time.ZoneId,
+            prefs: app.readylytics.health.core.model.data.preferences.UserPreferences,
+            affectedDates: MutableSet<java.time.LocalDate>,
             nextTokens: MutableMap<HealthDataType, String>,
+            budget: SyncBudget,
         ): HealthChangeSyncOutcome? =
             try {
                 var currentToken: String = token
                 var hasMore = true
                 while (hasMore) {
+                    if (budget.isExhausted()) {
+                        return HealthChangeSyncOutcome(
+                            requiresFullResync = true,
+                            continuationRequired = true,
+                            nextTokens = nextTokens,
+                            affectedDates = affectedDates,
+                            fullResyncReason = "Budget exhausted",
+                        )
+                    }
                     val response = client.getChanges(currentToken)
                     if (response.changesTokenExpired) {
                         logD("HealthChangeSynchronizer") {
@@ -148,6 +170,7 @@ class HealthChangeSynchronizerImpl
 
                     // Return candidate token only after Room transaction succeeds. The sync
                     // coordinator persists candidates after derived summaries are durable.
+                    budget.pagesApplied++
                     currentToken = response.nextChangesToken
                     nextTokens[dataType] = currentToken
                     hasMore = response.hasMore
@@ -223,9 +246,11 @@ class HealthChangeSynchronizerImpl
             }.toMap()
 
         private suspend fun syncIntervalChanges(
+            @Suppress("UnusedParameter")
             grantedPermissions: Set<String>,
-            zoneId: ZoneId,
-            affectedDates: MutableSet<LocalDate>,
+            zoneId: java.time.ZoneId,
+            affectedDates: MutableSet<java.time.LocalDate>,
+            budget: SyncBudget,
         ): HealthChangeSyncOutcome? {
             for (intervalType in listOf(IngestionTokenType.DISTANCE, IngestionTokenType.ELEVATION_GAINED)) {
                 val outcome = syncSingleIntervalType(intervalType, grantedPermissions, zoneId, affectedDates)
@@ -263,6 +288,7 @@ class HealthChangeSynchronizerImpl
                     zoneId = zoneId,
                     affectedDates = affectedDates,
                     nextIntervalTokens = stagedIntervalTokens,
+                    budget = budget,
                 )
             } else {
                 null
@@ -305,6 +331,15 @@ class HealthChangeSynchronizerImpl
                         else -> error("Unsupported interval type: $tokenType")
                     }
                 while (hasMore) {
+                    if (budget.isExhausted()) {
+                        return HealthChangeSyncOutcome(
+                            requiresFullResync = true,
+                            continuationRequired = true,
+                            nextTokens = nextTokens,
+                            affectedDates = affectedDates,
+                            fullResyncReason = "Budget exhausted",
+                        )
+                    }
                     val response = client.getChanges(currentToken)
                     if (response.changesTokenExpired) {
                         logD("HealthChangeSynchronizer") {
@@ -313,12 +348,15 @@ class HealthChangeSynchronizerImpl
                         return HealthChangeSyncOutcome.fullResync("Change token expired for ${tokenType.tokenKey}")
                     }
 
-                    val intervalChanges = response.changes.mapNotNull { toIntervalChange(it, intervalKind) }
+                    val intervalChanges = response.changes
+                        .mapNotNull { toIntervalChange(it, intervalKind) }
                     if (intervalChanges.isNotEmpty()) {
                         val dates = workoutEnrichmentRefresher.refreshForIntervalChanges(intervalChanges, zoneId)
                         affectedDates.addAll(dates)
                     }
 
+                    budget.pagesApplied++
+                    budget.pagesApplied++
                     currentToken = response.nextChangesToken
                     nextIntervalTokens[tokenType.tokenKey] = currentToken
                     hasMore = response.hasMore
@@ -405,29 +443,51 @@ class HealthChangeSynchronizerImpl
 
         private suspend fun processChangesPage(
             dataType: HealthDataType,
-            changes: List<Change>,
-            affectedDates: MutableSet<LocalDate>,
+            changes: List<androidx.health.connect.client.changes.Change>,
+            affectedDates: MutableSet<java.time.LocalDate>,
             selectedDevice: String?,
-            zoneId: ZoneId,
-            prefs: UserPreferences,
-            preparedWorkouts: Map<String, PreparedWorkout>,
+            zoneId: java.time.ZoneId,
+            prefs: app.readylytics.health.core.model.data.preferences.UserPreferences,
+            preparedWorkouts: Map<String, app.readylytics.health.core.model.domain.sync.PreparedWorkout>,
         ) {
             val spans = pageSessionSpans(dataType, changes)
+            val allIds = changes.mapNotNull {
+                when (it) {
+                    is androidx.health.connect.client.changes.UpsertionChange -> it.record.metadata.id
+                    is androidx.health.connect.client.changes.DeletionChange -> it.recordId
+                    else -> null
+                }
+            }
+            affectedDates.addAll(changeIngestionStore.affectedDatesForRecords(dataType, allIds, zoneId))
+            val toDeleteIds = mutableListOf<String>()
+            val toUpsert = mutableListOf<androidx.health.connect.client.records.Record>()
+            
             for (change in changes) {
                 when (change) {
-                    is UpsertionChange -> {
+                    is androidx.health.connect.client.changes.UpsertionChange -> {
                         val record = change.record
-                        val deviceLabel = DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin)
-                        val id = record.metadata.id
-
-                        affectedDates.addAll(changeIngestionStore.affectedDatesForRecord(dataType, id, zoneId))
+                        val deviceLabel = app.readylytics.health.core.model.domain.model.DeviceLabel.from(
+                            record.metadata.device, record.metadata.dataOrigin
+                        )
                         val keep = selectedDevice == null || deviceLabel == selectedDevice
-                        // Excluded records are removed for every type. A matching EXERCISE
-                        // record updates in place so Denied re-reads preserve stored route
-                        // points and coalesced enrichment fields.
                         if (!keep || dataType != HealthDataType.EXERCISE) {
-                            changeIngestionStore.deleteRecord(dataType, id)
+                            toDeleteIds.add(record.metadata.id)
                         }
+                        if (keep) {
+                            affectedDates.addAll(getDatesForRecord(record, zoneId))
+                            toUpsert.add(record)
+                        }
+                    }
+                    is androidx.health.connect.client.changes.DeletionChange -> {
+                        toDeleteIds.add(change.recordId)
+                    }
+                }
+            }
+            changeIngestionStore.deleteRecords(dataType, toDeleteIds)
+            if (toUpsert.isNotEmpty()) {
+                upsertRecords(dataType, toUpsert, prefs, spans, preparedWorkouts, healthIngestionStore, changeIngestionStore)
+            }
+        }
                         if (keep) {
                             affectedDates.addAll(getDatesForRecord(record, zoneId))
                             upsertRecord(dataType, record, prefs, spans, preparedWorkouts)
@@ -514,152 +574,4 @@ class HealthChangeSynchronizerImpl
                 else -> null
             }
 
-        private suspend fun upsertRecord(
-            dataType: HealthDataType,
-            record: Record,
-            prefs: UserPreferences,
-            spans: SessionSpans,
-            preparedWorkouts: Map<String, PreparedWorkout>,
-        ) {
-            when (dataType) {
-                HealthDataType.SLEEP -> upsertSleep(record)
-                HealthDataType.HEART_RATE -> upsertHeartRate(record, spans)
-                HealthDataType.HRV -> upsertHrv(record, spans)
-                HealthDataType.EXERCISE -> upsertExercise(record, prefs, preparedWorkouts)
-                HealthDataType.WEIGHT -> upsertWeight(record)
-                HealthDataType.BODY_FAT -> upsertBodyFat(record)
-                HealthDataType.BLOOD_PRESSURE -> upsertBloodPressure(record)
-                HealthDataType.OXYGEN_SATURATION -> upsertOxygenSaturation(record)
-                HealthDataType.BODY_TEMPERATURE -> upsertBodyTemperature(record)
-                HealthDataType.STEPS -> upsertSteps(record)
-                HealthDataType.VO2_MAX -> upsertVo2Max(record)
-            }
-        }
-
-        private suspend fun upsertSleep(record: Record) {
-            if (record !is SleepSessionRecord) return
-            val domainRecord = record.toDomain()
-            val sleepInput = SleepDataMapper.mapSleepSession(domainRecord)
-            val stageInputs = SleepDataMapper.mapSleepSessionStages(domainRecord)
-            healthIngestionStore.persist(
-                emptyBatch(sleepSessions = listOf(sleepInput), sleepStages = stageInputs),
-            )
-        }
-
-        private suspend fun upsertHeartRate(record: Record, spans: SessionSpans) {
-            if (record !is HealthConnectHeartRateRecord) return
-            val domainHr = record.toDomain()
-            // Real session spans overlapping this record's own time range so the sample is tagged
-            // SLEEP/EXERCISE immediately instead of RESTING/sessionId=null until the next reconcile
-            // pass corrects it (HC-004).
-            val hrSources = HeartRateMapper.mapToInputs(listOf(domainHr), spans.sleepSessions, spans.workouts)
-            healthIngestionStore.replaceHeartRateSources(hrSources)
-        }
-
-        private suspend fun upsertHrv(record: Record, spans: SessionSpans) {
-            if (record !is HeartRateVariabilityRmssdRecord) return
-            val domainHrv = record.toDomain()
-            val hrvSources = HrvMapper.mapToInputs(listOf(domainHrv), spans.sleepSessions)
-            healthIngestionStore.replaceHrvSources(hrvSources)
-        }
-
-        private suspend fun upsertExercise(
-            record: Record,
-            prefs: UserPreferences,
-            preparedWorkouts: Map<String, PreparedWorkout>,
-        ) {
-            if (record !is ExerciseSessionRecord) return
-            // Prepared by prepareWorkouts() before this page's writer transaction opened
-            // (H5/WP-09) -- every EXERCISE UpsertionChange in this page has an entry.
-            val prepared = preparedWorkouts[record.metadata.id] ?: return
-            val thresholds = ZoneThresholds.create(
-                prefs.zone1MinBpm, prefs.zone1MaxBpm, prefs.zone2MaxBpm,
-                prefs.zone3MaxBpm, prefs.zone4MaxBpm,
-            )
-            // Provisional metrics from already-stored HR overlapping this session so a workout
-            // upsert has non-zero TRIMP/zones/avgHr immediately (HC-004); a sample arriving in the
-            // same changes batch is corrected by the next reconcile pass. EXERCISE-only filter
-            // matches SessionLinkReconcilerImpl.recomputeWorkouts.
-            val hrSamples = changeIngestionStore.heartRateSamplesForMetrics(
-                RecordType.EXERCISE.name,
-                record.startTime.toEpochMilli(),
-                record.endTime.toEpochMilli(),
-            )
-            val metrics = ZoneThresholds.computeMetrics(
-                record.startTime.toEpochMilli(), record.endTime.toEpochMilli(), hrSamples, thresholds,
-            )
-            val workoutWithMetrics = prepared.workout.copy(
-                durationMinutes = metrics.durationMinutes,
-                zone1Minutes = metrics.zoneMinutes[0],
-                zone2Minutes = metrics.zoneMinutes[1],
-                zone3Minutes = metrics.zoneMinutes[2],
-                zone4Minutes = metrics.zoneMinutes[3],
-                zone5Minutes = metrics.zoneMinutes[4],
-                trimp = metrics.trimp,
-                avgHr = metrics.avgHr,
-            )
-            // modelTrimp preservation and the route/distance/elevation merge against whatever is
-            // already stored both happen inside persistPreparedWorkouts (H5/WP-09).
-            changeIngestionStore.persistPreparedWorkouts(listOf(prepared.copy(workout = workoutWithMetrics)))
-        }
-
-        private suspend fun upsertWeight(record: Record) {
-            if (record !is HealthConnectWeightRecord) return
-            healthIngestionStore.persist(emptyBatch(weights = listOf(record.toDomain().toWeightInput())))
-        }
-
-        private suspend fun upsertBodyFat(record: Record) {
-            if (record !is HealthConnectBodyFatRecord) return
-            healthIngestionStore.persist(emptyBatch(bodyFatSamples = listOf(record.toDomain().toBodyFatInput())))
-        }
-
-        private suspend fun upsertBloodPressure(record: Record) {
-            if (record !is HealthConnectBloodPressureRecord) return
-            healthIngestionStore.persist(
-                emptyBatch(bloodPressureSamples = listOf(record.toDomain().toBloodPressureInput())),
-            )
-        }
-
-        private suspend fun upsertOxygenSaturation(record: Record) {
-            if (record !is OxygenSaturationRecord) return
-            healthIngestionStore.persist(
-                emptyBatch(oxygenSaturationSamples = listOf(record.toDomain().toOxygenSaturationInput())),
-            )
-        }
-
-        private suspend fun upsertBodyTemperature(record: Record) {
-            if (record !is BodyTemperatureRecord) return
-            healthIngestionStore.persist(
-                emptyBatch(bodyTemperatureSamples = listOf(record.toDomain().toBodyTemperatureInput())),
-            )
-        }
-
-        private suspend fun upsertSteps(record: Record) {
-            if (record !is StepsRecord) return
-            // Steps have no dedicated scoring table (daily totals come from StepCountFetcher's
-            // aggregate reads) -- this row exists purely so a later DeletionChange for this record
-            // can resolve its own date range (HC-005).
-            val stepInput = StepRecordInput(
-                id = record.metadata.id,
-                startTime = record.startTime.toEpochMilli(),
-                endTime = record.endTime.toEpochMilli(),
-                count = record.count,
-                deviceName = DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin),
-            )
-            healthIngestionStore.persist(emptyBatch(stepRecords = listOf(stepInput)))
-        }
-
-        private suspend fun upsertVo2Max(record: Record) {
-            if (record !is Vo2MaxRecord) return
-            val domain = record.toDomain()
-            val vo2Input =
-                Vo2MaxInput(
-                    id = domain.id,
-                    timestampMs = domain.time.toEpochMilli(),
-                    vo2Max = domain.vo2MillilitersPerMinuteKilogram.toFloat(),
-                    measurementMethod = domain.measurementMethod,
-                    deviceName = domain.deviceName,
-                )
-            healthIngestionStore.persist(emptyBatch(vo2MaxSamples = listOf(vo2Input)))
-        }
-    }
+}

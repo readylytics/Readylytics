@@ -74,4 +74,11 @@ interface HeartRateMaintenanceDao : HeartRateRollupDao {
         sourceRecordRef: Long,
         timestamps: List<Long>,
     ): Int
+
+    @Query("SELECT * FROM heart_rate_records WHERE sourceRecordRef IN (:sourceRecordRefs)")
+    suspend fun getBySourceRecordRefs(sourceRecordRefs: List<Long>): List<app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity>
+
+    @Query("DELETE FROM heart_rate_records WHERE sourceRecordRef IN (:sourceRecordRefs)")
+    suspend fun deleteBySourceRecordRefs(sourceRecordRefs: List<Long>): Int
+
 }

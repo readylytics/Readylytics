@@ -29,6 +29,19 @@ interface HealthChangeIngestionStore {
     suspend fun deleteRecord(type: HealthDataType, hcRecordId: String)
 
     /**
+     * Resolves the calendar dates for a batch of already-persisted HC records with [ids].
+     */
+    suspend fun affectedDatesForRecords(
+        type: HealthDataType,
+        ids: List<String>,
+        zoneId: ZoneId,
+    ): Set<LocalDate>
+
+    /** Deletes the local row(s) owned by a batch of HC records, by type. */
+    suspend fun deleteRecords(type: HealthDataType, ids: List<String>)
+
+
+    /**
      * Sleep and workout session spans whose [SleepSessionInput]/[WorkoutInput] time range
      * overlaps `[startMs, endMs]`, for `SessionLinkSweep`-based session tagging of a changes-path
      * record (or page of records) at write time (HC-004).

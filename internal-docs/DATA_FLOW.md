@@ -2732,3 +2732,9 @@ Keep this document synchronized with the source.
 - **Reason-to-Closure Mapping:** In `ScoreInvalidation.dependencyClosure`, most ingestion modifications (`HOT_TIER_ROLLUP`, `RETENTION_CLEANUP`, `RECORD_DELETION`, `INTERVAL_CORRECTION`, `RESTORE_REGENERATE`, `AUTHORITATIVE_SOURCE_REPLACEMENT`) propagate to the entire retained suffix up through today. Legacy/unknown reasons are treated as `UNKNOWN` and mapped conservatively to the full suffix. The only reason with a bounded cutoff is `RECOMMENDATION_EXAMPLES` (30 days).
 - **Score-Day Attribution:** Source replacement captures both old and incoming HR/HRV session links before replacing rows, so invalidation retains sessions whose links are removed or changed. Linked sleep samples and deletions resolve to the canonical sleep score day: the session's localized wake/end-time date; linked workouts use their localized start-time date.
 - **Acknowledgment Behavior:** Dirty tickets are drained implicitly via `HealthResyncWorker` loops and other workers. Pending tickets are only removed from the dirty ranges table upon successful publication (acknowledgment) of recomputed days. Failure to acknowledge leaves the tickets safely intact, and if the DB schema/generation changes, work resumes from a new immutable snapshot.
+
+
+### Changes Path and Token Updates (Phase 2)
+Changes API polling now batches deletes, reads, and persists (up to 500 per chunk, max 20 pages or 60s foreground budget per run).
+Candidate tokens are only committed durably after their respective summaries or durable repair tickets cover the entire applied page.
+A budget exhaustion stops polling early, emitting REQUIRES_HISTORICAL_RESYNC with continuationRequired=true, which retains the latest fetched tokens for a later resumption.
