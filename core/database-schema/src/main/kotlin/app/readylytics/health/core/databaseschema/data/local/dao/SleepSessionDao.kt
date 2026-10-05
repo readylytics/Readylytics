@@ -169,7 +169,7 @@ interface SleepSessionDao {
     suspend fun deleteBetween(startMs: Long, endMs: Long): Int
 
     @Query("SELECT * FROM sleep_sessions WHERE id IN (:ids)")
-    suspend fun getByIds(ids: List<String>): List<app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity>
+    suspend fun getByIds(ids: List<String>): List<SleepSessionEntity>
 
     @Query("DELETE FROM sleep_sessions WHERE id IN (:ids)")
     suspend fun deleteByIds(ids: List<String>): Int

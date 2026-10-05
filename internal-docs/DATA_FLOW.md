@@ -2735,6 +2735,6 @@ Keep this document synchronized with the source.
 
 
 ### Changes Path and Token Updates (Phase 2)
-Changes API polling now batches deletes, reads, and persists (up to 500 per chunk, max 20 pages or 60s foreground budget per run).
-Candidate tokens are only committed durably after their respective summaries or durable repair tickets cover the entire applied page.
-A budget exhaustion stops polling early, emitting REQUIRES_HISTORICAL_RESYNC with continuationRequired=true, which retains the latest fetched tokens for a later resumption.
+Changes API polling now batches deletes, reads, and persists (up to 500 per chunk, max 20 pages or 60s foreground budget per run, both checked before fetching another page). Within one page, when the same HC record id appears more than once (e.g. an upsert then a deletion), only the last event for that id is applied -- `HealthChangeSynchronizerImpl.lastEventPerId` resolves this before the page's batched delete/upsert calls run.
+Candidate tokens are only committed durably after their respective summaries or durable repair tickets cover the entire applied page: `DailySyncUseCase.run()` commits once, after the walk-forward recompute covers every applied page's affected dates, and skips that commit entirely when `requiresHistoricalResync` is true (an out-of-window date older than the inline floor is covered by the escalation instead, never by a committed token).
+A budget exhaustion stops polling early, emitting REQUIRES_HISTORICAL_RESYNC with continuationRequired=true and the already-applied-page tokens. `DailySyncUseCase`'s continuation loop commits exactly those tokens before calling `applyPendingChanges()` again -- every already-applied page already committed its own Room transaction (and, for deletes/interval corrections, its own durable dirty-range ticket) before that outcome was returned, so this is what lets the next call resume past this run's progress instead of re-fetching the same pages forever.

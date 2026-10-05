@@ -169,23 +169,37 @@ class DailySyncUseCase
                         ensureActive()
                         val outcome = changeSynchronizer.applyPendingChanges()
                         affectedDates.addAll(outcome.affectedDates)
-                        
+
                         if (outcome.requiresFullResync) {
                             requiresHistoricalResync = true
                             fullResyncReason = outcome.fullResyncReason.takeIf { it.isNotEmpty() } ?: fullResyncReason
                             if (!outcome.continuationRequired) {
+                                // A genuine full-resync reason (not budget exhaustion): no page of
+                                // this call's token advanced far enough to be safely tokenized, so
+                                // nothing accumulated so far is committed. The caller retries after
+                                // a historical resync, which re-derives everything from scratch.
                                 return@withContext Result.failure(
                                     "Requires historical resync: ${outcome.fullResyncReason}",
                                     "REQUIRES_HISTORICAL_RESYNC",
                                 )
                             }
                         }
-                        
+
                         if (outcome.nextTokens.isNotEmpty()) {
                             nextTokens.putAll(outcome.nextTokens)
                         }
-                        
+
                         continuationRequired = outcome.continuationRequired
+                        if (continuationRequired) {
+                            // Budget exhaustion: every page applied so far already committed its
+                            // own Room transaction (and, for deletes/interval corrections, its own
+                            // durable dirty-range ticket) before this outcome was returned, so the
+                            // underlying data for those pages can never be lost. Persisting the
+                            // candidate tokens now is what lets the next applyPendingChanges() call
+                            // resume past this point instead of re-fetching -- and re-applying --
+                            // the same already-committed pages forever.
+                            changeSynchronizer.commitTokens(outcome.nextTokens)
+                        }
                     }
 
                     val standardDays = (0 until windowDays).map { today.minusDays(it.toLong()) }.toSet()
@@ -399,9 +413,12 @@ class DailySyncUseCase
                             "SYNC_PARTIAL_FAILURE",
                         )
                     }
-                    changeSynchronizer.commitTokens(nextTokens)
-                    
                     if (requiresHistoricalResync) {
+                        // An out-of-window affected date older than inlineFloor is NOT covered by
+                        // this run's walk-forward recompute above, and nothing else durably
+                        // tickets it here -- so the candidate tokens must stay uncommitted. The
+                        // REQUIRES_HISTORICAL_RESYNC escalation is what covers it instead: the
+                        // caller's resync re-derives everything from scratch, tokens included.
                         val staleDates =
                             outOfWindowAffected.filter { it.isBefore(inlineFloor) }.sorted().take(MAX_REPORTED_DATES)
                         Result.failure(
@@ -409,6 +426,9 @@ class DailySyncUseCase
                             "REQUIRES_HISTORICAL_RESYNC",
                         )
                     } else {
+                        // Every affected date was covered by the walk-forward recompute just run,
+                        // so the candidate tokens are now safe to commit.
+                        changeSynchronizer.commitTokens(nextTokens)
                         settingsRepo.updateLastSyncTimestamp(clock.millis())
                         Result.success(Unit)
                     }

@@ -157,7 +157,7 @@ interface OxygenSaturationRecordDao {
     suspend fun deleteBetween(startMs: Long, endMs: Long): Int
 
     @Query("SELECT * FROM oxygen_saturation_records WHERE id IN (:sourceRecordIds)")
-    suspend fun getBySourceRecordIds(sourceRecordIds: List<String>): List<app.readylytics.health.core.databaseschema.data.local.entity.OxygenSaturationRecordEntity>
+    suspend fun getBySourceRecordIds(sourceRecordIds: List<String>): List<OxygenSaturationRecordEntity>
 
     @Query("DELETE FROM oxygen_saturation_records WHERE id IN (:sourceRecordIds)")
     suspend fun deleteBySourceRecordIds(sourceRecordIds: List<String>): Int

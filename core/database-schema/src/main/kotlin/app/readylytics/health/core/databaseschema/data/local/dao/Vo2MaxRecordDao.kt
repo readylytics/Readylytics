@@ -45,8 +45,23 @@ interface Vo2MaxScanReconciliationDao {
     ): Int
 }
 
+/**
+ * Bind-safe batch lookup/delete by id. Split out of [Vo2MaxRecordDao] -- which owns the record's
+ * own single-row CRUD, retention and backup paging -- so neither interface crosses detekt's
+ * `TooManyFunctions` threshold, the same structural split already used for
+ * [SourceRecordDao]/[SourceRecordResolutionDao]. [Vo2MaxRecordDao] extends this interface, so
+ * callers keep using the single `Vo2MaxRecordDao` type unchanged.
+ */
+interface Vo2MaxBatchDao {
+    @Query("SELECT * FROM vo2_max_records WHERE id IN (:ids)")
+    suspend fun getByIds(ids: List<String>): List<Vo2MaxRecordEntity>
+
+    @Query("DELETE FROM vo2_max_records WHERE id IN (:ids)")
+    suspend fun deleteByIds(ids: List<String>): Int
+}
+
 @Dao
-interface Vo2MaxRecordDao : Vo2MaxScanReconciliationDao {
+interface Vo2MaxRecordDao : Vo2MaxScanReconciliationDao, Vo2MaxBatchDao {
     @Upsert
     suspend fun upsertAll(records: List<Vo2MaxRecordEntity>)
 
@@ -102,11 +117,4 @@ interface Vo2MaxRecordDao : Vo2MaxScanReconciliationDao {
      */
     @Query("DELETE FROM vo2_max_records")
     suspend fun deleteAll(): Int
-
-    @Query("SELECT * FROM vo2_max_records WHERE id IN (:ids)")
-    suspend fun getByIds(ids: List<String>): List<app.readylytics.health.core.databaseschema.data.local.entity.Vo2MaxRecordEntity>
-
-    @Query("DELETE FROM vo2_max_records WHERE id IN (:ids)")
-    suspend fun deleteByIds(ids: List<String>): Int
-
 }

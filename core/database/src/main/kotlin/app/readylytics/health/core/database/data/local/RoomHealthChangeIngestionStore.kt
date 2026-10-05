@@ -2,17 +2,12 @@ package app.readylytics.health.core.database.data.local
 
 import app.readylytics.health.core.databaseschema.data.local.dao.HealthMutationStateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.Vo2MaxRecordDao
-import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.model.data.preferences.scoringZone
 import app.readylytics.health.core.model.domain.model.DomainHeartRateSample
 import app.readylytics.health.core.model.domain.model.HealthDataType
-import app.readylytics.health.core.model.domain.model.RouteState
-import app.readylytics.health.core.model.domain.model.WorkoutRoutePoint
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
-import app.readylytics.health.core.model.domain.repository.ReadOutcome
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
-import app.readylytics.health.core.model.domain.repository.map
 import app.readylytics.health.core.databaseschema.data.local.dao.upsertIntervalSourceRecord
 import app.readylytics.health.core.model.domain.sync.HealthChangeIngestionStore
 import app.readylytics.health.core.model.domain.sync.IntervalKind
@@ -21,7 +16,6 @@ import app.readylytics.health.core.model.domain.sync.PreparedWorkout
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.sync.SessionSpans
 import app.readylytics.health.core.model.domain.sync.WorkoutInput
-import app.readylytics.health.core.model.domain.sync.mergeEnrichment
 import app.readylytics.health.core.model.domain.sync.overlaps
 import app.readylytics.health.core.model.domain.util.RetentionBounds
 import kotlinx.coroutines.CancellationException
@@ -45,6 +39,11 @@ class RoomHealthChangeIngestionStore
         private val transactionRunner: TransactionRunner? = null,
         private val vo2MaxRecordDao: Vo2MaxRecordDao? = null,
     ) : HealthChangeIngestionStore {
+        private val deletionJournalContext =
+            DeletionJournalContext(
+                daos, vo2MaxRecordDao, dirtyRangeStore, healthMutationStateDao, settingsRepo, transactionRunner,
+            )
+
         override suspend fun affectedDatesForRecord(
             type: HealthDataType,
             hcRecordId: String,
@@ -56,7 +55,7 @@ class RoomHealthChangeIngestionStore
                         datesBetween(it.startTime, it.endTime, zoneId)
                     } ?: emptySet()
                 HealthDataType.HEART_RATE ->
-                    datesForSourceRef(
+                    daos.datesForSourceRef(
                         sourceRef = daos.sourceRecordDao.getSourceRef(hcRecordId),
                         fetchRecords = { ref ->
                             daos.heartRateDao.getBySourceRecordRef(ref).map { it.timestampMs to it.sessionId }
@@ -64,7 +63,7 @@ class RoomHealthChangeIngestionStore
                         zoneId = zoneId,
                     )
                 HealthDataType.HRV ->
-                    datesForSourceRef(
+                    daos.datesForSourceRef(
                         sourceRef = daos.sourceRecordDao.getSourceRef(hcRecordId),
                         fetchRecords = { ref ->
                             daos.hrvDao.getBySourceRecordRef(ref).map { it.timestampMs to it.sessionId }
@@ -115,127 +114,9 @@ class RoomHealthChangeIngestionStore
             }
             return dates
         }
-            HealthDataType.HEART_RATE ->
-                daos.datesForSourceRefs(
-                    daos.sourceRecordDao.getSourceRefs(chunk),
-                    { daos.heartRateDao.getBySourceRecordRefs(it).map { r -> r.timestampMs to r.sessionId } },
-                    zoneId,
-                )
-            HealthDataType.HRV ->
-                daos.datesForSourceRefs(
-                    daos.sourceRecordDao.getSourceRefs(chunk),
-                    { daos.hrvDao.getBySourceRecordRefs(it).map { r -> r.timestampMs to r.sessionId } },
-                    zoneId,
-                )
-            HealthDataType.EXERCISE ->
-                daos.workoutDao.getByIds(chunk).flatMap {
-                    datesBetween(it.startTime, it.endTime, zoneId)
-                }
-            HealthDataType.WEIGHT ->
-                daos.weightRecordDao.getBySourceRecordIds(chunk).map { dateFor(it.timestampMs, zoneId) }
-            HealthDataType.BODY_FAT ->
-                daos.bodyFatRecordDao.getBySourceRecordIds(chunk).map { dateFor(it.timestampMs, zoneId) }
-            HealthDataType.BLOOD_PRESSURE ->
-                daos.bloodPressureRecordDao.getBySourceRecordIds(chunk)
-                    .map { dateFor(it.timestampMs, zoneId) }
-            HealthDataType.OXYGEN_SATURATION ->
-                daos.oxygenSaturationRecordDao.getBySourceRecordIds(chunk)
-                    .map { dateFor(it.timestampMs, zoneId) }
-            HealthDataType.BODY_TEMPERATURE ->
-                daos.bodyTemperatureRecordDao.getBySourceRecordIds(chunk)
-                    .map { dateFor(it.timestampMs, zoneId) }
-            HealthDataType.STEPS ->
-                daos.stepRecordDao.getByIds(chunk).flatMap {
-                    datesBetween(it.startTime, it.endTime, zoneId)
-                }
-            HealthDataType.VO2_MAX ->
-                vo2MaxRecordDao?.getByIds(chunk)?.map { dateFor(it.timestampMs, zoneId) } ?: emptyList()
-        }
-                        HealthDataType.HEART_RATE ->
-                            datesForSourceRefs(daos.sourceRecordDao.getSourceRefs(chunk), { daos.heartRateDao.getBySourceRecordRefs(it).map { r -> r.timestampMs to r.sessionId } }, zoneId)
-                        HealthDataType.HRV ->
-                            datesForSourceRefs(daos.sourceRecordDao.getSourceRefs(chunk), { daos.hrvDao.getBySourceRecordRefs(it).map { r -> r.timestampMs to r.sessionId } }, zoneId)
-                        HealthDataType.EXERCISE ->
-                            daos.workoutDao.getByIds(chunk).flatMap {
-                                datesBetween(it.startTime, it.endTime, zoneId)
-                            }
-                        HealthDataType.WEIGHT ->
-                            daos.weightRecordDao.getBySourceRecordIds(chunk).map { dateFor(it.timestampMs, zoneId) }
-                        HealthDataType.BODY_FAT ->
-                            daos.bodyFatRecordDao.getBySourceRecordIds(chunk).map { dateFor(it.timestampMs, zoneId) }
-                        HealthDataType.BLOOD_PRESSURE ->
-                            daos.bloodPressureRecordDao.getBySourceRecordIds(chunk)
-                                .map { dateFor(it.timestampMs, zoneId) }
-                        HealthDataType.OXYGEN_SATURATION ->
-                            daos.oxygenSaturationRecordDao.getBySourceRecordIds(chunk)
-                                .map { dateFor(it.timestampMs, zoneId) }
-                        HealthDataType.BODY_TEMPERATURE ->
-                            daos.bodyTemperatureRecordDao.getBySourceRecordIds(chunk)
-                                .map { dateFor(it.timestampMs, zoneId) }
-                        HealthDataType.STEPS ->
-                            daos.stepRecordDao.getByIds(chunk).flatMap {
-                                datesBetween(it.startTime, it.endTime, zoneId)
-                            }
-                        HealthDataType.VO2_MAX ->
-                            vo2MaxRecordDao?.getByIds(chunk)?.map { dateFor(it.timestampMs, zoneId) } ?: emptyList()
-                    }
-                )
-            }
-            return dates
-        }
-            return dates
-        }
-            return dates
-        }
 
-        override suspend fun deleteRecord(type: HealthDataType, hcRecordId: String) {
-            val zoneId =
-                try {
-                    settingsRepo?.userPreferences?.first()?.scoringZone() ?: clock.zone
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (_: Exception) {
-                    clock.zone
-                }
-            deleteRecordAndJournal(type, hcRecordId, zoneId)
-        }
-
-        suspend fun RoomHealthChangeIngestionStore.deleteRecordAndJournal(
-            type: HealthDataType,
-            hcRecordId: String,
-            zoneId: ZoneId,
-            reason: String = "RECORD_DELETION",
-            snapshotId: String = "ACTIVE",
-            today: LocalDate = LocalDate.now(clock.withZone(zoneId)),
-        ): Set<LocalDate> =
-            transactionRunner.runOrDirect {
-                val affected = affectedDatesForRecord(type, hcRecordId, zoneId)
-                if (affected.isNotEmpty() && dirtyRangeStore != null && healthMutationStateDao != null) {
-                    val earliest = affected.minOrNull()!!
-                    val latest = affected.maxOrNull()!!
-                    val prefs = settingsRepo?.userPreferences?.first()
-                    val retentionStart = RetentionBounds.resolveResyncStartDate(prefs ?: UserPreferences(), today)
-                    val closure =
-                        ScoreInvalidation.dependencyClosure(
-                            changed = ScoreInvalidation.AffectedRange(earliest, latest),
-                            reason = ScoreInvalidation.reasonFromStored(reason),
-                            retentionStart = retentionStart,
-                            today = today,
-                        )
-                    if (closure != null) {
-                        healthMutationStateDao.incrementGeneration()
-                        dirtyRangeStore.append(
-                            start = closure.start,
-                            endInclusive = closure.endInclusive,
-                            reason = reason,
-                            snapshotId = snapshotId,
-                        )
-                    }
-                }
-                deleteFromDaos(daos, vo2MaxRecordDao, type, hcRecordId)
-                affected
-            }
-
+        override suspend fun deleteRecord(type: HealthDataType, hcRecordId: String) =
+            deleteRecords(type, listOf(hcRecordId))
 
         override suspend fun deleteRecords(type: HealthDataType, ids: List<String>) {
             if (ids.isEmpty()) return
@@ -247,36 +128,7 @@ class RoomHealthChangeIngestionStore
                 } catch (_: Exception) {
                     clock.zone
                 }
-            
-            transactionRunner.runOrDirect {
-                val affected = affectedDatesForRecords(type, ids, zoneId)
-                if (affected.isNotEmpty() && dirtyRangeStore != null && healthMutationStateDao != null) {
-                    val today = LocalDate.now(clock.withZone(zoneId))
-                    val earliest = affected.minOrNull()!!
-                    val latest = affected.maxOrNull()!!
-                    val prefs = settingsRepo?.userPreferences?.first()
-                    val retentionStart = RetentionBounds.resolveResyncStartDate(prefs ?: UserPreferences(), today)
-                    val closure =
-                        ScoreInvalidation.dependencyClosure(
-                            changed = ScoreInvalidation.AffectedRange(earliest, latest),
-                            reason = ScoreInvalidation.reasonFromStored("RECORD_DELETION"),
-                            retentionStart = retentionStart,
-                            today = today,
-                        )
-                    if (closure != null) {
-                        healthMutationStateDao.incrementGeneration()
-                        dirtyRangeStore.append(
-                            start = closure.start,
-                            endInclusive = closure.endInclusive,
-                            reason = "RECORD_DELETION",
-                            snapshotId = "ACTIVE",
-                        )
-                    }
-                }
-                ids.chunked(500).forEach { chunk ->
-                    deleteFromDaosPlural(daos, vo2MaxRecordDao, type, chunk)
-                }
-            }
+            deleteRecordsAndJournal(deletionJournalContext, type, ids, zoneId, LocalDate.now(clock.withZone(zoneId)))
         }
 
         override suspend fun sessionSpansOverlapping(startMs: Long, endMs: Long): SessionSpans =
@@ -381,48 +233,5 @@ class RoomHealthChangeIngestionStore
             }
         }
     }
-
-/**
- * Resolves [PreparedWorkout.route]/[PreparedWorkout.distanceMeters]/[PreparedWorkout.elevationMeters]
- * against [existing] via [mergeEnrichment]: an Available outcome (including an authoritatively
- * empty/null value) replaces, Denied/Unsupported preserves the stored value. `avgSpeedKmh` is
- * always re-derived from the *selected* distance and this workout's own duration, and cleared
- * when that distance is authoritatively absent -- never preserved independently of distance.
- */
-private fun PreparedWorkout.toMergedEntity(existing: WorkoutRecordEntity?): WorkoutRecordEntity {
-    val distanceMeters = mergeEnrichment(existing?.totalDistanceMeters, this.distanceMeters)
-    val elevationGainMeters = mergeEnrichment(existing?.elevationGainMeters, elevationMeters)
-    val routeState =
-        mergeEnrichment(
-            existing?.routeState ?: RouteState.NOT_AVAILABLE,
-            route.map { points -> if (points.isNotEmpty()) RouteState.IMPORTED else RouteState.NOT_AVAILABLE },
-        )
-    val avgSpeedKmh = deriveWorkoutAvgSpeedKmh(distanceMeters, workout.startTime, workout.endTime)
-    return workout.toEntity().copy(
-        modelTrimp = existing?.modelTrimp,
-        modelTrimpSourceRevision = existing?.modelTrimpSourceRevision,
-        modelTrimpSnapshotId = existing?.modelTrimpSnapshotId,
-        modelTrimpAlgorithmRevision = existing?.modelTrimpAlgorithmRevision,
-        modelTrimpQuality = existing?.modelTrimpQuality,
-        totalDistanceMeters = distanceMeters,
-        avgSpeedKmh = avgSpeedKmh,
-        elevationGainMeters = elevationGainMeters,
-        routeState = routeState,
-    )
-}
-
-/**
- * Touches `workout_route_points` only when [PreparedWorkout.route] is [ReadOutcome.Available] --
- * a Denied/Unsupported read must never delete an already-imported route it merely couldn't
- * re-read this round (H5/WP-09).
- */
-private suspend fun applyRoutePoints(daos: HealthRecordDaos, prepared: PreparedWorkout) {
-    val route = prepared.route
-    if (route !is ReadOutcome.Available) return
-    daos.workoutRoutePointDao.deleteForWorkouts(listOf(prepared.workout.id))
-    if (route.data.isNotEmpty()) {
-        daos.workoutRoutePointDao.insertAll(route.data.map(WorkoutRoutePoint::toEntity))
-    }
-}
 
 

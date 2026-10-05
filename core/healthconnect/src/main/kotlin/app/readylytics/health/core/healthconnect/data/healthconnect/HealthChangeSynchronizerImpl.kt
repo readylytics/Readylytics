@@ -17,8 +17,10 @@ import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.data.preferences.scoringZone
 import app.readylytics.health.core.model.domain.model.*
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
+import app.readylytics.health.core.healthconnect.domain.sync.DEFAULT_CHANGES_APPLY_BUDGET_MS
 import app.readylytics.health.core.healthconnect.domain.sync.HealthChangeSyncOutcome
 import app.readylytics.health.core.healthconnect.domain.sync.HealthChangeSynchronizer
+import app.readylytics.health.core.healthconnect.domain.sync.MAX_CHANGE_PAGES_PER_RUN
 import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.core.model.domain.sync.mappers.*
 import app.readylytics.health.core.model.domain.util.logD
@@ -49,23 +51,42 @@ class HealthChangeSynchronizerImpl
     private class SyncBudget {
         val startNanos = System.nanoTime()
         var pagesApplied = 0
+
         fun isExhausted(): Boolean {
             val elapsedMs = (System.nanoTime() - startNanos) / 1_000_000L
-            return elapsedMs >= app.readylytics.health.core.healthconnect.domain.sync.DEFAULT_CHANGES_APPLY_BUDGET_MS || pagesApplied >= app.readylytics.health.core.healthconnect.domain.sync.MAX_CHANGE_PAGES_PER_RUN
+            return elapsedMs >= DEFAULT_CHANGES_APPLY_BUDGET_MS || pagesApplied >= MAX_CHANGE_PAGES_PER_RUN
         }
+    }
+
+    /**
+     * Mutable state threaded through one [applyPendingChanges] run: affected dates/candidate
+     * tokens collected so far across every data type and interval kind, and the budget they all
+     * share. Bundled into one holder (rather than three separate parameters) so the page-apply
+     * functions below stay under detekt's LongParameterList threshold.
+     */
+    private class SyncRunState(
+        val affectedDates: MutableSet<LocalDate>,
+        val nextTokens: MutableMap<HealthDataType, String>,
+        val budget: SyncBudget,
+    ) {
+        fun budgetExhaustedOutcome(): HealthChangeSyncOutcome =
+            HealthChangeSyncOutcome(
+                requiresFullResync = true,
+                continuationRequired = true,
+                nextTokens = nextTokens,
+                affectedDates = affectedDates,
+                fullResyncReason = "Budget exhausted",
+            )
     }
 
         private val stagedIntervalTokens = mutableMapOf<String, String>()
 
         override suspend fun applyPendingChanges(): HealthChangeSyncOutcome {
             stagedIntervalTokens.clear()
-            val budget = SyncBudget()
             val prefs = settingsRepo.userPreferences.first()
             val zoneId = prefs.scoringZone()
             val deviceByType = prefs.deviceByDataType
-
-            val affectedDates = mutableSetOf<LocalDate>()
-            val nextTokens = mutableMapOf<HealthDataType, String>()
+            val state = SyncRunState(mutableSetOf(), mutableMapOf(), SyncBudget())
 
             // A failed lookup must fail this sync (the caller retries), never read as "nothing
             // granted": that would suspend -- i.e. delete -- every change token, and the next sync
@@ -94,30 +115,16 @@ class HealthChangeSynchronizerImpl
                     return HealthChangeSyncOutcome.fullResync("Missing change token for $dataType")
                 }
 
-                applyChangesForType(
-                    dataType = dataType,
-                    token = token,
-                    deviceByType = deviceByType,
-                    zoneId = zoneId,
-                    prefs = prefs,
-                    affectedDates = affectedDates,
-                    nextTokens = nextTokens,
-                    budget = budget,
-                )?.let { return it }
+                applyChangesForType(dataType, token, deviceByType, zoneId, prefs, state)?.let { return it }
             }
 
             // OD-4: Track distance/elevation interval corrections independently
-            syncIntervalChanges(
-                grantedPermissions = grantedPermissions,
-                zoneId = zoneId,
-                affectedDates = affectedDates,
-                budget = budget,
-            )?.let { return it }
+            syncIntervalChanges(grantedPermissions, zoneId, state)?.let { return it }
 
             return HealthChangeSyncOutcome(
-                affectedDates = affectedDates,
+                affectedDates = state.affectedDates,
                 requiresFullResync = false,
-                nextTokens = nextTokens,
+                nextTokens = state.nextTokens,
             )
         }
 
@@ -125,25 +132,15 @@ class HealthChangeSynchronizerImpl
             dataType: HealthDataType,
             token: String,
             deviceByType: Map<String, String>,
-            zoneId: java.time.ZoneId,
-            prefs: app.readylytics.health.core.model.data.preferences.UserPreferences,
-            affectedDates: MutableSet<java.time.LocalDate>,
-            nextTokens: MutableMap<HealthDataType, String>,
-            budget: SyncBudget,
+            zoneId: ZoneId,
+            prefs: UserPreferences,
+            state: SyncRunState,
         ): HealthChangeSyncOutcome? =
             try {
                 var currentToken: String = token
                 var hasMore = true
                 while (hasMore) {
-                    if (budget.isExhausted()) {
-                        return HealthChangeSyncOutcome(
-                            requiresFullResync = true,
-                            continuationRequired = true,
-                            nextTokens = nextTokens,
-                            affectedDates = affectedDates,
-                            fullResyncReason = "Budget exhausted",
-                        )
-                    }
+                    if (state.budget.isExhausted()) return state.budgetExhaustedOutcome()
                     val response = client.getChanges(currentToken)
                     if (response.changesTokenExpired) {
                         logD("HealthChangeSynchronizer") {
@@ -160,7 +157,7 @@ class HealthChangeSynchronizerImpl
                         processChangesPage(
                             dataType = dataType,
                             changes = response.changes,
-                            affectedDates = affectedDates,
+                            affectedDates = state.affectedDates,
                             selectedDevice = selectedDevice,
                             zoneId = zoneId,
                             prefs = prefs,
@@ -170,9 +167,9 @@ class HealthChangeSynchronizerImpl
 
                     // Return candidate token only after Room transaction succeeds. The sync
                     // coordinator persists candidates after derived summaries are durable.
-                    budget.pagesApplied++
+                    state.budget.pagesApplied++
                     currentToken = response.nextChangesToken
-                    nextTokens[dataType] = currentToken
+                    state.nextTokens[dataType] = currentToken
                     hasMore = response.hasMore
                 }
                 null
@@ -248,12 +245,11 @@ class HealthChangeSynchronizerImpl
         private suspend fun syncIntervalChanges(
             @Suppress("UnusedParameter")
             grantedPermissions: Set<String>,
-            zoneId: java.time.ZoneId,
-            affectedDates: MutableSet<java.time.LocalDate>,
-            budget: SyncBudget,
+            zoneId: ZoneId,
+            state: SyncRunState,
         ): HealthChangeSyncOutcome? {
             for (intervalType in listOf(IngestionTokenType.DISTANCE, IngestionTokenType.ELEVATION_GAINED)) {
-                val outcome = syncSingleIntervalType(intervalType, grantedPermissions, zoneId, affectedDates)
+                val outcome = syncSingleIntervalType(intervalType, grantedPermissions, zoneId, state)
                 if (outcome != null) return outcome
             }
             return null
@@ -263,7 +259,7 @@ class HealthChangeSynchronizerImpl
             intervalType: IngestionTokenType,
             grantedPermissions: Set<String>,
             zoneId: ZoneId,
-            affectedDates: MutableSet<LocalDate>,
+            state: SyncRunState,
         ): HealthChangeSyncOutcome? {
             val typePermissions = recordClassesFor(intervalType).map { HealthPermission.getReadPermission(it) }
             val isGranted = typePermissions.all { it in grantedPermissions }
@@ -282,14 +278,7 @@ class HealthChangeSynchronizerImpl
 
             val token = storedToken ?: bootstrapIntervalToken(intervalType)
             return if (token != null) {
-                applyChangesForIntervalType(
-                    tokenType = intervalType,
-                    token = token,
-                    zoneId = zoneId,
-                    affectedDates = affectedDates,
-                    nextIntervalTokens = stagedIntervalTokens,
-                    budget = budget,
-                )
+                applyChangesForIntervalType(intervalType, token, zoneId, stagedIntervalTokens, state)
             } else {
                 null
             }
@@ -314,32 +303,39 @@ class HealthChangeSynchronizerImpl
                 }
             }
 
+        private fun intervalKindFor(tokenType: IngestionTokenType): IntervalKind =
+            when (tokenType) {
+                IngestionTokenType.DISTANCE -> IntervalKind.DISTANCE
+                IngestionTokenType.ELEVATION_GAINED -> IntervalKind.ELEVATION_GAINED
+                else -> error("Unsupported interval type: $tokenType")
+            }
+
+        /** One page of one interval type's changes: resolves affected dates, never touches tokens/budget. */
+        private suspend fun applyIntervalChangesPage(
+            changes: List<Change>,
+            intervalKind: IntervalKind,
+            zoneId: ZoneId,
+            affectedDates: MutableSet<LocalDate>,
+        ) {
+            val intervalChanges = changes.mapNotNull { toIntervalChange(it, intervalKind) }
+            if (intervalChanges.isNotEmpty()) {
+                affectedDates.addAll(workoutEnrichmentRefresher.refreshForIntervalChanges(intervalChanges, zoneId))
+            }
+        }
+
         private suspend fun applyChangesForIntervalType(
             tokenType: IngestionTokenType,
             token: String,
             zoneId: ZoneId,
-            affectedDates: MutableSet<LocalDate>,
             nextIntervalTokens: MutableMap<String, String>,
+            state: SyncRunState,
         ): HealthChangeSyncOutcome? =
             try {
                 var currentToken: String = token
                 var hasMore = true
-                val intervalKind =
-                    when (tokenType) {
-                        IngestionTokenType.DISTANCE -> IntervalKind.DISTANCE
-                        IngestionTokenType.ELEVATION_GAINED -> IntervalKind.ELEVATION_GAINED
-                        else -> error("Unsupported interval type: $tokenType")
-                    }
+                val intervalKind = intervalKindFor(tokenType)
                 while (hasMore) {
-                    if (budget.isExhausted()) {
-                        return HealthChangeSyncOutcome(
-                            requiresFullResync = true,
-                            continuationRequired = true,
-                            nextTokens = nextTokens,
-                            affectedDates = affectedDates,
-                            fullResyncReason = "Budget exhausted",
-                        )
-                    }
+                    if (state.budget.isExhausted()) return state.budgetExhaustedOutcome()
                     val response = client.getChanges(currentToken)
                     if (response.changesTokenExpired) {
                         logD("HealthChangeSynchronizer") {
@@ -348,15 +344,9 @@ class HealthChangeSynchronizerImpl
                         return HealthChangeSyncOutcome.fullResync("Change token expired for ${tokenType.tokenKey}")
                     }
 
-                    val intervalChanges = response.changes
-                        .mapNotNull { toIntervalChange(it, intervalKind) }
-                    if (intervalChanges.isNotEmpty()) {
-                        val dates = workoutEnrichmentRefresher.refreshForIntervalChanges(intervalChanges, zoneId)
-                        affectedDates.addAll(dates)
-                    }
+                    applyIntervalChangesPage(response.changes, intervalKind, zoneId, state.affectedDates)
 
-                    budget.pagesApplied++
-                    budget.pagesApplied++
+                    state.budget.pagesApplied++
                     currentToken = response.nextChangesToken
                     nextIntervalTokens[tokenType.tokenKey] = currentToken
                     hasMore = response.hasMore
@@ -441,34 +431,47 @@ class HealthChangeSynchronizerImpl
             )
         }
 
+        /**
+         * Resolves a page's final per-ID action: when the same HC record ID appears more than
+         * once in one page (e.g. an upsert followed by a deletion, or vice versa), only the LAST
+         * event for that ID must determine whether it ends up deleted or upserted -- an earlier
+         * event for the same ID must never re-apply after a later one supersedes it.
+         */
+        private fun lastEventPerId(changes: List<Change>): Map<String, Change> {
+            val lastById = linkedMapOf<String, Change>()
+            for (change in changes) {
+                val id =
+                    when (change) {
+                        is UpsertionChange -> change.record.metadata.id
+                        is DeletionChange -> change.recordId
+                        else -> null
+                    } ?: continue
+                lastById[id] = change
+            }
+            return lastById
+        }
+
         private suspend fun processChangesPage(
             dataType: HealthDataType,
-            changes: List<androidx.health.connect.client.changes.Change>,
+            changes: List<Change>,
             affectedDates: MutableSet<java.time.LocalDate>,
             selectedDevice: String?,
             zoneId: java.time.ZoneId,
             prefs: app.readylytics.health.core.model.data.preferences.UserPreferences,
-            preparedWorkouts: Map<String, app.readylytics.health.core.model.domain.sync.PreparedWorkout>,
+            preparedWorkouts: Map<String, PreparedWorkout>,
         ) {
             val spans = pageSessionSpans(dataType, changes)
-            val allIds = changes.mapNotNull {
-                when (it) {
-                    is androidx.health.connect.client.changes.UpsertionChange -> it.record.metadata.id
-                    is androidx.health.connect.client.changes.DeletionChange -> it.recordId
-                    else -> null
-                }
-            }
-            affectedDates.addAll(changeIngestionStore.affectedDatesForRecords(dataType, allIds, zoneId))
+            val lastEvents = lastEventPerId(changes)
+            affectedDates.addAll(
+                changeIngestionStore.affectedDatesForRecords(dataType, lastEvents.keys.toList(), zoneId),
+            )
             val toDeleteIds = mutableListOf<String>()
-            val toUpsert = mutableListOf<androidx.health.connect.client.records.Record>()
-            
-            for (change in changes) {
+            val toUpsert = mutableListOf<Record>()
+            for (change in lastEvents.values) {
                 when (change) {
-                    is androidx.health.connect.client.changes.UpsertionChange -> {
+                    is UpsertionChange -> {
                         val record = change.record
-                        val deviceLabel = app.readylytics.health.core.model.domain.model.DeviceLabel.from(
-                            record.metadata.device, record.metadata.dataOrigin
-                        )
+                        val deviceLabel = DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin)
                         val keep = selectedDevice == null || deviceLabel == selectedDevice
                         if (!keep || dataType != HealthDataType.EXERCISE) {
                             toDeleteIds.add(record.metadata.id)
@@ -478,27 +481,19 @@ class HealthChangeSynchronizerImpl
                             toUpsert.add(record)
                         }
                     }
-                    is androidx.health.connect.client.changes.DeletionChange -> {
+                    is DeletionChange -> {
                         toDeleteIds.add(change.recordId)
                     }
+                    else -> Unit
                 }
             }
-            changeIngestionStore.deleteRecords(dataType, toDeleteIds)
+            if (toDeleteIds.isNotEmpty()) {
+                changeIngestionStore.deleteRecords(dataType, toDeleteIds)
+            }
             if (toUpsert.isNotEmpty()) {
-                upsertRecords(dataType, toUpsert, prefs, spans, preparedWorkouts, healthIngestionStore, changeIngestionStore)
-            }
-        }
-                        if (keep) {
-                            affectedDates.addAll(getDatesForRecord(record, zoneId))
-                            upsertRecord(dataType, record, prefs, spans, preparedWorkouts)
-                        }
-                    }
-                    is DeletionChange -> {
-                        val id = change.recordId
-                        affectedDates.addAll(changeIngestionStore.affectedDatesForRecord(dataType, id, zoneId))
-                        changeIngestionStore.deleteRecord(dataType, id)
-                    }
-                }
+                upsertRecords(
+                    dataType, toUpsert, prefs, spans, preparedWorkouts, healthIngestionStore, changeIngestionStore,
+                )
             }
         }
 

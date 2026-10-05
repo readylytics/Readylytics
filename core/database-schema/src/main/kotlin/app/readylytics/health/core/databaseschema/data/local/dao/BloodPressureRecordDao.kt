@@ -195,7 +195,7 @@ interface BloodPressureRecordDao {
     suspend fun deleteBetween(startMs: Long, endMs: Long): Int
 
     @Query("SELECT * FROM blood_pressure_records WHERE id IN (:sourceRecordIds)")
-    suspend fun getBySourceRecordIds(sourceRecordIds: List<String>): List<app.readylytics.health.core.databaseschema.data.local.entity.BloodPressureRecordEntity>
+    suspend fun getBySourceRecordIds(sourceRecordIds: List<String>): List<BloodPressureRecordEntity>
 
     @Query("DELETE FROM blood_pressure_records WHERE id IN (:sourceRecordIds)")
     suspend fun deleteBySourceRecordIds(sourceRecordIds: List<String>): Int

@@ -163,15 +163,15 @@ class HealthChangeSynchronizerRecordSyncTest {
             routeOneChange(dataType = HealthDataType.HEART_RATE, change = change)
             val expectedDates = setOf(epochDay(1000L), epochDay(2000L))
             coEvery {
-                changeIngestionStore.affectedDatesForRecord(HealthDataType.HEART_RATE, recordId, any())
+                changeIngestionStore.affectedDatesForRecords(HealthDataType.HEART_RATE, listOf(recordId), any())
             } returns expectedDates
 
             val outcome = synchronizer.applyPendingChanges()
 
             assertEquals(expectedDates, outcome.affectedDates)
             coVerifyOrder {
-                changeIngestionStore.affectedDatesForRecord(HealthDataType.HEART_RATE, recordId, any())
-                changeIngestionStore.deleteRecord(HealthDataType.HEART_RATE, recordId)
+                changeIngestionStore.affectedDatesForRecords(HealthDataType.HEART_RATE, listOf(recordId), any())
+                changeIngestionStore.deleteRecords(HealthDataType.HEART_RATE, listOf(recordId))
             }
         }
 
@@ -187,15 +187,15 @@ class HealthChangeSynchronizerRecordSyncTest {
             routeOneChange(dataType = HealthDataType.HRV, change = change)
             val expectedDates = setOf(epochDay(3000L), epochDay(4000L))
             coEvery {
-                changeIngestionStore.affectedDatesForRecord(HealthDataType.HRV, recordId, any())
+                changeIngestionStore.affectedDatesForRecords(HealthDataType.HRV, listOf(recordId), any())
             } returns expectedDates
 
             val outcome = synchronizer.applyPendingChanges()
 
             assertEquals(expectedDates, outcome.affectedDates)
             coVerifyOrder {
-                changeIngestionStore.affectedDatesForRecord(HealthDataType.HRV, recordId, any())
-                changeIngestionStore.deleteRecord(HealthDataType.HRV, recordId)
+                changeIngestionStore.affectedDatesForRecords(HealthDataType.HRV, listOf(recordId), any())
+                changeIngestionStore.deleteRecords(HealthDataType.HRV, listOf(recordId))
             }
         }
 
@@ -227,7 +227,7 @@ class HealthChangeSynchronizerRecordSyncTest {
                 }
             routeOneChange(dataType = HealthDataType.HEART_RATE, change = change)
             coEvery {
-                changeIngestionStore.affectedDatesForRecord(HealthDataType.HEART_RATE, recordId, any())
+                changeIngestionStore.affectedDatesForRecords(HealthDataType.HEART_RATE, listOf(recordId), any())
             } returns setOf(epochDay(oldTimestampMs))
 
             val outcome = synchronizer.applyPendingChanges()
@@ -237,8 +237,8 @@ class HealthChangeSynchronizerRecordSyncTest {
                 outcome.affectedDates,
             )
             coVerifyOrder {
-                changeIngestionStore.affectedDatesForRecord(HealthDataType.HEART_RATE, recordId, any())
-                changeIngestionStore.deleteRecord(HealthDataType.HEART_RATE, recordId)
+                changeIngestionStore.affectedDatesForRecords(HealthDataType.HEART_RATE, listOf(recordId), any())
+                changeIngestionStore.deleteRecords(HealthDataType.HEART_RATE, listOf(recordId))
                 healthIngestionStore.replaceHeartRateSources(
                     match {
                         it.size == 1 && it[0].rows.size == 1 &&
@@ -269,7 +269,7 @@ class HealthChangeSynchronizerRecordSyncTest {
                 }
             routeOneChange(dataType = HealthDataType.WEIGHT, change = change)
             coEvery {
-                changeIngestionStore.affectedDatesForRecord(HealthDataType.WEIGHT, recordId, any())
+                changeIngestionStore.affectedDatesForRecords(HealthDataType.WEIGHT, listOf(recordId), any())
             } returns setOf(epochDay(oldTimestampMs))
 
             val outcome = synchronizer.applyPendingChanges()
@@ -279,8 +279,8 @@ class HealthChangeSynchronizerRecordSyncTest {
                 outcome.affectedDates,
             )
             coVerifyOrder {
-                changeIngestionStore.affectedDatesForRecord(HealthDataType.WEIGHT, recordId, any())
-                changeIngestionStore.deleteRecord(HealthDataType.WEIGHT, recordId)
+                changeIngestionStore.affectedDatesForRecords(HealthDataType.WEIGHT, listOf(recordId), any())
+                changeIngestionStore.deleteRecords(HealthDataType.WEIGHT, listOf(recordId))
                 healthIngestionStore.persist(
                     match { batch -> batch.weights.map { it.id } == listOf("${recordId}_${newTime.toEpochMilli()}") },
                 )
@@ -312,7 +312,7 @@ class HealthChangeSynchronizerRecordSyncTest {
                     }
                 routeOneChange(dataType = HealthDataType.WEIGHT, change = change)
                 coEvery {
-                    changeIngestionStore.affectedDatesForRecord(HealthDataType.WEIGHT, recordId, any())
+                    changeIngestionStore.affectedDatesForRecords(HealthDataType.WEIGHT, listOf(recordId), any())
                 } returns emptySet()
 
                 val outcome = synchronizer.applyPendingChanges()
@@ -492,7 +492,7 @@ class HealthChangeSynchronizerRecordSyncTest {
 
             synchronizer.applyPendingChanges()
 
-            coVerify(exactly = 0) { changeIngestionStore.deleteRecord(HealthDataType.EXERCISE, any()) }
+            coVerify(exactly = 0) { changeIngestionStore.deleteRecords(HealthDataType.EXERCISE, any()) }
             coVerify { changeIngestionStore.persistPreparedWorkouts(any()) }
         }
 
@@ -503,7 +503,7 @@ class HealthChangeSynchronizerRecordSyncTest {
             val recordId = "exercise-deleted"
             val storedDay = LocalDate.of(2026, 6, 1)
             coEvery {
-                changeIngestionStore.affectedDatesForRecord(HealthDataType.EXERCISE, recordId, any())
+                changeIngestionStore.affectedDatesForRecords(HealthDataType.EXERCISE, listOf(recordId), any())
             } returns setOf(storedDay)
             routeOneChange(
                 HealthDataType.EXERCISE,
@@ -514,8 +514,8 @@ class HealthChangeSynchronizerRecordSyncTest {
 
             assertEquals(setOf(storedDay), outcome.affectedDates)
             coVerifyOrder {
-                changeIngestionStore.affectedDatesForRecord(HealthDataType.EXERCISE, recordId, any())
-                changeIngestionStore.deleteRecord(HealthDataType.EXERCISE, recordId)
+                changeIngestionStore.affectedDatesForRecords(HealthDataType.EXERCISE, listOf(recordId), any())
+                changeIngestionStore.deleteRecords(HealthDataType.EXERCISE, listOf(recordId))
             }
         }
 

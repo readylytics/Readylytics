@@ -1,15 +1,8 @@
 package app.readylytics.health.core.database.data.local
 
 import app.readylytics.health.core.databaseschema.data.local.dao.Vo2MaxRecordDao
-import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.model.domain.model.HealthDataType
-import app.readylytics.health.core.model.domain.model.RouteState
-import app.readylytics.health.core.model.domain.model.WorkoutRoutePoint
-import app.readylytics.health.core.model.domain.repository.ReadOutcome
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
-import app.readylytics.health.core.model.domain.repository.map
-import app.readylytics.health.core.model.domain.sync.PreparedWorkout
-import app.readylytics.health.core.model.domain.sync.mergeEnrichment
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -130,37 +123,6 @@ suspend fun deleteFromDaosPlural(
             daos.bodyTemperatureRecordDao.deleteBySourceRecordIds(ids)
         HealthDataType.STEPS -> daos.stepRecordDao.deleteByIds(ids)
         HealthDataType.VO2_MAX -> vo2MaxRecordDao?.deleteByIds(ids)
-    }
-}
-
-fun PreparedWorkout.toMergedEntity(existing: WorkoutRecordEntity?): WorkoutRecordEntity {
-    val distanceMeters = mergeEnrichment(existing?.totalDistanceMeters, this.distanceMeters)
-    val elevationGainMeters = mergeEnrichment(existing?.elevationGainMeters, elevationMeters)
-    val routeState =
-        mergeEnrichment(
-            existing?.routeState ?: RouteState.NOT_AVAILABLE,
-            route.map { points -> if (points.isNotEmpty()) RouteState.IMPORTED else RouteState.NOT_AVAILABLE },
-        )
-    val avgSpeedKmh = app.readylytics.health.core.database.data.local.deriveWorkoutAvgSpeedKmh(distanceMeters, workout.startTime, workout.endTime)
-    return workout.toEntity().copy(
-        modelTrimp = existing?.modelTrimp,
-        modelTrimpSourceRevision = existing?.modelTrimpSourceRevision,
-        modelTrimpSnapshotId = existing?.modelTrimpSnapshotId,
-        modelTrimpAlgorithmRevision = existing?.modelTrimpAlgorithmRevision,
-        modelTrimpQuality = existing?.modelTrimpQuality,
-        totalDistanceMeters = distanceMeters,
-        avgSpeedKmh = avgSpeedKmh,
-        elevationGainMeters = elevationGainMeters,
-        routeState = routeState,
-    )
-}
-
-suspend fun applyRoutePoints(daos: HealthRecordDaos, prepared: PreparedWorkout) {
-    val route = prepared.route
-    if (route !is ReadOutcome.Available) return
-    daos.workoutRoutePointDao.deleteForWorkouts(listOf(prepared.workout.id))
-    if (route.data.isNotEmpty()) {
-        daos.workoutRoutePointDao.insertAll(route.data.map(WorkoutRoutePoint::toEntity))
     }
 }
 

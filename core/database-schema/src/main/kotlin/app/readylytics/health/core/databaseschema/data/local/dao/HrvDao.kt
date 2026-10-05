@@ -306,7 +306,7 @@ interface HrvDao {
     ): Int
 
     @Query("SELECT * FROM hrv_records WHERE sourceRecordRef IN (:sourceRecordRefs)")
-    suspend fun getBySourceRecordRefs(sourceRecordRefs: List<Long>): List<app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity>
+    suspend fun getBySourceRecordRefs(sourceRecordRefs: List<Long>): List<HrvRecordEntity>
 
     @Query("DELETE FROM hrv_records WHERE sourceRecordRef IN (:sourceRecordRefs)")
     suspend fun deleteBySourceRecordRefs(sourceRecordRefs: List<Long>): Int
