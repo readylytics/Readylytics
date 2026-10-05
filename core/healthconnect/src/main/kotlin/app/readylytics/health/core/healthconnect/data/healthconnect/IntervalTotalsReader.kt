@@ -1,5 +1,7 @@
 package app.readylytics.health.core.healthconnect.data.healthconnect
 
+import app.readylytics.health.core.model.domain.repository.ReadRetryScope
+import app.readylytics.health.core.healthconnect.domain.sync.retryWithBackoff
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.records.DistanceRecord
@@ -37,14 +39,16 @@ class IntervalTotalsReader
         suspend fun readDistanceTotals(
             from: Instant,
             to: Instant,
+            retryScope: ReadRetryScope? = null,
         ): ReadOutcome<List<DomainIntervalTotal>> =
-            readIntervalTotals<DistanceRecord>(from, to) { it.toIntervalTotal() }
+            readIntervalTotals<DistanceRecord>(from, to, retryScope) { it.toIntervalTotal() }
 
         suspend fun readElevationTotals(
             from: Instant,
             to: Instant,
+            retryScope: ReadRetryScope? = null,
         ): ReadOutcome<List<DomainIntervalTotal>> =
-            readIntervalTotals<ElevationGainedRecord>(from, to) { it.toIntervalTotal() }
+            readIntervalTotals<ElevationGainedRecord>(from, to, retryScope) { it.toIntervalTotal() }
 
         fun resolveTotal(
             session: ExerciseSessionRecord,
@@ -64,6 +68,7 @@ class IntervalTotalsReader
         private suspend inline fun <reified T : Record> readIntervalTotals(
             from: Instant,
             to: Instant,
+            retryScope: ReadRetryScope?,
             noinline map: (T) -> DomainIntervalTotal,
         ): ReadOutcome<List<DomainIntervalTotal>> =
             withContext(ioDispatcher) {
@@ -74,7 +79,7 @@ class IntervalTotalsReader
                 }
                 try {
                     ReadOutcome.Available(
-                        readAllPages<T>(from, to).map(map),
+                        readAllPages<T>(from, to, retryScope).map(map),
                     )
                 } catch (e: CancellationException) {
                     throw e
@@ -107,19 +112,22 @@ class IntervalTotalsReader
         private suspend inline fun <reified T : Record> readAllPages(
             from: Instant,
             to: Instant,
+            retryScope: ReadRetryScope? = null,
         ): List<T> {
             val all = mutableListOf<T>()
             var pageToken: String? = null
             try {
                 do {
                     val response =
-                        client.readRecords(
-                            ReadRecordsRequest(
-                                recordType = T::class,
-                                timeRangeFilter = TimeRangeFilter.between(from, to),
-                                pageToken = pageToken,
-                            ),
-                        )
+                        retryWithBackoff(budget = retryScope) {
+                            client.readRecords(
+                                ReadRecordsRequest(
+                                    recordType = T::class,
+                                    timeRangeFilter = TimeRangeFilter.between(from, to),
+                                    pageToken = pageToken,
+                                ),
+                            )
+                        }
                     all.addAll(response.records)
                     pageToken = response.pageToken
                 } while (pageToken != null)

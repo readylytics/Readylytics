@@ -221,46 +221,40 @@ class HealthIngestionCoordinator
             coroutineScope {
                 val sleepSessions =
                     async {
-                        retryBudget.execute("sleepSessions") { hcRepo.readSleepSessions(windowStart, windowEnd) }
+                        hcRepo.readSleepSessions(windowStart, windowEnd, retryScope = retryBudget)
                     }
                 val exerciseRecords =
                     async {
-                        retryBudget.execute("exerciseRecords") {
-                            hcRepo.readExerciseSessions(windowStart, windowEnd, includeDetails = true)
-                        }
+                        hcRepo.readExerciseSessions(
+                            windowStart, windowEnd, includeDetails = true, retryScope = retryBudget,
+                        )
                     }
                 val weightRecords =
                     async {
-                        retryBudget.execute("weightRecords") { hcRepo.readWeightRecords(windowStart, windowEnd) }
+                        hcRepo.readWeightRecords(windowStart, windowEnd, retryScope = retryBudget)
                     }
                 val bodyFatRecords =
                     async {
-                        retryBudget.execute("bodyFatRecords") { hcRepo.readBodyFatRecords(windowStart, windowEnd) }
+                        hcRepo.readBodyFatRecords(windowStart, windowEnd, retryScope = retryBudget)
                     }
                 val bloodPressureRecords =
                     async {
-                        retryBudget.execute("bloodPressureRecords") {
-                            hcRepo.readBloodPressureRecords(windowStart, windowEnd)
-                        }
+                        hcRepo.readBloodPressureRecords(windowStart, windowEnd, retryScope = retryBudget)
                     }
                 val spo2Records =
                     async {
-                        retryBudget.execute("oxygenSaturationRecords") {
-                            hcRepo.readOxygenSaturationRecords(windowStart, windowEnd)
-                        }
+                        hcRepo.readOxygenSaturationRecords(windowStart, windowEnd, retryScope = retryBudget)
                     }
                 val bodyTemperatureRecords =
                     async {
-                        retryBudget.execute("bodyTemperatureRecords") {
-                            hcRepo.readBodyTemperatureRecords(windowStart, windowEnd)
-                        }
+                        hcRepo.readBodyTemperatureRecords(windowStart, windowEnd, retryScope = retryBudget)
                     }
                 val stepsRecords =
-                    async { retryBudget.execute("stepsRecords") { hcRepo.readStepsRecords(windowStart, windowEnd) } }
+                    async { hcRepo.readStepsRecords(windowStart, windowEnd, retryScope = retryBudget) }
                 val vo2MaxRecords =
                     async {
                         if (hcRepo.hasVo2MaxPermission()) {
-                            retryBudget.execute("vo2MaxRecords") { hcRepo.readVo2MaxRecords(windowStart, windowEnd) }
+                            hcRepo.readVo2MaxRecords(windowStart, windowEnd, retryScope = retryBudget)
                         } else {
                             ReadOutcome.Denied
                         }

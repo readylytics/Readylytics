@@ -1,5 +1,7 @@
 package app.readylytics.health.core.healthconnect.data.healthconnect
 
+import app.readylytics.health.core.model.domain.repository.ReadRetryScope
+import app.readylytics.health.core.healthconnect.domain.sync.retryWithBackoff
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.records.StepsRecord
@@ -58,12 +60,13 @@ class StepRecordReader
         suspend fun readStepsRecords(
             from: Instant,
             to: Instant,
+            retryScope: ReadRetryScope? = null,
         ): ReadOutcome<List<DomainStepsRecord>> =
             withContext(ioDispatcher) {
                 if (!isSdkAvailable()) return@withContext ReadOutcome.Unsupported
                 if (!hasStepsPermission()) return@withContext ReadOutcome.Denied
                 try {
-                    ReadOutcome.Available(readAllStepsRecordsPages(from, to).map { it.toDomain() })
+                    ReadOutcome.Available(readAllStepsRecordsPages(from, to, retryScope).map { it.toDomain() })
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: HealthConnectPermissionRevokedException) {
@@ -86,18 +89,21 @@ class StepRecordReader
         suspend fun readSteps(
             from: Instant,
             to: Instant,
+            retryScope: ReadRetryScope? = null,
         ): ReadOutcome<Long> =
             withContext(ioDispatcher) {
                 if (!isSdkAvailable()) return@withContext ReadOutcome.Unsupported
                 if (!hasStepsPermission()) return@withContext ReadOutcome.Denied
                 try {
                     val result =
-                        client.aggregate(
-                            AggregateRequest(
-                                metrics = setOf(StepsRecord.COUNT_TOTAL),
-                                timeRangeFilter = TimeRangeFilter.between(from, to),
-                            ),
-                        )
+                        retryWithBackoff(budget = retryScope) {
+                            client.aggregate(
+                                AggregateRequest(
+                                    metrics = setOf(StepsRecord.COUNT_TOTAL),
+                                    timeRangeFilter = TimeRangeFilter.between(from, to),
+                                ),
+                            )
+                        }
                     ReadOutcome.Available(result[StepsRecord.COUNT_TOTAL] ?: 0L)
                 } catch (e: CancellationException) {
                     throw e
@@ -122,23 +128,26 @@ class StepRecordReader
             from: Instant,
             to: Instant,
             zoneId: ZoneId,
+            retryScope: ReadRetryScope? = null,
         ): ReadOutcome<Map<LocalDate, Long>> =
             withContext(ioDispatcher) {
                 if (!isSdkAvailable()) return@withContext ReadOutcome.Unsupported
                 if (!hasStepsPermission()) return@withContext ReadOutcome.Denied
                 try {
                     val response =
-                        client.aggregateGroupByPeriod(
-                            AggregateGroupByPeriodRequest(
-                                metrics = setOf(StepsRecord.COUNT_TOTAL),
-                                timeRangeFilter =
-                                    TimeRangeFilter.between(
-                                        LocalDateTime.ofInstant(from, zoneId),
-                                        LocalDateTime.ofInstant(to, zoneId),
-                                    ),
-                                timeRangeSlicer = Period.ofDays(1),
-                            ),
-                        )
+                        retryWithBackoff(budget = retryScope) {
+                            client.aggregateGroupByPeriod(
+                                AggregateGroupByPeriodRequest(
+                                    metrics = setOf(StepsRecord.COUNT_TOTAL),
+                                    timeRangeFilter =
+                                        TimeRangeFilter.between(
+                                            LocalDateTime.ofInstant(from, zoneId),
+                                            LocalDateTime.ofInstant(to, zoneId),
+                                        ),
+                                    timeRangeSlicer = Period.ofDays(1),
+                                ),
+                            )
+                        }
                     val mapped =
                         response
                             .mapNotNull { group ->
@@ -154,7 +163,7 @@ class StepRecordReader
                     logD("StepRecordReader") {
                         "aggregateGroupByPeriod unsupported; falling back to per-day step aggregate (${e.message})"
                     }
-                    readDailyStepTotalsPerDay(from, to, zoneId)
+                    readDailyStepTotalsPerDay(from, to, zoneId, retryScope)
                 } catch (e: HealthConnectPermissionRevokedException) {
                     logD("StepRecordReader") { "Daily step totals permission revoked: ${e.message}" }
                     ReadOutcome.Denied
@@ -176,6 +185,7 @@ class StepRecordReader
             from: Instant,
             to: Instant,
             zoneId: ZoneId,
+            retryScope: ReadRetryScope? = null,
         ): ReadOutcome<Map<LocalDate, Long>> {
             val totals = mutableMapOf<LocalDate, Long>()
             var day = LocalDateTime.ofInstant(from, zoneId).toLocalDate()
@@ -187,7 +197,7 @@ class StepRecordReader
                 val boundedStart = maxOf(dayStart, from)
                 val boundedEnd = minOf(dayEnd, to)
                 if (boundedStart.isBefore(boundedEnd)) {
-                    when (val outcome = readSteps(boundedStart, boundedEnd)) {
+                    when (val outcome = readSteps(boundedStart, boundedEnd, retryScope)) {
                         is ReadOutcome.Available -> totals[day] = outcome.data
                         ReadOutcome.Denied -> failureOutcome = ReadOutcome.Denied
                         ReadOutcome.Unsupported -> failureOutcome = ReadOutcome.Unsupported
@@ -201,19 +211,22 @@ class StepRecordReader
         private suspend fun readAllStepsRecordsPages(
             from: Instant,
             to: Instant,
+            retryScope: ReadRetryScope? = null,
         ): List<StepsRecord> {
             val all = mutableListOf<StepsRecord>()
             var pageToken: String? = null
             try {
                 do {
                     val response =
-                        client.readRecords(
-                            ReadRecordsRequest(
-                                recordType = StepsRecord::class,
-                                timeRangeFilter = TimeRangeFilter.between(from, to),
-                                pageToken = pageToken,
-                            ),
-                        )
+                        retryWithBackoff(budget = retryScope) {
+                            client.readRecords(
+                                ReadRecordsRequest(
+                                    recordType = StepsRecord::class,
+                                    timeRangeFilter = TimeRangeFilter.between(from, to),
+                                    pageToken = pageToken,
+                                ),
+                            )
+                        }
                     all.addAll(response.records)
                     pageToken = response.pageToken
                 } while (pageToken != null)

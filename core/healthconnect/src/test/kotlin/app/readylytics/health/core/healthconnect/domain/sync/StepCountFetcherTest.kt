@@ -30,7 +30,7 @@ class StepCountFetcherTest {
     @Test
     fun `fetchWindow with all devices populates days on Available read`() =
         runTest {
-            coEvery { hcRepo.readSteps(any(), any()) } returns ReadOutcome.Available(5000L)
+            coEvery { hcRepo.readSteps(any(), any(), any()) } returns ReadOutcome.Available(5000L)
 
             val result = fetcher.fetchWindow(today, windowDays = 2, zoneId = zoneId, stepsDevice = null)
 
@@ -42,7 +42,7 @@ class StepCountFetcherTest {
     @Test
     fun `fetchWindow with all devices omits days when read is Denied or Unsupported`() =
         runTest {
-            coEvery { hcRepo.readSteps(any(), any()) } returns ReadOutcome.Denied
+            coEvery { hcRepo.readSteps(any(), any(), any()) } returns ReadOutcome.Denied
 
             val result = fetcher.fetchWindow(today, windowDays = 2, zoneId = zoneId, stepsDevice = null)
 
@@ -60,7 +60,7 @@ class StepCountFetcherTest {
                     count = 3500L,
                     deviceName = "Pixel Watch",
                 )
-            coEvery { hcRepo.readStepsRecords(any(), any()) } returns ReadOutcome.Available(listOf(record))
+            coEvery { hcRepo.readStepsRecords(any(), any(), any()) } returns ReadOutcome.Available(listOf(record))
 
             val result = fetcher.fetchWindow(today, windowDays = 3, zoneId = zoneId, stepsDevice = "Pixel Watch")
 
@@ -73,7 +73,7 @@ class StepCountFetcherTest {
     @Test
     fun `fetchWindow with selected device explicitly zeroes prior totals on Available empty records`() =
         runTest {
-            coEvery { hcRepo.readStepsRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+            coEvery { hcRepo.readStepsRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
 
             val result = fetcher.fetchWindow(today, windowDays = 2, zoneId = zoneId, stepsDevice = "Pixel Watch")
 
@@ -85,7 +85,7 @@ class StepCountFetcherTest {
     @Test
     fun `fetchWindow with selected device omits days when read is Denied`() =
         runTest {
-            coEvery { hcRepo.readStepsRecords(any(), any()) } returns ReadOutcome.Denied
+            coEvery { hcRepo.readStepsRecords(any(), any(), any()) } returns ReadOutcome.Denied
 
             val result = fetcher.fetchWindow(today, windowDays = 2, zoneId = zoneId, stepsDevice = "Pixel Watch")
 
@@ -97,7 +97,7 @@ class StepCountFetcherTest {
         runTest {
             val start = LocalDate.of(2026, 9, 1)
             val end = LocalDate.of(2026, 9, 3)
-            coEvery { hcRepo.readDailyStepTotals(any(), any(), any()) } returns ReadOutcome.Denied
+            coEvery { hcRepo.readDailyStepTotals(any(), any(), any(), any()) } returns ReadOutcome.Denied
 
             val result = fetcher.fetchRange(start, end, chunkDays = 10, stepsDevice = null, zoneId = zoneId)
 
@@ -109,7 +109,7 @@ class StepCountFetcherTest {
         runTest {
             val start = LocalDate.of(2026, 9, 1)
             val end = LocalDate.of(2026, 9, 3)
-            coEvery { hcRepo.readStepsRecords(any(), any()) } returns ReadOutcome.Denied
+            coEvery { hcRepo.readStepsRecords(any(), any(), any()) } returns ReadOutcome.Denied
 
             val result = fetcher.fetchRange(start, end, chunkDays = 10, stepsDevice = "Pixel Watch", zoneId = zoneId)
 
@@ -135,7 +135,7 @@ class StepCountFetcherTest {
                     count = 2000L,
                     deviceName = "Pixel Watch",
                 )
-            coEvery { hcRepo.readStepsRecords(any(), any()) } returns
+            coEvery { hcRepo.readStepsRecords(any(), any(), any()) } returns
                 ReadOutcome.Available(listOf(insideWindowRecord, outsideWindowRecord))
 
             val result = fetcher.fetchWindow(today, windowDays = 2, zoneId = zoneId, stepsDevice = "Pixel Watch")
@@ -161,7 +161,7 @@ class StepCountFetcherTest {
                     deviceName = "Pixel Watch",
                 )
             // Returned in both chunk 1 and chunk 2
-            coEvery { hcRepo.readStepsRecords(any(), any()) } returns
+            coEvery { hcRepo.readStepsRecords(any(), any(), any()) } returns
                 ReadOutcome.Available(listOf(straddlingRecord))
 
             val result = fetcher.fetchRange(start, end, chunkDays = 1, stepsDevice = "Pixel Watch", zoneId = zoneId)

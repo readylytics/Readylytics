@@ -90,19 +90,20 @@ class ResyncDeletionConvergenceTest {
             WalkForwardBaselineContext(emptyList())
             coEvery { scoringRepository.fetchWalkForwardFatigueContext(any(), any(), any(), any()) } returns
             WalkForwardFatigueContext(emptyList())
-        coEvery { hcRepo.readSleepSessions(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readExerciseSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
-        coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
-        coEvery { hcRepo.readStepsRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readSteps(any(), any()) } returns ReadOutcome.Available(0L)
-        coEvery { hcRepo.readDailyStepTotals(any(), any(), any()) } returns ReadOutcome.Available(emptyMap())
-        coEvery { hcRepo.readWeightRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readBodyFatRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readBloodPressureRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readOxygenSaturationRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readBodyTemperatureRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readVo2MaxRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readSleepSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readExerciseSessions(any(), any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any(), any()) } returns
+            ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readStepsRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readSteps(any(), any(), any()) } returns ReadOutcome.Available(0L)
+        coEvery { hcRepo.readDailyStepTotals(any(), any(), any(), any()) } returns ReadOutcome.Available(emptyMap())
+        coEvery { hcRepo.readWeightRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBodyFatRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBloodPressureRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readOxygenSaturationRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBodyTemperatureRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readVo2MaxRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
 
         useCase =
             ResyncRangeUseCase(
@@ -168,7 +169,7 @@ class ResyncDeletionConvergenceTest {
             fakeStore.sleepSessions[sessionKept.id] = sessionKept
 
             // Health Connect only returns sessionKept
-            coEvery { hcRepo.readSleepSessions(any(), any()) } returns
+            coEvery { hcRepo.readSleepSessions(any(), any(), any()) } returns
                 ReadOutcome.Available(
                     listOf(
                         DomainSleepSessionRecord(
@@ -215,7 +216,7 @@ class ResyncDeletionConvergenceTest {
 
             fakeStore.sleepSessions[sessionKept.id] = sessionKept
 
-            coEvery { hcRepo.readSleepSessions(any(), any()) } returns
+            coEvery { hcRepo.readSleepSessions(any(), any(), any()) } returns
                 ReadOutcome.Available(
                     listOf(
                         DomainSleepSessionRecord(
@@ -282,7 +283,7 @@ class ResyncDeletionConvergenceTest {
             fakeStore.sleepSessions[inWindowSession.id] = inWindowSession
 
             // Health Connect only returns in-window session
-            coEvery { hcRepo.readSleepSessions(any(), any()) } returns
+            coEvery { hcRepo.readSleepSessions(any(), any(), any()) } returns
                 ReadOutcome.Available(
                     listOf(
                         DomainSleepSessionRecord(
@@ -329,8 +330,9 @@ class ResyncDeletionConvergenceTest {
                     deviceName = "Pixel Watch",
                 )
 
-            coEvery { hcRepo.readSleepSessions(any(), any()) } returns ReadOutcome.Available(listOf(session))
-            coEvery { hcRepo.readExerciseSessions(any(), any(), any()) } returns ReadOutcome.Available(listOf(workout))
+            coEvery { hcRepo.readSleepSessions(any(), any(), any()) } returns ReadOutcome.Available(listOf(session))
+            coEvery { hcRepo.readExerciseSessions(any(), any(), any(), any()) } returns
+                ReadOutcome.Available(listOf(workout))
 
             // Pass 1
             val result1 = useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
@@ -381,7 +383,7 @@ class ResyncDeletionConvergenceTest {
             fakeStore.sleepSessions[session.id] = session
 
             // HC returns nothing, but skipIngestAndPrune is true
-            coEvery { hcRepo.readSleepSessions(any(), any()) } returns ReadOutcome.Available(emptyList())
+            coEvery { hcRepo.readSleepSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
 
             val result =
                 useCase.run(
@@ -414,7 +416,7 @@ class ResyncDeletionConvergenceTest {
 
             // Weight permission is NOT granted
             coEvery { hcRepo.hasWeightPermission() } returns false
-            coEvery { hcRepo.readWeightRecords(any(), any()) } returns ReadOutcome.Denied
+            coEvery { hcRepo.readWeightRecords(any(), any(), any()) } returns ReadOutcome.Denied
 
             val result = useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
 
@@ -447,11 +449,12 @@ class ResyncDeletionConvergenceTest {
                     from = any(),
                     to = any(),
                     startPageToken = "token-page-2",
+                    retryScope = any(),
                     onPage = any(),
                 )
             } coAnswers {
                 @Suppress("UNCHECKED_CAST")
-                val onPage = it.invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
+                val onPage = it.invocation.args[4] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
                 onPage(listOf(hrSamplePage2), null)
                 ReadOutcome.Available(Unit)
             }
@@ -497,11 +500,11 @@ class ResyncDeletionConvergenceTest {
 
             val capturedStartTokens = mutableListOf<String?>()
             coEvery {
-                hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any())
+                hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any(), any())
             } coAnswers {
                 val token = invocation.args[2] as String?
                 capturedStartTokens.add(token)
-                val onPage = invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
+                val onPage = invocation.args[4] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
                 if (token == null) {
                     onPage(listOf(page1), "token-page-2")
                     onPage(listOf(page2), null)
@@ -546,11 +549,12 @@ class ResyncDeletionConvergenceTest {
                     from = any(),
                     to = any(),
                     startPageToken = any(),
+                    retryScope = any(),
                     onPage = any(),
                 )
             } coAnswers {
                 @Suppress("UNCHECKED_CAST")
-                val onPage = it.invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
+                val onPage = it.invocation.args[4] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
                 onPage(listOf(page1Record), "token-page-2")
                 // Permission regranted before reconciliation pass
                 coEvery { hcRepo.checkPermissions() } returns PermissionStatus.Granted

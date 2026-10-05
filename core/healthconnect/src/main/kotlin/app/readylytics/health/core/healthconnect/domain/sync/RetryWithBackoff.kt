@@ -1,6 +1,7 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
 import app.readylytics.health.core.model.domain.util.logD
+import app.readylytics.health.core.model.domain.repository.ReadRetryScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 
@@ -17,7 +18,7 @@ import kotlinx.coroutines.delay
 internal suspend fun <T> retryWithBackoff(
     policy: HealthConnectRetryPolicy = HealthConnectRetryPolicy(),
     delayFn: suspend (Long) -> Unit = { delay(it) },
-    budget: ReadRetryBudget? = null,
+    budget: ReadRetryScope? = null,
     block: suspend () -> T,
 ): T {
     if (budget != null) return budget.execute("retryWithBackoff", block)

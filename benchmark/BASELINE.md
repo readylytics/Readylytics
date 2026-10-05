@@ -590,3 +590,22 @@ wall times above are where to look for it.
   `:app:verifyReleaseSigningInputs` needs the `READYLYTICS_UPLOAD_*` secrets, which this machine does
   not have. The stale blocker text above has been corrected.
 - **No CI-emulator numbers.** Every figure here is from the physical SM-A576B.
+
+## 2026-10-05 — Phase 2 WP-11 retry scope
+
+Deterministic JVM regression measurements, using an always-failing provider with
+`IOException("rate limit")` and the default five-attempt policy:
+
+| Scenario | Before | After |
+|---|---:|---:|
+| Nested SDK retry beneath the ingest-window budget | 25 SDK calls | At most 5 SDK calls |
+| Nine concurrent bulk readers through the actual repository | Not captured | At most 5 SDK calls |
+| Independent null-scope retry | 5 attempts | 5 attempts |
+
+The concurrent reservation test observes exactly five failed calls; successful calls release
+capacity without consuming the failure budget. A failed later SDK page does not replay an earlier
+page consumer. These are call-count assertions, not device latency or allocation measurements.
+
+The focused connected repository fixture compiled, but `:app:connectedDebugAndroidTest` could not
+execute: `com.android.builder.testing.api.DeviceException: No connected devices!`. Device acceptance
+for this task remains unmeasured.

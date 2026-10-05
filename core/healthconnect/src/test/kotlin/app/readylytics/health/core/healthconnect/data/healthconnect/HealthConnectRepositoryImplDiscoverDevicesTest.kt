@@ -123,6 +123,70 @@ class HealthConnectRepositoryImplDiscoverDevicesTest {
     }
 
     @Test
+    fun standaloneRepositoryReadKeepsFiveAttempts() = runTest {
+        val failure = object : java.io.IOException("rate limit") {}
+        var sdkCalls = 0
+        coEvery { client.readRecords<Record>(any()) } coAnswers { sdkCalls++; throw failure }
+        val thrown = kotlin.test.assertFailsWith<java.io.IOException> {
+            repo.readSleepSessions(Instant.EPOCH, Instant.EPOCH.plusSeconds(3600), retryScope = null)
+        }
+        assertEquals(5, sdkCalls)
+        kotlin.test.assertSame(failure, thrown)
+    }
+
+    @Test
+    fun standaloneRepositoryCancellationEscapesUnchanged() = runTest {
+        val cancellation = kotlinx.coroutines.CancellationException("cancel")
+        var sdkCalls = 0
+        coEvery { client.readRecords<Record>(any()) } coAnswers { sdkCalls++; throw cancellation }
+        val thrown = kotlin.test.assertFailsWith<kotlinx.coroutines.CancellationException> {
+            repo.readSleepSessions(Instant.EPOCH, Instant.EPOCH.plusSeconds(3600), retryScope = null)
+        }
+        assertEquals(1, sdkCalls)
+        kotlin.test.assertSame(cancellation, thrown)
+    }
+
+    @Test
+    fun sharedScopeBoundsActualRepositorySdkReadsAcrossNineBulkReaders() = runTest {
+        val failure = object : java.io.IOException("rate limit") {}
+        var sdkCalls = 0
+        coEvery { client.readRecords<Record>(any()) } coAnswers {
+            sdkCalls++
+            kotlinx.coroutines.yield()
+            throw failure
+        }
+        val coordinator = app.readylytics.health.core.healthconnect.domain.sync.HealthIngestionCoordinator(
+            repo,
+            mockk<app.readylytics.health.core.model.domain.sync.HealthIngestionStore>(relaxed = true),
+            app.readylytics.health.core.healthconnect.domain.sync.FakeScanStagingStore(),
+        )
+        val thrown = kotlin.test.assertFailsWith<java.io.IOException> {
+            coordinator.ingestWindow(Instant.EPOCH, Instant.EPOCH.plusSeconds(3600),
+                app.readylytics.health.core.model.domain.preferences.UserPreferences())
+        }
+        kotlin.test.assertTrue(sdkCalls <= 5, "SDK calls: $sdkCalls")
+        kotlin.test.assertSame(failure, thrown)
+        kotlin.test.assertFalse((thrown as Throwable) is
+            app.readylytics.health.core.model.domain.repository.HealthConnectWindowTimeoutException)
+    }
+
+    @Test
+    fun pageConsumerFailureIsNeverRetriedByRepositoryScope() = runTest {
+        val failure = object : java.io.IOException("consumer failed") {}
+        var consumers = 0
+        val scope = app.readylytics.health.core.healthconnect.domain.sync.ReadRetryBudget(delayFn = {})
+        val thrown = kotlin.test.assertFailsWith<java.io.IOException> {
+            repo.readHeartRateSamplesPaged(Instant.EPOCH, Instant.EPOCH.plusSeconds(3600), retryScope = scope) { _, _ ->
+                consumers++
+                throw failure
+            }
+        }
+        kotlin.test.assertSame(failure, thrown)
+        assertEquals(1, consumers)
+        assertEquals(0, scope.attemptsUsed)
+    }
+
+    @Test
     fun `discoverDevices aggregates device names across multiple HR and HRV pages`() =
         runTest {
             val devices = repo.discoverDevices(windowDays = 2)

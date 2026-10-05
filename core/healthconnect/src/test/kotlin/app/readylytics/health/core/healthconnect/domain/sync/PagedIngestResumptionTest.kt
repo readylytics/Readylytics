@@ -80,21 +80,22 @@ class PagedIngestResumptionTest {
             WalkForwardBaselineContext(emptyList())
         coEvery { scoringRepository.fetchWalkForwardFatigueContext(any(), any(), any(), any()) } returns
             WalkForwardFatigueContext(emptyList())
-        coEvery { hcRepo.readSleepSessions(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readExerciseSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readStepsRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readWeightRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readBodyFatRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readBloodPressureRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readOxygenSaturationRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readBodyTemperatureRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readVo2MaxRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
-        coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
-        coEvery { hcRepo.readDailyStepTotals(any(), any(), any()) } returns ReadOutcome.Available(emptyMap())
-        coEvery { hcRepo.readSteps(any(), any()) } returns ReadOutcome.Available(0L)
-        coEvery { hcRepo.readHeartRateSamples(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readHrvSamples(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readSleepSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readExerciseSessions(any(), any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readStepsRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readWeightRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBodyFatRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBloodPressureRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readOxygenSaturationRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBodyTemperatureRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readVo2MaxRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any(), any()) } returns
+            ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readDailyStepTotals(any(), any(), any(), any()) } returns ReadOutcome.Available(emptyMap())
+        coEvery { hcRepo.readSteps(any(), any(), any()) } returns ReadOutcome.Available(0L)
+        coEvery { hcRepo.readHeartRateSamples(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readHrvSamples(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
 
         useCase =
             ResyncRangeUseCase(
@@ -127,8 +128,8 @@ class PagedIngestResumptionTest {
                 savedTokens.add(checkpointStore.value?.hrPageToken)
             }
 
-            coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } coAnswers {
-                val callback = it.invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
+            coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any(), any()) } coAnswers {
+                val callback = it.invocation.args[4] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
                 callback(listOf(mockk(relaxed = true)), "page-2")
                 callback(listOf(mockk(relaxed = true)), "page-3")
                 callback(listOf(mockk(relaxed = true)), null)
@@ -166,9 +167,9 @@ class PagedIngestResumptionTest {
 
             val capturedStartToken = slot<String?>()
             coEvery {
-                hcRepo.readHeartRateSamplesPaged(any(), any(), captureNullable(capturedStartToken), any())
+                hcRepo.readHeartRateSamplesPaged(any(), any(), captureNullable(capturedStartToken), any(), any())
             } coAnswers {
-                val callback = it.invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
+                val callback = it.invocation.args[4] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
                 callback(listOf(mockk(relaxed = true)), null)
                 app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(Unit)
             }
@@ -199,9 +200,9 @@ class PagedIngestResumptionTest {
 
             val capturedStartToken = slot<String?>()
             coEvery {
-                hcRepo.readHeartRateSamplesPaged(any(), any(), captureNullable(capturedStartToken), any())
+                hcRepo.readHeartRateSamplesPaged(any(), any(), captureNullable(capturedStartToken), any(), any())
             } coAnswers {
-                val callback = it.invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
+                val callback = it.invocation.args[4] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
                 callback(listOf(mockk(relaxed = true)), null)
                 ReadOutcome.Available(Unit)
             }
@@ -236,9 +237,9 @@ class PagedIngestResumptionTest {
 
             val capturedHrvStartToken = slot<String?>()
             coEvery {
-                hcRepo.readHrvSamplesPaged(any(), any(), captureNullable(capturedHrvStartToken), any())
+                hcRepo.readHrvSamplesPaged(any(), any(), captureNullable(capturedHrvStartToken), any(), any())
             } coAnswers {
-                val callback = it.invocation.args[3] as suspend (List<DomainHrvRecord>, String?) -> Unit
+                val callback = it.invocation.args[4] as suspend (List<DomainHrvRecord>, String?) -> Unit
                 callback(listOf(mockk(relaxed = true)), null)
                 app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(Unit)
             }
@@ -274,7 +275,7 @@ class PagedIngestResumptionTest {
 
             var heartRateCalls = 0
             coEvery {
-                hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any())
+                hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any(), any())
             } coAnswers {
                 heartRateCalls++
                 val token = invocation.args[2] as String?
@@ -292,7 +293,7 @@ class PagedIngestResumptionTest {
                     }
                     else -> {
                         assertNull(token)
-                        val callback = invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
+                        val callback = invocation.args[4] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
                         callback(listOf(mockk(relaxed = true)), null)
                         ReadOutcome.Available(Unit)
                     }
@@ -319,7 +320,7 @@ class PagedIngestResumptionTest {
             }
 
             var callCount = 0
-            coEvery { hcRepo.readSleepSessions(any(), any()) } coAnswers {
+            coEvery { hcRepo.readSleepSessions(any(), any(), any()) } coAnswers {
                 callCount++
                 if (callCount == 1) {
                     throw HealthConnectWindowTimeoutException(
@@ -359,14 +360,14 @@ class PagedIngestResumptionTest {
             val windowStart = Instant.parse("2024-06-01T00:00:00Z")
             val windowEnd = Instant.parse("2024-06-02T00:00:00Z")
 
-            coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } coAnswers {
-                val callback = it.invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
+            coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any(), any()) } coAnswers {
+                val callback = it.invocation.args[4] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
                 callback(listOf(mockk(relaxed = true)), "hr-token-1")
                 callback(listOf(mockk(relaxed = true)), null)
                 app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(Unit)
             }
-            coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } coAnswers {
-                val callback = it.invocation.args[3] as suspend (List<DomainHrvRecord>, String?) -> Unit
+            coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any(), any()) } coAnswers {
+                val callback = it.invocation.args[4] as suspend (List<DomainHrvRecord>, String?) -> Unit
                 callback(listOf(mockk(relaxed = true)), "hrv-token-1")
                 callback(listOf(mockk(relaxed = true)), null)
                 app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(Unit)
@@ -535,19 +536,19 @@ class PagedIngestResumptionTest {
 
     private fun mockCrossTypeResumePages(records: CrossTypeResumeRecords) {
         var hrCallCount = 0
-        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } coAnswers {
+        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any(), any()) } coAnswers {
             hrCallCount++
-            val onPage = invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
+            val onPage = invocation.args[4] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
             val record = if (hrCallCount == 1) records.hrAttempt1 else records.hrAttempt2
             onPage(listOf(record), null)
             ReadOutcome.Available(Unit)
         }
 
         var hrvCallCount = 0
-        coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } coAnswers {
+        coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any(), any()) } coAnswers {
             hrvCallCount++
             val token = invocation.args[2] as String?
-            val onPage = invocation.args[3] as suspend (List<DomainHrvRecord>, String?) -> Unit
+            val onPage = invocation.args[4] as suspend (List<DomainHrvRecord>, String?) -> Unit
             if (hrvCallCount == 1) {
                 onPage(listOf(records.hrv1), "hrv-token-page-2")
                 error("Simulated worker kill after HRV page 1")
@@ -608,10 +609,10 @@ class PagedIngestResumptionTest {
         record2: DomainHeartRateRecord,
     ) {
         var callCount = 0
-        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } coAnswers {
+        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any(), any()) } coAnswers {
             callCount++
             val token = invocation.args[2] as String?
-            val onPage = invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
+            val onPage = invocation.args[4] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
             if (callCount == 1) {
                 onPage(listOf(record1), "token-page-2")
                 error("Simulated worker kill after page 1")
@@ -656,8 +657,8 @@ class PagedIngestResumptionTest {
         val store = ResumptionTrackingStore(staging)
         initialSamples.forEach { store.heartRateSamples[it.id] = it }
         val useCase = createResyncUseCase(store, staging, InMemoryResyncCheckpointStore())
-        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } coAnswers {
-            val onPage = invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
+        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any(), any()) } coAnswers {
+            val onPage = invocation.args[4] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
             onPage(listOf(records[0]), "token-page-2")
             onPage(listOf(records[1]), null)
             ReadOutcome.Available(Unit)

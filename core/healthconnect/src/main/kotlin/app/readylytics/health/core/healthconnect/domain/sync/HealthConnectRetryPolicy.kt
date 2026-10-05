@@ -5,7 +5,7 @@ import kotlin.math.min
 import kotlin.random.Random
 
 internal class HealthConnectRetryPolicy(
-    private val maxAttempts: Int = 5,
+    val maxAttempts: Int = 5,
     private val initialDelayMs: Long = 1_000,
     private val maxDelayMs: Long = 60_000,
     private val jitterRatio: Double = 0.20,

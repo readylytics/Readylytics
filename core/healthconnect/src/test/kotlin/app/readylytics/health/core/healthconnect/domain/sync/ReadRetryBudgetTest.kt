@@ -1,5 +1,6 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
+import kotlinx.coroutines.async
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -112,6 +113,63 @@ class ReadRetryBudgetTest {
         }
 
         assertEquals(totalFailedCalls.get(), budget.attemptsUsed)
+    }
+
+    @Test
+    fun concurrentFailuresReserveCapacityBeforeCallingProvider() = runTest {
+        val budget = ReadRetryBudget(delayFn = {})
+        val failure = IOException("rate limit")
+        var calls = 0
+        kotlinx.coroutines.supervisorScope {
+            val reads = List(9) { index ->
+                async {
+                    runCatching {
+                        budget.execute("read-$index") {
+                            calls++
+                            kotlinx.coroutines.yield()
+                            throw failure
+                        }
+                    }.exceptionOrNull()
+                }
+            }
+            reads.forEach { kotlin.test.assertSame(failure, it.await()) }
+        }
+        assertEquals(5, calls)
+    }
+
+    @Test
+    fun successfulCallsReleaseCapacityWithoutSpendingFailureBudget() = runTest {
+        val budget = ReadRetryBudget(delayFn = {})
+        kotlinx.coroutines.coroutineScope {
+            val reads = List(9) {
+                async {
+                    budget.execute("success") { kotlinx.coroutines.yield(); "ok" }
+                }
+            }
+            reads.forEach { assertEquals("ok", it.await()) }
+        }
+        assertEquals(0, budget.attemptsUsed)
+    }
+
+    @Test
+    fun permissionFailureDoesNotSpendOrPoisonSiblingBudget() = runTest {
+        val budget = ReadRetryBudget(delayFn = {})
+        kotlin.test.assertFailsWith<SecurityException> {
+            budget.execute("denied") { throw SecurityException("revoked") }
+        }
+        assertEquals("ok", budget.execute("sibling") { "ok" })
+        assertEquals(0, budget.attemptsUsed)
+    }
+
+    @Test
+    fun cancellationReleasesReservationWithoutSpendingBudget() = runTest {
+        val budget = ReadRetryBudget(policy = HealthConnectRetryPolicy(maxAttempts = 1), delayFn = {})
+        val cancellation = kotlinx.coroutines.CancellationException("cancel")
+        kotlin.test.assertSame(cancellation, kotlin.test.assertFailsWith<kotlinx.coroutines.CancellationException> {
+            budget.execute("cancelled") { throw cancellation }
+        })
+        assertEquals("ok", kotlinx.coroutines.withTimeout(100) { budget.execute("next") { "ok" } })
+        assertEquals(0, budget.attemptsUsed)
     }
 
     companion object {

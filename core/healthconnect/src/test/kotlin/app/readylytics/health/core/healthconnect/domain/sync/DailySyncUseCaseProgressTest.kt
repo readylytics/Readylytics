@@ -76,7 +76,7 @@ class DailySyncUseCaseProgressTest : DailySyncUseCaseTestFixture() {
     @Test
     fun `sync rethrows cancellation instead of converting to failure`() =
         runTest {
-            coEvery { hcRepo.readSleepSessions(any(), any()) } throws CancellationException("cancelled")
+            coEvery { hcRepo.readSleepSessions(any(), any(), any()) } throws CancellationException("cancelled")
 
             assertFailsWith<CancellationException> {
                 useCase.run(windowDays = 1, onProgress = null)
@@ -89,7 +89,7 @@ class DailySyncUseCaseProgressTest : DailySyncUseCaseTestFixture() {
             // HC-008: a revoked Health Connect permission must surface distinctly so
             // ForegroundSyncController/the periodic worker can route to the permission-recovery
             // flow, not be swallowed into a generic Result.Failure("SYNC_ERROR").
-            coEvery { hcRepo.readSleepSessions(any(), any()) } throws
+            coEvery { hcRepo.readSleepSessions(any(), any(), any()) } throws
                 app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException(
                     SecurityException("revoked"),
                 )
@@ -235,8 +235,8 @@ class DailySyncUseCaseProgressTest : DailySyncUseCaseTestFixture() {
             val onProgress: (ResyncPhase, Int, Int) -> Unit = { phase, current, total ->
                 progressEvents += Triple(phase, current, total)
             }
-            coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } coAnswers {
-                val callback = it.invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
+            coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any(), any()) } coAnswers {
+                val callback = it.invocation.args[4] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
                 callback(listOf(mockk(relaxed = true), mockk(relaxed = true)), "page-2")
                 callback(listOf(mockk(relaxed = true)), null)
                 app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(Unit)
@@ -265,7 +265,7 @@ class DailySyncUseCaseProgressTest : DailySyncUseCaseTestFixture() {
             // duration of a remote read. Ingestion, reconcile and the step fetch must all be done
             // before the transaction opens.
             var depthDuringHcRead = -1
-            coEvery { hcRepo.readSteps(any(), any()) } answers {
+            coEvery { hcRepo.readSteps(any(), any(), any()) } answers {
                 depthDuringHcRead = transactionRunner.openDepth
                 app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(0L)
             }

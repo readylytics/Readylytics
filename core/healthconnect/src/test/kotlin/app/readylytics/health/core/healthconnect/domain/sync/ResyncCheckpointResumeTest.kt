@@ -73,19 +73,20 @@ class ResyncCheckpointResumeTest {
         // so the walk-forward actually exercises the 6-arg path.
         coEvery { scoringRepository.fetchWalkForwardFatigueContext(any(), any(), any(), any()) } returns
             WalkForwardFatigueContext(emptyList())
-        coEvery { hcRepo.readSleepSessions(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readExerciseSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
-        coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
-        coEvery { hcRepo.readStepsRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readSteps(any(), any()) } returns ReadOutcome.Available(0L)
-        coEvery { hcRepo.readDailyStepTotals(any(), any(), any()) } returns ReadOutcome.Available(emptyMap())
-        coEvery { hcRepo.readWeightRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readBodyFatRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readBloodPressureRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readOxygenSaturationRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readBodyTemperatureRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readVo2MaxRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readSleepSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readExerciseSessions(any(), any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any(), any()) } returns
+            ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readStepsRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readSteps(any(), any(), any()) } returns ReadOutcome.Available(0L)
+        coEvery { hcRepo.readDailyStepTotals(any(), any(), any(), any()) } returns ReadOutcome.Available(emptyMap())
+        coEvery { hcRepo.readWeightRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBodyFatRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBloodPressureRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readOxygenSaturationRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBodyTemperatureRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readVo2MaxRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
         useCase =
             ResyncRangeUseCase(
                 settingsRepo = settingsRepo,
@@ -143,7 +144,7 @@ class ResyncCheckpointResumeTest {
 
             val sleepFromSlot = slot<Instant>()
             coEvery {
-                hcRepo.readSleepSessions(capture(sleepFromSlot), any())
+                hcRepo.readSleepSessions(capture(sleepFromSlot), any(), any())
             } returns ReadOutcome.Available(emptyList())
 
             useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
@@ -274,7 +275,7 @@ class ResyncCheckpointResumeTest {
 
             val sleepFromInstants = mutableListOf<Instant>()
             coEvery {
-                hcRepo.readSleepSessions(capture(sleepFromInstants), any())
+                hcRepo.readSleepSessions(capture(sleepFromInstants), any(), any())
             } returns ReadOutcome.Available(emptyList())
 
             useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
@@ -303,7 +304,7 @@ class ResyncCheckpointResumeTest {
                 )
 
             val sleepFromSlot = slot<Instant>()
-            coEvery { hcRepo.readSleepSessions(capture(sleepFromSlot), any()) } throws
+            coEvery { hcRepo.readSleepSessions(capture(sleepFromSlot), any(), any()) } throws
                 IllegalStateException("stop after checkpoint initialization")
 
             val result =
@@ -329,7 +330,7 @@ class ResyncCheckpointResumeTest {
 
             coVerifyOrder {
                 changeSynchronizer.captureChangesTokens()
-                hcRepo.readSleepSessions(any(), any())
+                hcRepo.readSleepSessions(any(), any(), any())
                 scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any())
                 changeSynchronizer.commitTokens(baselineTokens)
             }
@@ -346,7 +347,7 @@ class ResyncCheckpointResumeTest {
                     HealthDataType.HRV to "baseline-hrv-token",
                 )
             coEvery { changeSynchronizer.captureChangesTokens() } returns multiTokens
-            coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Denied
+            coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any(), any()) } returns ReadOutcome.Denied
 
             useCase.run(startDate = startDate, endDate = startDate, chunkDays = 30, onProgress = null)
 
@@ -387,7 +388,8 @@ class ResyncCheckpointResumeTest {
             // The resumed chunk (6/3-6/4) regrants HRV -- it must NOT resurrect HRV's promotion
             // eligibility: chunk 1's denial was already committed and is never reprocessed on
             // resume, so it must permanently exclude HRV for the rest of this run.
-            coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
+            coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any(), any()) } returns
+                ReadOutcome.Available(Unit)
 
             useCase.run(startDate = startDate, endDate = endDate, chunkDays = 2, onProgress = null)
 
@@ -447,7 +449,7 @@ class ResyncCheckpointResumeTest {
 
             val tokenSlot = slot<String?>()
             coEvery {
-                hcRepo.readHeartRateSamplesPaged(any(), any(), captureNullable(tokenSlot), any())
+                hcRepo.readHeartRateSamplesPaged(any(), any(), captureNullable(tokenSlot), any(), any())
             } returns ReadOutcome.Available(Unit)
 
             useCase.run(startDate = startDate, endDate = startDate, chunkDays = 30, onProgress = null)

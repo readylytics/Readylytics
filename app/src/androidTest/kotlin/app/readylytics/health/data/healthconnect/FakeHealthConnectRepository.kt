@@ -143,22 +143,27 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
         }
     }
 
-    private inline fun <T> runRead(
+    private suspend fun <T> runRead(
         op: FakeOp,
+        retryScope: app.readylytics.health.core.model.domain.repository.ReadRetryScope? = null,
         block: () -> T,
     ): ReadOutcome<T> {
         if (!isAvailable()) return ReadOutcome.Unsupported
         val error = errors[op]
         if (error is SecurityException) return ReadOutcome.Denied
-        if (error != null) throw error
-        return ReadOutcome.Available(block())
+        val read: suspend () -> T = {
+            if (error != null) throw error
+            block()
+        }
+        return ReadOutcome.Available(retryScope?.execute(op.name, read) ?: read())
     }
 
     override suspend fun readSleepSessions(
         from: Instant,
         to: Instant,
+        retryScope: app.readylytics.health.core.model.domain.repository.ReadRetryScope?,
     ): ReadOutcome<List<DomainSleepSessionRecord>> =
-        runRead(FakeOp.Sleep) {
+        runRead(FakeOp.Sleep, retryScope) {
             val total = totalInRange(sleepCount, from, to)
             sleepPagesServed = pagesFor(total)
             stubList(total) { index -> placeholderSleep(index) }
@@ -167,8 +172,9 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
     override suspend fun readHeartRateSamples(
         from: Instant,
         to: Instant,
+        retryScope: app.readylytics.health.core.model.domain.repository.ReadRetryScope?,
     ): ReadOutcome<List<DomainHeartRateRecord>> =
-        runRead(FakeOp.HeartRate) {
+        runRead(FakeOp.HeartRate, retryScope) {
             val total = totalInRange(hrCount, from, to)
             hrPagesServed = pagesFor(total)
             stubList(total) { index -> placeholderHeartRate(index) }
@@ -177,8 +183,9 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
     override suspend fun readHrvSamples(
         from: Instant,
         to: Instant,
+        retryScope: app.readylytics.health.core.model.domain.repository.ReadRetryScope?,
     ): ReadOutcome<List<DomainHrvRecord>> =
-        runRead(FakeOp.Hrv) {
+        runRead(FakeOp.Hrv, retryScope) {
             stubList(totalInRange(hrvCount, from, to)) { index -> placeholderHrv(index) }
         }
 
@@ -186,6 +193,7 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
         from: Instant,
         to: Instant,
         startPageToken: String?,
+        retryScope: app.readylytics.health.core.model.domain.repository.ReadRetryScope?,
         onPage: suspend (List<DomainHeartRateRecord>, String?) -> Unit,
     ): ReadOutcome<Unit> {
         if (!isAvailable()) return ReadOutcome.Unsupported
@@ -208,6 +216,7 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
         from: Instant,
         to: Instant,
         startPageToken: String?,
+        retryScope: app.readylytics.health.core.model.domain.repository.ReadRetryScope?,
         onPage: suspend (List<DomainHrvRecord>, String?) -> Unit,
     ): ReadOutcome<Unit> {
         if (!isAvailable()) return ReadOutcome.Unsupported
@@ -229,8 +238,9 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
         from: Instant,
         to: Instant,
         includeDetails: Boolean,
+        retryScope: app.readylytics.health.core.model.domain.repository.ReadRetryScope?,
     ): ReadOutcome<List<DomainExerciseSessionRecord>> =
-        runRead(FakeOp.Exercise) {
+        runRead(FakeOp.Exercise, retryScope) {
             val total = totalInRange(exerciseCount, from, to)
             exercisePagesServed = pagesFor(total)
             stubList(total) { index -> placeholderExercise(index) }
@@ -239,8 +249,9 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
     override suspend fun readStepsRecords(
         from: Instant,
         to: Instant,
+        retryScope: app.readylytics.health.core.model.domain.repository.ReadRetryScope?,
     ): ReadOutcome<List<DomainStepsRecord>> =
-        runRead(FakeOp.Steps) {
+        runRead(FakeOp.Steps, retryScope) {
             val count = stepsByInstant.keys.count { inRange(it, from, to) }
             stubList(count) { index -> placeholderSteps(index) }
         }
@@ -248,8 +259,9 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
     override suspend fun readSteps(
         from: Instant,
         to: Instant,
+        retryScope: app.readylytics.health.core.model.domain.repository.ReadRetryScope?,
     ): ReadOutcome<Long> =
-        runRead(FakeOp.Steps) {
+        runRead(FakeOp.Steps, retryScope) {
             stepsByInstant
                 .filterKeys { inRange(it, from, to) }
                 .values
@@ -260,8 +272,9 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
         from: Instant,
         to: Instant,
         zoneId: ZoneId,
+        retryScope: app.readylytics.health.core.model.domain.repository.ReadRetryScope?,
     ): ReadOutcome<Map<LocalDate, Long>> =
-        runRead(FakeOp.Steps) {
+        runRead(FakeOp.Steps, retryScope) {
             stepsByInstant
                 .filterKeys { inRange(it, from, to) }
                 .entries
@@ -272,40 +285,45 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
     override suspend fun readWeightRecords(
         from: Instant,
         to: Instant,
+        retryScope: app.readylytics.health.core.model.domain.repository.ReadRetryScope?,
     ): ReadOutcome<List<DomainWeightRecord>> =
-        runRead(FakeOp.Weight) {
+        runRead(FakeOp.Weight, retryScope) {
             stubList(totalInRange(weightCount, from, to)) { index -> placeholderWeight(index) }
         }
 
     override suspend fun readBodyFatRecords(
         from: Instant,
         to: Instant,
+        retryScope: app.readylytics.health.core.model.domain.repository.ReadRetryScope?,
     ): ReadOutcome<List<DomainBodyFatRecord>> =
-        runRead(FakeOp.BodyFat) {
+        runRead(FakeOp.BodyFat, retryScope) {
             stubList(totalInRange(bodyFatCount, from, to)) { index -> placeholderBodyFat(index) }
         }
 
     override suspend fun readBloodPressureRecords(
         from: Instant,
         to: Instant,
+        retryScope: app.readylytics.health.core.model.domain.repository.ReadRetryScope?,
     ): ReadOutcome<List<DomainBloodPressureRecord>> =
-        runRead(FakeOp.BloodPressure) {
+        runRead(FakeOp.BloodPressure, retryScope) {
             stubList(totalInRange(bpCount, from, to)) { index -> placeholderBloodPressure(index) }
         }
 
     override suspend fun readOxygenSaturationRecords(
         from: Instant,
         to: Instant,
+        retryScope: app.readylytics.health.core.model.domain.repository.ReadRetryScope?,
     ): ReadOutcome<List<DomainOxygenSaturationRecord>> =
-        runRead(FakeOp.OxygenSaturation) {
+        runRead(FakeOp.OxygenSaturation, retryScope) {
             stubList(totalInRange(spo2Count, from, to)) { index -> placeholderOxygen(index) }
         }
 
     override suspend fun readBodyTemperatureRecords(
         from: Instant,
         to: Instant,
+        retryScope: app.readylytics.health.core.model.domain.repository.ReadRetryScope?,
     ): ReadOutcome<List<DomainBodyTemperatureRecord>> =
-        runRead(FakeOp.BodyTemperature) {
+        runRead(FakeOp.BodyTemperature, retryScope) {
             stubList(totalInRange(bodyTemperatureCount, from, to)) { index -> placeholderBodyTemperature(index) }
         }
 
@@ -342,6 +360,7 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
     override suspend fun readVo2MaxRecords(
         startTime: Instant,
         endTime: Instant,
+        retryScope: app.readylytics.health.core.model.domain.repository.ReadRetryScope?,
     ): ReadOutcome<List<DomainVo2MaxRecord>> =
         runRead(FakeOp.Discovery) {
             emptyList()

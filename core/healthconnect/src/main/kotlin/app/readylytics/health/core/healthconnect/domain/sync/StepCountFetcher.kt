@@ -1,6 +1,7 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
 import app.readylytics.health.core.model.domain.model.DomainStepsRecord
+import app.readylytics.health.core.model.domain.repository.ReadRetryScope
 import app.readylytics.health.core.model.domain.repository.ReadOutcome
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
 import app.readylytics.health.core.model.domain.sync.mappers.StepsMapper
@@ -32,6 +33,10 @@ class StepCountFetcher
     constructor(
         private val hcRepo: HealthConnectRepository,
     ) {
+        private val standaloneRetry = object : ReadRetryScope {
+            override suspend fun <T> execute(label: String, block: suspend () -> T): T = retryWithBackoff(block = block)
+        }
+
         private companion object {
             // Max concurrent Health Connect step reads during a catch-up sync.
             const val STEPS_FETCH_CONCURRENCY = 4
@@ -80,7 +85,7 @@ class StepCountFetcher
             val dayStart = day.atStartOfDay(zoneId).toInstant()
             val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
             return semaphore.withPermit {
-                val outcome = retryWithBackoff { hcRepo.readSteps(dayStart, dayEnd) }
+                val outcome = hcRepo.readSteps(dayStart, dayEnd, retryScope = standaloneRetry)
                 if (outcome is ReadOutcome.Available) {
                     day to outcome.data
                 } else {
@@ -98,7 +103,7 @@ class StepCountFetcher
             val oldestTargetDay = today.minusDays((windowDays - 1).toLong())
             val windowStart = oldestTargetDay.atStartOfDay(zoneId).toInstant()
             val windowEnd = today.plusDays(1).atStartOfDay(zoneId).toInstant()
-            val outcome = retryWithBackoff { hcRepo.readStepsRecords(windowStart, windowEnd) }
+            val outcome = hcRepo.readStepsRecords(windowStart, windowEnd, retryScope = standaloneRetry)
             if (outcome !is ReadOutcome.Available) return emptyMap()
 
             val stepsMap = mutableMapOf<LocalDate, Long>()
@@ -146,7 +151,7 @@ class StepCountFetcher
                 val chunkEndExclusive = minOf(chunkStart.plusDays(chunkDays.toLong()), endDate.plusDays(1))
                 val windowStart = chunkStart.atStartOfDay(zoneId).toInstant()
                 val windowEnd = chunkEndExclusive.atStartOfDay(zoneId).toInstant()
-                val outcome = retryWithBackoff { hcRepo.readDailyStepTotals(windowStart, windowEnd, zoneId) }
+                val outcome = hcRepo.readDailyStepTotals(windowStart, windowEnd, zoneId, retryScope = standaloneRetry)
                 if (outcome is ReadOutcome.Available) {
                     zeroFillDays(chunkStart, chunkEndExclusive, stepsMap)
                     stepsMap.putAll(outcome.data)
@@ -173,7 +178,7 @@ class StepCountFetcher
                 val chunkEndExclusive = minOf(chunkStart.plusDays(chunkDays.toLong()), endDate.plusDays(1))
                 val stepsWindowStart = chunkStart.atStartOfDay(zoneId).toInstant()
                 val stepsWindowEnd = chunkEndExclusive.atStartOfDay(zoneId).toInstant()
-                val outcome = retryWithBackoff { hcRepo.readStepsRecords(stepsWindowStart, stepsWindowEnd) }
+                val outcome = hcRepo.readStepsRecords(stepsWindowStart, stepsWindowEnd, retryScope = standaloneRetry)
                 if (processRecordsOutcome(outcome, stepsDevice, seenRecordIds, allEntries)) {
                     hasAnySuccess = true
                 }

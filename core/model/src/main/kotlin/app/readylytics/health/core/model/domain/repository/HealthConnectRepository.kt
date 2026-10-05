@@ -75,16 +75,19 @@ interface HealthConnectRepository : HealthConnectPermissionChecker {
     suspend fun readSleepSessions(
         from: Instant,
         to: Instant,
+        retryScope: ReadRetryScope? = null,
     ): ReadOutcome<List<DomainSleepSessionRecord>>
 
     suspend fun readHeartRateSamples(
         from: Instant,
         to: Instant,
+        retryScope: ReadRetryScope? = null,
     ): ReadOutcome<List<DomainHeartRateRecord>>
 
     suspend fun readHrvSamples(
         from: Instant,
         to: Instant,
+        retryScope: ReadRetryScope? = null,
     ): ReadOutcome<List<DomainHrvRecord>>
 
     /**
@@ -96,6 +99,7 @@ interface HealthConnectRepository : HealthConnectPermissionChecker {
         from: Instant,
         to: Instant,
         startPageToken: String? = null,
+        retryScope: ReadRetryScope? = null,
         onPage: suspend (records: List<DomainHeartRateRecord>, nextPageToken: String?) -> Unit,
     ): ReadOutcome<Unit>
 
@@ -104,6 +108,7 @@ interface HealthConnectRepository : HealthConnectPermissionChecker {
         from: Instant,
         to: Instant,
         startPageToken: String? = null,
+        retryScope: ReadRetryScope? = null,
         onPage: suspend (records: List<DomainHrvRecord>, nextPageToken: String?) -> Unit,
     ): ReadOutcome<Unit>
 
@@ -118,16 +123,19 @@ interface HealthConnectRepository : HealthConnectPermissionChecker {
         from: Instant,
         to: Instant,
         includeDetails: Boolean = true,
+        retryScope: ReadRetryScope? = null,
     ): ReadOutcome<List<DomainExerciseSessionRecord>>
 
     suspend fun readStepsRecords(
         from: Instant,
         to: Instant,
+        retryScope: ReadRetryScope? = null,
     ): ReadOutcome<List<DomainStepsRecord>>
 
     suspend fun readSteps(
         from: Instant,
         to: Instant,
+        retryScope: ReadRetryScope? = null,
     ): ReadOutcome<Long>
 
     /**
@@ -140,6 +148,7 @@ interface HealthConnectRepository : HealthConnectPermissionChecker {
         from: Instant,
         to: Instant,
         zoneId: java.time.ZoneId,
+        retryScope: ReadRetryScope? = null,
     ): ReadOutcome<Map<java.time.LocalDate, Long>>
 
     suspend fun discoverDevices(windowDays: Int = 2): List<String>
@@ -147,31 +156,37 @@ interface HealthConnectRepository : HealthConnectPermissionChecker {
     suspend fun readWeightRecords(
         from: Instant,
         to: Instant,
+        retryScope: ReadRetryScope? = null,
     ): ReadOutcome<List<DomainWeightRecord>>
 
     suspend fun readBodyFatRecords(
         from: Instant,
         to: Instant,
+        retryScope: ReadRetryScope? = null,
     ): ReadOutcome<List<DomainBodyFatRecord>>
 
     suspend fun readBloodPressureRecords(
         from: Instant,
         to: Instant,
+        retryScope: ReadRetryScope? = null,
     ): ReadOutcome<List<DomainBloodPressureRecord>>
 
     suspend fun readOxygenSaturationRecords(
         from: Instant,
         to: Instant,
+        retryScope: ReadRetryScope? = null,
     ): ReadOutcome<List<DomainOxygenSaturationRecord>>
 
     suspend fun readBodyTemperatureRecords(
         from: Instant,
         to: Instant,
+        retryScope: ReadRetryScope? = null,
     ): ReadOutcome<List<DomainBodyTemperatureRecord>>
 
     suspend fun readVo2MaxRecords(
         startTime: Instant,
         endTime: Instant,
+        retryScope: ReadRetryScope? = null,
     ): ReadOutcome<List<DomainVo2MaxRecord>>
 
     /** Reads a single exercise session by ID with its route data. */

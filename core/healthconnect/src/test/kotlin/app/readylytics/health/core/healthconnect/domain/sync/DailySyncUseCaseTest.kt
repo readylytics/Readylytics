@@ -76,19 +76,20 @@ abstract class DailySyncUseCaseTestFixture {
         // relaxed mock a real (empty) context so recomputeDay receives a non-null instance.
         coEvery { scoringRepository.fetchWalkForwardFatigueContext(any(), any(), any(), any()) } returns
             WalkForwardFatigueContext(emptyList())
-        coEvery { hcRepo.readSleepSessions(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readExerciseSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
-        coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
-        coEvery { hcRepo.readStepsRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readSteps(any(), any()) } returns ReadOutcome.Available(0L)
-        coEvery { hcRepo.readDailyStepTotals(any(), any(), any()) } returns ReadOutcome.Available(emptyMap())
-        coEvery { hcRepo.readWeightRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readBodyFatRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readBloodPressureRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readOxygenSaturationRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readBodyTemperatureRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readVo2MaxRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readSleepSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readExerciseSessions(any(), any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any(), any()) } returns
+            ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readStepsRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readSteps(any(), any(), any()) } returns ReadOutcome.Available(0L)
+        coEvery { hcRepo.readDailyStepTotals(any(), any(), any(), any()) } returns ReadOutcome.Available(emptyMap())
+        coEvery { hcRepo.readWeightRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBodyFatRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBloodPressureRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readOxygenSaturationRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBodyTemperatureRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readVo2MaxRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
         coEvery { hcRepo.hasVo2MaxPermission() } returns false
 
         useCase = buildUseCase()
@@ -363,25 +364,25 @@ class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
     @Test
     fun `sync fetches and upserts all heart-related record types`() =
         runTest {
-            coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } coAnswers {
-                val callback = it.invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
+            coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any(), any()) } coAnswers {
+                val callback = it.invocation.args[4] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
                 callback(listOf(mockk(relaxed = true)), null)
                 app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(Unit)
             }
-            coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } coAnswers {
-                val callback = it.invocation.args[3] as suspend (List<DomainHrvRecord>, String?) -> Unit
+            coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any(), any()) } coAnswers {
+                val callback = it.invocation.args[4] as suspend (List<DomainHrvRecord>, String?) -> Unit
                 callback(listOf(mockk(relaxed = true)), null)
                 app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(Unit)
             }
-            coEvery { hcRepo.readSteps(any(), any()) } returns
+            coEvery { hcRepo.readSteps(any(), any(), any()) } returns
                 app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(0L)
 
             useCase.run(windowDays = 8, onProgress = null)
 
             coVerify {
-                hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any())
-                hcRepo.readHrvSamplesPaged(any(), any(), any(), any())
-                hcRepo.readSteps(any(), any())
+                hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any(), any())
+                hcRepo.readHrvSamplesPaged(any(), any(), any(), any(), any())
+                hcRepo.readSteps(any(), any(), any())
                 healthIngestionStore.persist(any())
                 healthIngestionStore.replaceHeartRateSources(any())
                 healthIngestionStore.replaceHrvSources(any())
@@ -393,9 +394,9 @@ class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
         runTest {
             val hrvFromSlot = slot<Instant>()
             val hrFromSlot = slot<Instant>()
-            coEvery { hcRepo.readHrvSamplesPaged(capture(hrvFromSlot), any(), any(), any()) } returns
+            coEvery { hcRepo.readHrvSamplesPaged(capture(hrvFromSlot), any(), any(), any(), any()) } returns
                 app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(Unit)
-            coEvery { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any(), any()) } returns
+            coEvery { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any(), any(), any()) } returns
                 app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(Unit)
 
             useCase.run(windowDays = 1, onProgress = null)
@@ -422,7 +423,7 @@ class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
             val todayMidnight = today.atStartOfDay(zoneId).toInstant()
             val yesterdayMidnight = today.minusDays(1).atStartOfDay(zoneId).toInstant()
             val froms = mutableListOf<Instant>()
-            coEvery { hcRepo.readSleepSessions(capture(froms), any()) } returns
+            coEvery { hcRepo.readSleepSessions(capture(froms), any(), any()) } returns
                 app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(emptyList())
 
             useCase.run(windowDays = 1, onProgress = null)
@@ -434,7 +435,7 @@ class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
     fun `sync retries today's ingest with an extended budget after a timeout`() =
         runTest {
             var sleepReadCalls = 0
-            coEvery { hcRepo.readSleepSessions(any(), any()) } coAnswers {
+            coEvery { hcRepo.readSleepSessions(any(), any(), any()) } coAnswers {
                 if (++sleepReadCalls == 1) {
                     throw HealthConnectWindowTimeoutException(
                         Instant.EPOCH,
@@ -455,7 +456,7 @@ class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
     @Test
     fun `sync returns DEFERRED_DAILY_SYNC when today's ingest times out even after retry`() =
         runTest {
-            coEvery { hcRepo.readSleepSessions(any(), any()) } throws
+            coEvery { hcRepo.readSleepSessions(any(), any(), any()) } throws
                 HealthConnectWindowTimeoutException(
                     Instant.EPOCH,
                     Instant.EPOCH.plusSeconds(1),
@@ -470,7 +471,7 @@ class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
                 (result as app.readylytics.health.core.model.domain.model.Result.Failure).code,
             )
             // today's two attempts both timed out; the back-day segment never ran and nothing scored.
-            coVerify(exactly = 2) { hcRepo.readSleepSessions(any(), any()) }
+            coVerify(exactly = 2) { hcRepo.readSleepSessions(any(), any(), any()) }
             coVerify(exactly = 0) {
                 scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any(), any())
             }
@@ -484,7 +485,7 @@ class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
             val today = LocalDate.now(fixedClock.withZone(zoneId))
             val todayMidnight = today.atStartOfDay(zoneId).toInstant()
             val yesterdayMidnight = today.minusDays(1).atStartOfDay(zoneId).toInstant()
-            coEvery { hcRepo.readSleepSessions(any(), any()) } coAnswers {
+            coEvery { hcRepo.readSleepSessions(any(), any(), any()) } coAnswers {
                 if (firstArg<Instant>() == yesterdayMidnight) {
                     throw HealthConnectWindowTimeoutException(
                         yesterdayMidnight,
@@ -518,7 +519,7 @@ class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
                     requiresFullResync = false,
                     nextTokens = mapOf(HealthDataType.SLEEP to "next-sleep-token"),
                 )
-            coEvery { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any(), any()) } returns
+            coEvery { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any(), any(), any()) } returns
                 app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(Unit)
             coJustRun {
                 scoringRepository.computeAndPersistDailySummary(
@@ -557,7 +558,7 @@ class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
                     requiresFullResync = false,
                     nextTokens = nextTokens,
                 )
-            coEvery { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any(), any()) } returns
+            coEvery { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any(), any(), any()) } returns
                 app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(Unit)
             coJustRun {
                 scoringRepository.computeAndPersistDailySummary(

@@ -128,6 +128,30 @@ class HealthConnectRepositoryImplTest {
         assertTrue((repo.optionalPermissions intersect repo.criticalPermissions).isEmpty())
     }
 
+    @Test
+    fun readSleepSessions_delegatesProviderFailureToSuppliedScope() =
+        runBlocking {
+            val failure = java.io.IOException("rate limit")
+            fake.errors[FakeOp.Sleep] = failure
+            var scopeCalls = 0
+            val scope =
+                object : app.readylytics.health.core.model.domain.repository.ReadRetryScope {
+                    override suspend fun <T> execute(
+                        label: String,
+                        block: suspend () -> T,
+                    ): T {
+                        scopeCalls++
+                        return block()
+                    }
+                }
+            val thrown =
+                assertThrows(java.io.IOException::class.java) {
+                    runBlocking { repo.readSleepSessions(t0, t7, retryScope = scope) }
+                }
+            assertSame(failure, thrown)
+            assertEquals(1, scopeCalls)
+        }
+
     // ---------- sleep ----------
 
     @Test

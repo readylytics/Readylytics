@@ -37,7 +37,7 @@ class HealthIngestionCoordinatorVo2MaxTest {
                     measurementMethod = 1,
                     deviceName = "Pixel Watch",
                 )
-            coEvery { hcRepo.readVo2MaxRecords(any(), any()) } returns
+            coEvery { hcRepo.readVo2MaxRecords(any(), any(), any()) } returns
                 ReadOutcome.Available(listOf(domainRecord))
 
             val batchSlot = slot<HealthIngestionBatch>()
@@ -50,7 +50,7 @@ class HealthIngestionCoordinatorVo2MaxTest {
                 prefs = UserPreferences(),
             )
 
-            coVerify(exactly = 1) { hcRepo.readVo2MaxRecords(any(), any()) }
+            coVerify(exactly = 1) { hcRepo.readVo2MaxRecords(any(), any(), any()) }
             assertTrue(batchSlot.isCaptured)
             val vo2Samples = batchSlot.captured.vo2MaxSamples
             assertEquals(1, vo2Samples.size)
@@ -80,7 +80,7 @@ class HealthIngestionCoordinatorVo2MaxTest {
                 prefs = UserPreferences(),
             )
 
-            coVerify(exactly = 0) { hcRepo.readVo2MaxRecords(any(), any()) }
+            coVerify(exactly = 0) { hcRepo.readVo2MaxRecords(any(), any(), any()) }
             assertTrue(batchSlot.isCaptured)
             assertTrue(batchSlot.captured.vo2MaxSamples.isEmpty())
         }
@@ -94,7 +94,7 @@ class HealthIngestionCoordinatorVo2MaxTest {
             coEvery { healthIngestionStore.reconcileWindow(any(), any()) } returns null
 
             coEvery { hcRepo.hasVo2MaxPermission() } returns true
-            coEvery { hcRepo.readVo2MaxRecords(any(), any()) } returns
+            coEvery { hcRepo.readVo2MaxRecords(any(), any(), any()) } returns
                 ReadOutcome.Available(
                     listOf(
                         DomainVo2MaxRecord(
@@ -164,7 +164,7 @@ class HealthIngestionCoordinatorVo2MaxTest {
                     measurementMethod = null,
                     deviceName = "Watch B",
                 )
-            coEvery { hcRepo.readVo2MaxRecords(any(), any()) } returns
+            coEvery { hcRepo.readVo2MaxRecords(any(), any(), any()) } returns
                 ReadOutcome.Available(listOf(recordA, recordB))
 
             val batchSlot = slot<HealthIngestionBatch>()
@@ -217,7 +217,7 @@ class HealthIngestionCoordinatorVo2MaxTest {
                     measurementMethod = null,
                     deviceName = "Watch A",
                 )
-            coEvery { hcRepo.readVo2MaxRecords(any(), any()) } returns
+            coEvery { hcRepo.readVo2MaxRecords(any(), any(), any()) } returns
                 ReadOutcome.Available(listOf(recordA, recordB))
 
             val batchSlot = slot<HealthIngestionBatch>()
@@ -241,15 +241,16 @@ class HealthIngestionCoordinatorVo2MaxTest {
         }
 
     private fun stubEmptyReads(hcRepo: HealthConnectRepository) {
-        coEvery { hcRepo.readSleepSessions(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readExerciseSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readWeightRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readBodyFatRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readBloodPressureRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readOxygenSaturationRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readBodyTemperatureRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readStepsRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
-        coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readSleepSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readExerciseSessions(any(), any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readWeightRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBodyFatRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBloodPressureRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readOxygenSaturationRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBodyTemperatureRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readStepsRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any(), any()) } returns
+            ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
     }
 }
