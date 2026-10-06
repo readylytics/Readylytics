@@ -23,9 +23,15 @@ interface SelectedSourcePruner {
      * device does not match [selectedDevice], paging through matches in bounded batches so a
      * multi-year range never loads its full result set into memory. Returns the
      * [ScoreInvalidation.AffectedRange] spanning the dates of every deleted workout (in [zoneId]),
-     * or null if nothing was deleted -- the caller widens this through
-     * [ScoreInvalidation.dependencyClosure] before recomputing, since a removed workout's TRIMP
-     * shifts rolling baselines/load scores forward of its own date.
+     * or null if nothing was deleted.
+     *
+     * Fix-round-3: the implementation also durably journals a `dirty_ranges` ticket per deleted
+     * page, atomically with that page's own delete (see `SelectedSourcePrunerImpl`'s
+     * `journalPrunedPage`) -- this return value is a convenience for callers/tests, not the sole
+     * record of "what needs recompute". A worker killed after a page commits but before it calls
+     * the caller's recompute must still recompute that page's dates on retry even though a retry's
+     * prune finds nothing left to delete and reports null; the durable ticket is what makes that
+     * possible.
      */
     suspend fun pruneExcludedWorkouts(
         start: LocalDate,

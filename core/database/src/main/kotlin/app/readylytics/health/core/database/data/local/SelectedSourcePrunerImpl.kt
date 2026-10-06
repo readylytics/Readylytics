@@ -1,5 +1,6 @@
 package app.readylytics.health.core.database.data.local
 
+import app.readylytics.health.core.databaseschema.data.local.dao.HealthMutationStateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.Vo2MaxRecordDao
 import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
@@ -21,6 +22,13 @@ class SelectedSourcePrunerImpl
         private val transactionRunner: TransactionRunner,
         private val daos: HealthRecordDaos,
         private val vo2MaxRecordDao: Vo2MaxRecordDao? = null,
+        // Fix-round-3: durable journal for pruneExcludedWorkouts, so a page's delete and the
+        // ticket recording "its dates still need recompute" commit atomically. Nullable default
+        // keeps every pre-existing 2/3-arg test construction compiling; Hilt always injects the
+        // real bindings in production (both already exist, see RoomDirtyRangeStore/
+        // HealthMutationStateDao other callers such as SourcePayloadWriter).
+        private val dirtyRangeStore: RoomDirtyRangeStore? = null,
+        private val healthMutationStateDao: HealthMutationStateDao? = null,
     ) : SelectedSourcePruner {
         override suspend fun prune(
             start: LocalDate,
@@ -74,16 +82,17 @@ class SelectedSourcePrunerImpl
                 if (page.isEmpty()) break
 
                 val ids = page.map { it.id }
+                val pageDates = page.map { Instant.ofEpochMilli(it.startTime).atZone(zoneId).toLocalDate() }
+                val pageStart = pageDates.min()
+                val pageEnd = pageDates.max()
                 transactionRunner.runInTransaction {
                     daos.workoutRoutePointDao.deleteForWorkouts(ids)
                     daos.workoutDao.deleteByIds(ids)
+                    journalPrunedPage(pageStart, pageEnd, start, endInclusive)
                 }
 
-                for (record in page) {
-                    val date = Instant.ofEpochMilli(record.startTime).atZone(zoneId).toLocalDate()
-                    if (touchedStart == null || date.isBefore(touchedStart)) touchedStart = date
-                    if (touchedEnd == null || date.isAfter(touchedEnd)) touchedEnd = date
-                }
+                if (touchedStart == null || pageStart.isBefore(touchedStart)) touchedStart = pageStart
+                if (touchedEnd == null || pageEnd.isAfter(touchedEnd)) touchedEnd = pageEnd
 
                 val last = page.last()
                 cursorTs = last.startTime
@@ -92,6 +101,42 @@ class SelectedSourcePrunerImpl
             }
 
             return touchedStart?.let { ScoreInvalidation.AffectedRange(it, touchedEnd ?: it) }
+        }
+
+        /**
+         * Fix-round-3 (durability): journals a durable `dirty_ranges` ticket for this page's
+         * dependency closure, in the SAME transaction as the page's own delete (the pattern
+         * [DeletionJournalContext.deleteRecordsAndJournal]/`SourcePayloadWriter.recordDirtyRange`
+         * already use). Without this, the live [ScoreInvalidation.AffectedRange] this function
+         * returns was the only record of "these dates need recompute" -- a worker killed after
+         * this page's delete committed but before the caller's recompute succeeded would lose that
+         * fact forever, since a retry's prune finds nothing left to delete and reports null. With
+         * the ticket durable, a retry's recompute drains it regardless of what the retry's own
+         * prune finds.
+         */
+        private suspend fun journalPrunedPage(
+            pageStart: LocalDate,
+            pageEnd: LocalDate,
+            retentionStart: LocalDate,
+            today: LocalDate,
+        ) {
+            val store = dirtyRangeStore ?: return
+            val mutationStateDao = healthMutationStateDao ?: return
+            ScoreInvalidation
+                .dependencyClosure(
+                    changed = ScoreInvalidation.AffectedRange(pageStart, pageEnd),
+                    reason = ScoreInvalidation.Reason.WORKOUT,
+                    retentionStart = retentionStart,
+                    today = today,
+                )?.let { closure ->
+                    mutationStateDao.incrementGeneration()
+                    store.append(
+                        start = closure.start,
+                        endInclusive = closure.endInclusive,
+                        reason = "WORKOUT",
+                        snapshotId = "ACTIVE",
+                    )
+                }
         }
 
         private suspend fun pruneType(

@@ -137,6 +137,14 @@ class HealthResyncWorker
          * and the recompute below reuses the existing `recomputeOnly = true` path. A user who never
          * changed their device selection (or has none excluded to delete) still reaches
          * [updateSelectedWorkoutRepairCompleted] so the gate stops re-enqueuing.
+         *
+         * Fix-round-3 (durability): the range to recompute is no longer derived from this attempt's
+         * live prune result -- [SelectedSourcePrunerImpl] now journals a durable `dirty_ranges`
+         * ticket per page atomically with that page's own delete, so [drainJournaledRepairTickets]
+         * (the same pending-ticket drain [runNormalRecompute] already uses) picks it up regardless
+         * of whether THIS attempt's prune found anything left to delete. A worker killed after a
+         * page's delete committed but before recompute succeeds therefore retries correctly: the
+         * ticket survives even though a retry's prune reports nothing more to prune.
          */
         private suspend fun runSelectedWorkoutRepair(
             resyncUseCase: FullHistoricalResyncUseCase,
@@ -150,14 +158,8 @@ class HealthResyncWorker
                 val zoneId = prefs.scoringZone()
                 val today = LocalDate.now(zoneId)
                 val retentionStart = RetentionBounds.resolveResyncStartDate(prefs, today)
-                val closure = resolveRepairClosure(prefs, retentionStart, today, zoneId)
-                val recomputeResult =
-                    closure?.let { range ->
-                        resyncUseCase.execute(recomputeOnly = true, rangeOverride = range) { phase, current, total ->
-                            notifyProgress(syncController, phase, current, total)
-                        }
-                    }
-                if (recomputeResult != null && !recomputeResult.isSuccess) return Result.retry()
+                pruneExcludedWorkoutsIfSelected(prefs, retentionStart, today, zoneId)
+                if (!drainJournaledRepairTickets(resyncUseCase, syncController)) return Result.retry()
                 settings.updateSelectedWorkoutRepairCompleted(true)
             }
 
@@ -166,32 +168,54 @@ class HealthResyncWorker
         }
 
         /**
-         * Null when there is no excluded device, or nothing was actually pruned for it. Resolves
-         * [selectedSourcePruner] lazily, after the device guard, so a user who never excluded a
-         * device never even touches the DI-resolved pruner.
+         * No-op when there is no excluded device. Resolves [selectedSourcePruner] lazily, after the
+         * device guard, so a user who never excluded a device never even touches the DI-resolved
+         * pruner. The prune's own durable journaling (see [SelectedSourcePrunerImpl]) is what now
+         * carries "what needs recompute" forward -- this function's return is intentionally
+         * discarded.
          */
-        private suspend fun resolveRepairClosure(
+        private suspend fun pruneExcludedWorkoutsIfSelected(
             prefs: UserPreferences,
             retentionStart: LocalDate,
             today: LocalDate,
             zoneId: ZoneId,
-        ): ScoreInvalidation.AffectedRange? {
+        ) {
             val selectedDevice = prefs.deviceByDataType[HealthDataType.EXERCISE.name]
-            if (selectedDevice.isNullOrBlank()) return null
+            if (selectedDevice.isNullOrBlank()) return
+            val pruner = selectedSourcePruner?.get() ?: return
+            val coordinator = healthMutationCoordinator?.get()
+            if (coordinator != null) {
+                coordinator.withMutation { pruner.pruneExcludedWorkouts(retentionStart, today, selectedDevice, zoneId) }
+            } else {
+                pruner.pruneExcludedWorkouts(retentionStart, today, selectedDevice, zoneId)
+            }
+        }
 
-            return selectedSourcePruner?.get()?.let { pruner ->
-                val coordinator = healthMutationCoordinator?.get()
-                val affected =
-                    if (coordinator != null) {
-                        coordinator.withMutation {
-                            pruner.pruneExcludedWorkouts(retentionStart, today, selectedDevice, zoneId)
-                        }
-                    } else {
-                        pruner.pruneExcludedWorkouts(retentionStart, today, selectedDevice, zoneId)
+        /**
+         * Drains [DirtyRangeStore.pending] exactly like [runNormalRecompute]'s own drain loop,
+         * stopping (returning `true`) the moment nothing is pending -- unlike that loop, this never
+         * falls back to a full-retained-window recompute on an empty first read, since an untouched
+         * repair (no device ever excluded, nothing ever journaled) must stay a zero-cost no-op.
+         * Returns `false` on a failed recompute so the caller retries.
+         */
+        private suspend fun drainJournaledRepairTickets(
+            resyncUseCase: FullHistoricalResyncUseCase,
+            syncController: ForegroundSyncController,
+        ): Boolean {
+            var lastPendingState: List<Pair<Long, LocalDate>>? = null
+            while (true) {
+                val pending = dirtyRangeStore.get().pending(DIRTY_RANGE_BATCH_SIZE)
+                val currentState = pending.map { it.id to it.nextDay }
+                if (pending.isEmpty() || currentState == lastPendingState) return true
+                lastPendingState = currentState
+                val range =
+                    ScoreInvalidation.AffectedRange(pending.minOf { it.nextDay }, pending.maxOf { it.endInclusive })
+                val result =
+                    resyncUseCase.execute(recomputeOnly = true, rangeOverride = range) { phase, current, total ->
+                        notifyProgress(syncController, phase, current, total)
                     }
-                affected?.let {
-                    ScoreInvalidation.dependencyClosure(it, ScoreInvalidation.Reason.WORKOUT, retentionStart, today)
-                }
+                if (!result.isSuccess) return false
+                persistPostRecomputeState(recomputeOnly = true, rangeOverride = range)
             }
         }
 
