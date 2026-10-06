@@ -688,3 +688,12 @@ COMPLETE until the whole paged read succeeds" rule already used for HR/HRV.
 ### 2026-10-06 Task 6 review correction
 
 The dense benchmark now samples used heap during processing after every persisted steps page and logs `MAX_OBSERVED_USED_HEAP_DELTA` and `MAX_RESULT_SET_SIZE`. Sampling can miss intra-page peaks and does not establish retained-heap flatness; allocation/retained-heap profiling remains required on a device. All four scale points remain unmeasured.
+
+### 2026-10-06 — Phase 2 Task 7 WP-16 route read call counts
+
+Deterministic mocked-SDK call measurements (not device timing): two unchanged imported-session
+reads issue **0** `readRecord` calls, versus the previous unconditional **2** in bulk. A no-consent
+Changes read issues **0** route calls; granting consent to a `PERMISSION_REQUIRED` session issues
+**1**, and the following unchanged imported read issues **0**. Each changed start/end/type/device
+identity and `NOT_AVAILABLE` state remains eligible. Tests cover exact route preservation in Room.
+No attached device was reported by `adb devices`; real Binder latency is not measured here.

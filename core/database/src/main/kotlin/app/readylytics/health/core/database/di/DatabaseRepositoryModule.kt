@@ -18,6 +18,8 @@ import app.readylytics.health.core.model.domain.repository.SleepSessionRepositor
 import app.readylytics.health.core.model.domain.repository.WeightRepository
 import app.readylytics.health.core.model.domain.repository.WorkoutRepository
 import app.readylytics.health.core.model.domain.sync.ScanStagingStore
+import app.readylytics.health.core.database.data.repository.RoomWorkoutRouteLookup
+import app.readylytics.health.core.model.domain.repository.WorkoutRouteLookup
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -58,6 +60,10 @@ abstract class DatabaseRepositoryModule {
     @Binds
     @Singleton
     abstract fun bindSleepSessionRepository(impl: SleepSessionRepositoryImpl): SleepSessionRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindWorkoutRouteLookup(impl: RoomWorkoutRouteLookup): WorkoutRouteLookup
 
     @Binds
     @Singleton

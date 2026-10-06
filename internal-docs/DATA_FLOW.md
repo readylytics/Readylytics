@@ -448,14 +448,21 @@ points per workout (`(workoutId, timestampMs)` index, cascade-deleted with the p
 adds no new primary scoring input; route points and the route-derived
 `workout_records.totalDistanceMeters`/`avgSpeedKmh`/`elevationGainMeters`/`routeState` columns are
 display/insight data. Route points are populated by `HealthConnectRepositoryImpl.readExerciseSessions`
-— Health Connect bulk `readRecords` does **not** return exercise routes, so each session is additionally
-fetched via `readRecord` and the `exerciseRouteResult` is mapped through `ExerciseSessionRecord.toDomain(routeResult)`
-(`core/healthconnect/.../HealthConnectRecordConverters.kt`); a per-session route failure degrades to
-`NoData` (`NOT_AVAILABLE`) so a missing/revoked route permission never aborts an exercise sync pass.
-That per-record read costs one extra IPC round-trip per session, so `readExerciseSessions` takes an
-`includeDetails` flag (default `true`). Ingestion (`HealthIngestionCoordinator`) passes `true`;
-`discoverDevices` passes `false`, because device discovery only reads `deviceName` and would otherwise
-issue one route read per workout in its scan window.
+— Health Connect bulk `readRecords` does **not** return exercise routes. Bulk and Changes
+reads share `WorkoutRouteReadPolicy`: check route permission before any route SDK read, then
+compare the stable ID, start/end milliseconds, exercise type and mapped device name with the
+Room `WorkoutRouteLookup` snapshot. Only an exactly unchanged `IMPORTED` route is skipped;
+new, changed, `PERMISSION_REQUIRED` and `NOT_AVAILABLE` sessions remain eligible after consent.
+`RoomWorkoutRouteLookup` reuses `WorkoutDao.getByIds` in distinct 900-ID chunks, below the oldest
+supported SQLite bind limit; there is no schema change. Route reads and snapshot lookups occur
+before writer transactions. Skips return preservation semantics (`ReadOutcome.Denied` for
+PreparedWorkout; consent-required empty input for the bulk merge, which retains imported points
+and state), never an authoritative empty Changes route. Actual consent denial also preserves
+stored routes. Transient errors and cancellation propagate for retry; permitted authoritative
+NoData retains the existing Changes removal semantics. A fetched route is mapped through
+`ExerciseSessionRecord.toDomain(routeResult)` (`core/healthconnect/.../HealthConnectRecordConverters.kt`).
+`includeDetails=false` (device discovery) avoids all route enrichment. Distance/elevation totals
+still use the paged whole-window attribution and publish only on an Available outcome.
 Version 12 (`Migration11To12`) adds the `index_step_records_startTime` index on `step_records` (`startTime`)
 for keyset pagination, efficient range queries, and retention cleanup; keyset `pageAfter` methods added to all
 13 backup-facing DAOs (`HeartRateDao`, `HrvDao`, `SleepSessionDao`, `WorkoutDao`, `DailySummaryDao`, `WeightRecordDao`,

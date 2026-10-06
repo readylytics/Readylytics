@@ -2,6 +2,7 @@ package app.readylytics.health.core.healthconnect.data.healthconnect
 
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
+import app.readylytics.health.core.model.domain.repository.WorkoutRouteLookup
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord
@@ -65,6 +66,7 @@ class HealthConnectRepositoryImpl
         private val intervalTotalsReader: IntervalTotalsReader,
         private val clock: Clock,
         private val client: HealthConnectClient,
+        private val routeLookup: WorkoutRouteLookup,
     ) : HealthConnectRepository {
         override val criticalPermissions: Set<String> =
             setOf(
@@ -445,11 +447,16 @@ class HealthConnectRepositoryImpl
 
                     if (elevationOutcome !is ReadOutcome.Available) elevationBySession.clear()
 
+                    val routeConsent = WorkoutRouteReadPolicy.hasConsent(client)
+                    val storedRoutes = routeLookup.snapshots(sessions.map { it.metadata.id })
                     sessions.map { session ->
-                        // Routes are only returned by a per-record read, so this is an extra IPC
-                        // round-trip per session.
+                        // Read routes only when consent and the stored identity require enrichment.
                         val routeResult =
-                            try {
+                            if (!routeConsent ||
+                                !WorkoutRouteReadPolicy.needsRead(session, storedRoutes[session.metadata.id])
+                            ) {
+                                ExerciseRouteResult.ConsentRequired()
+                            } else try {
                                 val record =
                                     retryWithBackoff(budget = retryScope) {
                                         client.readRecord(ExerciseSessionRecord::class, session.metadata.id).record

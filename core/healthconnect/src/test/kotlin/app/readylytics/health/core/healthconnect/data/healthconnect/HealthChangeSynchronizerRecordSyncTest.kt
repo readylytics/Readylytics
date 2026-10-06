@@ -111,6 +111,52 @@ class HealthChangeSynchronizerRecordSyncTest {
     }
 
     @Test
+    fun transientRouteFailurePreservesStoredRoute() =
+        runTest {
+            seedTokens()
+            val importedRoute = listOf(
+                WorkoutRoutePoint(workoutId = "failure-route", latitude = 48.0, longitude = 2.0, timestampMs = 1L),
+            )
+            var persistedRoute = importedRoute
+            coEvery { changeIngestionStore.persistPreparedWorkouts(any()) } coAnswers {
+                firstArg<List<PreparedWorkout>>().forEach { prepared ->
+                    val route = prepared.route
+                    if (route is ReadOutcome.Available) persistedRoute = route.data
+                }
+            }
+            coEvery { client.permissionController.getGrantedPermissions() } returns
+                setOf(
+                    "android.permission.health.READ_EXERCISE_ROUTES",
+                    HealthPermission.getReadPermission(ExerciseSessionRecord::class),
+                )
+            val realPreparer = WorkoutReadPreparer(client, mockk(relaxed = true))
+            val realSynchronizer = HealthChangeSynchronizerImpl(
+                client = client,
+                tokenStore = tokenStore,
+                settingsRepo = settingsRepo,
+                transactionRunner = transactionRunner,
+                healthIngestionStore = healthIngestionStore,
+                changeIngestionStore = changeIngestionStore,
+                workoutReadPreparer = realPreparer,
+                clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
+            )
+            val record = createMockExerciseRecord(
+                "failure-route",
+                Instant.parse("2026-06-01T10:00:00Z"),
+                Instant.parse("2026-06-01T11:00:00Z"),
+            )
+            val ioFailure = java.io.IOException("binder failed")
+            coEvery { client.readRecord(ExerciseSessionRecord::class, "failure-route") } throws ioFailure
+            routeOneChange(HealthDataType.EXERCISE, UpsertionChange(record))
+            val thrown = assertThrows(java.io.IOException::class.java) {
+                kotlinx.coroutines.runBlocking { realSynchronizer.applyPendingChanges() }
+            }
+            assertSame(ioFailure, thrown)
+            assertEquals(importedRoute, persistedRoute)
+            coVerify(exactly = 0) { changeIngestionStore.persistPreparedWorkouts(any()) }
+        }
+
+    @Test
     fun `a single heart rate record resolves its source ref exactly once`() =
         runTest {
             // WP-16 / R2-HC-003 acceptance test: a single upserted HEART_RATE record carrying 200
@@ -422,7 +468,12 @@ class HealthChangeSynchronizerRecordSyncTest {
         runTest {
             // H5/WP-09 acceptance criterion: Exercise enrichment using real WorkoutReadPreparer
             // executes client.readRecord and client.readRecords strictly outside writer transactions.
-            val realPreparer = WorkoutReadPreparer(client)
+            coEvery { client.permissionController.getGrantedPermissions() } returns
+                setOf(
+                    "android.permission.health.READ_EXERCISE_ROUTES",
+                    HealthPermission.getReadPermission(ExerciseSessionRecord::class),
+                )
+            val realPreparer = WorkoutReadPreparer(client, mockk(relaxed = true))
             val realSynchronizer =
                 HealthChangeSynchronizerImpl(
                     client = client,

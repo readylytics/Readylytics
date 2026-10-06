@@ -6,6 +6,8 @@ import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.ExerciseRouteResult
 import androidx.health.connect.client.records.ExerciseSessionRecord
+import app.readylytics.health.core.model.domain.repository.WorkoutRouteLookup
+import app.readylytics.health.core.model.domain.repository.StoredWorkoutRouteSnapshot
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.records.HeartRateRecord
@@ -37,6 +39,7 @@ import kotlin.test.assertEquals
 class HealthConnectRepositoryImplDiscoverDevicesTest {
     private val context = mockk<Context>(relaxed = true)
     private val client = mockk<HealthConnectClient>(relaxed = true)
+    private val routeLookup = mockk<WorkoutRouteLookup>(relaxed = true)
     private lateinit var repo: HealthConnectRepositoryImpl
 
     private fun emptyResponse() =
@@ -113,6 +116,7 @@ class HealthConnectRepositoryImplDiscoverDevicesTest {
             IntervalTotalsReader(context = context, ioDispatcher = ioDispatcher, client = client)
         repo =
             HealthConnectRepositoryImpl(
+                routeLookup = routeLookup,
                 context = context,
                 ioDispatcher = ioDispatcher,
                 stepRecordReader = stepRecordReader,
@@ -121,6 +125,31 @@ class HealthConnectRepositoryImplDiscoverDevicesTest {
                 client = client,
             )
         coEvery { client.permissionController.getGrantedPermissions() } returns repo.allPermissions
+    }
+
+    @Test
+    fun unchangedImportedBulkRouteSkipsRead() = runTest {
+        val from = Instant.parse("2026-08-01T00:00:00Z")
+        val to = from.plusSeconds(3600)
+        val session = mockk<ExerciseSessionRecord>(relaxed = true) {
+            every { metadata.id } returns "stored-session"
+            every { startTime } returns from
+            every { endTime } returns to
+            every { exerciseRouteResult } returns ExerciseRouteResult.NoData()
+        }
+        val stored = StoredWorkoutRouteSnapshot(
+            "stored-session", from.toEpochMilli(), to.toEpochMilli(), session.exerciseType.toString(),
+            DeviceLabel.from(session.metadata.device, session.metadata.dataOrigin), "IMPORTED",
+        )
+        coEvery { routeLookup.snapshots(any()) } returns mapOf(stored.id to stored)
+        coEvery { client.permissionController.getGrantedPermissions() } returns
+            repo.allPermissions + "android.permission.health.READ_EXERCISE_ROUTES"
+        coEvery {
+            client.readRecords<ExerciseSessionRecord>(match { it.recordType == ExerciseSessionRecord::class })
+        } returns
+            mockk { every { records } returns listOf(session); every { pageToken } returns null }
+        repeat(2) { repo.readExerciseSessions(from, to, true) }
+        io.mockk.coVerify(exactly = 0) { client.readRecord(ExerciseSessionRecord::class, any()) }
     }
 
     @Test

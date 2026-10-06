@@ -22,6 +22,7 @@ class HealthConnectPermissionSetsTest {
     private val ioDispatcher = Dispatchers.Unconfined
     private val repo =
         HealthConnectRepositoryImpl(
+                routeLookup = mockk(relaxed = true),
             context = context,
             ioDispatcher = ioDispatcher,
             stepRecordReader = StepRecordReader(context = context, ioDispatcher = ioDispatcher, client = client),

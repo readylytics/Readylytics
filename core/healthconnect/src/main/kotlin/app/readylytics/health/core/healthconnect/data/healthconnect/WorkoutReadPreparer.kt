@@ -10,6 +10,7 @@ import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import app.readylytics.health.core.model.domain.model.DomainIntervalTotal
 import app.readylytics.health.core.model.domain.model.WorkoutRoutePoint
+import app.readylytics.health.core.model.domain.repository.WorkoutRouteLookup
 import app.readylytics.health.core.model.domain.repository.ReadOutcome
 import app.readylytics.health.core.model.domain.sync.PreparedWorkout
 import app.readylytics.health.core.model.domain.sync.WorkoutInput
@@ -38,6 +39,7 @@ class WorkoutReadPreparer
     @Inject
     constructor(
         private val client: HealthConnectClient,
+        private val routeLookup: WorkoutRouteLookup,
     ) {
         suspend fun prepare(record: ExerciseSessionRecord, baseWorkout: WorkoutInput): PreparedWorkout =
             PreparedWorkout(
@@ -55,8 +57,14 @@ class WorkoutReadPreparer
          * to obtain the true `exerciseRouteResult` before deciding whether route data is available,
          * denied, or genuinely absent (H5/WP-09).
          */
-        private suspend fun readRoute(record: ExerciseSessionRecord): ReadOutcome<List<WorkoutRoutePoint>> =
-            try {
+        private suspend fun readRoute(record: ExerciseSessionRecord): ReadOutcome<List<WorkoutRoutePoint>> {
+            return try {
+                if (!WorkoutRouteReadPolicy.hasConsent(client) ||
+                    !WorkoutRouteReadPolicy.needsRead(
+                        record,
+                        routeLookup.snapshots(listOf(record.metadata.id))[record.metadata.id],
+                    )
+                ) return ReadOutcome.Denied
                 val routeResult =
                     if (record.exerciseRouteResult is ExerciseRouteResult.Data) {
                         record.exerciseRouteResult
@@ -91,6 +99,8 @@ class WorkoutReadPreparer
             } catch (e: Exception) {
                 if (e.asHealthConnectSecurityCause() != null) ReadOutcome.Denied else throw e
             }
+
+        }
 
         /**
          * Same-package attribution of one optional interval record type (distance, elevation) to

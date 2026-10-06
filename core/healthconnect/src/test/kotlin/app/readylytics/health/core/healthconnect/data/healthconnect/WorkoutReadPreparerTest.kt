@@ -14,6 +14,8 @@ import androidx.health.connect.client.response.ReadRecordResponse
 import androidx.health.connect.client.response.ReadRecordsResponse
 import androidx.health.connect.client.units.Length
 import app.readylytics.health.core.model.domain.model.WorkoutRoutePoint
+import app.readylytics.health.core.model.domain.repository.StoredWorkoutRouteSnapshot
+import app.readylytics.health.core.model.domain.repository.WorkoutRouteLookup
 import app.readylytics.health.core.model.domain.repository.ReadOutcome
 import app.readylytics.health.core.model.domain.sync.WorkoutInput
 import io.mockk.coEvery
@@ -34,6 +36,7 @@ import java.time.Instant
 
 class WorkoutReadPreparerTest {
     private val client = mockk<HealthConnectClient>()
+    private val lookup = mockk<WorkoutRouteLookup>()
     private lateinit var preparer: WorkoutReadPreparer
 
     private val t0 = Instant.parse("2026-06-01T10:00:00Z")
@@ -43,7 +46,11 @@ class WorkoutReadPreparerTest {
 
     @Before
     fun setUp() {
-        preparer = WorkoutReadPreparer(client)
+        preparer = WorkoutReadPreparer(client, lookup)
+        coEvery { lookup.snapshots(any()) } returns emptyMap()
+
+        coEvery { client.permissionController.getGrantedPermissions() } returns
+            setOf("android.permission.health.READ_EXERCISE_ROUTES")
 
         // Default: distance and elevation return empty pages so route tests don't fail on them
         coEvery {
@@ -53,6 +60,83 @@ class WorkoutReadPreparerTest {
             client.readRecords<ElevationGainedRecord>(match { it.recordType == ElevationGainedRecord::class })
         } returns emptyPage()
     }
+
+    @Test
+    fun unchangedImportedRouteSkipsRead() =
+        runTest {
+            val session = mockExerciseSession(ExerciseRouteResult.NoData())
+            val stored = snapshot(session)
+            coEvery { lookup.snapshots(any()) } returns mapOf(sessionId to stored)
+            assertEquals(ReadOutcome.Denied, preparer.prepare(session, baseWorkout()).route)
+            assertEquals(ReadOutcome.Denied, preparer.prepare(session, baseWorkout()).route)
+            coVerify(exactly = 0) { client.readRecord(ExerciseSessionRecord::class, any()) }
+        }
+
+    @Test
+    fun newConsentEnrichesOnce() =
+        runTest {
+            val session = mockExerciseSession(ExerciseRouteResult.NoData())
+            var stored = snapshot(session).copy(routeState = "PERMISSION_REQUIRED")
+            coEvery { lookup.snapshots(any()) } answers { mapOf(sessionId to stored) }
+            coEvery { client.permissionController.getGrantedPermissions() } returns emptySet()
+            assertEquals(ReadOutcome.Denied, preparer.prepare(session, baseWorkout()).route)
+            coVerify(exactly = 0) { client.readRecord(ExerciseSessionRecord::class, any()) }
+            coEvery { client.permissionController.getGrantedPermissions() } returns
+                setOf("android.permission.health.READ_EXERCISE_ROUTES")
+            val point = ExerciseRoute.Location(t0.plusSeconds(30), 48.0, 2.0)
+            val fetched = mockExerciseSession(ExerciseRouteResult.Data(ExerciseRoute(listOf(point))))
+            coEvery { client.readRecord(ExerciseSessionRecord::class, sessionId) } returns mockk {
+                every { record } returns fetched
+            }
+            assertTrue(preparer.prepare(session, baseWorkout()).route is ReadOutcome.Available)
+            stored = stored.copy(routeState = "IMPORTED")
+            assertEquals(ReadOutcome.Denied, preparer.prepare(session, baseWorkout()).route)
+            coVerify(exactly = 1) { client.readRecord(ExerciseSessionRecord::class, any()) }
+        }
+
+    @Test
+    fun `every changed identity field requires enrichment`() =
+        runTest {
+            val session = mockExerciseSession(ExerciseRouteResult.NoData())
+            val stored = snapshot(session)
+            val changed = listOf(
+                stored.copy(startTime = stored.startTime + 1),
+                stored.copy(endTime = stored.endTime + 1),
+                stored.copy(exerciseType = "other"),
+                stored.copy(deviceName = "other"),
+                stored.copy(routeState = "NOT_AVAILABLE"),
+            )
+            coEvery { client.readRecord(ExerciseSessionRecord::class, sessionId) } returns mockk {
+                every { record } returns session
+            }
+            changed.forEach { previous ->
+                coEvery { lookup.snapshots(any()) } returns mapOf(sessionId to previous)
+                assertTrue(preparer.prepare(session, baseWorkout()).route is ReadOutcome.Available)
+            }
+            coVerify(exactly = changed.size) { client.readRecord(ExerciseSessionRecord::class, any()) }
+        }
+
+    private fun snapshot(session: ExerciseSessionRecord) =
+        StoredWorkoutRouteSnapshot(
+            sessionId,
+            t0.toEpochMilli(),
+            t1.toEpochMilli(),
+            session.exerciseType.toString(),
+            DeviceLabel.from(session.metadata.device, session.metadata.dataOrigin),
+            "IMPORTED",
+        )
+
+    @Test
+    fun `no consent skips route SDK read`() =
+        runTest {
+            coEvery { client.permissionController.getGrantedPermissions() } returns emptySet()
+            val session = mockExerciseSession(ExerciseRouteResult.NoData())
+            coEvery { client.readRecord(ExerciseSessionRecord::class, sessionId) } returns mockk {
+                every { record } returns session
+            }
+            assertEquals(ReadOutcome.Denied, preparer.prepare(session, baseWorkout()).route)
+            coVerify(exactly = 0) { client.readRecord(ExerciseSessionRecord::class, any()) }
+        }
 
     @Test
     fun `prepare with existing ExerciseRouteResult Data maps points without calling client readRecord`() =
