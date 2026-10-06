@@ -213,20 +213,65 @@ class HealthPipelineBaselineBenchmark {
                     )
 
                 val before = usedHeapBytes()
-                var peak = before
+                var maximumObservedUsedHeap = before
+                var maximumResultSetSize = 0
+                fakeRepo.onStepsPageProcessed = { size ->
+                    maximumResultSetSize = maxOf(maximumResultSetSize, size)
+                    maximumObservedUsedHeap = maxOf(maximumObservedUsedHeap, usedHeapBytes())
+                }
                 val (_, nanos) =
                     measured {
                         coordinator.ingestWindow(windowStart, windowEnd, prefs, reconcileDeletions = false)
-                        peak = maxOf(peak, usedHeapBytes())
                     }
 
                 Log.i(
                     "BaselineMetrics",
                     "METRIC=steps_ingest, SCALE=$total, DURATION_MS=${nanos / 1_000_000.0}, " +
                         "TX=${txRunner.transactionCount}, STATEMENTS=${callback.statementCount}, " +
-                        "PEAK_HEAP_DELTA=${peak - before}",
+                        "MAX_OBSERVED_USED_HEAP_DELTA=${maximumObservedUsedHeap - before}, " +
+                        "MAX_RESULT_SET_SIZE=$maximumResultSetSize",
                 )
                 assertEquals(total, database.stepRecordDao().count())
+                database.close()
+            }
+        }
+
+    @Test
+    fun successfulStepsPageThenDenialPreservesPriorRoomRows() =
+        runBlocking {
+            val database = fixture.createDatabase("denied-steps.db", true, CountingQueryCallback())
+            try {
+                val store =
+                    ScoringBenchmarkHelper.createRoomHealthIngestionStore(
+                        database,
+                        CountingTransactionRunner(RoomTransactionRunner(database)),
+                    )
+                val staging =
+                    RoomScanStagingStore(database.scanStagingDao(), database.scanTypeStateDao())
+                val repo =
+                    BenchmarkFakeHealthConnectRepository(stepsPagesSequence = BaselineScalePoints.stepsPages(100))
+                val coordinator = HealthIngestionCoordinator(repo, store, staging)
+                val start = Instant.parse("2026-01-01T00:00:00Z")
+                val end = start.plusSeconds(30L * 24 * 3600)
+                val prefs = UserPreferences(scoringZoneId = zoneId.id)
+                coordinator.ingestWindow(start, end, prefs)
+                val existingRows = database.stepRecordDao().getBetween(start.toEpochMilli(), end.toEpochMilli()).toSet()
+                assertEquals(100, existingRows.size)
+                repo.stepsPagesSequence = BaselineScalePoints.stepsPages(10)
+                repo.stepsOutcome = app.readylytics.health.core.model.domain.repository.ReadOutcome.Denied
+                coordinator.ingestWindow(
+                    start,
+                    end,
+                    prefs,
+                    scanIdentity =
+                        app.readylytics.health.core.model.domain.sync
+                            .ScanIdentity("denied", "0"),
+                )
+                assertEquals(
+                    existingRows,
+                    database.stepRecordDao().getBetween(start.toEpochMilli(), end.toEpochMilli()).toSet(),
+                )
+            } finally {
                 database.close()
             }
         }

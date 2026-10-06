@@ -1,5 +1,11 @@
 package app.readylytics.health.core.healthconnect.data.healthconnect
 
+import app.readylytics.health.core.model.domain.repository.ReadOutcome
+import androidx.health.connect.client.units.Length
+import androidx.health.connect.client.records.DistanceRecord
+import androidx.health.connect.client.records.ElevationGainedRecord
+import androidx.health.connect.client.records.ExerciseRouteResult
+import androidx.health.connect.client.records.ExerciseSessionRecord
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.records.HeartRateRecord
@@ -115,6 +121,82 @@ class HealthConnectRepositoryImplDiscoverDevicesTest {
                 client = client,
             )
         coEvery { client.permissionController.getGrantedPermissions() } returns repo.allPermissions
+    }
+
+    @Test
+    fun lateDistanceDenialDiscardsSuccessfulPage() = runTest { assertLateIntervalDenial(false) }
+
+    @Test
+    fun lateElevationDenialDiscardsSuccessfulPage() = runTest { assertLateIntervalDenial(true) }
+
+    @Test
+    fun lateIntervalCancellationPropagates() = runTest {
+        val failure = kotlinx.coroutines.CancellationException("cancel second page")
+        val thrown = kotlin.test.assertFailsWith<kotlinx.coroutines.CancellationException> {
+            assertLateIntervalDenial(false, failure)
+        }
+        assertEquals(failure.message, thrown.message)
+    }
+
+    @Test
+    fun lateIntervalTransientFailurePropagates() = runTest {
+        val failure = IllegalStateException("provider failed second page")
+        val thrown = kotlin.test.assertFailsWith<IllegalStateException> {
+            assertLateIntervalDenial(true, failure)
+        }
+        assertEquals(failure.message, thrown.message)
+    }
+
+    private suspend fun assertLateIntervalDenial(
+        isElevation: Boolean,
+        failure: Exception = SecurityException("revoked"),
+    ) {
+        val start = Instant.parse("2026-08-20T00:00:00Z")
+        val end = start.plusSeconds(3600)
+        val session = mockk<ExerciseSessionRecord>(relaxed = true) {
+            every { metadata.id } returns "session"
+            every { metadata.dataOrigin.packageName } returns "writer"
+            every { startTime } returns start
+            every { endTime } returns end
+            every { exerciseRouteResult } returns ExerciseRouteResult.NoData()
+        }
+        coEvery { client.readRecords<Record>(match { it.recordType == session::class }) } returns mockk {
+            every { records } returns listOf(session)
+            every { pageToken } returns null
+        }
+        // Match the SDK class, since MockK may provide a subclass.
+        coEvery { client.readRecords<Record>(match {
+            it.recordType == ExerciseSessionRecord::class
+        }) } returns mockk {
+            every { records } returns listOf(session)
+            every { pageToken } returns null
+        }
+        coEvery { client.readRecord(ExerciseSessionRecord::class, "session") } returns mockk {
+            every { record } returns session
+        }
+        val type: kotlin.reflect.KClass<out Record> = if (isElevation) ElevationGainedRecord::class
+            else DistanceRecord::class
+        val interval: Record = if (isElevation) mockk<ElevationGainedRecord>(relaxed = true) {
+            every { elevation } returns Length.meters(50.0)
+            every { startTime } returns start
+            every { endTime } returns end
+            every { metadata.dataOrigin.packageName } returns "writer"
+        } else mockk<DistanceRecord>(relaxed = true) {
+            every { distance } returns Length.meters(500.0)
+            every { startTime } returns start
+            every { endTime } returns end
+            every { metadata.dataOrigin.packageName } returns "writer"
+        }
+        coEvery { client.readRecords<Record>(match { it.recordType == type && it.pageToken == null }) } returns mockk {
+            every { records } returns listOf(interval)
+            every { pageToken } returns "denied-page"
+        }
+        coEvery {
+            client.readRecords<Record>(match { it.recordType == type && it.pageToken == "denied-page" })
+        } throws failure
+        val outcome = repo.readExerciseSessions(start, end, includeDetails = true)
+        val workout = (outcome as ReadOutcome.Available).data.single()
+        kotlin.test.assertNull(if (isElevation) workout.elevationGainMeters else workout.totalDistanceMeters)
     }
 
     @After

@@ -118,6 +118,13 @@ class IntervalTotalsReader
             retryScope: ReadRetryScope?,
             noinline map: (T) -> DomainIntervalTotal,
         ): ReadOutcome<List<DomainIntervalTotal>> =
+            readIntervalOutcome(T::class.simpleName) {
+                val all = mutableListOf<DomainIntervalTotal>()
+                readAllPagesStreaming<T>(from, to, retryScope) { page -> all.addAll(page.map(map)) }
+                all
+            }
+
+        private suspend fun <R> readIntervalOutcome(recordName: String?, read: suspend () -> R): ReadOutcome<R> =
             withContext(ioDispatcher) {
                 val isSdkAvailable =
                     HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE
@@ -125,20 +132,18 @@ class IntervalTotalsReader
                     return@withContext ReadOutcome.Unsupported
                 }
                 try {
-                    ReadOutcome.Available(
-                        readAllPages<T>(from, to, retryScope).map(map),
-                    )
+                    ReadOutcome.Available(read())
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: HealthConnectPermissionRevokedException) {
                     logD("IntervalTotalsReader") {
-                        "${T::class.simpleName} permission not granted; " +
+                        "$recordName permission not granted; " +
                             "falling back to route-derived totals (${e.message})"
                     }
                     ReadOutcome.Denied
                 } catch (e: SecurityException) {
                     logD("IntervalTotalsReader") {
-                        "${T::class.simpleName} permission not granted; " +
+                        "$recordName permission not granted; " +
                             "falling back to route-derived totals (${e.message})"
                     }
                     ReadOutcome.Denied
@@ -146,7 +151,7 @@ class IntervalTotalsReader
                     val securityCause = e.asHealthConnectSecurityCause()
                     if (securityCause != null) {
                         logD("IntervalTotalsReader") {
-                            "${T::class.simpleName} permission not granted; " +
+                            "$recordName permission not granted; " +
                                 "falling back to route-derived totals (${securityCause.message})"
                         }
                         ReadOutcome.Denied
@@ -156,18 +161,8 @@ class IntervalTotalsReader
                 }
             }
 
-        private suspend inline fun <reified T : Record> readAllPages(
-            from: Instant,
-            to: Instant,
-            retryScope: ReadRetryScope? = null,
-        ): List<T> {
-            val all = mutableListOf<T>()
-            readAllPagesStreaming<T>(from, to, retryScope) { all.addAll(it) }
-            return all
-        }
-
         /**
-         * Paged variant of [readAllPages]: invokes [onPage] once per Health Connect page instead of
+         * Paged provider read: invokes [onPage] once per Health Connect page instead of
          * accumulating every page into one list (HC-001). [retryScope] (Task 1) wraps each page.
          */
         private suspend inline fun <reified T : Record> readAllPagesStreaming(
@@ -210,40 +205,7 @@ class IntervalTotalsReader
             noinline onPage: suspend (List<DomainIntervalTotal>) -> Unit,
             noinline map: (T) -> DomainIntervalTotal,
         ): ReadOutcome<Unit> =
-            withContext(ioDispatcher) {
-                val isSdkAvailable =
-                    HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE
-                if (!isSdkAvailable) {
-                    return@withContext ReadOutcome.Unsupported
-                }
-                try {
-                    readAllPagesStreaming<T>(from, to, retryScope) { page -> onPage(page.map(map)) }
-                    ReadOutcome.Available(Unit)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: HealthConnectPermissionRevokedException) {
-                    logD("IntervalTotalsReader") {
-                        "${T::class.simpleName} permission not granted; " +
-                            "falling back to route-derived totals (${e.message})"
-                    }
-                    ReadOutcome.Denied
-                } catch (e: SecurityException) {
-                    logD("IntervalTotalsReader") {
-                        "${T::class.simpleName} permission not granted; " +
-                            "falling back to route-derived totals (${e.message})"
-                    }
-                    ReadOutcome.Denied
-                } catch (e: Exception) {
-                    val securityCause = e.asHealthConnectSecurityCause()
-                    if (securityCause != null) {
-                        logD("IntervalTotalsReader") {
-                            "${T::class.simpleName} permission not granted; " +
-                                "falling back to route-derived totals (${securityCause.message})"
-                        }
-                        ReadOutcome.Denied
-                    } else {
-                        throw e
-                    }
-                }
+            readIntervalOutcome(T::class.simpleName) {
+                readAllPagesStreaming<T>(from, to, retryScope) { page -> onPage(page.map(map)) }
             }
     }

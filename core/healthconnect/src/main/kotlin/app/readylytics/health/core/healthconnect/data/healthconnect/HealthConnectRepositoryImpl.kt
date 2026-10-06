@@ -434,13 +434,16 @@ class HealthConnectRepositoryImpl
                     // continuously as steps, so each page is folded straight into a per-session
                     // running total instead of ever holding the full range in memory.
                     val distanceBySession = mutableMapOf<String, Double?>()
-                    intervalTotalsReader.readDistanceTotalsPaged(from, to, retryScope) { page ->
+                    val distanceOutcome = intervalTotalsReader.readDistanceTotalsPaged(from, to, retryScope) { page ->
                         intervalTotalsReader.foldPageIntoSessionTotals(sessions, page, distanceBySession)
                     }
+                    if (distanceOutcome !is ReadOutcome.Available) distanceBySession.clear()
                     val elevationBySession = mutableMapOf<String, Double?>()
-                    intervalTotalsReader.readElevationTotalsPaged(from, to, retryScope) { page ->
+                    val elevationOutcome = intervalTotalsReader.readElevationTotalsPaged(from, to, retryScope) { page ->
                         intervalTotalsReader.foldPageIntoSessionTotals(sessions, page, elevationBySession)
                     }
+
+                    if (elevationOutcome !is ReadOutcome.Available) elevationBySession.clear()
 
                     sessions.map { session ->
                         // Routes are only returned by a per-record read, so this is an extra IPC

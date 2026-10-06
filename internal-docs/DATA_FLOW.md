@@ -528,8 +528,8 @@ source app, because chord-summing a sampled track cuts every corner. Under `incl
 materializing the whole range at once — `DistanceRecord`/`ElevationGainedRecord` can be written as
 continuously as steps, WP-15/HC-001) via `IntervalTotalsReader.readDistanceTotalsPaged`/
 `readElevationTotalsPaged`, folding each page directly into a per-session running-total map
-(`IntervalTotalsReader.foldPageIntoSessionTotals` → `SessionTotalsResolver.accumulate`, both pure
-Kotlin in `core/model/.../domain/util/`) instead of ever holding the full totals list: a total counts
+(`IntervalTotalsReader.foldPageIntoSessionTotals`, SDK adapter in `core/healthconnect`, delegates
+to Android-free `SessionTotalsResolver.accumulate` in `core/model/.../domain/util/`) instead of ever holding the full totals list: a total counts
 only if its `dataOrigin` package matches the session's **and** its
 midpoint falls inside the session — midpoint containment keeps a boundary-straddling record in exactly
 one session regardless of chunk alignment (or which page it lands on), and same-package matching
@@ -540,8 +540,8 @@ The result populates
 `DomainExerciseSessionRecord.totalDistanceMeters`/`elevationGainMeters`, with `avgSpeedMps` derived
 from the same distance so pace can never disagree with distance. `WorkoutMapper` keeps the
 route-derived fallbacks for sources that write no such records. Both permissions
-(`READ_DISTANCE`, `READ_ELEVATION_GAINED`) are **optional** — `readIntervalTotals` swallows a
-permission error and returns an empty list, so an ungranted permission silently falls back to the
+(`READ_DISTANCE`, `READ_ELEVATION_GAINED`) are **optional** — `readIntervalTotals` returns
+`Denied` for a permission error, so an ungranted permission silently falls back to the
 route-derived value instead of failing the sync pass.
 **Delta-synced EXERCISE reads/writes are split across the writer-transaction boundary (H5/WP-09).**
 `HealthChangeSynchronizerImpl.applyChangesForType` resolves every Health Connect SDK read one
@@ -585,6 +585,7 @@ back with the `USER_SET` flag while routes came back with no user decision recor
 from `optionalPermissions`** and from the onboarding permission bullets (`PermissionBullets.healthPermissionLabelRes`),
 while remaining **declared in `AndroidManifest.xml`** — that declaration is what makes the "Access exercise routes" row
 exist at all (guarded by `HealthConnectManifestPermissionsTest`).
+Optional paged distance/elevation accumulators are published only after an `Available` outcome. Late denial or unsupported outcomes discard every partial total and preserve route fallback; transient failures and cancellation propagate.
 
 A workout sitting at `routeState = PERMISSION_REQUIRED` therefore has two ways out.
 **(a) User set routes to "Always allow"** in Health Connect settings: `WorkoutDetailViewModel.loadWorkout` sees

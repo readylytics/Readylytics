@@ -1,5 +1,9 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
+import app.readylytics.health.core.model.domain.model.DomainHeartRateSample
+import app.readylytics.health.core.model.domain.model.DomainHeartRateRecord
+import app.readylytics.health.core.model.domain.sync.HeartRateInput
+import app.readylytics.health.core.model.domain.sync.SourcePayload
 import app.readylytics.health.core.model.domain.model.DomainExerciseSessionRecord
 import app.readylytics.health.core.model.domain.model.DomainSleepSessionRecord
 import app.readylytics.health.core.model.domain.model.DomainStepsRecord
@@ -253,9 +257,8 @@ class HealthIngestionCoordinatorVo2MaxTest {
         runTest {
             val hcRepo = mockk<HealthConnectRepository>(relaxed = true)
             stubEmptyReads(hcRepo)
-            // A session is also present so this test doubles as the regression check that removing
-            // steps from RawBulkRecords did not disturb the complete, unfiltered session lists that
-            // feed IngestionSessionContext (sleep/workout mapping for HR/HRV tagging).
+            // Sessions remain in the bulk batch while dense steps stream separately.
+            // filteredSessionsStillLinkSamplesFromSelectedDevice checks downstream attribution.
             stubDenseSessionReads(hcRepo)
 
             val healthIngestionStore = mockk<HealthIngestionStore>(relaxed = true)
@@ -281,12 +284,45 @@ class HealthIngestionCoordinatorVo2MaxTest {
             assertTrue(maxPageSize[0] <= configuredPageSize)
             assertEquals(TypeScanState.COMPLETE, staging.stateOf(scanId, HealthDataType.STEPS))
 
-            // The complete, unfiltered session lists still reach the bulk batch unaffected by
-            // steps moving to its own paged/staged path.
+            // Sessions still reach the bulk batch when no device filter is selected.
             val sessionBatch = persistedBatches.single { it.sleepSessions.isNotEmpty() || it.workouts.isNotEmpty() }
             assertEquals(listOf("sleep-dense-1"), sessionBatch.sleepSessions.map { it.id })
             assertEquals(listOf("workout-dense-1"), sessionBatch.workouts.map { it.id })
         }
+
+    @Test
+    fun filteredSessionsStillLinkSamplesFromSelectedDevice() = runTest {
+        val repo = mockk<HealthConnectRepository>(relaxed = true)
+        stubEmptyReads(repo)
+        stubDenseSessionReads(repo)
+        val store = mockk<HealthIngestionStore>(relaxed = true)
+        val batches = mutableListOf<HealthIngestionBatch>()
+        coEvery { store.persist(capture(batches)) } returns Unit
+        val sources = mutableListOf<List<SourcePayload<HeartRateInput>>>()
+        coEvery { store.replaceHeartRateSources(capture(sources)) } returns Unit
+        coEvery { repo.readHeartRateSamplesPaged(any(), any(), any(), any(), any()) } coAnswers {
+            arg<suspend (List<DomainHeartRateRecord>, String?) -> Unit>(4)(
+                listOf(DomainHeartRateRecord(
+                    "hr-watch", "Watch", listOf(
+                        DomainHeartRateSample(
+                            Instant.parse("2026-09-03T04:00:00Z"), 60),
+                        DomainHeartRateSample(
+                            Instant.parse("2026-09-03T10:30:00Z"), 120),
+                    ),
+                )), null,
+            )
+            ReadOutcome.Available(Unit)
+        }
+        HealthIngestionCoordinator(repo, store, InMemoryScanStagingStore()).ingestWindow(
+            Instant.parse("2026-09-03T00:00:00Z"), Instant.parse("2026-09-04T00:00:00Z"),
+            UserPreferences(deviceByDataType = mapOf(
+                "SLEEP" to "Watch", "EXERCISE" to "Watch", "HEART_RATE" to "Watch",
+            )),
+        )
+        assertTrue(batches.all { it.sleepSessions.isEmpty() && it.workouts.isEmpty() })
+        assertEquals(setOf("sleep-dense-1", "workout-dense-1"),
+            sources.flatten().flatMap { it.rows }.map { it.sessionId }.toSet())
+    }
 
     private fun stubDenseSessionReads(hcRepo: HealthConnectRepository) {
         val sleepSession =
@@ -355,7 +391,13 @@ class HealthIngestionCoordinatorVo2MaxTest {
         runTest {
             val hcRepo = mockk<HealthConnectRepository>(relaxed = true)
             stubEmptyReads(hcRepo)
-            coEvery { hcRepo.readStepsRecordsPaged(any(), any(), any(), any()) } returns ReadOutcome.Denied
+            coEvery { hcRepo.readStepsRecordsPaged(any(), any(), any(), any()) } coAnswers {
+                arg<suspend (List<DomainStepsRecord>) -> Unit>(3)(listOf(
+                    DomainStepsRecord("existing", Instant.parse("2026-09-03T00:00:00Z"),
+                        Instant.parse("2026-09-03T00:00:01Z"), 10L, "Phone"),
+                ))
+                ReadOutcome.Denied
+            }
             val healthIngestionStore = mockk<HealthIngestionStore>(relaxed = true)
 
             val staging = InMemoryScanStagingStore()
@@ -369,9 +411,9 @@ class HealthIngestionCoordinatorVo2MaxTest {
                 scanIdentity = scanId,
             )
 
-            assertTrue(staging.stagedIds(scanId, HealthDataType.STEPS).isEmpty())
+            assertEquals(setOf("existing"), staging.stagedIds(scanId, HealthDataType.STEPS))
             assertEquals(TypeScanState.SCANNING, staging.stateOf(scanId, HealthDataType.STEPS))
-            coVerify(exactly = 0) { healthIngestionStore.persist(match { it.stepRecords.isNotEmpty() }) }
+            coVerify(exactly = 1) { healthIngestionStore.persist(match { it.stepRecords.isNotEmpty() }) }
         }
 
     private fun stubEmptyReads(hcRepo: HealthConnectRepository) {

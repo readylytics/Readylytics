@@ -63,6 +63,9 @@ class BenchmarkFakeHealthConnectRepository(
     var pagesSequence: Sequence<List<DomainHeartRateRecord>> = emptySequence(),
     var stepsPagesSequence: Sequence<List<DomainStepsRecord>> = emptySequence(),
 ) : HealthConnectRepository {
+    var onStepsPageProcessed: (Int) -> Unit = {}
+    var stepsOutcome: ReadOutcome<Unit> = ReadOutcome.Available(Unit)
+
     override val criticalPermissions: Set<String> = emptySet()
     override val requiredPermissions: Set<String> = emptySet()
     override val optionalPermissions: Set<String> = emptySet()
@@ -153,8 +156,9 @@ class BenchmarkFakeHealthConnectRepository(
     ): ReadOutcome<Unit> {
         for (page in stepsPagesSequence) {
             onPage(page)
+            onStepsPageProcessed(page.size)
         }
-        return ReadOutcome.Available(Unit)
+        return stepsOutcome
     }
 
     override suspend fun readSteps(

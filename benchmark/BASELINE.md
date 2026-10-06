@@ -663,7 +663,7 @@ COMPLETE until the whole paged read succeeds" rule already used for HR/HRV.
   synthetic `DomainStepsRecord`s via `BaselineScalePoints.stepsPages`/`HealthParentFixture.stepsPages`)
   through the real `HealthIngestionCoordinator` + `RoomHealthIngestionStore` on an isolated SQLCipher
   database per scale point, logging `METRIC=steps_ingest` with wall time, transaction count,
-  statement count, and `Runtime.totalMemory() - freeMemory()` peak-heap delta. It is an
+  statement count, maximum result-set size, and maximum observed used-heap delta sampled after each page is processed (`Runtime.totalMemory() - freeMemory()`). This is during-ingest used heap, including uncollected garbage; it is not peak retained heap or allocation profiling. It is an
   `@LargeTest`-annotated `androidx.test` instrumented test requiring a connected Android
   device/emulator; this environment has none (`No connected devices!`, the same blocker as every
   prior dated section above). No heap, result-set, or wall-time figures are claimed for any of the
@@ -684,3 +684,7 @@ COMPLETE until the whole paged read succeeds" rule already used for HR/HRV.
   already-flat HR/HRV paged-ingestion shape measured (with the same device caveat) in earlier dated
   sections above. This is a prediction from the implementation shape (one page in memory at a time,
   same pattern as `HeartSampleStreamer`), not a measurement.
+
+### 2026-10-06 Task 6 review correction
+
+The dense benchmark now samples used heap during processing after every persisted steps page and logs `MAX_OBSERVED_USED_HEAP_DELTA` and `MAX_RESULT_SET_SIZE`. Sampling can miss intra-page peaks and does not establish retained-heap flatness; allocation/retained-heap profiling remains required on a device. All four scale points remain unmeasured.
