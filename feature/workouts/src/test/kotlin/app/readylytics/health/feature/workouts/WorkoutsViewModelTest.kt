@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.date.SelectedDateStore
 import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.model.RecordType
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
 import app.readylytics.health.core.model.domain.repository.HeartRateRepository
@@ -112,7 +113,8 @@ class WorkoutsViewModelTest {
             }
         heartRateRepository =
             mockk {
-                coEvery { getByTimeRange(any(), any()) } returns emptyList()
+                coEvery { countInRangeOfType(RecordType.EXERCISE.name, any(), any()) } returns 0
+                coEvery { getByTimeRangeOfType(RecordType.EXERCISE.name, any(), any()) } returns emptyList()
             }
 
         selectedDateRepository =
@@ -986,7 +988,7 @@ class WorkoutsViewModelTest {
     @Test
     fun `heart-rate samples are batched, not fetched once per workout`() =
         runTest(testDispatcher) {
-            // 5 close-together workouts must collapse into one getByTimeRange call per fetch
+            // 5 close-together workouts must collapse into one typed read per fetch
             // (F10) instead of one query per workout. After pagination there are two fetches:
             // the visible page (5 workouts) and the selected-day strain derivation (5 workouts),
             // each collapsed into a single batched query.
@@ -1015,7 +1017,18 @@ class WorkoutsViewModelTest {
 
             viewModel.uiState.first { it.recentWorkouts.size == 5 }
 
-            coVerify(exactly = 2) { heartRateRepository.getByTimeRange(any(), any()) }
+            val startMs = dummyWorkouts.minOf { it.startTime }
+            val endMs = dummyWorkouts.maxOf { it.endTime }
+            coVerify(exactly = 2) {
+                heartRateRepository.countInRangeOfType(RecordType.EXERCISE.name, startMs, endMs)
+            }
+            coVerify(exactly = 2) {
+                heartRateRepository.getByTimeRangeOfType(RecordType.EXERCISE.name, startMs, endMs)
+            }
+            coVerify(exactly = 0) { heartRateRepository.getByTimeRange(any(), any()) }
+            coVerify(exactly = 0) {
+                heartRateRepository.forEachByTimeRangeOfTypePage(any(), any(), any(), any(), any())
+            }
 
             collectJob.cancel()
         }
