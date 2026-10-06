@@ -243,7 +243,6 @@ class HealthChangeSynchronizerImpl
             }.toMap()
 
         private suspend fun syncIntervalChanges(
-            @Suppress("UnusedParameter")
             grantedPermissions: Set<String>,
             zoneId: ZoneId,
             state: SyncRunState,

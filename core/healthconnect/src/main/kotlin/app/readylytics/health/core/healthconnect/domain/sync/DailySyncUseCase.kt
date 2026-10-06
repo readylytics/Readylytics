@@ -159,8 +159,6 @@ class DailySyncUseCase
                     val today = runContext.today
 
                     var continuationRequired = true
-                    var requiresHistoricalResync = false
-                    var fullResyncReason: String? = null
                     val affectedDates = mutableSetOf<java.time.LocalDate>()
                     val nextTokens = mutableMapOf<
                         app.readylytics.health.core.model.domain.model.HealthDataType, String>()
@@ -170,19 +168,22 @@ class DailySyncUseCase
                         val outcome = changeSynchronizer.applyPendingChanges()
                         affectedDates.addAll(outcome.affectedDates)
 
-                        if (outcome.requiresFullResync) {
-                            requiresHistoricalResync = true
-                            fullResyncReason = outcome.fullResyncReason.takeIf { it.isNotEmpty() } ?: fullResyncReason
-                            if (!outcome.continuationRequired) {
-                                // A genuine full-resync reason (not budget exhaustion): no page of
-                                // this call's token advanced far enough to be safely tokenized, so
-                                // nothing accumulated so far is committed. The caller retries after
-                                // a historical resync, which re-derives everything from scratch.
-                                return@withContext Result.failure(
-                                    "Requires historical resync: ${outcome.fullResyncReason}",
-                                    "REQUIRES_HISTORICAL_RESYNC",
-                                )
-                            }
+                        // continuationRequired=true always pairs with requiresFullResync=true on
+                        // budget exhaustion (brief Step 3), so requiresFullResync alone must never
+                        // be latched into a persistent flag here -- only a genuine OTHER full-resync
+                        // reason (continuationRequired=false) is terminal. Returning immediately
+                        // inline (rather than setting a var read after the loop) means a later
+                        // iteration that successfully drains the backlog is never overridden by an
+                        // earlier budget-exhaustion iteration's transient requiresFullResync=true.
+                        if (outcome.requiresFullResync && !outcome.continuationRequired) {
+                            // No page of this call's token advanced far enough to be safely
+                            // tokenized, so nothing accumulated so far is committed. The caller
+                            // retries after a historical resync, which re-derives everything from
+                            // scratch.
+                            return@withContext Result.failure(
+                                "Requires historical resync: ${outcome.fullResyncReason}",
+                                "REQUIRES_HISTORICAL_RESYNC",
+                            )
                         }
 
                         if (outcome.nextTokens.isNotEmpty()) {
@@ -207,6 +208,7 @@ class DailySyncUseCase
 
                     val inlineFloor = today.minusDays(MAX_INLINE_RECOMPUTE_DAYS.toLong())
                     val outOfWindowAffected = affectedDates.filter { it.isBefore(standardOldest) }
+                    var requiresHistoricalResync = false
                     if (outOfWindowAffected.any { it.isBefore(inlineFloor) }) {
                         requiresHistoricalResync = true
                     }

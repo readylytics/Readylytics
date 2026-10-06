@@ -578,4 +578,44 @@ class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
             assertTrue(result is app.readylytics.health.core.model.domain.model.Result.Success)
             coVerify(exactly = 1) { changeSynchronizer.commitTokens(nextTokens) }
         }
+
+    @Test
+    fun `daily sync continues past budget exhaustion and commits once the backlog drains`() =
+        runTest {
+            // First call: budget exhausted mid-backlog (continuationRequired pairs with
+            // requiresFullResync per the outcome contract) -- the loop must keep going, not
+            // latch requiresFullResync into a permanent "needs historical resync" flag that
+            // survives past a later, successful iteration (Fix round 2, Critical 1).
+            val tokensAfterFirstCall = mapOf(HealthDataType.SLEEP to "token-19")
+            val tokensAfterDrain = mapOf(HealthDataType.SLEEP to "token-end")
+            val outcomes =
+                listOf(
+                    HealthChangeSyncOutcome(
+                        affectedDates = emptySet(),
+                        requiresFullResync = true,
+                        continuationRequired = true,
+                        nextTokens = tokensAfterFirstCall,
+                        fullResyncReason = "Budget exhausted",
+                    ),
+                    HealthChangeSyncOutcome(
+                        affectedDates = emptySet(),
+                        requiresFullResync = false,
+                        continuationRequired = false,
+                        nextTokens = tokensAfterDrain,
+                    ),
+                )
+            var applyCallCount = 0
+            coEvery { changeSynchronizer.applyPendingChanges() } coAnswers {
+                outcomes[applyCallCount++]
+            }
+
+            val result = useCase.run(windowDays = 1, onProgress = null)
+
+            assertTrue(result is app.readylytics.health.core.model.domain.model.Result.Success)
+            coVerify(exactly = 2) { changeSynchronizer.applyPendingChanges() }
+            // Progressive commit mid-loop (so a retry resumes past the exhausted page), then the
+            // final commit once the walk-forward recompute covers everything.
+            coVerify(exactly = 1) { changeSynchronizer.commitTokens(tokensAfterFirstCall) }
+            coVerify(exactly = 1) { changeSynchronizer.commitTokens(tokensAfterDrain) }
+        }
 }

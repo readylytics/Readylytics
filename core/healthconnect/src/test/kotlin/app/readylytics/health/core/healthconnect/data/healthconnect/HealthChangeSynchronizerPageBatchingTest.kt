@@ -27,6 +27,7 @@ import org.junit.Before
 import org.junit.Test
 import java.time.Clock
 import java.time.Instant
+import kotlin.test.assertFailsWith
 
 /**
  * Brief Step 1 TDD coverage for WP-14 page-batching: one Room transaction per page (not per
@@ -163,6 +164,31 @@ class HealthChangeSynchronizerPageBatchingTest {
         assertEquals("token_20", outcome.nextTokens[HealthDataType.EXERCISE])
         assertTrue(outcome.continuationRequired)
         assertTrue(outcome.requiresFullResync)
+    }
+
+    @Test
+    fun `a failed page leaves token 19 committed`() = runTest {
+        val fake = FakeStore()
+        val synchronizer = newSynchronizer(fake)
+
+        for (i in 1..21) {
+            val changes = listOf(UpsertionChange(record = exerciseRecord("id_$i", "Model")))
+            coEvery { client.getChanges("token_${i - 1}") } returns changesResponse(changes, "token_$i", hasMore = true)
+        }
+        setupFakeTokenStore(mapOf(HealthDataType.EXERCISE to "token_0"))
+        // Page 20's Room transaction fails outright (e.g. a write error), before touching the
+        // budget/token bookkeeping for that page.
+        fake.failOnTransactionNumber = 20
+
+        // Not swallowed into a corrupted/partial outcome -- propagates per the existing
+        // generic-Exception contract (applyChangesForType's catch block re-throws anything that
+        // isn't a security/token-expiry cause), same as any other mid-run write failure.
+        assertFailsWith<IllegalStateException> { synchronizer.applyPendingChanges() }
+
+        // Exactly the 19 prior pages ever completed; page 20 left no trace at all -- the state a
+        // caller could durably commit is page 19's, never a half-applied page 20.
+        assertEquals(19, fake.pagesApplied)
+        assertEquals(19, fake.transactionCount)
     }
 
     @Test
