@@ -132,6 +132,18 @@ interface HealthConnectRepository : HealthConnectPermissionChecker {
         retryScope: ReadRetryScope? = null,
     ): ReadOutcome<List<DomainStepsRecord>>
 
+    /**
+     * Streams steps records page-by-page instead of materializing the whole [from]..[to] range in
+     * memory (HC-001) -- a day of continuously-recorded steps can reach tens of thousands of rows.
+     * [onPage] is invoked once per Health Connect page, in the order pages are returned.
+     */
+    suspend fun readStepsRecordsPaged(
+        from: Instant,
+        to: Instant,
+        retryScope: ReadRetryScope? = null,
+        onPage: suspend (records: List<DomainStepsRecord>) -> Unit,
+    ): ReadOutcome<Unit>
+
     suspend fun readSteps(
         from: Instant,
         to: Instant,

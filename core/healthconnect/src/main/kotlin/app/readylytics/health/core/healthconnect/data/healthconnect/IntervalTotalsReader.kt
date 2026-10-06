@@ -50,6 +50,29 @@ class IntervalTotalsReader
         ): ReadOutcome<List<DomainIntervalTotal>> =
             readIntervalTotals<ElevationGainedRecord>(from, to, retryScope) { it.toIntervalTotal() }
 
+        /**
+         * Streams distance totals page-by-page instead of materializing the whole [from]..[to]
+         * range in memory (HC-001) -- a phone writing continuous distance can be as dense as steps.
+         * [onPage] is invoked once per Health Connect page; callers fold each page into their own
+         * per-session running totals (see [HealthConnectRepositoryImpl.readExerciseSessions]).
+         */
+        suspend fun readDistanceTotalsPaged(
+            from: Instant,
+            to: Instant,
+            retryScope: ReadRetryScope? = null,
+            onPage: suspend (List<DomainIntervalTotal>) -> Unit,
+        ): ReadOutcome<Unit> =
+            readIntervalTotalsPaged<DistanceRecord>(from, to, retryScope, onPage) { it.toIntervalTotal() }
+
+        /** Elevation-gain equivalent of [readDistanceTotalsPaged]. */
+        suspend fun readElevationTotalsPaged(
+            from: Instant,
+            to: Instant,
+            retryScope: ReadRetryScope? = null,
+            onPage: suspend (List<DomainIntervalTotal>) -> Unit,
+        ): ReadOutcome<Unit> =
+            readIntervalTotalsPaged<ElevationGainedRecord>(from, to, retryScope, onPage) { it.toIntervalTotal() }
+
         fun resolveTotal(
             session: ExerciseSessionRecord,
             totals: List<DomainIntervalTotal>,
@@ -60,6 +83,30 @@ class IntervalTotalsReader
                 sessionOrigin = session.metadata.dataOrigin.packageName,
                 totals = totals,
             )
+
+        /**
+         * Streaming counterpart of [resolveTotal]: folds one page of interval totals into
+         * [accumulator] (keyed by session id) for every session in [sessions], so attribution never
+         * requires holding the full [from]..[to] totals list -- only one page plus the bounded
+         * session-id accumulator map.
+         */
+        fun foldPageIntoSessionTotals(
+            sessions: List<ExerciseSessionRecord>,
+            page: List<DomainIntervalTotal>,
+            accumulator: MutableMap<String, Double?>,
+        ) {
+            if (page.isEmpty()) return
+            for (session in sessions) {
+                accumulator[session.metadata.id] =
+                    SessionTotalsResolver.accumulate(
+                        sessionStart = session.startTime,
+                        sessionEnd = session.endTime,
+                        sessionOrigin = session.metadata.dataOrigin.packageName,
+                        totalsPage = page,
+                        runningTotal = accumulator[session.metadata.id],
+                    )
+            }
+        }
 
         /**
          * Bulk-reads an interval record type, returning Denied/Unsupported when permission is not
@@ -115,6 +162,20 @@ class IntervalTotalsReader
             retryScope: ReadRetryScope? = null,
         ): List<T> {
             val all = mutableListOf<T>()
+            readAllPagesStreaming<T>(from, to, retryScope) { all.addAll(it) }
+            return all
+        }
+
+        /**
+         * Paged variant of [readAllPages]: invokes [onPage] once per Health Connect page instead of
+         * accumulating every page into one list (HC-001). [retryScope] (Task 1) wraps each page.
+         */
+        private suspend inline fun <reified T : Record> readAllPagesStreaming(
+            from: Instant,
+            to: Instant,
+            retryScope: ReadRetryScope? = null,
+            onPage: suspend (List<T>) -> Unit,
+        ) {
             var pageToken: String? = null
             try {
                 do {
@@ -128,7 +189,7 @@ class IntervalTotalsReader
                                 ),
                             )
                         }
-                    all.addAll(response.records)
+                    onPage(response.records)
                     pageToken = response.pageToken
                 } while (pageToken != null)
             } catch (e: CancellationException) {
@@ -136,6 +197,53 @@ class IntervalTotalsReader
             } catch (e: Exception) {
                 rethrowReadFailureOrOriginal(T::class.simpleName, e)
             }
-            return all
         }
+
+        /**
+         * Paged counterpart of [readIntervalTotals]: streams pages instead of materializing the
+         * whole range, returning Denied/Unsupported identically.
+         */
+        private suspend inline fun <reified T : Record> readIntervalTotalsPaged(
+            from: Instant,
+            to: Instant,
+            retryScope: ReadRetryScope?,
+            noinline onPage: suspend (List<DomainIntervalTotal>) -> Unit,
+            noinline map: (T) -> DomainIntervalTotal,
+        ): ReadOutcome<Unit> =
+            withContext(ioDispatcher) {
+                val isSdkAvailable =
+                    HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE
+                if (!isSdkAvailable) {
+                    return@withContext ReadOutcome.Unsupported
+                }
+                try {
+                    readAllPagesStreaming<T>(from, to, retryScope) { page -> onPage(page.map(map)) }
+                    ReadOutcome.Available(Unit)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: HealthConnectPermissionRevokedException) {
+                    logD("IntervalTotalsReader") {
+                        "${T::class.simpleName} permission not granted; " +
+                            "falling back to route-derived totals (${e.message})"
+                    }
+                    ReadOutcome.Denied
+                } catch (e: SecurityException) {
+                    logD("IntervalTotalsReader") {
+                        "${T::class.simpleName} permission not granted; " +
+                            "falling back to route-derived totals (${e.message})"
+                    }
+                    ReadOutcome.Denied
+                } catch (e: Exception) {
+                    val securityCause = e.asHealthConnectSecurityCause()
+                    if (securityCause != null) {
+                        logD("IntervalTotalsReader") {
+                            "${T::class.simpleName} permission not granted; " +
+                                "falling back to route-derived totals (${securityCause.message})"
+                        }
+                        ReadOutcome.Denied
+                    } else {
+                        throw e
+                    }
+                }
+            }
     }

@@ -61,6 +61,7 @@ class BenchmarkFakeEncryptionManager : EncryptionManager {
 
 class BenchmarkFakeHealthConnectRepository(
     var pagesSequence: Sequence<List<DomainHeartRateRecord>> = emptySequence(),
+    var stepsPagesSequence: Sequence<List<DomainStepsRecord>> = emptySequence(),
 ) : HealthConnectRepository {
     override val criticalPermissions: Set<String> = emptySet()
     override val requiredPermissions: Set<String> = emptySet()
@@ -143,6 +144,18 @@ class BenchmarkFakeHealthConnectRepository(
         to: Instant,
         retryScope: ReadRetryScope?,
     ): ReadOutcome<List<DomainStepsRecord>> = ReadOutcome.Available(emptyList())
+
+    override suspend fun readStepsRecordsPaged(
+        from: Instant,
+        to: Instant,
+        retryScope: ReadRetryScope?,
+        onPage: suspend (records: List<DomainStepsRecord>) -> Unit,
+    ): ReadOutcome<Unit> {
+        for (page in stepsPagesSequence) {
+            onPage(page)
+        }
+        return ReadOutcome.Available(Unit)
+    }
 
     override suspend fun readSteps(
         from: Instant,

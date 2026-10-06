@@ -225,6 +225,13 @@ class ScanStagingIngestionTest {
         retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainStepsRecord>> = ReadOutcome.Available(emptyList())
 
+        override suspend fun readStepsRecordsPaged(
+            from: Instant,
+            to: Instant,
+            retryScope: ReadRetryScope?,
+            onPage: suspend (records: List<DomainStepsRecord>) -> Unit,
+        ): ReadOutcome<Unit> = ReadOutcome.Available(Unit)
+
         override suspend fun readSteps(
             from: Instant,
             to: Instant,

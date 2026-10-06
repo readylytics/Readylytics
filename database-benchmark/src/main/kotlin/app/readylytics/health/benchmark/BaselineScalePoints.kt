@@ -1,6 +1,7 @@
 package app.readylytics.health.benchmark
 
 import app.readylytics.health.core.model.domain.model.DomainHeartRateRecord
+import app.readylytics.health.core.model.domain.model.DomainStepsRecord
 
 /**
  * The three scale points every Phase 0 measurement is taken at. Peak memory is expected to be flat
@@ -37,4 +38,8 @@ object BaselineScalePoints {
             samplesPerParent = 1,
             pageSize = PAGE_SIZE,
         )
+
+    /** WP-15: one steps record per row (sparse-parent shape is the only shape steps has). */
+    fun stepsPages(totalRecords: Int): Sequence<List<DomainStepsRecord>> =
+        HealthParentFixture.stepsPages(recordCount = totalRecords, pageSize = PAGE_SIZE)
 }

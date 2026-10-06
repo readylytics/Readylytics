@@ -82,6 +82,7 @@ abstract class DailySyncUseCaseTestFixture {
             ReadOutcome.Available(Unit)
         coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
         coEvery { hcRepo.readStepsRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readStepsRecordsPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
         coEvery { hcRepo.readSteps(any(), any(), any()) } returns ReadOutcome.Available(0L)
         coEvery { hcRepo.readDailyStepTotals(any(), any(), any(), any()) } returns ReadOutcome.Available(emptyMap())
         coEvery { hcRepo.readWeightRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())

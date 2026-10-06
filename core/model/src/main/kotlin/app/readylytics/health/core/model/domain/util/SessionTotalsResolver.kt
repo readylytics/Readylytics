@@ -46,6 +46,32 @@ object SessionTotalsResolver {
         }
     }
 
+    /**
+     * Streaming counterpart of [totalFor]: folds one page of [totalsPage] into [runningTotal]
+     * instead of requiring the whole [from]..[to] totals list at once (HC-001). [runningTotal] is
+     * `null` until the first matching record is seen (across any page), mirroring [totalFor]'s
+     * "writer contributed none" contract -- a session whose only matching record happens to sum to
+     * zero must still return a non-null `0.0`, not fall back to the route-derived value.
+     */
+    fun accumulate(
+        sessionStart: Instant,
+        sessionEnd: Instant,
+        sessionOrigin: String,
+        totalsPage: List<DomainIntervalTotal>,
+        runningTotal: Double?,
+    ): Double? {
+        if (totalsPage.isEmpty()) return runningTotal
+        val startMs = sessionStart.toEpochMilli()
+        val endMs = sessionEnd.toEpochMilli()
+        var sum = runningTotal
+        for (total in totalsPage) {
+            if (isMatchingTotal(total, sessionOrigin, startMs, endMs)) {
+                sum = (sum ?: 0.0) + total.value
+            }
+        }
+        return sum
+    }
+
     private fun isMatchingTotal(
         total: DomainIntervalTotal,
         sessionOrigin: String,

@@ -66,7 +66,45 @@ class StepRecordReader
                 if (!isSdkAvailable()) return@withContext ReadOutcome.Unsupported
                 if (!hasStepsPermission()) return@withContext ReadOutcome.Denied
                 try {
-                    ReadOutcome.Available(readAllStepsRecordsPages(from, to, retryScope).map { it.toDomain() })
+                    val all = mutableListOf<StepsRecord>()
+                    readStepsRecordsPagesStreaming(from, to, retryScope) { all.addAll(it) }
+                    ReadOutcome.Available(all.map { it.toDomain() })
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: HealthConnectPermissionRevokedException) {
+                    logD("StepRecordReader") { "Steps records permission revoked: ${e.message}" }
+                    ReadOutcome.Denied
+                } catch (e: SecurityException) {
+                    logD("StepRecordReader") { "Steps records permission denied: ${e.message}" }
+                    ReadOutcome.Denied
+                } catch (e: Exception) {
+                    val securityCause = e.asHealthConnectSecurityCause()
+                    if (securityCause != null) {
+                        logD("StepRecordReader") { "Steps records permission denied: ${securityCause.message}" }
+                        ReadOutcome.Denied
+                    } else {
+                        throw e
+                    }
+                }
+            }
+
+        /**
+         * Streams steps records page-by-page instead of materializing the whole [from]..[to] range
+         * in memory (HC-001) -- a dense day of continuously-recorded steps can reach tens of
+         * thousands of rows. [onPage] is invoked once per Health Connect page.
+         */
+        suspend fun readStepsRecordsPaged(
+            from: Instant,
+            to: Instant,
+            retryScope: ReadRetryScope? = null,
+            onPage: suspend (records: List<DomainStepsRecord>) -> Unit,
+        ): ReadOutcome<Unit> =
+            withContext(ioDispatcher) {
+                if (!isSdkAvailable()) return@withContext ReadOutcome.Unsupported
+                if (!hasStepsPermission()) return@withContext ReadOutcome.Denied
+                try {
+                    readStepsRecordsPagesStreaming(from, to, retryScope) { page -> onPage(page.map { it.toDomain() }) }
+                    ReadOutcome.Available(Unit)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: HealthConnectPermissionRevokedException) {
@@ -208,12 +246,17 @@ class StepRecordReader
             return failureOutcome ?: ReadOutcome.Available(totals)
         }
 
-        private suspend fun readAllStepsRecordsPages(
+        /**
+         * Pages through every `StepsRecord` in [from]..[to], invoking [onPage] once per Health
+         * Connect page so neither caller ever holds more than one page in memory at a time.
+         * [retryScope] (Task 1) wraps each individual SDK page fetch.
+         */
+        private suspend fun readStepsRecordsPagesStreaming(
             from: Instant,
             to: Instant,
             retryScope: ReadRetryScope? = null,
-        ): List<StepsRecord> {
-            val all = mutableListOf<StepsRecord>()
+            onPage: suspend (List<StepsRecord>) -> Unit,
+        ) {
             var pageToken: String? = null
             try {
                 do {
@@ -227,7 +270,7 @@ class StepRecordReader
                                 ),
                             )
                         }
-                    all.addAll(response.records)
+                    onPage(response.records)
                     pageToken = response.pageToken
                 } while (pageToken != null)
             } catch (e: CancellationException) {
@@ -235,6 +278,5 @@ class StepRecordReader
             } catch (e: Exception) {
                 rethrowReadFailureOrOriginal(StepsRecord::class.simpleName, e)
             }
-            return all
         }
     }

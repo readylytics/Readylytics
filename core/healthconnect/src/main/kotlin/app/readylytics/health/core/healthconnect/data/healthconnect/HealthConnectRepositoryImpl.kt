@@ -429,12 +429,18 @@ class HealthConnectRepositoryImpl
                 if (sessions.isEmpty() || !includeDetails) {
                     sessions.map { it.toDomain(null) }
                 } else {
-                    // Two bulk reads for the whole window, not one per session: DistanceRecord and
-                    // ElevationGainedRecord are low-volume, and attribution happens in memory.
-                    val distanceTotals =
-                        intervalTotalsReader.readDistanceTotals(from, to, retryScope).valueOrPrevious(emptyList())
-                    val elevationTotals =
-                        intervalTotalsReader.readElevationTotals(from, to, retryScope).valueOrPrevious(emptyList())
+                    // Two paged reads for the whole window, not one per session and not one buffered
+                    // list per type (HC-001): DistanceRecord/ElevationGainedRecord can be written as
+                    // continuously as steps, so each page is folded straight into a per-session
+                    // running total instead of ever holding the full range in memory.
+                    val distanceBySession = mutableMapOf<String, Double?>()
+                    intervalTotalsReader.readDistanceTotalsPaged(from, to, retryScope) { page ->
+                        intervalTotalsReader.foldPageIntoSessionTotals(sessions, page, distanceBySession)
+                    }
+                    val elevationBySession = mutableMapOf<String, Double?>()
+                    intervalTotalsReader.readElevationTotalsPaged(from, to, retryScope) { page ->
+                        intervalTotalsReader.foldPageIntoSessionTotals(sessions, page, elevationBySession)
+                    }
 
                     sessions.map { session ->
                         // Routes are only returned by a per-record read, so this is an extra IPC
@@ -468,8 +474,8 @@ class HealthConnectRepositoryImpl
                             }
                         session.toDomain(
                             routeResult = routeResult,
-                            totalDistanceMeters = intervalTotalsReader.resolveTotal(session, distanceTotals),
-                            elevationGainMeters = intervalTotalsReader.resolveTotal(session, elevationTotals),
+                            totalDistanceMeters = distanceBySession[session.metadata.id],
+                            elevationGainMeters = elevationBySession[session.metadata.id],
                         )
                     }
                 }
@@ -518,6 +524,14 @@ class HealthConnectRepositoryImpl
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainStepsRecord>> =
             stepRecordReader.readStepsRecords(from, to, retryScope)
+
+        override suspend fun readStepsRecordsPaged(
+            from: Instant,
+            to: Instant,
+            retryScope: ReadRetryScope?,
+            onPage: suspend (records: List<DomainStepsRecord>) -> Unit,
+        ): ReadOutcome<Unit> =
+            stepRecordReader.readStepsRecordsPaged(from, to, retryScope, onPage)
 
         override suspend fun readSteps(
             from: Instant,

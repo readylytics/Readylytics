@@ -375,6 +375,14 @@ class FirstSetupDummyIngestionFlowTest {
         ): app.readylytics.health.core.model.domain.repository.ReadOutcome<List<DomainStepsRecord>> =
             app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(emptyList())
 
+        override suspend fun readStepsRecordsPaged(
+            from: Instant,
+            to: Instant,
+            retryScope: ReadRetryScope?,
+            onPage: suspend (records: List<DomainStepsRecord>) -> Unit,
+        ): app.readylytics.health.core.model.domain.repository.ReadOutcome<Unit> =
+            app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(Unit)
+
         override suspend fun readSteps(
             from: Instant,
             to: Instant,

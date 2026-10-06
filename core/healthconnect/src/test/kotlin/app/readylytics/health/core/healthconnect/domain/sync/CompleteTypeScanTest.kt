@@ -82,6 +82,7 @@ class CompleteTypeScanTest {
             ReadOutcome.Available(Unit)
         coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
         coEvery { hcRepo.readStepsRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readStepsRecordsPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
         coEvery { hcRepo.readDailyStepTotals(any(), any(), any(), any()) } returns ReadOutcome.Available(emptyMap())
         coEvery { hcRepo.readWeightRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
         coEvery { hcRepo.readBodyFatRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())

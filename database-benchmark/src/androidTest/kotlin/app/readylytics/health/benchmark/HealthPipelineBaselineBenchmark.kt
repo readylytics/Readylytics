@@ -183,6 +183,59 @@ class HealthPipelineBaselineBenchmark {
         }
     }
 
+    /**
+     * WP-15: dense steps paged-ingestion benchmark -- one dense day (43,200 one-second-cadence
+     * records) plus the Phase 0 250k/500k/1M scale points. Steps now streams page-by-page through
+     * [HealthIngestionCoordinator] exactly like HR/HRV (HC-001), so peak retained heap is expected
+     * flat across all four scale points rather than growing with record count.
+     */
+    @Test
+    fun measureDenseStepsIngestAtEachScalePoint() =
+        runBlocking {
+            val windowStart = Instant.parse("2026-01-01T00:00:00Z")
+            val windowEnd = windowStart.plusSeconds(30L * 24 * 3600)
+            val prefs = UserPreferences(scoringZoneId = zoneId.id)
+
+            for (total in DENSE_STEPS_SCALE_POINTS) {
+                val callback = CountingQueryCallback()
+                val database = fixture.createDatabase("current-benchmark-steps-$total.db", true, callback)
+                val txRunner = CountingTransactionRunner(RoomTransactionRunner(database))
+                val store = ScoringBenchmarkHelper.createRoomHealthIngestionStore(database, txRunner)
+                val fakeRepo =
+                    BenchmarkFakeHealthConnectRepository(
+                        stepsPagesSequence = BaselineScalePoints.stepsPages(total),
+                    )
+                val coordinator =
+                    HealthIngestionCoordinator(
+                        fakeRepo,
+                        store,
+                        RoomScanStagingStore(database.scanStagingDao(), database.scanTypeStateDao()),
+                    )
+
+                val before = usedHeapBytes()
+                var peak = before
+                val (_, nanos) =
+                    measured {
+                        coordinator.ingestWindow(windowStart, windowEnd, prefs, reconcileDeletions = false)
+                        peak = maxOf(peak, usedHeapBytes())
+                    }
+
+                Log.i(
+                    "BaselineMetrics",
+                    "METRIC=steps_ingest, SCALE=$total, DURATION_MS=${nanos / 1_000_000.0}, " +
+                        "TX=${txRunner.transactionCount}, STATEMENTS=${callback.statementCount}, " +
+                        "PEAK_HEAP_DELTA=${peak - before}",
+                )
+                assertEquals(total, database.stepRecordDao().count())
+                database.close()
+            }
+        }
+
+    private fun usedHeapBytes(): Long {
+        val runtime = Runtime.getRuntime()
+        return runtime.totalMemory() - runtime.freeMemory()
+    }
+
     /** Measures all 7 pipeline stages separately and emits structured metrics for BASELINE.md. */
     @Test
     fun measurePipelineStagesSeparately() =
@@ -337,6 +390,9 @@ class HealthPipelineBaselineBenchmark {
         writer.flush()
     }
 }
+
+/** 43,200 = one dense day at one-second cadence, plus the Phase 0 250k/500k/1M scale points. */
+private val DENSE_STEPS_SCALE_POINTS: List<Int> = listOf(43_200) + BaselineScalePoints.SAMPLE_COUNTS
 
 /** Monotonic nanosecond timing helper. */
 suspend fun <T> measured(block: suspend () -> T): Pair<T, Long> {

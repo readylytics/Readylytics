@@ -85,6 +85,7 @@ class ResyncRangeUseCaseTest {
             ReadOutcome.Available(Unit)
         coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
         coEvery { hcRepo.readStepsRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readStepsRecordsPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
         coEvery { hcRepo.readSteps(any(), any(), any()) } returns ReadOutcome.Available(0L)
         coEvery { hcRepo.readDailyStepTotals(any(), any(), any(), any()) } returns ReadOutcome.Available(emptyMap())
         coEvery { hcRepo.readWeightRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
@@ -278,11 +279,13 @@ class ResyncRangeUseCaseTest {
                 onProgress = null,
             )
 
-            // HC-005/WP-08: readStepsRecords is now called twice per chunk regardless of the
-            // selected device -- once by HealthIngestionCoordinator.ingestWindow (populates the raw
-            // step_records table for every device, unfiltered) and once by StepCountFetcher.fetchRange
-            // (the device-filtered daily-total aggregate actually used for scoring).
-            coVerify(exactly = 2) { hcRepo.readStepsRecords(any(), any(), any()) }
+            // HC-005/WP-08/WP-15: steps is read once by HealthIngestionCoordinator.ingestWindow via
+            // the paged port (populates the raw step_records table for every device, unfiltered,
+            // page-by-page) and once by StepCountFetcher.fetchRange via the unpaged port (the
+            // device-filtered daily-total aggregate actually used for scoring) -- two different
+            // methods now, each called once, rather than one method called twice.
+            coVerify(exactly = 1) { hcRepo.readStepsRecordsPaged(any(), any(), any(), any()) }
+            coVerify(exactly = 1) { hcRepo.readStepsRecords(any(), any(), any()) }
             coVerify(exactly = 0) { hcRepo.readSteps(any(), any(), any()) }
         }
 
@@ -296,11 +299,22 @@ class ResyncRangeUseCaseTest {
                     ),
                 )
             var sdkCalls = 0
-            coEvery { hcRepo.readStepsRecords(any(), any(), any()) } coAnswers {
+            // WP-15: ingestion now reads steps via the paged port; StepCountFetcher's selected-
+            // device daily-total aggregate still reads the unpaged port. Different methods, but the
+            // same shared window ReadRetryScope, so the first ever SDK attempt (ingestion's) still
+            // fails once and retries inside that one call before StepCountFetcher's call runs.
+            coEvery { hcRepo.readStepsRecordsPaged(any(), any(), any(), any()) } coAnswers {
                 val scope = thirdArg<ReadRetryScope>()
                 scope.execute("steps page") {
                     sdkCalls++
                     if (sdkCalls == 1) throw java.io.IOException("rate limited")
+                    ReadOutcome.Available(Unit)
+                }
+            }
+            coEvery { hcRepo.readStepsRecords(any(), any(), any()) } coAnswers {
+                val scope = thirdArg<ReadRetryScope>()
+                scope.execute("steps aggregate") {
+                    sdkCalls++
                     ReadOutcome.Available(emptyList())
                 }
             }
@@ -312,10 +326,11 @@ class ResyncRangeUseCaseTest {
                 onProgress = null,
             )
 
-            // Two repository reads: ingestion and the selected-device recompute window.
-            // The ingestion SDK page retries once inside its supplied scope.
+            // Two repository reads: ingestion (paged) and the selected-device recompute window
+            // (unpaged). The ingestion SDK page retries once inside its supplied scope.
             assertEquals(3, sdkCalls)
-            coVerify(exactly = 2) { hcRepo.readStepsRecords(any(), any(), any()) }
+            coVerify(exactly = 1) { hcRepo.readStepsRecordsPaged(any(), any(), any(), any()) }
+            coVerify(exactly = 1) { hcRepo.readStepsRecords(any(), any(), any()) }
         }
 
     @Test
@@ -463,6 +478,7 @@ class ResyncRangeUseCaseTest {
             coVerify(exactly = 0) { hcRepo.readDailyStepTotals(any(), any(), any(), any()) }
             coVerify(exactly = 0) { hcRepo.readSteps(any(), any(), any()) }
             coVerify(exactly = 0) { hcRepo.readStepsRecords(any(), any(), any()) }
+            coVerify(exactly = 0) { hcRepo.readStepsRecordsPaged(any(), any(), any(), any()) }
             coVerify(exactly = 0) { hcRepo.readSleepSessions(any(), any(), any()) }
             coVerify(exactly = 0) { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any(), any()) }
             coVerify(exactly = 0) { hcRepo.readHrvSamplesPaged(any(), any(), any(), any(), any()) }

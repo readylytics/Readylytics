@@ -83,6 +83,7 @@ class PagedIngestResumptionTest {
         coEvery { hcRepo.readSleepSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
         coEvery { hcRepo.readExerciseSessions(any(), any(), any(), any()) } returns ReadOutcome.Available(emptyList())
         coEvery { hcRepo.readStepsRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readStepsRecordsPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
         coEvery { hcRepo.readWeightRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
         coEvery { hcRepo.readBodyFatRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
         coEvery { hcRepo.readBloodPressureRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())

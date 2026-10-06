@@ -126,6 +126,7 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
     var sleepPagesServed: Int = 0
     var hrPagesServed: Int = 0
     var exercisePagesServed: Int = 0
+    var stepsPagesServed: Int = 0
 
     private val pageSize: Int = 50
 
@@ -255,6 +256,25 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
             val count = stepsByInstant.keys.count { inRange(it, from, to) }
             stubList(count) { index -> placeholderSteps(index) }
         }
+
+    override suspend fun readStepsRecordsPaged(
+        from: Instant,
+        to: Instant,
+        retryScope: app.readylytics.health.core.model.domain.repository.ReadRetryScope?,
+        onPage: suspend (records: List<DomainStepsRecord>) -> Unit,
+    ): ReadOutcome<Unit> {
+        if (!isAvailable()) return ReadOutcome.Unsupported
+        val error = errors[FakeOp.Steps]
+        if (error is SecurityException) return ReadOutcome.Denied
+        if (error != null) throw error
+        val count = stepsByInstant.keys.count { inRange(it, from, to) }
+        val chunks = stubList(count) { index -> placeholderSteps(index) }.chunked(pageSize)
+        stepsPagesServed = chunks.size
+        for (chunk in chunks) {
+            if (retryScope != null) retryScope.execute("steps-page") { onPage(chunk) } else onPage(chunk)
+        }
+        return ReadOutcome.Available(Unit)
+    }
 
     override suspend fun readSteps(
         from: Instant,

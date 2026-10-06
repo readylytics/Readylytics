@@ -382,6 +382,42 @@ class HealthConnectRepositoryImplTest {
             assertEquals(2, repo.readStepsRecords(t0, t7).asAvailable().size)
         }
 
+    // ---------- steps records (paged) ----------
+
+    @Test
+    fun readStepsRecordsPaged_emptyWhenNone() =
+        runBlocking {
+            val pages = mutableListOf<Int>()
+            val outcome = repo.readStepsRecordsPaged(t0, t7) { page -> pages += page.size }
+            assertEquals(ReadOutcome.Available(Unit), outcome)
+            assertTrue(pages.isEmpty())
+        }
+
+    @Test
+    fun readStepsRecordsPaged_streamsAllPagesWithoutExceedingPageSize() =
+        runBlocking {
+            repeat(120) { i ->
+                fake.stepsByInstant[t0.plusSeconds(i.toLong())] = 1L
+            }
+            val pageSizes = mutableListOf<Int>()
+            var total = 0
+            repo.readStepsRecordsPaged(t0, t7) { page ->
+                pageSizes += page.size
+                total += page.size
+            }
+            assertEquals(120, total)
+            assertEquals(3, fake.stepsPagesServed)
+            assertTrue(pageSizes.all { it <= 50 })
+        }
+
+    @Test
+    fun readStepsRecordsPaged_returnsDeniedOnSecurityException() =
+        runBlocking {
+            fake.stepsByInstant[t1] = 1_000L
+            fake.errors[FakeOp.Steps] = SecurityException("revoked")
+            assertEquals(ReadOutcome.Denied, repo.readStepsRecordsPaged(t0, t7) { })
+        }
+
     // ---------- readSteps (aggregate) ----------
 
     @Test

@@ -647,3 +647,40 @@ host measurement is not Android device performance evidence.
 - **Query plans:** The type-filtered queries use `index_hr_v10_timestamp_source` and `index_hr_v10_type_timestamp`. No `SCAN heart_rate_records`, no temp B-tree.
 - **Heap and result set size (250k/500k/1M):** Due to the lack of a connected device (blocked device measurements), actual peak heap and wall time are not recorded on a physical SM-A576B. The cluster bounds guarantee `MAX_CLUSTER_SAMPLES = 50_000`, so the max result-set size remains capped at 50_001. Over-sized single workouts paginate and process sequentially, yielding a flat peak retained heap across the three fixed-size-workout fixtures in host unit tests.
 - **Metrics exactness:** `displayTrimpMatchesPersisted` asserts the bounded queries do not truncate input or change values, computing exactly identical trimp. 
+
+## 2026-10-06 — Phase 2 Task 6 WP-15 dense steps/interval paging
+
+Steps records and exercise-session distance/elevation interval totals now stream page-by-page
+through `readStepsRecordsPaged` / `IntervalTotalsReader.read{Distance,Elevation}TotalsPaged`
+exactly like the existing HR/HRV paged ports, instead of being bulk-read into one in-memory list
+(HC-001). `RawBulkRecords` no longer carries a `stepsRecords` field; steps is staged and persisted
+page-by-page by `HealthIngestionCoordinator.streamSteps`, with the same "never mark the scan
+COMPLETE until the whole paged read succeeds" rule already used for HR/HRV.
+
+- **43,200-step allocation benchmark and 250k/500k/1M ingest variants: NOT MEASURED, environment-blocked.**
+  `database-benchmark:measureDenseStepsIngestAtEachScalePoint` (`HealthPipelineBaselineBenchmark.kt`)
+  was added to exercise exactly these four scale points (43,200, 250,000, 500,000, 1,000,000
+  synthetic `DomainStepsRecord`s via `BaselineScalePoints.stepsPages`/`HealthParentFixture.stepsPages`)
+  through the real `HealthIngestionCoordinator` + `RoomHealthIngestionStore` on an isolated SQLCipher
+  database per scale point, logging `METRIC=steps_ingest` with wall time, transaction count,
+  statement count, and `Runtime.totalMemory() - freeMemory()` peak-heap delta. It is an
+  `@LargeTest`-annotated `androidx.test` instrumented test requiring a connected Android
+  device/emulator; this environment has none (`No connected devices!`, the same blocker as every
+  prior dated section above). No heap, result-set, or wall-time figures are claimed for any of the
+  four scale points — fabricating them would misrepresent unmeasured work as evidence.
+- **What was verified instead (host JVM, no device):** every `core:healthconnect` and
+  `core:database` unit test exercising the new paged steps/interval ports passes, including
+  `denseStepsStageEveryProviderId` (43,200 synthetic ids delivered across 44 mocked 1,000-row pages,
+  every id staged, max observed page size ≤ the configured 1,000, scan reaches `COMPLETE`) and
+  `deniedPageNeverCompletesScan` (a denied steps page leaves the scan `SCANNING`, never `COMPLETE`,
+  so `StagedDeletionReconciler` never runs against it) in
+  `HealthIngestionCoordinatorVo2MaxTest.kt`, plus the Room-level
+  `reconcileWindow for STEPS preserves existing rows when the scan is not complete` test in
+  `RoomHealthIngestionStoreReconcileTest.kt` (zero calls to `stepRecordDao.deleteRecordsNotStaged`/
+  `boundsOfUnstagedRecords` when the scan state is not `COMPLETE`). These confirm the *mechanism*
+  that should keep peak retained heap flat with page count (bounded page size, no buffered list),
+  but they are call-count/staging assertions on mocked collaborators, not a measured heap number.
+- **Expectation, unverified:** peak retained heap flat across the four scale points, matching the
+  already-flat HR/HRV paged-ingestion shape measured (with the same device caveat) in earlier dated
+  sections above. This is a prediction from the implementation shape (one page in memory at a time,
+  same pattern as `HeartSampleStreamer`), not a measurement.
