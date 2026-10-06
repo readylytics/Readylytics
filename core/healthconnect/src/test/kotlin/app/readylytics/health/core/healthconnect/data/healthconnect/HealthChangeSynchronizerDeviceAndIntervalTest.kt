@@ -115,6 +115,22 @@ class HealthChangeSynchronizerDeviceAndIntervalTest {
         }
 
     @Test
+    fun `captureChangesTokens suspends interval token on genuine permission denial`() =
+        runTest {
+            coEvery {
+                client.getChangesToken(match { it.recordTypes.contains(DistanceRecord::class) })
+            } throws SecurityException("DISTANCE not granted")
+            coEvery {
+                client.getChangesToken(match { !it.recordTypes.contains(DistanceRecord::class) })
+            } returns "baseline-token"
+
+            val tokens = synchronizer.captureChangesTokens()
+
+            assertFalse(tokens.intervals.containsKey("DISTANCE"))
+            coVerify(exactly = 1) { tokenStore.suspendToken("DISTANCE") }
+        }
+
+    @Test
     fun `applyPendingChanges persists an upserted steps record for later deletion resolution`() =
         runTest {
             seedTokens()

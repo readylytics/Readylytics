@@ -250,7 +250,9 @@ class HealthChangeSynchronizerImpl
         override suspend fun captureChangesTokens(): CapturedChangeTokens {
             val typed = captureTypedTokens()
             val intervals = listOf(IngestionTokenType.DISTANCE, IngestionTokenType.ELEVATION_GAINED)
-                .mapNotNull { type -> bootstrapIntervalToken(type)?.let { type.tokenKey to it } }.toMap()
+                .mapNotNull { type ->
+                    bootstrapIntervalToken(type, suspendOnDenial = true)?.let { type.tokenKey to it }
+                }.toMap()
             return CapturedChangeTokens(typed, intervals)
         }
 
@@ -295,7 +297,17 @@ class HealthChangeSynchronizerImpl
             }
         }
 
-        private suspend fun bootstrapIntervalToken(intervalType: IngestionTokenType): String? =
+        /**
+         * [suspendOnDenial] is only true from [captureChangesTokens]'s baseline-capture context,
+         * which has no prior permission check -- a genuine denial there must be recorded the same
+         * way [captureTypedTokens] records it for typed tokens. [syncSingleIntervalType]'s lazy
+         * fallback confirms permission moments earlier, so it leaves this false: a denial there is
+         * transient (see [skipTypeKeepingToken]'s doc), not a real revocation.
+         */
+        private suspend fun bootstrapIntervalToken(
+            intervalType: IngestionTokenType,
+            suspendOnDenial: Boolean = false,
+        ): String? =
             try {
                 val initialToken =
                     client.getChangesToken(
@@ -306,6 +318,7 @@ class HealthChangeSynchronizerImpl
                 throw e
             } catch (e: Exception) {
                 if (e.asHealthConnectSecurityCause() != null) {
+                    if (suspendOnDenial) tokenStore.suspendToken(intervalType.tokenKey)
                     null
                 } else {
                     throw e
