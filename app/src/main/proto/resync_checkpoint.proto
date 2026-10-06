@@ -39,6 +39,8 @@ message ResyncCheckpointProto {
   bool completed_types_recorded = 11;
   // WP-10: immutable run identity and scoring snapshot.
   HistoricalRunIdentityProto run_identity = 12;
+  map<string, string> baseline_interval_tokens = 13;
+  repeated string completed_interval_types = 14;
 }
 
 message HistoricalRunIdentityProto {

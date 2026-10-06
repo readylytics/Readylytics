@@ -199,12 +199,12 @@ class HealthChangeSynchronizerImplTest {
             val baselineTokens = synchronizer.captureChangesTokens()
             assertTrue(
                 "Baseline tokens must include newly regranted STEPS",
-                baselineTokens.containsKey(HealthDataType.STEPS),
+                baselineTokens.typed.containsKey(HealthDataType.STEPS),
             )
 
             // 7. Commit baseline tokens, clearing suspension and bootstrapping delta sync
-            synchronizer.commitTokens(baselineTokens)
-            baselineTokens.forEach { (_, token) ->
+            synchronizer.commitTokens(baselineTokens.typed, baselineTokens.intervals)
+            baselineTokens.typed.forEach { (_, token) ->
                 coEvery { client.getChanges(token) } returns changesResponse(emptyList())
             }
 

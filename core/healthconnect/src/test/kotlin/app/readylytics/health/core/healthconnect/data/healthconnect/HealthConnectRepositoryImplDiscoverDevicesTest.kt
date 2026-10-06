@@ -17,6 +17,7 @@ import androidx.health.connect.client.response.ReadRecordsResponse
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
+import io.mockk.coVerify
 import io.mockk.coEvery
 import io.mockk.unmockkAll
 import kotlinx.coroutines.Dispatchers
@@ -223,9 +224,18 @@ class HealthConnectRepositoryImplDiscoverDevicesTest {
         coEvery {
             client.readRecords<Record>(match { it.recordType == type && it.pageToken == "denied-page" })
         } throws failure
-        val outcome = repo.readExerciseSessions(start, end, includeDetails = true)
-        val workout = (outcome as ReadOutcome.Available).data.single()
+        val outcome = repo.readExerciseSessionsWithCompletion(start, end)
+        assertEquals(setOf(if (isElevation) "DISTANCE" else "ELEVATION_GAINED"), outcome.completedIntervalTypes)
+        val workout = (outcome.sessions as ReadOutcome.Available).data.single()
         kotlin.test.assertNull(if (isElevation) workout.elevationGainMeters else workout.totalDistanceMeters)
+    }
+
+    @Test
+    fun emptySessionWindowStillScansIntervalsForCompletion() = runTest {
+        val result = repo.readExerciseSessionsWithCompletion(Instant.EPOCH, Instant.EPOCH.plusSeconds(3600))
+        assertEquals(setOf("DISTANCE", "ELEVATION_GAINED"), result.completedIntervalTypes)
+        coVerify { client.readRecords<Record>(match { it.recordType == DistanceRecord::class }) }
+        coVerify { client.readRecords<Record>(match { it.recordType == ElevationGainedRecord::class }) }
     }
 
     @After

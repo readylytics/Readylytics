@@ -106,8 +106,8 @@ class HealthChangeSynchronizerDeviceAndIntervalTest {
 
             val tokens = synchronizer.captureChangesTokens()
 
-            assertEquals(HealthDataType.entries.size, tokens.size)
-            coVerify(exactly = HealthDataType.entries.size) {
+            assertEquals(HealthDataType.entries.size, tokens.typed.size)
+            coVerify(exactly = HealthDataType.entries.size + 2) {
                 client.getChangesToken(any<ChangesTokenRequest>())
             }
             coVerify(exactly = 0) { tokenStore.put(any(), any(), any()) }
@@ -290,7 +290,7 @@ class HealthChangeSynchronizerDeviceAndIntervalTest {
                 )
             }
 
-            synchronizer.commitTokens(outcome.nextTokens)
+            synchronizer.commitTokens(outcome.nextTokens, outcome.nextIntervalTokens)
             coVerify { tokenStore.putToken("DISTANCE", "dist-token-2", any()) }
         }
 
@@ -333,9 +333,98 @@ class HealthChangeSynchronizerDeviceAndIntervalTest {
             val outcome = synchronizer.applyPendingChanges()
 
             assertFalse(outcome.requiresFullResync)
-            synchronizer.commitTokens(outcome.nextTokens)
+            synchronizer.commitTokens(outcome.nextTokens, outcome.nextIntervalTokens)
             coVerify { tokenStore.putToken("DISTANCE", "next-token", any()) }
         }
+
+    @Test
+    fun interleavedRunsOwnTheirIntervalTokens() = runTest {
+        coEvery { client.permissionController.getGrantedPermissions() } returns
+            setOf(HealthPermission.getReadPermission(DistanceRecord::class))
+        coEvery { tokenStore.getToken("DISTANCE") } returns "start"
+        coEvery { client.getChanges("start") } returnsMany listOf(
+            ChangesResponse(emptyList(), "token-A", false, false),
+            ChangesResponse(emptyList(), "token-B", false, false),
+        )
+        val runA = synchronizer.applyPendingChanges()
+        val runB = synchronizer.applyPendingChanges()
+        assertEquals(mapOf("DISTANCE" to "token-A"), runA.nextIntervalTokens)
+        assertEquals(mapOf("DISTANCE" to "token-B"), runB.nextIntervalTokens)
+        synchronizer.commitTokens(runA.nextTokens, runA.nextIntervalTokens)
+        coVerify(exactly = 1) { tokenStore.putToken("DISTANCE", "token-A", any()) }
+        coVerify(exactly = 0) { tokenStore.putToken("DISTANCE", "token-B", any()) }
+    }
+
+    @Test
+    fun synchronizerHasNoCollectionSideChannel() {
+        assertTrue(HealthChangeSynchronizerImpl::class.java.declaredFields.none {
+            Map::class.java.isAssignableFrom(it.type) || Collection::class.java.isAssignableFrom(it.type)
+        })
+    }
+
+    @Test
+    fun deniedIntervalAfterAcceptedPageKeepsStoredToken() = runTest {
+        coEvery { client.permissionController.getGrantedPermissions() } returns
+            setOf(HealthPermission.getReadPermission(DistanceRecord::class))
+        coEvery { tokenStore.getToken("DISTANCE") } returns "start"
+        coEvery { client.getChanges("start") } returns ChangesResponse(emptyList(), "page-two", true, false)
+        coEvery { client.getChanges("page-two") } throws SecurityException("late denial")
+        val outcome = synchronizer.applyPendingChanges()
+        assertTrue(outcome.nextIntervalTokens.isEmpty())
+        synchronizer.commitTokens(outcome.nextTokens, outcome.nextIntervalTokens)
+        coVerify(exactly = 0) { tokenStore.putToken("DISTANCE", any(), any()) }
+        coVerify(exactly = 0) { tokenStore.suspendToken("DISTANCE") }
+    }
+
+    @Test
+    fun cancelledIntervalRunCannotLeakTokensIntoAnotherCommit() = runTest {
+        coEvery { client.permissionController.getGrantedPermissions() } returns
+            setOf(HealthPermission.getReadPermission(DistanceRecord::class))
+        coEvery { tokenStore.getToken("DISTANCE") } returns "start"
+        coEvery { client.getChanges("start") } returns ChangesResponse(emptyList(), "page-two", true, false)
+        coEvery { client.getChanges("page-two") } throws kotlinx.coroutines.CancellationException("cancel")
+        kotlin.test.assertFailsWith<kotlinx.coroutines.CancellationException> { synchronizer.applyPendingChanges() }
+        synchronizer.commitTokens(emptyMap(), emptyMap())
+        coVerify(exactly = 0) { tokenStore.putToken(any(), any(), any()) }
+    }
+
+    @Test
+    fun promotedBaselineDoesNotReplayOldIntervalChanges() = runTest {
+        coEvery { client.permissionController.getGrantedPermissions() } returns
+            setOf(HealthPermission.getReadPermission(DistanceRecord::class))
+        coEvery { client.getChangesToken(any()) } returns "baseline"
+        var stored = "old"
+        coEvery { tokenStore.getToken("DISTANCE") } coAnswers { stored }
+        coEvery { tokenStore.putToken("DISTANCE", any(), any()) } coAnswers { stored = secondArg() }
+        val captured = synchronizer.captureChangesTokens()
+        synchronizer.commitTokens(emptyMap(), captured.intervals)
+        var nextDailyIntervalChangeCount = 0
+        coEvery { client.getChanges("baseline") } returns ChangesResponse(emptyList(), "next", false, false)
+        coEvery { client.getChanges("old") } coAnswers {
+            nextDailyIntervalChangeCount++
+            ChangesResponse(emptyList(), "next", false, false)
+        }
+        synchronizer.applyPendingChanges()
+        assertEquals(0, nextDailyIntervalChangeCount)
+    }
+
+    @Test
+    fun intervalBudgetContinuationReturnsOwnedCursor() = runTest {
+        coEvery { client.permissionController.getGrantedPermissions() } returns
+            setOf(HealthPermission.getReadPermission(DistanceRecord::class))
+        coEvery { tokenStore.getToken("DISTANCE") } returns "start"
+        coEvery { client.getChanges(any()) } returns ChangesResponse(emptyList(), "page-next", true, false)
+        val outcome = synchronizer.applyPendingChanges()
+        assertTrue(outcome.continuationRequired)
+        assertEquals(mapOf("DISTANCE" to "page-next"), outcome.nextIntervalTokens)
+    }
+
+    @Test
+    fun intervalPermissionRevokedBeforeCommitDoesNotPromote() = runTest {
+        coEvery { client.permissionController.getGrantedPermissions() } returns emptySet()
+        synchronizer.commitTokens(emptyMap(), mapOf("DISTANCE" to "candidate"))
+        coVerify(exactly = 0) { tokenStore.putToken(any(), any(), any()) }
+    }
 
     private fun seedTokens() {
         coEvery { tokenStore.get(HealthDataType.SLEEP) } returns "sleep-token"

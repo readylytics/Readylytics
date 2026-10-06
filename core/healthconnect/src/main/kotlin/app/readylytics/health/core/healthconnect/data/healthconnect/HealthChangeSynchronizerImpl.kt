@@ -18,6 +18,7 @@ import app.readylytics.health.core.model.data.preferences.scoringZone
 import app.readylytics.health.core.model.domain.model.*
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.healthconnect.domain.sync.DEFAULT_CHANGES_APPLY_BUDGET_MS
+import app.readylytics.health.core.healthconnect.domain.sync.CapturedChangeTokens
 import app.readylytics.health.core.healthconnect.domain.sync.HealthChangeSyncOutcome
 import app.readylytics.health.core.healthconnect.domain.sync.HealthChangeSynchronizer
 import app.readylytics.health.core.healthconnect.domain.sync.MAX_CHANGE_PAGES_PER_RUN
@@ -68,21 +69,21 @@ class HealthChangeSynchronizerImpl
         val affectedDates: MutableSet<LocalDate>,
         val nextTokens: MutableMap<HealthDataType, String>,
         val budget: SyncBudget,
+        val nextIntervalTokens: MutableMap<String, String> = mutableMapOf(),
     ) {
         fun budgetExhaustedOutcome(): HealthChangeSyncOutcome =
             HealthChangeSyncOutcome(
                 requiresFullResync = true,
                 continuationRequired = true,
-                nextTokens = nextTokens,
+                nextTokens = nextTokens.toMap(),
+                nextIntervalTokens = nextIntervalTokens.toMap(),
                 affectedDates = affectedDates,
                 fullResyncReason = "Budget exhausted",
             )
     }
 
-        private val stagedIntervalTokens = mutableMapOf<String, String>()
 
         override suspend fun applyPendingChanges(): HealthChangeSyncOutcome {
-            stagedIntervalTokens.clear()
             val prefs = settingsRepo.userPreferences.first()
             val zoneId = prefs.scoringZone()
             val deviceByType = prefs.deviceByDataType
@@ -124,7 +125,8 @@ class HealthChangeSynchronizerImpl
             return HealthChangeSyncOutcome(
                 affectedDates = state.affectedDates,
                 requiresFullResync = false,
-                nextTokens = state.nextTokens,
+                nextTokens = state.nextTokens.toMap(),
+                nextIntervalTokens = state.nextIntervalTokens.toMap(),
             )
         }
 
@@ -208,22 +210,25 @@ class HealthChangeSynchronizerImpl
             return null
         }
 
-        override suspend fun commitTokens(tokens: Map<HealthDataType, String>) {
-            if (tokens.isNotEmpty()) {
-                tokenStore.putAll(tokens, clock.millis())
+        override suspend fun commitTokens(typed: Map<HealthDataType, String>, intervals: Map<String, String>) {
+            if (typed.isNotEmpty()) {
+                tokenStore.putAll(typed, clock.millis())
             }
-            if (stagedIntervalTokens.isNotEmpty()) {
-                stagedIntervalTokens.forEach { (typeKey, token) ->
-                    tokenStore.putToken(typeKey, token, clock.millis())
+            if (intervals.isNotEmpty()) {
+                val granted = client.permissionController.getGrantedPermissions()
+                for (type in listOf(IngestionTokenType.DISTANCE, IngestionTokenType.ELEVATION_GAINED)) {
+                    val token = intervals[type.tokenKey] ?: continue
+                    if (recordClassesFor(type).all { HealthPermission.getReadPermission(it) in granted }) {
+                        tokenStore.putToken(type.tokenKey, token, clock.millis())
+                    }
                 }
-                stagedIntervalTokens.clear()
             }
         }
 
         // Optional data types (weight, body fat, BP, SpO2, body temperature, steps) may lack
         // permission -- a permission-denied getChangesToken call must not abort the whole resync,
         // it just means that type gets no baseline token (mirrors the read-side degrade pattern).
-        override suspend fun captureChangesTokens(): Map<HealthDataType, String> =
+        private suspend fun captureTypedTokens(): Map<HealthDataType, String> =
             HealthDataType.entries.mapNotNull { dataType ->
                 try {
                     dataType to
@@ -241,6 +246,13 @@ class HealthChangeSynchronizerImpl
                     null
                 }
             }.toMap()
+
+        override suspend fun captureChangesTokens(): CapturedChangeTokens {
+            val typed = captureTypedTokens()
+            val intervals = listOf(IngestionTokenType.DISTANCE, IngestionTokenType.ELEVATION_GAINED)
+                .mapNotNull { type -> bootstrapIntervalToken(type)?.let { type.tokenKey to it } }.toMap()
+            return CapturedChangeTokens(typed, intervals)
+        }
 
         private suspend fun syncIntervalChanges(
             grantedPermissions: Set<String>,
@@ -277,7 +289,7 @@ class HealthChangeSynchronizerImpl
 
             val token = storedToken ?: bootstrapIntervalToken(intervalType)
             return if (token != null) {
-                applyChangesForIntervalType(intervalType, token, zoneId, stagedIntervalTokens, state)
+                applyChangesForIntervalType(intervalType, token, zoneId, state.nextIntervalTokens, state)
             } else {
                 null
             }
@@ -289,13 +301,11 @@ class HealthChangeSynchronizerImpl
                     client.getChangesToken(
                         ChangesTokenRequest(recordTypes = recordClassesFor(intervalType)),
                     )
-                stagedIntervalTokens[intervalType.tokenKey] = initialToken
                 initialToken
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
                 if (e.asHealthConnectSecurityCause() != null) {
-                    tokenStore.suspendToken(intervalType.tokenKey)
                     null
                 } else {
                     throw e
@@ -355,16 +365,16 @@ class HealthChangeSynchronizerImpl
                 throw e
             } catch (e: SecurityException) {
                 logE("HealthChangeSynchronizer", e) {
-                    "SecurityException reading changes for ${tokenType.tokenKey}: suspending token"
+                    "SecurityException reading changes for ${tokenType.tokenKey}: keeping token"
                 }
-                tokenStore.suspendToken(tokenType.tokenKey)
+                nextIntervalTokens.remove(tokenType.tokenKey)
                 null
             } catch (e: Exception) {
                 if (e.asHealthConnectSecurityCause() != null) {
                     logE("HealthChangeSynchronizer", e) {
-                        "SecurityException reading changes for ${tokenType.tokenKey}: suspending token"
+                        "SecurityException reading changes for ${tokenType.tokenKey}: keeping token"
                     }
-                    tokenStore.suspendToken(tokenType.tokenKey)
+                    nextIntervalTokens.remove(tokenType.tokenKey)
                     null
                 } else if (isTokenExpiredException(e)) {
                     logD("HealthChangeSynchronizer") {

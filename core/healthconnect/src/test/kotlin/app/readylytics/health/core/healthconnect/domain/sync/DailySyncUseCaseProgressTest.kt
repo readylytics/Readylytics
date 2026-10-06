@@ -70,7 +70,7 @@ class DailySyncUseCaseProgressTest : DailySyncUseCaseTestFixture() {
             assertEquals(floorDay, scoredDays.first())
             assertEquals(today, scoredDays.last())
             assertTrue(result is app.readylytics.health.core.model.domain.model.Result.Success)
-            coVerify(exactly = 1) { changeSynchronizer.commitTokens(nextTokens) }
+            coVerify(exactly = 1) { changeSynchronizer.commitTokens(nextTokens, emptyMap()) }
         }
 
     @Test

@@ -68,7 +68,7 @@ abstract class DailySyncUseCaseTestFixture {
     @Before
     fun setup() {
         coEvery { changeSynchronizer.applyPendingChanges() } returns HealthChangeSyncOutcome(emptySet(), false)
-        coJustRun { changeSynchronizer.commitTokens(any()) }
+        coJustRun { changeSynchronizer.commitTokens(any(), any()) }
         coEvery { dirtyRangeStore.pending(any()) } returns emptyList()
         coJustRun { dirtyRangeStore.discardBefore(any()) }
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
@@ -77,6 +77,12 @@ abstract class DailySyncUseCaseTestFixture {
         coEvery { scoringRepository.fetchWalkForwardFatigueContext(any(), any(), any(), any()) } returns
             WalkForwardFatigueContext(emptyList())
         coEvery { hcRepo.readSleepSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readExerciseSessionsWithCompletion(any(), any(), any()) } coAnswers {
+            app.readylytics.health.core.model.domain.repository.ExerciseSessionRead(
+                hcRepo.readExerciseSessions(firstArg(), secondArg(), true, thirdArg()),
+            )
+        }
+
         coEvery { hcRepo.readExerciseSessions(any(), any(), any(), any()) } returns ReadOutcome.Available(emptyList())
         coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any(), any()) } returns
             ReadOutcome.Available(Unit)
@@ -308,7 +314,7 @@ class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
 
             coVerifyOrder {
                 scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any(), any())
-                changeSynchronizer.commitTokens(nextTokens)
+                changeSynchronizer.commitTokens(nextTokens, emptyMap())
             }
         }
 
@@ -476,7 +482,7 @@ class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
             coVerify(exactly = 0) {
                 scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any(), any())
             }
-            coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }
+            coVerify(exactly = 0) { changeSynchronizer.commitTokens(any(), any()) }
         }
 
     @Test
@@ -540,7 +546,7 @@ class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
                 "REQUIRES_HISTORICAL_RESYNC",
                 (result as app.readylytics.health.core.model.domain.model.Result.Failure).code,
             )
-            coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }
+            coVerify(exactly = 0) { changeSynchronizer.commitTokens(any(), any()) }
         }
 
     @Test
@@ -577,7 +583,7 @@ class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
             // Ingestion reaches one extra day back from the widened oldest target day.
             assertEquals(today.minusDays(2).atStartOfDay(zoneId).toInstant(), hrFromSlot.captured)
             assertTrue(result is app.readylytics.health.core.model.domain.model.Result.Success)
-            coVerify(exactly = 1) { changeSynchronizer.commitTokens(nextTokens) }
+            coVerify(exactly = 1) { changeSynchronizer.commitTokens(nextTokens, emptyMap()) }
         }
 
     @Test
@@ -616,7 +622,7 @@ class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
             coVerify(exactly = 2) { changeSynchronizer.applyPendingChanges() }
             // Progressive commit mid-loop (so a retry resumes past the exhausted page), then the
             // final commit once the walk-forward recompute covers everything.
-            coVerify(exactly = 1) { changeSynchronizer.commitTokens(tokensAfterFirstCall) }
-            coVerify(exactly = 1) { changeSynchronizer.commitTokens(tokensAfterDrain) }
+            coVerify(exactly = 1) { changeSynchronizer.commitTokens(tokensAfterFirstCall, emptyMap()) }
+            coVerify(exactly = 1) { changeSynchronizer.commitTokens(tokensAfterDrain, emptyMap()) }
         }
 }

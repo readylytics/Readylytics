@@ -1,6 +1,7 @@
 package app.readylytics.health.core.healthconnect.data.healthconnect
 
 import android.content.Context
+import app.readylytics.health.core.model.domain.repository.ExerciseSessionRead
 import androidx.health.connect.client.HealthConnectClient
 import app.readylytics.health.core.model.domain.repository.WorkoutRouteLookup
 import androidx.health.connect.client.permission.HealthPermission
@@ -426,26 +427,30 @@ class HealthConnectRepositoryImpl
             includeDetails: Boolean,
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainExerciseSessionRecord>> =
+            readExerciseSessionsResult(from, to, includeDetails, retryScope).sessions
+
+        override suspend fun readExerciseSessionsWithCompletion(
+            from: Instant,
+            to: Instant,
+            retryScope: ReadRetryScope?,
+        ): ExerciseSessionRead = readExerciseSessionsResult(from, to, true, retryScope, scanEmptyWindow = true)
+
+        private suspend fun readExerciseSessionsResult(
+            from: Instant,
+            to: Instant,
+            includeDetails: Boolean,
+            retryScope: ReadRetryScope?,
+            scanEmptyWindow: Boolean = false,
+        ): ExerciseSessionRead {
+            val completed = mutableSetOf<String>()
+            val outcome =
             safeReadRecords<ExerciseSessionRecord, _>("Exercise session") {
                 val sessions = readAllPages<ExerciseSessionRecord>(from, to, retryScope)
-                if (sessions.isEmpty() || !includeDetails) {
+                if ((!scanEmptyWindow && sessions.isEmpty()) || !includeDetails) {
                     sessions.map { it.toDomain(null) }
                 } else {
-                    // Two paged reads for the whole window, not one per session and not one buffered
-                    // list per type (HC-001): DistanceRecord/ElevationGainedRecord can be written as
-                    // continuously as steps, so each page is folded straight into a per-session
-                    // running total instead of ever holding the full range in memory.
-                    val distanceBySession = mutableMapOf<String, Double?>()
-                    val distanceOutcome = intervalTotalsReader.readDistanceTotalsPaged(from, to, retryScope) { page ->
-                        intervalTotalsReader.foldPageIntoSessionTotals(sessions, page, distanceBySession)
-                    }
-                    if (distanceOutcome !is ReadOutcome.Available) distanceBySession.clear()
-                    val elevationBySession = mutableMapOf<String, Double?>()
-                    val elevationOutcome = intervalTotalsReader.readElevationTotalsPaged(from, to, retryScope) { page ->
-                        intervalTotalsReader.foldPageIntoSessionTotals(sessions, page, elevationBySession)
-                    }
-
-                    if (elevationOutcome !is ReadOutcome.Available) elevationBySession.clear()
+                    val totals = intervalTotalsReader.readSessionTotals(sessions, from, to, retryScope)
+                    completed.addAll(totals.completedTypes)
 
                     val routeConsent = WorkoutRouteReadPolicy.hasConsent(client)
                     val storedRoutes = routeLookup.snapshots(sessions.map { it.metadata.id })
@@ -484,12 +489,14 @@ class HealthConnectRepositoryImpl
                             }
                         session.toDomain(
                             routeResult = routeResult,
-                            totalDistanceMeters = distanceBySession[session.metadata.id],
-                            elevationGainMeters = elevationBySession[session.metadata.id],
+                            totalDistanceMeters = totals.distance[session.metadata.id],
+                            elevationGainMeters = totals.elevation[session.metadata.id],
                         )
                     }
                 }
             }
+            return ExerciseSessionRead(outcome, if (outcome is ReadOutcome.Available) completed.toSet() else emptySet())
+        }
 
         override suspend fun readExerciseSession(id: String): DomainExerciseSessionRecord? =
             withContext(ioDispatcher) {

@@ -24,6 +24,7 @@ data class PrunePhaseContext(
     val reconcileEndMs: Long,
     val selectionHash: String,
     val baselineChangeTokens: Map<HealthDataType, String>,
+    val intervalTokens: IntervalTokenProgress = IntervalTokenProgress(),
     val runCompletedTypes: Set<HealthDataType>,
     val runIdentity: HistoricalRunIdentity,
     val runIngestion: Boolean,
@@ -87,6 +88,18 @@ class HistoricalPrunePhase
                 selections = prunerSelections,
                 zoneId = context.zoneId,
             )
+            saveReconcileCheckpoint(context)
+            val pruneEnd = clock.millis()
+            logTelemetry(
+                pruneStart = pruneStart,
+                pruneEnd = pruneEnd,
+                reconcileStartMs = context.reconcileStartMs,
+                reconcileEndMs = context.reconcileEndMs,
+                before = PruneCounts(hrBefore, hrvBefore, sleepBefore, workoutBefore),
+            )
+        }
+
+        private suspend fun saveReconcileCheckpoint(context: PrunePhaseContext) {
             checkpointStore.save(
                 ResyncCheckpoint(
                     startDate = context.startDate,
@@ -95,17 +108,11 @@ class HistoricalPrunePhase
                     nextDate = context.startDate,
                     selectionHash = context.selectionHash,
                     baselineChangeTokens = context.baselineChangeTokens,
+                    baselineIntervalTokens = context.intervalTokens.baseline,
+                    completedIntervalTypes = context.intervalTokens.completed,
                     completedTypes = context.runCompletedTypes,
                     runIdentity = context.runIdentity,
                 ),
-            )
-            val pruneEnd = clock.millis()
-            logTelemetry(
-                pruneStart = pruneStart,
-                pruneEnd = pruneEnd,
-                reconcileStartMs = context.reconcileStartMs,
-                reconcileEndMs = context.reconcileEndMs,
-                before = PruneCounts(hrBefore, hrvBefore, sleepBefore, workoutBefore),
             )
         }
 

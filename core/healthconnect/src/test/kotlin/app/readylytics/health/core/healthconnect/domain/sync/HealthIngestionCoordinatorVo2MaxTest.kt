@@ -345,6 +345,12 @@ class HealthIngestionCoordinatorVo2MaxTest {
             )
         coEvery { hcRepo.readSleepSessions(any(), any(), any()) } returns
             ReadOutcome.Available(listOf(sleepSession))
+        coEvery { hcRepo.readExerciseSessionsWithCompletion(any(), any(), any()) } coAnswers {
+            app.readylytics.health.core.model.domain.repository.ExerciseSessionRead(
+                hcRepo.readExerciseSessions(firstArg(), secondArg(), true, thirdArg()),
+            )
+        }
+
         coEvery { hcRepo.readExerciseSessions(any(), any(), any(), any()) } returns
             ReadOutcome.Available(listOf(workoutSession))
     }
@@ -418,6 +424,11 @@ class HealthIngestionCoordinatorVo2MaxTest {
 
     private fun stubEmptyReads(hcRepo: HealthConnectRepository) {
         coEvery { hcRepo.readSleepSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readExerciseSessionsWithCompletion(any(), any(), any()) } coAnswers {
+            app.readylytics.health.core.model.domain.repository.ExerciseSessionRead(
+                hcRepo.readExerciseSessions(firstArg(), secondArg(), true, thirdArg()),
+            )
+        }
         coEvery { hcRepo.readExerciseSessions(any(), any(), any(), any()) } returns ReadOutcome.Available(emptyList())
         coEvery { hcRepo.readWeightRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
         coEvery { hcRepo.readBodyFatRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())

@@ -72,8 +72,8 @@ class PagedIngestResumptionTest {
     fun setup() {
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
         coEvery { changeSynchronizer.applyPendingChanges() } returns HealthChangeSyncOutcome(emptySet(), false)
-        coEvery { changeSynchronizer.captureChangesTokens() } returns baselineTokens
-        coEvery { changeSynchronizer.commitTokens(any()) } returns Unit
+        coEvery { changeSynchronizer.captureChangesTokens() } returns CapturedChangeTokens(baselineTokens)
+        coEvery { changeSynchronizer.commitTokens(any(), any()) } returns Unit
         coEvery { scoringRepository.fetchWalkForwardTrimpContext(any(), any(), any()) } returns
             WalkForwardTrimpContext(TreeMap(), TreeMap())
         coEvery { scoringRepository.fetchWalkForwardBaselineContext(any(), any(), any()) } returns
@@ -81,6 +81,12 @@ class PagedIngestResumptionTest {
         coEvery { scoringRepository.fetchWalkForwardFatigueContext(any(), any(), any(), any()) } returns
             WalkForwardFatigueContext(emptyList())
         coEvery { hcRepo.readSleepSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readExerciseSessionsWithCompletion(any(), any(), any()) } coAnswers {
+            app.readylytics.health.core.model.domain.repository.ExerciseSessionRead(
+                hcRepo.readExerciseSessions(firstArg(), secondArg(), true, thirdArg()),
+            )
+        }
+
         coEvery { hcRepo.readExerciseSessions(any(), any(), any(), any()) } returns ReadOutcome.Available(emptyList())
         coEvery { hcRepo.readStepsRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
         coEvery { hcRepo.readStepsRecordsPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)

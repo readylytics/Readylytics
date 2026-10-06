@@ -153,6 +153,7 @@ class HealthIngestionCoordinator
                 IngestionWindowResult(
                     affectedRange = affectedRange,
                     completedTypes = scans.mapTo(HashSet()) { it.type },
+                    completedIntervalTypes = rawRecords.completedIntervalTypes,
                 )
             }
         }
@@ -233,8 +234,8 @@ class HealthIngestionCoordinator
                     }
                 val exerciseRecords =
                     async {
-                        hcRepo.readExerciseSessions(
-                            windowStart, windowEnd, includeDetails = true, retryScope = retryBudget,
+                        hcRepo.readExerciseSessionsWithCompletion(
+                            windowStart, windowEnd, retryScope = retryBudget,
                         )
                     }
                 val weightRecords =
@@ -267,7 +268,8 @@ class HealthIngestionCoordinator
                     }
                 RawBulkRecords(
                     sleepSessions = sleepSessions.await(),
-                    exerciseRecords = exerciseRecords.await(),
+                    exerciseRecords = exerciseRecords.await().sessions,
+                    completedIntervalTypes = exerciseRecords.await().completedIntervalTypes,
                     weightRecords = weightRecords.await(),
                     bodyFatRecords = bodyFatRecords.await(),
                     bloodPressureRecords = bloodPressureRecords.await(),
@@ -457,11 +459,13 @@ class HealthIngestionCoordinator
 data class IngestionWindowResult(
     val affectedRange: ScoreInvalidation.AffectedRange?,
     val completedTypes: Set<HealthDataType> = emptySet(),
+    val completedIntervalTypes: Set<String> = emptySet(),
 )
 
 // Steps is deliberately absent -- it is a dense type streamed/staged page-by-page alongside HR/HRV
 // (see [HealthIngestionCoordinator.streamSteps]), never bulk-fetched or held in full here (HC-001).
 internal data class RawBulkRecords(
+    val completedIntervalTypes: Set<String> = emptySet(),
     val sleepSessions: ReadOutcome<List<DomainSleepSessionRecord>>,
     val exerciseRecords: ReadOutcome<List<DomainExerciseSessionRecord>>,
     val weightRecords: ReadOutcome<List<DomainWeightRecord>>,

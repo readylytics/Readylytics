@@ -160,6 +160,7 @@ class DailySyncUseCase
 
                     var continuationRequired = true
                     val affectedDates = mutableSetOf<java.time.LocalDate>()
+                    val nextIntervalTokens = mutableMapOf<String, String>()
                     val nextTokens = mutableMapOf<
                         app.readylytics.health.core.model.domain.model.HealthDataType, String>()
 
@@ -190,6 +191,7 @@ class DailySyncUseCase
                             nextTokens.putAll(outcome.nextTokens)
                         }
 
+                        nextIntervalTokens.putAll(outcome.nextIntervalTokens)
                         continuationRequired = outcome.continuationRequired
                         if (continuationRequired) {
                             // Budget exhaustion: every page applied so far already committed its
@@ -199,7 +201,7 @@ class DailySyncUseCase
                             // candidate tokens now is what lets the next applyPendingChanges() call
                             // resume past this point instead of re-fetching -- and re-applying --
                             // the same already-committed pages forever.
-                            changeSynchronizer.commitTokens(outcome.nextTokens)
+                            changeSynchronizer.commitTokens(outcome.nextTokens, outcome.nextIntervalTokens)
                         }
                     }
 
@@ -430,7 +432,7 @@ class DailySyncUseCase
                     } else {
                         // Every affected date was covered by the walk-forward recompute just run,
                         // so the candidate tokens are now safe to commit.
-                        changeSynchronizer.commitTokens(nextTokens)
+                        changeSynchronizer.commitTokens(nextTokens, nextIntervalTokens)
                         settingsRepo.updateLastSyncTimestamp(clock.millis())
                         Result.success(Unit)
                     }

@@ -35,6 +35,12 @@ class HealthIngestionCoordinatorTimeoutTest {
             }
         coEvery { hcRepo.hasVo2MaxPermission() } returns true
         coEvery { hcRepo.readSleepSessions(any(), any(), any()) } coAnswers { readSdk(thirdArg()) }
+        coEvery { hcRepo.readExerciseSessionsWithCompletion(any(), any(), any()) } coAnswers {
+            app.readylytics.health.core.model.domain.repository.ExerciseSessionRead(
+                hcRepo.readExerciseSessions(firstArg(), secondArg(), true, thirdArg()),
+            )
+        }
+
         coEvery { hcRepo.readExerciseSessions(any(), any(), any(), any()) } coAnswers { readSdk(arg(3)) }
         coEvery { hcRepo.readWeightRecords(any(), any(), any()) } coAnswers { readSdk(thirdArg()) }
         coEvery { hcRepo.readBodyFatRecords(any(), any(), any()) } coAnswers { readSdk(thirdArg()) }

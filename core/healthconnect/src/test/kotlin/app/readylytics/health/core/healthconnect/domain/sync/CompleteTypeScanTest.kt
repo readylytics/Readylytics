@@ -67,8 +67,9 @@ class CompleteTypeScanTest {
         fakeStore.clear()
         staging.clearAll()
         coEvery { changeSynchronizer.applyPendingChanges() } returns HealthChangeSyncOutcome(emptySet(), false)
-        coEvery { changeSynchronizer.captureChangesTokens() } returns mapOf(HealthDataType.HEART_RATE to "hr-base")
-        coEvery { changeSynchronizer.commitTokens(any()) } returns Unit
+        coEvery { changeSynchronizer.captureChangesTokens() } returns
+            CapturedChangeTokens(mapOf(HealthDataType.HEART_RATE to "hr-base"))
+        coEvery { changeSynchronizer.commitTokens(any(), any()) } returns Unit
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
         coEvery { scoringRepository.fetchWalkForwardTrimpContext(any(), any(), any()) } returns
             WalkForwardTrimpContext(TreeMap(), TreeMap())
@@ -77,6 +78,12 @@ class CompleteTypeScanTest {
         coEvery { scoringRepository.fetchWalkForwardFatigueContext(any(), any(), any(), any()) } returns
             WalkForwardFatigueContext(emptyList())
         coEvery { hcRepo.readSleepSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readExerciseSessionsWithCompletion(any(), any(), any()) } coAnswers {
+            app.readylytics.health.core.model.domain.repository.ExerciseSessionRead(
+                hcRepo.readExerciseSessions(firstArg(), secondArg(), true, thirdArg()),
+            )
+        }
+
         coEvery { hcRepo.readExerciseSessions(any(), any(), any(), any()) } returns ReadOutcome.Available(emptyList())
         coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any(), any()) } returns
             ReadOutcome.Available(Unit)

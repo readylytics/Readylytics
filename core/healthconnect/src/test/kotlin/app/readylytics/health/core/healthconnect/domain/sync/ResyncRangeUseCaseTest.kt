@@ -80,6 +80,12 @@ class ResyncRangeUseCaseTest {
         coEvery { scoringRepository.fetchWalkForwardFatigueContext(any(), any(), any(), any()) } returns
             WalkForwardFatigueContext(emptyList())
         coEvery { hcRepo.readSleepSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readExerciseSessionsWithCompletion(any(), any(), any()) } coAnswers {
+            app.readylytics.health.core.model.domain.repository.ExerciseSessionRead(
+                hcRepo.readExerciseSessions(firstArg(), secondArg(), true, thirdArg()),
+            )
+        }
+
         coEvery { hcRepo.readExerciseSessions(any(), any(), any(), any()) } returns ReadOutcome.Available(emptyList())
         coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any(), any()) } returns
             ReadOutcome.Available(Unit)
@@ -485,7 +491,7 @@ class ResyncRangeUseCaseTest {
             coVerify(exactly = 0) { selectedSourcePruner.prune(any(), any(), any(), any()) }
             coVerify(exactly = 0) { changeSynchronizer.captureChangesTokens() }
             coVerify(exactly = 0) { changeSynchronizer.applyPendingChanges() }
-            coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }
+            coVerify(exactly = 0) { changeSynchronizer.commitTokens(any(), any()) }
             coVerify(exactly = 1) { sessionLinkReconciler.reconcile(any(), any(), any()) }
             coVerify(exactly = 2) {
                 scoringRepository.computeAndPersistDailySummary(any(), null, any(), any(), any())
@@ -635,7 +641,7 @@ class ResyncRangeUseCaseTest {
             assertEquals(35, transactionRunner.transactionCount)
             assertEquals(ResyncPhase.RECOMPUTE, checkpointStore.value?.phase)
             assertEquals(startDate.plusDays(30), checkpointStore.value?.nextDate)
-            coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }
+            coVerify(exactly = 0) { changeSynchronizer.commitTokens(any(), any()) }
         }
 
     @Test

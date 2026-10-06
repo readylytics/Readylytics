@@ -52,6 +52,11 @@ sealed interface PermissionStatus {
     ) : PermissionStatus
 }
 
+data class ExerciseSessionRead(
+    val sessions: ReadOutcome<List<DomainExerciseSessionRecord>>,
+    val completedIntervalTypes: Set<String> = emptySet(),
+)
+
 interface HealthConnectRepository : HealthConnectPermissionChecker {
     val criticalPermissions: Set<String>
     val requiredPermissions: Set<String>
@@ -125,6 +130,12 @@ interface HealthConnectRepository : HealthConnectPermissionChecker {
         includeDetails: Boolean = true,
         retryScope: ReadRetryScope? = null,
     ): ReadOutcome<List<DomainExerciseSessionRecord>>
+
+    suspend fun readExerciseSessionsWithCompletion(
+        from: Instant,
+        to: Instant,
+        retryScope: ReadRetryScope? = null,
+    ): ExerciseSessionRead = ExerciseSessionRead(readExerciseSessions(from, to, true, retryScope))
 
     suspend fun readStepsRecords(
         from: Instant,

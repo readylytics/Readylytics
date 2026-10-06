@@ -222,7 +222,7 @@ class FirstSetupDummyIngestionFlowTest {
                 requiresFullResync = false,
                 nextTokens = mapOf(HealthDataType.SLEEP to "next-sleep-token"),
             )
-        coJustRun { changeSynchronizer.commitTokens(any()) }
+        coJustRun { changeSynchronizer.commitTokens(any(), any()) }
 
         return DailySyncUseCase(
             settingsRepo = settingsRepo,
