@@ -697,3 +697,104 @@ Changes read issues **0** route calls; granting consent to a `PERMISSION_REQUIRE
 **1**, and the following unchanged imported read issues **0**. Each changed start/end/type/device
 identity and `NOT_AVAILABLE` state remains eligible. Tests cover exact route preservation in Room.
 No attached device was reported by `adb devices`; real Binder latency is not measured here.
+
+## 2026-10-06 — Phase 2 Task 10 WP-18 tier-visible read measurement and close
+
+**Scope.** The four remaining tier-visible bulk reads named in the Task 10 brief:
+`HeartRateDao.getVisibleByTimeRange`, `HeartRateDao.getVisibleByTypeAndTimeRange`,
+`HeartRateDao.pagePlausibleSamplesForRollup`, and Task 4's type-filtered workout read
+(`TypedHeartRateDao.visibleTypePage`, consumed page-by-page via `AuthoritativeHeartRateReader
+.typePagesInRange` / `TypedHeartRateRepositoryImpl.forEachByTimeRangeOfTypePage`).
+
+**Decision: no new DAO method.** `getVisiblePageAfter` was NOT added. Evidence below.
+
+### JVM evidence (ran, real output)
+
+`./gradlew :core:database:testDebugUnitTest --tests '*Phase2QueryPlanTest'` — **7/7 pass**, 0
+failures, including the two new Task 10 tests:
+
+- `tierVisibilityPlansStayIndexed` — real `EXPLAIN QUERY PLAN` on an empty in-memory Room database
+  (schema-only; access path doesn't depend on row count):
+  ```
+  getVisibleByTimeRange:
+  SEARCH TABLE heart_rate_records AS h USING INDEX index_hr_v10_timestamp_source (timestampMs>? AND timestampMs<?)
+  | SEARCH TABLE minute_coverage AS c USING INTEGER PRIMARY KEY (rowid=?)
+  | CORRELATED SCALAR SUBQUERY 1
+  | SEARCH TABLE hr_minute_buckets AS b2 USING INDEX index_hr_minute_buckets_bucketStartMs_bucketEndMs (bucketStartMs=?)
+
+  getVisibleByTypeAndTimeRange:
+  SEARCH TABLE heart_rate_records AS h USING INDEX index_hr_v10_type_timestamp (recordType=? AND timestampMs>? AND timestampMs<?)
+  | SEARCH TABLE minute_coverage AS c USING INTEGER PRIMARY KEY (rowid=?)
+  | CORRELATED SCALAR SUBQUERY 1
+  | SEARCH TABLE hr_minute_buckets AS b2 USING INDEX index_hr_minute_buckets_bucketStartMs_bucketEndMs (bucketStartMs=?)
+  | USE TEMP B-TREE FOR RIGHT PART OF ORDER BY
+  ```
+  Both plans pass `plan.isNotBlank()` and `!plan.contains("SCAN heart_rate_records")` — no table
+  scan, every table access is an index `SEARCH` or a rowid seek. **Nuance worth recording:** the
+  typed query reports `USE TEMP B-TREE FOR RIGHT PART OF ORDER BY`, not the brief's literal
+  `"USE TEMP B-TREE FOR ORDER BY"` — SQLite's partial-sort optimization, which only sorts ties on
+  `sourceRecordRef` within a single `timestampMs` value (the leading `ORDER BY` column is already
+  delivered in index order by `index_hr_v10_type_timestamp`). This is a bounded per-timestamp sort,
+  not a sort of the whole result set, so the assertion correctly passes.
+- `pagedVisibilityMatchesRange` — real seeded Room data (50 rows split across a warm-covered half
+  of the window and a raw-only half, so neither tier alone answers the range), comparing Task 4's
+  paged consumer against the unbounded reference: every page stayed `<= 7` (the configured budget)
+  and the concatenated pages were **element-identical** to `rangeInOfType(...).mergedSamples()`.
+
+`./gradlew :core:database:testDebugUnitTest --tests '*AuthoritativeHeartRateReaderEquivalenceTest'`
+— **14/14 pass**, 0 failures (regression check only; this task did not change this file).
+
+### Why no new DAO method is needed
+
+`getVisibleByTimeRange` and `getVisibleByTypeAndTimeRange` have no `LIMIT` and are not keyset-paged.
+Tracing every production caller (not a synthetic worst case):
+
+| Caller | Method | Window actually passed |
+|---|---|---|
+| `ScoringHistoryRepositoryImpl.getHeartRateRecordsByTimeRange` | `getVisibleByTimeRange` | one calendar day (`ComputeSleepMetricsUseCase`/baseline, per-day scoring) |
+| `HeartRateRepositoryImpl.getByTimeRange` / `observeByTimeRange` / `observeTimelineWithResolution` | `getVisibleByTimeRange` | `HeartRateDetailViewModel`: one calendar day (dashboard HR chart) |
+| `HeartRateRepositoryImpl.getRecoveryWindowSamples` | `getVisibleByTimeRange` | `WorkoutDetailLoader`: one workout's span plus a ~3-minute HRR tail |
+| `ScoringHeartRateDataLoader.loadExerciseHrSamples` | `getVisibleByTypeAndTimeRange` | one workout's `[startTime, endTime]` |
+| `SessionLinkReconcilerImpl.recomputeWorkouts` | `getVisibleByTypeAndTimeRange` | `WORKOUT_BATCH_SIZE` chronologically-adjacent workouts' combined span (not the full reconcile range) |
+
+Every caller supplies a window bounded by a day, a workout, or a small chronologically-local batch
+of workouts — never the full retention window. The 1M-row question the brief asks ("does the SQL
+itself degrade as the table grows, independent of answer size") is answered by the EXPLAIN QUERY
+PLAN evidence above: the access path is index-driven from schema alone, so it does not change
+shape as rows accumulate — a day-bounded query against a 1M-row table costs the same per-row index
+seek it costs against a 10k-row table, and returns the same number of rows either way. There is no
+code path today that calls either method with an unbounded or retention-wide window, so there is no
+measured unbounded-result-set problem for either method to fix.
+
+`pagePlausibleSamplesForRollup` (Task 8) and the Task 4 typed read are already keyset-paged with a
+caller-supplied `limit`/`MAX_CLUSTER_SAMPLES`/`SAMPLE_PAGE_SIZE` budget (proven element-identical to
+the unbounded reference above), so they were never in question.
+
+Net: Task 4's bounded type-filtered read already is the one genuinely-unbounded-shaped consumer
+(an arbitrarily long single workout, or an arbitrarily dense workout cluster) in this group, and it
+already pages. The other three consumers are shape-bounded by their callers, not by the DAO method.
+Adding `getVisiblePageAfter` would add a new query method, a new call site, and a second code path
+to keep behaviorally identical to the existing one, for a problem no measured or traced caller has.
+
+### Device-gated (written, not run — exact blocker)
+
+`database-benchmark:measureTierVisibleReadsAtEachScalePoint` (new, `HealthPipelineBaselineBenchmark
+.kt`) and `database-benchmark:tierVisiblePlansStayIndexedAtRealCardinality` (new,
+`QueryPlanRecorderTest.kt`) were added to measure the same four paths at the Phase 0 250k/500k/1M
+scale points on a real (SQLCipher-backed) device database — `METRIC=tier_visible_day_window` (day-
+window row count/wall time at each scale, asserting the result stays `< SCALE`) and
+`METRIC=tier_visible_paged` (max page size at each scale against the real production budgets:
+`ROLLUP_PAGE_LIMIT = 5_000` mirroring `MinuteRollupStreamer.SAMPLE_PAGE_SIZE`, `TYPED_PAGE_LIMIT =
+50_000` mirroring `WorkoutHeartRateBatcher.MAX_CLUSTER_SAMPLES`). **Blocker: `adb devices` returns
+an empty list in this environment — no emulator or physical device is attached, and none can be
+attached.** Both files compile (`./gradlew database-benchmark:compileDebugAndroidTestKotlin`
+succeeds) but neither test has been run. No 1M wall-time, heap, or result-set number is claimed for
+these two tests; fabricating one would misrepresent unmeasured work as evidence, the same discipline
+every earlier dated section in this file follows.
+
+### No production code changed
+
+`HeartRateDao.kt` and `AuthoritativeHeartRateReader.kt` are unchanged by this task — the Task 10
+brief makes modifying them conditional on the paging trigger firing, and it did not. No Room schema
+change (still v23). `internal-docs/DATA_FLOW.md` is unchanged: no documented read path's shape
+changed.

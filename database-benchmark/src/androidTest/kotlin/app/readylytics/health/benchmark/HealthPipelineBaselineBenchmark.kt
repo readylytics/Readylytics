@@ -17,6 +17,7 @@ import app.readylytics.health.core.database.data.local.RoomHealthIngestionStore
 import app.readylytics.health.core.database.data.local.RoomScanStagingStore
 import app.readylytics.health.core.database.data.local.RoomTransactionRunner
 import app.readylytics.health.core.database.data.local.SessionLinkReconcilerImpl
+import app.readylytics.health.core.database.data.repository.TypedHeartRateRepositoryImpl
 import app.readylytics.health.core.healthconnect.domain.sync.HealthIngestionCoordinator
 import app.readylytics.health.core.model.domain.heartrate.ZoneThresholds
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
@@ -236,6 +237,127 @@ class HealthPipelineBaselineBenchmark {
             }
         }
 
+    /**
+     * Task 10 (WP-18) decision evidence. Measures the two remaining tier-visible bulk reads that are
+     * NOT keyset-paged (`getVisibleByTimeRange`, `getVisibleByTypeAndTimeRange`) alongside the two
+     * that already are (`pagePlausibleSamplesForRollup` from Task 8, and Task 4's typed page via
+     * `TypedHeartRateRepositoryImpl.forEachByTimeRangeOfTypePage`), at the Phase 0 250k/500k/1M scale
+     * points.
+     *
+     * The two unpaged methods are read with a single caller-bounded one-day window at every scale --
+     * the real shape every production consumer uses (`ScoringHistoryRepositoryImpl`,
+     * `HeartRateRepositoryImpl`, `ScoringHeartRateDataLoader`, `SessionLinkReconcilerImpl`; see
+     * `AuthoritativeHeartRateReader.kt`'s Task 10 notes) -- to prove the *answer* size tracks the
+     * window, not the table: `TIME_RANGE_ROWS`/`TYPE_RANGE_ROWS` must stay far below `SCALE` even at
+     * 1M rows. The two already-paged methods are driven across the FULL seeded range with their real
+     * production limits (5,000 for the rollup page -- `MinuteRollupStreamer.SAMPLE_PAGE_SIZE` -- and
+     * 50,000 for the typed page -- `WorkoutHeartRateBatcher.MAX_CLUSTER_SAMPLES`) to prove every page
+     * still respects that limit at 1M rows.
+     */
+    @Test
+    fun measureTierVisibleReadsAtEachScalePoint() =
+        runBlocking {
+            val windowStart = Instant.parse("2026-01-01T00:00:00Z")
+            val oneDayWindowEndMs = windowStart.toEpochMilli() + ONE_DAY_MS
+
+            for (total in BaselineScalePoints.SAMPLE_COUNTS) {
+                val database = fixture.createDatabase("current-benchmark-tiervis-$total.db", true)
+                try {
+                    val seedStore =
+                        ScoringBenchmarkHelper.createRoomHealthIngestionStore(database, RoomTransactionRunner(database))
+                    for (page in BaselineScalePoints.densePages(total)) {
+                        seedStore.replaceHeartRateSources(HeartRateMapper.mapToInputs(page, emptyList(), emptyList()))
+                    }
+
+                    val (dayRaw, dayRawNanos) =
+                        measured {
+                            database.heartRateDao().getVisibleByTimeRange(windowStart.toEpochMilli(), oneDayWindowEndMs)
+                        }
+                    val (dayTyped, dayTypedNanos) =
+                        measured {
+                            database
+                                .heartRateDao()
+                                .getVisibleByTypeAndTimeRange("RESTING", windowStart.toEpochMilli(), oneDayWindowEndMs)
+                        }
+                    Log.i(
+                        "BaselineMetrics",
+                        "METRIC=tier_visible_day_window, SCALE=$total, " +
+                            "TIME_RANGE_ROWS=${dayRaw.size}, TIME_RANGE_MS=${dayRawNanos / 1_000_000.0}, " +
+                            "TYPE_RANGE_ROWS=${dayTyped.size}, TYPE_RANGE_MS=${dayTypedNanos / 1_000_000.0}",
+                    )
+                    assertTrue(
+                        "a one-day window's result must not balloon toward the table size: " +
+                            "${dayRaw.size} rows at SCALE=$total",
+                        dayRaw.size < total,
+                    )
+                    assertTrue(
+                        "a one-day typed window's result must not balloon toward the table size: " +
+                            "${dayTyped.size} rows at SCALE=$total",
+                        dayTyped.size < total,
+                    )
+
+                    val reader = AuthoritativeHeartRateReader(database.heartRateDao(), database.minuteBucketDao())
+                    val typedRepo = TypedHeartRateRepositoryImpl(reader)
+                    var maxTypedPage = 0
+                    var typedTotal = 0
+                    val (_, typedPagedNanos) =
+                        measured {
+                            typedRepo.forEachByTimeRangeOfTypePage(
+                                "RESTING",
+                                0L,
+                                Long.MAX_VALUE,
+                                TYPED_PAGE_LIMIT,
+                            ) { page ->
+                                maxTypedPage = maxOf(maxTypedPage, page.size)
+                                typedTotal += page.size
+                            }
+                        }
+                    assertTrue(
+                        "typed page exceeded its configured limit: $maxTypedPage",
+                        maxTypedPage <= TYPED_PAGE_LIMIT,
+                    )
+
+                    var maxRollupPage = 0
+                    var rollupTotal = 0
+                    var afterTs = Long.MIN_VALUE
+                    var afterRef = Long.MIN_VALUE
+                    val rollupStartedNanos = SystemClock.elapsedRealtimeNanos()
+                    while (true) {
+                        val page =
+                            database.heartRateDao().pagePlausibleSamplesForRollup(
+                                0L,
+                                Long.MAX_VALUE,
+                                afterTs,
+                                afterRef,
+                                ROLLUP_PAGE_LIMIT,
+                            )
+                        if (page.isEmpty()) break
+                        maxRollupPage = maxOf(maxRollupPage, page.size)
+                        rollupTotal += page.size
+                        val last = page.last()
+                        afterTs = last.timestampMs
+                        afterRef = last.sourceRecordRef
+                    }
+                    val rollupPagedNanos = SystemClock.elapsedRealtimeNanos() - rollupStartedNanos
+                    assertTrue(
+                        "rollup page exceeded its configured limit: $maxRollupPage",
+                        maxRollupPage <= ROLLUP_PAGE_LIMIT,
+                    )
+
+                    Log.i(
+                        "BaselineMetrics",
+                        "METRIC=tier_visible_paged, SCALE=$total, " +
+                            "TYPED_PAGE_MAX=$maxTypedPage, TYPED_TOTAL=$typedTotal, " +
+                            "TYPED_MS=${typedPagedNanos / 1_000_000.0}, " +
+                            "ROLLUP_PAGE_MAX=$maxRollupPage, ROLLUP_TOTAL=$rollupTotal, " +
+                            "ROLLUP_MS=${rollupPagedNanos / 1_000_000.0}",
+                    )
+                } finally {
+                    database.close()
+                }
+            }
+        }
+
     @Test
     fun successfulStepsPageThenDenialPreservesPriorRoomRows() =
         runBlocking {
@@ -438,6 +560,14 @@ class HealthPipelineBaselineBenchmark {
 
 /** 43,200 = one dense day at one-second cadence, plus the Phase 0 250k/500k/1M scale points. */
 private val DENSE_STEPS_SCALE_POINTS: List<Int> = listOf(43_200) + BaselineScalePoints.SAMPLE_COUNTS
+
+private const val ONE_DAY_MS = 24L * 3600 * 1000
+
+/** Mirrors `MinuteRollupStreamer.SAMPLE_PAGE_SIZE`, the real production rollup page budget. */
+private const val ROLLUP_PAGE_LIMIT = 5_000
+
+/** Mirrors `WorkoutHeartRateBatcher.MAX_CLUSTER_SAMPLES`, the real production typed-page budget. */
+private const val TYPED_PAGE_LIMIT = 50_000
 
 /** Monotonic nanosecond timing helper. */
 suspend fun <T> measured(block: suspend () -> T): Pair<T, Long> {

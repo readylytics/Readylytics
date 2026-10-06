@@ -8,6 +8,7 @@ import app.readylytics.health.core.model.domain.sync.mappers.HeartRateMapper
 import app.readylytics.health.databasebenchmark.data.migration.CurrentSchemaBenchmarkFixture
 import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -55,6 +56,33 @@ class QueryPlanRecorderTest {
         assertTrue("plan was empty", plan.isNotBlank())
         assertTrue("expected an index scan, got:\n$plan", plan.contains("USING INDEX"))
         assertTrue("unexpected temp b-tree sort, got:\n$plan", !plan.contains("USE TEMP B-TREE"))
+    }
+
+    /**
+     * Task 10 (WP-18): the same tier-visibility plan [Phase2QueryPlanTest.tierVisibilityPlansStayIndexed]
+     * proves on an empty database, now against [SEED_SAMPLES] real rows plus `ANALYZE` -- so the
+     * planner's cardinality estimates, not just the schema, are what commit to an index-driven plan.
+     */
+    @Test
+    fun tierVisiblePlansStayIndexedAtRealCardinality() {
+        val timeRangePlan =
+            QueryPlanRecorder.planOneLine(
+                database,
+                "SELECT h.* FROM heart_rate_records h " +
+                    "LEFT JOIN minute_coverage c ON c.bucketStartMs = " +
+                    "((h.timestampMs / 60000) - (CASE WHEN h.timestampMs % 60000 < 0 THEN 1 ELSE 0 END)) * 60000 " +
+                    "WHERE h.timestampMs >= 0 AND h.timestampMs <= 86400000 " +
+                    "AND (c.bucketStartMs IS NULL OR c.tier = 'HOT' " +
+                    "OR (c.tier IN ('WARM', 'LEGACY_WARM') AND NOT EXISTS (" +
+                    "SELECT 1 FROM hr_minute_buckets b2 WHERE b2.bucketStartMs = c.bucketStartMs " +
+                    "AND b2.generation = c.visibleGeneration))) " +
+                    "ORDER BY h.timestampMs ASC, h.sourceRecordRef ASC",
+            )
+        assertTrue("plan was empty", timeRangePlan.isNotBlank())
+        assertFalse(
+            "must not scan heart_rate_records: $timeRangePlan",
+            timeRangePlan.contains("SCAN heart_rate_records"),
+        )
     }
 
     /** Guards Review Focus 1 in miniature: an empty plan must never read as a pass. */
