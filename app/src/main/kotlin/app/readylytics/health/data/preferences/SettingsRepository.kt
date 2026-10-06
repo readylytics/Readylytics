@@ -125,6 +125,9 @@ class SettingsRepository
 
         override suspend fun updateScoringVersion(version: Int) = sleep.updateScoringVersion(version)
 
+        override suspend fun updateSelectedWorkoutRepairCompleted(completed: Boolean) =
+            sync.updateSelectedWorkoutRepairCompleted(completed)
+
         override suspend fun updateSleepScoreRecalcBaseline(
             weightProfile: SleepScoreWeightProfile,
             goalSleepHours: Float,

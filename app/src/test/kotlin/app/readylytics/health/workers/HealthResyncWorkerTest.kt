@@ -16,13 +16,16 @@ import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspector
+import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.core.model.domain.sync.DirtyRangeStore
 import app.readylytics.health.core.model.domain.sync.DirtyTicket
+import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
+import app.readylytics.health.core.model.domain.sync.SelectedSourcePruner
 import dagger.Lazy
 import io.mockk.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,6 +51,10 @@ class HealthResyncWorkerTest {
     private val foregroundSyncControllerLazy = mockk<Lazy<ForegroundSyncController>>()
     private val settingsRepository = mockk<SettingsRepository>(relaxed = true)
     private val settingsRepositoryLazy = mockk<Lazy<SettingsRepository>>()
+    private val selectedSourcePruner = mockk<SelectedSourcePruner>()
+    private val selectedSourcePrunerLazy = mockk<Lazy<SelectedSourcePruner>>()
+    private val healthMutationCoordinator = mockk<HealthMutationCoordinator>()
+    private val healthMutationCoordinatorLazy = mockk<Lazy<HealthMutationCoordinator>>()
 
     @Before
     fun setUp() {
@@ -61,6 +68,11 @@ class HealthResyncWorkerTest {
         every { settingsRepositoryLazy.get() } returns settingsRepository
         coEvery { settingsRepository.userPreferences } returns
             MutableStateFlow(UserPreferences(scoringVersion = 0))
+        every { selectedSourcePrunerLazy.get() } returns selectedSourcePruner
+        every { healthMutationCoordinatorLazy.get() } returns healthMutationCoordinator
+        coEvery { healthMutationCoordinator.withMutation<ScoreInvalidation.AffectedRange?>(any()) } coAnswers {
+            firstArg<suspend () -> ScoreInvalidation.AffectedRange?>().invoke()
+        }
 
         val progressUpdater = mockk<androidx.work.ProgressUpdater>()
         every { workerParams.progressUpdater } returns progressUpdater
@@ -541,6 +553,122 @@ class HealthResyncWorkerTest {
             )
         }
 
+    @Test
+    fun `selected workout repair mode with no excluded device completes as a no-op and sets the flag`() =
+        runBlocking {
+            every { workerParams.inputData } returns
+                androidx.work.Data
+                    .Builder()
+                    .putString(HealthResyncWorker.KEY_RECOMPUTE_MODE, HealthResyncWorker.MODE_SELECTED_WORKOUT_REPAIR)
+                    .build()
+            coEvery { settingsRepository.userPreferences } returns
+                MutableStateFlow(UserPreferences(scoringVersion = 0))
+            coEvery { settingsRepository.updateSelectedWorkoutRepairCompleted(true) } returns Unit
+
+            val result = createWorker().doWork()
+
+            assertEquals(
+                androidx.work.ListenableWorker.Result
+                    .success(),
+                result,
+            )
+            coVerify(exactly = 1) { settingsRepository.updateSelectedWorkoutRepairCompleted(true) }
+            coVerify(exactly = 0) { useCase.execute(any(), any(), any(), any()) }
+            verify(exactly = 0) { selectedSourcePrunerLazy.get() }
+        }
+
+    @Test
+    fun `selected workout repair mode short-circuits when already completed`() =
+        runBlocking {
+            every { workerParams.inputData } returns
+                androidx.work.Data
+                    .Builder()
+                    .putString(HealthResyncWorker.KEY_RECOMPUTE_MODE, HealthResyncWorker.MODE_SELECTED_WORKOUT_REPAIR)
+                    .build()
+            coEvery { settingsRepository.userPreferences } returns
+                MutableStateFlow(UserPreferences(selectedWorkoutRepairCompleted = true))
+
+            val result = createWorker().doWork()
+
+            assertEquals(
+                androidx.work.ListenableWorker.Result
+                    .success(),
+                result,
+            )
+            coVerify(exactly = 0) { settingsRepository.updateSelectedWorkoutRepairCompleted(any()) }
+            verify(exactly = 0) { selectedSourcePrunerLazy.get() }
+        }
+
+    @Test
+    fun `selected workout repair mode prunes the excluded device and recomputes the affected closure`() =
+        runBlocking {
+            every { workerParams.inputData } returns
+                androidx.work.Data
+                    .Builder()
+                    .putString(HealthResyncWorker.KEY_RECOMPUTE_MODE, HealthResyncWorker.MODE_SELECTED_WORKOUT_REPAIR)
+                    .build()
+            val prefs =
+                UserPreferences(
+                    deviceByDataType = mapOf(HealthDataType.EXERCISE.name to "Watch"),
+                    retentionDaysEnabled = false,
+                )
+            coEvery { settingsRepository.userPreferences } returns MutableStateFlow(prefs)
+            coEvery { settingsRepository.updateSelectedWorkoutRepairCompleted(true) } returns Unit
+            val affectedDate = LocalDate.now()
+            coEvery {
+                selectedSourcePruner.pruneExcludedWorkouts(any(), any(), "Watch", any())
+            } returns ScoreInvalidation.AffectedRange(affectedDate, affectedDate)
+            val rangeSlot = slot<ScoreInvalidation.AffectedRange?>()
+            coEvery { useCase.execute(true, captureNullable(rangeSlot), any(), any()) } returns
+                app.readylytics.health.core.model.domain.model.Result
+                    .Success(Unit)
+
+            val result = createWorker().doWork()
+
+            assertEquals(
+                androidx.work.ListenableWorker.Result
+                    .success(),
+                result,
+            )
+            coVerify(exactly = 1) {
+                selectedSourcePruner.pruneExcludedWorkouts(any(), any(), "Watch", any())
+            }
+            coVerify(exactly = 1) { settingsRepository.updateSelectedWorkoutRepairCompleted(true) }
+            assertEquals(affectedDate, rangeSlot.captured?.start)
+        }
+
+    @Test
+    fun failedRepairRetriesWithoutFlag() =
+        runBlocking {
+            every { workerParams.inputData } returns
+                androidx.work.Data
+                    .Builder()
+                    .putString(HealthResyncWorker.KEY_RECOMPUTE_MODE, HealthResyncWorker.MODE_SELECTED_WORKOUT_REPAIR)
+                    .build()
+            val prefs =
+                UserPreferences(
+                    deviceByDataType = mapOf(HealthDataType.EXERCISE.name to "Watch"),
+                    retentionDaysEnabled = false,
+                )
+            coEvery { settingsRepository.userPreferences } returns MutableStateFlow(prefs)
+            val affectedDate = LocalDate.now()
+            coEvery {
+                selectedSourcePruner.pruneExcludedWorkouts(any(), any(), "Watch", any())
+            } returns ScoreInvalidation.AffectedRange(affectedDate, affectedDate)
+            coEvery { useCase.execute(true, any(), any(), any()) } returns
+                app.readylytics.health.core.model.domain.model.Result
+                    .Failure("boom", "ERR")
+
+            val result = createWorker().doWork()
+
+            assertEquals(
+                androidx.work.ListenableWorker.Result
+                    .retry(),
+                result,
+            )
+            coVerify(exactly = 0) { settingsRepository.updateSelectedWorkoutRepairCompleted(any()) }
+        }
+
     private fun createWorker(dirtyRangeStore: DirtyRangeStore? = null) =
         HealthResyncWorker(
             appContext = context,
@@ -555,6 +683,8 @@ class HealthResyncWorkerTest {
                         override suspend fun pending(limit: Int): List<DirtyTicket> = emptyList()
                     }
                 },
+            selectedSourcePruner = selectedSourcePrunerLazy,
+            healthMutationCoordinator = healthMutationCoordinatorLazy,
         )
 
     @Test

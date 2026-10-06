@@ -21,10 +21,15 @@ import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRec
 import app.readylytics.health.core.databaseschema.data.local.entity.HrMinuteBucketEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.Vo2MaxRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRoutePointEntity
 import app.readylytics.health.core.model.domain.model.HealthDataType
+import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -378,5 +383,73 @@ class SelectedSourcePrunerImplTest {
             } finally {
                 TimeZone.setDefault(originalTimeZone)
             }
+        }
+
+    private fun workoutRecord(
+        id: String,
+        startTime: Long,
+        deviceName: String?,
+    ) = WorkoutRecordEntity(
+        id = id,
+        startTime = startTime,
+        endTime = startTime + 3_600_000L,
+        exerciseType = "RUNNING",
+        durationMinutes = 60,
+        zone1Minutes = 0f,
+        zone2Minutes = 0f,
+        zone3Minutes = 0f,
+        zone4Minutes = 0f,
+        zone5Minutes = 0f,
+        trimp = 10f,
+        avgHr = 120f,
+        deviceName = deviceName,
+    )
+
+    @Test
+    fun repairExcludesOnlyOtherDeviceWorkouts() =
+        runTest {
+            val zoneId = ZoneId.systemDefault()
+            val date = LocalDate.of(2024, 6, 1)
+            val timestamp = date.atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val routeDao = database.workoutRoutePointDao()
+
+            workoutDao.upsertAll(
+                listOf(
+                    workoutRecord("kept", timestamp, "Watch"),
+                    workoutRecord("excluded", timestamp, "Phone"),
+                ),
+            )
+            routeDao.insertAll(
+                listOf(
+                    WorkoutRoutePointEntity(
+                        workoutId = "excluded",
+                        latitude = 1.0,
+                        longitude = 1.0,
+                        altitude = null,
+                        timestampMs = timestamp,
+                    ),
+                ),
+            )
+
+            val affected = pruner.pruneExcludedWorkouts(date, date, "Watch", zoneId)
+
+            assertEquals(listOf("kept"), workoutDao.getSince(0).map { it.id })
+            assertTrue(routeDao.getRoutePoints("excluded").isEmpty())
+            assertEquals(ScoreInvalidation.AffectedRange(date, date), affected)
+        }
+
+    @Test
+    fun `pruneExcludedWorkouts is a no-op when nothing is excluded`() =
+        runTest {
+            val zoneId = ZoneId.systemDefault()
+            val date = LocalDate.of(2024, 6, 1)
+            val timestamp = date.atStartOfDay(zoneId).toInstant().toEpochMilli()
+
+            workoutDao.upsertAll(listOf(workoutRecord("kept", timestamp, "Watch")))
+
+            val affected = pruner.pruneExcludedWorkouts(date, date, "Watch", zoneId)
+
+            assertEquals(listOf("kept"), workoutDao.getSince(0).map { it.id })
+            assertNull(affected)
         }
 }

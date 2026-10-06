@@ -122,6 +122,8 @@ data class UserPreferences(
     val lastAppliedTrainingReadinessLoadBalanceWeight: Float? = null,
     val vo2MaxSourceMode: Vo2MaxSourceMode = Vo2MaxSourceMode.AUTO,
     val vo2MaxEstimationMethod: Vo2MaxEstimationMethod = Vo2MaxEstimationMethod.HR_RATIO,
+    // WP-17 (HC-102): one-time flag, see user_preferences.proto field 100 doc comment.
+    val selectedWorkoutRepairCompleted: Boolean = false,
 )
 
 /**

@@ -5,7 +5,24 @@ import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
 import app.readylytics.health.core.model.domain.sync.RecalcTrigger
 import java.time.LocalDate
 
-interface WorkerScheduler {
+/**
+ * Periodic (recurring `PeriodicWorkRequest`) workers, split out of [WorkerScheduler] (WP-17/HC-102)
+ * purely to keep each interface under detekt's `TooManyFunctions` threshold -- every method here is
+ * still reachable through [WorkerScheduler], which extends this. [WorkerSchedulerImpl] implements
+ * these via Kotlin interface delegation (`by`) to [app.readylytics.health.workers.PeriodicWorkSchedulerImpl]
+ * rather than one-line override thunks, so delegation doesn't just move the function count back onto
+ * that class.
+ */
+interface PeriodicWorkScheduler {
+    fun scheduleBackupWorker(schedule: BackupSchedule)
+    fun scheduleBirthdayWorker()
+    fun schedulePeriodicSync(intervalMinutes: Long)
+    fun cancelPeriodicSync()
+    fun scheduleDataCleanupWorker()
+    fun scheduleDataRollupWorker()
+}
+
+interface WorkerScheduler : PeriodicWorkScheduler {
     companion object {
         const val LOCAL_BACKUP_WORK_NAME = "local_backup_periodic"
         const val BIRTHDAY_WORK_NAME = "birthday_check_periodic"
@@ -49,6 +66,17 @@ interface WorkerScheduler {
     fun cancelResyncWorker()
 
     /**
+     * WP-17 (HC-102): enqueues the one-time repair-only pass (prune already-stranded
+     * de-selected-device workouts + recompute their affected range, zero Health Connect reads)
+     * into the same unique [RESYNC_WORK_NAME] chain. Always [androidx.work.ExistingWorkPolicy.KEEP]
+     * -- unlike a settings-change recompute, a second startup before the first repair finishes
+     * must never double-enqueue or replace it; the flag gate means only the first missing-flag
+     * startup ever calls this per app run anyway, but KEEP makes a concurrent/rapid restart safe
+     * too.
+     */
+    fun scheduleSelectedWorkoutRepair()
+
+    /**
      * Task 4: enqueues the durable, parameter-only Training Readiness projection recompute under
      * the same unique [RESYNC_WORK_NAME] chain as [scheduleResyncWorker], always appended as a
      * durable successor so it never silently drops a rapid repeated request. [config] is the exact
@@ -56,10 +84,4 @@ interface WorkerScheduler {
      * sync/resync paths read.
      */
     fun scheduleTrainingReadinessRecompute(config: TrainingReadinessConfig)
-    fun scheduleBackupWorker(schedule: BackupSchedule)
-    fun scheduleBirthdayWorker()
-    fun schedulePeriodicSync(intervalMinutes: Long)
-    fun cancelPeriodicSync()
-    fun scheduleDataCleanupWorker()
-    fun scheduleDataRollupWorker()
 }

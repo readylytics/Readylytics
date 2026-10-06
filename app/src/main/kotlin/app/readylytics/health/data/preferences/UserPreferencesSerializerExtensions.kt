@@ -156,6 +156,7 @@ internal fun UserPreferencesProto.Builder.applyScoringAndRecalcFields(
         domain.lastRecalcHypersomniaOnsetPercent?.let { setLastRecalcHypersomniaOnsetPercent(it) }
         setScoringVersion(domain.scoringVersion)
         setTrimpNormalizationMigrated(domain.trimpNormalizationMigrated)
+        setSelectedWorkoutRepairCompleted(domain.selectedWorkoutRepairCompleted)
         setResidualFatigueHalfLifeHours(domain.residualFatigueHalfLifeHours)
         setResidualFatigueGain(domain.residualFatigueGain)
         setTrainingReadinessResidualFatigueScale(domain.trainingReadinessResidualFatigueScale)

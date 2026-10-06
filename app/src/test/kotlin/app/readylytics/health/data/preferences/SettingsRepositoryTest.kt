@@ -252,6 +252,28 @@ class SettingsRepositoryTest {
         }
 
     @Test
+    fun `selected workout repair completed defaults false and persists true once set`() =
+        runTest {
+            // Real SyncPreferences (not this file's relaxed mock) so updateSelectedWorkoutRepairCompleted
+            // actually reaches the shared dataStore the assertions below read back from.
+            val repositoryWithRealSync =
+                SettingsRepository(
+                    dataStore = dataStore,
+                    physiology = PhysiologyPreferences(dataStore),
+                    thresholds = mockk<ThresholdPreferences>(relaxed = true),
+                    sleep = SleepPreferences(dataStore),
+                    ui = mockk<UIPreferences>(relaxed = true),
+                    sync = SyncPreferences(dataStore),
+                    backup = mockk<BackupPreferences>(relaxed = true),
+                )
+            assertEquals(false, repositoryWithRealSync.userPreferences.first().selectedWorkoutRepairCompleted)
+
+            repositoryWithRealSync.updateSelectedWorkoutRepairCompleted(true)
+
+            assertEquals(true, repositoryWithRealSync.userPreferences.first().selectedWorkoutRepairCompleted)
+        }
+
+    @Test
     fun `hypersomnia onset percent normalizes into supported stepped range`() =
         runTest {
             repository.updateHypersomniaOnsetPercent(123)

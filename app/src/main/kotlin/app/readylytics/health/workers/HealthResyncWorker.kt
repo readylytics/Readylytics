@@ -18,6 +18,7 @@ import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.data.preferences.appliedTrainingReadinessConfig
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspector
+import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.preferences.scoringZone
@@ -25,9 +26,11 @@ import app.readylytics.health.core.model.domain.repository.HealthConnectPermissi
 import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
 import app.readylytics.health.core.model.domain.sync.DirtyRangeStore
 import app.readylytics.health.core.model.domain.sync.DirtyTicket
+import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 import app.readylytics.health.core.model.domain.sync.RecalcTrigger
 import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
+import app.readylytics.health.core.model.domain.sync.SelectedSourcePruner
 import app.readylytics.health.core.model.domain.util.RetentionBounds
 import app.readylytics.health.core.model.domain.util.logE
 import dagger.Lazy
@@ -37,6 +40,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
+import java.time.ZoneId
 
 @HiltWorker
 class HealthResyncWorker
@@ -55,6 +59,10 @@ class HealthResyncWorker
                 }
             },
         private val diagnosticRecorder: RecalcDiagnosticRecorder? = null,
+        // WP-17 (HC-102): both null by default for existing test constructors; Hilt always
+        // injects the real bindings in production. See runSelectedWorkoutRepair.
+        private val selectedSourcePruner: Lazy<SelectedSourcePruner>? = null,
+        private val healthMutationCoordinator: Lazy<HealthMutationCoordinator>? = null,
     ) : CoroutineWorker(appContext, params) {
         override suspend fun doWork(): Result {
             if (databaseReadinessGate.inspect() != DatabaseReadiness.Ready) {
@@ -68,10 +76,12 @@ class HealthResyncWorker
             syncController.onBackgroundRecalcStarted()
             var success = false
             return try {
-                if (inputData.getString(KEY_RECOMPUTE_MODE) == MODE_TRAINING_READINESS) {
-                    runTrainingReadinessProjection(resyncUseCase, syncController) { success = it }
-                } else {
-                    runNormalRecompute(resyncUseCase, syncController) { success = it }
+                when (inputData.getString(KEY_RECOMPUTE_MODE)) {
+                    MODE_TRAINING_READINESS ->
+                        runTrainingReadinessProjection(resyncUseCase, syncController) { success = it }
+                    MODE_SELECTED_WORKOUT_REPAIR ->
+                        runSelectedWorkoutRepair(resyncUseCase, syncController) { success = it }
+                    else -> runNormalRecompute(resyncUseCase, syncController) { success = it }
                 }
             } catch (e: TimeoutCancellationException) {
                 Result.retry()
@@ -116,6 +126,72 @@ class HealthResyncWorker
                 Result.success()
             } else {
                 Result.retry()
+            }
+        }
+
+        /**
+         * WP-17 (HC-102): one-time startup repair for workouts stranded by a now-deselected
+         * device that were already imported before this app version added de-selection pruning
+         * ([SelectedSourcePruner.prune] only ever runs forward from a new sync window). Does zero
+         * Health Connect reads: [SelectedSourcePruner.pruneExcludedWorkouts] is a Room-only delete,
+         * and the recompute below reuses the existing `recomputeOnly = true` path. A user who never
+         * changed their device selection (or has none excluded to delete) still reaches
+         * [updateSelectedWorkoutRepairCompleted] so the gate stops re-enqueuing.
+         */
+        private suspend fun runSelectedWorkoutRepair(
+            resyncUseCase: FullHistoricalResyncUseCase,
+            syncController: ForegroundSyncController,
+            onSuccessChanged: (Boolean) -> Unit,
+        ): Result {
+            val settings = settingsRepository.get()
+            val prefs = settings.userPreferences.first()
+
+            if (!prefs.selectedWorkoutRepairCompleted) {
+                val zoneId = prefs.scoringZone()
+                val today = LocalDate.now(zoneId)
+                val retentionStart = RetentionBounds.resolveResyncStartDate(prefs, today)
+                val closure = resolveRepairClosure(prefs, retentionStart, today, zoneId)
+                val recomputeResult =
+                    closure?.let { range ->
+                        resyncUseCase.execute(recomputeOnly = true, rangeOverride = range) { phase, current, total ->
+                            notifyProgress(syncController, phase, current, total)
+                        }
+                    }
+                if (recomputeResult != null && !recomputeResult.isSuccess) return Result.retry()
+                settings.updateSelectedWorkoutRepairCompleted(true)
+            }
+
+            onSuccessChanged(true)
+            return Result.success()
+        }
+
+        /**
+         * Null when there is no excluded device, or nothing was actually pruned for it. Resolves
+         * [selectedSourcePruner] lazily, after the device guard, so a user who never excluded a
+         * device never even touches the DI-resolved pruner.
+         */
+        private suspend fun resolveRepairClosure(
+            prefs: UserPreferences,
+            retentionStart: LocalDate,
+            today: LocalDate,
+            zoneId: ZoneId,
+        ): ScoreInvalidation.AffectedRange? {
+            val selectedDevice = prefs.deviceByDataType[HealthDataType.EXERCISE.name]
+            if (selectedDevice.isNullOrBlank()) return null
+
+            return selectedSourcePruner?.get()?.let { pruner ->
+                val coordinator = healthMutationCoordinator?.get()
+                val affected =
+                    if (coordinator != null) {
+                        coordinator.withMutation {
+                            pruner.pruneExcludedWorkouts(retentionStart, today, selectedDevice, zoneId)
+                        }
+                    } else {
+                        pruner.pruneExcludedWorkouts(retentionStart, today, selectedDevice, zoneId)
+                    }
+                affected?.let {
+                    ScoreInvalidation.dependencyClosure(it, ScoreInvalidation.Reason.WORKOUT, retentionStart, today)
+                }
             }
         }
 
@@ -261,6 +337,7 @@ class HealthResyncWorker
             const val KEY_RECOMPUTE_END_EPOCH_DAY = "recompute_end_epoch_day"
             const val KEY_RECOMPUTE_MODE = "recompute_mode"
             const val MODE_TRAINING_READINESS = "TRAINING_READINESS"
+            const val MODE_SELECTED_WORKOUT_REPAIR = "SELECTED_WORKOUT_REPAIR"
             const val KEY_TRAINING_READINESS_SCALE = "training_readiness_scale"
             const val KEY_TRAINING_READINESS_WEIGHT = "training_readiness_weight"
         }

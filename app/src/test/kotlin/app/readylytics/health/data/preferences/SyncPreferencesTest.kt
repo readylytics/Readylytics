@@ -76,4 +76,16 @@ class SyncPreferencesTest {
             val proto = dataStore.data.first()
             assertEquals(LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE, proto.rasSourceMode)
         }
+
+    @Test
+    fun `selected workout repair flag defaults false and persists true once set`() =
+        runTest {
+            assertEquals(false, dataStore.data.first().selectedWorkoutRepairCompleted)
+
+            syncPreferences.updateSelectedWorkoutRepairCompleted(true)
+
+            val proto = dataStore.data.first()
+            assertEquals(true, proto.selectedWorkoutRepairCompleted)
+            assertEquals(true, proto.toDomainModel().selectedWorkoutRepairCompleted)
+        }
 }

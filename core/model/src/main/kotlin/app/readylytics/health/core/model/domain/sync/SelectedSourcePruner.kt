@@ -11,4 +11,26 @@ interface SelectedSourcePruner {
         selections: Map<HealthDataType, String?>,
         zoneId: ZoneId,
     )
+
+    /**
+     * WP-17 (HC-102): retroactive, bounded-page sibling of [prune] for the one-time startup
+     * repair of workouts already persisted before this app version added de-selection pruning.
+     * [prune] only ever runs going forward from a new sync/resync window, so a workout recorded
+     * by a device the user later deselected -- and already imported before that -- is otherwise
+     * stranded in Room forever.
+     *
+     * Deletes every `workout_records` row (and its route points) in `[start, endInclusive]` whose
+     * device does not match [selectedDevice], paging through matches in bounded batches so a
+     * multi-year range never loads its full result set into memory. Returns the
+     * [ScoreInvalidation.AffectedRange] spanning the dates of every deleted workout (in [zoneId]),
+     * or null if nothing was deleted -- the caller widens this through
+     * [ScoreInvalidation.dependencyClosure] before recomputing, since a removed workout's TRIMP
+     * shifts rolling baselines/load scores forward of its own date.
+     */
+    suspend fun pruneExcludedWorkouts(
+        start: LocalDate,
+        endInclusive: LocalDate,
+        selectedDevice: String,
+        zoneId: ZoneId,
+    ): ScoreInvalidation.AffectedRange?
 }

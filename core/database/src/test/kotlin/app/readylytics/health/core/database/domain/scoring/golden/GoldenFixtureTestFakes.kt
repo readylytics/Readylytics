@@ -32,6 +32,8 @@ class FakeSettingsRepository(
 
     override suspend fun updateScoringVersion(version: Int) = Unit
 
+    override suspend fun updateSelectedWorkoutRepairCompleted(completed: Boolean) = Unit
+
     override suspend fun updateSleepScoreRecalcBaseline(
         weightProfile: SleepScoreWeightProfile,
         goalSleepHours: Float,
