@@ -242,6 +242,7 @@ class FirstSetupDummyIngestionFlowTest {
             // of the sync window boundaries, so a fixed clock in that era is used for determinism
             // without needing to assert on it directly (DI-002).
             clock = Clock.fixed(Instant.parse("2026-06-29T12:00:00Z"), ZoneId.of("UTC")),
+            dirtyRangeStore = mockk(relaxed = true),
         )
     }
 

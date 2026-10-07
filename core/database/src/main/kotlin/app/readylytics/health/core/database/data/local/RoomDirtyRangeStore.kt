@@ -67,4 +67,13 @@ class RoomDirtyRangeStore
             )
         }
 
+        override suspend fun journalDirtyRange(
+            start: LocalDate,
+            endInclusive: LocalDate,
+            reason: String,
+            snapshotId: String,
+        ): Long {
+            healthMutationStateDao.incrementGeneration()
+            return append(start, endInclusive, reason, snapshotId)
+        }
     }

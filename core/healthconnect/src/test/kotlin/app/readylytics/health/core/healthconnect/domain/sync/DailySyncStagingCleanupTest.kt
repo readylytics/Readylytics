@@ -105,6 +105,7 @@ class DailySyncStagingCleanupTest {
                         ),
                     ioDispatcher = Dispatchers.Unconfined,
                     clock = fixedClock,
+                    dirtyRangeStore = mockk(relaxed = true),
                 )
 
             val result = useCase.run(windowDays = 1, onProgress = null)

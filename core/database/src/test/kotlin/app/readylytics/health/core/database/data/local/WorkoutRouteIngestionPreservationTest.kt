@@ -262,7 +262,7 @@ class WorkoutRouteIngestionPreservationTest {
         runTest {
             val existing = seedWorkoutWithImportedRoute()
 
-            changeStore.deleteRecord(HealthDataType.EXERCISE, existing.id)
+            changeStore.deleteRecords(HealthDataType.EXERCISE, listOf(existing.id))
 
             assertEquals(null, database.workoutDao().getById(existing.id))
             assertTrue(database.workoutRoutePointDao().getRoutePoints(existing.id).isEmpty())

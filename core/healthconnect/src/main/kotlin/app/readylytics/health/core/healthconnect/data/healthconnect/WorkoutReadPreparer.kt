@@ -50,12 +50,20 @@ class WorkoutReadPreparer
             )
 
         /**
-         * Resolves the true route for this workout. Health Connect's Changes API (`getChanges`)
-         * does not populate routes in `ExerciseSessionRecord` (it always yields `NoData`).
-         * When `record.exerciseRouteResult` is not already `ExerciseRouteResult.Data`, we read
-         * the record authoritatively via `client.readRecord(ExerciseSessionRecord::class, id)`
-         * to obtain the true `exerciseRouteResult` before deciding whether route data is available,
-         * denied, or genuinely absent (H5/WP-09).
+         * Resolves the true route for this workout, re-reading at most once per route grant/change
+         * (Task 7). First checks [WorkoutRouteReadPolicy.hasConsent] and
+         * [WorkoutRouteReadPolicy.needsRead] against the already-stored route snapshot for this
+         * workout ID; when route consent is missing, or the stored snapshot is already
+         * [RouteState.IMPORTED] and this record's id/time range/exercise type/device all still
+         * match it, this returns [ReadOutcome.Denied] immediately without any further SDK read --
+         * an unchanged, already-imported route is never re-fetched. Otherwise (first import, a
+         * newly granted route permission, or a changed record) it performs the authoritative read:
+         * Health Connect's Changes API (`getChanges`) does not populate routes in
+         * `ExerciseSessionRecord` (it always yields `NoData`), so when `record.exerciseRouteResult`
+         * is not already `ExerciseRouteResult.Data`, we read the record authoritatively via
+         * `client.readRecord(ExerciseSessionRecord::class, id)` to obtain the true
+         * `exerciseRouteResult` before deciding whether route data is available, denied, or
+         * genuinely absent (H5/WP-09).
          */
         private suspend fun readRoute(record: ExerciseSessionRecord): ReadOutcome<List<WorkoutRoutePoint>> {
             return try {

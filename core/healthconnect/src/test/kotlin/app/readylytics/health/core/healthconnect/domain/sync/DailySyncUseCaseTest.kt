@@ -130,6 +130,7 @@ abstract class DailySyncUseCaseTestFixture {
                 ),
             ioDispatcher = Dispatchers.Unconfined,
             clock = fixedClock,
+            dirtyRangeStore = effectiveDirtyRangeStore,
         )
     }
 
@@ -624,5 +625,88 @@ class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
             // final commit once the walk-forward recompute covers everything.
             coVerify(exactly = 1) { changeSynchronizer.commitTokens(tokensAfterFirstCall, emptyMap()) }
             coVerify(exactly = 1) { changeSynchronizer.commitTokens(tokensAfterDrain, emptyMap()) }
+        }
+
+    /**
+     * In-memory [DirtyRangeStore] that actually records [journalDirtyRange] calls (unlike the
+     * fixture's relaxed mockk, which would silently accept the call without proving a later read
+     * sees it) -- so this test can read [pending] back afterward to prove durability, the same way
+     * production code (e.g. `HealthResyncWorker.runNormalRecompute`'s drain) would.
+     */
+    private class RecordingDirtyRangeStore : DirtyRangeStore {
+        private val tickets = mutableListOf<DirtyTicket>()
+
+        override suspend fun pending(limit: Int): List<DirtyTicket> = tickets.take(limit)
+
+        override suspend fun journalDirtyRange(
+            start: LocalDate,
+            endInclusive: LocalDate,
+            reason: String,
+            snapshotId: String,
+        ): Long {
+            val ticket =
+                DirtyTicket(
+                    id = tickets.size.toLong() + 1,
+                    sourceGeneration = 1L,
+                    nextDay = start,
+                    endInclusive = endInclusive,
+                    scoringSnapshotId = snapshotId,
+                    reason = reason,
+                )
+            tickets += ticket
+            return ticket.id
+        }
+    }
+
+    @Test
+    fun `budget exhaustion journals a durable dirty ticket for the page's affected dates`() =
+        runTest {
+            // Final-review Finding 1: an EXERCISE keep=true upsert (or any brand-new record) never
+            // journals its own dirty-range ticket on the normal delete-side path, so the mid-loop
+            // budget-exhaustion commit must journal one itself before committing tokens past that
+            // page -- or a crash before the walk-forward recompute below silently and permanently
+            // skips recomputing this date.
+            val today = LocalDate.now(fixedClock.withZone(ZoneId.systemDefault()))
+            val affectedDay = today.minusDays(5)
+            val recordingStore = RecordingDirtyRangeStore()
+            val tokensAfterFirstCall = mapOf(HealthDataType.SLEEP to "token-19")
+            val tokensAfterDrain = mapOf(HealthDataType.SLEEP to "token-end")
+            val outcomes =
+                listOf(
+                    HealthChangeSyncOutcome(
+                        affectedDates = setOf(affectedDay),
+                        requiresFullResync = true,
+                        continuationRequired = true,
+                        nextTokens = tokensAfterFirstCall,
+                        fullResyncReason = "Budget exhausted",
+                    ),
+                    HealthChangeSyncOutcome(
+                        affectedDates = emptySet(),
+                        requiresFullResync = false,
+                        continuationRequired = false,
+                        nextTokens = tokensAfterDrain,
+                    ),
+                )
+            var applyCallCount = 0
+            coEvery { changeSynchronizer.applyPendingChanges() } coAnswers { outcomes[applyCallCount++] }
+            // Simulate the process dying before the walk-forward recompute below ever succeeds for
+            // this (or any) day: computeAndPersistDailySummary throwing means recomputeDay's own
+            // catch converts it to Result.Failure, so the run never reaches its final commitTokens
+            // -- the ONLY durable record of affectedDay needing recompute is the mid-loop journal
+            // call under test.
+            coEvery {
+                scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any(), any())
+            } throws RuntimeException("simulated crash before recompute")
+
+            val result = buildUseCase(recordingStore).run(windowDays = 1, onProgress = null)
+
+            assertTrue(result is app.readylytics.health.core.model.domain.model.Result.Failure)
+            coVerify(exactly = 1) { changeSynchronizer.commitTokens(tokensAfterFirstCall, emptyMap()) }
+            coVerify(exactly = 0) { changeSynchronizer.commitTokens(tokensAfterDrain, emptyMap()) }
+            val pending = recordingStore.pending(10)
+            assertTrue(
+                "Expected a durable ticket covering $affectedDay, got $pending",
+                pending.any { !it.nextDay.isAfter(affectedDay) && !it.endInclusive.isBefore(affectedDay) },
+            )
         }
 }

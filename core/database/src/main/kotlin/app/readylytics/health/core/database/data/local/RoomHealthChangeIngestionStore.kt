@@ -44,64 +44,6 @@ class RoomHealthChangeIngestionStore
                 daos, vo2MaxRecordDao, dirtyRangeStore, healthMutationStateDao, settingsRepo, transactionRunner,
             )
 
-        override suspend fun affectedDatesForRecord(
-            type: HealthDataType,
-            hcRecordId: String,
-            zoneId: ZoneId,
-        ): Set<LocalDate> =
-            when (type) {
-                HealthDataType.SLEEP ->
-                    daos.sleepSessionDao.getById(hcRecordId)?.let {
-                        datesBetween(it.startTime, it.endTime, zoneId)
-                    } ?: emptySet()
-                HealthDataType.HEART_RATE ->
-                    daos.datesForSourceRef(
-                        sourceRef = daos.sourceRecordDao.getSourceRef(hcRecordId),
-                        fetchRecords = { ref ->
-                            daos.heartRateDao.getBySourceRecordRef(ref).map { it.timestampMs to it.sessionId }
-                        },
-                        zoneId = zoneId,
-                    )
-                HealthDataType.HRV ->
-                    daos.datesForSourceRef(
-                        sourceRef = daos.sourceRecordDao.getSourceRef(hcRecordId),
-                        fetchRecords = { ref ->
-                            daos.hrvDao.getBySourceRecordRef(ref).map { it.timestampMs to it.sessionId }
-                        },
-                        zoneId = zoneId,
-                    )
-                HealthDataType.EXERCISE ->
-                    daos.workoutDao.getById(hcRecordId)?.let {
-                        datesBetween(it.startTime, it.endTime, zoneId)
-                    } ?: emptySet()
-                HealthDataType.WEIGHT ->
-                    daos.weightRecordDao.getBySourceRecordId(hcRecordId)
-                        .mapTo(mutableSetOf()) { dateFor(it.timestampMs, zoneId) }
-                HealthDataType.BODY_FAT ->
-                    daos.bodyFatRecordDao.getBySourceRecordId(hcRecordId)
-                        .mapTo(mutableSetOf()) { dateFor(it.timestampMs, zoneId) }
-                HealthDataType.BLOOD_PRESSURE ->
-                    daos.bloodPressureRecordDao.getBySourceRecordId(hcRecordId)
-                        .mapTo(mutableSetOf()) { dateFor(it.timestampMs, zoneId) }
-                HealthDataType.OXYGEN_SATURATION ->
-                    daos.oxygenSaturationRecordDao.getBySourceRecordId(hcRecordId)
-                        .mapTo(mutableSetOf()) { dateFor(it.timestampMs, zoneId) }
-                HealthDataType.BODY_TEMPERATURE ->
-                    daos.bodyTemperatureRecordDao.getBySourceRecordId(hcRecordId)
-                        .mapTo(mutableSetOf()) { dateFor(it.timestampMs, zoneId) }
-                HealthDataType.STEPS ->
-                    daos.stepRecordDao.getById(hcRecordId)?.let {
-                        datesBetween(it.startTime, it.endTime, zoneId)
-                    } ?: emptySet()
-                HealthDataType.VO2_MAX ->
-                    // VO2 max keeps its raw stable HC id (no timestamp suffix, unlike the
-                    // composite-keyed vitals above), so a direct primary-key lookup resolves
-                    // the pre-delete timestamp for the P2 dirty-range journal.
-                    vo2MaxRecordDao?.getById(hcRecordId)?.let { setOf(dateFor(it.timestampMs, zoneId)) }
-                        ?: emptySet()
-            }
-
-
         override suspend fun affectedDatesForRecords(
             type: HealthDataType,
             ids: List<String>,
@@ -114,9 +56,6 @@ class RoomHealthChangeIngestionStore
             }
             return dates
         }
-
-        override suspend fun deleteRecord(type: HealthDataType, hcRecordId: String) =
-            deleteRecords(type, listOf(hcRecordId))
 
         override suspend fun deleteRecords(type: HealthDataType, ids: List<String>) {
             if (ids.isEmpty()) return

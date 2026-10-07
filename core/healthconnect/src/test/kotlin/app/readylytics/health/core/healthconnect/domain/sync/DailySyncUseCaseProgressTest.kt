@@ -124,6 +124,7 @@ class DailySyncUseCaseProgressTest : DailySyncUseCaseTestFixture() {
                         ),
                     ioDispatcher = Dispatchers.Unconfined,
                     clock = historicalClock,
+                    dirtyRangeStore = mockk(relaxed = true),
                 )
             every { settingsRepo.userPreferences } returns flowOf(UserPreferences(scoringZoneId = "UTC"))
             val expectedDay = LocalDate.of(2019, 1, 10)

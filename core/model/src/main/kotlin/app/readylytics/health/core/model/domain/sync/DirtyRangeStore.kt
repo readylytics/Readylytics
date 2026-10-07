@@ -30,6 +30,22 @@ interface DirtyRangeStore {
     suspend fun discardRetiredAgingTickets(): Int = 0
 
     suspend fun pending(limit: Int = 100): List<DirtyTicket>
+
+    /**
+     * Bumps the mutation-state generation, then durably journals `[start, endInclusive]` for
+     * [reason]/[snapshotId] -- the increment-then-append order every other dirty-range journal
+     * call site in this codebase uses (`SelectedSourcePrunerImpl.journalPrunedPage`,
+     * `DeletionJournalContext.journalAffectedDates`), bundled into one interface call for callers
+     * that only hold this interface and not the Room DAOs those call sites inject directly (e.g.
+     * `DailySyncUseCase`, across the `core:healthconnect`/`core:database` module boundary). No-op
+     * default (returns -1) for read-only/fake stores that never write a ticket.
+     */
+    suspend fun journalDirtyRange(
+        start: LocalDate,
+        endInclusive: LocalDate,
+        reason: String,
+        snapshotId: String,
+    ): Long = -1
 }
 
 /** `dirty_ranges.reason` values written only by builds that still journaled data aging. */

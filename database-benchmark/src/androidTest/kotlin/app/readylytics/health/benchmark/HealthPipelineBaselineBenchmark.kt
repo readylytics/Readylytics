@@ -247,7 +247,7 @@ class HealthPipelineBaselineBenchmark {
      * The two unpaged methods are read with a single caller-bounded one-day window at every scale --
      * the real shape every production consumer uses (`ScoringHistoryRepositoryImpl`,
      * `HeartRateRepositoryImpl`, `ScoringHeartRateDataLoader`, `SessionLinkReconcilerImpl`; see
-     * `AuthoritativeHeartRateReader.kt`'s Task 10 notes) -- to prove the *answer* size tracks the
+     * `benchmark/BASELINE.md`'s Task 10 section) -- to prove the *answer* size tracks the
      * window, not the table: `TIME_RANGE_ROWS`/`TYPE_RANGE_ROWS` must stay far below `SCALE` even at
      * 1M rows. The two already-paged methods are driven across the FULL seeded range with their real
      * production limits (5,000 for the rollup page -- `MinuteRollupStreamer.SAMPLE_PAGE_SIZE` -- and

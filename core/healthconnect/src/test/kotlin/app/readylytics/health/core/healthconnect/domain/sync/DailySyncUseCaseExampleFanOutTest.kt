@@ -107,6 +107,7 @@ class DailySyncUseCaseExampleFanOutTest {
                     ),
                 ioDispatcher = Dispatchers.Unconfined,
                 clock = fixedClock,
+                dirtyRangeStore = mockk(relaxed = true),
             )
     }
 

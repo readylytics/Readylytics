@@ -88,19 +88,6 @@ class FakeStore : HealthChangeIngestionStore, HealthIngestionStore, TransactionR
 
     // --- HealthChangeIngestionStore ---
 
-    override suspend fun affectedDatesForRecord(
-        type: HealthDataType,
-        hcRecordId: String,
-        zoneId: ZoneId,
-    ): Set<LocalDate> {
-        affectedDateCalls++
-        return emptySet()
-    }
-
-    override suspend fun deleteRecord(type: HealthDataType, hcRecordId: String) {
-        deleteCalls++
-    }
-
     override suspend fun affectedDatesForRecords(
         type: HealthDataType,
         ids: List<String>,

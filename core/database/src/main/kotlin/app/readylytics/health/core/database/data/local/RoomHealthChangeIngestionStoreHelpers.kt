@@ -50,20 +50,6 @@ suspend fun HealthRecordDaos.datesForSourceRefs(
     return dates
 }
 
-suspend fun HealthRecordDaos.datesForSourceRef(
-    sourceRef: Long?,
-    fetchRecords: suspend (Long) -> List<Pair<Long, String?>>,
-    zoneId: ZoneId,
-): Set<LocalDate> {
-    val ref = sourceRef ?: return emptySet()
-    val dates = mutableSetOf<LocalDate>()
-    fetchRecords(ref).forEach { (timestampMs, sessionId) ->
-        dates.add(dateFor(timestampMs, zoneId))
-        dates.addAll(sessionDatesFor(this, sessionId, zoneId))
-    }
-    return dates
-}
-
 suspend fun deleteFromDaos(
     daos: HealthRecordDaos,
     vo2MaxRecordDao: Vo2MaxRecordDao?,

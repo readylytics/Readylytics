@@ -151,9 +151,6 @@ class HealthChangeSynchronizerDeviceAndIntervalTest {
                     every { this@mockk.record } returns record
                 }
             routeOneChange(dataType = HealthDataType.STEPS, change = change)
-            coEvery {
-                changeIngestionStore.affectedDatesForRecord(HealthDataType.STEPS, recordId, any())
-            } returns emptySet()
 
             synchronizer.applyPendingChanges()
 

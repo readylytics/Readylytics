@@ -197,6 +197,16 @@ class HealthResyncWorker
          * falls back to a full-retained-window recompute on an empty first read, since an untouched
          * repair (no device ever excluded, nothing ever journaled) must stay a zero-cost no-op.
          * Returns `false` on a failed recompute so the caller retries.
+         *
+         * Deliberately does NOT call [discardExpiredDirtyRanges] first, unlike [runNormalRecompute].
+         * [DirtyRangeStore.pending] reads globally across every journaling source, not just this
+         * repair's own tickets, so a pre-existing expired ticket written by some other path could
+         * still be picked up here. The consequence is bounded and harmless, though: an expired
+         * ticket only ever widens the drained [ScoreInvalidation.AffectedRange] to also cover a
+         * no-longer-retained span, producing one wider-than-necessary (wasteful, not wrong)
+         * recompute -- never corruption or a skipped date. Leaving the expiry sweep out of this
+         * one-time, best-effort repair path keeps it simple; a dedicated discard pass here would
+         * only trim that waste, which is tracked as follow-up debt rather than fixed in this wave.
          */
         private suspend fun drainJournaledRepairTickets(
             resyncUseCase: FullHistoricalResyncUseCase,

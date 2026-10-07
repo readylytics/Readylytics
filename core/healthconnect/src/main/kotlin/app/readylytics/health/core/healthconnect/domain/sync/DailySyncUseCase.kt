@@ -50,6 +50,7 @@ class DailySyncUseCase
         private val ingestion: DailySyncIngestionCollaborators,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
         private val clock: Clock,
+        private val dirtyRangeStore: DirtyRangeStore,
     ) {
         private val sessionLinkReconciler get() = ingestion.sessionLinkReconciler
         private val changeSynchronizer get() = ingestion.changeSynchronizer
@@ -90,6 +91,36 @@ class DailySyncUseCase
                     onProgress = onProgress,
                 )
             }
+        }
+
+        /**
+         * Final-review fix (Finding 1): journals a durable dirty-range ticket covering
+         * [affectedDates]' dependency closure, for [run]'s mid-loop continuation commit. Budget
+         * exhaustion there commits the change-synchronizer's candidate tokens past a page before
+         * this run's own walk-forward recompute has reached that page's dates -- an EXERCISE
+         * upsert with `keep=true` never runs `deleteRecordsAndJournal`
+         * (`HealthChangeSynchronizerImpl.persistPreparedWorkouts`), and a brand-new record of any
+         * type has no prior row for the delete-side journal to resolve an affected date from
+         * (`DeletionJournalContext` requires `affected.isNotEmpty()`), so without this call nothing
+         * durable records that those dates still need recompute if the process dies before the
+         * walk-forward further down runs. Same increment-then-append pattern as
+         * `SelectedSourcePrunerImpl.journalPrunedPage`, routed through [DirtyRangeStore.journalDirtyRange]
+         * (rather than the Room DAOs that method injects directly) since this class lives across
+         * the `core:healthconnect`/`core:database` module boundary and only holds this interface.
+         * No-op when [affectedDates] is empty.
+         */
+        private suspend fun journalContinuationTicket(
+            affectedDates: Set<java.time.LocalDate>,
+            retentionStart: java.time.LocalDate,
+            today: java.time.LocalDate,
+        ) {
+            if (affectedDates.isEmpty()) return
+            val changed = ScoreInvalidation.AffectedRange(affectedDates.min(), affectedDates.max())
+            ScoreInvalidation
+                .dependencyClosure(changed, ScoreInvalidation.Reason.UNKNOWN, retentionStart, today)
+                ?.let { closure ->
+                    dirtyRangeStore.journalDirtyRange(closure.start, closure.endInclusive, "UNKNOWN", "ACTIVE")
+                }
         }
 
         /**
@@ -195,12 +226,28 @@ class DailySyncUseCase
                         continuationRequired = outcome.continuationRequired
                         if (continuationRequired) {
                             // Budget exhaustion: every page applied so far already committed its
-                            // own Room transaction (and, for deletes/interval corrections, its own
-                            // durable dirty-range ticket) before this outcome was returned, so the
-                            // underlying data for those pages can never be lost. Persisting the
-                            // candidate tokens now is what lets the next applyPendingChanges() call
-                            // resume past this point instead of re-fetching -- and re-applying --
-                            // the same already-committed pages forever.
+                            // own Room transaction, but NOT every write path also journals a
+                            // durable dirty-range ticket for its dates -- an EXERCISE upsert with
+                            // keep=true never runs deleteRecordsAndJournal
+                            // (HealthChangeSynchronizerImpl.persistPreparedWorkouts), and a
+                            // brand-new record of any type has no prior row for the delete-side
+                            // journal to resolve an affected date from (DeletionJournalContext
+                            // requires affected.isNotEmpty()). So this page's own affected dates
+                            // must be journaled here, before the candidate tokens below let the
+                            // next applyPendingChanges() call resume past this page -- otherwise a
+                            // crash before the walk-forward recompute further down runs leaves
+                            // nothing durable recording that this page's dates still need
+                            // recomputing, and a retry resumes from the committed token past them
+                            // forever (final-review Finding 1).
+                            journalContinuationTicket(
+                                affectedDates = outcome.affectedDates,
+                                retentionStart = RetentionBounds.resolveResyncStartDate(prefs, today),
+                                today = today,
+                            )
+                            // Persisting the candidate tokens now is what lets the next
+                            // applyPendingChanges() call resume past this point instead of
+                            // re-fetching -- and re-applying -- the same already-committed pages
+                            // forever.
                             changeSynchronizer.commitTokens(outcome.nextTokens, outcome.nextIntervalTokens)
                         }
                     }
