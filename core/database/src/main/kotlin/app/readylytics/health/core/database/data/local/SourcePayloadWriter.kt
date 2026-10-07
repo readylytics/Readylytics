@@ -326,17 +326,17 @@ private fun isMetadataChanged(
     return !(boundsMatch && detailsMatch)
 }
 
-private fun HeartRateRecordEntity.matchesPayload(input: HeartRateInput): Boolean {
-    val coreMatches = beatsPerMinute == input.beatsPerMinute && recordType == input.recordType
-    val metaMatches = sessionId == input.sessionId && deviceName == input.deviceName
-    return coreMatches && metaMatches
-}
+// Source identity covers only Health Connect-owned fields. `recordType`/`sessionId` are session
+// links owned by SessionLinkReconciler, which re-derives them over the complete sync range after
+// every ingest; the mapper's per-segment links are provisional and routinely differ. Comparing them
+// here made every unchanged overnight source look "replaced" on each sync, journaling an
+// AUTHORITATIVE_SOURCE_REPLACEMENT ticket per source and flip-flopping with the reconcile pass
+// (#295, #302).
+private fun HeartRateRecordEntity.matchesPayload(input: HeartRateInput): Boolean =
+    beatsPerMinute == input.beatsPerMinute && deviceName == input.deviceName
 
-private fun HrvRecordEntity.matchesPayload(input: HrvInput): Boolean {
-    val coreMatches = rmssdMs == input.rmssdMs && recordType == input.recordType
-    val metaMatches = sessionId == input.sessionId && deviceName == input.deviceName
-    return coreMatches && metaMatches
-}
+private fun HrvRecordEntity.matchesPayload(input: HrvInput): Boolean =
+    rmssdMs == input.rmssdMs && deviceName == input.deviceName
 
 private suspend fun HeartRateDao.readTimestampsKeyset(sourceRef: Long): List<Long> {
     val timestamps = mutableListOf<Long>()
