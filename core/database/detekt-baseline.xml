@@ -10,8 +10,6 @@
     <ID>LongMethod:RetentionCleanupTest.kt$RetentionCleanupTest$@Test fun testRetentionCleanup()</ID>
     <ID>LongMethod:RollingWindowTest.kt$RollingWindowTest$@Test fun `getTrimpInRange feeds local-date aggregation`()</ID>
     <ID>LongMethod:RollingWindowTest.kt$RollingWindowTest$@Test fun `getWorkoutsInRange filters correctly`()</ID>
-    <ID>LongMethod:ScoringGoldenSnapshotTest.kt$ScoringGoldenSnapshotTest$@Test fun `case 2 - day with sleep spanning midnight`()</ID>
-    <ID>LongMethod:ScoringGoldenSnapshotTest.kt$ScoringGoldenSnapshotTest$private fun createRepository(settingsRepository: SettingsRepository): ScoringRepositoryImpl</ID>
     <ID>LongMethod:ScoringRepositoryBiphasicIntegrationTest.kt$ScoringRepositoryBiphasicIntegrationTest$@Test fun `biphasic scoring aggregates sleep totals but keeps recovery inputs on core cluster`()</ID>
     <ID>LongMethod:ScoringRepositoryN1Test.kt$ScoringRepositoryN1Test$@Before fun setUp()</ID>
     <ID>LongMethod:ScoringRepositoryN1Test.kt$ScoringRepositoryN1Test$@Test fun `profile differentiation produces different RAS gains`()</ID>
@@ -20,6 +18,5 @@
     <ID>LongMethod:SyntheticDatasetGenerator.kt$SyntheticDatasetGenerator$suspend fun generate( db: HealthDatabase, endDate: LocalDate, config: Config = Config(), ): GenerationSummary</ID>
     <ID>LongMethod:WalkForwardTransactionEquivalenceTest.kt$WalkForwardTransactionEquivalenceTest$private suspend fun runWalkForward(wrapInTransaction: Boolean): RunOutput</ID>
     <ID>ReturnCount:ReadinessSummaryCoordinator.kt$ReadinessSummaryCoordinator$suspend fun resolveSleepAggregation( targetDate: LocalDate, zoneId: ZoneId, prefs: UserPreferences, ): SleepAggregationContext?</ID>
-    <ID>ReturnCount:ScoringDayDataLoader.kt$ScoringDayDataLoader$suspend fun loadMergedMinuteBuckets(dayStartMs: Long, dayEndMs: Long): List&lt;HrMinuteBucketRow&gt;</ID>
   </CurrentIssues>
 </SmellBaseline>
