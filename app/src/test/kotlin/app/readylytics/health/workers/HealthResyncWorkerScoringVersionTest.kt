@@ -12,6 +12,7 @@ import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspector
 import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
 import app.readylytics.health.core.model.domain.util.RetentionBounds
 import dagger.Lazy
@@ -26,11 +27,16 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneOffset
 import kotlin.test.assertEquals
 
 @RunWith(RobolectricTestRunner::class)
 class HealthResyncWorkerScoringVersionTest {
+    private val fixedInstant = Instant.parse("2026-09-15T12:00:00Z")
+    private val fixedClock = Clock.fixed(fixedInstant, ZoneOffset.UTC)
     private lateinit var context: Context
     private lateinit var workerParams: WorkerParameters
     private val useCase = mockk<FullHistoricalResyncUseCase>()
@@ -187,7 +193,7 @@ class HealthResyncWorkerScoringVersionTest {
     fun `a bounded recompute-only pass spanning the full retention window still advances`() =
         runTest {
             val prefs = UserPreferences(scoringVersion = 3)
-            val today = LocalDate.now()
+            val today = LocalDate.now(fixedClock.withZone(prefs.scoringZone()))
             val retentionStart = RetentionBounds.resolveResyncStartDate(prefs, today)
             every { workerParams.inputData } returns
                 Data
@@ -301,6 +307,46 @@ class HealthResyncWorkerScoringVersionTest {
             coVerify(exactly = 0) { settingsRepository.updateTrainingReadinessConfig(any()) }
         }
 
+    @Test
+    fun `a bounded full-retention pass advances version even when host timezone differs from scoring zone`() =
+        runTest {
+            val defaultTz = java.util.TimeZone.getDefault()
+            try {
+                java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("Pacific/Honolulu"))
+                val prefs =
+                    UserPreferences(
+                        scoringVersion = 3,
+                        scoringZoneId = "Europe/Berlin",
+                        retentionDaysEnabled = true,
+                        retentionDays = 30,
+                    )
+                val today = LocalDate.now(fixedClock.withZone(prefs.scoringZone()))
+                val retentionStart = RetentionBounds.resolveResyncStartDate(prefs, today)
+                every { workerParams.inputData } returns
+                    Data
+                        .Builder()
+                        .putBoolean(HealthResyncWorker.KEY_RECOMPUTE_ONLY, true)
+                        .putLong(HealthResyncWorker.KEY_RECOMPUTE_START_EPOCH_DAY, retentionStart.toEpochDay())
+                        .putLong(HealthResyncWorker.KEY_RECOMPUTE_END_EPOCH_DAY, today.toEpochDay())
+                        .build()
+                coEvery { settingsRepository.userPreferences } returns MutableStateFlow(prefs)
+                coEvery { useCase.execute(any(), any(), any(), any()) } returns Result.Success(Unit)
+
+                val result = createWorker().doWork()
+
+                assertEquals(
+                    androidx.work.ListenableWorker.Result
+                        .success(),
+                    result,
+                )
+                coVerify(exactly = 1) {
+                    settingsRepository.updateScoringVersion(SettingsDefaults.CURRENT_SCORING_VERSION)
+                }
+            } finally {
+                java.util.TimeZone.setDefault(defaultTz)
+            }
+        }
+
     private fun createWorker(dirtyRangeStore: app.readylytics.health.core.model.domain.sync.DirtyRangeStore? = null) =
         HealthResyncWorker(
             appContext = context,
@@ -309,6 +355,7 @@ class HealthResyncWorkerScoringVersionTest {
             foregroundSyncController = foregroundSyncControllerLazy,
             databaseReadinessGate = databaseReadinessGate,
             settingsRepository = settingsRepositoryLazy,
+            clock = fixedClock,
             dirtyRangeStore =
                 dagger.Lazy {
                     dirtyRangeStore ?: object : app.readylytics.health.core.model.domain.sync.DirtyRangeStore {

@@ -254,84 +254,58 @@ class ProductionReadinessStaticTest {
 
     @Test
     fun `data backup and transfer exclusions are fully configured`() {
-        val manifestFile = projectFile("app/src/main/AndroidManifest.xml")
-        val dbFactory =
-            javax.xml.parsers.DocumentBuilderFactory
-                .newInstance()
-        val dBuilder = dbFactory.newDocumentBuilder()
-        val doc = dBuilder.parse(manifestFile)
-        doc.documentElement.normalize()
-        val applicationNode = doc.getElementsByTagName("application").item(0) as org.w3c.dom.Element
-        val allowBackup = applicationNode.getAttribute("android:allowBackup")
-        val dataExtractionRules = applicationNode.getAttribute("android:dataExtractionRules")
-        val fullBackupContent = applicationNode.getAttribute("android:fullBackupContent")
+        val manifest = xmlRoot("app/src/main/AndroidManifest.xml")
+        val application = manifest.getElementsByTagName("application").item(0) as org.w3c.dom.Element
+        org.junit.Assert.assertEquals("false", application.getAttribute("android:allowBackup"))
+        org.junit.Assert.assertEquals(
+            "@xml/data_extraction_rules",
+            application.getAttribute("android:dataExtractionRules"),
+        )
+        org.junit.Assert.assertEquals("@xml/full_backup_content", application.getAttribute("android:fullBackupContent"))
 
-        org.junit.Assert.assertEquals("false", allowBackup)
-        org.junit.Assert.assertEquals("@xml/data_extraction_rules", dataExtractionRules)
-        org.junit.Assert.assertEquals("@xml/full_backup_content", fullBackupContent)
-
-        val dataRulesFile = projectFile("app/src/main/res/xml/data_extraction_rules.xml")
-        val rulesDoc = dBuilder.parse(dataRulesFile)
-        rulesDoc.documentElement.normalize()
-
-        val cloudBackupNode = rulesDoc.getElementsByTagName("cloud-backup").item(0) as? org.w3c.dom.Element
-        val cloudExcludes = mutableSetOf<String>()
-        if (cloudBackupNode != null) {
-            val excludesList = cloudBackupNode.getElementsByTagName("exclude")
-            for (i in 0 until excludesList.length) {
-                val excludeEl = excludesList.item(i) as org.w3c.dom.Element
-                cloudExcludes.add(excludeEl.getAttribute("domain"))
-            }
-        }
-        val expectedCloudDomains = listOf("root", "file", "database", "sharedpref", "external")
-        for (domain in expectedCloudDomains) {
-            assertTrue("data_extraction_rules.xml cloud-backup should exclude $domain", cloudExcludes.contains(domain))
-        }
-
-        val deviceTransferNode = rulesDoc.getElementsByTagName("device-transfer").item(0) as? org.w3c.dom.Element
-        val transferExcludes = mutableSetOf<String>()
-        if (deviceTransferNode != null) {
-            val excludesList = deviceTransferNode.getElementsByTagName("exclude")
-            for (i in 0 until excludesList.length) {
-                val excludeEl = excludesList.item(i) as org.w3c.dom.Element
-                transferExcludes.add(excludeEl.getAttribute("domain"))
-            }
-        }
-        val expectedTransferDomains =
-            listOf(
-                "root",
-                "file",
-                "database",
-                "sharedpref",
-                "external",
-                "device_root",
-                "device_file",
-                "device_database",
-                "device_sharedpref",
-            )
-        for (domain in expectedTransferDomains) {
-            assertTrue(
-                "data_extraction_rules.xml device-transfer should exclude $domain",
-                transferExcludes.contains(domain),
-            )
-        }
-
-        val fullBackupFile = projectFile("app/src/main/res/xml/full_backup_content.xml")
-        val fullDoc = dBuilder.parse(fullBackupFile)
-        fullDoc.documentElement.normalize()
-        val fullExcludes = mutableSetOf<String>()
-        val fullExcludesList = fullDoc.getElementsByTagName("exclude")
-        for (i in 0 until fullExcludesList.length) {
-            val excludeEl = fullExcludesList.item(i) as org.w3c.dom.Element
-            fullExcludes.add(excludeEl.getAttribute("domain"))
-        }
-        val expectedFullBackupDomains = listOf("root", "file", "database", "sharedpref", "external")
-        for (domain in expectedFullBackupDomains) {
-            assertTrue("full_backup_content.xml should exclude $domain", fullExcludes.contains(domain))
-        }
-
+        val rules = xmlRoot("app/src/main/res/xml/data_extraction_rules.xml")
+        val standardDomains = listOf("root", "file", "database", "sharedpref", "external")
+        assertExcludedDomains(rules, "cloud-backup", standardDomains, "data_extraction_rules.xml cloud-backup")
+        assertExcludedDomains(
+            rules,
+            "device-transfer",
+            standardDomains + listOf("device_root", "device_file", "device_database", "device_sharedpref"),
+            "data_extraction_rules.xml device-transfer",
+        )
+        assertExcludedDomains(
+            xmlRoot("app/src/main/res/xml/full_backup_content.xml"),
+            null,
+            standardDomains,
+            "full_backup_content.xml",
+        )
         val backupRulesFile = File(projectFile("app/src/main/res/xml").absolutePath, "backup_rules.xml")
         assertFalse("Unused backup_rules.xml should be absent", backupRulesFile.exists())
+    }
+
+    private fun xmlRoot(path: String): org.w3c.dom.Element =
+        javax.xml.parsers.DocumentBuilderFactory
+            .newInstance()
+            .newDocumentBuilder()
+            .parse(projectFile(path))
+            .documentElement
+            .also { it.normalize() }
+
+    private fun assertExcludedDomains(
+        root: org.w3c.dom.Element,
+        section: String?,
+        expected: List<String>,
+        label: String,
+    ) {
+        val container = if (section == null) root else root.getElementsByTagName(section).item(0) as org.w3c.dom.Element
+        val excludes = container.getElementsByTagName("exclude")
+        val domains =
+            (0 until excludes.length)
+                .map { index ->
+                    (excludes.item(index) as org.w3c.dom.Element).getAttribute("domain")
+                }.toSet()
+        expected.forEach { domain ->
+            assertTrue("$label should exclude $domain", domain in domains)
+        }
     }
 
     private fun sourceFile(path: String): File =
@@ -404,8 +378,18 @@ class ProductionReadinessStaticTest {
                 .substringAfter("setContent {")
                 .substringBefore("private fun ReadylyticsContent")
 
-        assertTrue(readinessContent.contains("DatabaseReadinessTheme"))
+        assertTrue(readinessContent.contains("DatabaseReadinessContent("))
         assertFalse(readinessContent.contains("FitDashboardTheme {"))
+        val renderer =
+            projectFile(
+                "app/src/main/kotlin/app/readylytics/health/ui/migration/DatabaseReadinessContent.kt",
+            ).readText()
+        val recoveryBranch = renderer.substringAfter("DatabaseReadiness.KeyCorrupted").substringBefore("else ->")
+        val blockedBranch = renderer.substringAfter("else ->")
+        assertTrue(recoveryBranch.contains("DatabaseReadinessTheme"))
+        assertTrue(blockedBranch.contains("DatabaseReadinessTheme"))
+        assertFalse(renderer.contains("FitDashboardTheme {"))
+        assertFalse(renderer.contains("hiltViewModel"))
 
         val theme =
             projectFile(

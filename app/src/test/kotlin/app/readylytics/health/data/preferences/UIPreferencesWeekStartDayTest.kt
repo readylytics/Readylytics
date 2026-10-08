@@ -21,11 +21,15 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.Clock
 import java.time.DayOfWeek
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 
 @RunWith(AndroidJUnit4::class)
 class UIPreferencesWeekStartDayTest {
+    private val clock = Clock.fixed(Instant.parse("2026-01-01T12:00:00Z"), ZoneId.of("UTC"))
     private lateinit var context: Context
     private lateinit var fileName: String
     private lateinit var dataStoreScope: CoroutineScope
@@ -51,7 +55,7 @@ class UIPreferencesWeekStartDayTest {
     @Test
     fun `weekStartDay defaults to monday`() =
         runTest {
-            val prefs = dataStore.data.first().toDomainModel()
+            val prefs = dataStore.data.first().toDomainModel(clock)
             assertEquals(SettingsDefaults.WEEK_START_DAY, prefs.weekStartDay)
             assertEquals(DayOfWeek.MONDAY, prefs.weekStartDay)
         }
@@ -61,7 +65,7 @@ class UIPreferencesWeekStartDayTest {
         runTest {
             uiPreferences.updateWeekStartDay(DayOfWeek.MONDAY)
 
-            val prefs = dataStore.data.first().toDomainModel()
+            val prefs = dataStore.data.first().toDomainModel(clock)
             assertEquals(DayOfWeek.MONDAY, prefs.weekStartDay)
         }
 
@@ -70,7 +74,7 @@ class UIPreferencesWeekStartDayTest {
         runTest {
             uiPreferences.updateWeekStartDay(DayOfWeek.SUNDAY)
 
-            val prefs = dataStore.data.first().toDomainModel()
+            val prefs = dataStore.data.first().toDomainModel(clock)
             assertEquals(DayOfWeek.SUNDAY, prefs.weekStartDay)
         }
 
@@ -79,7 +83,7 @@ class UIPreferencesWeekStartDayTest {
         runTest {
             uiPreferences.updateWeekStartDay(DayOfWeek.SATURDAY)
 
-            val prefs = dataStore.data.first().toDomainModel()
+            val prefs = dataStore.data.first().toDomainModel(clock)
             assertEquals(DayOfWeek.SATURDAY, prefs.weekStartDay)
         }
 
@@ -93,7 +97,7 @@ class UIPreferencesWeekStartDayTest {
             dataStoreScope.coroutineContext.job.cancelAndJoin()
 
             val restarted = newDataStore(CoroutineScope(Dispatchers.IO + SupervisorJob()))
-            val prefs = restarted.data.first().toDomainModel()
+            val prefs = restarted.data.first().toDomainModel(clock)
 
             assertEquals(DayOfWeek.SUNDAY, prefs.weekStartDay)
         }
@@ -104,11 +108,11 @@ class UIPreferencesWeekStartDayTest {
             val today = LocalDate.of(2026, 6, 4) // Thursday
 
             uiPreferences.updateWeekStartDay(DayOfWeek.MONDAY)
-            val mondayPrefs = dataStore.data.first().toDomainModel()
+            val mondayPrefs = dataStore.data.first().toDomainModel(clock)
             val mondayWeekStart = WeekBounds.weekStartOnOrBefore(today, mondayPrefs.weekStartDay)
 
             uiPreferences.updateWeekStartDay(DayOfWeek.SUNDAY)
-            val sundayPrefs = dataStore.data.first().toDomainModel()
+            val sundayPrefs = dataStore.data.first().toDomainModel(clock)
             val sundayWeekStart = WeekBounds.weekStartOnOrBefore(today, sundayPrefs.weekStartDay)
 
             assertEquals(LocalDate.of(2026, 6, 1), mondayWeekStart)

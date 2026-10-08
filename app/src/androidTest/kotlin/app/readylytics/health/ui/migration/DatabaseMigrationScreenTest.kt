@@ -1,17 +1,19 @@
 package app.readylytics.health.ui.migration
 
+import androidx.compose.material3.Text
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasProgressBarRangeInfo
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import app.readylytics.health.core.model.domain.migration.DatabaseMigrationProgress
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.migration.V7MigrationPhase
+import app.readylytics.health.domain.migration.DatabaseMigrationUiState
 import app.readylytics.health.ui.theme.DatabaseReadinessTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -20,6 +22,83 @@ import org.junit.Test
 class DatabaseMigrationScreenTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    @Test
+    fun checkingDoesNotScheduleOrComposeNormalContent() {
+        var scheduled = 0
+        var normal = 0
+        var recovery = 0
+        composeRule.setContent {
+            DatabaseReadinessContent(
+                state = DatabaseMigrationUiState(DatabaseReadiness.Checking),
+                onStartOrResume = { scheduled++ },
+                onSendDiagnostics = {},
+                readyContent = { normal++ },
+                keyRecoveryContent = { recovery++ },
+            )
+        }
+        composeRule.onNode(hasProgressBarRangeInfo(ProgressBarRangeInfo.Indeterminate)).assertIsDisplayed()
+        composeRule.runOnIdle {
+            assertEquals(0, scheduled)
+            assertEquals(0, normal)
+            assertEquals(0, recovery)
+        }
+    }
+
+    @Test
+    fun encryptionSchedulesOnceAndDisplaysPreparationGuidance() {
+        var scheduled = 0
+        composeRule.setContent {
+            DatabaseReadinessContent(
+                state =
+                    DatabaseMigrationUiState(
+                        DatabaseReadiness.EncryptionRequired,
+                    ),
+                onStartOrResume = { scheduled++ },
+                onSendDiagnostics = {},
+                readyContent = { error("normal content must wait") },
+                keyRecoveryContent = { error("key recovery must wait") },
+            )
+        }
+        composeRule
+            .onNodeWithText(
+                "Preparing your health database. Keep Readylytics open while this finishes.",
+            ).assertIsDisplayed()
+        composeRule.onNode(hasProgressBarRangeInfo(ProgressBarRangeInfo.Indeterminate)).assertIsDisplayed()
+        composeRule.runOnIdle { assertEquals(1, scheduled) }
+    }
+
+    @Test
+    fun terminalKeyCorruptionRoutesRecoveryWithoutSchedulingPreparation() {
+        var scheduled = 0
+        composeRule.setContent {
+            DatabaseReadinessContent(
+                DatabaseMigrationUiState(DatabaseReadiness.KeyCorrupted),
+                { scheduled++ },
+                {},
+                readyContent = { error("database must remain gated") },
+                keyRecoveryContent = { Text("Fixture key recovery") },
+            )
+        }
+        composeRule.onNodeWithText("Fixture key recovery").assertIsDisplayed()
+        composeRule.runOnIdle { assertEquals(0, scheduled) }
+    }
+
+    @Test
+    fun terminalUnsupportedVersionShowsFailureWithoutSchedulingPreparation() {
+        var scheduled = 0
+        composeRule.setContent {
+            DatabaseReadinessContent(
+                DatabaseMigrationUiState(DatabaseReadiness.Failed("unsupported version")),
+                { scheduled++ },
+                {},
+                readyContent = { error("database must remain gated") },
+                keyRecoveryContent = { error("unsupported version is not key corruption") },
+            )
+        }
+        composeRule.onNodeWithText("Retry").assertIsDisplayed()
+        composeRule.runOnIdle { assertEquals(0, scheduled) }
+    }
 
     @Test
     fun preparingFromV5IsIndeterminate() {

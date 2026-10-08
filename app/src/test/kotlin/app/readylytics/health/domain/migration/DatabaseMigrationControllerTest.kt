@@ -3,6 +3,7 @@ package app.readylytics.health.domain.migration
 import androidx.work.Data
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import app.readylytics.health.core.model.domain.migration.DatabaseMigrationFailureKind
 import app.readylytics.health.core.model.domain.migration.DatabaseMigrationProgress
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspector
@@ -36,10 +37,18 @@ class DatabaseMigrationControllerTest {
     private val scope = TestScope(dispatcher)
 
     @Test
+    fun constructionDoesNotInspect() {
+        val controller = controller()
+        assertEquals(DatabaseReadiness.Checking, controller.state.value.readiness)
+        verify(exactly = 0) { gate.inspect() }
+    }
+
+    @Test
     fun `initial state comes from readiness gate`() {
         every { gate.inspect() } returns DatabaseReadiness.MigrationRequired(6)
 
         val controller = controller()
+        scope.advanceUntilIdle()
 
         assertEquals(
             DatabaseMigrationUiState(DatabaseReadiness.MigrationRequired(6)),
@@ -52,6 +61,7 @@ class DatabaseMigrationControllerTest {
         every { gate.inspect() } returns DatabaseReadiness.KeyCorrupted
 
         val controller = controller()
+        scope.advanceUntilIdle()
 
         assertEquals(
             DatabaseMigrationUiState(DatabaseReadiness.KeyCorrupted),
@@ -99,6 +109,7 @@ class DatabaseMigrationControllerTest {
             listOf(DatabaseReadiness.MigrationRequired(6), DatabaseReadiness.Ready)
         val controller = controller()
 
+        scope.advanceUntilIdle()
         workInfos.value = listOf(workInfo(WorkInfo.State.SUCCEEDED))
         scope.advanceUntilIdle()
 
@@ -157,6 +168,48 @@ class DatabaseMigrationControllerTest {
     }
 
     @Test
+    fun `plaintext unsupported version terminal failure reaches existing failure UI`() {
+        every { gate.inspect() } returns DatabaseReadiness.EncryptionRequired
+        val controller = controller()
+        workInfos.value =
+            listOf(
+                workInfo(
+                    WorkInfo.State.FAILED,
+                    output = failureOutput(DatabaseMigrationFailureKind.UNSUPPORTED_VERSION),
+                ),
+            )
+        scope.advanceUntilIdle()
+        assertEquals(DatabaseReadiness.Failed("Database migration failed"), controller.state.value.readiness)
+    }
+
+    @Test
+    fun `plaintext corrupt key terminal failure reaches existing recovery UI`() {
+        every { gate.inspect() } returns DatabaseReadiness.EncryptionRequired
+        val controller = controller()
+        workInfos.value =
+            listOf(workInfo(WorkInfo.State.FAILED, output = failureOutput(DatabaseMigrationFailureKind.KEY_CORRUPTED)))
+        scope.advanceUntilIdle()
+        assertEquals(DatabaseReadiness.KeyCorrupted, controller.state.value.readiness)
+    }
+
+    @Test
+    fun `ready overrides stale permanent plaintext failure output`() {
+        every { gate.inspect() } returns DatabaseReadiness.Ready
+        val controller = controller()
+        for (kind in listOf(
+            DatabaseMigrationFailureKind.UNSUPPORTED_VERSION,
+            DatabaseMigrationFailureKind.KEY_CORRUPTED,
+        )) {
+            workInfos.value = listOf(workInfo(WorkInfo.State.FAILED, output = failureOutput(kind)))
+            scope.advanceUntilIdle()
+            assertEquals(DatabaseReadiness.Ready, controller.state.value.readiness)
+        }
+    }
+
+    private fun failureOutput(kind: DatabaseMigrationFailureKind) =
+        Data.Builder().putString(DatabaseMigrationWorker.KEY_FAILURE_KIND, kind.name).build()
+
+    @Test
     fun `start or resume schedules unique migration work`() {
         every { gate.inspect() } returns DatabaseReadiness.MigrationRequired(5)
         val controller = controller()
@@ -172,6 +225,7 @@ class DatabaseMigrationControllerTest {
             workManager = workManager,
             databaseReadinessInspector = gate,
             appScope = scope,
+            ioDispatcher = dispatcher,
         )
 
     private fun workInfo(

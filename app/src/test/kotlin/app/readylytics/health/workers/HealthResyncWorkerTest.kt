@@ -32,13 +32,18 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.ZoneOffset
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
 class HealthResyncWorkerTest {
+    private val fixedInstant = Instant.parse("2026-09-01T12:00:00Z")
+    private val fixedClock = Clock.fixed(fixedInstant, ZoneOffset.UTC)
     private lateinit var context: Context
     private lateinit var workerParams: WorkerParameters
     private val useCase = mockk<FullHistoricalResyncUseCase>()
@@ -179,7 +184,7 @@ class HealthResyncWorkerTest {
             try {
                 database.healthMutationStateDao().upsert(HealthMutationStateEntity(id = 1, sourceGeneration = 7))
                 val store = RoomDirtyRangeStore(database.dirtyRangeDao(), database.healthMutationStateDao())
-                val cutoff = LocalDate.now(ZoneOffset.UTC).minusDays(30)
+                val cutoff = LocalDate.now(fixedClock.withZone(ZoneOffset.UTC)).minusDays(30)
                 repeat(105) { store.append(cutoff.minusDays(10), cutoff.minusDays(1), "EXPIRED", "snapshot") }
                 val retainedId = store.append(cutoff.minusDays(4), cutoff.plusDays(2), "OVERLAP", "snapshot")
                 coEvery { settingsRepository.userPreferences } returns
@@ -546,6 +551,35 @@ class HealthResyncWorkerTest {
     // to HealthResyncWorkerSelectedWorkoutRepairTest.kt -- that mode's real-Room setup pushed this
     // class over detekt's LargeClass threshold.
 
+    @Test
+    fun `doWork discards dirty ranges before the retention start derived from injected clock`() =
+        runBlocking {
+            val store = mockk<DirtyRangeStore>(relaxed = true)
+            coEvery { store.pending(any()) } returns emptyList()
+            coEvery { settingsRepository.userPreferences } returns
+                MutableStateFlow(
+                    UserPreferences(
+                        retentionDaysEnabled = true,
+                        retentionDays = 30,
+                        scoringZoneId = "Europe/Berlin",
+                    ),
+                )
+            every { workerParams.inputData } returns
+                androidx.work.Data
+                    .Builder()
+                    .putBoolean(HealthResyncWorker.KEY_RECOMPUTE_ONLY, true)
+                    .build()
+            coEvery { useCase.execute(any(), any(), any(), any()) } returns
+                app.readylytics.health.core.model.domain.model.Result
+                    .Success(Unit)
+
+            createWorker(store).doWork()
+
+            val expectedToday = LocalDate.now(fixedClock.withZone(ZoneId.of("Europe/Berlin")))
+            val expectedCutoff = expectedToday.minusDays(30)
+            coVerify(exactly = 1) { store.discardBefore(expectedCutoff) }
+        }
+
     private fun createWorker(dirtyRangeStore: DirtyRangeStore? = null) =
         HealthResyncWorker(
             appContext = context,
@@ -554,6 +588,7 @@ class HealthResyncWorkerTest {
             foregroundSyncController = foregroundSyncControllerLazy,
             databaseReadinessGate = databaseReadinessGate,
             settingsRepository = settingsRepositoryLazy,
+            clock = fixedClock,
             dirtyRangeStore =
                 Lazy {
                     dirtyRangeStore ?: object : DirtyRangeStore {

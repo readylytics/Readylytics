@@ -18,9 +18,13 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
 
 @RunWith(AndroidJUnit4::class)
 class UIPreferencesBulkDisplayModeTest {
+    private val clock = Clock.fixed(Instant.parse("2026-01-01T12:00:00Z"), ZoneId.of("UTC"))
     private lateinit var dataStore: DataStore<UserPreferencesProto>
     private lateinit var uiPreferences: UIPreferences
 
@@ -40,7 +44,7 @@ class UIPreferencesBulkDisplayModeTest {
     @Test
     fun `bulkDisplayModeNoticeDismissed defaults to false`() =
         runTest {
-            val prefs = dataStore.data.first().toDomainModel()
+            val prefs = dataStore.data.first().toDomainModel(clock)
             assertFalse(prefs.bulkDisplayModeNoticeDismissed)
         }
 
@@ -49,7 +53,7 @@ class UIPreferencesBulkDisplayModeTest {
         runTest {
             uiPreferences.updateBulkDisplayModeNoticeDismissed(true)
 
-            val prefs = dataStore.data.first().toDomainModel()
+            val prefs = dataStore.data.first().toDomainModel(clock)
             assertTrue(prefs.bulkDisplayModeNoticeDismissed)
         }
 }

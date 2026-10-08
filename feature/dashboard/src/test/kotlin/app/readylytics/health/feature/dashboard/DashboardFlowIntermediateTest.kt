@@ -31,6 +31,8 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -75,6 +77,7 @@ class DashboardFlowIntermediateTest {
                         circadianRepository = circadianRepository,
                         insightDismissalRepository = insightDismissalRepository,
                         bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
+                        clock = Clock.systemUTC(),
                     ).collect(inputs::add)
                 }
             runCurrent()
@@ -338,6 +341,63 @@ class DashboardFlowIntermediateTest {
             verify {
                 dailySummaryRepository.observeFirstSessionEndingInRange(expectedStartMs, expectedEndMs)
             }
+        }
+
+    @Test
+    fun `createDashboardBasicInputsFlow resolves today in scoring zone using clock`() =
+        runTest {
+            val fixedClock = Clock.fixed(Instant.parse("2026-01-01T10:30:00Z"), ZoneId.of("Pacific/Honolulu"))
+            val prefs = UserPreferences(scoringZoneId = "Pacific/Kiritimati")
+            val settingsRepo =
+                mockk<UserPreferencesReader> { every { userPreferences } returns MutableStateFlow(prefs) }
+            val dailySummaryRepo =
+                mockk<DailySummaryRepository> {
+                    every { observeSince(any()) } returns MutableStateFlow(emptyList())
+                    every { observeByDate(any()) } returns MutableStateFlow(null)
+                }
+            val circadianRepo =
+                mockk<CircadianConsistencyRepository> {
+                    every { resultFor(any()) } returns
+                        flowOf(CircadianConsistencyResult.MissingData)
+                }
+            val dismissalRepo =
+                mockk<InsightDismissalRepository> { every { observeForDate(any()) } returns flowOf(emptySet()) }
+            val bodyTempProvider =
+                mockk<BodyTemperatureBaselineProvider> {
+                    every {
+                        observeBaseline(
+                            any(),
+                        )
+                    } returns MutableStateFlow(null)
+                }
+
+            val selectedDateFlow = MutableStateFlow(LocalDate.of(2026, 1, 2))
+            val flow =
+                createDashboardBasicInputsFlow(
+                    selectedDate = selectedDateFlow,
+                    dailySummaryRepository = dailySummaryRepo,
+                    settingsRepository = settingsRepo,
+                    circadianRepository = circadianRepo,
+                    insightDismissalRepository = dismissalRepo,
+                    bodyTemperatureBaselineProvider = bodyTempProvider,
+                    clock = fixedClock,
+                )
+
+            val collector = backgroundScope.launch { flow.collect() }
+            runCurrent()
+
+            // Today in Kiritimati (2026-01-02) starts at 2026-01-01T10:00:00Z
+            val expectedTodayMs = Instant.parse("2026-01-01T10:00:00Z").toEpochMilli()
+            verify { dailySummaryRepo.observeSince(expectedTodayMs) }
+
+            // Switch to yesterday in Kiritimati (2026-01-01) -> starts at 2025-12-31T10:00:00Z
+            selectedDateFlow.value = LocalDate.of(2026, 1, 1)
+            runCurrent()
+
+            val expectedYesterdayMs = Instant.parse("2025-12-31T10:00:00Z").toEpochMilli()
+            verify { dailySummaryRepo.observeByDate(expectedYesterdayMs) }
+
+            collector.cancel()
         }
 
     private fun mockCardManagementDelegate(

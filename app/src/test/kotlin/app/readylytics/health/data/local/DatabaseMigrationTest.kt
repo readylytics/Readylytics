@@ -8,6 +8,7 @@ import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -70,7 +71,7 @@ class DatabaseMigrationTest {
     @Test
     fun `Room guard refuses to open before external migration completes`() {
         val gate = mockk<DatabaseReadinessGate>()
-        every { gate.inspect() } returns DatabaseReadiness.MigrationRequired(6)
+        every { gate.readiness } returns MutableStateFlow(DatabaseReadiness.MigrationRequired(6))
 
         val failure = runCatching { requireDatabaseReady(gate) }.exceptionOrNull()
 
@@ -79,16 +80,16 @@ class DatabaseMigrationTest {
             "HealthDatabase cannot open before the external v7 migration is complete",
             failure?.message,
         )
-        verify(exactly = 1) { gate.inspect() }
+        verify(exactly = 0) { gate.inspect() }
     }
 
     @Test
     fun `Room guard accepts an externally migrated database`() {
         val gate = mockk<DatabaseReadinessGate>()
-        every { gate.inspect() } returns DatabaseReadiness.Ready
+        every { gate.readiness } returns MutableStateFlow(DatabaseReadiness.Ready)
 
         requireDatabaseReady(gate)
 
-        verify(exactly = 1) { gate.inspect() }
+        verify(exactly = 0) { gate.inspect() }
     }
 }

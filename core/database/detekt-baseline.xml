@@ -21,6 +21,5 @@
     <ID>LongMethod:WalkForwardTransactionEquivalenceTest.kt$WalkForwardTransactionEquivalenceTest$private suspend fun runWalkForward(wrapInTransaction: Boolean): RunOutput</ID>
     <ID>ReturnCount:ReadinessSummaryCoordinator.kt$ReadinessSummaryCoordinator$suspend fun resolveSleepAggregation( targetDate: LocalDate, zoneId: ZoneId, prefs: UserPreferences, ): SleepAggregationContext?</ID>
     <ID>ReturnCount:ScoringDayDataLoader.kt$ScoringDayDataLoader$suspend fun loadMergedMinuteBuckets(dayStartMs: Long, dayEndMs: Long): List&lt;HrMinuteBucketRow&gt;</ID>
-    <ID>ReturnCount:SqlCipherKeyManager.kt$SqlCipherKeyManager$fun migrateIfNeeded(dbFile: File)</ID>
   </CurrentIssues>
 </SmellBaseline>

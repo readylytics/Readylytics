@@ -240,6 +240,11 @@ class SettingsReopenAfterSetupFlowTest {
                 displaySettings = displaySettings,
                 userUseCase = userProfileActions,
                 healthDataRefresh = healthDataRefresh,
+                clock =
+                    java.time.Clock.fixed(
+                        java.time.Instant.parse("2026-01-01T10:30:00Z"),
+                        java.time.ZoneId.of("Pacific/Honolulu"),
+                    ),
             )
     }
 }

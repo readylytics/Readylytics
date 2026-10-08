@@ -19,9 +19,13 @@ import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
 
 @RunWith(AndroidJUnit4::class)
 class UIPreferencesLastGlobalDisplayModeTest {
+    private val clock = Clock.fixed(Instant.parse("2026-01-01T12:00:00Z"), ZoneId.of("UTC"))
     private lateinit var dataStore: DataStore<UserPreferencesProto>
     private lateinit var uiPreferences: UIPreferences
 
@@ -41,7 +45,7 @@ class UIPreferencesLastGlobalDisplayModeTest {
     @Test
     fun `lastGlobalDisplayMode defaults to null`() =
         runTest {
-            val prefs = dataStore.data.first().toDomainModel()
+            val prefs = dataStore.data.first().toDomainModel(clock)
             assertNull(prefs.lastGlobalDisplayMode)
         }
 
@@ -50,7 +54,7 @@ class UIPreferencesLastGlobalDisplayModeTest {
         runTest {
             uiPreferences.updateLastGlobalDisplayMode(DashboardCardDisplayMode.GAUGE)
 
-            val prefs = dataStore.data.first().toDomainModel()
+            val prefs = dataStore.data.first().toDomainModel(clock)
             assertEquals(DashboardCardDisplayMode.GAUGE, prefs.lastGlobalDisplayMode)
         }
 
@@ -60,7 +64,7 @@ class UIPreferencesLastGlobalDisplayModeTest {
             uiPreferences.updateLastGlobalDisplayMode(DashboardCardDisplayMode.BAR)
             uiPreferences.updateLastGlobalDisplayMode(null)
 
-            val prefs = dataStore.data.first().toDomainModel()
+            val prefs = dataStore.data.first().toDomainModel(clock)
             assertNull(prefs.lastGlobalDisplayMode)
         }
 }

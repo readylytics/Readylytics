@@ -11,10 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
-import java.io.FileInputStream
 import java.io.RandomAccessFile
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 import java.security.SecureRandom
 import java.util.concurrent.locks.ReentrantLock
 import javax.crypto.Cipher
@@ -29,7 +26,7 @@ import javax.inject.Singleton
 // always agree on page size / KDF / HMAC settings.
 private const val CIPHER_COMPATIBILITY = 4
 
-private val CIPHER_COMPATIBILITY_HOOK =
+internal val CIPHER_COMPATIBILITY_HOOK =
     object : net.zetetic.database.sqlcipher.SQLiteDatabaseHook {
         override fun preKey(connection: net.zetetic.database.sqlcipher.SQLiteConnection) {
             connection.execute("PRAGMA cipher_compatibility = $CIPHER_COMPATIBILITY", null, null)
@@ -37,6 +34,23 @@ private val CIPHER_COMPATIBILITY_HOOK =
 
         override fun postKey(connection: net.zetetic.database.sqlcipher.SQLiteConnection) = Unit
     }
+
+private val libraryLock = Any()
+private var libraryLoaded = false
+
+private fun ensureNativeLibraryLoaded() {
+    synchronized(libraryLock) {
+        if (libraryLoaded) return
+        try {
+            System.loadLibrary("sqlcipher")
+        } catch (e: UnsatisfiedLinkError) {
+            logW("SqlCipherKeyManager", e) {
+                "Could not load sqlcipher library via System.loadLibrary"
+            }
+        }
+        libraryLoaded = true
+    }
+}
 
 /**
  * Manages SQLCipher database encryption key generation, storage, and decryption.
@@ -52,15 +66,6 @@ class SqlCipherKeyManager
         @param:ApplicationContext private val context: Context,
         private val keyProvider: KeyProvider,
     ) {
-        init {
-            try {
-                System.loadLibrary("sqlcipher")
-            } catch (e: UnsatisfiedLinkError) {
-                logW("SqlCipherKeyManager", e) {
-                    "Could not load sqlcipher library via System.loadLibrary"
-                }
-            }
-        }
 
         private val _isKeyCorrupted = MutableStateFlow(false)
         val isKeyCorrupted: StateFlow<Boolean> = _isKeyCorrupted.asStateFlow()
@@ -108,8 +113,9 @@ class SqlCipherKeyManager
          */
         fun getOrCreateFactory(): SupportSQLiteOpenHelper.Factory =
             SupportSQLiteOpenHelper.Factory { configuration ->
-                val delegateHelper =
-                    withCrossProcessKeyLock {
+                val createDelegate = {
+                    ensureNativeLibraryLoaded()
+                    val actualDelegate = withCrossProcessKeyLock {
                         val decryptedKey =
                             try {
                                 getOrCreateDbKeyLocked()
@@ -124,18 +130,17 @@ class SqlCipherKeyManager
                         try {
                             val keyHex = decryptedKey.toHex()
                             val rawKeyBytes = "x'$keyHex'".toByteArray(Charsets.UTF_8)
-                            // We must NOT fill rawKeyBytes with zeros: SupportOpenHelperFactory retains this
-                            // array as the SQLCipher password for its helper's lifecycle, including later
-                            // opens or connections. SQLCipher does not clear this caller-owned array for us.
-                            val delegate =
+                            val factory =
                                 net.zetetic.database.sqlcipher
                                     .SupportOpenHelperFactory(rawKeyBytes)
-                            delegate.create(configuration)
+                            factory.create(configuration)
                         } finally {
                             decryptedKey.fill(0)
                         }
                     }
-                LockedFirstOpenHelper(delegateHelper)
+                    LockedFirstOpenHelper(actualDelegate)
+                }
+                DeferredSqlCipherOpenHelper(configuration, createDelegate)
             }
 
         private inner class LockedFirstOpenHelper(
@@ -249,6 +254,7 @@ class SqlCipherKeyManager
             block: (net.zetetic.database.sqlcipher.SQLiteDatabase) -> T,
         ): T {
             val fileExistedBeforeOpen = dbFile.exists()
+            ensureNativeLibraryLoaded()
             return if (fileExistedBeforeOpen) {
                 val db =
                     withCrossProcessKeyLock {
@@ -274,60 +280,28 @@ class SqlCipherKeyManager
             }
         }
 
+        /** Reclaims only abandoned export files, serialized with every live plaintext export. */
+        fun discardStalePlaintextExport(dbFile: File) {
+            withCrossProcessKeyLock { PlaintextDatabaseExporter().discardStaleTarget(dbFile) }
+        }
+
         /**
-         * Detects if the database file is plaintext (SQLite format) and migrates it to encrypted format.
-         * Checks the first 16 bytes for SQLite magic header; if found, performs migration.
+         * Encrypts plaintext SQLite files while holding the key lock through the closed-target
+         * cutover. [beforeReplace] must not call key-manager methods that acquire that lock.
          */
-        fun migrateIfNeeded(dbFile: File) {
-            if (!dbFile.exists()) return
-
-            val magic = ByteArray(16)
-            FileInputStream(dbFile).use { stream ->
-                val bytesRead = stream.read(magic)
-                if (bytesRead != 16) return
-            }
-
-            // SQLite magic header is 16 bytes: "SQLite format 3\000"
-            val sqliteMagic = "SQLite format 3\u0000".toByteArray(Charsets.UTF_8)
-            if (!magic.contentEquals(sqliteMagic)) {
-                return
-            }
-
-            val tempFile = File(dbFile.parent, "${dbFile.name}.cipher_tmp")
-            val rawKey = getOrCreateDbKey()
-            try {
-                val rawKeyBytes = "x'${rawKey.toHex()}'".toByteArray(Charsets.UTF_8)
-                // Create the encrypted target via the same nativeKey-backed open path used to
-                // reopen it later (withWritableDatabase/getOrCreateFactory), instead of ATTACH's
-                // KEY clause. ATTACH's KEY clause and the Java-level password/nativeKey() path are
-                // separate native code paths in SQLCipher and are not guaranteed to agree on
-                // cipher settings -- opening the target the same way it will always be reopened
-                // guarantees self-consistency.
-                val encryptedDb =
-                    net.zetetic.database.sqlcipher.SQLiteDatabase
-                        .openOrCreateDatabase(tempFile, rawKeyBytes, null, null, CIPHER_COMPATIBILITY_HOOK)
-                encryptedDb.rawExecSQL("ATTACH DATABASE '${dbFile.absolutePath}' AS plaintext KEY ''")
-                // Force rollback journaling on the attached source so its full contents are
-                // visible to the export regardless of any pending WAL state from its creator.
-                encryptedDb.rawExecSQL("PRAGMA plaintext.journal_mode = DELETE")
-                encryptedDb.rawExecSQL("SELECT sqlcipher_export('main', 'plaintext')")
-                encryptedDb.rawExecSQL("DETACH DATABASE plaintext")
-                encryptedDb.close()
-
-                Files.move(
-                    tempFile.toPath(),
-                    dbFile.toPath(),
-                    StandardCopyOption.ATOMIC_MOVE,
-                    StandardCopyOption.REPLACE_EXISTING,
-                )
-
-                File("${dbFile.absolutePath}-wal").delete()
-                File("${dbFile.absolutePath}-shm").delete()
-            } catch (e: Exception) {
-                tempFile.delete()
-                throw MigrationException("SQLCipher migration failed", e)
-            } finally {
-                rawKey.fill(0)
+        fun migrateIfNeeded(dbFile: File, beforeReplace: () -> Unit = {}) {
+            // One acquisition covers the complete export, so preflight reclamation in another
+            // worker/process cannot unlink a live target. Callbacks must not reenter key access.
+            ensureNativeLibraryLoaded()
+            withCrossProcessKeyLock {
+                if (isPlaintextDatabase(dbFile)) {
+                    val rawKey = getOrCreateDbKeyLocked()
+                    try {
+                        PlaintextDatabaseExporter().export(dbFile, rawKey, beforeReplace)
+                    } finally {
+                        rawKey.fill(0)
+                    }
+                }
             }
         }
 
@@ -340,7 +314,8 @@ class SqlCipherKeyManager
             destFile: File,
         ) {
             if (!dbFile.exists()) return
-            val rawKey = getOrCreateDbKey()
+            ensureNativeLibraryLoaded()
+            val rawKey = withCrossProcessKeyLock { getOrCreateDbKeyLocked() }
             try {
                 // Raw key must be passed as bytes, not a String: see withWritableDatabase.
                 val rawKeyBytes = "x'${rawKey.toHex()}'".toByteArray(Charsets.UTF_8)
@@ -397,8 +372,8 @@ class SqlCipherKeyManager
          * Clears the stored key and deletes the encrypted database, so the next open regenerates
          * both from scratch (the recovery path behind DatabaseRecoveryScreen).
          *
-         * Holds the same cross-process lock as [getOrCreateDbKey]: the key *removal* needs the
-         * identical treatment as the key *write*, otherwise a concurrent getOrCreateDbKey() in
+         * Holds the same cross-process lock as [withCrossProcessKeyLock]: the key *removal* needs the
+         * identical treatment as the key *write*, otherwise concurrent key retrieval in
          * another thread/process can interleave with a reset and read a stale key against an
          * already-deleted DB file (or vice versa). The removal is likewise `commit = true` so it
          * is durably on disk before the lock is released.
@@ -418,15 +393,12 @@ class SqlCipherKeyManager
             }
         }
 
-        private fun getOrCreateDbKey(): ByteArray =
-            withCrossProcessKeyLock { getOrCreateDbKeyLocked() }
-
         /**
-         * Unlocked core of [getOrCreateDbKey]. Callable only from inside a block already holding
+         * Key retrieval core. Callable only from inside a block already holding
          * [withCrossProcessKeyLock] (e.g. from [withWritableDatabase] or [getOrCreateFactory],
          * which need the key fetch and the subsequent physical file open covered by one single
-         * lock acquisition) -- [withCrossProcessKeyLock] is documented non-reentrant, so calling
-         * the locked [getOrCreateDbKey] from within an already-held lock would throw
+         * lock acquisition) -- [withCrossProcessKeyLock] is documented non-reentrant, so taking
+         * another key lock from within an already-held lock would throw
          * [java.nio.channels.OverlappingFileLockException].
          */
         private fun getOrCreateDbKeyLocked(): ByteArray =
@@ -445,7 +417,7 @@ class SqlCipherKeyManager
             }
 
         @androidx.annotation.VisibleForTesting
-        fun getOrCreateDbKeyForTest(): ByteArray = getOrCreateDbKey()
+        fun getOrCreateDbKeyForTest(): ByteArray = withCrossProcessKeyLock { getOrCreateDbKeyLocked() }
 
         companion object {
             private const val KEYSTORE_ALIAS = "sqlcipher_db_key"

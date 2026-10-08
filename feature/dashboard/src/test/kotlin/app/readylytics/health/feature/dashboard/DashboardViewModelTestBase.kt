@@ -102,28 +102,84 @@ abstract class DashboardViewModelTestBase {
     }
 
     /** The default wiring, shared by [setUp] and [configureDashboardFlows]. */
-    protected fun buildViewModel(): DashboardViewModel =
+    protected fun buildViewModel(clock: java.time.Clock = java.time.Clock.systemDefaultZone()): DashboardViewModel =
         DashboardViewModel(
-            dailySummaryRepository = dailySummaryRepository,
-            getDashboardDataUseCase = getDashboardDataUseCase,
+            repositories =
+                DashboardRepositories(
+                    dailySummary = dailySummaryRepository,
+                    selectedDate = selectedDateRepository,
+                    settings = settingsRepo,
+                    cardConfig = cardConfigRepository,
+                    circadian = circadianRepo,
+                    dailyMetricCache = dailyMetricCache,
+                    heartRate = heartRateRepository,
+                    insightDismissal = insightDismissalRepository,
+                    bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
+                ),
+            useCases =
+                DashboardUseCases(
+                    getDashboardData = getDashboardDataUseCase,
+                    observeDashboardStrainIncrease = observeDashboardStrainIncreaseUseCase,
+                    observeDashboardRasIncrease = observeDashboardRasIncreaseUseCase,
+                    getDailyPromptData = getDailyPromptDataUseCase,
+                    getCurrentResidualFatigue = getCurrentResidualFatigueUseCase,
+                ),
             foregroundSyncController = foregroundSyncController,
-            selectedDateRepository = selectedDateRepository,
-            settingsRepo = settingsRepo,
-            cardConfigRepository = cardConfigRepository,
-            circadianRepo = circadianRepo,
-            dailyMetricCache = dailyMetricCache,
-            heartRateRepository = heartRateRepository,
-            insightDismissalRepository = insightDismissalRepository,
-            observeDashboardStrainIncreaseUseCase = observeDashboardStrainIncreaseUseCase,
-            observeDashboardRasIncreaseUseCase = observeDashboardRasIncreaseUseCase,
-            getDailyPromptDataUseCase = getDailyPromptDataUseCase,
-            getCurrentResidualFatigueUseCase = getCurrentResidualFatigueUseCase,
             fatigueTicker = fatigueTicker,
-            bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
             permissionChecker = permissionChecker,
-            clock = java.time.Clock.systemDefaultZone(),
+            clock = clock,
             defaultDispatcher = testDispatcher,
         )
+
+    protected fun arrangeStrainForwardingTest(
+        selectedDate: LocalDate,
+        summary: DailySummary,
+        preferences: UserPreferences,
+    ) {
+        every { selectedDateRepository.selectedDate } returns MutableStateFlow(selectedDate)
+        every { selectedDateRepository.earliestDate } returns MutableStateFlow(selectedDate.minusDays(30))
+        every { settingsRepo.userPreferences } returns MutableStateFlow(preferences)
+        every { dailySummaryRepository.observeByDate(any()) } returns flowOf(summary)
+        every { dailySummaryRepository.observeSince(any()) } returns flowOf(listOf(summary))
+        every {
+            dailySummaryRepository.observeFirstSessionEndingInRange(any(), any())
+        } returns flowOf(null)
+        every { cardConfigRepository.dashboardCardConfigurations() } returns flowOf(emptyList())
+        every { circadianRepo.resultFor(selectedDate) } returns flowOf(CircadianConsistencyResult.MissingData)
+        every { insightDismissalRepository.observeForDate(any()) } returns flowOf(emptySet())
+        every {
+            heartRateRepository.observeAggregateByTimeRange(any(), any())
+        } returns flowOf(null)
+        every { foregroundSyncController.isSyncing } returns MutableStateFlow(false)
+        every { foregroundSyncController.recalcProgress } returns MutableStateFlow(null)
+        every {
+            observeDashboardStrainIncreaseUseCase.invoke(any(), any())
+        } returns flowOf(0.23f)
+        every {
+            observeDashboardRasIncreaseUseCase.invoke(any(), any())
+        } returns flowOf(null)
+        every { bodyTemperatureBaselineProvider.observeBaseline(any()) } returns flowOf(null)
+        coEvery { permissionChecker.hasBodyTemperaturePermission() } returns true
+        every {
+            getDashboardDataUseCase.invoke(
+                summary = summary,
+                prefs = preferences,
+                date = selectedDate,
+                lastSleepSession = null,
+                rasSummaries = listOf(summary),
+                circadianResult = CircadianConsistencyResult.MissingData,
+                heartRateSummary = null,
+                todayStrainIncrease = 0.23f,
+                todayRasIncrease = null,
+            )
+        } returns
+            Result.success(
+                GetDashboardDataUseCase.DashboardCards(
+                    cardDataMap = emptyMap(),
+                    rasDailyBreakdown = emptyList(),
+                ),
+            )
+    }
 
     protected fun configureDashboardFlows(
         isSyncing: MutableStateFlow<Boolean>,

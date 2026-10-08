@@ -94,6 +94,7 @@ fun createDashboardBasicInputsFlow(
     circadianRepository: CircadianConsistencyRepository,
     insightDismissalRepository: InsightDismissalRepository,
     bodyTemperatureBaselineProvider: BodyTemperatureBaselineProvider,
+    clock: java.time.Clock,
 ): Flow<DashboardBasicInputs> =
     combine(selectedDate, settingsRepository.userPreferences) { date, prefs -> date to prefs }
         .flatMapLatest { (date, prefs) ->
@@ -101,7 +102,7 @@ fun createDashboardBasicInputsFlow(
             // DailySummaryEntity.dateMidnightMs is written with, not the device zone, or the
             // summary/RAS/dismissal lookups can silently miss or hit the wrong day.
             val zoneId = prefs.scoringZone()
-            val today = LocalDate.now(zoneId)
+            val today = LocalDate.now(clock.withZone(zoneId))
 
             // Select appropriate summary flow based on whether date is today or historical
             val summaryFlow =

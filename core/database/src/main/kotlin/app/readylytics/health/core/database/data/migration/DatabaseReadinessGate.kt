@@ -3,9 +3,15 @@ package app.readylytics.health.core.database.data.migration
 import android.content.Context
 import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.database.data.security.SqlCipherKeyManager
+import app.readylytics.health.core.database.data.security.isPlaintextDatabase
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspector
+import dagger.Lazy
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -24,11 +30,11 @@ class DatabaseReadinessGate
         @Inject
         constructor(
             @ApplicationContext context: Context,
-            sqlCipherKeyManager: SqlCipherKeyManager,
+            sqlCipherKeyManager: Lazy<SqlCipherKeyManager>,
         ) : this(
             dbFile = context.getDatabasePath(DATABASE_NAME),
             inspectExistingDatabase = { file ->
-                sqlCipherKeyManager.withWritableDatabase(file) { database ->
+                sqlCipherKeyManager.get().withWritableDatabase(file) { database ->
                     val userVersion =
                         database.rawQuery("PRAGMA user_version", emptyArray<String>()).use { cursor ->
                             check(cursor.moveToFirst()) { "Database has no user_version" }
@@ -50,29 +56,44 @@ class DatabaseReadinessGate
             },
         )
 
-        override fun inspect(): DatabaseReadiness {
-            if (!dbFile.exists()) return DatabaseReadiness.Ready
+        private val mutableReadiness = MutableStateFlow<DatabaseReadiness>(DatabaseReadiness.Checking)
+        val readiness: StateFlow<DatabaseReadiness> = mutableReadiness.asStateFlow()
 
-            return try {
-                val state = inspectExistingDatabase(dbFile)
-                when (state.userVersion) {
-                    // Anything from the first Room-managed version up to the current one can be
-                    // opened directly: Room applies DatabaseMigrations.all itself. Gating this on
-                    // an exact match would lock the app out of its own schema the moment
-                    // DATABASE_VERSION is bumped.
-                    in ROOM_MANAGED_MIN_VERSION..CURRENT_DATABASE_VERSION -> DatabaseReadiness.Ready
-                    // v5/v6 predate the shadow-table rebuild, which runs outside Room in
-                    // V7DatabaseMigrator before the database may be opened at all.
-                    5, 6 -> DatabaseReadiness.MigrationRequired(state.userVersion)
-                    else ->
-                        DatabaseReadiness.Failed(
-                            "Unsupported database version: ${state.userVersion}",
-                        )
-                }
-            } catch (_: SqlCipherKeyManager.KeyDecryptionException) {
-                DatabaseReadiness.KeyCorrupted
-            } catch (e: Exception) {
-                DatabaseReadiness.Failed(e.message ?: "Database readiness inspection failed")
+        fun invalidate() {
+            mutableReadiness.value = DatabaseReadiness.Checking
+        }
+
+        override fun inspect(): DatabaseReadiness = inspectFile().also { mutableReadiness.value = it }
+
+        private fun inspectFile(): DatabaseReadiness = try {
+            when {
+                !dbFile.exists() -> DatabaseReadiness.Ready
+                isPlaintextDatabase(dbFile) -> DatabaseReadiness.EncryptionRequired
+                else -> inspectEncryptedDatabase()
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: SqlCipherKeyManager.KeyDecryptionException) {
+            DatabaseReadiness.KeyCorrupted
+        } catch (e: Exception) {
+            DatabaseReadiness.Failed(e.message ?: "Database readiness inspection failed")
+        }
+
+        private fun inspectEncryptedDatabase(): DatabaseReadiness {
+            val state = inspectExistingDatabase(dbFile)
+            return when (state.userVersion) {
+                // Anything from the first Room-managed version up to the current one can be
+                // opened directly: Room applies DatabaseMigrations.all itself. Gating this on
+                // an exact match would lock the app out of its own schema the moment
+                // DATABASE_VERSION is bumped.
+                in ROOM_MANAGED_MIN_VERSION..CURRENT_DATABASE_VERSION -> DatabaseReadiness.Ready
+                // v5/v6 predate the shadow-table rebuild, which runs outside Room in
+                // V7DatabaseMigrator before the database may be opened at all.
+                5, 6 -> DatabaseReadiness.MigrationRequired(state.userVersion)
+                else ->
+                    DatabaseReadiness.Failed(
+                        "Unsupported database version: ${state.userVersion}",
+                    )
             }
         }
 

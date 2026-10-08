@@ -42,6 +42,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.time.Clock
 import java.time.LocalDate
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -108,15 +109,15 @@ class WorkoutsViewModelLayoutManagementTest {
         WorkoutsViewModel(
             repositories =
                 WorkoutsRepositories(
-                    dailySummaryRepository,
-                    workoutRepository,
-                    heartRateRepository,
+                    dailySummary = dailySummaryRepository,
+                    workout = workoutRepository,
+                    heartRate = heartRateRepository,
+                    selectedDate = selectedDateRepository,
+                    settings = settingsRepo,
+                    layout = workoutsLayoutRepository,
                 ),
-            selectedDateRepository = selectedDateRepository,
             scoringCalculators = WorkoutsScoringCalculators(scoringCalculator, TrainingStressBalanceCalculator()),
-            settingsRepo = settingsRepo,
             foregroundSyncController = foregroundSyncController,
-            workoutsLayoutRepository = workoutsLayoutRepository,
             selectedRangeStore = WorkoutsSelectedRangeStore(SavedStateHandle()),
             dispatchers = WorkoutsDispatchers(testDispatcher, testDispatcher),
             useCases =
@@ -127,6 +128,7 @@ class WorkoutsViewModelLayoutManagementTest {
                         .GenerateResidualFatigueCurveUseCase(),
                     WorkoutsDistancePermissionGate { true },
                 ),
+            clock = Clock.systemDefaultZone(),
         )
 
     @After

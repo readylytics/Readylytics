@@ -96,7 +96,7 @@ class SqlCipherKeyManagerTest {
             .putString(SqlCipherKeyManager.PREF_IV, "corrupted")
             .commit()
 
-        // getOrCreateFactory should return a factory that throws during create()
+        // getOrCreateFactory should return a factory that defers key decryption until database access
         val factory = keyManager.getOrCreateFactory()
 
         assertThrows(KeyDecryptionException::class.java) {
@@ -115,7 +115,8 @@ class SqlCipherKeyManagerTest {
                             ) = Unit
                         },
                     ).build()
-            factory.create(configuration)
+            val helper = factory.create(configuration)
+            helper.writableDatabase
         }
 
         assertTrue(keyManager.isKeyCorrupted.value)

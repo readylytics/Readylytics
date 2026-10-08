@@ -66,7 +66,7 @@ fun DatabaseMigrationScreen(
                         text = guidanceText(readiness),
                         style = MaterialTheme.typography.bodyLarge,
                     )
-                    MigrationProgress(progress)
+                    MigrationProgress(if (readiness == DatabaseReadiness.EncryptionRequired) null else progress)
                     if (readiness is DatabaseReadiness.InsufficientSpace ||
                         readiness is DatabaseReadiness.Failed
                     ) {
@@ -88,9 +88,12 @@ fun DatabaseMigrationScreen(
 @Composable
 private fun guidanceText(readiness: DatabaseReadiness): String =
     when (readiness) {
+        DatabaseReadiness.Checking,
         DatabaseReadiness.Ready,
         is DatabaseReadiness.MigrationRequired,
         -> stringResource(R.string.database_migration_description)
+
+        DatabaseReadiness.EncryptionRequired -> stringResource(R.string.database_encryption_description)
 
         is DatabaseReadiness.InsufficientSpace -> {
             val bytesToFree = (readiness.requiredBytes - readiness.availableBytes).coerceAtLeast(0L)

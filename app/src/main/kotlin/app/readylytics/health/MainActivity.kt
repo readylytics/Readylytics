@@ -7,7 +7,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,7 +23,6 @@ import app.readylytics.health.benchmark.applyBenchmarkTestTagSemantics
 import app.readylytics.health.core.database.data.security.SqlCipherKeyManager
 import app.readylytics.health.core.model.data.preferences.AppTheme
 import app.readylytics.health.core.model.domain.backup.RestoreResult
-import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.crashreport.CachePrune
 import app.readylytics.health.crashreport.DiagnosticLogFileExport
@@ -33,11 +31,10 @@ import app.readylytics.health.data.backup.LocalRestoreManager
 import app.readylytics.health.di.ReleaseLogSink
 import app.readylytics.health.domain.migration.DatabaseMigrationController
 import app.readylytics.health.ui.crashreport.CrashReportPrompt
-import app.readylytics.health.ui.migration.DatabaseMigrationScreen
+import app.readylytics.health.ui.migration.DatabaseReadinessContent
 import app.readylytics.health.ui.navigation.AppNavHost
 import app.readylytics.health.ui.recovery.DatabaseRecoveryScreen
 import app.readylytics.health.ui.sync.SyncViewModel
-import app.readylytics.health.ui.theme.DatabaseReadinessTheme
 import app.readylytics.health.ui.theme.FitDashboardTheme
 import app.readylytics.health.util.SecureFileLogSink
 import dagger.Lazy
@@ -58,7 +55,7 @@ class MainActivity : ComponentActivity() {
     }
 
     @Inject
-    lateinit var sqlCipherKeyManager: SqlCipherKeyManager
+    lateinit var sqlCipherKeyManager: Lazy<SqlCipherKeyManager>
 
     @Inject
     lateinit var localRestoreManager: Lazy<LocalRestoreManager>
@@ -78,7 +75,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         lifecycleScope.launch(Dispatchers.IO) {
-            runCatching { sqlCipherKeyManager.validateKeyDecryption() }
+            runCatching { sqlCipherKeyManager.get().validateKeyDecryption() }
             CachePrune.pruneCacheDirectories(this@MainActivity)
             isKeyValidationComplete = true
         }
@@ -91,73 +88,52 @@ class MainActivity : ComponentActivity() {
             // Modifier.testTag-ed Compose nodes (see BenchmarkSemantics.kt).
             Box(modifier = Modifier.applyBenchmarkTestTagSemantics()) {
                 val migrationState by databaseMigrationController.state.collectAsStateWithLifecycle()
-                when (val readiness = migrationState.readiness) {
-                    DatabaseReadiness.Ready -> ReadylyticsContent(splashScreen)
-                    DatabaseReadiness.KeyCorrupted -> {
+                DatabaseReadinessContent(
+                    state = migrationState,
+                    onStartOrResume = databaseMigrationController::startOrResume,
+                    onSendDiagnostics = ::sendMigrationDiagnostics,
+                    readyContent = { ReadylyticsContent(splashScreen) },
+                    keyRecoveryContent = {
                         splashScreen.setKeepOnScreenCondition { false }
-                        val dbFile = remember { getDatabasePath("health_dashboard.db") }
-                        DatabaseReadinessTheme {
-                            DatabaseRecoveryScreen(
-                                onResetDatabase = {
-                                    sqlCipherKeyManager.resetKeyAndDatabase(dbFile)
-                                    recreate()
-                                },
-                                onRestoreBackup = { uri, onResult ->
-                                    lifecycleScope.launch {
-                                        val result = localRestoreManager.get().applyRestore(uri)
-                                        if (result is RestoreResult.Success ||
-                                            result is RestoreResult.SuccessRequiresRestart
-                                        ) {
-                                            onResult(true, null)
-                                        } else if (result is RestoreResult.Failure) {
-                                            onResult(false, getString(R.string.recovery_error_default))
-                                        }
-                                    }
-                                },
-                            )
-                        }
-                    }
-                    is DatabaseReadiness.MigrationRequired -> {
-                        LaunchedEffect(readiness) {
-                            databaseMigrationController.startOrResume()
-                        }
-                        DatabaseReadinessTheme {
-                            DatabaseMigrationScreen(
-                                readiness = readiness,
-                                progress = migrationState.progress,
-                                onRetry = databaseMigrationController::startOrResume,
-                                onSendDiagnostics = ::sendMigrationDiagnostics,
-                            )
-                        }
-                    }
-                    is DatabaseReadiness.InsufficientSpace,
-                    is DatabaseReadiness.Failed,
-                    -> {
-                        DatabaseReadinessTheme {
-                            DatabaseMigrationScreen(
-                                readiness = readiness,
-                                progress = migrationState.progress,
-                                onRetry = databaseMigrationController::startOrResume,
-                                onSendDiagnostics = ::sendMigrationDiagnostics,
-                            )
-                        }
-                    }
-                }
+                        KeyRecoveryContent()
+                    },
+                )
             }
         }
     }
 
     @androidx.compose.runtime.Composable
+    private fun KeyRecoveryContent() {
+        val dbFile = remember { getDatabasePath("health_dashboard.db") }
+        DatabaseRecoveryScreen(
+            onResetDatabase = {
+                sqlCipherKeyManager.get().resetKeyAndDatabase(dbFile)
+                recreate()
+            },
+            onRestoreBackup = { uri, onResult ->
+                lifecycleScope.launch {
+                    val result = localRestoreManager.get().applyRestore(uri)
+                    if (result is RestoreResult.Success || result is RestoreResult.SuccessRequiresRestart) {
+                        onResult(true, null)
+                    } else if (result is RestoreResult.Failure) {
+                        onResult(false, getString(R.string.recovery_error_default))
+                    }
+                }
+            },
+        )
+    }
+
+    @androidx.compose.runtime.Composable
     private fun ReadylyticsContent(splashScreen: androidx.core.splashscreen.SplashScreen) {
         val dbFile = remember { getDatabasePath("health_dashboard.db") }
-        val isDatabaseCorrupted by sqlCipherKeyManager.isKeyCorrupted.collectAsStateWithLifecycle()
+        val isDatabaseCorrupted by sqlCipherKeyManager.get().isKeyCorrupted.collectAsStateWithLifecycle()
 
         if (isDatabaseCorrupted) {
             splashScreen.setKeepOnScreenCondition { false }
             FitDashboardTheme {
                 DatabaseRecoveryScreen(
                     onResetDatabase = {
-                        sqlCipherKeyManager.resetKeyAndDatabase(dbFile)
+                        sqlCipherKeyManager.get().resetKeyAndDatabase(dbFile)
                         recreate()
                     },
                     onRestoreBackup = { uri, onResult ->

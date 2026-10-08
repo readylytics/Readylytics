@@ -18,6 +18,10 @@ enum class V7MigrationPhase {
 }
 
 sealed interface DatabaseReadiness {
+    data object Checking : DatabaseReadiness
+
+    data object EncryptionRequired : DatabaseReadiness
+
     data object Ready : DatabaseReadiness
 
     data class MigrationRequired(
@@ -59,6 +63,12 @@ fun DatabaseMigrationProgress.fraction(): Float {
     return ((phase.ordinal + rowFraction) / phaseCount).coerceIn(0f, 1f)
 }
 
+enum class DatabaseMigrationFailureKind {
+    RETRYABLE,
+    UNSUPPORTED_VERSION,
+    KEY_CORRUPTED,
+}
+
 sealed interface V7MigrationResult {
     data object Complete : V7MigrationResult
 
@@ -69,5 +79,6 @@ sealed interface V7MigrationResult {
 
     data class Failed(
         val reason: String,
+        val kind: DatabaseMigrationFailureKind = DatabaseMigrationFailureKind.RETRYABLE,
     ) : V7MigrationResult
 }

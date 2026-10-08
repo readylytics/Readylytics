@@ -1,6 +1,8 @@
 package app.readylytics.health.core.database.di
 
 import android.content.Context
+import android.content.pm.ApplicationInfo
+import android.os.StrictMode
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
@@ -39,45 +41,67 @@ abstract class DatabaseModule {
     companion object {
         @Provides
         @Singleton
-        @Suppress("SpreadOperator")
         fun provideDatabase(
             @ApplicationContext context: Context,
             sqlCipherKeyManager: SqlCipherKeyManager,
             databaseReadinessGate: DatabaseReadinessGate,
         ): HealthDatabase {
-            val dbFile = context.getDatabasePath("health_dashboard.db")
-            sqlCipherKeyManager.migrateIfNeeded(dbFile)
             requireDatabaseReady(databaseReadinessGate)
 
-            val builder =
-                Room
-                    .databaseBuilder<HealthDatabase>(context, "health_dashboard.db")
-                    .openHelperFactory(sqlCipherKeyManager.getOrCreateFactory())
-                    .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
-                    .setQueryCoroutineContext(Dispatchers.IO)
-                    .addMigrations(*DatabaseMigrations.all)
-                    .addCallback(
-                        object : RoomDatabase.Callback() {
-                            override fun onCreate(db: SupportSQLiteDatabase) {
-                                super.onCreate(db)
-                                db.execSQL("INSERT OR IGNORE INTO health_mutation_state VALUES (1, 0, NULL, NULL, 0)")
-                            }
-
-                            override fun onOpen(db: SupportSQLiteDatabase) {
-                                super.onOpen(db)
-                                db.execSQL("PRAGMA synchronous = NORMAL")
-                                db.execSQL("PRAGMA foreign_keys = ON")
-                            }
-                        },
+            val isDebug = (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+            val oldPolicy =
+                if (isDebug) {
+                    val current = StrictMode.getThreadPolicy()
+                    StrictMode.setThreadPolicy(
+                        StrictMode.ThreadPolicy
+                            .Builder(current)
+                            .detectDiskReads()
+                            .detectDiskWrites()
+                            .penaltyDeath()
+                            .build(),
                     )
+                    current
+                } else {
+                    null
+                }
 
-            return builder.build()
+            try {
+                val builder =
+                    Room
+                        .databaseBuilder<HealthDatabase>(context, "health_dashboard.db")
+                        .openHelperFactory(sqlCipherKeyManager.getOrCreateFactory())
+                        .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
+                        .setQueryCoroutineContext(Dispatchers.IO)
+
+                DatabaseMigrations.all.forEach { builder.addMigrations(it) }
+
+                builder.addCallback(
+                    object : RoomDatabase.Callback() {
+                        override fun onCreate(db: SupportSQLiteDatabase) {
+                            super.onCreate(db)
+                            db.execSQL("INSERT OR IGNORE INTO health_mutation_state VALUES (1, 0, NULL, NULL, 0)")
+                        }
+
+                        override fun onOpen(db: SupportSQLiteDatabase) {
+                            super.onOpen(db)
+                            db.execSQL("PRAGMA synchronous = NORMAL")
+                            db.execSQL("PRAGMA foreign_keys = ON")
+                        }
+                    },
+                )
+
+                return builder.build()
+            } finally {
+                if (oldPolicy != null) {
+                    StrictMode.setThreadPolicy(oldPolicy)
+                }
+            }
         }
     }
 }
 
 fun requireDatabaseReady(databaseReadinessGate: DatabaseReadinessGate) {
-    check(databaseReadinessGate.inspect() == DatabaseReadiness.Ready) {
+    check(databaseReadinessGate.readiness.value == DatabaseReadiness.Ready) {
         "HealthDatabase cannot open before the external v7 migration is complete"
     }
 }
