@@ -1,7 +1,12 @@
 package app.readylytics.health.feature.workouts
 
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import app.readylytics.health.core.designsystem.FitDashboardTheme
 import app.readylytics.health.core.model.domain.preferences.UnitSystem
@@ -105,5 +110,26 @@ class WorkoutPerformanceChartsTest {
 
         composeRule.onNodeWithText("Pace Profile").assertIsDisplayed()
         composeRule.onNodeWithText("Elevation Profile").assertIsDisplayed()
+    }
+
+    @Test
+    fun workoutPerformanceCharts_exposeAccessibilitySemanticsOnBothCanvases() {
+        composeRule.setContent {
+            FitDashboardTheme {
+                WorkoutPerformanceCharts(
+                    paceSpeedData = listOf(0.0 to 5.5, 1.0 to 5.2),
+                    elevationData = listOf(0.0 to 100.0, 1.0 to 120.0),
+                    isPaceMode = true,
+                )
+            }
+        }
+
+        listOf("PaceSpeedChartCanvas", "ElevationChartCanvas").forEach { tag ->
+            composeRule
+                .onNodeWithTag(tag)
+                .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.ContentDescription))
+                .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.StateDescription))
+                .assert(SemanticsMatcher.keyIsDefined(SemanticsActions.CustomActions))
+        }
     }
 }
