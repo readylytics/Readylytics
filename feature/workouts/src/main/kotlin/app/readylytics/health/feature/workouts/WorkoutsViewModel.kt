@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -97,6 +97,16 @@ class WorkoutsViewModel
         // data reload.
         private val selectedTrainingLoadMetricState = MutableStateFlow(TrainingLoadMetric.ACWR)
 
+        private val chromeState =
+            combine(
+                foregroundSyncController.isSyncing,
+                isRangeChangingState,
+                selectedTrainingLoadMetricState,
+                createWorkoutsLayoutStateFlow(cardStateFlow, chartStateFlow, historyStateFlow),
+            ) { syncing, rangeChanging, metric, layout ->
+                WorkoutsChromeState(syncing, rangeChanging, metric, layout)
+            }.distinctUntilChanged()
+
         private val _currentPage = MutableStateFlow(1)
         val currentPage = _currentPage.asStateFlow()
 
@@ -120,34 +130,9 @@ class WorkoutsViewModel
                 .combine(dataLoader.boundaryPreferences) { params, boundary -> params to boundary }
                 .flatMapLatest { (params, boundary) -> dataLoader.observeState(params, zoneId = boundary.first) }
                 .distinctUntilChanged()
-                .map { state ->
-                    isRangeChangingState.value = false
-                    state
-                }.combine(foregroundSyncController.isSyncing) { state, syncing ->
-                    state.copy(
-                        isLoading = syncing && (state.latestSummary == null && state.recentWorkouts.isEmpty()),
-                        isRefreshing = syncing,
-                    )
-                }.combine(isRangeChangingState) { state, isChanging ->
-                    state.copy(isRangeChanging = isChanging)
-                }.combine(selectedTrainingLoadMetricState) { state, metric ->
-                    state.copy(selectedTrainingLoadMetric = metric)
-                }.combine(cardStateFlow) { state, cardState ->
-                    state.copy(
-                        cardConfigurations = cardState.pendingConfiguration ?: cardState.cardConfigurations,
-                        isManagingCards = cardState.isManagingCards,
-                    )
-                }.combine(chartStateFlow) { state, chartState ->
-                    state.copy(
-                        chartConfigurations = chartState.pendingConfiguration ?: chartState.chartConfigurations,
-                        isManagingCharts = chartState.isManagingCharts,
-                    )
-                }.combine(historyStateFlow) { state, historyState ->
-                    state.copy(
-                        historyConfigurations = historyState.pendingConfiguration ?: historyState.historyConfigurations,
-                        isManagingHistory = historyState.isManagingHistory,
-                    )
-                }.flowOn(dispatchers.default)
+                .onEach { isRangeChangingState.value = false }
+                .combine(chromeState) { state, chrome -> chrome.applyTo(state) }
+                .flowOn(dispatchers.default)
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5_000),

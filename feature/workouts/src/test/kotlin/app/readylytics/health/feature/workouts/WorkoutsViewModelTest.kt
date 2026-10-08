@@ -3,6 +3,7 @@ package app.readylytics.health.feature.workouts
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.model.RecordType
 import app.readylytics.health.core.model.domain.repository.WorkoutData
+import app.readylytics.health.core.ui.common.TimeRange
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.verify
@@ -12,8 +13,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.ZoneId
 
@@ -174,5 +177,24 @@ class WorkoutsViewModelTest : WorkoutsViewModelTestFixture() {
             }
 
             collectJob.cancel()
+        }
+
+    @Test
+    fun `range change during an active sync clears the range-changing flag once data reloads`() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            testScheduler.advanceUntilIdle()
+
+            viewModel.onRangeSelected(TimeRange.THIRTY_DAYS)
+            isSyncingFlow.value = true
+            testScheduler.advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertFalse(state.isRangeChanging)
+            assertTrue(state.isRefreshing)
+            assertEquals(TimeRange.THIRTY_DAYS, viewModel.selectedRange.value)
+
+            collectJob.cancelAndJoin()
         }
 }

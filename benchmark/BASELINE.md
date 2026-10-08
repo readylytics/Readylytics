@@ -838,3 +838,19 @@ All 27 connected tests passed on the target device with zero failures, errors, o
 
 - **Architecture Tests:** `DatabaseProvisionArchitectureTest` passes; static verification confirms `DatabaseModule.kt` contains no forbidden disk IO, key retrieval, file checks, or `System.loadLibrary` calls in `provideDatabase`.
 - **Unit Suite:** All 4,515 unit tests across the project pass (`BUILD SUCCESSFUL`), including `DeferredSqlCipherOpenHelperTest`, `DatabaseProvisionGuardTest`, and `SqlCipherKeyManagerTest`.
+
+## Phase 5 — WP-21 Workouts state pipeline (UI-101) (2026-10-08)
+
+### Structural change (by construction, JVM-verified)
+- **Before:** after the data pipeline, `WorkoutsViewModel.uiState` ran six chained `combine` stages
+  (`isSyncing`, `isRangeChanging`, training-load metric, card, chart, history layout), each a
+  `WorkoutsUiState.copy(...)` — **6 state copies per chrome emission** (e.g. one `isSyncing` tick).
+- **After:** chrome inputs merge into `WorkoutsChromeState` (two small `combine`s over holder types)
+  and reach the data state through one `WorkoutsChromeState.applyTo` — **1 state copy per chrome emission**.
+- **Equivalence:** `WorkoutsChromeStateTest` asserts `applyTo` equals the legacy six-copy chain over the
+  full input matrix (data present/absent × syncing × range-changing × metric × pending layout).
+- `WorkoutsUiState`, `WorkoutsChromeState` and `WorkoutsLayoutState` are `@Immutable`.
+
+### Device recomposition count (§11 measurement 11) — PENDING
+Recomposition count of the Workouts list during 30 s of simulated sync ticking requires a connected
+device and a recomposition-counting journey that `:benchmark` does not have yet. Not run; no number is claimed.
