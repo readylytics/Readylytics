@@ -271,17 +271,26 @@ class SqlCipherKeyManager
             }
         }
 
+        /** Reclaims only abandoned export files, serialized with every live plaintext export. */
+        fun discardStalePlaintextExport(dbFile: File) {
+            withCrossProcessKeyLock { PlaintextDatabaseExporter().discardStaleTarget(dbFile) }
+        }
+
         /**
-         * Detects if the database file is plaintext (SQLite format) and migrates it to encrypted format.
-         * Checks the first 16 bytes for SQLite magic header; if found, performs migration.
+         * Encrypts plaintext SQLite files while holding the key lock through the closed-target
+         * cutover. [beforeReplace] must not call key-manager methods that acquire that lock.
          */
         fun migrateIfNeeded(dbFile: File, beforeReplace: () -> Unit = {}) {
-            if (isPlaintextDatabase(dbFile)) {
-                val rawKey = getOrCreateDbKey()
-                try {
-                    PlaintextDatabaseExporter().export(dbFile, rawKey, beforeReplace)
-                } finally {
-                    rawKey.fill(0)
+            // One acquisition covers the complete export, so preflight reclamation in another
+            // worker/process cannot unlink a live target. Callbacks must not reenter key access.
+            withCrossProcessKeyLock {
+                if (isPlaintextDatabase(dbFile)) {
+                    val rawKey = getOrCreateDbKeyLocked()
+                    try {
+                        PlaintextDatabaseExporter().export(dbFile, rawKey, beforeReplace)
+                    } finally {
+                        rawKey.fill(0)
+                    }
                 }
             }
         }
@@ -295,7 +304,7 @@ class SqlCipherKeyManager
             destFile: File,
         ) {
             if (!dbFile.exists()) return
-            val rawKey = getOrCreateDbKey()
+            val rawKey = withCrossProcessKeyLock { getOrCreateDbKeyLocked() }
             try {
                 // Raw key must be passed as bytes, not a String: see withWritableDatabase.
                 val rawKeyBytes = "x'${rawKey.toHex()}'".toByteArray(Charsets.UTF_8)
@@ -353,7 +362,7 @@ class SqlCipherKeyManager
          * both from scratch (the recovery path behind DatabaseRecoveryScreen).
          *
          * Holds the same cross-process lock as [getOrCreateDbKey]: the key *removal* needs the
-         * identical treatment as the key *write*, otherwise a concurrent getOrCreateDbKey() in
+         * identical treatment as the key *write*, otherwise concurrent key retrieval in
          * another thread/process can interleave with a reset and read a stale key against an
          * already-deleted DB file (or vice versa). The removal is likewise `commit = true` so it
          * is durably on disk before the lock is released.
@@ -373,15 +382,12 @@ class SqlCipherKeyManager
             }
         }
 
-        private fun getOrCreateDbKey(): ByteArray =
-            withCrossProcessKeyLock { getOrCreateDbKeyLocked() }
-
         /**
-         * Unlocked core of [getOrCreateDbKey]. Callable only from inside a block already holding
+         * Key retrieval core. Callable only from inside a block already holding
          * [withCrossProcessKeyLock] (e.g. from [withWritableDatabase] or [getOrCreateFactory],
          * which need the key fetch and the subsequent physical file open covered by one single
-         * lock acquisition) -- [withCrossProcessKeyLock] is documented non-reentrant, so calling
-         * the locked [getOrCreateDbKey] from within an already-held lock would throw
+         * lock acquisition) -- [withCrossProcessKeyLock] is documented non-reentrant, so taking
+         * another key lock from within an already-held lock would throw
          * [java.nio.channels.OverlappingFileLockException].
          */
         private fun getOrCreateDbKeyLocked(): ByteArray =
@@ -400,7 +406,7 @@ class SqlCipherKeyManager
             }
 
         @androidx.annotation.VisibleForTesting
-        fun getOrCreateDbKeyForTest(): ByteArray = getOrCreateDbKey()
+        fun getOrCreateDbKeyForTest(): ByteArray = withCrossProcessKeyLock { getOrCreateDbKeyLocked() }
 
         companion object {
             private const val KEYSTORE_ALIAS = "sqlcipher_db_key"

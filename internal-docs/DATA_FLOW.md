@@ -386,12 +386,16 @@ plaintext is `EncryptionRequired`; encrypted v5/v6 is `MigrationRequired`, encry
 without IO. `DatabaseModule` continues to guard existing databases before Room construction.
 `DatabasePreparationRunner` performs inspection, plaintext read-only version validation, export,
 and any external v7 preparation inside the injected IO dispatcher. Plaintext versions outside
-5..23 are rejected before export. Encryption preflight reserves source file plus WAL bytes, 25%
-overhead, and 64 MiB; insufficient space leaves the original and target unopened. The key manager
-acquires/zeros the raw key using the existing key-lock protocol and delegates native handles and
-file cutover to `PlaintextDatabaseExporter`. Retry removes an incomplete `.cipher_tmp` and its
-WAL/SHM/journal sidecars; export reads the source's committed WAL without changing its journal
-mode, explicitly copies `user_version`, validates the target, and closes native handles before
+5..23 are rejected before export. Before measuring free bytes, preparation reclaims only abandoned
+`.cipher_tmp` and its WAL/SHM/journal sidecars through the key manager. Reclamation and the complete plaintext export
+share its existing JVM ReentrantLock/cross-process FileLock; a live target cannot be unlinked by
+another manager/process. Export takes one acquisition, uses the unlocked key-fetch core internally,
+and keeps raw-key zeroing in finally; the post-close cutover callback must not reenter key access.
+The lock's export scope is deliberately extended for this serialization. Encryption preflight then
+remeasures space, reserving source file plus original WAL bytes, 25% overhead, and 64 MiB;
+insufficient space leaves the original database/WAL intact and opens no new target. The key manager
+delegates native handles and file cutover to `PlaintextDatabaseExporter`; export reads the source's
+committed WAL without changing its journal mode, explicitly copies `user_version`, validates the target, and closes native handles before
 checking cancellation and atomically replacing the source. A cancellation or failure before
 replacement leaves committed source data usable. Encrypted Room-managed files bypass both export
 and the external migrator. Preparation re-inspects and reports complete only for actual `Ready`;
@@ -433,7 +437,13 @@ since WorkManager replays a previous run's terminal record on cold start. `Datab
 withholds normal Room-backed content until ready, shows an indeterminate migration screen while
 checking without scheduling work, and schedules the existing unique worker for encryption or
 v5/v6 migration. Encryption uses preparation guidance and indeterminate progress with no new
-persisted migration phase; existing notification, progress, and failure keys remain unchanged.
+persisted migration phase; existing notification/progress and space-failure keys remain unchanged.
+`V7MigrationResult.Failed` defaults to retryable for existing v7 callers. Plaintext unsupported
+versions and key-decryption failures carry typed permanent failure kinds; the worker terminates
+with `failureKind` output metadata, and the controller maps them to existing failure/key-recovery
+content even while the source still has a plaintext header. Actual Ready overrides stale permanent
+failure metadata. Transient failures retain WorkManager's existing 30-second EXPONENTIAL backoff;
+no new attempt-count cap is introduced.
 Version 4 adds
 the metadata-only `audit_events` table; it does not change Health Connect
 ingestion tables or scoring formulas. Version 5 adds two nullable `daily_summaries` columns,

@@ -3,12 +3,15 @@ package app.readylytics.health.data.migration
 import app.readylytics.health.core.database.data.migration.DatabaseReadinessGate
 import app.readylytics.health.core.database.data.migration.ExistingDatabaseState
 import app.readylytics.health.core.database.data.security.SqlCipherKeyManager
+import app.readylytics.health.core.model.domain.migration.DatabaseMigrationFailureKind
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.migration.V7MigrationResult
 import dagger.Lazy
+import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.CancellationException
@@ -28,7 +31,10 @@ import kotlin.test.assertIs
 @OptIn(ExperimentalCoroutinesApi::class)
 class DatabasePreparationRunnerTest {
     @get:Rule val temporaryFolder = TemporaryFolder()
-    private val keyManager = mockk<SqlCipherKeyManager>()
+    private val keyManager =
+        mockk<SqlCipherKeyManager> {
+            every { discardStalePlaintextExport(any()) } just Runs
+        }
     private val migrator = mockk<V7DatabaseMigrator>()
     private val file by lazy { temporaryFolder.newFile("fixture.db") }
     private var version = 6
@@ -90,9 +96,47 @@ class DatabasePreparationRunnerTest {
             file.writeBytes("SQLite format 3\u0000".encodeToByteArray())
             for (unsupported in listOf(4, 24)) {
                 version = unsupported
-                assertIs<V7MigrationResult.Failed>(runner(StandardTestDispatcher(testScheduler)).run {})
+                assertEquals(
+                    DatabaseMigrationFailureKind.UNSUPPORTED_VERSION,
+                    assertIs<V7MigrationResult.Failed>(runner(StandardTestDispatcher(testScheduler)).run {}).kind,
+                )
             }
             verify(exactly = 0) { keyManager.migrateIfNeeded(any(), any()) }
+        }
+
+    @Test
+    fun plaintextCorruptKeyProducesPermanentRecoveryFailure() =
+        runTest {
+            file.writeBytes("SQLite format 3\u0000".encodeToByteArray())
+            every { keyManager.migrateIfNeeded(file, any()) } throws
+                SqlCipherKeyManager.KeyDecryptionException("corrupt")
+            val failure = assertIs<V7MigrationResult.Failed>(runner(StandardTestDispatcher(testScheduler)).run {})
+            assertEquals(DatabaseMigrationFailureKind.KEY_CORRUPTED, failure.kind)
+            assertEquals("SQLite format 3\u0000", file.readText())
+        }
+
+    @Test
+    fun spacePreflightRemeasuresAfterReclaimingOnlyAbandonedTarget() =
+        runTest {
+            version = 23
+            file.writeBytes("SQLite format 3\u0000".encodeToByteArray())
+            val wal = temporaryFolder.newFile("fixture.db-wal").apply { writeText("committed original wal") }
+            val stale =
+                temporaryFolder
+                    .newFile(
+                        "fixture.db.cipher_tmp",
+                    ).apply { writeText("allocated abandoned export") }
+            val space: (java.io.File) -> Long = { if (stale.exists()) 0L else Long.MAX_VALUE }
+            assertEquals(0L, space(file))
+            every { keyManager.discardStalePlaintextExport(file) } answers {
+                check(stale.delete()) { "test stale export was not reclaimed" }
+            }
+            every { keyManager.migrateIfNeeded(file, any()) } answers { file.writeText("encrypted") }
+            assertEquals(
+                V7MigrationResult.Complete,
+                runner(StandardTestDispatcher(testScheduler), spaceReader = space).run {},
+            )
+            assertEquals("committed original wal", wal.readText())
         }
 
     @Test
@@ -132,5 +176,6 @@ class DatabasePreparationRunnerTest {
     private fun runner(
         dispatcher: kotlinx.coroutines.CoroutineDispatcher,
         available: Long = Long.MAX_VALUE,
-    ) = DatabasePreparationRunner(file, gate, keyManager, Lazy { migrator }, dispatcher, { available }, { version })
+        spaceReader: (java.io.File) -> Long = { available },
+    ) = DatabasePreparationRunner(file, gate, keyManager, Lazy { migrator }, dispatcher, spaceReader, { version })
 }

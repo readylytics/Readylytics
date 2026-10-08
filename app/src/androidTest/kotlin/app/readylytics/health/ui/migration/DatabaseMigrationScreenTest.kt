@@ -1,11 +1,12 @@
 package app.readylytics.health.ui.migration
 
+import androidx.compose.material3.Text
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasProgressBarRangeInfo
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -29,9 +30,7 @@ class DatabaseMigrationScreenTest {
         var recovery = 0
         composeRule.setContent {
             DatabaseReadinessContent(
-                state =
-                    app.readylytics.health.domain.migration
-                        .DatabaseMigrationUiState(DatabaseReadiness.Checking),
+                state = DatabaseMigrationUiState(DatabaseReadiness.Checking),
                 onStartOrResume = { scheduled++ },
                 onSendDiagnostics = {},
                 readyContent = { normal++ },
@@ -67,6 +66,38 @@ class DatabaseMigrationScreenTest {
             ).assertIsDisplayed()
         composeRule.onNode(hasProgressBarRangeInfo(ProgressBarRangeInfo.Indeterminate)).assertIsDisplayed()
         composeRule.runOnIdle { assertEquals(1, scheduled) }
+    }
+
+    @Test
+    fun terminalKeyCorruptionRoutesRecoveryWithoutSchedulingPreparation() {
+        var scheduled = 0
+        composeRule.setContent {
+            DatabaseReadinessContent(
+                DatabaseMigrationUiState(DatabaseReadiness.KeyCorrupted),
+                { scheduled++ },
+                {},
+                readyContent = { error("database must remain gated") },
+                keyRecoveryContent = { Text("Fixture key recovery") },
+            )
+        }
+        composeRule.onNodeWithText("Fixture key recovery").assertIsDisplayed()
+        composeRule.runOnIdle { assertEquals(0, scheduled) }
+    }
+
+    @Test
+    fun terminalUnsupportedVersionShowsFailureWithoutSchedulingPreparation() {
+        var scheduled = 0
+        composeRule.setContent {
+            DatabaseReadinessContent(
+                DatabaseMigrationUiState(DatabaseReadiness.Failed("unsupported version")),
+                { scheduled++ },
+                {},
+                readyContent = { error("database must remain gated") },
+                keyRecoveryContent = { error("unsupported version is not key corruption") },
+            )
+        }
+        composeRule.onNodeWithText("Retry").assertIsDisplayed()
+        composeRule.runOnIdle { assertEquals(0, scheduled) }
     }
 
     @Test

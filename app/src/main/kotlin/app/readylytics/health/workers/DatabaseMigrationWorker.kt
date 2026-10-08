@@ -7,6 +7,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import app.readylytics.health.core.model.domain.migration.DatabaseMigrationFailureKind
 import app.readylytics.health.core.model.domain.migration.DatabaseMigrationProgress
 import app.readylytics.health.core.model.domain.migration.V7MigrationPhase
 import app.readylytics.health.core.model.domain.migration.V7MigrationResult
@@ -48,7 +49,7 @@ class DatabaseMigrationWorker
                                 KEY_AVAILABLE_BYTES to result.availableBytes,
                             ),
                         )
-                    is V7MigrationResult.Failed -> Result.retry()
+                    is V7MigrationResult.Failed -> failureResult(result)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -56,6 +57,13 @@ class DatabaseMigrationWorker
                 Result.retry()
             }
         }
+
+        private fun failureResult(failure: V7MigrationResult.Failed): Result =
+            if (failure.kind == DatabaseMigrationFailureKind.RETRYABLE) {
+                Result.retry()
+            } else {
+                Result.failure(workDataOf(KEY_FAILURE_KIND to failure.kind.name))
+            }
 
         override suspend fun getForegroundInfo(): ForegroundInfo = buildForegroundInfo(PREFLIGHT_PROGRESS)
 
@@ -78,6 +86,7 @@ class DatabaseMigrationWorker
         }
 
         companion object {
+            const val KEY_FAILURE_KIND = "failureKind"
             const val KEY_PHASE = "phase"
             const val KEY_COPIED_ROWS = "copiedRows"
             const val KEY_TOTAL_ROWS = "totalRows"

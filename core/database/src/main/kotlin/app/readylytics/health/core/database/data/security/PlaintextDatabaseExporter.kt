@@ -23,6 +23,10 @@ internal fun isPlaintextDatabase(dbFile: File): Boolean {
 
 /** The source (including committed WAL data) remains authoritative until atomic replacement. */
 internal class PlaintextDatabaseExporter {
+    fun discardStaleTarget(dbFile: File) {
+        deleteTarget(File(dbFile.parentFile, "${dbFile.name}.cipher_tmp"))
+    }
+
     fun export(dbFile: File, rawKey: ByteArray, beforeReplace: () -> Unit) {
         val target = File(dbFile.parentFile, "${dbFile.name}.cipher_tmp")
         deleteTarget(target)

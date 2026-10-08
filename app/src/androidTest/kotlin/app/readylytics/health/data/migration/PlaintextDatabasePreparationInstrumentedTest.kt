@@ -14,6 +14,7 @@ import app.readylytics.health.core.database.data.migration.DatabaseReadinessGate
 import app.readylytics.health.core.database.data.migration.ExistingDatabaseState
 import app.readylytics.health.core.database.data.security.AndroidKeystoreKeyProvider
 import app.readylytics.health.core.database.data.security.SqlCipherKeyManager
+import app.readylytics.health.core.model.domain.migration.DatabaseMigrationFailureKind
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.migration.V7MigrationPhase
 import app.readylytics.health.core.model.domain.migration.V7MigrationResult
@@ -22,6 +23,7 @@ import io.mockk.every
 import io.mockk.spyk
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.junit.After
@@ -33,6 +35,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
 import java.util.UUID
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class PlaintextDatabasePreparationInstrumentedTest {
@@ -100,7 +104,6 @@ class PlaintextDatabasePreparationInstrumentedTest {
                     keyManager.migrateIfNeeded(source) {
                         assertTrue(Looper.myLooper() != Looper.getMainLooper())
                         assertNoExportHandle(source)
-                        assertExportHasNoWriterLock(source)
                         throw CancellationException("before replacement")
                     }
                 }
@@ -125,7 +128,6 @@ class PlaintextDatabasePreparationInstrumentedTest {
                 withContext(Dispatchers.IO) {
                     keyManager.migrateIfNeeded(source) {
                         assertNoExportHandle(source)
-                        assertExportHasNoWriterLock(source)
                         throw IllegalStateException("cutover failure")
                     }
                 }
@@ -196,6 +198,96 @@ class PlaintextDatabasePreparationInstrumentedTest {
         }
 
     @Test
+    fun successfulCutoverPreservesOutstandingWalWithOriginalWriterOpen() =
+        runBlocking {
+            val source = createPlaintext(23, pendingWalRow = true)
+            assertTrue(File("$source-wal").length() > 0)
+            val writer = writers.getValue(source)
+            assertTrue(writer.isOpen)
+            assertEquals(V7MigrationResult.Complete, runner(source).first.run {})
+            assertTrue(writer.isOpen)
+            assertFalse(hasPlaintextHeader(source))
+            assertFixtureRows(source, encrypted = true)
+            assertEquals(23, readUserVersionAfterRoomOpen(source))
+            writers.remove(source)!!.close()
+            assertFixtureRows(source, encrypted = true)
+            assertEquals(23, readUserVersionAfterRoomOpen(source))
+        }
+
+    @Test
+    fun reclamationMakesInsufficientPreflightSpaceSufficient() =
+        runBlocking {
+            val source = createPlaintext(23, pendingWalRow = false)
+            val stale = File("$source.cipher_tmp").apply { writeBytes(ByteArray(1024)) }
+            listOf("-wal", "-shm", "-journal").forEach { File("$source.cipher_tmp$it").writeText("abandoned") }
+            val space: (File) -> Long = { if (stale.exists()) 0L else Long.MAX_VALUE }
+            assertEquals(0L, space(source))
+            assertEquals(V7MigrationResult.Complete, runner(source, spaceReader = space).first.run {})
+            assertFalse(stale.exists())
+            assertFixtureRows(source, encrypted = true)
+        }
+
+    @Test
+    fun reclaimFromAnotherManagerWaitsForLiveExportToReleaseKeyLock() =
+        runBlocking {
+            val source = createPlaintext(23, pendingWalRow = false)
+            val replacementReady = CountDownLatch(1)
+            val allowCancellation = CountDownLatch(1)
+            val cleanupStarted = CountDownLatch(1)
+            val cleanupFinished = CountDownLatch(1)
+            val exporter =
+                async(Dispatchers.IO) {
+                    expectCancellation {
+                        keyManager.migrateIfNeeded(source) {
+                            replacementReady.countDown()
+                            check(allowCancellation.await(10, TimeUnit.SECONDS)) { "test did not release export" }
+                            throw CancellationException("cancel locked export")
+                        }
+                    }
+                }
+            try {
+                assertTrue(replacementReady.await(10, TimeUnit.SECONDS))
+                val otherManager = SqlCipherKeyManager(keyContext, AndroidKeystoreKeyProvider())
+                val cleanup =
+                    async(Dispatchers.IO) {
+                        cleanupStarted.countDown()
+                        otherManager.discardStalePlaintextExport(source)
+                        cleanupFinished.countDown()
+                    }
+                try {
+                    assertTrue(cleanupStarted.await(10, TimeUnit.SECONDS))
+                    assertFalse("cleanup must wait for live export", cleanupFinished.await(200, TimeUnit.MILLISECONDS))
+                    assertTrue(File("$source.cipher_tmp").exists())
+                } finally {
+                    allowCancellation.countDown()
+                }
+                exporter.await()
+                cleanup.await()
+                assertTrue(hasPlaintextHeader(source))
+                assertFixtureRows(source, encrypted = false)
+            } finally {
+                allowCancellation.countDown()
+            }
+        }
+
+    @Test
+    fun corruptKeyOnPlaintextProducesTypedRecoveryWithoutReplacingOriginal() =
+        runBlocking {
+            val source = createPlaintext(23, pendingWalRow = false)
+            keyContext
+                .getSharedPreferences(SqlCipherKeyManager.PREF_FILE_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putString(SqlCipherKeyManager.PREF_ENCRYPTED_KEY, "invalid")
+                .commit()
+            val original = source.readBytes()
+            assertEquals(DatabaseReadiness.EncryptionRequired, runner(source).second.inspect())
+            val result = runner(source).first.run {} as V7MigrationResult.Failed
+            assertEquals(DatabaseMigrationFailureKind.KEY_CORRUPTED, result.kind)
+            assertTrue(original.contentEquals(source.readBytes()))
+            assertTrue(hasPlaintextHeader(source))
+        }
+
+    @Test
     fun missingFileDoesNotCreateAFile() =
         runBlocking {
             val file = context.getDatabasePath("preparation-$token-missing.db")
@@ -220,7 +312,8 @@ class PlaintextDatabasePreparationInstrumentedTest {
             val source = createPlaintext(23, pendingWalRow = false)
             SQLiteDatabase.openDatabase(source.path, null, SQLiteDatabase.OPEN_READWRITE).use { it.version = 24 }
             val original = source.readBytes()
-            assertTrue(runner(source).first.run {} is V7MigrationResult.Failed)
+            val result = runner(source).first.run {} as V7MigrationResult.Failed
+            assertEquals(DatabaseMigrationFailureKind.UNSUPPORTED_VERSION, result.kind)
             assertTrue(original.contentEquals(source.readBytes()))
             assertFalse(File("$source.cipher_tmp").exists())
         }
@@ -252,6 +345,10 @@ class PlaintextDatabasePreparationInstrumentedTest {
         val file = context.getDatabasePath(name)
         val database = SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READWRITE)
         database.enableWriteAheadLogging()
+        database.rawQuery("PRAGMA wal_autocheckpoint = 0", null).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(0, cursor.getInt(0))
+        }
         if (version == 23) {
             database.execSQL(
                 "INSERT INTO health_source_records (id, sourceRecordId, recordType, createdAtMs) " +
@@ -361,6 +458,7 @@ class PlaintextDatabasePreparationInstrumentedTest {
     private fun runner(
         file: File,
         available: Long = Long.MAX_VALUE,
+        spaceReader: (File) -> Long = { available },
     ): Pair<DatabasePreparationRunner, DatabaseReadinessGate> {
         val gate =
             DatabaseReadinessGate(file) { source ->
@@ -372,9 +470,7 @@ class PlaintextDatabasePreparationInstrumentedTest {
             keyManager,
             Lazy { V7DatabaseMigrator(keyManager, file) },
             Dispatchers.IO,
-            {
-                available
-            },
+            spaceReader,
             { source ->
                 SQLiteDatabase
                     .openDatabase(
@@ -414,13 +510,6 @@ class PlaintextDatabasePreparationInstrumentedTest {
         synchronized(databases) {
             val handles = databases.keys.filterIsInstance<net.zetetic.database.sqlcipher.SQLiteDatabase>()
             assertFalse(handles.any { it.path == "$source.cipher_tmp" && it.isOpen })
-        }
-    }
-
-    private fun assertExportHasNoWriterLock(source: File) {
-        keyManager.withWritableDatabase(File("$source.cipher_tmp")) { database ->
-            database.rawExecSQL("BEGIN EXCLUSIVE")
-            database.rawExecSQL("ROLLBACK")
         }
     }
 

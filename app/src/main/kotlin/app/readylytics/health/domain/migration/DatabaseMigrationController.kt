@@ -4,6 +4,7 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import app.readylytics.health.core.model.di.ApplicationScope
 import app.readylytics.health.core.model.di.IoDispatcher
+import app.readylytics.health.core.model.domain.migration.DatabaseMigrationFailureKind
 import app.readylytics.health.core.model.domain.migration.DatabaseMigrationProgress
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspector
@@ -61,13 +62,16 @@ class DatabaseMigrationControllerImpl
             val readiness = databaseReadinessInspector.inspect()
             val workInfo = workInfos.firstOrNull()
             return when {
-                readiness == DatabaseReadiness.Ready -> DatabaseMigrationUiState(readiness)
+                readiness == DatabaseReadiness.Ready || readiness == DatabaseReadiness.KeyCorrupted ->
+                    DatabaseMigrationUiState(readiness)
                 workInfo?.state == WorkInfo.State.FAILED -> DatabaseMigrationUiState(failureReadiness(workInfo))
                 else -> DatabaseMigrationUiState(readiness, activeProgress(workInfo))
             }
         }
 
         private fun failureReadiness(workInfo: WorkInfo): DatabaseReadiness {
+            val failureKind = workInfo.outputData.getString(DatabaseMigrationWorker.KEY_FAILURE_KIND)
+            if (failureKind == DatabaseMigrationFailureKind.KEY_CORRUPTED.name) return DatabaseReadiness.KeyCorrupted
             val required = workInfo.outputData.getLong(DatabaseMigrationWorker.KEY_REQUIRED_BYTES, MISSING_BYTES)
             val available = workInfo.outputData.getLong(DatabaseMigrationWorker.KEY_AVAILABLE_BYTES, MISSING_BYTES)
             return if (required != MISSING_BYTES && available != MISSING_BYTES) {

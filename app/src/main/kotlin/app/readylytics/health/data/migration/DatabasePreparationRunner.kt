@@ -6,6 +6,7 @@ import android.os.StatFs
 import app.readylytics.health.core.database.data.migration.DatabaseReadinessGate
 import app.readylytics.health.core.database.data.security.SqlCipherKeyManager
 import app.readylytics.health.core.model.di.IoDispatcher
+import app.readylytics.health.core.model.domain.migration.DatabaseMigrationFailureKind
 import app.readylytics.health.core.model.domain.migration.DatabaseMigrationProgress
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.migration.V7MigrationResult
@@ -53,6 +54,11 @@ class DatabasePreparationRunner internal constructor(
                 prepare(onProgress)
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: SqlCipherKeyManager.KeyDecryptionException) {
+                V7MigrationResult.Failed(
+                    e.message ?: "Database key decryption failed",
+                    DatabaseMigrationFailureKind.KEY_CORRUPTED,
+                )
             } catch (e: Exception) {
                 V7MigrationResult.Failed(e.message ?: "Database preparation failed")
             }
@@ -84,8 +90,13 @@ class DatabasePreparationRunner internal constructor(
     private suspend fun encryptPlaintext(): V7MigrationResult {
         val version = readPlaintextVersion(dbFile)
         if (version !in 5..DatabaseReadinessGate.CURRENT_DATABASE_VERSION) {
-            return V7MigrationResult.Failed("Unsupported database version: $version")
+            return V7MigrationResult.Failed(
+                "Unsupported database version: $version",
+                DatabaseMigrationFailureKind.UNSUPPORTED_VERSION,
+            )
         }
+        currentCoroutineContext().ensureActive()
+        keyManager.discardStalePlaintextExport(dbFile)
         val sourceBytes = dbFile.length() + File("${dbFile.absolutePath}-wal").length()
         val requiredBytes = sourceBytes + sourceBytes / 4 + EXPORT_RESERVE_BYTES
         val freeBytes = availableBytes(dbFile)
@@ -106,6 +117,8 @@ class DatabasePreparationRunner internal constructor(
             is DatabaseReadiness.InsufficientSpace ->
                 V7MigrationResult.InsufficientSpace(readiness.requiredBytes, readiness.availableBytes)
             is DatabaseReadiness.Failed -> V7MigrationResult.Failed(readiness.message)
+            DatabaseReadiness.KeyCorrupted ->
+                V7MigrationResult.Failed("Database key decryption failed", DatabaseMigrationFailureKind.KEY_CORRUPTED)
             else -> V7MigrationResult.Failed("Database preparation did not reach Ready: $readiness")
         }
 
