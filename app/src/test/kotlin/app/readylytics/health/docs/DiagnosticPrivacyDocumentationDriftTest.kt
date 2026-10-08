@@ -19,7 +19,17 @@ class DiagnosticPrivacyDocumentationDriftTest {
             assertTrue(privacyMd.contains(step), "privacy.md must name the '$step' step")
         }
         assertEquals(4, CountBucket.entries.size, "update privacy.md's count ranges when CountBucket changes")
-        listOf("none", "1–10", "11–100", "more than 100", "never the calendar date").forEach { phrase ->
+        listOf(
+            "none",
+            "1–10",
+            "11–100",
+            "more than 100",
+            "never the calendar date",
+            // `logcat -d` stamps every line with date and time, so a shared logcat export can
+            // turn the relative day offset back into a date; the policy must say so.
+            "logcat export",
+            "Android adds its own date and time",
+        ).forEach { phrase ->
             assertTrue(privacyMd.contains(phrase), "privacy.md must contain '$phrase'")
         }
     }

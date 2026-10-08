@@ -81,7 +81,7 @@ logged or stored.
 
 ### What a diagnostic log entry contains
 
-Each entry in the on-device diagnostic log (and in a logcat export you choose to share) contains only:
+Each entry in the on-device diagnostic log contains only:
 
 - a reason code — operation failed, permission denied, backup failed, restore failed, or log write failed;
 - the names of the error types involved and up to 32 code locations per error (file positions in
@@ -93,6 +93,10 @@ Each entry in the on-device diagnostic log (and in a logcat export you choose to
 
 It never contains message text, dates or timestamps, record IDs, device or app names, health values,
 or exact counts.
+
+A logcat export you choose to share contains the same entries, but Android adds its own date and time
+to every logcat line. Combined with the "days before today" value, that timestamp can reveal the
+calendar date of the affected day.
 
 Diagnostic, crash, logcat export, and backup staging files are written to the app's internal
 cache and are excluded from Android auto-backup and device-to-device transfer.
