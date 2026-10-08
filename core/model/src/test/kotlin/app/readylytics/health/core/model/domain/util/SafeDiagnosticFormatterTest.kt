@@ -1,7 +1,9 @@
 package app.readylytics.health.core.model.domain.util
 
+import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import org.junit.Test
 import java.io.IOException
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -65,5 +67,26 @@ class SafeDiagnosticFormatterTest {
     fun `null failure outputs reason name`() {
         val text = safeDiagnostic(DiagnosticReason.OPERATION_FAILED, null)
         assertTrue(text.startsWith("OPERATION_FAILED"))
+    }
+
+    @Test
+    fun `fields render on the reason line and payload text stays out`() {
+        val text =
+            safeDiagnostic(
+                DiagnosticReason.OPERATION_FAILED,
+                IllegalStateException("bpm=187"),
+                DiagnosticFields(phase = ResyncPhase.RECOMPUTE, dayOffsetFromToday = -3),
+            )
+        assertEquals("OPERATION_FAILED phase=RECOMPUTE dayOffset=-3", text.lines().first())
+        assertFalse(text.contains("bpm=187"))
+    }
+
+    @Test
+    fun `absent or empty fields keep the legacy output byte-identical`() {
+        val failure = IllegalStateException("x")
+        val legacy = safeDiagnostic(DiagnosticReason.OPERATION_FAILED, failure)
+        assertEquals(legacy, safeDiagnostic(DiagnosticReason.OPERATION_FAILED, failure, null))
+        assertEquals(legacy, safeDiagnostic(DiagnosticReason.OPERATION_FAILED, failure, DiagnosticFields()))
+        assertEquals("OPERATION_FAILED", legacy.lines().first())
     }
 }
