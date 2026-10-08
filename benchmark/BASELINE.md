@@ -798,3 +798,43 @@ every earlier dated section in this file follows.
 brief makes modifying them conditional on the paging trigger firing, and it did not. No Room schema
 change (still v23). `internal-docs/DATA_FLOW.md` is unchanged: no documented read path's shape
 changed.
+
+---
+
+## Phase 3 — WP-19 Database Readiness & IO-Free Room Provision (2026-10-08)
+
+### Test Environment & Device Identity
+
+- **Execution Date:** 2026-10-08
+- **Device Identity:** Android Emulator `emulator-5554` (AVD: `ReadylyticsPhase3`, arm64-v8a)
+- **API Level & OS:** Android 16 (API 36)
+- **Build Fingerprint:** `Android/sdk_phone64_arm64/emu64a:16/BE2A.250530.026.D1/13818094:userdebug/test-keys`
+- **Application Package:** `app.readylytics.health.local.grl3lb` (production package untouched)
+
+### Connected Instrumentation Results (emulator-5554)
+
+All 27 connected tests passed on the target device with zero failures, errors, or skips:
+
+1. **`DatabaseReadinessGraphInstrumentedTest` (2 tests, 0 failures):**
+   - `databaseProvisionOnMainThreadIsIoFree`: Verifies `DatabaseModule.provideDatabase` on main thread with StrictMode disk-read/disk-write penalties active. **Zero disk violations detected on main thread.** Native library loading, key retrieval, and database open are strictly deferred.
+   - `activityLaunchesAndSettlesWhenReady`: Full activity launch under test; verifies UI graph transitions smoothly from `Checking` to `Ready` without early ViewModel access or StrictMode disk crashes.
+
+2. **`PlaintextDatabasePreparationInstrumentedTest` (14 tests, 0 failures):**
+   - Covers plaintext versions 5, 6, 7, and 23: all sample rows and user_version preserved, reaching Room v23 off the main thread.
+   - Outstanding WAL cutover: committed WAL rows preserved even with writer open at cutover.
+   - Interruption/process-death recovery: stale `.cipher_tmp` target and sidecars discarded before free-space calculation and retried idempotently.
+   - Safety: corrupt key and insufficient storage reject cutover without deleting or corrupting original data.
+   - Cancellation: cooperative coroutine cancellation before cutover leaves source unmutated and clean for resume.
+
+3. **`SqlCipherKeyManagerCrossProcessRaceTest` (2 tests, 0 failures):**
+   - Multi-process race on fresh database creation converges cleanly on a single key.
+   - Multi-process factory open serialized under cross-process file lock.
+
+4. **`V7DatabaseMigratorInstrumentedTest` (9 tests, 0 failures):**
+   - Legacy v5 and v6 external migrations preserve workouts, heart rates, and source provenance.
+   - Resumable keyset batches survive simulated cancellation.
+
+### Unit & Architecture Gate Results
+
+- **Architecture Tests:** `DatabaseProvisionArchitectureTest` passes; static verification confirms `DatabaseModule.kt` contains no forbidden disk IO, key retrieval, file checks, or `System.loadLibrary` calls in `provideDatabase`.
+- **Unit Suite:** All 4,515 unit tests across the project pass (`BUILD SUCCESSFUL`), including `DeferredSqlCipherOpenHelperTest`, `DatabaseProvisionGuardTest`, and `SqlCipherKeyManagerTest`.

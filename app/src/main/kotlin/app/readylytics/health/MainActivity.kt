@@ -55,7 +55,7 @@ class MainActivity : ComponentActivity() {
     }
 
     @Inject
-    lateinit var sqlCipherKeyManager: SqlCipherKeyManager
+    lateinit var sqlCipherKeyManager: Lazy<SqlCipherKeyManager>
 
     @Inject
     lateinit var localRestoreManager: Lazy<LocalRestoreManager>
@@ -75,7 +75,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         lifecycleScope.launch(Dispatchers.IO) {
-            runCatching { sqlCipherKeyManager.validateKeyDecryption() }
+            runCatching { sqlCipherKeyManager.get().validateKeyDecryption() }
             CachePrune.pruneCacheDirectories(this@MainActivity)
             isKeyValidationComplete = true
         }
@@ -107,7 +107,7 @@ class MainActivity : ComponentActivity() {
         val dbFile = remember { getDatabasePath("health_dashboard.db") }
         DatabaseRecoveryScreen(
             onResetDatabase = {
-                sqlCipherKeyManager.resetKeyAndDatabase(dbFile)
+                sqlCipherKeyManager.get().resetKeyAndDatabase(dbFile)
                 recreate()
             },
             onRestoreBackup = { uri, onResult ->
@@ -126,14 +126,14 @@ class MainActivity : ComponentActivity() {
     @androidx.compose.runtime.Composable
     private fun ReadylyticsContent(splashScreen: androidx.core.splashscreen.SplashScreen) {
         val dbFile = remember { getDatabasePath("health_dashboard.db") }
-        val isDatabaseCorrupted by sqlCipherKeyManager.isKeyCorrupted.collectAsStateWithLifecycle()
+        val isDatabaseCorrupted by sqlCipherKeyManager.get().isKeyCorrupted.collectAsStateWithLifecycle()
 
         if (isDatabaseCorrupted) {
             splashScreen.setKeepOnScreenCondition { false }
             FitDashboardTheme {
                 DatabaseRecoveryScreen(
                     onResetDatabase = {
-                        sqlCipherKeyManager.resetKeyAndDatabase(dbFile)
+                        sqlCipherKeyManager.get().resetKeyAndDatabase(dbFile)
                         recreate()
                     },
                     onRestoreBackup = { uri, onResult ->

@@ -39,14 +39,11 @@ abstract class DatabaseModule {
     companion object {
         @Provides
         @Singleton
-        @Suppress("SpreadOperator")
         fun provideDatabase(
             @ApplicationContext context: Context,
             sqlCipherKeyManager: SqlCipherKeyManager,
             databaseReadinessGate: DatabaseReadinessGate,
         ): HealthDatabase {
-            val dbFile = context.getDatabasePath("health_dashboard.db")
-            sqlCipherKeyManager.migrateIfNeeded(dbFile)
             requireDatabaseReady(databaseReadinessGate)
 
             val builder =
@@ -55,8 +52,10 @@ abstract class DatabaseModule {
                     .openHelperFactory(sqlCipherKeyManager.getOrCreateFactory())
                     .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
                     .setQueryCoroutineContext(Dispatchers.IO)
-                    .addMigrations(*DatabaseMigrations.all)
-                    .addCallback(
+
+            DatabaseMigrations.all.forEach { builder.addMigrations(it) }
+
+            builder.addCallback(
                         object : RoomDatabase.Callback() {
                             override fun onCreate(db: SupportSQLiteDatabase) {
                                 super.onCreate(db)
@@ -77,7 +76,7 @@ abstract class DatabaseModule {
 }
 
 fun requireDatabaseReady(databaseReadinessGate: DatabaseReadinessGate) {
-    check(databaseReadinessGate.inspect() == DatabaseReadiness.Ready) {
+    check(databaseReadinessGate.readiness.value == DatabaseReadiness.Ready) {
         "HealthDatabase cannot open before the external v7 migration is complete"
     }
 }

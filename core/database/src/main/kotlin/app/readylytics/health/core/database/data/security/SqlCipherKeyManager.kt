@@ -35,6 +35,23 @@ internal val CIPHER_COMPATIBILITY_HOOK =
         override fun postKey(connection: net.zetetic.database.sqlcipher.SQLiteConnection) = Unit
     }
 
+private val libraryLock = Any()
+private var libraryLoaded = false
+
+private fun ensureNativeLibraryLoaded() {
+    synchronized(libraryLock) {
+        if (libraryLoaded) return
+        try {
+            System.loadLibrary("sqlcipher")
+        } catch (e: UnsatisfiedLinkError) {
+            logW("SqlCipherKeyManager", e) {
+                "Could not load sqlcipher library via System.loadLibrary"
+            }
+        }
+        libraryLoaded = true
+    }
+}
+
 /**
  * Manages SQLCipher database encryption key generation, storage, and decryption.
  * Uses Android KeyStore to protect a 256-bit AES key, with encrypted key + IV stored in SharedPreferences.
@@ -49,15 +66,6 @@ class SqlCipherKeyManager
         @param:ApplicationContext private val context: Context,
         private val keyProvider: KeyProvider,
     ) {
-        init {
-            try {
-                System.loadLibrary("sqlcipher")
-            } catch (e: UnsatisfiedLinkError) {
-                logW("SqlCipherKeyManager", e) {
-                    "Could not load sqlcipher library via System.loadLibrary"
-                }
-            }
-        }
 
         private val _isKeyCorrupted = MutableStateFlow(false)
         val isKeyCorrupted: StateFlow<Boolean> = _isKeyCorrupted.asStateFlow()
@@ -105,8 +113,9 @@ class SqlCipherKeyManager
          */
         fun getOrCreateFactory(): SupportSQLiteOpenHelper.Factory =
             SupportSQLiteOpenHelper.Factory { configuration ->
-                val delegateHelper =
-                    withCrossProcessKeyLock {
+                val createDelegate = {
+                    ensureNativeLibraryLoaded()
+                    val actualDelegate = withCrossProcessKeyLock {
                         val decryptedKey =
                             try {
                                 getOrCreateDbKeyLocked()
@@ -121,18 +130,17 @@ class SqlCipherKeyManager
                         try {
                             val keyHex = decryptedKey.toHex()
                             val rawKeyBytes = "x'$keyHex'".toByteArray(Charsets.UTF_8)
-                            // We must NOT fill rawKeyBytes with zeros: SupportOpenHelperFactory retains this
-                            // array as the SQLCipher password for its helper's lifecycle, including later
-                            // opens or connections. SQLCipher does not clear this caller-owned array for us.
-                            val delegate =
+                            val factory =
                                 net.zetetic.database.sqlcipher
                                     .SupportOpenHelperFactory(rawKeyBytes)
-                            delegate.create(configuration)
+                            factory.create(configuration)
                         } finally {
                             decryptedKey.fill(0)
                         }
                     }
-                LockedFirstOpenHelper(delegateHelper)
+                    LockedFirstOpenHelper(actualDelegate)
+                }
+                DeferredSqlCipherOpenHelper(configuration, createDelegate)
             }
 
         private inner class LockedFirstOpenHelper(
@@ -246,6 +254,7 @@ class SqlCipherKeyManager
             block: (net.zetetic.database.sqlcipher.SQLiteDatabase) -> T,
         ): T {
             val fileExistedBeforeOpen = dbFile.exists()
+            ensureNativeLibraryLoaded()
             return if (fileExistedBeforeOpen) {
                 val db =
                     withCrossProcessKeyLock {
@@ -283,6 +292,7 @@ class SqlCipherKeyManager
         fun migrateIfNeeded(dbFile: File, beforeReplace: () -> Unit = {}) {
             // One acquisition covers the complete export, so preflight reclamation in another
             // worker/process cannot unlink a live target. Callbacks must not reenter key access.
+            ensureNativeLibraryLoaded()
             withCrossProcessKeyLock {
                 if (isPlaintextDatabase(dbFile)) {
                     val rawKey = getOrCreateDbKeyLocked()
@@ -304,6 +314,7 @@ class SqlCipherKeyManager
             destFile: File,
         ) {
             if (!dbFile.exists()) return
+            ensureNativeLibraryLoaded()
             val rawKey = withCrossProcessKeyLock { getOrCreateDbKeyLocked() }
             try {
                 // Raw key must be passed as bytes, not a String: see withWritableDatabase.
@@ -361,7 +372,7 @@ class SqlCipherKeyManager
          * Clears the stored key and deletes the encrypted database, so the next open regenerates
          * both from scratch (the recovery path behind DatabaseRecoveryScreen).
          *
-         * Holds the same cross-process lock as [getOrCreateDbKey]: the key *removal* needs the
+         * Holds the same cross-process lock as [withCrossProcessKeyLock]: the key *removal* needs the
          * identical treatment as the key *write*, otherwise concurrent key retrieval in
          * another thread/process can interleave with a reset and read a stale key against an
          * already-deleted DB file (or vice versa). The removal is likewise `commit = true` so it
