@@ -14,8 +14,10 @@ import app.readylytics.health.core.model.domain.repository.WalkForwardRasWindow
 import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardVo2MaxContext
 import app.readylytics.health.core.model.domain.sync.DirtyRangeStore
+import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
+import app.readylytics.health.core.model.domain.util.DiagnosticFields
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
 import kotlinx.coroutines.CancellationException
@@ -23,6 +25,7 @@ import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.Clock
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -91,7 +94,12 @@ class DailyRecomputeSupport
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                logE("DailyRecomputeSupport", e) { "Day $day sync failed" }
+                val fields =
+                    DiagnosticFields(
+                        phase = ResyncPhase.RECOMPUTE,
+                        dayOffsetFromToday = ChronoUnit.DAYS.between(runContext.today, day).toInt(),
+                    )
+                logE("DailyRecomputeSupport", e, fields) { "Day $day sync failed" }
                 Result.failure("Day $day sync failed", "DAY_SYNC_ERROR")
             }
 

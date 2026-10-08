@@ -2778,9 +2778,11 @@ Release diagnostics (logcat mirroring, encrypted file logs, and crash reports) m
 Diagnostic Event (Exception / Log statement)
   │
   ▼
-SafeDiagnosticFormatter.safeDiagnostic(DiagnosticReason, Throwable?)
+SafeDiagnosticFormatter.safeDiagnostic(DiagnosticReason, Throwable?, DiagnosticFields?)
   │  Emits only:
   │  • Structured reason (DiagnosticReason enum)
+  │  • Optional DiagnosticFields on the reason line: enum names (HealthDataType, ResyncPhase,
+  │    CountBucket) and a relative dayOffset — no free-form text (SEC-101)
   │  • Exception class names (e.g., java.lang.IllegalStateException)
   │  • Bounded stack traces (max 16 causes, 32 frames per cause, 8 suppressed)
   │  • Cyclic exception cycle detection via IdentityHashMap
@@ -2799,8 +2801,9 @@ SafeDiagnosticFormatter.safeDiagnostic(DiagnosticReason, Throwable?)
 ```
 
 Key components:
-- **`SafeDiagnosticFormatter` (`core/model/.../SafeDiagnosticFormatter.kt`):** Pure-Kotlin formatter defining `DiagnosticReason` (`OPERATION_FAILED`, `PERMISSION_DENIED`, `BACKUP_FAILED`, `RESTORE_FAILED`, `LOG_WRITE_FAILED`) and `safeDiagnostic(reason, failure)`. Strips all message interpolation and enforces bounded traversal of cause and suppressed chains.
-- **`SecureFileLogSink` (`app/.../SecureFileLogSink.kt`):** Release logging sink configured under `logs_v2/`. Resolves structured `DiagnosticReason` from incoming tags and formats all entries with `SafeDiagnosticFormatter`. Uses `Log.println` directly to ensure Android's logcat runtime does not print unsanitized `throwable.message`.
+- **`SafeDiagnosticFormatter` (`core/model/.../SafeDiagnosticFormatter.kt`):** Pure-Kotlin formatter defining `DiagnosticReason` (`OPERATION_FAILED`, `PERMISSION_DENIED`, `BACKUP_FAILED`, `RESTORE_FAILED`, `LOG_WRITE_FAILED`) and `safeDiagnostic(reason, failure, fields)`. Strips all message interpolation and enforces bounded traversal of cause and suppressed chains. When `fields` renders non-empty, its `key=value` pairs are appended to the reason line; otherwise the output is byte-identical to the fieldless form.
+- **`DiagnosticFields` (`core/model/src/main/kotlin/app/readylytics/health/core/model/domain/util/DiagnosticFields.kt`):** The only structured context a release diagnostic may carry (SEC-101 / OD-1): `HealthDataType`, `ResyncPhase`, `dayOffsetFromToday` (relative `Int`), `CountBucket`. Travels on `LogContext.fields` via `logW`/`logE`'s `fields` parameter. `DiagnosticFieldsTest` fails if a non-enum, non-`Int` field is added. First callers: `DailyRecomputeSupport.recomputeDay` failures (`RECOMPUTE` + day offset from `runContext.today`) and `HistoricalIngestPhase` token-fallback warnings (`INGEST`).
+- **`SecureFileLogSink` (`app/.../SecureFileLogSink.kt`):** Release logging sink configured under `logs_v2/`. Resolves structured `DiagnosticReason` from incoming tags and formats all entries with `SafeDiagnosticFormatter`. Uses `Log.println` directly to ensure Android's logcat runtime does not print unsanitized `throwable.message`. Passes `LogContext.fields` to the formatter; `sessionId` is never emitted.
 - **`CrashReportFormatter` (`core/model/.../CrashReportFormatter.kt`):** Generates crash report text containing device/OS metadata and sanitized stack frames via `SafeDiagnosticFormatter`. Raw crash messages and payload contexts are excluded.
 - **`CrashReportStoreImpl` (`app/.../CrashReportStoreImpl.kt`):** Manages crash report files under the isolated directory `crash_reports_v2/`, exposed via `FileProvider` cache path `crash_reports_v2`.
 - **Recalc diagnostics (`core/model/.../RecalcDiagnostic.kt`, `RecalcDiagnosticStore`; `app/.../RecalcDiagnosticStoreImpl.kt`, `RecalcDiagnosticRecorder`):** When an unexpected `RecalcTrigger` resolves to more than `LARGE_RECALC_THRESHOLD_DAYS` (3) days, `HealthResyncWorker` appends a plain-text entry (trigger, detail, mode, range, pending dirty tickets — dates, counts and reason names only) to `cacheDir/recalc_diagnostics/recalc_diagnostics.txt`, keeping the newest `MAX_RECALC_DIAGNOSTIC_ENTRIES` (20). On the next start `CrashReportViewModel.promptKind` offers it through the same `CrashReportPrompt` (email / GitHub issue) when no crash report is pending; it is exposed via `FileProvider` cache path `recalc_diagnostics` and leaves the device only when the user shares it. The range is the one the run actually walks: an explicit range; else, for a recompute-only drain with pending tickets, `pendingTicketRange(pending)` (#295/#302 reported the full retained window while only a two-day drain ran); else the full retained window.

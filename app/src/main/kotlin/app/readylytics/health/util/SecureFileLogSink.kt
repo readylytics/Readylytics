@@ -83,7 +83,7 @@ class SecureFileLogSink(
                 LogLevel.ERROR -> Log.ERROR
             }
         val reason = resolveReason(tag, message, throwable)
-        val safeText = safeDiagnostic(reason, throwable)
+        val safeText = safeDiagnostic(reason, throwable, context.fields)
         Log.println(priority, LOGCAT_TAG, safeText)
 
         // Offload file writing to serialization coroutine scope
