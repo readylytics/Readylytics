@@ -20825,14 +20825,6 @@ SPLapp/readylytics/health/domain/dashboard/DerivedInsights;->getCurrent()Lapp/re
 SPLapp/readylytics/health/domain/dashboard/DerivedInsights;->getCurrentParams()Lapp/readylytics/health/domain/insights/InsightParams;
 SPLapp/readylytics/health/domain/dashboard/DerivedInsights;->getDismissedCount()I
 SPLapp/readylytics/health/domain/dashboard/DerivedInsights;->getVisibleQueue()Ljava/util/List;
-Lapp/readylytics/health/domain/dashboard/GetWorkoutMetricsUseCase;
-SPLapp/readylytics/health/domain/dashboard/GetWorkoutMetricsUseCase;-><clinit>()V
-SPLapp/readylytics/health/domain/dashboard/GetWorkoutMetricsUseCase;-><init>(Lapp/readylytics/health/domain/util/ResourceProvider;)V
-SPLapp/readylytics/health/domain/dashboard/GetWorkoutMetricsUseCase;->invoke(Lapp/readylytics/health/domain/model/DailySummary;Lapp/readylytics/health/domain/model/DailyMetrics;)Lapp/readylytics/health/domain/model/Result;
-Lapp/readylytics/health/domain/dashboard/GetWorkoutMetricsUseCase$WorkoutMetrics;
-SPLapp/readylytics/health/domain/dashboard/GetWorkoutMetricsUseCase$WorkoutMetrics;-><clinit>()V
-SPLapp/readylytics/health/domain/dashboard/GetWorkoutMetricsUseCase$WorkoutMetrics;-><init>(Lapp/readylytics/health/feature/dashboard/CardData;)V
-SPLapp/readylytics/health/domain/dashboard/GetWorkoutMetricsUseCase$WorkoutMetrics;->getStrainRatioCard()Lapp/readylytics/health/feature/dashboard/CardData;
 Lapp/readylytics/health/domain/dashboard/InsightDeriver;
 SPLapp/readylytics/health/domain/dashboard/InsightDeriver;-><clinit>()V
 SPLapp/readylytics/health/domain/dashboard/InsightDeriver;-><init>()V
@@ -22017,7 +22009,6 @@ SPLapp/readylytics/health/feature/dashboard/StepsCardKt$$ExternalSyntheticLambda
 SPLapp/readylytics/health/feature/dashboard/StepsCardKt$$ExternalSyntheticLambda4;->invoke()Ljava/lang/Object;
 Lapp/readylytics/health/feature/dashboard/usecase/GetDashboardDataUseCase;
 SPLapp/readylytics/health/feature/dashboard/usecase/GetDashboardDataUseCase;-><clinit>()V
-SPLapp/readylytics/health/feature/dashboard/usecase/GetDashboardDataUseCase;-><init>(Lapp/readylytics/health/domain/util/ResourceProvider;Lapp/readylytics/health/domain/dashboard/GetWorkoutMetricsUseCase;)V
 SPLapp/readylytics/health/feature/dashboard/usecase/GetDashboardDataUseCase;->bloodPressureCard(Lapp/readylytics/health/domain/model/DailySummary;Lapp/readylytics/health/domain/model/DailyMetrics;)Lapp/readylytics/health/feature/dashboard/CardData;
 SPLapp/readylytics/health/feature/dashboard/usecase/GetDashboardDataUseCase;->bodyFatCard(Lapp/readylytics/health/domain/model/DailySummary;Lapp/readylytics/health/data/preferences/UserPreferences;Lapp/readylytics/health/domain/model/DailyMetrics;)Lapp/readylytics/health/feature/dashboard/CardData;
 SPLapp/readylytics/health/feature/dashboard/usecase/GetDashboardDataUseCase;->buildRasBreakdown(Ljava/time/LocalDate;Ljava/util/List;Lapp/readylytics/health/data/preferences/UserPreferences;)Ljava/util/List;

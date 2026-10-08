@@ -166,7 +166,7 @@ When HRV is much lower than usual and resting heart rate is elevated for more th
 
 **What we don't do.** We don't penalise you for resting. A week of light activity will _not_ drop Readiness; the score is designed for load _spikes_, not undertraining.
 
-_Implemented in: `LoadScoringStrategy.kt`, `RasScoringStrategy.kt`, `ComputeSleepMetricsUseCase.kt`, `LoadMetricsProvider.kt`, `RasProvider.kt`_
+_Implemented in: `LoadScoringStrategy.kt`, `RasScoringStrategy.kt`, `ComputeSleepMetricsUseCase.kt`_
 
 ---
 
@@ -513,7 +513,7 @@ _Implemented in: `Phase.kt`, `PhaseCalculator.kt`_
 
 - **TRIMP (Training Impulse)** — a single number summarising the intensity-weighted duration of an exercise session. Advanced models (such as LT-TRIMP) rely on the specific Heart Rate Zones configured in your app settings. These zones are always active; it is your responsibility to ensure they accurately reflect your current fitness level. On workout screens, **overall load** is derived primarily from total TRIMP. **Intensity** is derived from TRIMP/min (load density) and may promote a Moderate workout to Hard when `TRIMP >= 90` and `TRIMP/min >= 1.75`, or a Hard workout to Very Hard when `TRIMP >= 140` and `TRIMP/min >= 2.25`. These categorical labels do **not** replace numeric TRIMP in ATL, CTL, Strain Ratio, Load Score, RAS, or Readiness calculations.
 
-  _Implemented in: `RasCalculator.kt`, `ComputeWorkoutTrimpUseCase.kt`, `RasScoringStrategy.kt`, `HrMaxProvider.kt`_
+  _Implemented in: `RasCalculator.kt`, `ComputeWorkoutTrimpUseCase.kt`, `RasScoringStrategy.kt`, `HeartRateFormulas.kt`_
 
 - **iTRIMP (individualized training impulse).** When selected as your training-load model, iTRIMP is a Manzi-inspired fixed-exponent variant: each minute of exercise accrues TRIMP as `duration × hrR × exp(b × hrR)`, where `hrR` is your fractional heart-rate reserve and `b` is a single fixed exponent — default **2.1** (adjustable 1.0–4.5 in Advanced Settings). The fixed exponent makes high-intensity minutes scale more steeply than the default Banister model. No sex-specific weighting factor is applied in this variant.
 

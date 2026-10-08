@@ -25,7 +25,6 @@ hiltNavigationCompose = "1.4.0"
 kotlinxSerialization = "1.11.0"
 vico = "3.3.1"
 splashscreen = "1.2.0"
-securityCrypto = "1.1.0"
 protobufPlugin = "0.10.0"
 workManager = "2.11.2"
 protobuf = "4.36.2"
@@ -96,7 +95,6 @@ androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscree
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 vico-compose = { group = "com.patrykandpatrick.vico", name = "compose", version.ref = "vico" }
 vico-compose-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico" }
-androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
 androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workManager" }
 hilt-work = { group = "androidx.hilt", name = "hilt-work", version.ref = "hiltNavigationCompose" }
 hilt-work-compiler = { group = "androidx.hilt", name = "hilt-compiler", version.ref = "hiltNavigationCompose" }

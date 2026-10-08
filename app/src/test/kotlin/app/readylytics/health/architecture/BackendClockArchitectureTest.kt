@@ -19,9 +19,6 @@ class BackendClockArchitectureTest {
             "core/ui/src/main/kotlin/app/readylytics/health/core/ui/dashboard/DateSwitcher.kt"
         private const val BIRTHDAY_PICKER_PATH =
             "core/ui/src/main/kotlin/app/readylytics/health/core/ui/components/settings/BirthdayDatePickerField.kt"
-        private const val PERF_MONITOR_PATH =
-            "core/model/src/main/kotlin/app/readylytics/health/core/model/domain/util/PerformanceMonitor.kt"
-
         val ALLOW_LIST =
             listOf(
                 AllowedException(
@@ -48,12 +45,6 @@ class BackendClockArchitectureTest {
                         "override fun isSelectableYear(year: Int): Boolean = year in 1900..LocalDate.now().year",
                     violation = "LocalDate.now()",
                     reason = "UI date picker selectable year bound in BirthdayDatePickerField",
-                ),
-                AllowedException(
-                    relativePath = PERF_MONITOR_PATH,
-                    symbolSnippet = "val timestamp: Long = System.currentTimeMillis(),",
-                    violation = "System.currentTimeMillis()",
-                    reason = "Diagnostic timestamp default in PerformanceMonitor",
                 ),
                 AllowedException(
                     relativePath =
@@ -153,17 +144,6 @@ class BackendClockArchitectureTest {
                     violation = "Clock.systemDefaultZone()",
                     reason = "Hilt injects Clock for changes synchronization timestamps",
                     owner = "class HealthChangeSynchronizerImpl",
-                ),
-                AllowedException(
-                    relativePath =
-                        "core/model/src/main/kotlin/app/readylytics/health/" +
-                            "core/model/domain/service/DateRangeService.kt",
-                    symbolSnippet = "private val clock: Clock = Clock.systemDefaultZone(),",
-                    violation = "Clock.systemDefaultZone()",
-                    reason =
-                        "Existing pure helper has no production instance or backend caller; " +
-                            "compatibility API remains outside DI-101",
-                    owner = "class DateRangeService",
                 ),
             )
     }

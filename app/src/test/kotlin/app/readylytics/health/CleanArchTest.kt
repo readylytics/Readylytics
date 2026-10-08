@@ -389,10 +389,6 @@ class CleanArchTest {
 
     @Test
     fun `no ZoneId systemDefault in scoring database or feature ViewModels`() {
-        val allowedFiles =
-            setOf(
-                "TimezoneProviderImpl.kt",
-            )
         val violations =
             Konsist
                 .scopeFromProject()
@@ -406,8 +402,7 @@ class CleanArchTest {
                                     file.hasPackage("app.readylytics.health.feature..") &&
                                         file.name.endsWith("ViewModel.kt")
                                 )
-                        ) &&
-                        file.nameWithExtension !in allowedFiles
+                        )
                 }.flatMap { file ->
                     val matches = Regex("""ZoneId\.systemDefault\(\)""").findAll(file.text)
                     matches.map { "${file.name}: used ZoneId.systemDefault()" }.toList()
