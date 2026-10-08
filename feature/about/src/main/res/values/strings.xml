@@ -296,6 +296,10 @@
     <string name="about_glossary_atl_ctl">**ATL / CTL** — short-term and long-term rolling averages
         of TRIMP. Borrowed from Banister\'s training-load model and used by most cycling and running
         apps.</string>
+    <string name="about_glossary_hrmax">**Estimated max heart rate** — if you have not entered
+        your own, it is estimated from your age as `208 − 0.7 × age` (the Tanaka formula),
+        rounded down to a whole beat per minute: age 35 gives 183.5, so 183 bpm. It sets the top
+        of the heart-rate-reserve scale that TRIMP is measured against.</string>
     <string name="about_header_limitations">## Honest limitations</string>
     <string name="about_limit_1">**1. Wearable stage detection is imperfect.** Even premium devices
         misclassify deep and REM sleep on individual nights. We use age-adjusted targets and don\'t

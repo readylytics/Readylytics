@@ -51,6 +51,7 @@ fun LicenseSection() {
         BulletItem(stringResource(R.string.about_glossary_rem))
         BulletItem(stringResource(R.string.about_glossary_trimp))
         BulletItem(stringResource(R.string.about_glossary_atl_ctl))
+        BulletItem(stringResource(R.string.about_glossary_hrmax))
 
         SectionDivider()
 
