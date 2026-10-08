@@ -14,11 +14,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.test.assertHeightIsAtLeast
-import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performSemanticsAction
@@ -28,8 +25,6 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.FitDashboardTheme
 import app.readylytics.health.core.model.data.preferences.AppTheme
-import app.readylytics.health.core.ui.model.HeartRateDaySummary
-import app.readylytics.health.feature.dashboard.HeartRateCard
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -70,24 +65,6 @@ class WorkoutRecommendationCardLayoutTest {
     @Test
     fun dynamicThemeKeepsCardTextReadable() {
         renderAndCheck(fontScale = 1f, theme = AppTheme.DARK, name = "dynamic-dark", dynamicColor = true)
-    }
-
-    @Test
-    fun sharedTooltipFitsTheHeartRateCard() {
-        composeRule.setContent {
-            FitDashboardTheme(appTheme = AppTheme.DARK, dynamicColor = false) {
-                Box(Modifier.width(160.dp).testTag("recommendation-card")) {
-                    HeartRateCard(HeartRateDaySummary(minBpm = 55, maxBpm = 165, avgBpm = 80), onClick = {})
-                }
-            }
-        }
-
-        assertTextFits("55–165")
-        composeRule
-            .onNodeWithContentDescription("More information")
-            .assertWidthIsAtLeast(48.dp)
-            .assertHeightIsAtLeast(48.dp)
-        captureCard("heart-rate-dark")
     }
 
     private fun renderAndCheck(

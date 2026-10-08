@@ -11,7 +11,6 @@ import app.readylytics.health.core.model.domain.util.LogContext
 import app.readylytics.health.core.model.domain.util.LogLevel
 import app.readylytics.health.core.scoring.domain.cardio.CooperNormsClassifier
 import app.readylytics.health.core.scoring.domain.cardio.TrainingStressBalanceCalculator
-import app.readylytics.health.feature.dashboard.domain.dashboard.GetWorkoutMetricsUseCase
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.After
@@ -23,13 +22,11 @@ import java.time.LocalDate
 import app.readylytics.health.core.ui.R as CoreUiR
 
 class GetDashboardDataUseCaseTest {
-    private lateinit var getWorkoutMetricsUseCase: GetWorkoutMetricsUseCase
     private lateinit var resourceProvider: app.readylytics.health.core.model.domain.util.ResourceProvider
     private lateinit var useCase: GetDashboardDataUseCase
 
     @Before
     fun setUp() {
-        getWorkoutMetricsUseCase = mockk(relaxed = true)
         resourceProvider = mockk(relaxed = true)
         every { resourceProvider.getString(CoreUiR.string.metric_value_unavailable) } returns "—"
         useCase =
@@ -178,10 +175,6 @@ class GetDashboardDataUseCaseTest {
                 strainRatioWorkoutOnly = 0.365f,
             )
         val prefs = UserPreferences()
-        every { getWorkoutMetricsUseCase(summary, any()) } answers {
-            GetWorkoutMetricsUseCase(resourceProvider)(summary, secondArg())
-        }
-
         val result =
             useCase(
                 summary = summary,

@@ -25,7 +25,7 @@ class DateRangeServiceTest {
         val end = LocalDate.of(2026, 6, 1)
         val result = DateRange.create(start, end)
         assertTrue(result is Result.Failure)
-        assertEquals(DateRangeService.Codes.END_BEFORE_START, result.code)
+        assertEquals(DateRange.Codes.END_BEFORE_START, result.code)
     }
 
     @Test

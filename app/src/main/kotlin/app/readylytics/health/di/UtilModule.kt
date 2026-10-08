@@ -55,12 +55,6 @@ abstract class UtilModule {
 
     @Binds
     @Singleton
-    abstract fun bindTimezoneProvider(
-        impl: app.readylytics.health.data.util.TimezoneProviderImpl,
-    ): app.readylytics.health.core.model.domain.util.TimezoneProvider
-
-    @Binds
-    @Singleton
     abstract fun bindEncryptionManager(
         impl: app.readylytics.health.data.security.EncryptionManager,
     ): app.readylytics.health.core.model.domain.security.EncryptionManager
