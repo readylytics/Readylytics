@@ -76,6 +76,26 @@ class WorkerSchedulerTest {
         }
 
     @Test
+    fun `scheduleSelectedWorkoutRepair keeps existing unique work and sets the repair mode`() {
+        val request = slot<OneTimeWorkRequest>()
+
+        scheduler.scheduleSelectedWorkoutRepair()
+
+        verify {
+            workManager.enqueueUniqueWork(
+                WorkerScheduler.RESYNC_WORK_NAME,
+                ExistingWorkPolicy.KEEP,
+                capture(request),
+            )
+        }
+        assertEquals(
+            HealthResyncWorker.MODE_SELECTED_WORKOUT_REPAIR,
+            request.captured.workSpec.input
+                .getString(HealthResyncWorker.KEY_RECOMPUTE_MODE),
+        )
+    }
+
+    @Test
     fun `scheduleResyncWorker threads the saved checkpoint's run id into the request`() =
         runTest {
             val runIdentity = savedRunIdentity("saved-run-123")

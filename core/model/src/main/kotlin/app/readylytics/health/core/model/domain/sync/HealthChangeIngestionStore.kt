@@ -14,19 +14,17 @@ import java.time.ZoneId
  */
 interface HealthChangeIngestionStore {
     /**
-     * Resolves the calendar dates one already-persisted HC record with [hcRecordId] currently
-     * occupies, before it is deleted and replaced by an upsert (or removed outright by a
-     * deletion). Mirrors the deleted-record date lookup the Changes API path needs per record,
-     * since it processes one change at a time rather than a whole window.
+     * Resolves the calendar dates for a batch of already-persisted HC records with [ids].
      */
-    suspend fun affectedDatesForRecord(
+    suspend fun affectedDatesForRecords(
         type: HealthDataType,
-        hcRecordId: String,
+        ids: List<String>,
         zoneId: ZoneId,
     ): Set<LocalDate>
 
-    /** Deletes the local row(s) owned by one HC record, by type. */
-    suspend fun deleteRecord(type: HealthDataType, hcRecordId: String)
+    /** Deletes the local row(s) owned by a batch of HC records, by type. */
+    suspend fun deleteRecords(type: HealthDataType, ids: List<String>)
+
 
     /**
      * Sleep and workout session spans whose [SleepSessionInput]/[WorkoutInput] time range

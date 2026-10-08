@@ -76,6 +76,8 @@ internal fun ResyncCheckpointProto.toDomain(): ResyncCheckpoint =
             },
         nextDate = LocalDate.ofEpochDay(nextEpochDay),
         selectionHash = selectionHash,
+        baselineIntervalTokens = baselineIntervalTokensMap,
+        completedIntervalTypes = completedIntervalTypesList.toSet(),
         baselineChangeTokens = baselineChangeTokensMap.mapKeys { (dataType, _) -> HealthDataType.valueOf(dataType) },
         chunkDaysOverride = chunkDaysOverride.takeIf { it > 0 },
         hrPageToken = hrPageToken.takeIf { it.isNotBlank() },
@@ -135,6 +137,8 @@ internal fun ResyncCheckpoint.toProto(): ResyncCheckpointProto {
                 },
             ).setNextEpochDay(nextDate.toEpochDay())
             .setSelectionHash(selectionHash)
+            .putAllBaselineIntervalTokens(baselineIntervalTokens)
+            .addAllCompletedIntervalTypes(completedIntervalTypes)
             .putAllBaselineChangeTokens(baselineChangeTokens.mapKeys { (dataType, _) -> dataType.name })
             .setChunkDaysOverride(chunkDaysOverride ?: 0)
     hrPageToken?.let { builder.setHrPageToken(it) }

@@ -68,7 +68,7 @@ abstract class DailySyncUseCaseTestFixture {
     @Before
     fun setup() {
         coEvery { changeSynchronizer.applyPendingChanges() } returns HealthChangeSyncOutcome(emptySet(), false)
-        coJustRun { changeSynchronizer.commitTokens(any()) }
+        coJustRun { changeSynchronizer.commitTokens(any(), any()) }
         coEvery { dirtyRangeStore.pending(any()) } returns emptyList()
         coJustRun { dirtyRangeStore.discardBefore(any()) }
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
@@ -76,19 +76,27 @@ abstract class DailySyncUseCaseTestFixture {
         // relaxed mock a real (empty) context so recomputeDay receives a non-null instance.
         coEvery { scoringRepository.fetchWalkForwardFatigueContext(any(), any(), any(), any()) } returns
             WalkForwardFatigueContext(emptyList())
-        coEvery { hcRepo.readSleepSessions(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readExerciseSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
-        coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
-        coEvery { hcRepo.readStepsRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readSteps(any(), any()) } returns ReadOutcome.Available(0L)
-        coEvery { hcRepo.readDailyStepTotals(any(), any(), any()) } returns ReadOutcome.Available(emptyMap())
-        coEvery { hcRepo.readWeightRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readBodyFatRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readBloodPressureRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readOxygenSaturationRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readBodyTemperatureRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readVo2MaxRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readSleepSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readExerciseSessionsWithCompletion(any(), any(), any()) } coAnswers {
+            app.readylytics.health.core.model.domain.repository.ExerciseSessionRead(
+                hcRepo.readExerciseSessions(firstArg(), secondArg(), true, thirdArg()),
+            )
+        }
+
+        coEvery { hcRepo.readExerciseSessions(any(), any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any(), any()) } returns
+            ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readStepsRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readStepsRecordsPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readSteps(any(), any(), any()) } returns ReadOutcome.Available(0L)
+        coEvery { hcRepo.readDailyStepTotals(any(), any(), any(), any()) } returns ReadOutcome.Available(emptyMap())
+        coEvery { hcRepo.readWeightRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBodyFatRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBloodPressureRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readOxygenSaturationRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBodyTemperatureRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readVo2MaxRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
         coEvery { hcRepo.hasVo2MaxPermission() } returns false
 
         useCase = buildUseCase()
@@ -122,6 +130,7 @@ abstract class DailySyncUseCaseTestFixture {
                 ),
             ioDispatcher = Dispatchers.Unconfined,
             clock = fixedClock,
+            dirtyRangeStore = effectiveDirtyRangeStore,
         )
     }
 
@@ -306,7 +315,7 @@ class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
 
             coVerifyOrder {
                 scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any(), any())
-                changeSynchronizer.commitTokens(nextTokens)
+                changeSynchronizer.commitTokens(nextTokens, emptyMap())
             }
         }
 
@@ -363,25 +372,25 @@ class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
     @Test
     fun `sync fetches and upserts all heart-related record types`() =
         runTest {
-            coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } coAnswers {
-                val callback = it.invocation.args[3] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
+            coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any(), any()) } coAnswers {
+                val callback = it.invocation.args[4] as suspend (List<DomainHeartRateRecord>, String?) -> Unit
                 callback(listOf(mockk(relaxed = true)), null)
                 app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(Unit)
             }
-            coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } coAnswers {
-                val callback = it.invocation.args[3] as suspend (List<DomainHrvRecord>, String?) -> Unit
+            coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any(), any()) } coAnswers {
+                val callback = it.invocation.args[4] as suspend (List<DomainHrvRecord>, String?) -> Unit
                 callback(listOf(mockk(relaxed = true)), null)
                 app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(Unit)
             }
-            coEvery { hcRepo.readSteps(any(), any()) } returns
+            coEvery { hcRepo.readSteps(any(), any(), any()) } returns
                 app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(0L)
 
             useCase.run(windowDays = 8, onProgress = null)
 
             coVerify {
-                hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any())
-                hcRepo.readHrvSamplesPaged(any(), any(), any(), any())
-                hcRepo.readSteps(any(), any())
+                hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any(), any())
+                hcRepo.readHrvSamplesPaged(any(), any(), any(), any(), any())
+                hcRepo.readSteps(any(), any(), any())
                 healthIngestionStore.persist(any())
                 healthIngestionStore.replaceHeartRateSources(any())
                 healthIngestionStore.replaceHrvSources(any())
@@ -393,9 +402,9 @@ class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
         runTest {
             val hrvFromSlot = slot<Instant>()
             val hrFromSlot = slot<Instant>()
-            coEvery { hcRepo.readHrvSamplesPaged(capture(hrvFromSlot), any(), any(), any()) } returns
+            coEvery { hcRepo.readHrvSamplesPaged(capture(hrvFromSlot), any(), any(), any(), any()) } returns
                 app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(Unit)
-            coEvery { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any(), any()) } returns
+            coEvery { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any(), any(), any()) } returns
                 app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(Unit)
 
             useCase.run(windowDays = 1, onProgress = null)
@@ -422,7 +431,7 @@ class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
             val todayMidnight = today.atStartOfDay(zoneId).toInstant()
             val yesterdayMidnight = today.minusDays(1).atStartOfDay(zoneId).toInstant()
             val froms = mutableListOf<Instant>()
-            coEvery { hcRepo.readSleepSessions(capture(froms), any()) } returns
+            coEvery { hcRepo.readSleepSessions(capture(froms), any(), any()) } returns
                 app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(emptyList())
 
             useCase.run(windowDays = 1, onProgress = null)
@@ -434,7 +443,7 @@ class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
     fun `sync retries today's ingest with an extended budget after a timeout`() =
         runTest {
             var sleepReadCalls = 0
-            coEvery { hcRepo.readSleepSessions(any(), any()) } coAnswers {
+            coEvery { hcRepo.readSleepSessions(any(), any(), any()) } coAnswers {
                 if (++sleepReadCalls == 1) {
                     throw HealthConnectWindowTimeoutException(
                         Instant.EPOCH,
@@ -455,7 +464,7 @@ class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
     @Test
     fun `sync returns DEFERRED_DAILY_SYNC when today's ingest times out even after retry`() =
         runTest {
-            coEvery { hcRepo.readSleepSessions(any(), any()) } throws
+            coEvery { hcRepo.readSleepSessions(any(), any(), any()) } throws
                 HealthConnectWindowTimeoutException(
                     Instant.EPOCH,
                     Instant.EPOCH.plusSeconds(1),
@@ -470,11 +479,11 @@ class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
                 (result as app.readylytics.health.core.model.domain.model.Result.Failure).code,
             )
             // today's two attempts both timed out; the back-day segment never ran and nothing scored.
-            coVerify(exactly = 2) { hcRepo.readSleepSessions(any(), any()) }
+            coVerify(exactly = 2) { hcRepo.readSleepSessions(any(), any(), any()) }
             coVerify(exactly = 0) {
                 scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any(), any())
             }
-            coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }
+            coVerify(exactly = 0) { changeSynchronizer.commitTokens(any(), any()) }
         }
 
     @Test
@@ -484,7 +493,7 @@ class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
             val today = LocalDate.now(fixedClock.withZone(zoneId))
             val todayMidnight = today.atStartOfDay(zoneId).toInstant()
             val yesterdayMidnight = today.minusDays(1).atStartOfDay(zoneId).toInstant()
-            coEvery { hcRepo.readSleepSessions(any(), any()) } coAnswers {
+            coEvery { hcRepo.readSleepSessions(any(), any(), any()) } coAnswers {
                 if (firstArg<Instant>() == yesterdayMidnight) {
                     throw HealthConnectWindowTimeoutException(
                         yesterdayMidnight,
@@ -518,7 +527,7 @@ class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
                     requiresFullResync = false,
                     nextTokens = mapOf(HealthDataType.SLEEP to "next-sleep-token"),
                 )
-            coEvery { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any(), any()) } returns
+            coEvery { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any(), any(), any()) } returns
                 app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(Unit)
             coJustRun {
                 scoringRepository.computeAndPersistDailySummary(
@@ -538,7 +547,7 @@ class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
                 "REQUIRES_HISTORICAL_RESYNC",
                 (result as app.readylytics.health.core.model.domain.model.Result.Failure).code,
             )
-            coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }
+            coVerify(exactly = 0) { changeSynchronizer.commitTokens(any(), any()) }
         }
 
     @Test
@@ -557,7 +566,7 @@ class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
                     requiresFullResync = false,
                     nextTokens = nextTokens,
                 )
-            coEvery { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any(), any()) } returns
+            coEvery { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any(), any(), any()) } returns
                 app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(Unit)
             coJustRun {
                 scoringRepository.computeAndPersistDailySummary(
@@ -575,6 +584,129 @@ class DailySyncUseCaseTest : DailySyncUseCaseTestFixture() {
             // Ingestion reaches one extra day back from the widened oldest target day.
             assertEquals(today.minusDays(2).atStartOfDay(zoneId).toInstant(), hrFromSlot.captured)
             assertTrue(result is app.readylytics.health.core.model.domain.model.Result.Success)
-            coVerify(exactly = 1) { changeSynchronizer.commitTokens(nextTokens) }
+            coVerify(exactly = 1) { changeSynchronizer.commitTokens(nextTokens, emptyMap()) }
+        }
+
+    @Test
+    fun `daily sync continues past budget exhaustion and commits once the backlog drains`() =
+        runTest {
+            // First call: budget exhausted mid-backlog (continuationRequired pairs with
+            // requiresFullResync per the outcome contract) -- the loop must keep going, not
+            // latch requiresFullResync into a permanent "needs historical resync" flag that
+            // survives past a later, successful iteration (Fix round 2, Critical 1).
+            val tokensAfterFirstCall = mapOf(HealthDataType.SLEEP to "token-19")
+            val tokensAfterDrain = mapOf(HealthDataType.SLEEP to "token-end")
+            val outcomes =
+                listOf(
+                    HealthChangeSyncOutcome(
+                        affectedDates = emptySet(),
+                        requiresFullResync = true,
+                        continuationRequired = true,
+                        nextTokens = tokensAfterFirstCall,
+                        fullResyncReason = "Budget exhausted",
+                    ),
+                    HealthChangeSyncOutcome(
+                        affectedDates = emptySet(),
+                        requiresFullResync = false,
+                        continuationRequired = false,
+                        nextTokens = tokensAfterDrain,
+                    ),
+                )
+            var applyCallCount = 0
+            coEvery { changeSynchronizer.applyPendingChanges() } coAnswers {
+                outcomes[applyCallCount++]
+            }
+
+            val result = useCase.run(windowDays = 1, onProgress = null)
+
+            assertTrue(result is app.readylytics.health.core.model.domain.model.Result.Success)
+            coVerify(exactly = 2) { changeSynchronizer.applyPendingChanges() }
+            // Progressive commit mid-loop (so a retry resumes past the exhausted page), then the
+            // final commit once the walk-forward recompute covers everything.
+            coVerify(exactly = 1) { changeSynchronizer.commitTokens(tokensAfterFirstCall, emptyMap()) }
+            coVerify(exactly = 1) { changeSynchronizer.commitTokens(tokensAfterDrain, emptyMap()) }
+        }
+
+    /**
+     * In-memory [DirtyRangeStore] that actually records [journalDirtyRange] calls (unlike the
+     * fixture's relaxed mockk, which would silently accept the call without proving a later read
+     * sees it) -- so this test can read [pending] back afterward to prove durability, the same way
+     * production code (e.g. `HealthResyncWorker.runNormalRecompute`'s drain) would.
+     */
+    private class RecordingDirtyRangeStore : DirtyRangeStore {
+        private val tickets = mutableListOf<DirtyTicket>()
+
+        override suspend fun pending(limit: Int): List<DirtyTicket> = tickets.take(limit)
+
+        override suspend fun journalDirtyRange(
+            start: LocalDate,
+            endInclusive: LocalDate,
+            reason: String,
+            snapshotId: String,
+        ): Long {
+            val ticket =
+                DirtyTicket(
+                    id = tickets.size.toLong() + 1,
+                    sourceGeneration = 1L,
+                    nextDay = start,
+                    endInclusive = endInclusive,
+                    scoringSnapshotId = snapshotId,
+                    reason = reason,
+                )
+            tickets += ticket
+            return ticket.id
+        }
+    }
+
+    @Test
+    fun `budget exhaustion journals a durable dirty ticket for the page's affected dates`() =
+        runTest {
+            // Final-review Finding 1: an EXERCISE keep=true upsert (or any brand-new record) never
+            // journals its own dirty-range ticket on the normal delete-side path, so the mid-loop
+            // budget-exhaustion commit must journal one itself before committing tokens past that
+            // page -- or a crash before the walk-forward recompute below silently and permanently
+            // skips recomputing this date.
+            val today = LocalDate.now(fixedClock.withZone(ZoneId.systemDefault()))
+            val affectedDay = today.minusDays(5)
+            val recordingStore = RecordingDirtyRangeStore()
+            val tokensAfterFirstCall = mapOf(HealthDataType.SLEEP to "token-19")
+            val tokensAfterDrain = mapOf(HealthDataType.SLEEP to "token-end")
+            val outcomes =
+                listOf(
+                    HealthChangeSyncOutcome(
+                        affectedDates = setOf(affectedDay),
+                        requiresFullResync = true,
+                        continuationRequired = true,
+                        nextTokens = tokensAfterFirstCall,
+                        fullResyncReason = "Budget exhausted",
+                    ),
+                    HealthChangeSyncOutcome(
+                        affectedDates = emptySet(),
+                        requiresFullResync = false,
+                        continuationRequired = false,
+                        nextTokens = tokensAfterDrain,
+                    ),
+                )
+            var applyCallCount = 0
+            coEvery { changeSynchronizer.applyPendingChanges() } coAnswers { outcomes[applyCallCount++] }
+            // Simulate the process dying before the walk-forward recompute below ever succeeds for
+            // this (or any) day: computeAndPersistDailySummary throwing means recomputeDay's own
+            // catch converts it to Result.Failure, so the run never reaches its final commitTokens
+            // -- the ONLY durable record of affectedDay needing recompute is the mid-loop journal
+            // call under test.
+            coEvery {
+                scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any(), any())
+            } throws RuntimeException("simulated crash before recompute")
+
+            val result = buildUseCase(recordingStore).run(windowDays = 1, onProgress = null)
+
+            assertTrue(result is app.readylytics.health.core.model.domain.model.Result.Failure)
+            coVerify(exactly = 1) { changeSynchronizer.commitTokens(tokensAfterFirstCall, emptyMap()) }
+            coVerify(exactly = 0) { changeSynchronizer.commitTokens(tokensAfterDrain, emptyMap()) }
+            val pending = recordingStore.pending(10)
+            assertTrue(
+                "Expected a durable ticket covering $affectedDay, got $pending",
+                pending.any { !it.nextDay.isAfter(affectedDay) && !it.endInclusive.isBefore(affectedDay) },
+            )
         }
 }

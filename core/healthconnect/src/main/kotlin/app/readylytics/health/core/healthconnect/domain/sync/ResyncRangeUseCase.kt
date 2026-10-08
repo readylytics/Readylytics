@@ -43,6 +43,7 @@ private data class ResyncExecutionPlan(
     val runZoneId: ZoneId,
     val selectionHash: String,
     val checkpoint: ResyncCheckpoint?,
+    val intervalTokens: IntervalTokenProgress,
     val baselineChangeTokens: Map<HealthDataType, String>,
     val runCompletedTypes: Set<HealthDataType>,
     val totalDays: Int,
@@ -61,10 +62,14 @@ private data class ResyncExecutionPlan(
             activeRun: HistoricalRunIdentity,
             prefs: UserPreferences,
             checkpoint: ResyncCheckpoint?,
-            baselineChangeTokens: Map<HealthDataType, String>,
+            captured: CapturedChangeTokens,
             chunkDays: Int,
             skipIngestAndPrune: Boolean,
         ): ResyncExecutionPlan {
+            val baselineChangeTokens = captured.typed
+            val intervalTokens = IntervalTokenProgress(
+                captured.intervals, checkpoint?.completedIntervalTypes ?: captured.intervals.keys,
+            )
             val effectivePrefs = activeRun.effectivePreferences() ?: prefs
             val runContext =
                 ScoringRunContext.capture(
@@ -104,6 +109,7 @@ private data class ResyncExecutionPlan(
                 selectionHash = activeRun.scoringSnapshotId,
                 checkpoint = checkpoint,
                 baselineChangeTokens = baselineChangeTokens,
+                intervalTokens = intervalTokens,
                 runCompletedTypes = runCompletedTypes,
                 totalDays = totalDays,
                 totalChunks = totalChunks,
@@ -165,7 +171,7 @@ class ResyncRangeUseCase
         ): Result<Unit> =
             withContext(ioDispatcher) {
                 try {
-                    val plan = preparePlan(startDate, endDate, chunkDays, skipIngestAndPrune, requestedRunId)
+                    var plan = preparePlan(startDate, endDate, chunkDays, skipIngestAndPrune, requestedRunId)
                     var runCompletedTypes = plan.runCompletedTypes
                     var earliestDeletionDate: LocalDate? = null
                     var initialCounts = PruneCounts(0, 0, 0, 0)
@@ -174,6 +180,7 @@ class ResyncRangeUseCase
                         val outcome = executeIngestion(plan, chunkDays, skipIngestAndPrune, onProgress)
                         earliestDeletionDate = outcome.earliestDeletionDate
                         runCompletedTypes = outcome.completedTypes
+                        plan = plan.copy(intervalTokens = outcome.intervalTokens)
                         initialCounts =
                             PruneCounts(
                                 hr = outcome.hrBeforePrune,
@@ -257,7 +264,8 @@ class ResyncRangeUseCase
                 checkpointStore.clear()
             }
 
-            val baselineChangeTokens = resolveBaselineTokens(checkpoint, skipIngestAndPrune)
+            val captured = resolveBaselineTokens(checkpoint, skipIngestAndPrune)
+            val baselineChangeTokens = captured.typed
             if (checkpoint == null) {
                 checkpointStore.save(
                     ResyncCheckpoint(
@@ -267,6 +275,8 @@ class ResyncRangeUseCase
                         nextDate = runStartDate,
                         selectionHash = activeRun.scoringSnapshotId,
                         baselineChangeTokens = baselineChangeTokens,
+                        baselineIntervalTokens = captured.intervals,
+                        completedIntervalTypes = captured.intervals.keys,
                         completedTypes = if (skipIngestAndPrune) emptySet() else baselineChangeTokens.keys,
                         runIdentity = activeRun,
                     ),
@@ -278,7 +288,7 @@ class ResyncRangeUseCase
                 activeRun = activeRun,
                 prefs = prefs,
                 checkpoint = checkpoint,
-                baselineChangeTokens = baselineChangeTokens,
+                captured = captured,
                 chunkDays = chunkDays,
                 skipIngestAndPrune = skipIngestAndPrune,
             )
@@ -317,10 +327,10 @@ class ResyncRangeUseCase
         private suspend fun resolveBaselineTokens(
             checkpoint: ResyncCheckpoint?,
             skipIngestAndPrune: Boolean,
-        ): Map<HealthDataType, String> =
-            checkpoint?.baselineChangeTokens
+        ): CapturedChangeTokens =
+            checkpoint?.let { CapturedChangeTokens(it.baselineChangeTokens, it.baselineIntervalTokens) }
                 ?: if (skipIngestAndPrune) {
-                    emptyMap()
+                    CapturedChangeTokens()
                 } else {
                     changeSynchronizer.captureChangesTokens()
                 }
@@ -343,6 +353,7 @@ class ResyncRangeUseCase
                     reconcileEndMs = plan.reconcileEndMs,
                     selectionHash = plan.selectionHash,
                     baselineChangeTokens = plan.baselineChangeTokens,
+                    intervalTokens = plan.intervalTokens,
                     initialCompletedTypes = plan.runCompletedTypes,
                     runIdentity = plan.runIdentity,
                     checkpoint = plan.checkpoint,
@@ -367,6 +378,7 @@ class ResyncRangeUseCase
                     reconcileEndMs = plan.reconcileEndMs,
                     selectionHash = plan.selectionHash,
                     baselineChangeTokens = plan.baselineChangeTokens,
+                    intervalTokens = plan.intervalTokens,
                     runCompletedTypes = runCompletedTypes,
                     runIdentity = plan.runIdentity,
                     runIngestion = plan.runIngestion,
@@ -418,6 +430,8 @@ class ResyncRangeUseCase
                     nextDate = plan.runStartDate,
                     selectionHash = plan.selectionHash,
                     baselineChangeTokens = plan.baselineChangeTokens,
+                    baselineIntervalTokens = plan.intervalTokens.baseline,
+                    completedIntervalTypes = plan.intervalTokens.completed,
                     completedTypes = runCompletedTypes,
                     runIdentity = plan.runIdentity,
                 ),
@@ -467,6 +481,7 @@ class ResyncRangeUseCase
                     stepCountFetcher = ingestion.stepCountFetcher,
                     selectionHash = plan.selectionHash,
                     baselineChangeTokens = plan.baselineChangeTokens,
+                    intervalTokens = plan.intervalTokens,
                     runCompletedTypes = runCompletedTypes,
                     runIdentity = plan.runIdentity,
                     checkpoint = plan.checkpoint,
@@ -482,7 +497,10 @@ class ResyncRangeUseCase
         ) {
             if (!skipIngestAndPrune) {
                 val tokensToPromote = plan.baselineChangeTokens.filterKeys { it in runCompletedTypes }
-                changeSynchronizer.commitTokens(tokensToPromote)
+                changeSynchronizer.commitTokens(
+                    tokensToPromote,
+                    plan.intervalTokens.baseline.filterKeys { it in plan.intervalTokens.completed },
+                )
                 settingsRepo.updateLastSyncTimestamp(clock.millis())
             }
             checkpointStore.clear()

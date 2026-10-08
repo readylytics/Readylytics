@@ -61,6 +61,29 @@ class SessionTotalsResolverTest {
         assertEquals(1_000.0, resolve(totals))
     }
 
+    @Test
+    fun `page accumulation equals standalone across invalid origin and boundary records`() {
+        val totals = listOf(
+            total(watch, -1, 1, 0.0),
+            total(phone, 0, 20, 999.0),
+            total(watch, 0, 20, -1.0),
+            total(watch, 0, 20, Double.POSITIVE_INFINITY),
+            total(watch, 0, 20, Double.NaN),
+            DomainIntervalTotal(sessionEnd.minusSeconds(1), sessionEnd.plusSeconds(1), 5.0, watch),
+            DomainIntervalTotal(sessionEnd.plusSeconds(1), sessionEnd.plusSeconds(3), 100.0, watch),
+        )
+        for (pageSize in 1..totals.size) {
+            val accumulated = totals.chunked(pageSize).fold<List<DomainIntervalTotal>, Double?>(null) { sum, page ->
+                SessionTotalsResolver.accumulate(sessionStart, sessionEnd, watch, page, sum)
+            }
+            assertEquals(resolve(totals), accumulated)
+            assertEquals(5.0, accumulated)
+        }
+        assertNull(SessionTotalsResolver.accumulate(sessionStart, sessionEnd, watch, emptyList(), null))
+        assertEquals(0.0, SessionTotalsResolver.accumulate(sessionStart, sessionEnd, watch,
+            listOf(total(watch, 0, 1, 0.0)), null))
+    }
+
     private fun resolve(totals: List<DomainIntervalTotal>): Double? =
         SessionTotalsResolver.totalFor(sessionStart, sessionEnd, watch, totals)
 

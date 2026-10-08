@@ -6,15 +6,27 @@ import java.time.LocalDate
 interface HealthChangeSynchronizer {
     suspend fun applyPendingChanges(): HealthChangeSyncOutcome
 
-    suspend fun captureChangesTokens(): Map<HealthDataType, String>
+    suspend fun captureChangesTokens(): CapturedChangeTokens
 
-    suspend fun commitTokens(tokens: Map<HealthDataType, String>)
+    suspend fun commitTokens(typed: Map<HealthDataType, String>, intervals: Map<String, String>)
 }
+
+data class CapturedChangeTokens(
+    val typed: Map<HealthDataType, String> = emptyMap(),
+    val intervals: Map<String, String> = emptyMap(),
+)
+
+data class IntervalTokenProgress(
+    val baseline: Map<String, String> = emptyMap(),
+    val completed: Set<String> = emptySet(),
+)
 
 data class HealthChangeSyncOutcome(
     val affectedDates: Set<LocalDate>,
     val requiresFullResync: Boolean,
+    val continuationRequired: Boolean = false,
     val nextTokens: Map<HealthDataType, String> = emptyMap(),
+    val nextIntervalTokens: Map<String, String> = emptyMap(),
     /** Why [requiresFullResync] was set (diagnostics only; empty when it is false). */
     val fullResyncReason: String = "",
 ) {

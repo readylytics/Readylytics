@@ -10,6 +10,7 @@ import app.readylytics.health.core.model.domain.model.RecordType
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -20,6 +21,32 @@ import kotlin.math.round
 
 @RunWith(RobolectricTestRunner::class)
 class AuthoritativeHeartRateReaderTest {
+    @Test
+    fun overlappingWarmBucketSeriesMatchStableSort() {
+        val buckets = listOf("sleep-a", "sleep-b").mapIndexed { index, session ->
+            HrMinuteBucketEntity(
+                bucketStartMs = 0L,
+                bucketEndMs = 60_000L,
+                minBpm = 60 + index,
+                maxBpm = 70 + index,
+                avgBpm = 65.0 + index,
+                sampleCount = 3,
+                recordType = "SLEEP",
+                sessionId = session,
+                deviceName = "device",
+            )
+        }
+        val raw = listOf(sleepHr(1L, 0L, 80, "raw"), sleepHr(2L, 20_000L, 81, "raw"))
+        val reconstructed = buckets.reconstructAsRecords()
+        assertTrue(reconstructed.zipWithNext().any { (a, b) -> a.timestampMs > b.timestampMs })
+        val expected = (raw + reconstructed).sortedBy { it.timestampMs }
+        val merged = AuthoritativeHrRange(raw, buckets).mergedSamples()
+        assertEquals(expected, merged)
+        assertSame(raw.first(), merged.first())
+        assertSame(raw[1], merged.first { it.timestampMs == 20_000L })
+        assertSame(raw, AuthoritativeHrRange(raw, emptyList()).mergedSamples())
+    }
+
     private lateinit var database: HealthDatabase
     private lateinit var reader: AuthoritativeHeartRateReader
 
@@ -270,6 +297,48 @@ class AuthoritativeHeartRateReaderTest {
 
             assertEquals(individual.sortedBy { it.bucketStartMs }, batched.sortedBy { it.bucketStartMs })
         }
+
+    @Test
+    fun typedPagesMatchAuthoritativeRangeAcrossTiesAndWarmSlices() = runBlocking {
+        val first = seedSource("first")
+        val second = seedSource("second")
+        database.heartRateDao().upsertAll(listOf(
+            HeartRateRecordEntity(first, -1, 120, "EXERCISE"),
+            HeartRateRecordEntity(first, 0, 121, "EXERCISE"),
+            HeartRateRecordEntity(second, 0, 122, "EXERCISE"),
+            HeartRateRecordEntity(first, 1, 220, "RESTING"),
+            HeartRateRecordEntity(first, 120_000, 123, "EXERCISE"),
+        ))
+        val buckets = (0..7).map { index ->
+            HrMinuteBucketEntity(60_000, 120_000, 60 + index, 90 + index, 75.0 + index,
+                if (index == 0) 60_001 else 3, "EXERCISE", "session-${index / 2}", "device-${index % 2}")
+        } + HrMinuteBucketEntity(60_000, 120_000, 220, 220, 220.0, 5, "RESTING")
+        database.minuteBucketDao().upsertBuckets(buckets)
+        val expected = reader.rangeInOfType("EXERCISE", -1, 120_000).mergedSamples()
+        assertEquals(expected.size, reader.countInRangeOfType("EXERCISE", -1, 120_000))
+        for (limit in listOf(3, 50_000)) {
+            val actual = mutableListOf<HeartRateRecordEntity>()
+            reader.typePagesInRange("EXERCISE", -1, 120_000, limit) { page ->
+                assertTrue(page.size <= limit)
+                actual.addAll(page)
+            }
+            assertEquals(expected, actual)
+        }
+        assertTrue(expected.all { it.recordType == "EXERCISE" })
+    }
+
+    @Test
+    fun typedPagesRejectNonPositiveLimits() = runBlocking {
+        for (limit in listOf(0, -1)) {
+            var rejected = false
+            try {
+                reader.typePagesInRange("EXERCISE", 0, 1, limit) { error("Unexpected page") }
+            } catch (_: IllegalArgumentException) {
+                rejected = true
+            }
+            assertTrue(rejected)
+        }
+    }
 
     private suspend fun seedSource(id: String): Long =
         database.sourceRecordDao().getOrCreateSourceRef(id, "HEART_RATE", 0L)

@@ -93,6 +93,9 @@ internal class DatabaseReadyStartupInitializer(
             runNonFatal("Recompute-only resync check") {
                 scheduleRecomputeResyncIfNeeded(settings.userPreferences.first())
             }
+            runNonFatal("Selected workout repair check") {
+                scheduleSelectedWorkoutRepairIfNeeded(settings.userPreferences.first())
+            }
 
             scheduleStartupWorkers(settings)
             StartupInitializationResult.COMPLETE
@@ -168,6 +171,22 @@ internal class DatabaseReadyStartupInitializer(
         // way: a recompute writes modelTrimp for every workout it touches, so the count drops to
         // zero and the gate stops firing.
         workerScheduler.scheduleResyncWorker(recomputeOnly = true, trigger = trigger, triggerDetail = detail)
+    }
+
+    /**
+     * WP-17 (HC-102): the startup trigger for the one-time repair of workouts stranded by a
+     * now-deselected device that were already persisted before this app version added
+     * de-selection pruning -- [app.readylytics.health.core.model.domain.sync.SelectedSourcePruner.prune]
+     * only ever runs forward from a new sync window, never retroactively. Gated on the persisted
+     * flag so it is enqueued at most once: [workerScheduler.scheduleSelectedWorkoutRepair]'s
+     * `ExistingWorkPolicy.KEEP` additionally guards a second cold start racing the first repair's
+     * completion. Only [HealthResyncWorker]'s repair-only pass, after a successful prune +
+     * recompute, writes the flag true -- a killed/failed pass leaves it false so this re-fires.
+     */
+    private fun scheduleSelectedWorkoutRepairIfNeeded(prefs: UserPreferences) {
+        if (prefs.selectedWorkoutRepairCompleted) return
+        logI(TAG) { "Enqueueing selected-workout repair" }
+        workerScheduler.scheduleSelectedWorkoutRepair()
     }
 
     /**

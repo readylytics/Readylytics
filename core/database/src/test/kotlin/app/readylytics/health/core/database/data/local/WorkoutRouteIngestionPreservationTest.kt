@@ -1,5 +1,6 @@
 package app.readylytics.health.core.database.data.local
 
+import app.readylytics.health.core.database.data.repository.RoomWorkoutRouteLookup
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -94,6 +95,33 @@ class WorkoutRouteIngestionPreservationTest {
             sourceRecordDao = db.sourceRecordDao(),
             minuteBucketMaintenanceDao = db.minuteBucketMaintenanceDao(),
         )
+
+    @Test
+    fun `snapshot lookup handles more than one bind-safe chunk and duplicate ids`() =
+        runTest {
+            val ids = (0..1000).map { "lookup-$it" }
+            ids.forEach { seedWorkout(it, 0L) }
+            val lookup = RoomWorkoutRouteLookup(database.workoutDao())
+            val snapshots = lookup.snapshots(ids + ids.first())
+            assertEquals(ids.toSet(), snapshots.keys)
+            val stored = database.workoutDao().getById(ids.last())!!
+            assertEquals(stored.startTime, snapshots[stored.id]!!.startTime)
+            assertEquals(stored.endTime, snapshots[stored.id]!!.endTime)
+            assertEquals(stored.exerciseType, snapshots[stored.id]!!.exerciseType)
+            assertEquals(stored.deviceName, snapshots[stored.id]!!.deviceName)
+            assertEquals(stored.routeState, snapshots[stored.id]!!.routeState)
+            assertTrue(lookup.snapshots(emptyList()).isEmpty())
+        }
+
+    @Test
+    fun `skipped bulk consent input preserves exact imported route and state`() =
+        runTest {
+            store.persist(batch(workoutWithRoute()))
+            val importedRoute = database.workoutRoutePointDao().getRoutePoints(BULK_WORKOUT_ID)
+            store.persist(batch(workoutWithoutRoute().copy(routeState = RouteState.PERMISSION_REQUIRED)))
+            assertEquals(importedRoute, database.workoutRoutePointDao().getRoutePoints(BULK_WORKOUT_ID))
+            assertEquals(RouteState.IMPORTED, database.workoutDao().getById(BULK_WORKOUT_ID)!!.routeState)
+        }
 
     @Test
     fun `routeless refetch preserves stored route points and gps summary columns`() =
@@ -234,7 +262,7 @@ class WorkoutRouteIngestionPreservationTest {
         runTest {
             val existing = seedWorkoutWithImportedRoute()
 
-            changeStore.deleteRecord(HealthDataType.EXERCISE, existing.id)
+            changeStore.deleteRecords(HealthDataType.EXERCISE, listOf(existing.id))
 
             assertEquals(null, database.workoutDao().getById(existing.id))
             assertTrue(database.workoutRoutePointDao().getRoutePoints(existing.id).isEmpty())

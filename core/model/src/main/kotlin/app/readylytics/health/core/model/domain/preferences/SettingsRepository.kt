@@ -14,6 +14,9 @@ interface SettingsRepository {
     suspend fun updateBirthday(date: LocalDate)
     suspend fun updateScoringVersion(version: Int)
 
+    /** WP-17 (HC-102): see `user_preferences.proto` field 100's doc comment. */
+    suspend fun updateSelectedWorkoutRepairCompleted(completed: Boolean)
+
     /**
      * Records the sleep-scoring inputs (weight profile, goal hours, oversleep onset) applied by the
      * last successful historical recompute. Read back via [UserPreferences.lastRecalc*]; the Sleep

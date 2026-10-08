@@ -1,9 +1,11 @@
 package app.readylytics.health.feature.workouts
 
+import app.readylytics.health.core.model.domain.model.RecordType
 import app.readylytics.health.core.model.domain.repository.HeartRateRecordData
 import app.readylytics.health.core.model.domain.repository.HeartRateRepository
 import app.readylytics.health.core.model.domain.repository.WorkoutData
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase.HeartRateSample
+import kotlinx.coroutines.yield
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 
@@ -94,16 +96,40 @@ internal suspend fun fetchHeartRateSamplesByWorkout(
 ): Map<String, List<HeartRateSample>> {
     if (workouts.isEmpty()) return emptyMap()
     val result = mutableMapOf<String, List<HeartRateSample>>()
-    for (cluster in clusterWorkoutsBySpan(workouts)) {
+    val pending = ArrayDeque(clusterWorkoutsBySpan(workouts))
+    while (pending.isNotEmpty()) {
+        yield()
+        val cluster = pending.removeFirst()
         val spanStart = cluster.minOf { it.startTime }
         val spanEnd = cluster.maxOf { it.endTime }
-        val samples = heartRateRepository.getByTimeRange(spanStart, spanEnd)
-        for (workout in cluster) {
-            result[workout.id] =
-                sliceSamplesForWorkout(samples, workout).map {
-                    HeartRateSample(timestamp = Instant.ofEpochMilli(it.timestampMs), bpm = it.beatsPerMinute)
-                }
+        val count = heartRateRepository.countInRangeOfType(RecordType.EXERCISE.name, spanStart, spanEnd)
+        if (count > MAX_CLUSTER_SAMPLES && cluster.size > 1) {
+            val middle = cluster.size / 2
+            pending.addFirst(cluster.subList(middle, cluster.size))
+            pending.addFirst(cluster.subList(0, middle))
+        } else if (count > MAX_CLUSTER_SAMPLES) {
+            val workout = cluster.single()
+            val samples = ArrayList<HeartRateSample>()
+            heartRateRepository.forEachByTimeRangeOfTypePage(
+                RecordType.EXERCISE.name,
+                spanStart,
+                spanEnd,
+                MAX_CLUSTER_SAMPLES,
+            ) { page ->
+                samples.addAll(sliceSamplesForWorkout(page, workout).map { it.toWorkoutSample() })
+            }
+            result[workout.id] = samples
+        } else {
+            val samples = heartRateRepository.getByTimeRangeOfType(RecordType.EXERCISE.name, spanStart, spanEnd)
+            for (workout in cluster) {
+                result[workout.id] = sliceSamplesForWorkout(samples, workout).map { it.toWorkoutSample() }
+            }
         }
     }
     return result
 }
+
+internal const val MAX_CLUSTER_SAMPLES = 50_000
+
+private fun HeartRateRecordData.toWorkoutSample() =
+    HeartRateSample(timestamp = Instant.ofEpochMilli(timestampMs), bpm = beatsPerMinute)

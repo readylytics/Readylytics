@@ -20,6 +20,8 @@ class ResyncCheckpointStoreImplTest {
                 nextDate = LocalDate.of(2024, 1, 1),
                 selectionHash = "hash-123",
                 baselineChangeTokens = mapOf(HealthDataType.HEART_RATE to "token-hr"),
+                baselineIntervalTokens = mapOf("DISTANCE" to "baseline-distance"),
+                completedIntervalTypes = setOf("DISTANCE"),
                 chunkDaysOverride = 15,
                 hrPageToken = "next-page-hr-token-42",
                 hrvPageToken = "next-page-hrv-token-99",
@@ -46,6 +48,8 @@ class ResyncCheckpointStoreImplTest {
                 .build()
 
         val domain = proto.toDomain()
+        assertEquals(emptyMap(), domain.baselineIntervalTokens)
+        assertEquals(emptySet(), domain.completedIntervalTypes)
         assertNull(domain.hrPageToken)
         assertNull(domain.hrvPageToken)
     }

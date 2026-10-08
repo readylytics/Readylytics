@@ -1,5 +1,6 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
+import app.readylytics.health.core.model.domain.repository.ReadRetryScope
 import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.core.database.domain.sync.DailyRecomputeSupport
 import app.readylytics.health.core.model.domain.model.HealthDataType
@@ -78,19 +79,27 @@ class ResyncRangeUseCaseTest {
         // so the walk-forward actually exercises the 6-arg path.
         coEvery { scoringRepository.fetchWalkForwardFatigueContext(any(), any(), any(), any()) } returns
             WalkForwardFatigueContext(emptyList())
-        coEvery { hcRepo.readSleepSessions(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readExerciseSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
-        coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
-        coEvery { hcRepo.readStepsRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readSteps(any(), any()) } returns ReadOutcome.Available(0L)
-        coEvery { hcRepo.readDailyStepTotals(any(), any(), any()) } returns ReadOutcome.Available(emptyMap())
-        coEvery { hcRepo.readWeightRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readBodyFatRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readBloodPressureRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readOxygenSaturationRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readBodyTemperatureRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readVo2MaxRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readSleepSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readExerciseSessionsWithCompletion(any(), any(), any()) } coAnswers {
+            app.readylytics.health.core.model.domain.repository.ExerciseSessionRead(
+                hcRepo.readExerciseSessions(firstArg(), secondArg(), true, thirdArg()),
+            )
+        }
+
+        coEvery { hcRepo.readExerciseSessions(any(), any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any(), any()) } returns
+            ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readStepsRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readStepsRecordsPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readSteps(any(), any(), any()) } returns ReadOutcome.Available(0L)
+        coEvery { hcRepo.readDailyStepTotals(any(), any(), any(), any()) } returns ReadOutcome.Available(emptyMap())
+        coEvery { hcRepo.readWeightRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBodyFatRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBloodPressureRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readOxygenSaturationRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBodyTemperatureRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readVo2MaxRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
 
         useCase =
             ResyncRangeUseCase(
@@ -123,13 +132,13 @@ class ResyncRangeUseCaseTest {
             val hrvFromSlot = slot<Instant>()
             val hrFromSlot = slot<Instant>()
             coEvery {
-                hcRepo.readSleepSessions(capture(sleepFromSlot), any())
+                hcRepo.readSleepSessions(capture(sleepFromSlot), any(), any())
             } returns ReadOutcome.Available(emptyList())
             coEvery {
-                hcRepo.readHrvSamplesPaged(capture(hrvFromSlot), any(), any(), any())
+                hcRepo.readHrvSamplesPaged(capture(hrvFromSlot), any(), any(), any(), any())
             } returns ReadOutcome.Available(Unit)
             coEvery {
-                hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any(), any())
+                hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any(), any(), any())
             } returns ReadOutcome.Available(Unit)
             useCase.run(startDate, endDate, chunkDays = 30, onProgress = null)
 
@@ -156,10 +165,10 @@ class ResyncRangeUseCaseTest {
             val hrvFromInstants = mutableListOf<Instant>()
             val hrFromInstants = mutableListOf<Instant>()
             coEvery {
-                hcRepo.readHrvSamplesPaged(capture(hrvFromInstants), any(), any(), any())
+                hcRepo.readHrvSamplesPaged(capture(hrvFromInstants), any(), any(), any(), any())
             } returns ReadOutcome.Available(Unit)
             coEvery {
-                hcRepo.readHeartRateSamplesPaged(capture(hrFromInstants), any(), any(), any())
+                hcRepo.readHeartRateSamplesPaged(capture(hrFromInstants), any(), any(), any(), any())
             } returns ReadOutcome.Available(Unit)
             useCase.run(startDate, endDate, chunkDays = chunkDays, onProgress = null)
 
@@ -190,16 +199,16 @@ class ResyncRangeUseCaseTest {
             val hrvToInstants = mutableListOf<Instant>()
             val hrToInstants = mutableListOf<Instant>()
             coEvery {
-                hcRepo.readSleepSessions(any(), capture(sleepToInstants))
+                hcRepo.readSleepSessions(any(), capture(sleepToInstants), any())
             } returns ReadOutcome.Available(emptyList())
             coEvery {
-                hcRepo.readExerciseSessions(any(), capture(workoutToInstants))
+                hcRepo.readExerciseSessions(any(), capture(workoutToInstants), any(), any())
             } returns ReadOutcome.Available(emptyList())
             coEvery {
-                hcRepo.readHrvSamplesPaged(any(), capture(hrvToInstants), any(), any())
+                hcRepo.readHrvSamplesPaged(any(), capture(hrvToInstants), any(), any(), any())
             } returns ReadOutcome.Available(Unit)
             coEvery {
-                hcRepo.readHeartRateSamplesPaged(any(), capture(hrToInstants), any(), any())
+                hcRepo.readHeartRateSamplesPaged(any(), capture(hrToInstants), any(), any(), any())
             } returns ReadOutcome.Available(Unit)
             useCase.run(
                 startDate = startDate,
@@ -229,7 +238,7 @@ class ResyncRangeUseCaseTest {
 
             var callCount = 0
             val requestedWindowEnds = mutableListOf<Instant>()
-            coEvery { hcRepo.readSleepSessions(any(), capture(requestedWindowEnds)) } coAnswers {
+            coEvery { hcRepo.readSleepSessions(any(), capture(requestedWindowEnds), any()) } coAnswers {
                 callCount++
                 if (callCount == 1) {
                     throw app.readylytics.health.core.model.domain.repository.HealthConnectWindowTimeoutException(
@@ -276,12 +285,14 @@ class ResyncRangeUseCaseTest {
                 onProgress = null,
             )
 
-            // HC-005/WP-08: readStepsRecords is now called twice per chunk regardless of the
-            // selected device -- once by HealthIngestionCoordinator.ingestWindow (populates the raw
-            // step_records table for every device, unfiltered) and once by StepCountFetcher.fetchRange
-            // (the device-filtered daily-total aggregate actually used for scoring).
-            coVerify(exactly = 2) { hcRepo.readStepsRecords(any(), any()) }
-            coVerify(exactly = 0) { hcRepo.readSteps(any(), any()) }
+            // HC-005/WP-08/WP-15: steps is read once by HealthIngestionCoordinator.ingestWindow via
+            // the paged port (populates the raw step_records table for every device, unfiltered,
+            // page-by-page) and once by StepCountFetcher.fetchRange via the unpaged port (the
+            // device-filtered daily-total aggregate actually used for scoring) -- two different
+            // methods now, each called once, rather than one method called twice.
+            coVerify(exactly = 1) { hcRepo.readStepsRecordsPaged(any(), any(), any(), any()) }
+            coVerify(exactly = 1) { hcRepo.readStepsRecords(any(), any(), any()) }
+            coVerify(exactly = 0) { hcRepo.readSteps(any(), any(), any()) }
         }
 
     @Test
@@ -293,8 +304,26 @@ class ResyncRangeUseCaseTest {
                         deviceByDataType = mapOf(HealthDataType.STEPS.name to "Watch"),
                     ),
                 )
-            coEvery { hcRepo.readStepsRecords(any(), any()) } throws RuntimeException("rate limited") andThen
-                ReadOutcome.Available(emptyList())
+            var sdkCalls = 0
+            // WP-15: ingestion now reads steps via the paged port; StepCountFetcher's selected-
+            // device daily-total aggregate still reads the unpaged port. Different methods, but the
+            // same shared window ReadRetryScope, so the first ever SDK attempt (ingestion's) still
+            // fails once and retries inside that one call before StepCountFetcher's call runs.
+            coEvery { hcRepo.readStepsRecordsPaged(any(), any(), any(), any()) } coAnswers {
+                val scope = thirdArg<ReadRetryScope>()
+                scope.execute("steps page") {
+                    sdkCalls++
+                    if (sdkCalls == 1) throw java.io.IOException("rate limited")
+                    ReadOutcome.Available(Unit)
+                }
+            }
+            coEvery { hcRepo.readStepsRecords(any(), any(), any()) } coAnswers {
+                val scope = thirdArg<ReadRetryScope>()
+                scope.execute("steps aggregate") {
+                    sdkCalls++
+                    ReadOutcome.Available(emptyList())
+                }
+            }
 
             useCase.run(
                 startDate = LocalDate.of(2024, 6, 1),
@@ -303,12 +332,11 @@ class ResyncRangeUseCaseTest {
                 onProgress = null,
             )
 
-            // First call (ingestWindow's retryWithBackoff) throws, then succeeds on retry (2 calls);
-            // the recompute-phase StepCountFetcher.fetchRange call succeeds immediately after (the
-            // mock's last-defined `andThen` behavior persists) for a 3rd call. See HC-005/WP-08: the
-            // ingestion coordinator now also reads raw step records, independent of the per-device
-            // aggregate fetch this test originally exercised alone.
-            coVerify(exactly = 3) { hcRepo.readStepsRecords(any(), any()) }
+            // Two repository reads: ingestion (paged) and the selected-device recompute window
+            // (unpaged). The ingestion SDK page retries once inside its supplied scope.
+            assertEquals(3, sdkCalls)
+            coVerify(exactly = 1) { hcRepo.readStepsRecordsPaged(any(), any(), any(), any()) }
+            coVerify(exactly = 1) { hcRepo.readStepsRecords(any(), any(), any()) }
         }
 
     @Test
@@ -320,7 +348,7 @@ class ResyncRangeUseCaseTest {
                         deviceByDataType = mapOf(HealthDataType.STEPS.name to "Watch"),
                     ),
                 )
-            coEvery { hcRepo.readStepsRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+            coEvery { hcRepo.readStepsRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
             val date = LocalDate.of(2024, 6, 1)
 
             useCase.run(
@@ -453,16 +481,17 @@ class ResyncRangeUseCaseTest {
             )
 
             assertEquals(listOf(null, null), stepOverrides)
-            coVerify(exactly = 0) { hcRepo.readDailyStepTotals(any(), any(), any()) }
-            coVerify(exactly = 0) { hcRepo.readSteps(any(), any()) }
-            coVerify(exactly = 0) { hcRepo.readStepsRecords(any(), any()) }
-            coVerify(exactly = 0) { hcRepo.readSleepSessions(any(), any()) }
-            coVerify(exactly = 0) { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) }
-            coVerify(exactly = 0) { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) }
+            coVerify(exactly = 0) { hcRepo.readDailyStepTotals(any(), any(), any(), any()) }
+            coVerify(exactly = 0) { hcRepo.readSteps(any(), any(), any()) }
+            coVerify(exactly = 0) { hcRepo.readStepsRecords(any(), any(), any()) }
+            coVerify(exactly = 0) { hcRepo.readStepsRecordsPaged(any(), any(), any(), any()) }
+            coVerify(exactly = 0) { hcRepo.readSleepSessions(any(), any(), any()) }
+            coVerify(exactly = 0) { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any(), any()) }
+            coVerify(exactly = 0) { hcRepo.readHrvSamplesPaged(any(), any(), any(), any(), any()) }
             coVerify(exactly = 0) { selectedSourcePruner.prune(any(), any(), any(), any()) }
             coVerify(exactly = 0) { changeSynchronizer.captureChangesTokens() }
             coVerify(exactly = 0) { changeSynchronizer.applyPendingChanges() }
-            coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }
+            coVerify(exactly = 0) { changeSynchronizer.commitTokens(any(), any()) }
             coVerify(exactly = 1) { sessionLinkReconciler.reconcile(any(), any(), any()) }
             coVerify(exactly = 2) {
                 scoringRepository.computeAndPersistDailySummary(any(), null, any(), any(), any())
@@ -541,7 +570,7 @@ class ResyncRangeUseCaseTest {
                     operation = "read",
                     recordType = "HeartRateRecord",
                 )
-            coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } throws expected
+            coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any(), any()) } throws expected
 
             val actual =
                 assertFailsWith<HealthConnectPermissionRevokedException> {
@@ -612,7 +641,7 @@ class ResyncRangeUseCaseTest {
             assertEquals(35, transactionRunner.transactionCount)
             assertEquals(ResyncPhase.RECOMPUTE, checkpointStore.value?.phase)
             assertEquals(startDate.plusDays(30), checkpointStore.value?.nextDate)
-            coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }
+            coVerify(exactly = 0) { changeSynchronizer.commitTokens(any(), any()) }
         }
 
     @Test

@@ -128,4 +128,13 @@ internal class SyncPreferences
                 }
             }
         }
+
+        /**
+         * WP-17 (HC-102): persists the one-time startup repair's completion. Only the resync
+         * worker's repair-only mode writes `true`, and only after its prune + recompute both
+         * succeed -- see `user_preferences.proto` field 100's doc comment.
+         */
+        suspend fun updateSelectedWorkoutRepairCompleted(completed: Boolean) {
+            dataStore.updateData { it.toBuilder().setSelectedWorkoutRepairCompleted(completed).build() }
+        }
     }

@@ -1,5 +1,6 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
+import app.readylytics.health.core.model.domain.repository.ReadRetryScope
 import app.readylytics.health.core.model.domain.model.DomainBloodPressureRecord
 import app.readylytics.health.core.model.domain.model.DomainBodyFatRecord
 import app.readylytics.health.core.model.domain.model.DomainBodyTemperatureRecord
@@ -161,22 +162,26 @@ class ScanStagingIngestionTest {
         override suspend fun readSleepSessions(
             from: Instant,
             to: Instant,
+        retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainSleepSessionRecord>> = ReadOutcome.Available(emptyList())
 
         override suspend fun readHeartRateSamples(
             from: Instant,
             to: Instant,
+        retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainHeartRateRecord>> = ReadOutcome.Available(emptyList())
 
         override suspend fun readHrvSamples(
             from: Instant,
             to: Instant,
+        retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainHrvRecord>> = ReadOutcome.Available(emptyList())
 
         override suspend fun readHeartRateSamplesPaged(
             from: Instant,
             to: Instant,
             startPageToken: String?,
+        retryScope: ReadRetryScope?,
             onPage: suspend (records: List<DomainHeartRateRecord>, nextPageToken: String?) -> Unit,
         ): ReadOutcome<Unit> {
             observedHrStartToken = startPageToken
@@ -203,6 +208,7 @@ class ScanStagingIngestionTest {
             from: Instant,
             to: Instant,
             startPageToken: String?,
+        retryScope: ReadRetryScope?,
             onPage: suspend (records: List<DomainHrvRecord>, nextPageToken: String?) -> Unit,
         ): ReadOutcome<Unit> = ReadOutcome.Available(Unit)
 
@@ -210,22 +216,33 @@ class ScanStagingIngestionTest {
             from: Instant,
             to: Instant,
             includeDetails: Boolean,
+        retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainExerciseSessionRecord>> = ReadOutcome.Available(emptyList())
 
         override suspend fun readStepsRecords(
             from: Instant,
             to: Instant,
+        retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainStepsRecord>> = ReadOutcome.Available(emptyList())
+
+        override suspend fun readStepsRecordsPaged(
+            from: Instant,
+            to: Instant,
+            retryScope: ReadRetryScope?,
+            onPage: suspend (records: List<DomainStepsRecord>) -> Unit,
+        ): ReadOutcome<Unit> = ReadOutcome.Available(Unit)
 
         override suspend fun readSteps(
             from: Instant,
             to: Instant,
+        retryScope: ReadRetryScope?,
         ): ReadOutcome<Long> = ReadOutcome.Available(0L)
 
         override suspend fun readDailyStepTotals(
             from: Instant,
             to: Instant,
             zoneId: ZoneId,
+        retryScope: ReadRetryScope?,
         ): ReadOutcome<Map<LocalDate, Long>> = ReadOutcome.Available(emptyMap())
 
         override suspend fun discoverDevices(windowDays: Int): List<String> = emptyList()
@@ -233,31 +250,37 @@ class ScanStagingIngestionTest {
         override suspend fun readWeightRecords(
             from: Instant,
             to: Instant,
+        retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainWeightRecord>> = ReadOutcome.Available(emptyList())
 
         override suspend fun readBodyFatRecords(
             from: Instant,
             to: Instant,
+        retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainBodyFatRecord>> = ReadOutcome.Available(emptyList())
 
         override suspend fun readBloodPressureRecords(
             from: Instant,
             to: Instant,
+        retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainBloodPressureRecord>> = ReadOutcome.Available(emptyList())
 
         override suspend fun readOxygenSaturationRecords(
             from: Instant,
             to: Instant,
+        retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainOxygenSaturationRecord>> = ReadOutcome.Available(emptyList())
 
         override suspend fun readBodyTemperatureRecords(
             from: Instant,
             to: Instant,
+        retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainBodyTemperatureRecord>> = ReadOutcome.Available(emptyList())
 
         override suspend fun readVo2MaxRecords(
             startTime: Instant,
             endTime: Instant,
+        retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainVo2MaxRecord>> = ReadOutcome.Available(emptyList())
 
         override suspend fun readExerciseSession(id: String): DomainExerciseSessionRecord? = null

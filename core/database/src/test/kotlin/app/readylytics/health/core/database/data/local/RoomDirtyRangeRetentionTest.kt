@@ -27,6 +27,7 @@ class RoomDirtyRangeRetentionTest {
     private lateinit var database: HealthDatabase
     private lateinit var store: RoomDirtyRangeStore
     private lateinit var changeStore: RoomHealthChangeIngestionStore
+    private lateinit var daos: HealthRecordDaos
     private val cutoff = LocalDate.of(2026, 2, 1)
 
     @Before
@@ -37,7 +38,7 @@ class RoomDirtyRangeRetentionTest {
                 Room.inMemoryDatabaseBuilder(context, HealthDatabase::class.java).allowMainThreadQueries().build()
             database.healthMutationStateDao().upsert(HealthMutationStateEntity(id = 1, sourceGeneration = 7))
             store = RoomDirtyRangeStore(database.dirtyRangeDao(), database.healthMutationStateDao())
-            val daos =
+            daos =
                 HealthRecordDaos(
                     sleepSessionDao = database.sleepSessionDao(),
                     sleepStageDao = database.sleepStageDao(),
@@ -197,9 +198,17 @@ class RoomDirtyRangeRetentionTest {
                 ),
             )
 
-            changeStore.deleteRecordAndJournal(
+            deleteRecordsAndJournal(
+                context = DeletionJournalContext(
+                    daos = daos,
+                    vo2MaxRecordDao = null,
+                    dirtyRangeStore = store,
+                    healthMutationStateDao = database.healthMutationStateDao(),
+                    settingsRepo = null,
+                    transactionRunner = RoomTransactionRunner(database),
+                ),
                 type = HealthDataType.EXERCISE,
-                hcRecordId = "workout-200",
+                ids = listOf("workout-200"),
                 zoneId = ZoneOffset.UTC,
                 today = today,
             )
@@ -234,9 +243,17 @@ class RoomDirtyRangeRetentionTest {
                 ),
             )
 
-            changeStore.deleteRecordAndJournal(
+            deleteRecordsAndJournal(
+                context = DeletionJournalContext(
+                    daos = daos,
+                    vo2MaxRecordDao = null,
+                    dirtyRangeStore = store,
+                    healthMutationStateDao = database.healthMutationStateDao(),
+                    settingsRepo = null,
+                    transactionRunner = RoomTransactionRunner(database),
+                ),
                 type = HealthDataType.SLEEP,
-                hcRecordId = "sparse-sleep-1",
+                ids = listOf("sparse-sleep-1"),
                 zoneId = nyZone,
                 today = today,
             )

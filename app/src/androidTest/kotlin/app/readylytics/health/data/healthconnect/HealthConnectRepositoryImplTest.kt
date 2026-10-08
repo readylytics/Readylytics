@@ -128,6 +128,30 @@ class HealthConnectRepositoryImplTest {
         assertTrue((repo.optionalPermissions intersect repo.criticalPermissions).isEmpty())
     }
 
+    @Test
+    fun readSleepSessions_delegatesProviderFailureToSuppliedScope() =
+        runBlocking {
+            val failure = java.io.IOException("rate limit")
+            fake.errors[FakeOp.Sleep] = failure
+            var scopeCalls = 0
+            val scope =
+                object : app.readylytics.health.core.model.domain.repository.ReadRetryScope {
+                    override suspend fun <T> execute(
+                        label: String,
+                        block: suspend () -> T,
+                    ): T {
+                        scopeCalls++
+                        return block()
+                    }
+                }
+            val thrown =
+                assertThrows(java.io.IOException::class.java) {
+                    runBlocking { repo.readSleepSessions(t0, t7, retryScope = scope) }
+                }
+            assertSame(failure, thrown)
+            assertEquals(1, scopeCalls)
+        }
+
     // ---------- sleep ----------
 
     @Test
@@ -356,6 +380,42 @@ class HealthConnectRepositoryImplTest {
             fake.stepsByInstant[t1] = 1_000L
             fake.stepsByInstant[t2] = 2_000L
             assertEquals(2, repo.readStepsRecords(t0, t7).asAvailable().size)
+        }
+
+    // ---------- steps records (paged) ----------
+
+    @Test
+    fun readStepsRecordsPaged_emptyWhenNone() =
+        runBlocking {
+            val pages = mutableListOf<Int>()
+            val outcome = repo.readStepsRecordsPaged(t0, t7) { page -> pages += page.size }
+            assertEquals(ReadOutcome.Available(Unit), outcome)
+            assertTrue(pages.isEmpty())
+        }
+
+    @Test
+    fun readStepsRecordsPaged_streamsAllPagesWithoutExceedingPageSize() =
+        runBlocking {
+            repeat(120) { i ->
+                fake.stepsByInstant[t0.plusSeconds(i.toLong())] = 1L
+            }
+            val pageSizes = mutableListOf<Int>()
+            var total = 0
+            repo.readStepsRecordsPaged(t0, t7) { page ->
+                pageSizes += page.size
+                total += page.size
+            }
+            assertEquals(120, total)
+            assertEquals(3, fake.stepsPagesServed)
+            assertTrue(pageSizes.all { it <= 50 })
+        }
+
+    @Test
+    fun readStepsRecordsPaged_returnsDeniedOnSecurityException() =
+        runBlocking {
+            fake.stepsByInstant[t1] = 1_000L
+            fake.errors[FakeOp.Steps] = SecurityException("revoked")
+            assertEquals(ReadOutcome.Denied, repo.readStepsRecordsPaged(t0, t7) { })
         }
 
     // ---------- readSteps (aggregate) ----------

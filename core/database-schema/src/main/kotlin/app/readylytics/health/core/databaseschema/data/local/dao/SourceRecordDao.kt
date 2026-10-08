@@ -57,6 +57,12 @@ interface SourceRecordResolutionDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertIgnoreAll(entities: List<HealthSourceRecordEntity>)
+
+    @Query("SELECT id FROM health_source_records WHERE sourceRecordId IN (:sourceRecordIds)")
+    suspend fun getSourceRefs(sourceRecordIds: List<String>): List<Long>
+
+    @Query("DELETE FROM health_source_records WHERE sourceRecordId IN (:sourceRecordIds)")
+    suspend fun deleteBySourceRecordIds(sourceRecordIds: List<String>): Int
 }
 
 @Dao
@@ -241,4 +247,5 @@ suspend fun SourceRecordDao.upsertIntervalSourceRecord(
             ),
         )
     }
+
 }

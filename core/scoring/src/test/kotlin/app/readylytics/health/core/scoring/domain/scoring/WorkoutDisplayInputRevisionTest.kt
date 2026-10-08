@@ -43,11 +43,11 @@ class WorkoutDisplayInputRevisionTest {
                     )
                 }
             prepare()
-            coEvery { heartRate.getByTimeRange(any(), any()) } returns samples
+            coEvery { heartRate.getByTimeRangeOfType("EXERCISE", any(), any()) } returns samples
             display(workout)
             val prior = results.last()
             assertNotNull(prior.trimp)
-            coEvery { heartRate.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { heartRate.getByTimeRangeOfType("EXERCISE", any(), any()) } returns emptyList()
 
             display(cached(workout, prior))
 
@@ -60,7 +60,7 @@ class WorkoutDisplayInputRevisionTest {
         runTest {
             val workout = workout().copy(endTime = 0L)
             prepare()
-            coEvery { heartRate.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { heartRate.getByTimeRangeOfType("EXERCISE", any(), any()) } returns emptyList()
             display(workout)
             val prior = results.last()
 
@@ -72,6 +72,7 @@ class WorkoutDisplayInputRevisionTest {
 
     private fun prepare() {
         coEvery { summaries.getByDate(any()) } returns null
+        coEvery { summaries.getSince(any()) } returns emptyList()
         every { metrics.execute(any(), any(), any(), any()) } answers {
             results += thirdArg<CanonicalWorkoutResult>()
             ComputeWorkoutLoadMetricsUseCase.WorkoutLoadMetrics(null, null, null, null, "", null)

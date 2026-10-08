@@ -50,6 +50,7 @@ class DailySyncUseCase
         private val ingestion: DailySyncIngestionCollaborators,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
         private val clock: Clock,
+        private val dirtyRangeStore: DirtyRangeStore,
     ) {
         private val sessionLinkReconciler get() = ingestion.sessionLinkReconciler
         private val changeSynchronizer get() = ingestion.changeSynchronizer
@@ -90,6 +91,36 @@ class DailySyncUseCase
                     onProgress = onProgress,
                 )
             }
+        }
+
+        /**
+         * Final-review fix (Finding 1): journals a durable dirty-range ticket covering
+         * [affectedDates]' dependency closure, for [run]'s mid-loop continuation commit. Budget
+         * exhaustion there commits the change-synchronizer's candidate tokens past a page before
+         * this run's own walk-forward recompute has reached that page's dates -- an EXERCISE
+         * upsert with `keep=true` never runs `deleteRecordsAndJournal`
+         * (`HealthChangeSynchronizerImpl.persistPreparedWorkouts`), and a brand-new record of any
+         * type has no prior row for the delete-side journal to resolve an affected date from
+         * (`DeletionJournalContext` requires `affected.isNotEmpty()`), so without this call nothing
+         * durable records that those dates still need recompute if the process dies before the
+         * walk-forward further down runs. Same increment-then-append pattern as
+         * `SelectedSourcePrunerImpl.journalPrunedPage`, routed through [DirtyRangeStore.journalDirtyRange]
+         * (rather than the Room DAOs that method injects directly) since this class lives across
+         * the `core:healthconnect`/`core:database` module boundary and only holds this interface.
+         * No-op when [affectedDates] is empty.
+         */
+        private suspend fun journalContinuationTicket(
+            affectedDates: Set<java.time.LocalDate>,
+            retentionStart: java.time.LocalDate,
+            today: java.time.LocalDate,
+        ) {
+            if (affectedDates.isEmpty()) return
+            val changed = ScoreInvalidation.AffectedRange(affectedDates.min(), affectedDates.max())
+            ScoreInvalidation
+                .dependencyClosure(changed, ScoreInvalidation.Reason.UNKNOWN, retentionStart, today)
+                ?.let { closure ->
+                    dirtyRangeStore.journalDirtyRange(closure.start, closure.endInclusive, "UNKNOWN", "ACTIVE")
+                }
         }
 
         /**
@@ -158,26 +189,78 @@ class DailySyncUseCase
                     val zoneId = runContext.zoneId
                     val today = runContext.today
 
-                    val outcome = changeSynchronizer.applyPendingChanges()
-                    if (outcome.requiresFullResync) {
-                        return@withContext Result.failure(
-                            "Requires historical resync: ${outcome.fullResyncReason}",
-                            "REQUIRES_HISTORICAL_RESYNC",
-                        )
+                    var continuationRequired = true
+                    val affectedDates = mutableSetOf<java.time.LocalDate>()
+                    val nextIntervalTokens = mutableMapOf<String, String>()
+                    val nextTokens = mutableMapOf<
+                        app.readylytics.health.core.model.domain.model.HealthDataType, String>()
+
+                    while (continuationRequired) {
+                        ensureActive()
+                        val outcome = changeSynchronizer.applyPendingChanges()
+                        affectedDates.addAll(outcome.affectedDates)
+
+                        // continuationRequired=true always pairs with requiresFullResync=true on
+                        // budget exhaustion (brief Step 3), so requiresFullResync alone must never
+                        // be latched into a persistent flag here -- only a genuine OTHER full-resync
+                        // reason (continuationRequired=false) is terminal. Returning immediately
+                        // inline (rather than setting a var read after the loop) means a later
+                        // iteration that successfully drains the backlog is never overridden by an
+                        // earlier budget-exhaustion iteration's transient requiresFullResync=true.
+                        if (outcome.requiresFullResync && !outcome.continuationRequired) {
+                            // No page of this call's token advanced far enough to be safely
+                            // tokenized, so nothing accumulated so far is committed. The caller
+                            // retries after a historical resync, which re-derives everything from
+                            // scratch.
+                            return@withContext Result.failure(
+                                "Requires historical resync: ${outcome.fullResyncReason}",
+                                "REQUIRES_HISTORICAL_RESYNC",
+                            )
+                        }
+
+                        if (outcome.nextTokens.isNotEmpty()) {
+                            nextTokens.putAll(outcome.nextTokens)
+                        }
+
+                        nextIntervalTokens.putAll(outcome.nextIntervalTokens)
+                        continuationRequired = outcome.continuationRequired
+                        if (continuationRequired) {
+                            // Budget exhaustion: every page applied so far already committed its
+                            // own Room transaction, but NOT every write path also journals a
+                            // durable dirty-range ticket for its dates -- an EXERCISE upsert with
+                            // keep=true never runs deleteRecordsAndJournal
+                            // (HealthChangeSynchronizerImpl.persistPreparedWorkouts), and a
+                            // brand-new record of any type has no prior row for the delete-side
+                            // journal to resolve an affected date from (DeletionJournalContext
+                            // requires affected.isNotEmpty()). So this page's own affected dates
+                            // must be journaled here, before the candidate tokens below let the
+                            // next applyPendingChanges() call resume past this page -- otherwise a
+                            // crash before the walk-forward recompute further down runs leaves
+                            // nothing durable recording that this page's dates still need
+                            // recomputing, and a retry resumes from the committed token past them
+                            // forever (final-review Finding 1).
+                            journalContinuationTicket(
+                                affectedDates = outcome.affectedDates,
+                                retentionStart = RetentionBounds.resolveResyncStartDate(prefs, today),
+                                today = today,
+                            )
+                            // Persisting the candidate tokens now is what lets the next
+                            // applyPendingChanges() call resume past this point instead of
+                            // re-fetching -- and re-applying -- the same already-committed pages
+                            // forever.
+                            changeSynchronizer.commitTokens(outcome.nextTokens, outcome.nextIntervalTokens)
+                        }
                     }
 
                     val standardDays = (0 until windowDays).map { today.minusDays(it.toLong()) }.toSet()
                     val standardOldest = standardDays.minOrNull() ?: today
 
-                    // HC changes can legitimately touch recent past days (last night's sleep is
-                    // dated yesterday; HR/HRV backfilled for the prior day). Absorb those inline by
-                    // widening the walk-forward down to the earliest recent affected day - contiguous
-                    // to today so frozen baselines and acute/chronic averages propagate correctly.
-                    // Only changes older than the inline bound (which would make one foreground HC
-                    // read + recompute too large) escalate to the durable historical resync.
                     val inlineFloor = today.minusDays(MAX_INLINE_RECOMPUTE_DAYS.toLong())
-                    val outOfWindowAffected = outcome.affectedDates.filter { it.isBefore(standardOldest) }
-                    val requiresHistoricalResync = outOfWindowAffected.any { it.isBefore(inlineFloor) }
+                    val outOfWindowAffected = affectedDates.filter { it.isBefore(standardOldest) }
+                    var requiresHistoricalResync = false
+                    if (outOfWindowAffected.any { it.isBefore(inlineFloor) }) {
+                        requiresHistoricalResync = true
+                    }
                     val oldestTargetDay =
                         if (requiresHistoricalResync) {
                             standardOldest
@@ -382,6 +465,11 @@ class DailySyncUseCase
                         )
                     }
                     if (requiresHistoricalResync) {
+                        // An out-of-window affected date older than inlineFloor is NOT covered by
+                        // this run's walk-forward recompute above, and nothing else durably
+                        // tickets it here -- so the candidate tokens must stay uncommitted. The
+                        // REQUIRES_HISTORICAL_RESYNC escalation is what covers it instead: the
+                        // caller's resync re-derives everything from scratch, tokens included.
                         val staleDates =
                             outOfWindowAffected.filter { it.isBefore(inlineFloor) }.sorted().take(MAX_REPORTED_DATES)
                         Result.failure(
@@ -389,7 +477,9 @@ class DailySyncUseCase
                             "REQUIRES_HISTORICAL_RESYNC",
                         )
                     } else {
-                        changeSynchronizer.commitTokens(outcome.nextTokens)
+                        // Every affected date was covered by the walk-forward recompute just run,
+                        // so the candidate tokens are now safe to commit.
+                        changeSynchronizer.commitTokens(nextTokens, nextIntervalTokens)
                         settingsRepo.updateLastSyncTimestamp(clock.millis())
                         Result.success(Unit)
                     }

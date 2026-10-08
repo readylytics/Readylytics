@@ -191,4 +191,11 @@ interface BodyFatRecordDao {
 
     @Query("DELETE FROM body_fat_records WHERE timestampMs >= :startMs AND timestampMs <= :endMs")
     suspend fun deleteBetween(startMs: Long, endMs: Long): Int
+
+    @Query("SELECT * FROM body_fat_records WHERE id IN (:sourceRecordIds)")
+    suspend fun getBySourceRecordIds(sourceRecordIds: List<String>): List<BodyFatRecordEntity>
+
+    @Query("DELETE FROM body_fat_records WHERE id IN (:sourceRecordIds)")
+    suspend fun deleteBySourceRecordIds(sourceRecordIds: List<String>): Int
+
 }

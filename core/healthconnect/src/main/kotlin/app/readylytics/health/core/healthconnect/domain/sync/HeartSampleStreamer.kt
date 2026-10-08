@@ -28,20 +28,19 @@ internal class HeartSampleStreamer(
         staging.beginTypeScan(params.scanIdentity, HealthDataType.HEART_RATE, params.resumeHrScan)
         var sampleCount = 0
         val outcome =
-            params.retryBudget.execute("hrPages") {
-                hcRepo.readHeartRateSamplesPaged(
-                    from = params.windowStart,
-                    to = params.windowEnd,
-                    startPageToken = params.hrStartPageToken,
-                ) { page, nextToken ->
-                    // Staged before the write: a crash between staging and persisting re-reads the
-                    // page and re-stages the same ids idempotently, whereas the reverse order could
-                    // mark a persisted id unseen and delete it on the next reconcile.
-                    staging.stageIds(params.scanIdentity, HealthDataType.HEART_RATE, page.map { it.id })
-                    sampleCount += persistHeartRatePage(page, sessionContext, device)
-                    onPageDone()
-                    params.onTokenUpdated?.invoke(nextToken, null)
-                }
+            hcRepo.readHeartRateSamplesPaged(
+                from = params.windowStart,
+                to = params.windowEnd,
+                startPageToken = params.hrStartPageToken,
+                retryScope = params.retryBudget,
+            ) { page, nextToken ->
+                // Staged before the write: a crash between staging and persisting re-reads the
+                // page and re-stages the same ids idempotently, whereas the reverse order could
+                // mark a persisted id unseen and delete it on the next reconcile.
+                staging.stageIds(params.scanIdentity, HealthDataType.HEART_RATE, page.map { it.id })
+                sampleCount += persistHeartRatePage(page, sessionContext, device)
+                onPageDone()
+                params.onTokenUpdated?.invoke(nextToken, null)
             }
         if (outcome is ReadOutcome.Available) {
             staging.markTypeScanComplete(params.scanIdentity, HealthDataType.HEART_RATE)
@@ -59,17 +58,16 @@ internal class HeartSampleStreamer(
         staging.beginTypeScan(params.scanIdentity, HealthDataType.HRV, params.resumeHrvScan)
         var sampleCount = 0
         val outcome =
-            params.retryBudget.execute("hrvPages") {
-                hcRepo.readHrvSamplesPaged(
-                    from = params.windowStart,
-                    to = params.windowEnd,
-                    startPageToken = params.hrvStartPageToken,
-                ) { page, nextToken ->
-                    staging.stageIds(params.scanIdentity, HealthDataType.HRV, page.map { it.id })
-                    sampleCount += persistHrvPage(page, sessionContext, device)
-                    onPageDone()
-                    params.onTokenUpdated?.invoke(null, nextToken)
-                }
+            hcRepo.readHrvSamplesPaged(
+                from = params.windowStart,
+                to = params.windowEnd,
+                startPageToken = params.hrvStartPageToken,
+                retryScope = params.retryBudget,
+            ) { page, nextToken ->
+                staging.stageIds(params.scanIdentity, HealthDataType.HRV, page.map { it.id })
+                sampleCount += persistHrvPage(page, sessionContext, device)
+                onPageDone()
+                params.onTokenUpdated?.invoke(null, nextToken)
             }
         if (outcome is ReadOutcome.Available) {
             staging.markTypeScanComplete(params.scanIdentity, HealthDataType.HRV)

@@ -27,7 +27,7 @@ class StepCountFetcherRangeTest {
         runTest {
             val start = LocalDate.of(2024, 1, 1)
             val end = LocalDate.of(2024, 1, 3)
-            coEvery { hcRepo.readDailyStepTotals(any(), any(), any()) } returns
+            coEvery { hcRepo.readDailyStepTotals(any(), any(), any(), any()) } returns
                 ReadOutcome.Available(emptyMap())
 
             val result = fetcher.fetchRange(start, end, 30, null, zoneId)
@@ -43,7 +43,7 @@ class StepCountFetcherRangeTest {
         runTest {
             val start = LocalDate.of(2024, 1, 1)
             val end = LocalDate.of(2024, 1, 3)
-            coEvery { hcRepo.readDailyStepTotals(any(), any(), any()) } returns
+            coEvery { hcRepo.readDailyStepTotals(any(), any(), any(), any()) } returns
                 ReadOutcome.Available(mapOf(start.plusDays(1) to 4_321L))
 
             val result = fetcher.fetchRange(start, end, 30, null, zoneId)
@@ -61,7 +61,7 @@ class StepCountFetcherRangeTest {
             val chunkDays = 10
 
             val requestedWindows = mutableListOf<Pair<Instant, Instant>>()
-            coEvery { hcRepo.readDailyStepTotals(any(), any(), any()) } coAnswers {
+            coEvery { hcRepo.readDailyStepTotals(any(), any(), any(), any()) } coAnswers {
                 val from = firstArg<Instant>()
                 val to = secondArg<Instant>()
                 requestedWindows += from to to

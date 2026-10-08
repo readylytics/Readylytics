@@ -111,6 +111,52 @@ class HealthChangeSynchronizerRecordSyncTest {
     }
 
     @Test
+    fun transientRouteFailurePreservesStoredRoute() =
+        runTest {
+            seedTokens()
+            val importedRoute = listOf(
+                WorkoutRoutePoint(workoutId = "failure-route", latitude = 48.0, longitude = 2.0, timestampMs = 1L),
+            )
+            var persistedRoute = importedRoute
+            coEvery { changeIngestionStore.persistPreparedWorkouts(any()) } coAnswers {
+                firstArg<List<PreparedWorkout>>().forEach { prepared ->
+                    val route = prepared.route
+                    if (route is ReadOutcome.Available) persistedRoute = route.data
+                }
+            }
+            coEvery { client.permissionController.getGrantedPermissions() } returns
+                setOf(
+                    "android.permission.health.READ_EXERCISE_ROUTES",
+                    HealthPermission.getReadPermission(ExerciseSessionRecord::class),
+                )
+            val realPreparer = WorkoutReadPreparer(client, mockk(relaxed = true))
+            val realSynchronizer = HealthChangeSynchronizerImpl(
+                client = client,
+                tokenStore = tokenStore,
+                settingsRepo = settingsRepo,
+                transactionRunner = transactionRunner,
+                healthIngestionStore = healthIngestionStore,
+                changeIngestionStore = changeIngestionStore,
+                workoutReadPreparer = realPreparer,
+                clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
+            )
+            val record = createMockExerciseRecord(
+                "failure-route",
+                Instant.parse("2026-06-01T10:00:00Z"),
+                Instant.parse("2026-06-01T11:00:00Z"),
+            )
+            val ioFailure = java.io.IOException("binder failed")
+            coEvery { client.readRecord(ExerciseSessionRecord::class, "failure-route") } throws ioFailure
+            routeOneChange(HealthDataType.EXERCISE, UpsertionChange(record))
+            val thrown = assertThrows(java.io.IOException::class.java) {
+                kotlinx.coroutines.runBlocking { realSynchronizer.applyPendingChanges() }
+            }
+            assertSame(ioFailure, thrown)
+            assertEquals(importedRoute, persistedRoute)
+            coVerify(exactly = 0) { changeIngestionStore.persistPreparedWorkouts(any()) }
+        }
+
+    @Test
     fun `a single heart rate record resolves its source ref exactly once`() =
         runTest {
             // WP-16 / R2-HC-003 acceptance test: a single upserted HEART_RATE record carrying 200
@@ -163,15 +209,15 @@ class HealthChangeSynchronizerRecordSyncTest {
             routeOneChange(dataType = HealthDataType.HEART_RATE, change = change)
             val expectedDates = setOf(epochDay(1000L), epochDay(2000L))
             coEvery {
-                changeIngestionStore.affectedDatesForRecord(HealthDataType.HEART_RATE, recordId, any())
+                changeIngestionStore.affectedDatesForRecords(HealthDataType.HEART_RATE, listOf(recordId), any())
             } returns expectedDates
 
             val outcome = synchronizer.applyPendingChanges()
 
             assertEquals(expectedDates, outcome.affectedDates)
             coVerifyOrder {
-                changeIngestionStore.affectedDatesForRecord(HealthDataType.HEART_RATE, recordId, any())
-                changeIngestionStore.deleteRecord(HealthDataType.HEART_RATE, recordId)
+                changeIngestionStore.affectedDatesForRecords(HealthDataType.HEART_RATE, listOf(recordId), any())
+                changeIngestionStore.deleteRecords(HealthDataType.HEART_RATE, listOf(recordId))
             }
         }
 
@@ -187,15 +233,15 @@ class HealthChangeSynchronizerRecordSyncTest {
             routeOneChange(dataType = HealthDataType.HRV, change = change)
             val expectedDates = setOf(epochDay(3000L), epochDay(4000L))
             coEvery {
-                changeIngestionStore.affectedDatesForRecord(HealthDataType.HRV, recordId, any())
+                changeIngestionStore.affectedDatesForRecords(HealthDataType.HRV, listOf(recordId), any())
             } returns expectedDates
 
             val outcome = synchronizer.applyPendingChanges()
 
             assertEquals(expectedDates, outcome.affectedDates)
             coVerifyOrder {
-                changeIngestionStore.affectedDatesForRecord(HealthDataType.HRV, recordId, any())
-                changeIngestionStore.deleteRecord(HealthDataType.HRV, recordId)
+                changeIngestionStore.affectedDatesForRecords(HealthDataType.HRV, listOf(recordId), any())
+                changeIngestionStore.deleteRecords(HealthDataType.HRV, listOf(recordId))
             }
         }
 
@@ -227,7 +273,7 @@ class HealthChangeSynchronizerRecordSyncTest {
                 }
             routeOneChange(dataType = HealthDataType.HEART_RATE, change = change)
             coEvery {
-                changeIngestionStore.affectedDatesForRecord(HealthDataType.HEART_RATE, recordId, any())
+                changeIngestionStore.affectedDatesForRecords(HealthDataType.HEART_RATE, listOf(recordId), any())
             } returns setOf(epochDay(oldTimestampMs))
 
             val outcome = synchronizer.applyPendingChanges()
@@ -237,8 +283,8 @@ class HealthChangeSynchronizerRecordSyncTest {
                 outcome.affectedDates,
             )
             coVerifyOrder {
-                changeIngestionStore.affectedDatesForRecord(HealthDataType.HEART_RATE, recordId, any())
-                changeIngestionStore.deleteRecord(HealthDataType.HEART_RATE, recordId)
+                changeIngestionStore.affectedDatesForRecords(HealthDataType.HEART_RATE, listOf(recordId), any())
+                changeIngestionStore.deleteRecords(HealthDataType.HEART_RATE, listOf(recordId))
                 healthIngestionStore.replaceHeartRateSources(
                     match {
                         it.size == 1 && it[0].rows.size == 1 &&
@@ -269,7 +315,7 @@ class HealthChangeSynchronizerRecordSyncTest {
                 }
             routeOneChange(dataType = HealthDataType.WEIGHT, change = change)
             coEvery {
-                changeIngestionStore.affectedDatesForRecord(HealthDataType.WEIGHT, recordId, any())
+                changeIngestionStore.affectedDatesForRecords(HealthDataType.WEIGHT, listOf(recordId), any())
             } returns setOf(epochDay(oldTimestampMs))
 
             val outcome = synchronizer.applyPendingChanges()
@@ -279,8 +325,8 @@ class HealthChangeSynchronizerRecordSyncTest {
                 outcome.affectedDates,
             )
             coVerifyOrder {
-                changeIngestionStore.affectedDatesForRecord(HealthDataType.WEIGHT, recordId, any())
-                changeIngestionStore.deleteRecord(HealthDataType.WEIGHT, recordId)
+                changeIngestionStore.affectedDatesForRecords(HealthDataType.WEIGHT, listOf(recordId), any())
+                changeIngestionStore.deleteRecords(HealthDataType.WEIGHT, listOf(recordId))
                 healthIngestionStore.persist(
                     match { batch -> batch.weights.map { it.id } == listOf("${recordId}_${newTime.toEpochMilli()}") },
                 )
@@ -312,7 +358,7 @@ class HealthChangeSynchronizerRecordSyncTest {
                     }
                 routeOneChange(dataType = HealthDataType.WEIGHT, change = change)
                 coEvery {
-                    changeIngestionStore.affectedDatesForRecord(HealthDataType.WEIGHT, recordId, any())
+                    changeIngestionStore.affectedDatesForRecords(HealthDataType.WEIGHT, listOf(recordId), any())
                 } returns emptySet()
 
                 val outcome = synchronizer.applyPendingChanges()
@@ -422,7 +468,12 @@ class HealthChangeSynchronizerRecordSyncTest {
         runTest {
             // H5/WP-09 acceptance criterion: Exercise enrichment using real WorkoutReadPreparer
             // executes client.readRecord and client.readRecords strictly outside writer transactions.
-            val realPreparer = WorkoutReadPreparer(client)
+            coEvery { client.permissionController.getGrantedPermissions() } returns
+                setOf(
+                    "android.permission.health.READ_EXERCISE_ROUTES",
+                    HealthPermission.getReadPermission(ExerciseSessionRecord::class),
+                )
+            val realPreparer = WorkoutReadPreparer(client, mockk(relaxed = true))
             val realSynchronizer =
                 HealthChangeSynchronizerImpl(
                     client = client,
@@ -492,7 +543,7 @@ class HealthChangeSynchronizerRecordSyncTest {
 
             synchronizer.applyPendingChanges()
 
-            coVerify(exactly = 0) { changeIngestionStore.deleteRecord(HealthDataType.EXERCISE, any()) }
+            coVerify(exactly = 0) { changeIngestionStore.deleteRecords(HealthDataType.EXERCISE, any()) }
             coVerify { changeIngestionStore.persistPreparedWorkouts(any()) }
         }
 
@@ -503,7 +554,7 @@ class HealthChangeSynchronizerRecordSyncTest {
             val recordId = "exercise-deleted"
             val storedDay = LocalDate.of(2026, 6, 1)
             coEvery {
-                changeIngestionStore.affectedDatesForRecord(HealthDataType.EXERCISE, recordId, any())
+                changeIngestionStore.affectedDatesForRecords(HealthDataType.EXERCISE, listOf(recordId), any())
             } returns setOf(storedDay)
             routeOneChange(
                 HealthDataType.EXERCISE,
@@ -514,8 +565,8 @@ class HealthChangeSynchronizerRecordSyncTest {
 
             assertEquals(setOf(storedDay), outcome.affectedDates)
             coVerifyOrder {
-                changeIngestionStore.affectedDatesForRecord(HealthDataType.EXERCISE, recordId, any())
-                changeIngestionStore.deleteRecord(HealthDataType.EXERCISE, recordId)
+                changeIngestionStore.affectedDatesForRecords(HealthDataType.EXERCISE, listOf(recordId), any())
+                changeIngestionStore.deleteRecords(HealthDataType.EXERCISE, listOf(recordId))
             }
         }
 

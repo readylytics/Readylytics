@@ -1,6 +1,7 @@
 package app.readylytics.health.core.scoring.domain.scoring
 
 import app.readylytics.health.core.model.domain.display.MetricFormatter
+import app.readylytics.health.core.model.domain.model.RecordType
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.model.LoadSourceSelector
 import app.readylytics.health.core.model.domain.preferences.SettingsDefaults
@@ -47,7 +48,7 @@ class GetWorkoutDisplayMetricsUseCase
             val trimpByDate = resolveTrimpByDate(historicalSummaries, workoutDate, zoneId, prefs)
             val hrSamples =
                 samples ?: heartRateRepository
-                    .getByTimeRange(workout.startTime, workout.endTime)
+                    .getByTimeRangeOfType(RecordType.EXERCISE.name, workout.startTime, workout.endTime)
                     .map {
                         HeartRateSample(
                             timestamp = Instant.ofEpochMilli(it.timestampMs),

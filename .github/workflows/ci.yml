@@ -50,22 +50,6 @@ jobs:
         if: ${{ !cancelled() }}
         run: ./gradlew lint lintRelease
 
-      # Guards against the drift that left :database-benchmark uncompilable and its benchmarks
-      # silently not running. `assembleDebug` does not build any module's androidTest sources, and
-      # the two benchmark modules were not built by ANY CI step, so 35 compile errors accumulated
-      # there unnoticed across several phases. Compiling the instrumentation sources on every PR is
-      # cheap and would have caught all of them.
-      # Bounded heap/worker count and a hard timeout: an unbounded cold multi-module androidTest
-      # compile has previously OOM'd forked Kotlin/KSP workers on this shared 2-core runner
-      # (see scripts/run-instrumented-tests.sh), which leaves the Gradle daemon waiting on a
-      # dead worker forever with no further log output. Fail fast instead of hanging for hours.
-      - name: Compile instrumented test sources (incl. benchmark modules)
-        if: ${{ !cancelled() }}
-        run: |
-          timeout --signal=TERM --kill-after=30s 20m ./gradlew \
-            "-Dorg.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1g -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8" \
-            assembleDebugAndroidTest :benchmark:assembleBenchmarkBenchmark --max-workers=2 --stacktrace --console=plain
-
       # Same dead-worker hazard as the instrumented-compile step above: unbounded testDebugUnitTest
       # across all modules has hung for 28+ min with no further log output on this shared 2-core
       # runner (vs. ~2 min baseline). Bound heap/workers and fail fast instead of hanging.
@@ -103,3 +87,48 @@ jobs:
         with:
           name: lint-report
           path: app/build/reports/lint-results-*.xml
+
+  # Separate job: a cold androidTest compile of every module is the heaviest step and has stalled
+  # until the runner was killed. Isolating it gives it a fresh runner (no stale daemons from
+  # lint/detekt) and keeps lint/unit-test/coverage results from being skipped when it dies.
+  compile-instrumented:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v3.0.0
+        with:
+          packages: "platform-tools"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v3.5.0
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      # Guards against the drift that left :database-benchmark uncompilable and its benchmarks
+      # silently not running. `assembleDebug` does not build any module's androidTest sources, and
+      # the two benchmark modules were not built by ANY CI step, so 35 compile errors accumulated
+      # there unnoticed across several phases. Compiling the instrumentation sources on every PR is
+      # cheap and would have caught all of them.
+      # Bounded heap/worker count and a hard timeout: an unbounded cold multi-module androidTest
+      # compile has previously OOM'd forked Kotlin/KSP workers on this shared 2-core runner
+      # (see scripts/run-instrumented-tests.sh), which leaves the Gradle daemon waiting on a
+      # dead worker forever with no further log output. Fail fast instead of hanging for hours.
+      - name: Compile instrumented test sources (incl. benchmark modules)
+        timeout-minutes: 25
+        run: |
+          ./gradlew --stop
+          timeout --signal=TERM --kill-after=30s 20m ./gradlew \
+            "-Dorg.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1g -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8" \
+            assembleDebugAndroidTest :benchmark:assembleBenchmarkBenchmark --max-workers=2 --stacktrace --console=plain

@@ -161,6 +161,7 @@ class SourcePayloadWriter
             )
         }
 
+        // Keep entity materialization bounded; each DAO further splits writes into 100-row SQL statements.
         private suspend fun upsertHeartRateRows(
             sourceRef: Long,
             rows: List<HeartRateInput>,

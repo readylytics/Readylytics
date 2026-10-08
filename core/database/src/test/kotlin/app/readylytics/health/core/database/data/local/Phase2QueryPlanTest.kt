@@ -2,7 +2,14 @@ package app.readylytics.health.core.database.data.local
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import app.readylytics.health.core.databaseschema.data.local.dao.getOrCreateSourceRef
+import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HrMinuteBucketEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.MinuteCoverageEntity
+import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -162,6 +169,126 @@ class Phase2QueryPlanTest {
         )
     }
 
+    /**
+     * Task 10 (WP-18): the two remaining tier-visible bulk reads
+     * [app.readylytics.health.core.databaseschema.data.local.dao.VisibleHeartRateDao
+     * .getVisibleByTimeRange] and [.getVisibleByTypeAndTimeRange] are not keyset-paged. Every
+     * production consumer of them only ever supplies a caller-bounded window (one day for the
+     * dashboard/scoring range reads, one workout span or one batch of chronologically-local
+     * workouts for the typed read -- see `AuthoritativeHeartRateReader.kt`'s and
+     * `BASELINE.md`'s Task 10 notes), so the real question is whether the SQL itself degrades to a
+     * full scan as the table grows, independent of how large any one caller's window is. EXPLAIN
+     * QUERY PLAN answers that from schema alone: an empty database already proves the plan the
+     * planner commits to does not change as rows accumulate.
+     */
+    @Test
+    fun tierVisibilityPlansStayIndexed() {
+        val timeRangePlan = explain(VISIBLE_BY_TIME_RANGE_SQL).joinToString(" | ")
+        val typeRangePlan = explain(VISIBLE_BY_TYPE_AND_TIME_RANGE_SQL).joinToString(" | ")
+        println("Task 10 EXPLAIN QUERY PLAN getVisibleByTimeRange: $timeRangePlan")
+        println("Task 10 EXPLAIN QUERY PLAN getVisibleByTypeAndTimeRange: $typeRangePlan")
+
+        for (plan in listOf(timeRangePlan, typeRangePlan)) {
+            assertTrue("plan was empty", plan.isNotBlank())
+            assertFalse("must not scan heart_rate_records: $plan", plan.contains("SCAN heart_rate_records"))
+            assertFalse("must not temp-sort: $plan", plan.contains("USE TEMP B-TREE FOR ORDER BY"))
+        }
+    }
+
+    /**
+     * Task 10 (WP-18): the Task 4 type-filtered workout read
+     * ([app.readylytics.health.core.databaseschema.data.local.dao.TypedHeartRateDao.visibleTypePage],
+     * consumed page-by-page via [AuthoritativeHeartRateReader.typePagesInRange]) is the one bulk
+     * tier-visible consumer that is already keyset-paged to a caller-supplied budget. This proves
+     * paging changes nothing about the *answer*: every page concatenated is element-identical to the
+     * unbounded reference ([AuthoritativeHeartRateReader.rangeInOfType]), while every individual page
+     * still respects the configured budget -- on a fixture whose visible rows are split across both
+     * the raw and the warm tier, so neither tier alone answers the whole range.
+     */
+    @Test
+    fun pagedVisibilityMatchesRange() =
+        runBlocking {
+            val recordType = "EXERCISE"
+            val configuredBudget = 7
+            seedOverlapFixture(recordType)
+
+            val reader = AuthoritativeHeartRateReader(database.heartRateDao(), database.minuteBucketDao())
+            val endMs = OVERLAP_MINUTES * MINUTE_MS - 1
+            val referenceVisibleRows = reader.rangeInOfType(recordType, 0L, endMs).mergedSamples()
+
+            val pagedVisibleRows = mutableListOf<HeartRateRecordEntity>()
+            var maxResultSet = 0
+            reader.typePagesInRange(recordType, 0L, endMs, configuredBudget) { page ->
+                maxResultSet = maxOf(maxResultSet, page.size)
+                pagedVisibleRows += page
+            }
+
+            assertTrue("page exceeded the configured budget: $maxResultSet", maxResultSet <= configuredBudget)
+            assertEquals(referenceVisibleRows, pagedVisibleRows)
+        }
+
+    /**
+     * Seeds a window whose first half ([OVERLAP_MINUTES] / 2 minutes) is warm-covered and whose
+     * second half is raw-only, so neither tier alone answers the whole range -- an "overlap" fixture
+     * in this plan's terminology.
+     */
+    private suspend fun seedOverlapFixture(recordType: String) {
+        val samplesPerMinute = OVERLAP_SAMPLES_PER_MINUTE
+        val warmMinutes = 0 until OVERLAP_MINUTES / 2
+        val rawMinutes = OVERLAP_MINUTES / 2 until OVERLAP_MINUTES
+        val ref = database.sourceRecordDao().getOrCreateSourceRef("overlap-src", "HEART_RATE", 0L)
+
+        val rawRows =
+            rawMinutes.flatMap { minute ->
+                (0 until samplesPerMinute).map { sample ->
+                    HeartRateRecordEntity(
+                        sourceRecordRef = ref,
+                        timestampMs = minute * MINUTE_MS + sample * (MINUTE_MS / samplesPerMinute),
+                        beatsPerMinute = 100 + sample,
+                        recordType = recordType,
+                        sessionId = null,
+                    )
+                }
+            }
+        database.heartRateDao().upsertAll(rawRows)
+
+        warmMinutes.forEach { minute -> seedWarmMinute(minute * MINUTE_MS, recordType, samplesPerMinute) }
+    }
+
+    private suspend fun seedWarmMinute(
+        bucketStartMs: Long,
+        recordType: String,
+        samplesPerMinute: Int,
+    ) {
+        database.minuteBucketDao().upsertBuckets(
+            listOf(
+                HrMinuteBucketEntity(
+                    bucketStartMs = bucketStartMs,
+                    bucketEndMs = bucketStartMs + MINUTE_MS,
+                    minBpm = 100,
+                    maxBpm = 100 + samplesPerMinute - 1,
+                    avgBpm = 102.0,
+                    sampleCount = samplesPerMinute,
+                    recordType = recordType,
+                    sessionId = "",
+                    deviceName = "overlap-device",
+                    generation = 1L,
+                ),
+            ),
+        )
+        database.minuteCoverageDao().upsertCoverage(
+            listOf(
+                MinuteCoverageEntity(
+                    bucketStartMs = bucketStartMs,
+                    visibleGeneration = 1L,
+                    tier = "WARM",
+                    quality = QUALITY_SOURCE_BACKED,
+                    sourceSelectionId = null,
+                ),
+            ),
+        )
+    }
+
     /** Every `detail` row real SQLite reports for [sql], via `EXPLAIN QUERY PLAN`. */
     private fun explain(sql: String): List<String> {
         val details = mutableListOf<String>()
@@ -172,6 +299,39 @@ class Phase2QueryPlanTest {
             }
         }
         return details
+    }
+
+    private companion object {
+        const val MINUTE_MS = 60_000L
+        const val OVERLAP_MINUTES = 10
+        const val OVERLAP_SAMPLES_PER_MINUTE = 5
+
+        /** Verbatim copy of [app.readylytics.health.core.databaseschema.data.local.dao
+         * .VisibleHeartRateDao.getVisibleByTimeRange]'s `@Query`, with bound params substituted. */
+        const val VISIBLE_BY_TIME_RANGE_SQL =
+            "SELECT h.* FROM heart_rate_records h " +
+                "LEFT JOIN minute_coverage c ON c.bucketStartMs = " +
+                "((h.timestampMs / 60000) - (CASE WHEN h.timestampMs % 60000 < 0 THEN 1 ELSE 0 END)) * 60000 " +
+                "WHERE h.timestampMs >= 0 AND h.timestampMs <= 86400000 " +
+                "AND (c.bucketStartMs IS NULL OR c.tier = 'HOT' " +
+                "OR (c.tier IN ('WARM', 'LEGACY_WARM') AND NOT EXISTS (" +
+                "SELECT 1 FROM hr_minute_buckets b2 WHERE b2.bucketStartMs = c.bucketStartMs " +
+                "AND b2.generation = c.visibleGeneration))) " +
+                "ORDER BY h.timestampMs ASC, h.sourceRecordRef ASC"
+
+        /** Verbatim copy of [app.readylytics.health.core.databaseschema.data.local.dao
+         * .VisibleHeartRateDao.getVisibleByTypeAndTimeRange]'s `@Query`, bound params substituted. */
+        const val VISIBLE_BY_TYPE_AND_TIME_RANGE_SQL =
+            "SELECT h.* FROM heart_rate_records h " +
+                "LEFT JOIN minute_coverage c ON c.bucketStartMs = " +
+                "((h.timestampMs / 60000) - (CASE WHEN h.timestampMs % 60000 < 0 THEN 1 ELSE 0 END)) * 60000 " +
+                "WHERE h.recordType = 'EXERCISE' " +
+                "AND h.timestampMs >= 0 AND h.timestampMs <= 86400000 " +
+                "AND (c.bucketStartMs IS NULL OR c.tier = 'HOT' " +
+                "OR (c.tier IN ('WARM', 'LEGACY_WARM') AND NOT EXISTS (" +
+                "SELECT 1 FROM hr_minute_buckets b2 WHERE b2.bucketStartMs = c.bucketStartMs " +
+                "AND b2.generation = c.visibleGeneration))) " +
+                "ORDER BY h.timestampMs ASC, h.sourceRecordRef ASC"
     }
 }
 

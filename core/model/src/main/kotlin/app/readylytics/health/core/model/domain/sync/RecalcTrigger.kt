@@ -19,6 +19,8 @@ enum class RecalcTrigger(
     CATCH_UP_CAP(isUnexpected = false),
     STARTUP_TRIMP_BACKFILL(isUnexpected = true),
     STARTUP_PENDING_DIRTY(isUnexpected = true),
+    // WP-17 (HC-102): expected exactly once per app upgrade (or new install), not a bug signal.
+    STARTUP_SELECTED_WORKOUT_REPAIR(isUnexpected = false),
     PERIODIC_SYNC_ESCALATION(isUnexpected = true),
     FOREGROUND_SYNC_ESCALATION(isUnexpected = true),
     ;

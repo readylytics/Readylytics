@@ -1,5 +1,6 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
+import app.readylytics.health.core.model.domain.repository.ReadRetryScope
 import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.core.database.domain.sync.DailyRecomputeSupport
 import app.readylytics.health.core.model.data.preferences.UserPreferences
@@ -221,7 +222,7 @@ class FirstSetupDummyIngestionFlowTest {
                 requiresFullResync = false,
                 nextTokens = mapOf(HealthDataType.SLEEP to "next-sleep-token"),
             )
-        coJustRun { changeSynchronizer.commitTokens(any()) }
+        coJustRun { changeSynchronizer.commitTokens(any(), any()) }
 
         return DailySyncUseCase(
             settingsRepo = settingsRepo,
@@ -241,6 +242,7 @@ class FirstSetupDummyIngestionFlowTest {
             // of the sync window boundaries, so a fixed clock in that era is used for determinism
             // without needing to assert on it directly (DI-002).
             clock = Clock.fixed(Instant.parse("2026-06-29T12:00:00Z"), ZoneId.of("UTC")),
+            dirtyRangeStore = mockk(relaxed = true),
         )
     }
 
@@ -319,18 +321,21 @@ class FirstSetupDummyIngestionFlowTest {
         override suspend fun readSleepSessions(
             from: Instant,
             to: Instant,
+        retryScope: ReadRetryScope?,
         ): app.readylytics.health.core.model.domain.repository.ReadOutcome<List<DomainSleepSessionRecord>> =
             app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(listOf(sleepSession))
 
         override suspend fun readHeartRateSamples(
             from: Instant,
             to: Instant,
+        retryScope: ReadRetryScope?,
         ): app.readylytics.health.core.model.domain.repository.ReadOutcome<List<DomainHeartRateRecord>> =
             app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(heartRateRecords)
 
         override suspend fun readHrvSamples(
             from: Instant,
             to: Instant,
+        retryScope: ReadRetryScope?,
         ): app.readylytics.health.core.model.domain.repository.ReadOutcome<List<DomainHrvRecord>> =
             app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(listOf(hrvRecord))
 
@@ -338,6 +343,7 @@ class FirstSetupDummyIngestionFlowTest {
             from: Instant,
             to: Instant,
             startPageToken: String?,
+        retryScope: ReadRetryScope?,
             onPage: suspend (List<DomainHeartRateRecord>, String?) -> Unit,
         ): app.readylytics.health.core.model.domain.repository.ReadOutcome<Unit> {
             onPage(heartRateRecords, null)
@@ -348,6 +354,7 @@ class FirstSetupDummyIngestionFlowTest {
             from: Instant,
             to: Instant,
             startPageToken: String?,
+        retryScope: ReadRetryScope?,
             onPage: suspend (List<DomainHrvRecord>, String?) -> Unit,
         ): app.readylytics.health.core.model.domain.repository.ReadOutcome<Unit> {
             onPage(listOf(hrvRecord), null)
@@ -358,18 +365,29 @@ class FirstSetupDummyIngestionFlowTest {
             from: Instant,
             to: Instant,
             includeDetails: Boolean,
+        retryScope: ReadRetryScope?,
         ): app.readylytics.health.core.model.domain.repository.ReadOutcome<List<DomainExerciseSessionRecord>> =
             app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(listOf(workoutSession))
 
         override suspend fun readStepsRecords(
             from: Instant,
             to: Instant,
+        retryScope: ReadRetryScope?,
         ): app.readylytics.health.core.model.domain.repository.ReadOutcome<List<DomainStepsRecord>> =
             app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(emptyList())
+
+        override suspend fun readStepsRecordsPaged(
+            from: Instant,
+            to: Instant,
+            retryScope: ReadRetryScope?,
+            onPage: suspend (records: List<DomainStepsRecord>) -> Unit,
+        ): app.readylytics.health.core.model.domain.repository.ReadOutcome<Unit> =
+            app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(Unit)
 
         override suspend fun readSteps(
             from: Instant,
             to: Instant,
+        retryScope: ReadRetryScope?,
         ): app.readylytics.health.core.model.domain.repository.ReadOutcome<Long> =
             app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(4200L)
 
@@ -377,6 +395,7 @@ class FirstSetupDummyIngestionFlowTest {
             from: Instant,
             to: Instant,
             zoneId: ZoneId,
+        retryScope: ReadRetryScope?,
         ): app.readylytics.health.core.model.domain.repository.ReadOutcome<Map<LocalDate, Long>> =
             app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(emptyMap())
 
@@ -385,30 +404,35 @@ class FirstSetupDummyIngestionFlowTest {
         override suspend fun readWeightRecords(
             from: Instant,
             to: Instant,
+        retryScope: ReadRetryScope?,
         ): app.readylytics.health.core.model.domain.repository.ReadOutcome<List<DomainWeightRecord>> =
             app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(emptyList())
 
         override suspend fun readBodyFatRecords(
             from: Instant,
             to: Instant,
+        retryScope: ReadRetryScope?,
         ): app.readylytics.health.core.model.domain.repository.ReadOutcome<List<DomainBodyFatRecord>> =
             app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(emptyList())
 
         override suspend fun readBloodPressureRecords(
             from: Instant,
             to: Instant,
+        retryScope: ReadRetryScope?,
         ): app.readylytics.health.core.model.domain.repository.ReadOutcome<List<DomainBloodPressureRecord>> =
             app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(emptyList())
 
         override suspend fun readOxygenSaturationRecords(
             from: Instant,
             to: Instant,
+        retryScope: ReadRetryScope?,
         ): app.readylytics.health.core.model.domain.repository.ReadOutcome<List<DomainOxygenSaturationRecord>> =
             app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(emptyList())
 
         override suspend fun readBodyTemperatureRecords(
             from: Instant,
             to: Instant,
+        retryScope: ReadRetryScope?,
         ): app.readylytics.health.core.model.domain.repository.ReadOutcome<List<DomainBodyTemperatureRecord>> =
             app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(emptyList())
 
@@ -439,6 +463,7 @@ class FirstSetupDummyIngestionFlowTest {
         override suspend fun readVo2MaxRecords(
             startTime: Instant,
             endTime: Instant,
+        retryScope: ReadRetryScope?,
         ): app.readylytics.health.core.model.domain.repository.ReadOutcome<List<DomainVo2MaxRecord>> =
             app.readylytics.health.core.model.domain.repository.ReadOutcome.Available(emptyList())
 

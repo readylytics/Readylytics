@@ -58,8 +58,8 @@ class ResyncCheckpointResumeTest {
     fun setup() {
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
         coEvery { changeSynchronizer.applyPendingChanges() } returns HealthChangeSyncOutcome(emptySet(), false)
-        coEvery { changeSynchronizer.captureChangesTokens() } returns baselineTokens
-        coEvery { changeSynchronizer.commitTokens(any()) } returns Unit
+        coEvery { changeSynchronizer.captureChangesTokens() } returns CapturedChangeTokens(baselineTokens)
+        coEvery { changeSynchronizer.commitTokens(any(), any()) } returns Unit
         // PERF-002/WP-20/WP-22: every non-empty RECOMPUTE range now fetches batched TRIMP-series and
         // baseline contexts once up front via these methods before calling the 6-arg
         // computeAndPersistDailySummary overload.
@@ -73,19 +73,31 @@ class ResyncCheckpointResumeTest {
         // so the walk-forward actually exercises the 6-arg path.
         coEvery { scoringRepository.fetchWalkForwardFatigueContext(any(), any(), any(), any()) } returns
             WalkForwardFatigueContext(emptyList())
-        coEvery { hcRepo.readSleepSessions(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readExerciseSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
-        coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
-        coEvery { hcRepo.readStepsRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readSteps(any(), any()) } returns ReadOutcome.Available(0L)
-        coEvery { hcRepo.readDailyStepTotals(any(), any(), any()) } returns ReadOutcome.Available(emptyMap())
-        coEvery { hcRepo.readWeightRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readBodyFatRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readBloodPressureRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readOxygenSaturationRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readBodyTemperatureRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
-        coEvery { hcRepo.readVo2MaxRecords(any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readSleepSessions(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readExerciseSessionsWithCompletion(any(), any(), any()) } coAnswers {
+            app.readylytics.health.core.model.domain.repository.ExerciseSessionRead(
+                hcRepo.readExerciseSessions(firstArg(), secondArg(), true, thirdArg()),
+            )
+        }
+
+        coEvery { hcRepo.readExerciseSessions(any(), any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any(), any(), any()) } returns
+            ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readStepsRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readStepsRecordsPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
+        coEvery { hcRepo.readSteps(any(), any(), any()) } returns ReadOutcome.Available(0L)
+        coEvery { hcRepo.readDailyStepTotals(any(), any(), any(), any()) } returns ReadOutcome.Available(emptyMap())
+        coEvery { hcRepo.readWeightRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBodyFatRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBloodPressureRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readOxygenSaturationRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readBodyTemperatureRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        coEvery { hcRepo.readVo2MaxRecords(any(), any(), any()) } returns ReadOutcome.Available(emptyList())
+        setupUseCaseAfterRestart()
+    }
+
+    private fun setupUseCaseAfterRestart() {
         useCase =
             ResyncRangeUseCase(
                 settingsRepo = settingsRepo,
@@ -143,7 +155,7 @@ class ResyncCheckpointResumeTest {
 
             val sleepFromSlot = slot<Instant>()
             coEvery {
-                hcRepo.readSleepSessions(capture(sleepFromSlot), any())
+                hcRepo.readSleepSessions(capture(sleepFromSlot), any(), any())
             } returns ReadOutcome.Available(emptyList())
 
             useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
@@ -274,7 +286,7 @@ class ResyncCheckpointResumeTest {
 
             val sleepFromInstants = mutableListOf<Instant>()
             coEvery {
-                hcRepo.readSleepSessions(capture(sleepFromInstants), any())
+                hcRepo.readSleepSessions(capture(sleepFromInstants), any(), any())
             } returns ReadOutcome.Available(emptyList())
 
             useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
@@ -303,7 +315,7 @@ class ResyncCheckpointResumeTest {
                 )
 
             val sleepFromSlot = slot<Instant>()
-            coEvery { hcRepo.readSleepSessions(capture(sleepFromSlot), any()) } throws
+            coEvery { hcRepo.readSleepSessions(capture(sleepFromSlot), any(), any()) } throws
                 IllegalStateException("stop after checkpoint initialization")
 
             val result =
@@ -329,9 +341,9 @@ class ResyncCheckpointResumeTest {
 
             coVerifyOrder {
                 changeSynchronizer.captureChangesTokens()
-                hcRepo.readSleepSessions(any(), any())
+                hcRepo.readSleepSessions(any(), any(), any())
                 scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any())
-                changeSynchronizer.commitTokens(baselineTokens)
+                changeSynchronizer.commitTokens(baselineTokens, emptyMap())
             }
             assertEquals(null, checkpointStore.value)
         }
@@ -345,8 +357,8 @@ class ResyncCheckpointResumeTest {
                     HealthDataType.SLEEP to "baseline-sleep-token",
                     HealthDataType.HRV to "baseline-hrv-token",
                 )
-            coEvery { changeSynchronizer.captureChangesTokens() } returns multiTokens
-            coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Denied
+            coEvery { changeSynchronizer.captureChangesTokens() } returns CapturedChangeTokens(multiTokens)
+            coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any(), any()) } returns ReadOutcome.Denied
 
             useCase.run(startDate = startDate, endDate = startDate, chunkDays = 30, onProgress = null)
 
@@ -355,6 +367,7 @@ class ResyncCheckpointResumeTest {
                     match { tokens ->
                         tokens.containsKey(HealthDataType.SLEEP) && !tokens.containsKey(HealthDataType.HRV)
                     },
+                    any(),
                 )
             }
         }
@@ -387,12 +400,13 @@ class ResyncCheckpointResumeTest {
             // The resumed chunk (6/3-6/4) regrants HRV -- it must NOT resurrect HRV's promotion
             // eligibility: chunk 1's denial was already committed and is never reprocessed on
             // resume, so it must permanently exclude HRV for the rest of this run.
-            coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any()) } returns ReadOutcome.Available(Unit)
+            coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any(), any(), any()) } returns
+                ReadOutcome.Available(Unit)
 
             useCase.run(startDate = startDate, endDate = endDate, chunkDays = 2, onProgress = null)
 
             coVerify(exactly = 0) {
-                changeSynchronizer.commitTokens(match { tokens -> tokens.containsKey(HealthDataType.HRV) })
+                changeSynchronizer.commitTokens(match { tokens -> tokens.containsKey(HealthDataType.HRV) }, any())
             }
         }
 
@@ -421,7 +435,7 @@ class ResyncCheckpointResumeTest {
             useCase.run(startDate = startDate, endDate = startDate, chunkDays = 30, onProgress = null)
 
             coVerify {
-                changeSynchronizer.commitTokens(match { tokens -> tokens.containsKey(HealthDataType.SLEEP) })
+                changeSynchronizer.commitTokens(match { tokens -> tokens.containsKey(HealthDataType.SLEEP) }, any())
             }
         }
 
@@ -447,7 +461,7 @@ class ResyncCheckpointResumeTest {
 
             val tokenSlot = slot<String?>()
             coEvery {
-                hcRepo.readHeartRateSamplesPaged(any(), any(), captureNullable(tokenSlot), any())
+                hcRepo.readHeartRateSamplesPaged(any(), any(), captureNullable(tokenSlot), any(), any())
             } returns ReadOutcome.Available(Unit)
 
             useCase.run(startDate = startDate, endDate = startDate, chunkDays = 30, onProgress = null)
@@ -467,7 +481,7 @@ class ResyncCheckpointResumeTest {
             val result = useCase.run(startDate = startDate, endDate = startDate, chunkDays = 30, onProgress = null)
 
             assertEquals(false, result.isSuccess)
-            coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }
+            coVerify(exactly = 0) { changeSynchronizer.commitTokens(any(), any()) }
             assertEquals(ResyncPhase.RECOMPUTE, checkpointStore.value?.phase)
             assertEquals(startDate, checkpointStore.value?.nextDate)
         }
@@ -532,7 +546,7 @@ class ResyncCheckpointResumeTest {
             }
             coVerify(exactly = 0) { changeSynchronizer.captureChangesTokens() }
             coVerify(exactly = 0) { changeSynchronizer.applyPendingChanges() }
-            coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }
+            coVerify(exactly = 0) { changeSynchronizer.commitTokens(any(), any()) }
         }
 
     @Test

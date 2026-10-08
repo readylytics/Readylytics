@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -41,6 +42,28 @@ import org.robolectric.RobolectricTestRunner
  */
 @RunWith(RobolectricTestRunner::class)
 class AuthoritativeHeartRateReaderEquivalenceTest {
+    @Test
+    fun linearMergeMatchesStableSort() {
+        val fixtures = listOf(
+            listOf(1L, 3L, 5L) to listOf(2L, 4L, 6L),
+            listOf(1L, 2L) to listOf(8L, 9L),
+            listOf(8L, 9L) to listOf(1L, 2L),
+            listOf(1L, 2L) to listOf(3L, 4L),
+            listOf(2L, 2L, 4L) to listOf(2L, 2L, 4L),
+            emptyList<Long>() to listOf(1L, 2L),
+            listOf(1L, 2L) to emptyList<Long>(),
+            emptyList<Long>() to emptyList<Long>(),
+        )
+        for ((rawTimes, warmTimes) in fixtures) {
+            val raw = rawTimes.mapIndexed { index, time -> hr(index.toLong() + 1L, time, 60) }
+            val warm = warmTimes.map { time -> hr(0L, time, 70) }
+            val expected = (raw + warm).sortedBy { it.timestampMs }
+            val actual = mergeSortedSamples(raw, warm)
+            assertEquals(expected, actual)
+            expected.zip(actual).forEach { (reference, merged) -> assertSame(reference, merged) }
+        }
+    }
+
     private lateinit var database: HealthDatabase
     private lateinit var rollupManager: DataRollupManager
     private lateinit var reader: AuthoritativeHeartRateReader

@@ -390,6 +390,52 @@ class DatabaseReadyStartupInitializerTest {
             coVerify(exactly = 1) { backfill.execute() }
         }
 
+    @Test
+    fun `selected workout repair is enqueued once per cold start when the flag is unset`() =
+        runTest {
+            every { mutationCoordinatorLazy.get() } returns mutationCoordinator
+            every { backfillLazy.get() } returns backfill
+            every { settingsRepository.backupSchedule } returns flowOf(BackupSchedule.DAILY)
+            every { settingsRepository.backgroundSyncEnabled } returns flowOf(false)
+            coEvery { mutationCoordinator.withMutation<Int>(any()) } coAnswers {
+                firstArg<suspend () -> Int>().invoke()
+            }
+            coEvery { backfill.execute() } returns 0
+            val initializer = createInitializer()
+
+            initializer.initializeIfReady(DatabaseReadiness.Ready)
+            initializer.initializeIfReady(DatabaseReadiness.Ready)
+
+            // Not a double-enqueue race: initializeDatabase() itself only ever runs once per
+            // process (guarded by `initialized`), so the second initializeIfReady is a no-op.
+            verify(exactly = 1) { workerScheduler.scheduleSelectedWorkoutRepair() }
+        }
+
+    @Test
+    fun `selected workout repair is not re-enqueued once the flag is already set`() =
+        runTest {
+            every { mutationCoordinatorLazy.get() } returns mutationCoordinator
+            every { backfillLazy.get() } returns backfill
+            every { settingsRepository.backupSchedule } returns flowOf(BackupSchedule.DAILY)
+            every { settingsRepository.backgroundSyncEnabled } returns flowOf(false)
+            coEvery { mutationCoordinator.withMutation<Int>(any()) } coAnswers {
+                firstArg<suspend () -> Int>().invoke()
+            }
+            coEvery { backfill.execute() } returns 0
+            val initializer = createInitializer()
+            every { settingsRepository.userPreferences } returns
+                flowOf(
+                    UserPreferences(
+                        scoringVersion = SettingsDefaults.CURRENT_SCORING_VERSION,
+                        selectedWorkoutRepairCompleted = true,
+                    ),
+                )
+
+            initializer.initializeIfReady(DatabaseReadiness.Ready)
+
+            verify(exactly = 0) { workerScheduler.scheduleSelectedWorkoutRepair() }
+        }
+
     private fun createInitializer(
         context: Context? = null,
         restoreMaintenanceCoordinator: Lazy<RestoreMaintenanceCoordinator>? = null,

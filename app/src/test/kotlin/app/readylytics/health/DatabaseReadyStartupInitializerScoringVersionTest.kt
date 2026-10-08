@@ -475,6 +475,13 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
 
         override fun cancelResyncWorker() { /* no-op */ }
 
+        var repairEnqueues = 0
+            private set
+
+        override fun scheduleSelectedWorkoutRepair() {
+            repairEnqueues++
+        }
+
         override fun scheduleTrainingReadinessRecompute(
             config: app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig,
         ) { /* no-op */ }

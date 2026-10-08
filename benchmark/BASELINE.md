@@ -590,3 +590,211 @@ wall times above are where to look for it.
   `:app:verifyReleaseSigningInputs` needs the `READYLYTICS_UPLOAD_*` secrets, which this machine does
   not have. The stale blocker text above has been corrected.
 - **No CI-emulator numbers.** Every figure here is from the physical SM-A576B.
+
+## 2026-10-05 — Phase 2 WP-11 retry scope
+
+Deterministic JVM regression measurements, using an always-failing provider with
+`IOException("rate limit")` and the default five-attempt policy:
+
+| Scenario | Before | After |
+|---|---:|---:|
+| Nested SDK retry beneath the ingest-window budget | 25 SDK calls | At most 5 SDK calls |
+| Nine concurrent bulk readers through the actual repository | Not captured | At most 5 SDK calls |
+| Independent null-scope retry | 5 attempts | 5 attempts |
+
+The concurrent reservation test observes exactly five failed calls; successful calls release
+capacity without consuming the failure budget. A failed later SDK page does not replay an earlier
+page consumer. These are call-count assertions, not device latency or allocation measurements.
+
+The focused connected repository fixture compiled, but `:app:connectedDebugAndroidTest` could not
+execute: `com.android.builder.testing.api.DeviceException: No connected devices!`. Device acceptance
+for this task remains unmeasured.
+
+
+## 2026-10-05 — Phase 2 Task 2 HR/HRV batch upserts
+
+HR/HRV `upsertAll` now uses at most 100 rows (600 binds) per conflict-targeted INSERT,
+retaining the stable `(sourceRecordRef, timestampMs)` key and exact null-safe no-op predicate.
+The `hr_upsert` fixture reports `insertStatements`, `totalStatements`, elapsed time and WAL bytes.
+Insert-only acceptance is checked separately against the former one INSERT per sample.
+The dated Phase 0 1M baseline above remains 6,010,400 **total** statements; its fixed per-source
+operations mean the insert-only reduction cannot establish the requested total reduction.
+
+Device timing and WAL measurements are blocked: no connected ADB device is available.
+No after wall time, WAL size, or 1M total statement count is claimed.
+
+- [ ] Measured 1M total statement count ≤120,208 (≥50× vs 6,010,400).
+- [ ] Device wall time and WAL measurement recorded.
+
+
+### 2026-10-05 — Task 3 WP-13 / PERF-103 tier merge allocations
+
+Host JVM `ThreadMXBean.getThreadAllocatedBytes`, actual Kotlin expressions, 30 paired
+warmup iterations and mean over 20 measured calls. Fixture: 100,000 raw rows at even
+millisecond timestamps and 100,000 warm rows at odd timestamps, preconstructed and sorted.
+Old `(raw + warm).sortedBy { it.timestampMs }`: **21,993,085 bytes/call**;
+`mergeSortedSamples(raw, warm)`: **800,072 bytes/call**;
+production ordering expression `mergeSortedSamples(raw, warm.sortedBy { it.timestampMs })`:
+**6,001,989 bytes/call** (72.7% below old). These are allocated bytes, not object counts,
+and exclude reconstruction common to both paths. Warm input is already sorted in this fixture;
+overlapping bucket series retain warm-only stable sorting cost O(warm log warm).
+Temporary JUnit allocation probe was removed before the task gate; reproducible fixture and
+method are recorded in the Task 3 report. Pair with Task 4's WP-13 runtime numbers; this
+host measurement is not Android device performance evidence.
+
+### 2026-10-05 — Phase 2 Task 4 WP-13 / PERF-101 row-bounded queries
+
+- **Query plans:** The type-filtered queries use `index_hr_v10_timestamp_source` and `index_hr_v10_type_timestamp`. No `SCAN heart_rate_records`, no temp B-tree.
+- **Heap and result set size (250k/500k/1M):** Due to the lack of a connected device (blocked device measurements), actual peak heap and wall time are not recorded on a physical SM-A576B. The cluster bounds guarantee `MAX_CLUSTER_SAMPLES = 50_000`, so the max result-set size remains capped at 50_001. Over-sized single workouts paginate and process sequentially, yielding a flat peak retained heap across the three fixed-size-workout fixtures in host unit tests.
+- **Metrics exactness:** `displayTrimpMatchesPersisted` asserts the bounded queries do not truncate input or change values, computing exactly identical trimp. 
+
+## 2026-10-06 — Phase 2 Task 6 WP-15 dense steps/interval paging
+
+Steps records and exercise-session distance/elevation interval totals now stream page-by-page
+through `readStepsRecordsPaged` / `IntervalTotalsReader.read{Distance,Elevation}TotalsPaged`
+exactly like the existing HR/HRV paged ports, instead of being bulk-read into one in-memory list
+(HC-001). `RawBulkRecords` no longer carries a `stepsRecords` field; steps is staged and persisted
+page-by-page by `HealthIngestionCoordinator.streamSteps`, with the same "never mark the scan
+COMPLETE until the whole paged read succeeds" rule already used for HR/HRV.
+
+- **43,200-step allocation benchmark and 250k/500k/1M ingest variants: NOT MEASURED, environment-blocked.**
+  `database-benchmark:measureDenseStepsIngestAtEachScalePoint` (`HealthPipelineBaselineBenchmark.kt`)
+  was added to exercise exactly these four scale points (43,200, 250,000, 500,000, 1,000,000
+  synthetic `DomainStepsRecord`s via `BaselineScalePoints.stepsPages`/`HealthParentFixture.stepsPages`)
+  through the real `HealthIngestionCoordinator` + `RoomHealthIngestionStore` on an isolated SQLCipher
+  database per scale point, logging `METRIC=steps_ingest` with wall time, transaction count,
+  statement count, maximum result-set size, and maximum observed used-heap delta sampled after each page is processed (`Runtime.totalMemory() - freeMemory()`). This is during-ingest used heap, including uncollected garbage; it is not peak retained heap or allocation profiling. It is an
+  `@LargeTest`-annotated `androidx.test` instrumented test requiring a connected Android
+  device/emulator; this environment has none (`No connected devices!`, the same blocker as every
+  prior dated section above). No heap, result-set, or wall-time figures are claimed for any of the
+  four scale points — fabricating them would misrepresent unmeasured work as evidence.
+- **What was verified instead (host JVM, no device):** every `core:healthconnect` and
+  `core:database` unit test exercising the new paged steps/interval ports passes, including
+  `denseStepsStageEveryProviderId` (43,200 synthetic ids delivered across 44 mocked 1,000-row pages,
+  every id staged, max observed page size ≤ the configured 1,000, scan reaches `COMPLETE`) and
+  `deniedPageNeverCompletesScan` (a denied steps page leaves the scan `SCANNING`, never `COMPLETE`,
+  so `StagedDeletionReconciler` never runs against it) in
+  `HealthIngestionCoordinatorVo2MaxTest.kt`, plus the Room-level
+  `reconcileWindow for STEPS preserves existing rows when the scan is not complete` test in
+  `RoomHealthIngestionStoreReconcileTest.kt` (zero calls to `stepRecordDao.deleteRecordsNotStaged`/
+  `boundsOfUnstagedRecords` when the scan state is not `COMPLETE`). These confirm the *mechanism*
+  that should keep peak retained heap flat with page count (bounded page size, no buffered list),
+  but they are call-count/staging assertions on mocked collaborators, not a measured heap number.
+- **Expectation, unverified:** peak retained heap flat across the four scale points, matching the
+  already-flat HR/HRV paged-ingestion shape measured (with the same device caveat) in earlier dated
+  sections above. This is a prediction from the implementation shape (one page in memory at a time,
+  same pattern as `HeartSampleStreamer`), not a measurement.
+
+### 2026-10-06 Task 6 review correction
+
+The dense benchmark now samples used heap during processing after every persisted steps page and logs `MAX_OBSERVED_USED_HEAP_DELTA` and `MAX_RESULT_SET_SIZE`. Sampling can miss intra-page peaks and does not establish retained-heap flatness; allocation/retained-heap profiling remains required on a device. All four scale points remain unmeasured.
+
+### 2026-10-06 — Phase 2 Task 7 WP-16 route read call counts
+
+Deterministic mocked-SDK call measurements (not device timing): two unchanged imported-session
+reads issue **0** `readRecord` calls, versus the previous unconditional **2** in bulk. A no-consent
+Changes read issues **0** route calls; granting consent to a `PERMISSION_REQUIRED` session issues
+**1**, and the following unchanged imported read issues **0**. Each changed start/end/type/device
+identity and `NOT_AVAILABLE` state remains eligible. Tests cover exact route preservation in Room.
+No attached device was reported by `adb devices`; real Binder latency is not measured here.
+
+## 2026-10-06 — Phase 2 Task 10 WP-18 tier-visible read measurement and close
+
+**Scope.** The four remaining tier-visible bulk reads named in the Task 10 brief:
+`HeartRateDao.getVisibleByTimeRange`, `HeartRateDao.getVisibleByTypeAndTimeRange`,
+`HeartRateDao.pagePlausibleSamplesForRollup`, and Task 4's type-filtered workout read
+(`TypedHeartRateDao.visibleTypePage`, consumed page-by-page via `AuthoritativeHeartRateReader
+.typePagesInRange` / `TypedHeartRateRepositoryImpl.forEachByTimeRangeOfTypePage`).
+
+**Decision: no new DAO method.** `getVisiblePageAfter` was NOT added. Evidence below.
+
+### JVM evidence (ran, real output)
+
+`./gradlew :core:database:testDebugUnitTest --tests '*Phase2QueryPlanTest'` — **7/7 pass**, 0
+failures, including the two new Task 10 tests:
+
+- `tierVisibilityPlansStayIndexed` — real `EXPLAIN QUERY PLAN` on an empty in-memory Room database
+  (schema-only; access path doesn't depend on row count):
+  ```
+  getVisibleByTimeRange:
+  SEARCH TABLE heart_rate_records AS h USING INDEX index_hr_v10_timestamp_source (timestampMs>? AND timestampMs<?)
+  | SEARCH TABLE minute_coverage AS c USING INTEGER PRIMARY KEY (rowid=?)
+  | CORRELATED SCALAR SUBQUERY 1
+  | SEARCH TABLE hr_minute_buckets AS b2 USING INDEX index_hr_minute_buckets_bucketStartMs_bucketEndMs (bucketStartMs=?)
+
+  getVisibleByTypeAndTimeRange:
+  SEARCH TABLE heart_rate_records AS h USING INDEX index_hr_v10_type_timestamp (recordType=? AND timestampMs>? AND timestampMs<?)
+  | SEARCH TABLE minute_coverage AS c USING INTEGER PRIMARY KEY (rowid=?)
+  | CORRELATED SCALAR SUBQUERY 1
+  | SEARCH TABLE hr_minute_buckets AS b2 USING INDEX index_hr_minute_buckets_bucketStartMs_bucketEndMs (bucketStartMs=?)
+  | USE TEMP B-TREE FOR RIGHT PART OF ORDER BY
+  ```
+  Both plans pass `plan.isNotBlank()` and `!plan.contains("SCAN heart_rate_records")` — no table
+  scan, every table access is an index `SEARCH` or a rowid seek. **Nuance worth recording:** the
+  typed query reports `USE TEMP B-TREE FOR RIGHT PART OF ORDER BY`, not the brief's literal
+  `"USE TEMP B-TREE FOR ORDER BY"` — SQLite's partial-sort optimization, which only sorts ties on
+  `sourceRecordRef` within a single `timestampMs` value (the leading `ORDER BY` column is already
+  delivered in index order by `index_hr_v10_type_timestamp`). This is a bounded per-timestamp sort,
+  not a sort of the whole result set, so the assertion correctly passes.
+- `pagedVisibilityMatchesRange` — real seeded Room data (50 rows split across a warm-covered half
+  of the window and a raw-only half, so neither tier alone answers the range), comparing Task 4's
+  paged consumer against the unbounded reference: every page stayed `<= 7` (the configured budget)
+  and the concatenated pages were **element-identical** to `rangeInOfType(...).mergedSamples()`.
+
+`./gradlew :core:database:testDebugUnitTest --tests '*AuthoritativeHeartRateReaderEquivalenceTest'`
+— **14/14 pass**, 0 failures (regression check only; this task did not change this file).
+
+### Why no new DAO method is needed
+
+`getVisibleByTimeRange` and `getVisibleByTypeAndTimeRange` have no `LIMIT` and are not keyset-paged.
+Tracing every production caller (not a synthetic worst case):
+
+| Caller | Method | Window actually passed |
+|---|---|---|
+| `ScoringHistoryRepositoryImpl.getHeartRateRecordsByTimeRange` | `getVisibleByTimeRange` | one calendar day (`ComputeSleepMetricsUseCase`/baseline, per-day scoring) |
+| `HeartRateRepositoryImpl.getByTimeRange` / `observeByTimeRange` / `observeTimelineWithResolution` | `getVisibleByTimeRange` | `HeartRateDetailViewModel`: one calendar day (dashboard HR chart) |
+| `HeartRateRepositoryImpl.getRecoveryWindowSamples` | `getVisibleByTimeRange` | `WorkoutDetailLoader`: one workout's span plus a ~3-minute HRR tail |
+| `ScoringHeartRateDataLoader.loadExerciseHrSamples` | `getVisibleByTypeAndTimeRange` | one workout's `[startTime, endTime]` |
+| `SessionLinkReconcilerImpl.recomputeWorkouts` | `getVisibleByTypeAndTimeRange` | `WORKOUT_BATCH_SIZE` chronologically-adjacent workouts' combined span (not the full reconcile range) |
+
+Every caller supplies a window bounded by a day, a workout, or a small chronologically-local batch
+of workouts — never the full retention window. The 1M-row question the brief asks ("does the SQL
+itself degrade as the table grows, independent of answer size") is answered by the EXPLAIN QUERY
+PLAN evidence above: the access path is index-driven from schema alone, so it does not change
+shape as rows accumulate — a day-bounded query against a 1M-row table costs the same per-row index
+seek it costs against a 10k-row table, and returns the same number of rows either way. There is no
+code path today that calls either method with an unbounded or retention-wide window, so there is no
+measured unbounded-result-set problem for either method to fix.
+
+`pagePlausibleSamplesForRollup` (Task 8) and the Task 4 typed read are already keyset-paged with a
+caller-supplied `limit`/`MAX_CLUSTER_SAMPLES`/`SAMPLE_PAGE_SIZE` budget (proven element-identical to
+the unbounded reference above), so they were never in question.
+
+Net: Task 4's bounded type-filtered read already is the one genuinely-unbounded-shaped consumer
+(an arbitrarily long single workout, or an arbitrarily dense workout cluster) in this group, and it
+already pages. The other three consumers are shape-bounded by their callers, not by the DAO method.
+Adding `getVisiblePageAfter` would add a new query method, a new call site, and a second code path
+to keep behaviorally identical to the existing one, for a problem no measured or traced caller has.
+
+### Device-gated (written, not run — exact blocker)
+
+`database-benchmark:measureTierVisibleReadsAtEachScalePoint` (new, `HealthPipelineBaselineBenchmark
+.kt`) and `database-benchmark:tierVisiblePlansStayIndexedAtRealCardinality` (new,
+`QueryPlanRecorderTest.kt`) were added to measure the same four paths at the Phase 0 250k/500k/1M
+scale points on a real (SQLCipher-backed) device database — `METRIC=tier_visible_day_window` (day-
+window row count/wall time at each scale, asserting the result stays `< SCALE`) and
+`METRIC=tier_visible_paged` (max page size at each scale against the real production budgets:
+`ROLLUP_PAGE_LIMIT = 5_000` mirroring `MinuteRollupStreamer.SAMPLE_PAGE_SIZE`, `TYPED_PAGE_LIMIT =
+50_000` mirroring `WorkoutHeartRateBatcher.MAX_CLUSTER_SAMPLES`). **Blocker: `adb devices` returns
+an empty list in this environment — no emulator or physical device is attached, and none can be
+attached.** Both files compile (`./gradlew database-benchmark:compileDebugAndroidTestKotlin`
+succeeds) but neither test has been run. No 1M wall-time, heap, or result-set number is claimed for
+these two tests; fabricating one would misrepresent unmeasured work as evidence, the same discipline
+every earlier dated section in this file follows.
+
+### No production code changed
+
+`HeartRateDao.kt` and `AuthoritativeHeartRateReader.kt` are unchanged by this task — the Task 10
+brief makes modifying them conditional on the paging trigger firing, and it did not. No Room schema
+change (still v23). `internal-docs/DATA_FLOW.md` is unchanged: no documented read path's shape
+changed.

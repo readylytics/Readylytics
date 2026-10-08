@@ -315,6 +315,15 @@ message UserPreferencesProto {
     // VO2_MAX_METHOD_UNSET (proto3 zero value) = never explicitly set; resolves to
     // Vo2MaxEstimationMethod.HR_RATIO at the domain read boundary.
     Vo2MaxEstimationMethodProto vo2_max_estimation_method = 99;
+
+    // WP-17 (HC-102): one-time flag -- the startup repair that retroactively prunes workouts
+    // recorded by a now-deselected device (already-persisted rows the forward-going
+    // SelectedSourcePruner never retouches) has completed successfully. Field number
+    // deliberately 100, a gap from the block above, to avoid collision with other in-flight
+    // Phase 2 tasks' field additions. Only a successful HealthResyncWorker repair-only pass
+    // (prune + recompute) writes true; a killed/failed pass leaves it false so the next
+    // startup retries.
+    bool selected_workout_repair_completed = 100;
 }
 
 enum TrimpMethodProto {

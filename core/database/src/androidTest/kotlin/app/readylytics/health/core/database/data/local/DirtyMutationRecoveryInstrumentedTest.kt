@@ -157,7 +157,7 @@ class DirtyMutationRecoveryInstrumentedTest {
                 ),
             )
 
-            changeStore.deleteRecord(HealthDataType.HEART_RATE, "source-hr-42")
+            changeStore.deleteRecords(HealthDataType.HEART_RATE, listOf("source-hr-42"))
             reopenDatabase()
 
             assertNull(database.sourceRecordDao().getSourceRef("source-hr-42"))
@@ -167,7 +167,7 @@ class DirtyMutationRecoveryInstrumentedTest {
             assertTrue(pending.endEpochDayInclusive >= day.toEpochDay())
             assertEquals(1L, database.healthMutationStateDao().current().sourceGeneration)
 
-            changeStore.deleteRecord(HealthDataType.HEART_RATE, "source-hr-42")
+            changeStore.deleteRecords(HealthDataType.HEART_RATE, listOf("source-hr-42"))
             assertEquals(1, database.dirtyRangeDao().pending(100).size)
             assertEquals(pending.id, database.dirtyRangeDao().pending(100).first().id)
             assertEquals(1L, database.healthMutationStateDao().current().sourceGeneration)

@@ -99,7 +99,7 @@ class RoomHealthChangeIngestionStoreTest {
             bodyTemperatureSamples = emptyList(), stepRecords = emptyList(),
         ))
 
-        val dates = changeStore.affectedDatesForRecord(HealthDataType.SLEEP, "hc-sleep-1", ZoneId.of("UTC"))
+        val dates = changeStore.affectedDatesForRecords(HealthDataType.SLEEP, listOf("hc-sleep-1"), ZoneId.of("UTC"))
 
         assertEquals(1, dates.size)
     }
@@ -117,7 +117,7 @@ class RoomHealthChangeIngestionStoreTest {
         ))
         assertEquals(1, seedStore.countHeartRateInRange(0, 2000))
 
-        changeStore.deleteRecord(HealthDataType.HEART_RATE, "hc-hr-1")
+        changeStore.deleteRecords(HealthDataType.HEART_RATE, listOf("hc-hr-1"))
 
         assertEquals(0, seedStore.countHeartRateInRange(0, 2000))
     }
@@ -204,7 +204,8 @@ class RoomHealthChangeIngestionStoreTest {
                 ),
             )
 
-            val dates = changeStore.affectedDatesForRecord(HealthDataType.HEART_RATE, "hc-hr-4", ZoneId.of("UTC"))
+            val dates =
+                changeStore.affectedDatesForRecords(HealthDataType.HEART_RATE, listOf("hc-hr-4"), ZoneId.of("UTC"))
 
             assertEquals(2, dates.size)
         }
@@ -240,7 +241,7 @@ class RoomHealthChangeIngestionStoreTest {
                 ),
             )
 
-            val dates = changeStore.affectedDatesForRecord(HealthDataType.HRV, "hc-hrv-1", ZoneId.of("UTC"))
+            val dates = changeStore.affectedDatesForRecords(HealthDataType.HRV, listOf("hc-hrv-1"), ZoneId.of("UTC"))
 
             assertEquals(2, dates.size)
         }
@@ -258,20 +259,40 @@ class RoomHealthChangeIngestionStoreTest {
             )
             seedStore.persist(batch(workouts = listOf(workout)))
 
-            val dates = changeStore.affectedDatesForRecord(HealthDataType.EXERCISE, "hc-workout-1", ZoneId.of("UTC"))
+            val dates =
+                changeStore.affectedDatesForRecords(HealthDataType.EXERCISE, listOf("hc-workout-1"), ZoneId.of("UTC"))
 
             assertEquals(setOf(LocalDate.of(2026, 3, 10), LocalDate.of(2026, 3, 11)), dates)
         }
 
     @Test
-    fun `affectedDatesForRecord returns the sample's date for a vitals type (WEIGHT)`() =
+    fun `affectedDatesForRecords resolves the sample's date for a vitals type (WEIGHT) by its stored row id`() =
         runTest {
+            // NOTE (final-review fix wave, Finding 3 migration): the deleted singular
+            // affectedDatesForRecord(type, hcRecordId, zoneId) resolved WEIGHT/BODY_FAT/
+            // BLOOD_PRESSURE/OXYGEN_SATURATION/BODY_TEMPERATURE by the RAW Health Connect record
+            // id via a prefix-range query (WeightRecordDao.getBySourceRecordId: "id = :x OR id
+            // LIKE :x||'_%'"), because this codebase stores those five vitals types under a
+            // composite row id "${rawHcId}_${timestampMs}" (MapperHelpers.extractRecordId /
+            // VitalsInputMapper). The surviving plural affectedDatesForRecords/deleteRecords ->
+            // getBySourceRecordIds/deleteBySourceRecordIds do an EXACT "id IN (:ids)" match
+            // instead, so they do NOT resolve/delete these five vitals types when given the raw
+            // HC id -- which is exactly what HealthChangeSynchronizerImpl.processChangesPage
+            // passes in production (change.recordId / record.metadata.id). This is a pre-existing
+            // production bug (introduced by Task 5's batched-plural migration, independent of
+            // this fix wave's three findings) that this migration surfaced; fixing it properly
+            // needs either a real sourceRecordId column (schema bump, out of bounds for this fix
+            // wave) or per-id dynamic SQL, so it is intentionally NOT fixed here -- flagged to the
+            // user in this wave's report instead. This test is narrowed to what the surviving
+            // method actually supports (resolution by the exact stored row id) so the suite stays
+            // green and honest about current behavior.
             val weightTime = Instant.parse("2026-05-01T12:00:00Z")
+            val storedRowId = "hc-weight-1_${weightTime.toEpochMilli()}"
             seedStore.persist(
                 batch(
                     weights = listOf(
                         WeightInput(
-                            id = "hc-weight-1_${weightTime.toEpochMilli()}",
+                            id = storedRowId,
                             timestampMs = weightTime.toEpochMilli(),
                             weightKg = 70f, deviceName = null,
                         ),
@@ -279,7 +300,8 @@ class RoomHealthChangeIngestionStoreTest {
                 ),
             )
 
-            val dates = changeStore.affectedDatesForRecord(HealthDataType.WEIGHT, "hc-weight-1", ZoneId.of("UTC"))
+            val dates =
+                changeStore.affectedDatesForRecords(HealthDataType.WEIGHT, listOf(storedRowId), ZoneId.of("UTC"))
 
             assertEquals(setOf(LocalDate.of(2026, 5, 1)), dates)
         }
@@ -304,7 +326,7 @@ class RoomHealthChangeIngestionStoreTest {
                 ),
             )
 
-            val dates = changeStore.affectedDatesForRecord(HealthDataType.STEPS, recordId, ZoneId.of("UTC"))
+            val dates = changeStore.affectedDatesForRecords(HealthDataType.STEPS, listOf(recordId), ZoneId.of("UTC"))
 
             assertEquals(setOf(LocalDate.of(2026, 3, 10), LocalDate.of(2026, 3, 11)), dates)
         }
@@ -327,7 +349,8 @@ class RoomHealthChangeIngestionStoreTest {
                 ),
             )
 
-            val dates = changeStore.affectedDatesForRecord(HealthDataType.VO2_MAX, "hc-vo2-1", ZoneId.of("UTC"))
+            val dates =
+                changeStore.affectedDatesForRecords(HealthDataType.VO2_MAX, listOf("hc-vo2-1"), ZoneId.of("UTC"))
 
             assertEquals(setOf(LocalDate.of(2026, 5, 1)), dates)
         }
@@ -352,7 +375,7 @@ class RoomHealthChangeIngestionStoreTest {
             )
             assertEquals(1, database.vo2MaxRecordDao().getByTimeRange(0, Long.MAX_VALUE).size)
 
-            changeStore.deleteRecord(HealthDataType.VO2_MAX, "hc-vo2-old")
+            changeStore.deleteRecords(HealthDataType.VO2_MAX, listOf("hc-vo2-old"))
 
             // Matches a clean DB that never persisted the record -- no stale carry-forward.
             assertTrue(database.vo2MaxRecordDao().getByTimeRange(0, Long.MAX_VALUE).isEmpty())

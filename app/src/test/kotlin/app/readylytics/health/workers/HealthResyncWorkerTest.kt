@@ -541,6 +541,11 @@ class HealthResyncWorkerTest {
             )
         }
 
+    // WP-17/HC-102 fix-round-3: the selected-workout-device repair mode's tests (zero-cost no-op,
+    // already-completed short-circuit, ticket-driven recompute, two-attempt crash-safety) moved
+    // to HealthResyncWorkerSelectedWorkoutRepairTest.kt -- that mode's real-Room setup pushed this
+    // class over detekt's LargeClass threshold.
+
     private fun createWorker(dirtyRangeStore: DirtyRangeStore? = null) =
         HealthResyncWorker(
             appContext = context,

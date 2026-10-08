@@ -35,8 +35,8 @@ data class AuthoritativeHrRange(
     /**
      * The **whole** range as raw-shaped rows: [rawSamples] plus every visible warm bucket
      * reconstructed into synthetic rows that keep that bucket's own `recordType`/`sessionId`/
-     * `deviceName` (see [reconstructAsRecords]), ordered ascending by timestamp. The sort is stable,
-     * so raw rows keep their `(timestampMs, sourceRecordRef)` order among themselves.
+     * `deviceName` (see [reconstructAsRecords]), ordered ascending by timestamp. The merge is stable,
+     * with raw rows first on ties; each tier retains its original order among equal timestamps.
      *
      * **Any consumer that means "every sample in this window" must use this, not [rawSamples]
      * alone.** For a minute the coverage ledger resolves to the warm tier, [rawSamples] is empty
@@ -54,8 +54,30 @@ data class AuthoritativeHrRange(
         if (warmBuckets.isEmpty()) {
             rawSamples
         } else {
-            (rawSamples + warmBuckets.reconstructAsRecords()).sortedBy { it.timestampMs }
+            // Bucket series can overlap within a minute; reconstruction is not globally sorted.
+            mergeSortedSamples(rawSamples, warmBuckets.reconstructAsRecords().sortedBy { it.timestampMs })
         }
+}
+
+/** Stable linear merge of timestamp-sorted tiers, retaining raw-first ties and row identity. */
+internal fun mergeSortedSamples(
+    raw: List<HeartRateRecordEntity>,
+    warm: List<HeartRateRecordEntity>,
+): List<HeartRateRecordEntity> {
+    if (warm.isEmpty() || raw.isEmpty()) return if (warm.isEmpty()) raw else warm
+    val merged = ArrayList<HeartRateRecordEntity>(raw.size + warm.size)
+    var rawIndex = 0
+    var warmIndex = 0
+    while (rawIndex < raw.size && warmIndex < warm.size) {
+        if (raw[rawIndex].timestampMs <= warm[warmIndex].timestampMs) {
+            merged.add(raw[rawIndex++])
+        } else {
+            merged.add(warm[warmIndex++])
+        }
+    }
+    while (rawIndex < raw.size) merged.add(raw[rawIndex++])
+    while (warmIndex < warm.size) merged.add(warm[warmIndex++])
+    return merged
 }
 
 /**
@@ -108,6 +130,8 @@ class AuthoritativeHeartRateReader
                 rawSamples = heartRateDao.getVisibleByTimeRange(startMs, endMs),
                 warmBuckets = minuteBucketDao.getVisibleBucketsInTimeRange(startMs, endMs),
             )
+
+
 
         /**
          * Observable form of [rangeIn] with an exclusive `endMs`, matching
@@ -357,3 +381,26 @@ private fun mergeMinuteBucketRows(
             )
         }
 }
+
+internal suspend fun AuthoritativeHeartRateReader.rangeInOfType(
+    recordType: String, startMs: Long, endMs: Long
+): AuthoritativeHrRange =
+    AuthoritativeHrRange(
+        heartRateDao.getVisibleByTypeAndTimeRange(recordType, startMs, endMs),
+        minuteBucketDao.visibleOfType(recordType, startMs, endMs),
+    )
+
+internal suspend fun AuthoritativeHeartRateReader.countInRangeOfType(
+    recordType: String, startMs: Long, endMs: Long
+): Int =
+    (heartRateDao.countVisibleOfType(recordType, startMs, endMs) +
+        minuteBucketDao.countVisibleOfType(recordType, startMs, endMs))
+        .coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+
+internal suspend fun AuthoritativeHeartRateReader.typePagesInRange(
+    recordType: String,
+    startMs: Long,
+    endMs: Long,
+    limit: Int,
+    onPage: suspend (List<HeartRateRecordEntity>) -> Unit,
+) = readTypePages(TypedHrWindow(recordType, startMs, endMs), limit, onPage)

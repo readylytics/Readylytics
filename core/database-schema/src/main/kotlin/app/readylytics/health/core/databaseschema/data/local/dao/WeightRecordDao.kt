@@ -191,4 +191,11 @@ interface WeightRecordDao {
 
     @Query("DELETE FROM weight_records WHERE timestampMs >= :startMs AND timestampMs <= :endMs")
     suspend fun deleteBetween(startMs: Long, endMs: Long): Int
+
+    @Query("SELECT * FROM weight_records WHERE id IN (:sourceRecordIds)")
+    suspend fun getBySourceRecordIds(sourceRecordIds: List<String>): List<WeightRecordEntity>
+
+    @Query("DELETE FROM weight_records WHERE id IN (:sourceRecordIds)")
+    suspend fun deleteBySourceRecordIds(sourceRecordIds: List<String>): Int
+
 }

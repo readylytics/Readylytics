@@ -1,19 +1,15 @@
 package app.readylytics.health.workers
 
 import androidx.work.BackoffPolicy
-import androidx.work.Constraints
 import androidx.work.Data
-import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
-import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
-import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import app.readylytics.health.core.model.data.preferences.BackupSchedule
 import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
 import app.readylytics.health.core.model.domain.sync.RecalcTrigger
 import app.readylytics.health.core.model.domain.sync.ResyncCheckpointStore
+import app.readylytics.health.core.model.workers.PeriodicWorkScheduler
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import dagger.Lazy
 import kotlinx.coroutines.flow.first
@@ -24,18 +20,24 @@ import javax.inject.Singleton
 
 @Singleton
 class WorkerSchedulerImpl
-    @Inject
     constructor(
         private val workManager: Lazy<WorkManager>,
         private val resyncCheckpointStore: Lazy<ResyncCheckpointStore>,
-    ) : WorkerScheduler {
+        periodic: PeriodicWorkScheduler,
+    ) : WorkerScheduler,
+        PeriodicWorkScheduler by periodic {
+        // Dagger resolves this constructor: `periodic` (see the primary constructor above) has no
+        // binding of its own -- it is always the real WorkManager-backed implementation, computed
+        // here rather than left as an injectable parameter, purely so WorkerSchedulerImplTest's
+        // existing 2-arg construction keeps working (WP-17/HC-102, boyscout TooManyFunctions split).
+        @Inject
+        constructor(
+            workManager: Lazy<WorkManager>,
+            resyncCheckpointStore: Lazy<ResyncCheckpointStore>,
+        ) : this(workManager, resyncCheckpointStore, PeriodicWorkSchedulerImpl(workManager))
+
         companion object {
-            const val LOCAL_BACKUP_WORK_NAME = WorkerScheduler.LOCAL_BACKUP_WORK_NAME
-            const val BIRTHDAY_WORK_NAME = WorkerScheduler.BIRTHDAY_WORK_NAME
-            const val DATA_CLEANUP_WORK_NAME = WorkerScheduler.DATA_CLEANUP_WORK_NAME
-            const val DATA_ROLLUP_WORK_NAME = WorkerScheduler.DATA_ROLLUP_WORK_NAME
             const val RESYNC_WORK_NAME = WorkerScheduler.RESYNC_WORK_NAME
-            const val PERIODIC_SYNC_WORK_NAME = WorkerScheduler.PERIODIC_SYNC_WORK_NAME
             const val DATABASE_MIGRATION_WORK_NAME = WorkerScheduler.DATABASE_MIGRATION_WORK_NAME
 
             /** WorkManager input `Data` is capped at 10 KB; a diagnostic detail never needs more. */
@@ -121,6 +123,27 @@ class WorkerSchedulerImpl
             workManager.get().cancelUniqueWork(RESYNC_WORK_NAME)
         }
 
+        override fun scheduleSelectedWorkoutRepair() {
+            val data =
+                Data
+                    .Builder()
+                    .putString(HealthResyncWorker.KEY_RECOMPUTE_MODE, HealthResyncWorker.MODE_SELECTED_WORKOUT_REPAIR)
+                    .build()
+
+            val request =
+                OneTimeWorkRequestBuilder<HealthResyncWorker>()
+                    .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+                    .setInputData(data)
+                    .build()
+
+            workManager.get().enqueueUniqueWork(
+                RESYNC_WORK_NAME,
+                ExistingWorkPolicy.KEEP,
+                request,
+            )
+        }
+
         /**
          * Task 4: enqueues the durable, parameter-only Training Readiness projection recompute
          * (settings explicit "Recalculate" action, task 5) into the same unique [RESYNC_WORK_NAME]
@@ -147,123 +170,6 @@ class WorkerSchedulerImpl
             workManager.get().enqueueUniqueWork(
                 RESYNC_WORK_NAME,
                 ExistingWorkPolicy.APPEND_OR_REPLACE,
-                request,
-            )
-        }
-
-        override fun scheduleBackupWorker(schedule: BackupSchedule) {
-            if (schedule == BackupSchedule.MANUAL) {
-                workManager.get().cancelUniqueWork(LOCAL_BACKUP_WORK_NAME)
-                return
-            }
-
-            val intervalDays = if (schedule == BackupSchedule.DAILY) 1L else 7L
-            val constraints =
-                Constraints
-                    .Builder()
-                    .setRequiresBatteryNotLow(true)
-                    .setRequiresCharging(true)
-                    .setRequiredNetworkType(NetworkType.CONNECTED)
-                    .build()
-
-            val request =
-                PeriodicWorkRequestBuilder<LocalBackupWorker>(intervalDays, TimeUnit.DAYS)
-                    .setConstraints(constraints)
-                    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.MINUTES)
-                    .build()
-
-            workManager.get().enqueueUniquePeriodicWork(
-                LOCAL_BACKUP_WORK_NAME,
-                ExistingPeriodicWorkPolicy.UPDATE,
-                request,
-            )
-        }
-
-        override fun scheduleBirthdayWorker() {
-            val constraints =
-                Constraints
-                    .Builder()
-                    .setRequiresBatteryNotLow(true)
-                    .build()
-
-            val request =
-                PeriodicWorkRequestBuilder<BirthdayCheckWorker>(1, TimeUnit.DAYS)
-                    .setConstraints(constraints)
-                    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.HOURS)
-                    .build()
-
-            workManager.get().enqueueUniquePeriodicWork(
-                BIRTHDAY_WORK_NAME,
-                ExistingPeriodicWorkPolicy.KEEP,
-                request,
-            )
-        }
-
-        /**
-         * Enqueues (or reschedules with a new interval) the periodic background Health Connect
-         * sync. [ExistingPeriodicWorkPolicy.UPDATE] applies the new interval immediately while
-         * preserving the unique work identity.
-         */
-        override fun schedulePeriodicSync(intervalMinutes: Long) {
-            val constraints =
-                Constraints
-                    .Builder()
-                    .setRequiresBatteryNotLow(true)
-                    .build()
-
-            val request =
-                PeriodicWorkRequestBuilder<PeriodicHealthSyncWorker>(intervalMinutes, TimeUnit.MINUTES)
-                    .setConstraints(constraints)
-                    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.MINUTES)
-                    .build()
-
-            workManager.get().enqueueUniquePeriodicWork(
-                PERIODIC_SYNC_WORK_NAME,
-                ExistingPeriodicWorkPolicy.UPDATE,
-                request,
-            )
-        }
-
-        override fun cancelPeriodicSync() {
-            workManager.get().cancelUniqueWork(PERIODIC_SYNC_WORK_NAME)
-        }
-
-        override fun scheduleDataCleanupWorker() {
-            val constraints =
-                Constraints
-                    .Builder()
-                    .setRequiresBatteryNotLow(true)
-                    .setRequiresDeviceIdle(true)
-                    .build()
-
-            val request =
-                PeriodicWorkRequestBuilder<DataCleanupWorker>(1, TimeUnit.DAYS)
-                    .setConstraints(constraints)
-                    .build()
-
-            workManager.get().enqueueUniquePeriodicWork(
-                DATA_CLEANUP_WORK_NAME,
-                ExistingPeriodicWorkPolicy.KEEP,
-                request,
-            )
-        }
-
-        override fun scheduleDataRollupWorker() {
-            val constraints =
-                Constraints
-                    .Builder()
-                    .setRequiresBatteryNotLow(true)
-                    .setRequiresDeviceIdle(true)
-                    .build()
-
-            val request =
-                PeriodicWorkRequestBuilder<DataRollupWorker>(1, TimeUnit.DAYS)
-                    .setConstraints(constraints)
-                    .build()
-
-            workManager.get().enqueueUniquePeriodicWork(
-                DATA_ROLLUP_WORK_NAME,
-                ExistingPeriodicWorkPolicy.KEEP,
                 request,
             )
         }

@@ -1,7 +1,9 @@
 package app.readylytics.health.core.healthconnect.data.healthconnect
 
 import android.content.Context
+import app.readylytics.health.core.model.domain.repository.ExerciseSessionRead
 import androidx.health.connect.client.HealthConnectClient
+import app.readylytics.health.core.model.domain.repository.WorkoutRouteLookup
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord
@@ -37,6 +39,7 @@ import app.readylytics.health.core.model.domain.model.DomainWeightRecord
 import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
 import app.readylytics.health.core.model.domain.repository.PermissionStatus
+import app.readylytics.health.core.model.domain.repository.ReadRetryScope
 import app.readylytics.health.core.model.domain.repository.ReadOutcome
 import app.readylytics.health.core.model.domain.repository.getOrNull
 import app.readylytics.health.core.model.domain.repository.valueOrPrevious
@@ -64,6 +67,7 @@ class HealthConnectRepositoryImpl
         private val intervalTotalsReader: IntervalTotalsReader,
         private val clock: Clock,
         private val client: HealthConnectClient,
+        private val routeLookup: WorkoutRouteLookup,
     ) : HealthConnectRepository {
         override val criticalPermissions: Set<String> =
             setOf(
@@ -261,9 +265,10 @@ class HealthConnectRepositoryImpl
         private suspend inline fun <reified T : androidx.health.connect.client.records.Record> readAllPages(
             from: Instant,
             to: Instant,
+            retryScope: ReadRetryScope? = null,
         ): List<T> {
             val all = mutableListOf<T>()
-            readAllPagesStreaming<T>(from, to) { page, _ -> all.addAll(page) }
+            readAllPagesStreaming<T>(from, to, retryScope = retryScope) { page, _ -> all.addAll(page) }
             return all
         }
 
@@ -277,6 +282,7 @@ class HealthConnectRepositoryImpl
             from: Instant,
             to: Instant,
             startPageToken: String? = null,
+            retryScope: ReadRetryScope? = null,
             onPage: suspend (records: List<T>, nextPageToken: String?) -> Unit,
         ) {
             var pageToken: String? = startPageToken
@@ -284,7 +290,7 @@ class HealthConnectRepositoryImpl
                 do {
                     val currentToken = pageToken
                     val response =
-                        retryWithBackoff {
+                        retryWithBackoff(budget = retryScope) {
                             client.readRecords(
                                 ReadRecordsRequest(
                                     recordType = T::class,
@@ -306,38 +312,42 @@ class HealthConnectRepositoryImpl
         override suspend fun readSleepSessions(
             from: Instant,
             to: Instant,
+            retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainSleepSessionRecord>> =
             safeReadRecords<SleepSessionRecord, _>("Sleep session") {
-                readAllPages<SleepSessionRecord>(from, to).map { it.toDomain() }
+                readAllPages<SleepSessionRecord>(from, to, retryScope).map { it.toDomain() }
             }
 
         override suspend fun readHeartRateSamples(
             from: Instant,
             to: Instant,
+            retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainHeartRateRecord>> =
             safeReadRecords<HeartRateRecord, _>("Heart rate") {
-                readAllPages<HeartRateRecord>(from, to).map { it.toDomain() }
+                readAllPages<HeartRateRecord>(from, to, retryScope).map { it.toDomain() }
             }
 
         override suspend fun readHrvSamples(
             from: Instant,
             to: Instant,
+            retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainHrvRecord>> =
             safeReadRecords<HeartRateVariabilityRmssdRecord, _>("HRV") {
-                readAllPages<HeartRateVariabilityRmssdRecord>(from, to).map { it.toDomain() }
+                readAllPages<HeartRateVariabilityRmssdRecord>(from, to, retryScope).map { it.toDomain() }
             }
 
         override suspend fun readHeartRateSamplesPaged(
             from: Instant,
             to: Instant,
             startPageToken: String?,
+            retryScope: ReadRetryScope?,
             onPage: suspend (List<DomainHeartRateRecord>, String?) -> Unit,
         ): ReadOutcome<Unit> =
             withContext(ioDispatcher) {
                 if (!isAvailable()) return@withContext ReadOutcome.Unsupported
                 if (!hasPermission<HeartRateRecord>("Heart rate")) return@withContext ReadOutcome.Denied
                 try {
-                    readAllPagesStreaming<HeartRateRecord>(from, to, startPageToken) { page, nextToken ->
+                    readAllPagesStreaming<HeartRateRecord>(from, to, startPageToken, retryScope) { page, nextToken ->
                         onPage(page.map { it.toDomain() }, nextToken)
                     }
                     ReadOutcome.Available(Unit)
@@ -370,6 +380,7 @@ class HealthConnectRepositoryImpl
             from: Instant,
             to: Instant,
             startPageToken: String?,
+            retryScope: ReadRetryScope?,
             onPage: suspend (List<DomainHrvRecord>, String?) -> Unit,
         ): ReadOutcome<Unit> =
             withContext(ioDispatcher) {
@@ -380,6 +391,7 @@ class HealthConnectRepositoryImpl
                         from,
                         to,
                         startPageToken,
+                        retryScope,
                     ) { page, nextToken ->
                         onPage(page.map { it.toDomain() }, nextToken)
                     }
@@ -413,28 +425,47 @@ class HealthConnectRepositoryImpl
             from: Instant,
             to: Instant,
             includeDetails: Boolean,
+            retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainExerciseSessionRecord>> =
+            readExerciseSessionsResult(from, to, includeDetails, retryScope).sessions
+
+        override suspend fun readExerciseSessionsWithCompletion(
+            from: Instant,
+            to: Instant,
+            retryScope: ReadRetryScope?,
+        ): ExerciseSessionRead = readExerciseSessionsResult(from, to, true, retryScope, scanEmptyWindow = true)
+
+        private suspend fun readExerciseSessionsResult(
+            from: Instant,
+            to: Instant,
+            includeDetails: Boolean,
+            retryScope: ReadRetryScope?,
+            scanEmptyWindow: Boolean = false,
+        ): ExerciseSessionRead {
+            val completed = mutableSetOf<String>()
+            val outcome =
             safeReadRecords<ExerciseSessionRecord, _>("Exercise session") {
-                val sessions = readAllPages<ExerciseSessionRecord>(from, to)
-                if (sessions.isEmpty() || !includeDetails) {
+                val sessions = readAllPages<ExerciseSessionRecord>(from, to, retryScope)
+                if ((!scanEmptyWindow && sessions.isEmpty()) || !includeDetails) {
                     sessions.map { it.toDomain(null) }
                 } else {
-                    // Two bulk reads for the whole window, not one per session: DistanceRecord and
-                    // ElevationGainedRecord are low-volume, and attribution happens in memory.
-                    val distanceTotals =
-                        intervalTotalsReader.readDistanceTotals(from, to).valueOrPrevious(emptyList())
-                    val elevationTotals =
-                        intervalTotalsReader.readElevationTotals(from, to).valueOrPrevious(emptyList())
+                    val totals = intervalTotalsReader.readSessionTotals(sessions, from, to, retryScope)
+                    completed.addAll(totals.completedTypes)
 
+                    val routeConsent = WorkoutRouteReadPolicy.hasConsent(client)
+                    val storedRoutes = routeLookup.snapshots(sessions.map { it.metadata.id })
                     sessions.map { session ->
-                        // Routes are only returned by a per-record read, so this is an extra IPC
-                        // round-trip per session.
+                        // Read routes only when consent and the stored identity require enrichment.
                         val routeResult =
-                            try {
+                            if (!routeConsent ||
+                                !WorkoutRouteReadPolicy.needsRead(session, storedRoutes[session.metadata.id])
+                            ) {
+                                ExerciseRouteResult.ConsentRequired()
+                            } else try {
                                 val record =
-                                    client
-                                        .readRecord(ExerciseSessionRecord::class, session.metadata.id)
-                                        .record
+                                    retryWithBackoff(budget = retryScope) {
+                                        client.readRecord(ExerciseSessionRecord::class, session.metadata.id).record
+                                    }
                                 record.exerciseRouteResult
                             } catch (e: CancellationException) {
                                 throw e
@@ -458,12 +489,14 @@ class HealthConnectRepositoryImpl
                             }
                         session.toDomain(
                             routeResult = routeResult,
-                            totalDistanceMeters = intervalTotalsReader.resolveTotal(session, distanceTotals),
-                            elevationGainMeters = intervalTotalsReader.resolveTotal(session, elevationTotals),
+                            totalDistanceMeters = totals.distance[session.metadata.id],
+                            elevationGainMeters = totals.elevation[session.metadata.id],
                         )
                     }
                 }
             }
+            return ExerciseSessionRead(outcome, if (outcome is ReadOutcome.Available) completed.toSet() else emptySet())
+        }
 
         override suspend fun readExerciseSession(id: String): DomainExerciseSessionRecord? =
             withContext(ioDispatcher) {
@@ -505,68 +538,85 @@ class HealthConnectRepositoryImpl
         override suspend fun readStepsRecords(
             from: Instant,
             to: Instant,
+            retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainStepsRecord>> =
-            stepRecordReader.readStepsRecords(from, to)
+            stepRecordReader.readStepsRecords(from, to, retryScope)
+
+        override suspend fun readStepsRecordsPaged(
+            from: Instant,
+            to: Instant,
+            retryScope: ReadRetryScope?,
+            onPage: suspend (records: List<DomainStepsRecord>) -> Unit,
+        ): ReadOutcome<Unit> =
+            stepRecordReader.readStepsRecordsPaged(from, to, retryScope, onPage)
 
         override suspend fun readSteps(
             from: Instant,
             to: Instant,
+            retryScope: ReadRetryScope?,
         ): ReadOutcome<Long> =
-            stepRecordReader.readSteps(from, to)
+            stepRecordReader.readSteps(from, to, retryScope)
 
         override suspend fun readDailyStepTotals(
             from: Instant,
             to: Instant,
             zoneId: ZoneId,
+            retryScope: ReadRetryScope?,
         ): ReadOutcome<Map<LocalDate, Long>> =
-            stepRecordReader.readDailyStepTotals(from, to, zoneId)
+            stepRecordReader.readDailyStepTotals(from, to, zoneId, retryScope)
 
         override suspend fun readWeightRecords(
             from: Instant,
             to: Instant,
+            retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainWeightRecord>> =
             safeReadRecords<WeightRecord, _>("Weight") {
-                readAllPages<WeightRecord>(from, to).map { it.toDomain() }
+                readAllPages<WeightRecord>(from, to, retryScope).map { it.toDomain() }
             }
 
         override suspend fun readBodyFatRecords(
             from: Instant,
             to: Instant,
+            retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainBodyFatRecord>> =
             safeReadRecords<BodyFatRecord, _>("Body fat") {
-                readAllPages<BodyFatRecord>(from, to).map { it.toDomain() }
+                readAllPages<BodyFatRecord>(from, to, retryScope).map { it.toDomain() }
             }
 
         override suspend fun readBloodPressureRecords(
             from: Instant,
             to: Instant,
+            retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainBloodPressureRecord>> =
             safeReadRecords<BloodPressureRecord, _>("Blood pressure") {
-                readAllPages<BloodPressureRecord>(from, to).map { it.toDomain() }
+                readAllPages<BloodPressureRecord>(from, to, retryScope).map { it.toDomain() }
             }
 
         override suspend fun readOxygenSaturationRecords(
             from: Instant,
             to: Instant,
+            retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainOxygenSaturationRecord>> =
             safeReadRecords<OxygenSaturationRecord, _>("Oxygen saturation") {
-                readAllPages<OxygenSaturationRecord>(from, to).map { it.toDomain() }
+                readAllPages<OxygenSaturationRecord>(from, to, retryScope).map { it.toDomain() }
             }
 
         override suspend fun readBodyTemperatureRecords(
             from: Instant,
             to: Instant,
+            retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainBodyTemperatureRecord>> =
             safeReadRecords<BodyTemperatureRecord, _>("Body temperature") {
-                readAllPages<BodyTemperatureRecord>(from, to).map { it.toDomain() }
+                readAllPages<BodyTemperatureRecord>(from, to, retryScope).map { it.toDomain() }
             }
 
         override suspend fun readVo2MaxRecords(
             startTime: Instant,
             endTime: Instant,
+            retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainVo2MaxRecord>> =
             safeReadRecords<Vo2MaxRecord, _>("VO2 max") {
-                readAllPages<Vo2MaxRecord>(startTime, endTime).map { it.toDomain() }
+                readAllPages<Vo2MaxRecord>(startTime, endTime, retryScope).map { it.toDomain() }
             }
 
         private suspend inline fun <reified T : androidx.health.connect.client.records.Record, R> safeReadRecords(

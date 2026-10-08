@@ -1,5 +1,13 @@
 package app.readylytics.health.core.healthconnect.data.healthconnect
 
+import app.readylytics.health.core.model.domain.repository.ReadOutcome
+import androidx.health.connect.client.units.Length
+import androidx.health.connect.client.records.DistanceRecord
+import androidx.health.connect.client.records.ElevationGainedRecord
+import androidx.health.connect.client.records.ExerciseRouteResult
+import androidx.health.connect.client.records.ExerciseSessionRecord
+import app.readylytics.health.core.model.domain.repository.WorkoutRouteLookup
+import app.readylytics.health.core.model.domain.repository.StoredWorkoutRouteSnapshot
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.records.HeartRateRecord
@@ -9,6 +17,7 @@ import androidx.health.connect.client.response.ReadRecordsResponse
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
+import io.mockk.coVerify
 import io.mockk.coEvery
 import io.mockk.unmockkAll
 import kotlinx.coroutines.Dispatchers
@@ -31,6 +40,7 @@ import kotlin.test.assertEquals
 class HealthConnectRepositoryImplDiscoverDevicesTest {
     private val context = mockk<Context>(relaxed = true)
     private val client = mockk<HealthConnectClient>(relaxed = true)
+    private val routeLookup = mockk<WorkoutRouteLookup>(relaxed = true)
     private lateinit var repo: HealthConnectRepositoryImpl
 
     private fun emptyResponse() =
@@ -107,6 +117,7 @@ class HealthConnectRepositoryImplDiscoverDevicesTest {
             IntervalTotalsReader(context = context, ioDispatcher = ioDispatcher, client = client)
         repo =
             HealthConnectRepositoryImpl(
+                routeLookup = routeLookup,
                 context = context,
                 ioDispatcher = ioDispatcher,
                 stepRecordReader = stepRecordReader,
@@ -117,9 +128,183 @@ class HealthConnectRepositoryImplDiscoverDevicesTest {
         coEvery { client.permissionController.getGrantedPermissions() } returns repo.allPermissions
     }
 
+    @Test
+    fun unchangedImportedBulkRouteSkipsRead() = runTest {
+        val from = Instant.parse("2026-08-01T00:00:00Z")
+        val to = from.plusSeconds(3600)
+        val session = mockk<ExerciseSessionRecord>(relaxed = true) {
+            every { metadata.id } returns "stored-session"
+            every { startTime } returns from
+            every { endTime } returns to
+            every { exerciseRouteResult } returns ExerciseRouteResult.NoData()
+        }
+        val stored = StoredWorkoutRouteSnapshot(
+            "stored-session", from.toEpochMilli(), to.toEpochMilli(), session.exerciseType.toString(),
+            DeviceLabel.from(session.metadata.device, session.metadata.dataOrigin), "IMPORTED",
+        )
+        coEvery { routeLookup.snapshots(any()) } returns mapOf(stored.id to stored)
+        coEvery { client.permissionController.getGrantedPermissions() } returns
+            repo.allPermissions + "android.permission.health.READ_EXERCISE_ROUTES"
+        coEvery {
+            client.readRecords<ExerciseSessionRecord>(match { it.recordType == ExerciseSessionRecord::class })
+        } returns
+            mockk { every { records } returns listOf(session); every { pageToken } returns null }
+        repeat(2) { repo.readExerciseSessions(from, to, true) }
+        io.mockk.coVerify(exactly = 0) { client.readRecord(ExerciseSessionRecord::class, any()) }
+    }
+
+    @Test
+    fun lateDistanceDenialDiscardsSuccessfulPage() = runTest { assertLateIntervalDenial(false) }
+
+    @Test
+    fun lateElevationDenialDiscardsSuccessfulPage() = runTest { assertLateIntervalDenial(true) }
+
+    @Test
+    fun lateIntervalCancellationPropagates() = runTest {
+        val failure = kotlinx.coroutines.CancellationException("cancel second page")
+        val thrown = kotlin.test.assertFailsWith<kotlinx.coroutines.CancellationException> {
+            assertLateIntervalDenial(false, failure)
+        }
+        assertEquals(failure.message, thrown.message)
+    }
+
+    @Test
+    fun lateIntervalTransientFailurePropagates() = runTest {
+        val failure = IllegalStateException("provider failed second page")
+        val thrown = kotlin.test.assertFailsWith<IllegalStateException> {
+            assertLateIntervalDenial(true, failure)
+        }
+        assertEquals(failure.message, thrown.message)
+    }
+
+    private suspend fun assertLateIntervalDenial(
+        isElevation: Boolean,
+        failure: Exception = SecurityException("revoked"),
+    ) {
+        val start = Instant.parse("2026-08-20T00:00:00Z")
+        val end = start.plusSeconds(3600)
+        val session = mockk<ExerciseSessionRecord>(relaxed = true) {
+            every { metadata.id } returns "session"
+            every { metadata.dataOrigin.packageName } returns "writer"
+            every { startTime } returns start
+            every { endTime } returns end
+            every { exerciseRouteResult } returns ExerciseRouteResult.NoData()
+        }
+        coEvery { client.readRecords<Record>(match { it.recordType == session::class }) } returns mockk {
+            every { records } returns listOf(session)
+            every { pageToken } returns null
+        }
+        // Match the SDK class, since MockK may provide a subclass.
+        coEvery { client.readRecords<Record>(match {
+            it.recordType == ExerciseSessionRecord::class
+        }) } returns mockk {
+            every { records } returns listOf(session)
+            every { pageToken } returns null
+        }
+        coEvery { client.readRecord(ExerciseSessionRecord::class, "session") } returns mockk {
+            every { record } returns session
+        }
+        val type: kotlin.reflect.KClass<out Record> = if (isElevation) ElevationGainedRecord::class
+            else DistanceRecord::class
+        val interval: Record = if (isElevation) mockk<ElevationGainedRecord>(relaxed = true) {
+            every { elevation } returns Length.meters(50.0)
+            every { startTime } returns start
+            every { endTime } returns end
+            every { metadata.dataOrigin.packageName } returns "writer"
+        } else mockk<DistanceRecord>(relaxed = true) {
+            every { distance } returns Length.meters(500.0)
+            every { startTime } returns start
+            every { endTime } returns end
+            every { metadata.dataOrigin.packageName } returns "writer"
+        }
+        coEvery { client.readRecords<Record>(match { it.recordType == type && it.pageToken == null }) } returns mockk {
+            every { records } returns listOf(interval)
+            every { pageToken } returns "denied-page"
+        }
+        coEvery {
+            client.readRecords<Record>(match { it.recordType == type && it.pageToken == "denied-page" })
+        } throws failure
+        val outcome = repo.readExerciseSessionsWithCompletion(start, end)
+        assertEquals(setOf(if (isElevation) "DISTANCE" else "ELEVATION_GAINED"), outcome.completedIntervalTypes)
+        val workout = (outcome.sessions as ReadOutcome.Available).data.single()
+        kotlin.test.assertNull(if (isElevation) workout.elevationGainMeters else workout.totalDistanceMeters)
+    }
+
+    @Test
+    fun emptySessionWindowStillScansIntervalsForCompletion() = runTest {
+        val result = repo.readExerciseSessionsWithCompletion(Instant.EPOCH, Instant.EPOCH.plusSeconds(3600))
+        assertEquals(setOf("DISTANCE", "ELEVATION_GAINED"), result.completedIntervalTypes)
+        coVerify { client.readRecords<Record>(match { it.recordType == DistanceRecord::class }) }
+        coVerify { client.readRecords<Record>(match { it.recordType == ElevationGainedRecord::class }) }
+    }
+
     @After
     fun teardown() {
         unmockkAll()
+    }
+
+    @Test
+    fun standaloneRepositoryReadKeepsFiveAttempts() = runTest {
+        val failure = object : java.io.IOException("rate limit") {}
+        var sdkCalls = 0
+        coEvery { client.readRecords<Record>(any()) } coAnswers { sdkCalls++; throw failure }
+        val thrown = kotlin.test.assertFailsWith<java.io.IOException> {
+            repo.readSleepSessions(Instant.EPOCH, Instant.EPOCH.plusSeconds(3600), retryScope = null)
+        }
+        assertEquals(5, sdkCalls)
+        kotlin.test.assertSame(failure, thrown)
+    }
+
+    @Test
+    fun standaloneRepositoryCancellationEscapesUnchanged() = runTest {
+        val cancellation = kotlinx.coroutines.CancellationException("cancel")
+        var sdkCalls = 0
+        coEvery { client.readRecords<Record>(any()) } coAnswers { sdkCalls++; throw cancellation }
+        val thrown = kotlin.test.assertFailsWith<kotlinx.coroutines.CancellationException> {
+            repo.readSleepSessions(Instant.EPOCH, Instant.EPOCH.plusSeconds(3600), retryScope = null)
+        }
+        assertEquals(1, sdkCalls)
+        kotlin.test.assertSame(cancellation, thrown)
+    }
+
+    @Test
+    fun sharedScopeBoundsActualRepositorySdkReadsAcrossNineBulkReaders() = runTest {
+        val failure = object : java.io.IOException("rate limit") {}
+        var sdkCalls = 0
+        coEvery { client.readRecords<Record>(any()) } coAnswers {
+            sdkCalls++
+            kotlinx.coroutines.yield()
+            throw failure
+        }
+        val coordinator = app.readylytics.health.core.healthconnect.domain.sync.HealthIngestionCoordinator(
+            repo,
+            mockk<app.readylytics.health.core.model.domain.sync.HealthIngestionStore>(relaxed = true),
+            app.readylytics.health.core.healthconnect.domain.sync.FakeScanStagingStore(),
+        )
+        val thrown = kotlin.test.assertFailsWith<java.io.IOException> {
+            coordinator.ingestWindow(Instant.EPOCH, Instant.EPOCH.plusSeconds(3600),
+                app.readylytics.health.core.model.domain.preferences.UserPreferences())
+        }
+        kotlin.test.assertTrue(sdkCalls <= 5, "SDK calls: $sdkCalls")
+        kotlin.test.assertSame(failure, thrown)
+        kotlin.test.assertFalse((thrown as Throwable) is
+            app.readylytics.health.core.model.domain.repository.HealthConnectWindowTimeoutException)
+    }
+
+    @Test
+    fun pageConsumerFailureIsNeverRetriedByRepositoryScope() = runTest {
+        val failure = object : java.io.IOException("consumer failed") {}
+        var consumers = 0
+        val scope = app.readylytics.health.core.healthconnect.domain.sync.ReadRetryBudget(delayFn = {})
+        val thrown = kotlin.test.assertFailsWith<java.io.IOException> {
+            repo.readHeartRateSamplesPaged(Instant.EPOCH, Instant.EPOCH.plusSeconds(3600), retryScope = scope) { _, _ ->
+                consumers++
+                throw failure
+            }
+        }
+        kotlin.test.assertSame(failure, thrown)
+        assertEquals(1, consumers)
+        assertEquals(0, scope.attemptsUsed)
     }
 
     @Test

@@ -34,6 +34,7 @@ data class IngestPhaseContext(
     val reconcileEndMs: Long,
     val selectionHash: String,
     val baselineChangeTokens: Map<HealthDataType, String>,
+    val intervalTokens: IntervalTokenProgress = IntervalTokenProgress(),
     val initialCompletedTypes: Set<HealthDataType>,
     val runIdentity: HistoricalRunIdentity,
     val checkpoint: ResyncCheckpoint?,
@@ -41,6 +42,7 @@ data class IngestPhaseContext(
 )
 
 data class IngestPhaseOutcome(
+    val intervalTokens: IntervalTokenProgress = IntervalTokenProgress(),
     val earliestDeletionDate: LocalDate?,
     val completedTypes: Set<HealthDataType>,
     val hrBeforePrune: Int,
@@ -115,6 +117,7 @@ private fun logIngestCompletionTelemetry(
 private sealed interface ChunkIngestResult {
     data class Success(
         val nextChunkStart: LocalDate,
+        val intervalTokens: IntervalTokenProgress,
         val affectedStart: LocalDate?,
         val completedTypes: Set<HealthDataType>,
     ) : ChunkIngestResult
@@ -136,6 +139,7 @@ class HistoricalIngestPhase
             context: IngestPhaseContext,
             onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)?,
         ): IngestPhaseOutcome {
+            var currentContext = context
             staging.clearRunsOtherThan(context.runIdentity.runId)
             val beforeCounts = readCounts(context.reconcileStartMs, context.reconcileEndMs)
             val ingestStart = clock.millis()
@@ -151,12 +155,13 @@ class HistoricalIngestPhase
 
             while (!chunkStart.isAfter(context.endDate)) {
                 currentCoroutineContext().ensureActive()
-                val chunkResult = processChunk(context, chunkStart, effectiveChunkDays, runCompletedTypes)
+                val chunkResult = processChunk(currentContext, chunkStart, effectiveChunkDays, runCompletedTypes)
                 when (chunkResult) {
                     is ChunkIngestResult.Shrunk -> {
                         effectiveChunkDays = chunkResult.newChunkDays
                     }
                     is ChunkIngestResult.Success -> {
+                        currentContext = currentContext.copy(intervalTokens = chunkResult.intervalTokens)
                         runCompletedTypes = chunkResult.completedTypes
                         if (chunkResult.affectedStart != null) {
                             earliestDeletionDate =
@@ -174,6 +179,7 @@ class HistoricalIngestPhase
             logIngestCompletionTelemetry(clock, ingestStart, beforeCounts, afterCounts)
 
             return IngestPhaseOutcome(
+                intervalTokens = currentContext.intervalTokens,
                 earliestDeletionDate = earliestDeletionDate,
                 completedTypes = runCompletedTypes,
                 hrBeforePrune = afterCounts.hr,
@@ -271,11 +277,15 @@ class HistoricalIngestPhase
                 }
 
             val updatedCompletedTypes = runCompletedTypes.intersect(ingestResult.completedTypes)
-            saveChunkCompleted(context, chunkEndExclusive, updatedCompletedTypes)
+            val intervalTokens = context.intervalTokens.copy(
+                completed = context.intervalTokens.completed.intersect(ingestResult.completedIntervalTypes),
+            )
+            saveChunkCompleted(context.copy(intervalTokens = intervalTokens), chunkEndExclusive, updatedCompletedTypes)
             for (type in HealthDataType.entries) {
                 staging.clearTypeScan(scanIdentity, type)
             }
             return ChunkIngestResult.Success(
+                intervalTokens = intervalTokens,
                 nextChunkStart = chunkEndExclusive,
                 affectedStart = ingestResult.affectedRange?.start,
                 completedTypes = updatedCompletedTypes,
@@ -410,6 +420,8 @@ class HistoricalIngestPhase
                     nextDate = chunkStart,
                     selectionHash = context.selectionHash,
                     baselineChangeTokens = context.baselineChangeTokens,
+                    baselineIntervalTokens = context.intervalTokens.baseline,
+                    completedIntervalTypes = context.intervalTokens.completed,
                     chunkDaysOverride = shrunkDays,
                     hrPageToken = null,
                     hrvPageToken = null,
@@ -436,6 +448,8 @@ class HistoricalIngestPhase
                     nextDate = chunkStart,
                     selectionHash = context.selectionHash,
                     baselineChangeTokens = context.baselineChangeTokens,
+                    baselineIntervalTokens = context.intervalTokens.baseline,
+                    completedIntervalTypes = context.intervalTokens.completed,
                     chunkDaysOverride = chunkOverride,
                     hrPageToken = hrToken,
                     hrvPageToken = hrvToken,
@@ -459,6 +473,8 @@ class HistoricalIngestPhase
                     nextDate = if (nextPhase == ResyncPhase.INGEST) chunkEndExclusive else context.startDate,
                     selectionHash = context.selectionHash,
                     baselineChangeTokens = context.baselineChangeTokens,
+                    baselineIntervalTokens = context.intervalTokens.baseline,
+                    completedIntervalTypes = context.intervalTokens.completed,
                     chunkDaysOverride = null,
                     hrPageToken = null,
                     hrvPageToken = null,

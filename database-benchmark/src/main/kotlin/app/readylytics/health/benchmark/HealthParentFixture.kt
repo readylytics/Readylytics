@@ -2,6 +2,7 @@ package app.readylytics.health.benchmark
 
 import app.readylytics.health.core.model.domain.model.DomainHeartRateRecord
 import app.readylytics.health.core.model.domain.model.DomainHeartRateSample
+import app.readylytics.health.core.model.domain.model.DomainStepsRecord
 import java.time.Instant
 
 /**
@@ -94,4 +95,29 @@ object HealthParentFixture {
 
     /** The chunk-boundary instant [pageBoundaryExtremes]' boundary parent straddles. */
     fun chunkBoundary(): Instant = start.plusMillis(WINDOW_MS)
+
+    /**
+     * WP-15: steps records, one per record (no nested samples -- each `StepsRecord` already is one
+     * row), spread evenly across this fixture's 30-day window. Used to benchmark the dense-steps
+     * paged ingestion path at the same deterministic-fixture discipline as [pages].
+     */
+    fun stepsPages(
+        recordCount: Int,
+        pageSize: Int,
+    ): Sequence<List<DomainStepsRecord>> {
+        require(recordCount > 0 && pageSize > 0)
+        require(recordCount <= WINDOW_MS)
+        return (0 until recordCount)
+            .asSequence()
+            .map { index ->
+                val offset = index.toLong() * WINDOW_MS / recordCount
+                DomainStepsRecord(
+                    id = "fixture_steps_$index",
+                    startTime = start.plusMillis(offset),
+                    endTime = start.plusMillis(offset + 1),
+                    count = 10L + index % 50,
+                    deviceName = "fixture-origin-${index % 3}",
+                )
+            }.chunked(pageSize)
+    }
 }

@@ -272,4 +272,30 @@ interface WorkoutDao {
 
     @Query("DELETE FROM workout_records WHERE startTime >= :startMs AND endTime <= :endMs")
     suspend fun deleteBetween(startMs: Long, endMs: Long): Int
+
+    @Query("DELETE FROM workout_records WHERE id IN (:ids)")
+    suspend fun deleteByIds(ids: List<String>): Int
+
+    // WP-17 (HC-102): cursor-paged (not offset-paged, since deleting a page shifts offsets)
+    // sibling of pageAfter/pageAfterInRange, scoped additionally to a device mismatch, for the
+    // retroactive excluded-workout repair's bounded-batch delete.
+    @Query(
+        "SELECT * FROM workout_records " +
+            "WHERE startTime >= :fromMs AND startTime < :toMs " +
+            "AND (deviceName != :deviceName OR deviceName IS NULL) AND (" +
+            "  startTime > :afterTs OR " +
+            "  (startTime = :afterTs AND id > :afterId)" +
+            ") " +
+            "ORDER BY startTime ASC, id ASC " +
+            "LIMIT :limit",
+    )
+    suspend fun pageExcludedByDevice(
+        fromMs: Long,
+        toMs: Long,
+        deviceName: String,
+        afterTs: Long,
+        afterId: String,
+        limit: Int,
+    ): List<WorkoutRecordEntity>
+
 }
