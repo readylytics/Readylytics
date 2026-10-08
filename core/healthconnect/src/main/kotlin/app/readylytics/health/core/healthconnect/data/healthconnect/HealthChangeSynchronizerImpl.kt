@@ -495,7 +495,7 @@ class HealthChangeSynchronizerImpl
                         val record = change.record
                         val deviceLabel = DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin)
                         val keep = selectedDevice == null || deviceLabel == selectedDevice
-                        if (!keep || dataType != HealthDataType.EXERCISE) {
+                        if (!keep || dataType !in REPLACED_WITHOUT_PRE_DELETE) {
                             toDeleteIds.add(record.metadata.id)
                         }
                         if (keep) {
@@ -592,3 +592,13 @@ class HealthChangeSynchronizerImpl
             }
 
 }
+
+/**
+ * Kept upsertions of these types skip the pre-delete: `EXERCISE` updates in place (keeps
+ * `modelTrimp` and the coalesced route), and `HEART_RATE`/`HRV` go through the source-scoped
+ * `replaceHeartRateSources`/`replaceHrvSources`, which already drop rows the new payload omits,
+ * journal exactly one dirty ticket, and skip an identical re-report entirely. A pre-delete would
+ * journal a second ticket and defeat that skip. De-selected records are still deleted.
+ */
+private val REPLACED_WITHOUT_PRE_DELETE =
+    setOf(HealthDataType.EXERCISE, HealthDataType.HEART_RATE, HealthDataType.HRV)
