@@ -8,9 +8,12 @@ import app.readylytics.health.core.model.data.preferences.normalizeCoreMergeGapM
 import app.readylytics.health.core.model.data.preferences.normalizeMinimumCountedSleepSegmentMinutes
 import app.readylytics.health.core.model.data.preferences.normalizeSupplementalArchitectureCoveragePercent
 import app.readylytics.health.core.model.data.preferences.normalizeSupplementalCutoffMinutesOfDay
+import app.readylytics.health.core.model.data.preferences.scoringZone
 import app.readylytics.health.core.model.domain.preferences.Vo2MaxEstimationMethod
 import app.readylytics.health.core.model.domain.preferences.Vo2MaxSourceMode
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
+import java.time.Clock
+import java.time.LocalDate
 
 fun PhysiologyProfileProto.toDomainProfile(): PhysiologyProfile =
     when (this) {
@@ -45,10 +48,12 @@ fun Vo2MaxEstimationMethodProto.toDomainMethod(): Vo2MaxEstimationMethod =
         else -> Vo2MaxEstimationMethod.HR_RATIO
     }
 
-fun UserPreferencesProto.toDomainModel(): UserPreferences {
+fun UserPreferencesProto.toDomainModel(clock: Clock): UserPreferences {
     val profile = physiologyProfile.toDomainProfile()
-    return toSyncAndBaselinePreferences(profile)
-        .withZonesAndDemographics(this)
+    val base = toSyncAndBaselinePreferences(profile)
+    val today = LocalDate.now(clock.withZone(base.scoringZone()))
+    return base
+        .withZonesAndDemographics(this, today)
         .withThresholdsAndDisplay(this)
         .withPaletteAndUi(this)
         .withDevicesAndBackups(this)
@@ -100,4 +105,5 @@ private fun UserPreferencesProto.toSyncAndBaselinePreferences(profile: Physiolog
         autoCalculateMaxHr = autoCalculateMaxHr,
         manualZoneEditing = manualZoneEditing,
         physiologyProfile = profile,
+        scoringZoneId = scoringZoneId,
     )

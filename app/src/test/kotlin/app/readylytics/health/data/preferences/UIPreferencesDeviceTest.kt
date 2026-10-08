@@ -20,9 +20,13 @@ import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
 
 @RunWith(AndroidJUnit4::class)
 class UIPreferencesDeviceTest {
+    private val clock = Clock.fixed(Instant.parse("2026-01-01T12:00:00Z"), ZoneId.of("UTC"))
     private lateinit var dataStore: DataStore<UserPreferencesProto>
     private lateinit var uiPreferences: UIPreferences
 
@@ -44,7 +48,7 @@ class UIPreferencesDeviceTest {
         runTest {
             uiPreferences.updateDeviceForDataType(HealthDataType.STEPS.name, "Pixel Watch")
 
-            val prefs = dataStore.data.first().toDomainModel()
+            val prefs = dataStore.data.first().toDomainModel(clock)
             assertEquals("Pixel Watch", prefs.deviceByDataType[HealthDataType.STEPS.name])
         }
 
@@ -54,7 +58,7 @@ class UIPreferencesDeviceTest {
             uiPreferences.updateDeviceForDataType(HealthDataType.STEPS.name, "Pixel Watch")
             uiPreferences.updateDeviceForDataType(HealthDataType.STEPS.name, null)
 
-            val prefs = dataStore.data.first().toDomainModel()
+            val prefs = dataStore.data.first().toDomainModel(clock)
             assertNull(prefs.deviceByDataType[HealthDataType.STEPS.name])
         }
 

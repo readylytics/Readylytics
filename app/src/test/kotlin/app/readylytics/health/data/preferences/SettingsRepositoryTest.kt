@@ -6,11 +6,18 @@ import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.dataStoreFile
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.readylytics.health.core.model.data.preferences.AppTheme
+import app.readylytics.health.core.model.data.preferences.BackupSchedule
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
+import app.readylytics.health.core.model.data.preferences.SyncPreference
+import app.readylytics.health.core.model.data.preferences.UnitSystem
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.data.preferences.appliedTrainingReadinessConfig
+import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.core.model.domain.scoring.TrainingReadinessConfig
+import app.readylytics.health.core.model.domain.scoring.TrimpModel
+import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -22,9 +29,14 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.Clock
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 
 @RunWith(AndroidJUnit4::class)
 class SettingsRepositoryTest {
+    private val testClock = Clock.fixed(Instant.parse("2026-01-01T12:00:00Z"), ZoneId.of("UTC"))
     private lateinit var context: Context
     private lateinit var dataStore: DataStore<UserPreferencesProto>
     private lateinit var repository: SettingsRepository
@@ -47,6 +59,7 @@ class SettingsRepositoryTest {
                 ui = mockk<UIPreferences>(relaxed = true),
                 sync = mockk<SyncPreferences>(relaxed = true),
                 backup = mockk<BackupPreferences>(relaxed = true),
+                clock = testClock,
             )
     }
 
@@ -132,7 +145,7 @@ class SettingsRepositoryTest {
 
     @Test
     fun `legacy proto without sleep policy fields resolves defaults`() {
-        val prefs = UserPreferencesProto.getDefaultInstance().toDomainModel()
+        val prefs = UserPreferencesProto.getDefaultInstance().toDomainModel(testClock)
 
         assertEquals(180, prefs.coreMergeGapMinutes)
         assertEquals(1200, prefs.supplementalCutoffMinutesOfDay)
@@ -150,7 +163,7 @@ class SettingsRepositoryTest {
                 .setMinimumCountedSleepSegmentMinutes(30)
                 .setSupplementalArchitectureCoveragePercent(80)
                 .build()
-                .toDomainModel()
+                .toDomainModel(testClock)
 
         assertEquals(240, prefs.coreMergeGapMinutes)
         assertEquals(840, prefs.supplementalCutoffMinutesOfDay)
@@ -265,6 +278,7 @@ class SettingsRepositoryTest {
                     ui = mockk<UIPreferences>(relaxed = true),
                     sync = SyncPreferences(dataStore),
                     backup = mockk<BackupPreferences>(relaxed = true),
+                    clock = testClock,
                 )
             assertEquals(false, repositoryWithRealSync.userPreferences.first().selectedWorkoutRepairCompleted)
 
@@ -388,7 +402,7 @@ class SettingsRepositoryTest {
 
     @Test
     fun `legacy proto without residual fatigue parameters resolves defaults`() {
-        val prefs = UserPreferencesProto.getDefaultInstance().toDomainModel()
+        val prefs = UserPreferencesProto.getDefaultInstance().toDomainModel(testClock)
 
         assertEquals(24f, prefs.residualFatigueHalfLifeHours, 0f)
         assertEquals(1.0f, prefs.residualFatigueGain, 0f)
@@ -417,7 +431,7 @@ class SettingsRepositoryTest {
                 .setResidualFatigueHalfLifeHours(200f)
                 .setResidualFatigueGain(99f)
                 .build()
-                .toDomainModel()
+                .toDomainModel(testClock)
 
         assertEquals(96f, prefs.residualFatigueHalfLifeHours, 0f)
         assertEquals(5.0f, prefs.residualFatigueGain, 0f)
@@ -427,7 +441,7 @@ class SettingsRepositoryTest {
     fun `old residual fatigue enabled false does not gate training readiness defaults`() {
         val legacyDisabled = UserPreferencesProto.parseFrom(byteArrayOf(0xD8.toByte(), 0x05, 0x00))
 
-        val config = legacyDisabled.toDomainModel().appliedTrainingReadinessConfig()
+        val config = legacyDisabled.toDomainModel(testClock).appliedTrainingReadinessConfig()
 
         assertEquals(SettingsDefaults.TRAINING_READINESS_RESIDUAL_FATIGUE_SCALE, config.residualFatigueScale)
         assertEquals(SettingsDefaults.TRAINING_READINESS_LOAD_BALANCE_WEIGHT, config.loadBalanceWeight)
@@ -510,5 +524,116 @@ class SettingsRepositoryTest {
                 restored.trainingReadinessLoadBalanceWeight,
             )
             assertEquals(applied, restored.appliedTrainingReadinessConfig())
+        }
+
+    @Test
+    fun `delegate forwarding routes calls to core and sleep preference modules`() =
+        runTest {
+            val mockPhysiology = mockk<PhysiologyPreferences>(relaxed = true)
+            val mockThresholds = mockk<ThresholdPreferences>(relaxed = true)
+            val mockSleep = mockk<SleepPreferences>(relaxed = true)
+            val mockSync = mockk<SyncPreferences>(relaxed = true)
+
+            val repo =
+                SettingsRepository(
+                    dataStore = dataStore,
+                    physiology = mockPhysiology,
+                    thresholds = mockThresholds,
+                    sleep = mockSleep,
+                    ui = mockk<UIPreferences>(relaxed = true),
+                    sync = mockSync,
+                    backup = mockk<BackupPreferences>(relaxed = true),
+                    clock = testClock,
+                )
+
+            // PhysiologySettings
+            repo.updateGender("MALE")
+            coVerify(exactly = 1) { mockPhysiology.updateGender("MALE") }
+
+            // HeartRateZoneSettings
+            repo.updateAutoCalculateMaxHr(false)
+            coVerify(exactly = 1) { mockPhysiology.updateAutoCalculateMaxHr(false) }
+
+            // SleepSettings
+            repo.updateGoalSleepHours(8.5f)
+            coVerify(exactly = 1) { mockSleep.updateGoalSleepHours(8.5f) }
+            repo.updateHrvBaselineOverride(50f)
+            coVerify(exactly = 1) { mockPhysiology.updateHrvBaselineOverride(50f) }
+            repo.updateStrainLoadSourceMode(LoadSourceMode.WORKOUT_ONLY)
+            coVerify(exactly = 1) { mockSync.updateStrainLoadSourceMode(LoadSourceMode.WORKOUT_ONLY) }
+
+            // ThresholdSettings
+            repo.updateHrvOptimalThreshold(60f)
+            coVerify(exactly = 1) { mockThresholds.updateHrvOptimalThreshold(60f) }
+            repo.updateConsistencyThresholdMinutes(30)
+            coVerify(exactly = 1) { mockSleep.updateConsistencyThresholdMinutes(30) }
+
+            // SyncSettings
+            repo.updateSyncPreference(SyncPreference.BY_TIME)
+            coVerify(exactly = 1) { mockSync.updateSyncPreference(SyncPreference.BY_TIME) }
+        }
+
+    @Test
+    fun `delegate forwarding routes calls to display and overlapping preference modules`() =
+        runTest {
+            val mockPhysiology = mockk<PhysiologyPreferences>(relaxed = true)
+            val mockSleep = mockk<SleepPreferences>(relaxed = true)
+            val mockUi = mockk<UIPreferences>(relaxed = true)
+            val mockBackup = mockk<BackupPreferences>(relaxed = true)
+
+            val repo =
+                SettingsRepository(
+                    dataStore = dataStore,
+                    physiology = mockPhysiology,
+                    thresholds = mockk<ThresholdPreferences>(relaxed = true),
+                    sleep = mockSleep,
+                    ui = mockUi,
+                    sync = mockk<SyncPreferences>(relaxed = true),
+                    backup = mockBackup,
+                    clock = testClock,
+                )
+
+            // AboutPreferences
+            repo.updateAboutDismissed(true)
+            coVerify(exactly = 1) { mockUi.updateAboutDismissed(true) }
+
+            // ThemeSettings (via DisplaySettings)
+            repo.updateAppTheme(AppTheme.DARK)
+            coVerify(exactly = 1) { mockUi.updateAppTheme(AppTheme.DARK) }
+
+            // DisplayGoalSettings (via DisplaySettings)
+            repo.updateUnitSystem(UnitSystem.METRIC)
+            coVerify(exactly = 1) { mockUi.updateUnitSystem(UnitSystem.METRIC) }
+            repo.updateStepGoal(10000)
+            coVerify(exactly = 1) { mockSleep.updateStepGoal(10000) }
+
+            // TrimpSettings (via DisplaySettings)
+            repo.updateTrimpModel(TrimpModel.CHENG)
+            coVerify(exactly = 1) { mockPhysiology.updateTrimpModel(TrimpModel.CHENG) }
+
+            // FatigueSettings (via DisplaySettings)
+            repo.updateResidualFatigueHalfLifeHours(36f)
+            coVerify(exactly = 1) { mockPhysiology.updateResidualFatigueHalfLifeHours(36f) }
+            repo.updateBulkDisplayModeNoticeDismissed(true)
+            coVerify(exactly = 1) { mockUi.updateBulkDisplayModeNoticeDismissed(true) }
+
+            // DeviceSettings
+            repo.updatePrimaryDevice("Watch 1")
+            coVerify(exactly = 1) { mockUi.updatePrimaryDevice("Watch 1") }
+
+            // BackupSettings
+            repo.updateBackupSchedule(BackupSchedule.WEEKLY)
+            coVerify(exactly = 1) { mockBackup.updateBackupSchedule(BackupSchedule.WEEKLY) }
+
+            // Overlapping methods
+            val testDate = LocalDate.of(1995, 5, 20)
+            repo.updateBirthday(testDate)
+            coVerify(exactly = 1) { mockPhysiology.updateBirthday(testDate) }
+
+            repo.updateMaxHeartRate(190)
+            coVerify(exactly = 1) { mockPhysiology.updateMaxHeartRate(190) }
+
+            repo.migrateDeviceSelectionIfNeeded()
+            coVerify(exactly = 1) { mockUi.migrateDeviceSelectionIfNeeded() }
         }
 }

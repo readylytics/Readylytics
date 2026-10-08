@@ -16,9 +16,13 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
 
 @RunWith(AndroidJUnit4::class)
 class SyncPreferencesTest {
+    private val clock = Clock.fixed(Instant.parse("2026-01-01T12:00:00Z"), ZoneId.of("UTC"))
     private lateinit var dataStore: DataStore<UserPreferencesProto>
     private lateinit var syncPreferences: SyncPreferences
 
@@ -42,7 +46,7 @@ class SyncPreferencesTest {
 
             val proto = dataStore.data.first()
             assertEquals(LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY, proto.rasSourceMode)
-            assertEquals(LoadSourceMode.WORKOUT_ONLY, proto.toDomainModel().rasSourceMode)
+            assertEquals(LoadSourceMode.WORKOUT_ONLY, proto.toDomainModel(clock).rasSourceMode)
         }
 
     @Test
@@ -52,7 +56,7 @@ class SyncPreferencesTest {
 
             val proto = dataStore.data.first()
             assertEquals(LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE, proto.rasSourceMode)
-            assertEquals(LoadSourceMode.EVERYDAY_HEART_RATE, proto.toDomainModel().rasSourceMode)
+            assertEquals(LoadSourceMode.EVERYDAY_HEART_RATE, proto.toDomainModel(clock).rasSourceMode)
         }
 
     @Test
@@ -86,6 +90,6 @@ class SyncPreferencesTest {
 
             val proto = dataStore.data.first()
             assertEquals(true, proto.selectedWorkoutRepairCompleted)
-            assertEquals(true, proto.toDomainModel().selectedWorkoutRepairCompleted)
+            assertEquals(true, proto.toDomainModel(clock).selectedWorkoutRepairCompleted)
         }
 }

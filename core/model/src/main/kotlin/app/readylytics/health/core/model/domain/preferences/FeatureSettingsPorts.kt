@@ -76,7 +76,7 @@ interface ThresholdSettings {
     suspend fun updateConsistencyBaselineDays(days: Int)
 }
 
-interface DisplaySettings {
+interface ThemeSettings {
     suspend fun updateAppTheme(theme: AppTheme)
     suspend fun updateDynamicColorEnabled(enabled: Boolean)
     suspend fun updateFallbackThemeColor(color: FallbackThemeColor)
@@ -84,6 +84,9 @@ interface DisplaySettings {
     suspend fun updateCustomPrimaryColor(color: Long)
     suspend fun updateCustomSecondaryColor(color: Long)
     suspend fun updateCustomTertiaryColor(color: Long)
+}
+
+interface DisplayGoalSettings {
     suspend fun updateUnitSystem(unitSystem: UnitSystem)
     suspend fun updateWeekStartDay(day: DayOfWeek)
     suspend fun updateHrrToleranceSeconds(value: Int)
@@ -91,10 +94,16 @@ interface DisplaySettings {
     suspend fun updateStepGoal(steps: Int)
     suspend fun updateRetentionDaysEnabled(enabled: Boolean)
     suspend fun updateRetentionDays(days: Int)
+}
+
+interface TrimpSettings {
     suspend fun updateTrimpModel(model: TrimpModel)
     suspend fun updateBanisterMultiplier(value: Float)
     suspend fun updateChengBeta(value: Float)
     suspend fun updateItrimB(value: Float)
+}
+
+interface FatigueSettings {
     suspend fun updateResidualFatigueHalfLifeHours(hours: Float)
     suspend fun updateResidualFatigueGain(value: Float)
     suspend fun resetResidualFatigueToDefaults()
@@ -104,6 +113,12 @@ interface DisplaySettings {
     suspend fun updateBulkDisplayModeNoticeDismissed(dismissed: Boolean)
     suspend fun updateLastGlobalDisplayMode(mode: DashboardCardDisplayMode?)
 }
+
+interface DisplaySettings :
+    ThemeSettings,
+    DisplayGoalSettings,
+    TrimpSettings,
+    FatigueSettings
 
 interface SyncSettings {
     suspend fun updateSyncPreference(pref: SyncPreference)

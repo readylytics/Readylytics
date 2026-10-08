@@ -17,7 +17,10 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 
-internal fun UserPreferences.withZonesAndDemographics(proto: UserPreferencesProto): UserPreferences =
+internal fun UserPreferences.withZonesAndDemographics(
+    proto: UserPreferencesProto,
+    today: LocalDate,
+): UserPreferences =
     copy(
         zone1MinPercent = proto.zone1MinPercent,
         zone1MaxPercent = proto.zone1MaxPercent,
@@ -30,7 +33,7 @@ internal fun UserPreferences.withZonesAndDemographics(proto: UserPreferencesProt
         zone3MaxBpm = proto.zone3MaxBpm,
         zone4MaxBpm = proto.zone4MaxBpm,
         age = proto.age,
-        birthDate = migrateBirthdateFields(proto.birthDay, proto.birthMonth, proto.birthYear),
+        birthDate = migrateBirthdateFields(proto.birthDay, proto.birthMonth, proto.birthYear, today),
         gender = if (proto.hasGender()) Gender.fromString(proto.gender) else null,
         heightCm = if (proto.hasHeightCm()) proto.heightCm else null,
         isBirthdayConfigured = proto.isBirthdayConfigured,
@@ -262,6 +265,7 @@ private fun migrateBirthdateFields(
     day: Int,
     month: Int,
     year: Int,
+    today: LocalDate,
 ): String? {
     if (day == 0 || month == 0 || year == 0) return null
     return try {
@@ -269,7 +273,7 @@ private fun migrateBirthdateFields(
         val daysInMonth = YearMonth.of(year, clampedMonth).lengthOfMonth()
         val clampedDay = day.coerceIn(1, daysInMonth)
         val birthDate = LocalDate.of(year, clampedMonth, clampedDay)
-        if (birthDate > LocalDate.now()) null else birthDate.toString()
+        if (birthDate > today) null else birthDate.toString()
     } catch (_: Exception) {
         null
     }

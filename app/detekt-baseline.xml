@@ -18,7 +18,6 @@
     <ID>TooManyFunctions:FeaturePortModule.kt$FeaturePortModule</ID>
     <ID>TooManyFunctions:LogSlotStore.kt$LogSlotStore</ID>
     <ID>TooManyFunctions:PhysiologyPreferences.kt$PhysiologyPreferences</ID>
-    <ID>TooManyFunctions:SettingsRepository.kt$SettingsRepository : SettingsRepositoryUserPreferencesReaderAboutPreferencesPhysiologySettingsHeartRateZoneSettingsSleepSettingsThresholdSettingsDisplaySettingsSyncSettingsDeviceSettingsBackupSettings</ID>
     <ID>TooManyFunctions:SleepPreferences.kt$SleepPreferences</ID>
     <ID>TooManyFunctions:SyncPreferences.kt$SyncPreferences</ID>
     <ID>TooManyFunctions:UIPreferences.kt$UIPreferences</ID>
