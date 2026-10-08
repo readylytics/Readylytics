@@ -803,13 +803,3 @@ private fun ElevationChart(
         }
     }
 }
-
-private fun computeDistanceLabels(
-    maxDistance: Double,
-    target: Int = 5,
-): List<Double> {
-    if (maxDistance <= 0.0) return listOf(0.0)
-    val intervals = (target - 1).coerceAtLeast(1)
-    val step = maxDistance / intervals
-    return (0..intervals).map { (it * step) }.distinct()
-}
