@@ -177,11 +177,18 @@ object ClockCallScanner {
                 violations.add("$canonicalType.now()")
             } else {
                 val clockTypes = typeAliases.filterValues { it == "Clock" }.keys.joinToString("|") { Regex.escape(it) }
+                val hasNonClockDeclaration =
+                    Regex("""\bclock\s*:\s*([\w.]+)""").findAll(stripped).any {
+                        typeAliases[it.groupValues[1]] != "Clock"
+                    }
                 val declaredClocks =
-                    Regex("""\b(\w+)\s*:\s*(?:$clockTypes)\b""")
-                        .findAll(stripped)
-                        .map { it.groupValues[1] }
-                        .toSet() + "clock"
+                    (
+                        Regex("""\b(\w+)\s*:\s*(?:$clockTypes)\b""")
+                            .findAll(stripped)
+                            .map { it.groupValues[1] }
+                            .toSet() + "clock"
+                    ).filterNot { it == "clock" && hasNonClockDeclaration }
+                        .toSet()
                 val passesClock = isClockExpression(argText, declaredClocks, clockTypes)
                 if (!passesClock) {
                     violations.add("$canonicalType.now(zoneId)")
@@ -206,10 +213,15 @@ object ClockCallScanner {
         violations: MutableList<String>,
     ) {
         val clockTypes = typeAliases.filterValues { it == "Clock" }.keys.joinToString("|") { Regex.escape(it) }
-        val clockRegex = Regex("""\b(?:$clockTypes)\s*\.\s*(systemDefaultZone|systemUTC|system)\s*\(""")
+        val clockRegex =
+            Regex(
+                """\b(?:$clockTypes)\s*\.\s*""" +
+                    """(systemDefaultZone|systemUTC|system|tickMillis|tickSeconds|tickMinutes)\s*\(""",
+            )
         for (match in clockRegex.findAll(stripped)) {
             val method = match.groupValues[1]
-            violations.add(if (method == "system") "Clock.system(zoneId)" else "Clock.$method()")
+            val arguments = if (method == "system" || method.startsWith("tick")) "zoneId" else ""
+            violations.add("Clock.$method($arguments)")
         }
     }
 
@@ -224,7 +236,7 @@ object ClockCallScanner {
         }
         val names = declaredClocks.joinToString("|") { Regex.escape(it) }
         val reference = Regex("""^(?:this\.)?(?:$names)\b""").find(compact)
-        val factory = Regex("""^(?:$clockTypes)\.(?:fixed|offset|tick|tickSeconds|tickMinutes)\(""").find(compact)
+        val factory = Regex("""^(?:$clockTypes)\.(?:fixed|offset|tick)\(""").find(compact)
         val baseEnd =
             reference?.range?.last?.plus(1)
                 ?: factory?.let { findMatchingParen(compact, it.range.last).takeIf { end -> end >= 0 }?.plus(1) }

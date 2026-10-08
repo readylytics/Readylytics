@@ -199,4 +199,56 @@ class ClockCallScannerTest {
             """.trimIndent()
         assertTrue(ClockCallScanner.violations(source).isEmpty())
     }
+
+    @Test
+    fun `explicit non-clock declaration named clock selects ambient overload`() {
+        for (zoneType in listOf("ZoneId", "java.time.ZoneId", "ScoringZone")) {
+            val source =
+                "import java.time.ZoneId as ScoringZone\n" +
+                    "fun day(clock: $zoneType) = LocalDate.now(clock)"
+            assertEquals(listOf("LocalDate.now(zoneId)"), ClockCallScanner.violations(source))
+        }
+    }
+
+    @Test
+    fun `explicit clock declarations still pass with direct qualified and aliased types`() {
+        for (clockType in listOf("Clock", "java.time.Clock", "TimeSource")) {
+            val source =
+                "import java.time.Clock as TimeSource\n" +
+                    "fun day(clock: $clockType) = LocalDate.now(clock.withZone(zoneId))"
+            assertTrue(ClockCallScanner.violations(source).isEmpty())
+        }
+        assertTrue(ClockCallScanner.violations("LocalDate.now(clock)").isEmpty())
+    }
+
+    @Test
+    fun `ambient tick construction is rejected standalone and inside now with aliases`() {
+        for (factory in listOf("tickSeconds", "tickMinutes", "tickMillis")) {
+            for (clockType in listOf("Clock", "java.time.Clock", "TimeSource")) {
+                val call = "$clockType.$factory(zoneId)"
+                val imports = "import java.time.Clock as TimeSource\n"
+                assertEquals(
+                    listOf("Clock.$factory(zoneId)"),
+                    ClockCallScanner.violations(imports + "val time = $call"),
+                )
+                assertEquals(
+                    listOf("LocalDate.now(zoneId)", "Clock.$factory(zoneId)"),
+                    ClockCallScanner.violations(imports + "LocalDate.now($call)"),
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `explicit-source clock factories remain positive in every type form`() {
+        for (clockType in listOf("Clock", "java.time.Clock", "TimeSource")) {
+            val source =
+                "import java.time.Clock as TimeSource\n" +
+                    "LocalDate.now($clockType.fixed(instant, zoneId))\n" +
+                    "LocalTime.now($clockType.offset(clock, duration))\n" +
+                    "ZonedDateTime.now($clockType.tick(clock, duration))\n" +
+                    "val time = $clockType.tick(clock, duration)"
+            assertTrue(ClockCallScanner.violations(source).isEmpty())
+        }
+    }
 }
