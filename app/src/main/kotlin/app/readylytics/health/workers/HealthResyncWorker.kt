@@ -39,6 +39,7 @@ import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.first
+import java.time.Clock
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -52,6 +53,7 @@ class HealthResyncWorker
         private val foregroundSyncController: Lazy<ForegroundSyncController>,
         private val databaseReadinessGate: DatabaseReadinessInspector,
         private val settingsRepository: Lazy<SettingsRepository>,
+        private val clock: Clock,
         private val dirtyRangeStore: Lazy<DirtyRangeStore> =
             Lazy {
                 object : DirtyRangeStore {
@@ -156,7 +158,7 @@ class HealthResyncWorker
 
             if (!prefs.selectedWorkoutRepairCompleted) {
                 val zoneId = prefs.scoringZone()
-                val today = LocalDate.now(zoneId)
+                val today = LocalDate.now(clock.withZone(zoneId))
                 val retentionStart = RetentionBounds.resolveResyncStartDate(prefs, today)
                 pruneExcludedWorkoutsIfSelected(prefs, retentionStart, today, zoneId)
                 if (!drainJournaledRepairTickets(resyncUseCase, syncController)) return Result.retry()
@@ -303,7 +305,8 @@ class HealthResyncWorker
 
         private suspend fun discardExpiredDirtyRanges() {
             val prefs = settingsRepository.get().userPreferences.first()
-            val retentionStart = RetentionBounds.resolveResyncStartDate(prefs, LocalDate.now(prefs.scoringZone()))
+            val today = LocalDate.now(clock.withZone(prefs.scoringZone()))
+            val retentionStart = RetentionBounds.resolveResyncStartDate(prefs, today)
             dirtyRangeStore.get().discardBefore(retentionStart)
             dirtyRangeStore.get().discardRetiredAgingTickets()
         }
@@ -341,7 +344,8 @@ class HealthResyncWorker
             try {
                 val settings = settingsRepository.get()
                 val prefs = settings.userPreferences.first()
-                if (coversRetainedHistory(recomputeOnly, rangeOverride, prefs) &&
+                val today = LocalDate.now(clock.withZone(prefs.scoringZone()))
+                if (coversRetainedHistory(recomputeOnly, rangeOverride, prefs, today) &&
                     prefs.scoringVersion < SettingsDefaults.CURRENT_SCORING_VERSION
                 ) {
                     settings.updateScoringVersion(SettingsDefaults.CURRENT_SCORING_VERSION)
@@ -428,13 +432,13 @@ internal fun pendingTicketRange(pending: List<DirtyTicket>): ScoreInvalidation.A
         ScoreInvalidation.AffectedRange(pending.minOf { it.nextDay }, pending.maxOf { it.endInclusive })
     }
 
-private fun coversRetainedHistory(
+internal fun coversRetainedHistory(
     recomputeOnly: Boolean,
     rangeOverride: ScoreInvalidation.AffectedRange?,
     prefs: UserPreferences,
+    today: LocalDate,
 ): Boolean {
     if (!recomputeOnly || rangeOverride == null) return true
-    val today = LocalDate.now(prefs.scoringZone())
     val retentionStart = RetentionBounds.resolveResyncStartDate(prefs, today)
     return !rangeOverride.start.isAfter(retentionStart) && !rangeOverride.endInclusive.isBefore(today)
 }

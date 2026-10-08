@@ -23,6 +23,7 @@ import app.readylytics.health.core.model.domain.sync.DirtyTicket
 import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
 import app.readylytics.health.core.model.domain.sync.SelectedSourcePruner
+import app.readylytics.health.core.model.domain.util.RetentionBounds
 import dagger.Lazy
 import io.mockk.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,7 +32,10 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.ZoneOffset
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -43,6 +47,8 @@ import kotlin.test.assertTrue
  */
 @RunWith(RobolectricTestRunner::class)
 class HealthResyncWorkerSelectedWorkoutRepairTest {
+    private val fixedInstant = Instant.parse("2026-05-01T12:00:00Z")
+    private val fixedClock = Clock.fixed(fixedInstant, ZoneOffset.UTC)
     private lateinit var context: Context
     private lateinit var workerParams: WorkerParameters
     private val useCase = mockk<FullHistoricalResyncUseCase>()
@@ -174,8 +180,15 @@ class HealthResyncWorkerSelectedWorkoutRepairTest {
                         .success(),
                     result,
                 )
+                val expectedToday = LocalDate.of(2026, 5, 1)
+                val expectedRetentionStart = expectedToday.minusDays(RetentionBounds.ABSOLUTE_MAX_DAYS)
                 coVerify(exactly = 1) {
-                    selectedSourcePruner.pruneExcludedWorkouts(any(), any(), "Watch", any())
+                    selectedSourcePruner.pruneExcludedWorkouts(
+                        expectedRetentionStart,
+                        expectedToday,
+                        "Watch",
+                        ZoneId.of("UTC"),
+                    )
                 }
                 coVerify(exactly = 1) { settingsRepository.updateSelectedWorkoutRepairCompleted(true) }
                 assertEquals(affectedDate, rangeSlot.captured?.start)
@@ -325,6 +338,42 @@ class HealthResyncWorkerSelectedWorkoutRepairTest {
         healthMutationStateDao = database.healthMutationStateDao(),
     )
 
+    @Test
+    fun `selected workout repair receives scoring-zone today and retention start`() =
+        runBlocking {
+            every { workerParams.inputData } returns
+                androidx.work.Data
+                    .Builder()
+                    .putString(HealthResyncWorker.KEY_RECOMPUTE_MODE, HealthResyncWorker.MODE_SELECTED_WORKOUT_REPAIR)
+                    .build()
+            val prefs =
+                UserPreferences(
+                    deviceByDataType = mapOf(HealthDataType.EXERCISE.name to "Watch"),
+                    retentionDaysEnabled = true,
+                    retentionDays = 30,
+                    scoringZoneId = "Europe/Berlin",
+                )
+            coEvery { settingsRepository.userPreferences } returns MutableStateFlow(prefs)
+            coEvery { settingsRepository.updateSelectedWorkoutRepairCompleted(true) } returns Unit
+            coEvery {
+                selectedSourcePruner.pruneExcludedWorkouts(any(), any(), any(), any())
+            } returns null
+
+            createWorker().doWork()
+
+            val expectedZone = ZoneId.of("Europe/Berlin")
+            val expectedToday = LocalDate.now(fixedClock.withZone(expectedZone))
+            val expectedRetentionStart = expectedToday.minusDays(30)
+            coVerify(exactly = 1) {
+                selectedSourcePruner.pruneExcludedWorkouts(
+                    expectedRetentionStart,
+                    expectedToday,
+                    "Watch",
+                    expectedZone,
+                )
+            }
+        }
+
     private fun createWorker(
         dirtyRangeStore: DirtyRangeStore? = null,
         pruner: SelectedSourcePruner? = null,
@@ -335,6 +384,7 @@ class HealthResyncWorkerSelectedWorkoutRepairTest {
         foregroundSyncController = foregroundSyncControllerLazy,
         databaseReadinessGate = databaseReadinessGate,
         settingsRepository = settingsRepositoryLazy,
+        clock = fixedClock,
         dirtyRangeStore =
             Lazy {
                 dirtyRangeStore ?: object : DirtyRangeStore {
