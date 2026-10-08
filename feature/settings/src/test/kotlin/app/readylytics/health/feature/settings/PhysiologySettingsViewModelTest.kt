@@ -14,7 +14,10 @@ import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Before
 import org.junit.Test
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 
 class PhysiologySettingsViewModelTest {
     private lateinit var settingsRepo: UserPreferencesReader
@@ -28,7 +31,7 @@ class PhysiologySettingsViewModelTest {
     fun setUp() {
         settingsRepo =
             mockk {
-                every { userPreferences } returns flowOf(UserPreferences())
+                every { userPreferences } returns flowOf(UserPreferences(scoringZoneId = "Pacific/Kiritimati"))
             }
         physiologySettings = mockk(relaxed = true)
         displaySettings = mockk(relaxed = true)
@@ -41,6 +44,7 @@ class PhysiologySettingsViewModelTest {
                 displaySettings = displaySettings,
                 userUseCase = userUseCase,
                 healthDataRefresh = healthDataRefresh,
+                clock = Clock.fixed(Instant.parse("2026-01-01T10:30:00Z"), ZoneId.of("Pacific/Honolulu")),
             )
     }
 
@@ -79,8 +83,15 @@ class PhysiologySettingsViewModelTest {
     }
 
     @Test
+    fun `birthday today in scoring zone updates the profile`() {
+        val today = LocalDate.of(2026, 1, 2)
+        viewModel.onEvent(SettingsEvent.BirthdayChanged(date = today))
+        coVerify(timeout = 1000, exactly = 1) { userUseCase.updateBirthday(today) }
+    }
+
+    @Test
     fun onEvent_birthdayInFuture_doesNotUpdateUserProfileActions() {
-        val futureDate = LocalDate.now().plusDays(1)
+        val futureDate = LocalDate.of(2026, 1, 3)
         viewModel.onEvent(SettingsEvent.BirthdayChanged(date = futureDate))
         coVerify(timeout = 100, inverse = true) { userUseCase.updateBirthday(any()) }
     }

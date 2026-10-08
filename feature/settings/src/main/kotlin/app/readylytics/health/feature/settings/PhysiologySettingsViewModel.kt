@@ -6,6 +6,7 @@ import app.readylytics.health.core.model.domain.model.getOrNull
 import app.readylytics.health.core.model.domain.preferences.DisplaySettings
 import app.readylytics.health.core.model.domain.preferences.PhysiologySettings
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.sync.HealthDataRefresh
 import app.readylytics.health.core.model.domain.user.UserProfileActions
 import app.readylytics.health.core.model.domain.util.logD
@@ -20,6 +21,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.Clock
 import java.time.LocalDate
 import javax.inject.Inject
 
@@ -32,6 +34,7 @@ class PhysiologySettingsViewModel
         private val displaySettings: DisplaySettings,
         private val userUseCase: UserProfileActions,
         private val healthDataRefresh: HealthDataRefresh,
+        private val clock: Clock,
     ) : BaseViewModel() {
         fun validateBirthdayDayForUpdate(day: String): Result<Int> =
             try {
@@ -88,9 +91,14 @@ class PhysiologySettingsViewModel
         fun onEvent(event: SettingsEvent) {
             when (event) {
                 is SettingsEvent.BirthdayChanged -> {
-                    val validation = SettingsValidators.BIRTHDAY_DATE_RULE.validate(event.date)
-                    if (validation is ValidationResult.Valid) {
-                        viewModelScope.launch {
+                    viewModelScope.launch {
+                        val zoneId = settingsRepo.userPreferences.first().scoringZone()
+                        val validation =
+                            SettingsValidators
+                                .birthdayDateRule(
+                                    clock.withZone(zoneId),
+                                ).validate(event.date)
+                        if (validation is ValidationResult.Valid) {
                             userUseCase.updateBirthday(event.date).getOrNull()
                         }
                     }

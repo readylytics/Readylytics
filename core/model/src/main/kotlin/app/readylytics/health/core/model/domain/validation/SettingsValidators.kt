@@ -1,9 +1,10 @@
 package app.readylytics.health.core.model.domain.validation
 
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
+import java.time.Clock
 
 object SettingsValidators {
-    val BIRTHDAY_DATE_RULE = BirthdayDateRule()
+    fun birthdayDateRule(clock: Clock): BirthdayDateRule = BirthdayDateRule(clock)
 
     val HRV_BASELINE_RULE = IntRangeRule(1, 500, "HRV: 1–500 ms")
     val RHR_BASELINE_RULE = IntRangeRule(30, 100, "RHR: 30–100 bpm")

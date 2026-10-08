@@ -3,14 +3,9 @@ package app.readylytics.health.feature.dashboard
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.di.DefaultDispatcher
-import app.readylytics.health.core.model.domain.cache.DailyMetricCache
 import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
-import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.dashboard.CardManagementDelegate
-import app.readylytics.health.core.model.domain.dashboard.CardManagementEvent
-import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
-import app.readylytics.health.core.model.domain.date.SelectedDateStore
 import app.readylytics.health.core.model.domain.model.DailyMetricsMapper
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.model.InsightType
@@ -20,34 +15,23 @@ import app.readylytics.health.core.model.domain.model.SleepSessionSummary
 import app.readylytics.health.core.model.domain.model.getOrNull
 import app.readylytics.health.core.model.domain.preferences.SettingsDefaults
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
-import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.preferences.scoringZone
-import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
 import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionChecker
-import app.readylytics.health.core.model.domain.repository.HeartRateRepository
-import app.readylytics.health.core.model.domain.repository.InsightDismissalRepository
 import app.readylytics.health.core.model.domain.repository.SleepSessionData
-import app.readylytics.health.core.model.domain.service.BodyTemperatureBaselineProvider
 import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.core.model.domain.sync.RecalcProgress
 import app.readylytics.health.core.scoring.domain.airecommendation.DailyPromptFormatter
-import app.readylytics.health.core.scoring.domain.airecommendation.GetDailyPromptDataUseCase
 import app.readylytics.health.core.scoring.domain.dashboard.DerivedInsights
 import app.readylytics.health.core.scoring.domain.dashboard.InsightDeriver
 import app.readylytics.health.core.scoring.domain.insights.InsightContext
 import app.readylytics.health.core.scoring.domain.insights.InsightEngine
 import app.readylytics.health.core.scoring.domain.insights.InsightParams
-import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.core.ui.common.BaseViewModel
 import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
-import app.readylytics.health.feature.dashboard.usecase.GetCurrentResidualFatigueUseCase
-import app.readylytics.health.feature.dashboard.usecase.GetDashboardDataUseCase
 import app.readylytics.health.feature.dashboard.usecase.LiveResidualFatigue
-import app.readylytics.health.feature.dashboard.usecase.ObserveDashboardRasIncreaseUseCase
-import app.readylytics.health.feature.dashboard.usecase.ObserveDashboardStrainIncreaseUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -64,7 +48,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.Clock
 import java.time.LocalDate
-import java.time.LocalTime
 import javax.inject.Inject
 import app.readylytics.health.core.ui.R as CoreUiR
 
@@ -72,26 +55,15 @@ import app.readylytics.health.core.ui.R as CoreUiR
 class DashboardViewModel
     @Inject
     constructor(
-        private val dailySummaryRepository: DailySummaryRepository,
-        private val getDashboardDataUseCase: GetDashboardDataUseCase,
+        private val repositories: DashboardRepositories,
+        private val useCases: DashboardUseCases,
         private val foregroundSyncController: ForegroundSyncGateway,
-        private val selectedDateRepository: SelectedDateStore,
-        private val settingsRepo: UserPreferencesReader,
-        private val cardConfigRepository: CardConfigurationRepository,
-        private val circadianRepo: CircadianConsistencyRepository,
-        private val dailyMetricCache: DailyMetricCache,
-        private val heartRateRepository: HeartRateRepository,
-        private val insightDismissalRepository: InsightDismissalRepository,
-        private val observeDashboardStrainIncreaseUseCase: ObserveDashboardStrainIncreaseUseCase,
-        private val observeDashboardRasIncreaseUseCase: ObserveDashboardRasIncreaseUseCase,
-        private val getDailyPromptDataUseCase: GetDailyPromptDataUseCase,
-        private val getCurrentResidualFatigueUseCase: GetCurrentResidualFatigueUseCase,
         private val fatigueTicker: DashboardFatigueTicker,
-        private val bodyTemperatureBaselineProvider: BodyTemperatureBaselineProvider,
         private val permissionChecker: HealthConnectPermissionChecker,
         private val clock: Clock,
         @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
-    ) : BaseViewModel() {
+    ) : BaseViewModel(),
+        DashboardCardActions {
         fun validateSelectedDate(date: LocalDate): Result<LocalDate> =
             if (date <= LocalDate.now(clock)) {
                 Result.success(date)
@@ -102,7 +74,7 @@ class DashboardViewModel
         private val cardManagementDelegate =
             CardManagementDelegate(
                 defaultConfigurations = SettingsDefaults.DEFAULT_DASHBOARD_CARDS,
-                persist = cardConfigRepository::updateDashboardCardConfigurations,
+                persist = repositories.cardConfig::updateDashboardCardConfigurations,
                 scope = viewModelScope,
                 hasBodyTemperaturePermission = { permissionChecker.hasBodyTemperaturePermission() },
                 hasStepsPermission = { permissionChecker.hasStepsPermission() },
@@ -111,6 +83,9 @@ class DashboardViewModel
                 hasBloodPressurePermission = { permissionChecker.hasBloodPressurePermission() },
                 hasOxygenSaturationPermission = { permissionChecker.hasOxygenSaturationPermission() },
             )
+
+        override val cardActionHandler: DashboardCardActionHandler =
+            DashboardCardActionHandler(cardManagementDelegate) { uiState.value.cardConfigurations }
 
         val isManagingCards: StateFlow<Boolean> = cardManagementDelegate.isManagingCards
 
@@ -122,37 +97,38 @@ class DashboardViewModel
             // flow (a cold combine of multiple sources) against equal re-emissions.
             combine(
                 createDashboardBasicInputsFlow(
-                    selectedDateRepository.selectedDate,
-                    dailySummaryRepository,
-                    settingsRepo,
-                    circadianRepo,
-                    insightDismissalRepository,
-                    bodyTemperatureBaselineProvider,
+                    repositories.selectedDate.selectedDate,
+                    repositories.dailySummary,
+                    repositories.settings,
+                    repositories.circadian,
+                    repositories.insightDismissal,
+                    repositories.bodyTemperatureBaselineProvider,
+                    clock,
                 ),
                 createDashboardCardStateFlow(
-                    selectedDateRepository.selectedDate,
+                    repositories.selectedDate.selectedDate,
                     cardManagementDelegate,
-                    cardConfigRepository,
-                    dailySummaryRepository,
+                    repositories.cardConfig,
+                    repositories.dailySummary,
                     permissionChecker,
-                    settingsRepo,
+                    repositories.settings,
                 ),
                 createDashboardHrFlow(
-                    selectedDateRepository.selectedDate,
-                    heartRateRepository,
-                    settingsRepo,
+                    repositories.selectedDate.selectedDate,
+                    repositories.heartRate,
+                    repositories.settings,
                 ),
-                observeDashboardStrainIncreaseUseCase(
-                    selectedDateRepository.selectedDate,
-                    settingsRepo.userPreferences,
+                useCases.observeDashboardStrainIncrease(
+                    repositories.selectedDate.selectedDate,
+                    repositories.settings.userPreferences,
                 ),
                 // Paired rather than passed as a 6th source: the typed `combine` overloads stop at
                 // five. The ticker re-runs this transform once a minute so live residual fatigue
                 // keeps decaying on a dashboard nothing else is emitting into.
                 combine(
-                    observeDashboardRasIncreaseUseCase(
-                        selectedDateRepository.selectedDate,
-                        settingsRepo.userPreferences,
+                    useCases.observeDashboardRasIncrease(
+                        repositories.selectedDate.selectedDate,
+                        repositories.settings.userPreferences,
                     ),
                     fatigueTicker.minuteBuckets(),
                 ) { rasIncrease, minuteBucket -> rasIncrease to minuteBucket },
@@ -176,7 +152,7 @@ class DashboardViewModel
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5_000),
-                    initialValue = DashboardUiState(),
+                    initialValue = DashboardUiState(selectedDate = LocalDate.now(clock), today = LocalDate.now(clock)),
                 )
 
         // Builds everything that depends on persisted/derived data. Realtime sync fields
@@ -198,7 +174,7 @@ class DashboardViewModel
                 )
 
             val cardsResult =
-                getDashboardDataUseCase.invoke(
+                useCases.getDashboardData.invoke(
                     summary = basicInputs.summary,
                     prefs = basicInputs.userPreferences,
                     date = selectedDate,
@@ -213,7 +189,7 @@ class DashboardViewModel
                 )
 
             val cards = cardsResult.getOrNull()
-            val derived = deriveInsights(basicInputs, selectedDate)
+            val derived = deriveInsights(basicInputs, selectedDate, clock)
             val yesterdayMetrics = resolveYesterdayMetrics(basicInputs, selectedDate)
             return DashboardUiState(
                 summary = basicInputs.summary,
@@ -274,7 +250,7 @@ class DashboardViewModel
             // unknown, and falling back to the snapshot would understate fatigue.
             val value =
                 try {
-                    getCurrentResidualFatigueUseCase(selectedDate, basicInputs.userPreferences.scoringZone())
+                    useCases.getCurrentResidualFatigue(selectedDate, basicInputs.userPreferences.scoringZone())
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -294,40 +270,6 @@ class DashboardViewModel
             val minuteBucket: Long,
         )
 
-        private fun deriveInsights(
-            basicInputs: DashboardBasicInputs,
-            selectedDate: LocalDate,
-        ): DerivedInsights {
-            val engineFindings =
-                basicInputs.summary?.let { summary ->
-                    InsightEngine.evaluate(
-                        InsightContext(
-                            today = summary,
-                            circadianResult = basicInputs.circadianResult ?: CircadianConsistencyResult.MissingData,
-                            goalSleepMinutes = (basicInputs.userPreferences.goalSleepHours * 60).toInt(),
-                            stepGoal = basicInputs.userPreferences.stepGoal,
-                            recentDays = basicInputs.rasSummaries,
-                            nowMinutesOfDay = nowMinutesOfDayFor(selectedDate),
-                            prefs = basicInputs.userPreferences,
-                        ),
-                    )
-                } ?: emptyList()
-            return InsightDeriver.derive(
-                recoveryFlags = basicInputs.summary?.recoveryFlags,
-                engineFindings = engineFindings,
-                dismissedTypes = basicInputs.dismissedInsightTypes,
-            )
-        }
-
-        private fun resolveYesterdayMetrics(
-            basicInputs: DashboardBasicInputs,
-            selectedDate: LocalDate,
-        ) = basicInputs.rasSummaries
-            .firstOrNull { it.date == selectedDate.minusDays(1) }
-            ?.let { DailyMetricsMapper.toMetrics(it, basicInputs.userPreferences) }
-
-        // Time-of-day gating for insights only makes sense for the current day;
-        // for past days, treat as end-of-day so it never suppresses a finding.
         internal fun resolveDashboardSleepSessionSummary(session: SleepSessionData?): SleepSessionSummary? {
             session ?: return null
             // Biphasic days can legitimately aggregate more sleep than any single session.
@@ -339,15 +281,8 @@ class DashboardViewModel
             )
         }
 
-        private fun nowMinutesOfDayFor(selectedDate: LocalDate): Int =
-            if (selectedDate == LocalDate.now(clock)) {
-                LocalTime.now(clock).let { it.hour * 60 + it.minute }
-            } else {
-                1439
-            }
-
         val earliestDate: StateFlow<LocalDate?> =
-            selectedDateRepository.earliestDate
+            repositories.selectedDate.earliestDate
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5_000),
@@ -356,62 +291,21 @@ class DashboardViewModel
 
         fun onPreviousDay() {
             viewModelScope.launch {
-                selectedDateRepository.selectPreviousDay()
+                repositories.selectedDate.selectPreviousDay()
             }
         }
 
         fun onNextDay() {
             viewModelScope.launch {
-                selectedDateRepository.selectNextDay()
+                repositories.selectedDate.selectNextDay()
             }
-        }
-
-        fun toggleCardManagement() {
-            if (isManagingCards.value) {
-                cardManagementDelegate.saveChanges()
-            } else {
-                cardManagementDelegate.enterEditMode(uiState.value.cardConfigurations)
-            }
-        }
-
-        fun onCancelCardManagement() {
-            cardManagementDelegate.cancelChanges()
-        }
-
-        fun onToggleCardVisibility(
-            cardId: CardId,
-            visible: Boolean,
-        ) {
-            cardManagementDelegate.onToggleCardVisibility(
-                uiState.value.cardConfigurations,
-                cardId,
-                visible,
-            )
-        }
-
-        fun onReorderCards(newOrder: List<CardConfiguration>) {
-            cardManagementDelegate.onReorderCards(
-                uiState.value.cardConfigurations,
-                newOrder,
-            )
-        }
-
-        fun onResetToDefaults() {
-            cardManagementDelegate.onResetToDefaults()
-        }
-
-        fun onCardDisplayModeChanged(
-            cardId: CardId,
-            mode: DashboardCardDisplayMode,
-        ) {
-            cardManagementDelegate.onEvent(CardManagementEvent.DisplayModeChanged(cardId, mode))
         }
 
         fun onEvent(event: DashboardEvent) {
             when (event) {
                 is DashboardEvent.DateSelected ->
                     viewModelScope.launch {
-                        selectedDateRepository.updateSelectedDate(event.date)
+                        repositories.selectedDate.updateSelectedDate(event.date)
                     }
                 DashboardEvent.PreviousDay -> onPreviousDay()
                 DashboardEvent.NextDay -> onNextDay()
@@ -419,30 +313,39 @@ class DashboardViewModel
                 DashboardEvent.ToggleCardManagement -> toggleCardManagement()
                 is DashboardEvent.DismissInsight -> {
                     viewModelScope.launch {
-                        val zoneId = settingsRepo.userPreferences.first().scoringZone()
+                        val zoneId =
+                            repositories.settings.userPreferences
+                                .first()
+                                .scoringZone()
                         val dateMs =
-                            selectedDateRepository.selectedDate.value
+                            repositories.selectedDate.selectedDate.value
                                 .atStartOfDay(zoneId)
                                 .toInstant()
                                 .toEpochMilli()
-                        insightDismissalRepository.dismiss(dateMs, event.type)
+                        repositories.insightDismissal.dismiss(dateMs, event.type)
                     }
                 }
                 DashboardEvent.RestoreInsights -> {
                     viewModelScope.launch {
-                        val zoneId = settingsRepo.userPreferences.first().scoringZone()
+                        val zoneId =
+                            repositories.settings.userPreferences
+                                .first()
+                                .scoringZone()
                         val dateMs =
-                            selectedDateRepository.selectedDate.value
+                            repositories.selectedDate.selectedDate.value
                                 .atStartOfDay(zoneId)
                                 .toInstant()
                                 .toEpochMilli()
-                        insightDismissalRepository.restoreAllForDate(dateMs)
+                        repositories.insightDismissal.restoreAllForDate(dateMs)
                     }
                 }
                 DashboardEvent.RequestDailyPromptCopy -> {
                     viewModelScope.launch {
                         try {
-                            val zoneId = settingsRepo.userPreferences.first().scoringZone()
+                            val zoneId =
+                                repositories.settings.userPreferences
+                                    .first()
+                                    .scoringZone()
                             val text = generateDailyPrompt(LocalDate.now(clock.withZone(zoneId)))
                             _dailyPromptText.value = PromptRequest(text, promptRequestSeq++)
                         } catch (e: CancellationException) {
@@ -459,7 +362,7 @@ class DashboardViewModel
 
         internal suspend fun generateDailyPrompt(today: LocalDate): String =
             withContext(defaultDispatcher) {
-                DailyPromptFormatter.format(getDailyPromptDataUseCase.execute(today))
+                DailyPromptFormatter.format(useCases.getDailyPromptData.execute(today))
             }
 
         fun onRefresh() {
@@ -475,7 +378,7 @@ class DashboardViewModel
                 } finally {
                     // Always clear cached derived metrics, even if the sync failed partway, so the
                     // dashboard never serves stale sleep/load scores from a previous recalculation.
-                    dailyMetricCache.invalidate()
+                    repositories.dailyMetricCache.invalidate()
                 }
             }
         }
@@ -496,6 +399,39 @@ class DashboardViewModel
         }
     }
 
+private fun deriveInsights(
+    basicInputs: DashboardBasicInputs,
+    selectedDate: LocalDate,
+    clock: Clock,
+): DerivedInsights {
+    val engineFindings =
+        basicInputs.summary?.let { summary ->
+            InsightEngine.evaluate(
+                InsightContext(
+                    today = summary,
+                    circadianResult = basicInputs.circadianResult ?: CircadianConsistencyResult.MissingData,
+                    goalSleepMinutes = (basicInputs.userPreferences.goalSleepHours * 60).toInt(),
+                    stepGoal = basicInputs.userPreferences.stepGoal,
+                    recentDays = basicInputs.rasSummaries,
+                    nowMinutesOfDay = nowMinutesOfDayFor(selectedDate, clock),
+                    prefs = basicInputs.userPreferences,
+                ),
+            )
+        } ?: emptyList()
+    return InsightDeriver.derive(
+        recoveryFlags = basicInputs.summary?.recoveryFlags,
+        engineFindings = engineFindings,
+        dismissedTypes = basicInputs.dismissedInsightTypes,
+    )
+}
+
+private fun resolveYesterdayMetrics(
+    basicInputs: DashboardBasicInputs,
+    selectedDate: LocalDate,
+) = basicInputs.rasSummaries
+    .firstOrNull { it.date == selectedDate.minusDays(1) }
+    ?.let { DailyMetricsMapper.toMetrics(it, basicInputs.userPreferences) }
+
 /** A single "copy today's prompt" request, made distinguishable by a monotonic [requestId]. */
 data class PromptRequest(
     val text: String,
@@ -505,8 +441,8 @@ data class PromptRequest(
 @Immutable
 data class DashboardUiState(
     val summary: DailySummary? = null,
-    val selectedDate: LocalDate = LocalDate.now(),
-    val today: LocalDate = LocalDate.now(),
+    val selectedDate: LocalDate = LocalDate.ofEpochDay(0),
+    val today: LocalDate = LocalDate.ofEpochDay(0),
     val cardDataMap: Map<CardId, UniversalMetricPresentation> = emptyMap(),
     val circadianConsistency: CircadianConsistencyResult? = null,
     val restingHrCard: UniversalMetricPresentation? = null,

@@ -4,7 +4,7 @@ import java.time.Clock
 import java.time.LocalDate
 
 class BirthdayDateRule(
-    private val clock: Clock = Clock.systemDefaultZone(),
+    private val clock: Clock,
 ) : ValidationRule<LocalDate> {
     override val errorMessage: String = "Birthday must be in the past"
 

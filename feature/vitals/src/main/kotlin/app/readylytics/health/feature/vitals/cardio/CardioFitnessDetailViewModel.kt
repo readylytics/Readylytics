@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import java.time.Clock
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import java.util.Locale
@@ -63,6 +64,7 @@ class CardioFitnessDetailViewModel
         private val dailySummaryRepository: DailySummaryRepository,
         private val settingsRepo: UserPreferencesReader,
         private val cooperNormsClassifier: CooperNormsClassifier,
+        private val clock: Clock,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val selectedRangeFlow = MutableStateFlow(TimeRange.SEVEN_DAYS)
@@ -73,7 +75,7 @@ class CardioFitnessDetailViewModel
                 .distinctUntilChanged()
                 .flatMapLatest { params ->
                     val zoneId = params.prefs.scoringZone()
-                    val today = LocalDate.now(zoneId)
+                    val today = LocalDate.now(clock.withZone(zoneId))
                     val startDate = today.minusDays(params.range.days.toLong() - 1)
                     val fromMs = startDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
 

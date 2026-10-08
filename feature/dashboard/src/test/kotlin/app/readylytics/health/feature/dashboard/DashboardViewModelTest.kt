@@ -1,13 +1,15 @@
 package app.readylytics.health.feature.dashboard
 
 import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
+import app.readylytics.health.core.model.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.model.InsightType
-import app.readylytics.health.core.model.domain.model.Result
+import app.readylytics.health.core.model.domain.preferences.SettingsDefaults
 import app.readylytics.health.core.model.domain.sync.RecalcProgress
 import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
-import app.readylytics.health.feature.dashboard.usecase.GetDashboardDataUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -17,7 +19,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
@@ -79,28 +80,7 @@ class DashboardViewModelTest : DashboardViewModelTestBase() {
         runTest {
             val fixedClock =
                 java.time.Clock.fixed(Instant.parse("2026-08-09T12:00:00Z"), ZoneOffset.UTC)
-            viewModel =
-                DashboardViewModel(
-                    dailySummaryRepository = dailySummaryRepository,
-                    getDashboardDataUseCase = getDashboardDataUseCase,
-                    foregroundSyncController = foregroundSyncController,
-                    selectedDateRepository = selectedDateRepository,
-                    settingsRepo = settingsRepo,
-                    cardConfigRepository = cardConfigRepository,
-                    circadianRepo = circadianRepo,
-                    dailyMetricCache = dailyMetricCache,
-                    heartRateRepository = heartRateRepository,
-                    insightDismissalRepository = insightDismissalRepository,
-                    observeDashboardStrainIncreaseUseCase = observeDashboardStrainIncreaseUseCase,
-                    observeDashboardRasIncreaseUseCase = observeDashboardRasIncreaseUseCase,
-                    getDailyPromptDataUseCase = getDailyPromptDataUseCase,
-                    getCurrentResidualFatigueUseCase = getCurrentResidualFatigueUseCase,
-                    fatigueTicker = fatigueTicker,
-                    bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
-                    permissionChecker = permissionChecker,
-                    clock = fixedClock,
-                    defaultDispatcher = testDispatcher,
-                )
+            viewModel = buildViewModel(clock = fixedClock)
             coEvery { getDailyPromptDataUseCase.execute(LocalDate.of(2026, 8, 9)) } returns promptData()
             every { settingsRepo.userPreferences } returns
                 MutableStateFlow(UserPreferences(scoringZoneId = "UTC"))
@@ -122,28 +102,7 @@ class DashboardViewModelTest : DashboardViewModelTestBase() {
         runTest {
             val fixedClock =
                 java.time.Clock.fixed(Instant.parse("2026-08-09T12:00:00Z"), ZoneOffset.UTC)
-            viewModel =
-                DashboardViewModel(
-                    dailySummaryRepository = dailySummaryRepository,
-                    getDashboardDataUseCase = getDashboardDataUseCase,
-                    foregroundSyncController = foregroundSyncController,
-                    selectedDateRepository = selectedDateRepository,
-                    settingsRepo = settingsRepo,
-                    cardConfigRepository = cardConfigRepository,
-                    circadianRepo = circadianRepo,
-                    dailyMetricCache = dailyMetricCache,
-                    heartRateRepository = heartRateRepository,
-                    insightDismissalRepository = insightDismissalRepository,
-                    observeDashboardStrainIncreaseUseCase = observeDashboardStrainIncreaseUseCase,
-                    observeDashboardRasIncreaseUseCase = observeDashboardRasIncreaseUseCase,
-                    getDailyPromptDataUseCase = getDailyPromptDataUseCase,
-                    getCurrentResidualFatigueUseCase = getCurrentResidualFatigueUseCase,
-                    fatigueTicker = fatigueTicker,
-                    bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
-                    permissionChecker = permissionChecker,
-                    clock = fixedClock,
-                    defaultDispatcher = testDispatcher,
-                )
+            viewModel = buildViewModel(clock = fixedClock)
             coEvery { getDailyPromptDataUseCase.execute(any()) } returns promptData()
             every { settingsRepo.userPreferences } returns
                 MutableStateFlow(UserPreferences(scoringZoneId = "UTC"))
@@ -163,28 +122,7 @@ class DashboardViewModelTest : DashboardViewModelTestBase() {
             val fixedClock =
                 java.time.Clock.fixed(Instant.parse("2026-08-10T03:00:00Z"), ZoneOffset.UTC)
             val scoringZone = "America/Los_Angeles"
-            viewModel =
-                DashboardViewModel(
-                    dailySummaryRepository = dailySummaryRepository,
-                    getDashboardDataUseCase = getDashboardDataUseCase,
-                    foregroundSyncController = foregroundSyncController,
-                    selectedDateRepository = selectedDateRepository,
-                    settingsRepo = settingsRepo,
-                    cardConfigRepository = cardConfigRepository,
-                    circadianRepo = circadianRepo,
-                    dailyMetricCache = dailyMetricCache,
-                    heartRateRepository = heartRateRepository,
-                    insightDismissalRepository = insightDismissalRepository,
-                    observeDashboardStrainIncreaseUseCase = observeDashboardStrainIncreaseUseCase,
-                    observeDashboardRasIncreaseUseCase = observeDashboardRasIncreaseUseCase,
-                    getDailyPromptDataUseCase = getDailyPromptDataUseCase,
-                    getCurrentResidualFatigueUseCase = getCurrentResidualFatigueUseCase,
-                    fatigueTicker = fatigueTicker,
-                    bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
-                    permissionChecker = permissionChecker,
-                    clock = fixedClock,
-                    defaultDispatcher = testDispatcher,
-                )
+            viewModel = buildViewModel(clock = fixedClock)
             coEvery { getDailyPromptDataUseCase.execute(LocalDate.of(2026, 8, 9)) } returns promptData()
             every { settingsRepo.userPreferences } returns
                 MutableStateFlow(UserPreferences(scoringZoneId = scoringZone))
@@ -270,72 +208,9 @@ class DashboardViewModelTest : DashboardViewModelTestBase() {
             val selectedDate = LocalDate.of(2026, 7, 29)
             val summary = DailySummary(date = selectedDate)
             val preferences = UserPreferences(scoringZoneId = "UTC")
-            every { selectedDateRepository.selectedDate } returns MutableStateFlow(selectedDate)
-            every { selectedDateRepository.earliestDate } returns MutableStateFlow(selectedDate.minusDays(30))
-            every { settingsRepo.userPreferences } returns MutableStateFlow(preferences)
-            every { dailySummaryRepository.observeByDate(any()) } returns flowOf(summary)
-            every { dailySummaryRepository.observeSince(any()) } returns flowOf(listOf(summary))
-            every {
-                dailySummaryRepository.observeFirstSessionEndingInRange(any(), any())
-            } returns flowOf(null)
-            every { cardConfigRepository.dashboardCardConfigurations() } returns flowOf(emptyList())
-            every { circadianRepo.resultFor(selectedDate) } returns flowOf(CircadianConsistencyResult.MissingData)
-            every { insightDismissalRepository.observeForDate(any()) } returns flowOf(emptySet())
-            every {
-                heartRateRepository.observeAggregateByTimeRange(any(), any())
-            } returns flowOf(null)
-            every { foregroundSyncController.isSyncing } returns MutableStateFlow(false)
-            every { foregroundSyncController.recalcProgress } returns MutableStateFlow(null)
-            every {
-                observeDashboardStrainIncreaseUseCase.invoke(any(), any())
-            } returns flowOf(0.23f)
-            every {
-                observeDashboardRasIncreaseUseCase.invoke(any(), any())
-            } returns flowOf(null)
-            every { bodyTemperatureBaselineProvider.observeBaseline(any()) } returns flowOf(null)
-            coEvery { permissionChecker.hasBodyTemperaturePermission() } returns true
-            every {
-                getDashboardDataUseCase.invoke(
-                    summary = summary,
-                    prefs = preferences,
-                    date = selectedDate,
-                    lastSleepSession = null,
-                    rasSummaries = listOf(summary),
-                    circadianResult = CircadianConsistencyResult.MissingData,
-                    heartRateSummary = null,
-                    todayStrainIncrease = 0.23f,
-                    todayRasIncrease = null,
-                )
-            } returns
-                Result.success(
-                    GetDashboardDataUseCase.DashboardCards(
-                        cardDataMap = emptyMap(),
-                        rasDailyBreakdown = emptyList(),
-                    ),
-                )
+            arrangeStrainForwardingTest(selectedDate, summary, preferences)
 
-            viewModel =
-                DashboardViewModel(
-                    dailySummaryRepository = dailySummaryRepository,
-                    getDashboardDataUseCase = getDashboardDataUseCase,
-                    foregroundSyncController = foregroundSyncController,
-                    selectedDateRepository = selectedDateRepository,
-                    settingsRepo = settingsRepo,
-                    cardConfigRepository = cardConfigRepository,
-                    circadianRepo = circadianRepo,
-                    dailyMetricCache = dailyMetricCache,
-                    heartRateRepository = heartRateRepository,
-                    insightDismissalRepository = insightDismissalRepository,
-                    observeDashboardStrainIncreaseUseCase = observeDashboardStrainIncreaseUseCase,
-                    observeDashboardRasIncreaseUseCase = observeDashboardRasIncreaseUseCase,
-                    getDailyPromptDataUseCase = getDailyPromptDataUseCase,
-                    getCurrentResidualFatigueUseCase = getCurrentResidualFatigueUseCase,
-                    fatigueTicker = fatigueTicker,
-                    bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
-                    permissionChecker = permissionChecker,
-                    clock = java.time.Clock.systemDefaultZone(),
-                    defaultDispatcher = testDispatcher,
-                )
+            viewModel = buildViewModel()
 
             viewModel.uiState.first { it.summary == summary }
 
@@ -412,4 +287,80 @@ class DashboardViewModelTest : DashboardViewModelTestBase() {
             assertEquals(progress, states.last().recalcProgress)
             job.cancel()
         }
+
+    @Test
+    fun `inherited card actions persist visibility ordering and display mode on save`() =
+        runTest(testDispatcher) {
+            val cards =
+                listOf(
+                    CardConfiguration(CardId.SLEEP_SCORE, position = 0),
+                    CardConfiguration(CardId.STRAIN_RATIO, position = 1),
+                )
+            arrangeCardActions(cards)
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            runCurrent()
+            viewModel.toggleCardManagement()
+            viewModel.onReorderCards(cards.reversed())
+            viewModel.onToggleCardVisibility(CardId.SLEEP_SCORE, false)
+            viewModel.onCardDisplayModeChanged(CardId.STRAIN_RATIO, DashboardCardDisplayMode.VALUE)
+            viewModel.toggleCardManagement()
+            runCurrent()
+            coVerify(exactly = 1) {
+                cardConfigRepository.updateDashboardCardConfigurations(
+                    listOf(
+                        cards[1].copy(position = 0, requestedDisplayMode = DashboardCardDisplayMode.VALUE),
+                        cards[0].copy(position = 1, isVisible = false),
+                    ),
+                )
+            }
+            assertFalse(viewModel.isManagingCards.value)
+            collector.cancel()
+        }
+
+    @Test
+    fun `inherited cancel discards pending edits without persistence`() =
+        runTest(testDispatcher) {
+            arrangeCardActions(listOf(CardConfiguration(CardId.SLEEP_SCORE, position = 0)))
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            runCurrent()
+            viewModel.toggleCardManagement()
+            viewModel.onToggleCardVisibility(CardId.SLEEP_SCORE, false)
+            viewModel.onCancelCardManagement()
+            runCurrent()
+            assertFalse(viewModel.isManagingCards.value)
+            assertTrue(
+                viewModel.uiState.value.cardConfigurations
+                    .single()
+                    .isVisible,
+            )
+            coVerify(exactly = 0) { cardConfigRepository.updateDashboardCardConfigurations(any()) }
+            collector.cancel()
+        }
+
+    @Test
+    fun `inherited defaults action persists the standard dashboard layout`() =
+        runTest(testDispatcher) {
+            arrangeCardActions(emptyList())
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            runCurrent()
+            viewModel.toggleCardManagement()
+            viewModel.onResetToDefaults()
+            viewModel.toggleCardManagement()
+            runCurrent()
+            coVerify(exactly = 1) {
+                cardConfigRepository.updateDashboardCardConfigurations(SettingsDefaults.DEFAULT_DASHBOARD_CARDS)
+            }
+            collector.cancel()
+        }
+
+    private fun arrangeCardActions(cards: List<CardConfiguration>) {
+        configureDashboardFlows(MutableStateFlow(false), MutableStateFlow(null), null)
+        every { cardConfigRepository.dashboardCardConfigurations() } returns kotlinx.coroutines.flow.flowOf(cards)
+        coEvery { permissionChecker.hasStepsPermission() } returns true
+        coEvery { permissionChecker.hasWeightPermission() } returns true
+        coEvery { permissionChecker.hasBodyFatPermission() } returns true
+        coEvery { permissionChecker.hasBloodPressurePermission() } returns true
+        coEvery { permissionChecker.hasOxygenSaturationPermission() } returns true
+        viewModel = buildViewModel()
+    }
 }
