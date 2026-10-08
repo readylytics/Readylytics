@@ -378,12 +378,27 @@ and v5→v6. Existing v5/v6 files complete their upgrade before Room opens: afte
 free-space preflight, a v5 file receives the additive v5→v6 setup in one SQLCipher transaction,
 then the external v6→v7 state machine runs. Insufficient space returns the required/available-byte
 failure without mutating any legacy table. Room has no v6→v7 migration or one-shot
-`MIGRATION_6_7` `INSERT SELECT`: `DatabaseReadinessGate` inspects the encrypted file before Room
-construction, and `DatabaseModule` refuses to open any existing database that has not reached v7
-through the external `V7DatabaseMigrator`. Pure readiness, phase, progress, result, and
+`MIGRATION_6_7` `INSERT SELECT`: `DatabaseReadinessGate` starts at `Checking` without inspecting
+or resolving the lazy key manager. Inspection publishes its result through `readiness`, checking
+exactly the first 16 bytes for SQLite magic before any SQLCipher open. A missing file is `Ready`;
+plaintext is `EncryptionRequired`; encrypted v5/v6 is `MigrationRequired`, encrypted v7..23 is
+`Ready`, and unsupported or unreadable files fail closed. `invalidate()` publishes `Checking`
+without IO. `DatabaseModule` continues to guard existing databases before Room construction.
+`DatabasePreparationRunner` performs inspection, plaintext read-only version validation, export,
+and any external v7 preparation inside the injected IO dispatcher. Plaintext versions outside
+5..23 are rejected before export. Encryption preflight reserves source file plus WAL bytes, 25%
+overhead, and 64 MiB; insufficient space leaves the original and target unopened. The key manager
+acquires/zeros the raw key using the existing key-lock protocol and delegates native handles and
+file cutover to `PlaintextDatabaseExporter`. Retry removes an incomplete `.cipher_tmp` and its
+WAL/SHM/journal sidecars; export reads the source's committed WAL without changing its journal
+mode, explicitly copies `user_version`, validates the target, and closes native handles before
+checking cancellation and atomically replacing the source. A cancellation or failure before
+replacement leaves committed source data usable. Encrypted Room-managed files bypass both export
+and the external migrator. Preparation re-inspects and reports complete only for actual `Ready`;
+Room still owns migrations from v7 to the unchanged database version 23. Pure readiness, phase, progress, result, and
 `DatabaseReadinessInspector` contracts live in
 `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/migration/DatabaseMigrationModels.kt`;
-the SQLCipher/file-backed `DatabaseReadinessGate` remains in the app data layer and implements that
+the SQLCipher/file-backed `DatabaseReadinessGate` lives in `core:database` and implements that
 inspector. The v5→v6 statements are shared through
 `DatabaseUpgradeSql.V5_TO_V6`, preventing the Room and external paths from drifting.
 `V7DatabaseMigrator` copies HR and HRV into shadow tables in committed 10,000-row keyset pages. A
@@ -404,7 +419,7 @@ Room open accepts the externally migrated schema. A unit drift check keeps the e
 top-level identity, its `room_master_table` setup query, and the migrator-owned identity constant
 synchronized; migration instrumentation drops `room_master_table` from its plaintext validation
 copy so `MigrationTestHelper` must inspect the physical tables and indexes.
-`DatabaseMigrationWorker` performs this state machine as foreground `dataSync` work and publishes
+`DatabaseMigrationWorker` runs `DatabasePreparationRunner` as foreground `dataSync` work and publishes
 phase plus copied/total-row progress; the migration screen gates normal app content, and
 Room-backed startup, sync, backup, and cleanup work remain blocked or retry until
 `DatabaseReadinessGate` reports ready — that is, `user_version` has reached the externally
@@ -412,9 +427,13 @@ migrated v7 floor and has not passed `HealthDatabase.DATABASE_VERSION`. The gate
 the `DATABASE_VERSION` constant itself rather than a hand-copied literal: Room owns every step
 from v7 up to the current version, so a gate pinned to one exact version would reject the schema
 Room had just migrated to and strand the app on the migration screen after the next bump.
-`DatabaseMigrationController` likewise re-inspects the database before honouring a `FAILED`
-`WorkInfo`, since WorkManager replays a previous run's terminal record on the next cold start and
-that stale failure must not outrank a database that now reports ready.
+`DatabaseMigrationController` starts at `Checking` and performs initial and WorkInfo-triggered
+inspection on its injected IO dispatcher. Actual `Ready` overrides stale terminal WorkInfo,
+since WorkManager replays a previous run's terminal record on cold start. `DatabaseReadinessContent`
+withholds normal Room-backed content until ready, shows an indeterminate migration screen while
+checking without scheduling work, and schedules the existing unique worker for encryption or
+v5/v6 migration. Encryption uses preparation guidance and indeterminate progress with no new
+persisted migration phase; existing notification, progress, and failure keys remain unchanged.
 Version 4 adds
 the metadata-only `audit_events` table; it does not change Health Connect
 ingestion tables or scoring formulas. Version 5 adds two nullable `daily_summaries` columns,
@@ -2454,7 +2473,9 @@ defaults when unset).
 | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/service/HealthMetricsService.kt`     | Domain — canonical BP status seam and facade         | delegates BMI/body-fat assessments; owns blood-pressure assessment and component chart-band metadata derived from the same thresholds |
 | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/calculation/HealthMetricsCalculator.kt` | Domain — facade (delegates)                     | `assessBmi()`/`assessBodyFatPercent()` → `BodyCompositionAssessment`; `assessBloodPressure()` → `HealthMetricsService` |
 | `core/database/src/main/kotlin/app/readylytics/health/core/database/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v23)                             | 26 entities; pre-bridge Room migration chain ends at v6; external migration owns v7; Room owns v7→v23 |
-| `core/database/src/main/kotlin/app/readylytics/health/core/database/data/migration/DatabaseReadinessGate.kt`                                            | Storage — pre-Room readiness guard                  | missing or v7..`DATABASE_VERSION` ready; v5/v6 or resumable metadata require external migration |
+| `core/database/src/main/kotlin/app/readylytics/health/core/database/data/migration/DatabaseReadinessGate.kt`                                            | Storage — pre-Room readiness guard                  | Checking initially; plaintext requires encryption without key access; missing or encrypted v7..`DATABASE_VERSION` ready; encrypted v5/v6 require external migration |
+| `app/src/main/kotlin/app/readylytics/health/data/migration/DatabasePreparationRunner.kt` | Storage — IO preparation before Room | plaintext version/space preflight and encryption; lazy v5/v6 migration; re-inspect Ready |
+| `core/database/src/main/kotlin/app/readylytics/health/core/database/data/security/PlaintextDatabaseExporter.kt` | Storage — native plaintext export | preserve user_version and committed WAL; discard stale target; close/validate then cancellable atomic replacement |
 | `app/src/main/kotlin/app/readylytics/health/data/migration/V7DatabaseMigrator.kt`                                               | Storage — resumable external v7 migration           | preflight; 10k keyset copy/checkpoint; per-index transactions; validated atomic cutover  |
 | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/migration/DatabaseMigrationModels.kt`                                 | Domain — migration contracts                        | readiness inspector/state; phase/progress/result models                                  |
 | `core/database/src/main/kotlin/app/readylytics/health/core/database/data/security/SqlCipherKeyManager.kt`                                               | Storage — scoped encrypted DB access                | opens raw SQLCipher DB only inside a callback and zeroes plaintext key bytes              |

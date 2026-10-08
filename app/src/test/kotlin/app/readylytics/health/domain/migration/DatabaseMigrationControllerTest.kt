@@ -36,10 +36,18 @@ class DatabaseMigrationControllerTest {
     private val scope = TestScope(dispatcher)
 
     @Test
+    fun constructionDoesNotInspect() {
+        val controller = controller()
+        assertEquals(DatabaseReadiness.Checking, controller.state.value.readiness)
+        verify(exactly = 0) { gate.inspect() }
+    }
+
+    @Test
     fun `initial state comes from readiness gate`() {
         every { gate.inspect() } returns DatabaseReadiness.MigrationRequired(6)
 
         val controller = controller()
+        scope.advanceUntilIdle()
 
         assertEquals(
             DatabaseMigrationUiState(DatabaseReadiness.MigrationRequired(6)),
@@ -52,6 +60,7 @@ class DatabaseMigrationControllerTest {
         every { gate.inspect() } returns DatabaseReadiness.KeyCorrupted
 
         val controller = controller()
+        scope.advanceUntilIdle()
 
         assertEquals(
             DatabaseMigrationUiState(DatabaseReadiness.KeyCorrupted),
@@ -99,6 +108,7 @@ class DatabaseMigrationControllerTest {
             listOf(DatabaseReadiness.MigrationRequired(6), DatabaseReadiness.Ready)
         val controller = controller()
 
+        scope.advanceUntilIdle()
         workInfos.value = listOf(workInfo(WorkInfo.State.SUCCEEDED))
         scope.advanceUntilIdle()
 
@@ -172,6 +182,7 @@ class DatabaseMigrationControllerTest {
             workManager = workManager,
             databaseReadinessInspector = gate,
             appScope = scope,
+            ioDispatcher = dispatcher,
         )
 
     private fun workInfo(

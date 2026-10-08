@@ -10,7 +10,7 @@ import androidx.work.WorkerParameters
 import app.readylytics.health.core.model.domain.migration.DatabaseMigrationProgress
 import app.readylytics.health.core.model.domain.migration.V7MigrationPhase
 import app.readylytics.health.core.model.domain.migration.V7MigrationResult
-import app.readylytics.health.data.migration.V7DatabaseMigrator
+import app.readylytics.health.data.migration.DatabasePreparationRunner
 import com.google.common.util.concurrent.Futures
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -30,7 +30,7 @@ import kotlin.test.assertFailsWith
 class DatabaseMigrationWorkerTest {
     private lateinit var context: Context
     private lateinit var params: WorkerParameters
-    private val migrator = mockk<V7DatabaseMigrator>()
+    private val migrator = mockk<DatabasePreparationRunner>()
     private val foregroundUpdater = mockk<androidx.work.ForegroundUpdater>()
     private val progressUpdater = mockk<androidx.work.ProgressUpdater>()
 
@@ -75,7 +75,7 @@ class DatabaseMigrationWorkerTest {
                     copiedRows = 12L,
                     totalRows = 50L,
                 )
-            coEvery { migrator.migrate(any()) } coAnswers {
+            coEvery { migrator.run(any()) } coAnswers {
                 firstArg<suspend (DatabaseMigrationProgress) -> Unit>().invoke(progress)
                 V7MigrationResult.Complete
             }
@@ -85,7 +85,7 @@ class DatabaseMigrationWorkerTest {
             assertEquals(ListenableWorker.Result.success(), result)
             coVerifyOrder {
                 foregroundUpdater.setForegroundAsync(any(), any(), any())
-                migrator.migrate(any())
+                migrator.run(any())
             }
             coVerify {
                 progressUpdater.updateProgress(
@@ -104,7 +104,7 @@ class DatabaseMigrationWorkerTest {
     @Test
     fun `insufficient space returns failure with required and available bytes`() =
         runBlocking {
-            coEvery { migrator.migrate(any()) } returns V7MigrationResult.InsufficientSpace(900L, 400L)
+            coEvery { migrator.run(any()) } returns V7MigrationResult.InsufficientSpace(900L, 400L)
 
             val result = worker().doWork()
 
@@ -123,7 +123,7 @@ class DatabaseMigrationWorkerTest {
     @Test
     fun `ordinary migration failure retries`() =
         runBlocking {
-            coEvery { migrator.migrate(any()) } returns V7MigrationResult.Failed("validation")
+            coEvery { migrator.run(any()) } returns V7MigrationResult.Failed("validation")
 
             assertEquals(ListenableWorker.Result.retry(), worker().doWork())
         }
@@ -131,7 +131,7 @@ class DatabaseMigrationWorkerTest {
     @Test
     fun `unexpected exception retries`() =
         runBlocking {
-            coEvery { migrator.migrate(any()) } throws IllegalStateException("io")
+            coEvery { migrator.run(any()) } throws IllegalStateException("io")
 
             assertEquals(ListenableWorker.Result.retry(), worker().doWork())
         }
@@ -139,7 +139,7 @@ class DatabaseMigrationWorkerTest {
     @Test
     fun `cancellation is rethrown`() {
         runBlocking {
-            coEvery { migrator.migrate(any()) } throws CancellationException("stop")
+            coEvery { migrator.run(any()) } throws CancellationException("stop")
 
             assertFailsWith<CancellationException> { worker().doWork() }
         }

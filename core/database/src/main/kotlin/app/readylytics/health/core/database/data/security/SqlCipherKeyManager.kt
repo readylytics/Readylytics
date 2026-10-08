@@ -11,10 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
-import java.io.FileInputStream
 import java.io.RandomAccessFile
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 import java.security.SecureRandom
 import java.util.concurrent.locks.ReentrantLock
 import javax.crypto.Cipher
@@ -29,7 +26,7 @@ import javax.inject.Singleton
 // always agree on page size / KDF / HMAC settings.
 private const val CIPHER_COMPATIBILITY = 4
 
-private val CIPHER_COMPATIBILITY_HOOK =
+internal val CIPHER_COMPATIBILITY_HOOK =
     object : net.zetetic.database.sqlcipher.SQLiteDatabaseHook {
         override fun preKey(connection: net.zetetic.database.sqlcipher.SQLiteConnection) {
             connection.execute("PRAGMA cipher_compatibility = $CIPHER_COMPATIBILITY", null, null)
@@ -278,56 +275,14 @@ class SqlCipherKeyManager
          * Detects if the database file is plaintext (SQLite format) and migrates it to encrypted format.
          * Checks the first 16 bytes for SQLite magic header; if found, performs migration.
          */
-        fun migrateIfNeeded(dbFile: File) {
-            if (!dbFile.exists()) return
-
-            val magic = ByteArray(16)
-            FileInputStream(dbFile).use { stream ->
-                val bytesRead = stream.read(magic)
-                if (bytesRead != 16) return
-            }
-
-            // SQLite magic header is 16 bytes: "SQLite format 3\000"
-            val sqliteMagic = "SQLite format 3\u0000".toByteArray(Charsets.UTF_8)
-            if (!magic.contentEquals(sqliteMagic)) {
-                return
-            }
-
-            val tempFile = File(dbFile.parent, "${dbFile.name}.cipher_tmp")
-            val rawKey = getOrCreateDbKey()
-            try {
-                val rawKeyBytes = "x'${rawKey.toHex()}'".toByteArray(Charsets.UTF_8)
-                // Create the encrypted target via the same nativeKey-backed open path used to
-                // reopen it later (withWritableDatabase/getOrCreateFactory), instead of ATTACH's
-                // KEY clause. ATTACH's KEY clause and the Java-level password/nativeKey() path are
-                // separate native code paths in SQLCipher and are not guaranteed to agree on
-                // cipher settings -- opening the target the same way it will always be reopened
-                // guarantees self-consistency.
-                val encryptedDb =
-                    net.zetetic.database.sqlcipher.SQLiteDatabase
-                        .openOrCreateDatabase(tempFile, rawKeyBytes, null, null, CIPHER_COMPATIBILITY_HOOK)
-                encryptedDb.rawExecSQL("ATTACH DATABASE '${dbFile.absolutePath}' AS plaintext KEY ''")
-                // Force rollback journaling on the attached source so its full contents are
-                // visible to the export regardless of any pending WAL state from its creator.
-                encryptedDb.rawExecSQL("PRAGMA plaintext.journal_mode = DELETE")
-                encryptedDb.rawExecSQL("SELECT sqlcipher_export('main', 'plaintext')")
-                encryptedDb.rawExecSQL("DETACH DATABASE plaintext")
-                encryptedDb.close()
-
-                Files.move(
-                    tempFile.toPath(),
-                    dbFile.toPath(),
-                    StandardCopyOption.ATOMIC_MOVE,
-                    StandardCopyOption.REPLACE_EXISTING,
-                )
-
-                File("${dbFile.absolutePath}-wal").delete()
-                File("${dbFile.absolutePath}-shm").delete()
-            } catch (e: Exception) {
-                tempFile.delete()
-                throw MigrationException("SQLCipher migration failed", e)
-            } finally {
-                rawKey.fill(0)
+        fun migrateIfNeeded(dbFile: File, beforeReplace: () -> Unit = {}) {
+            if (isPlaintextDatabase(dbFile)) {
+                val rawKey = getOrCreateDbKey()
+                try {
+                    PlaintextDatabaseExporter().export(dbFile, rawKey, beforeReplace)
+                } finally {
+                    rawKey.fill(0)
+                }
             }
         }
 

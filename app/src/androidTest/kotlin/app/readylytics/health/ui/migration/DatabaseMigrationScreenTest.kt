@@ -12,6 +12,7 @@ import androidx.compose.ui.test.performClick
 import app.readylytics.health.core.model.domain.migration.DatabaseMigrationProgress
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.migration.V7MigrationPhase
+import app.readylytics.health.domain.migration.DatabaseMigrationUiState
 import app.readylytics.health.ui.theme.DatabaseReadinessTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -20,6 +21,53 @@ import org.junit.Test
 class DatabaseMigrationScreenTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    @Test
+    fun checkingDoesNotScheduleOrComposeNormalContent() {
+        var scheduled = 0
+        var normal = 0
+        var recovery = 0
+        composeRule.setContent {
+            DatabaseReadinessContent(
+                state =
+                    app.readylytics.health.domain.migration
+                        .DatabaseMigrationUiState(DatabaseReadiness.Checking),
+                onStartOrResume = { scheduled++ },
+                onSendDiagnostics = {},
+                readyContent = { normal++ },
+                keyRecoveryContent = { recovery++ },
+            )
+        }
+        composeRule.onNode(hasProgressBarRangeInfo(ProgressBarRangeInfo.Indeterminate)).assertIsDisplayed()
+        composeRule.runOnIdle {
+            assertEquals(0, scheduled)
+            assertEquals(0, normal)
+            assertEquals(0, recovery)
+        }
+    }
+
+    @Test
+    fun encryptionSchedulesOnceAndDisplaysPreparationGuidance() {
+        var scheduled = 0
+        composeRule.setContent {
+            DatabaseReadinessContent(
+                state =
+                    DatabaseMigrationUiState(
+                        DatabaseReadiness.EncryptionRequired,
+                    ),
+                onStartOrResume = { scheduled++ },
+                onSendDiagnostics = {},
+                readyContent = { error("normal content must wait") },
+                keyRecoveryContent = { error("key recovery must wait") },
+            )
+        }
+        composeRule
+            .onNodeWithText(
+                "Preparing your health database. Keep Readylytics open while this finishes.",
+            ).assertIsDisplayed()
+        composeRule.onNode(hasProgressBarRangeInfo(ProgressBarRangeInfo.Indeterminate)).assertIsDisplayed()
+        composeRule.runOnIdle { assertEquals(1, scheduled) }
+    }
 
     @Test
     fun preparingFromV5IsIndeterminate() {

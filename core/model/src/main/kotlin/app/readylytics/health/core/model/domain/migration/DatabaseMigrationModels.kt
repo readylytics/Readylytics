@@ -18,6 +18,10 @@ enum class V7MigrationPhase {
 }
 
 sealed interface DatabaseReadiness {
+    data object Checking : DatabaseReadiness
+
+    data object EncryptionRequired : DatabaseReadiness
+
     data object Ready : DatabaseReadiness
 
     data class MigrationRequired(
