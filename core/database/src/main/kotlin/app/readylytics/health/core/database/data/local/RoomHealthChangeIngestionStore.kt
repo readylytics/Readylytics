@@ -146,11 +146,10 @@ class RoomHealthChangeIngestionStore
                     daos.sourceRecordDao.deleteBySourceRecordId(sourceId)
                 }
                 if (dirtyDates.isNotEmpty() && dirtyRangeStore != null && healthMutationStateDao != null) {
-                    val today = LocalDate.now(clock)
+                    val prefs = settingsRepo?.userPreferences?.first()
+                    val today = LocalDate.now(clock.withZone(prefs?.scoringZone() ?: clock.zone))
                     val earliest = dirtyDates.minOrNull()!!
                     val latest = dirtyDates.maxOrNull()!!
-                    
-                    val prefs = settingsRepo?.userPreferences?.first()
                     val retentionStart = RetentionBounds.resolveResyncStartDate(prefs ?: UserPreferences(), today)
                     val closure =
                         ScoreInvalidation.dependencyClosure(

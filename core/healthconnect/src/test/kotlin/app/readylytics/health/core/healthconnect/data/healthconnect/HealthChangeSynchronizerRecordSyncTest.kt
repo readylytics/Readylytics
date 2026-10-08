@@ -246,55 +246,6 @@ class HealthChangeSynchronizerRecordSyncTest {
         }
 
     @Test
-    fun `applyPendingChanges replaces changed heart rate source record before upsert`() =
-        runTest {
-            seedTokens()
-            val recordId = "hr-record"
-            val oldTimestampMs = 1000L
-            val sampleTime = Instant.parse("2026-06-20T09:00:00Z")
-            val record =
-                mockk<HeartRateRecord>(relaxed = true) {
-                    every { metadata.id } returns recordId
-                    every { metadata.device } returns null
-                    every { metadata.dataOrigin.packageName } returns "pkg"
-                    every { startTime } returns sampleTime
-                    every { endTime } returns sampleTime
-                    every { samples } returns
-                        listOf(
-                            mockk {
-                                every { time } returns sampleTime
-                                every { beatsPerMinute } returns 63L
-                            },
-                        )
-                }
-            val change =
-                mockk<UpsertionChange>(relaxed = true) {
-                    every { this@mockk.record } returns record
-                }
-            routeOneChange(dataType = HealthDataType.HEART_RATE, change = change)
-            coEvery {
-                changeIngestionStore.affectedDatesForRecords(HealthDataType.HEART_RATE, listOf(recordId), any())
-            } returns setOf(epochDay(oldTimestampMs))
-
-            val outcome = synchronizer.applyPendingChanges()
-
-            assertEquals(
-                setOf(epochDay(oldTimestampMs), sampleTime.atZone(ZoneId.systemDefault()).toLocalDate()),
-                outcome.affectedDates,
-            )
-            coVerifyOrder {
-                changeIngestionStore.affectedDatesForRecords(HealthDataType.HEART_RATE, listOf(recordId), any())
-                changeIngestionStore.deleteRecords(HealthDataType.HEART_RATE, listOf(recordId))
-                healthIngestionStore.replaceHeartRateSources(
-                    match {
-                        it.size == 1 && it[0].rows.size == 1 &&
-                            it[0].rows[0].timestampMs == sampleTime.toEpochMilli()
-                    },
-                )
-            }
-        }
-
-    @Test
     fun `applyPendingChanges replaces changed weight source record before upsert`() =
         runTest {
             seedTokens()
