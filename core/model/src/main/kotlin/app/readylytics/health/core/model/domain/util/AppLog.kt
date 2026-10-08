@@ -2,7 +2,11 @@ package app.readylytics.health.core.model.domain.util
 
 enum class LogLevel { DEBUG, INFO, WARN, ERROR }
 
-data class LogContext(val sessionId: String? = null)
+data class LogContext(
+    val sessionId: String? = null,
+    /** Bounded structured context; the only context a release sink emits (SEC-101). */
+    val fields: DiagnosticFields? = null,
+)
 
 interface DomainLogSink {
     fun isLoggable(level: LogLevel, tag: String): Boolean = true
@@ -85,15 +89,17 @@ inline fun logI(
 inline fun logW(
     tag: String,
     throwable: Throwable? = null,
+    fields: DiagnosticFields? = null,
     msg: () -> String,
 ) {
-    DomainLogger.log(LogLevel.WARN, tag, throwable, LogContext(), msg)
+    DomainLogger.log(LogLevel.WARN, tag, throwable, LogContext(fields = fields), msg)
 }
 
 inline fun logE(
     tag: String,
     throwable: Throwable? = null,
+    fields: DiagnosticFields? = null,
     msg: () -> String,
 ) {
-    DomainLogger.log(LogLevel.ERROR, tag, throwable, LogContext(), msg)
+    DomainLogger.log(LogLevel.ERROR, tag, throwable, LogContext(fields = fields), msg)
 }

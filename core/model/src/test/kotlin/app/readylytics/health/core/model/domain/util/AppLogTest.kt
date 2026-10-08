@@ -1,5 +1,6 @@
 package app.readylytics.health.core.model.domain.util
 
+import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Test
@@ -84,5 +85,30 @@ class AppLogTest {
         assertEquals(2, sink.logs.size)
         assertEquals("[DEBUG] [SyncTest] [Session:none] chatty detail", sink.logs[0])
         assertEquals("[INFO] [SyncTest] [Session:none] lifecycle milestone", sink.logs[1])
+    }
+
+    @Test
+    fun `logE and logW forward diagnostic fields to the sink`() {
+        val captured = mutableListOf<LogContext>()
+        DomainLogger.installSink(
+            object : DomainLogSink {
+                override fun log(
+                    level: LogLevel,
+                    tag: String,
+                    message: String,
+                    throwable: Throwable?,
+                    context: LogContext,
+                ) {
+                    captured += context
+                }
+            },
+        )
+        val fields = DiagnosticFields(phase = ResyncPhase.PRUNE)
+
+        logE("Tag", fields = fields) { "m" }
+        logW("Tag", fields = fields) { "m" }
+        logE("Tag") { "m" }
+
+        assertEquals(listOf(fields, fields, null), captured.map { it.fields })
     }
 }

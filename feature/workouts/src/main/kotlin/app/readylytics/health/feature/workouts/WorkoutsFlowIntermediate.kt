@@ -80,3 +80,39 @@ internal fun createWorkoutsHistoryStateFlow(
             pendingConfiguration = pendingHistoryConfig,
         )
     }
+
+@Immutable
+internal data class WorkoutsLayoutState(
+    val cards: WorkoutsCardState,
+    val charts: WorkoutsChartState,
+    val history: WorkoutsHistoryState,
+)
+
+/** Cheap, frequently-ticking UI inputs merged onto the expensive data state in a single copy (UI-101). */
+@Immutable
+internal data class WorkoutsChromeState(
+    val isSyncing: Boolean,
+    val isRangeChanging: Boolean,
+    val trainingLoadMetric: TrainingLoadMetric,
+    val layout: WorkoutsLayoutState,
+)
+
+internal fun WorkoutsChromeState.applyTo(state: WorkoutsUiState): WorkoutsUiState =
+    state.copy(
+        isLoading = isSyncing && state.latestSummary == null && state.recentWorkouts.isEmpty(),
+        isRefreshing = isSyncing,
+        isRangeChanging = isRangeChanging,
+        selectedTrainingLoadMetric = trainingLoadMetric,
+        cardConfigurations = layout.cards.pendingConfiguration ?: layout.cards.cardConfigurations,
+        isManagingCards = layout.cards.isManagingCards,
+        chartConfigurations = layout.charts.pendingConfiguration ?: layout.charts.chartConfigurations,
+        isManagingCharts = layout.charts.isManagingCharts,
+        historyConfigurations = layout.history.pendingConfiguration ?: layout.history.historyConfigurations,
+        isManagingHistory = layout.history.isManagingHistory,
+    )
+
+internal fun createWorkoutsLayoutStateFlow(
+    cards: Flow<WorkoutsCardState>,
+    charts: Flow<WorkoutsChartState>,
+    history: Flow<WorkoutsHistoryState>,
+): Flow<WorkoutsLayoutState> = combine(cards, charts, history) { c, ch, h -> WorkoutsLayoutState(c, ch, h) }

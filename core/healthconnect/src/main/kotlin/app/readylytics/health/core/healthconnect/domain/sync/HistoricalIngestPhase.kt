@@ -11,6 +11,7 @@ import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import app.readylytics.health.core.model.domain.sync.ScanIdentity
 import app.readylytics.health.core.model.domain.sync.ScanStagingStore
 import app.readylytics.health.core.model.domain.util.logD
+import app.readylytics.health.core.model.domain.util.DiagnosticFields
 import app.readylytics.health.core.model.domain.util.logW
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
@@ -332,7 +333,7 @@ class HistoricalIngestPhase
             } catch (e: HealthConnectWindowTimeoutException) {
                 throw e
             } catch (e: Exception) {
-                logW(TELEMETRY_TAG, e) {
+                logW(TELEMETRY_TAG, e, DiagnosticFields(phase = ResyncPhase.INGEST)) {
                     "[INGESTION] Resumed token rejected for chunk ${params.chunkStart}; " +
                         "replaying chunk without tokens."
                 }

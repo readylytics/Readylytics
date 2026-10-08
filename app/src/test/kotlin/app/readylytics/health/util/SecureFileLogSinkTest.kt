@@ -2,6 +2,8 @@ package app.readylytics.health.util
 
 import android.content.Context
 import android.util.Log
+import app.readylytics.health.core.model.domain.sync.ResyncPhase
+import app.readylytics.health.core.model.domain.util.DiagnosticFields
 import app.readylytics.health.core.model.domain.util.DomainLogSink
 import app.readylytics.health.core.model.domain.util.DomainLogger
 import app.readylytics.health.core.model.domain.util.LogContext
@@ -640,4 +642,30 @@ class SecureFileLogSinkTest {
             const val CIPHERTEXT_PREFIX = "ciphertext:"
         }
     }
+
+    @Test
+    fun testDiagnosticFieldsReachTheFileOnTheReasonLine() =
+        runBlocking {
+            val sink =
+                SecureFileLogSink(
+                    context = mockContext,
+                    maxFileSize = 10000L,
+                    maxBackups = 2,
+                    encryptStreams = false,
+                    coroutineContext = Dispatchers.Unconfined,
+                )
+
+            sink.log(
+                LogLevel.ERROR,
+                "DailyRecomputeSupport",
+                "Day 2026-10-05 sync failed",
+                RuntimeException("bpm=187"),
+                LogContext(fields = DiagnosticFields(phase = ResyncPhase.RECOMPUTE, dayOffsetFromToday = -3)),
+            )
+
+            val content = sink.readLogsDecrypted()
+            assertTrue(content.lines().contains("OPERATION_FAILED phase=RECOMPUTE dayOffset=-3"))
+            assertFalse(content.contains("2026-10-05"))
+            assertFalse(content.contains("bpm=187"))
+        }
 }

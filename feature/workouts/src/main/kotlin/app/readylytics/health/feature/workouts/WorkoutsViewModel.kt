@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.domain.dashboard.CardManagementDelegate
 import app.readylytics.health.core.model.domain.layout.LayoutManagementDelegate
-import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.core.model.domain.workouts.FatigueCurveRange
 import app.readylytics.health.core.ui.common.TimeRange
@@ -19,9 +18,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -42,7 +40,7 @@ class WorkoutsViewModel
         private val clock: Clock,
     ) : ViewModel(),
         WorkoutsLayoutActions {
-        private val dataLoader = WorkoutsDataLoader(repositories, useCases, clock)
+        private val dataLoader = WorkoutsDataLoader(repositories, useCases, scoringCalculators, dispatchers.io, clock)
 
         private val _selectedRange =
             MutableStateFlow(selectedRangeStore.read())
@@ -99,13 +97,18 @@ class WorkoutsViewModel
         // data reload.
         private val selectedTrainingLoadMetricState = MutableStateFlow(TrainingLoadMetric.ACWR)
 
+        private val chromeState =
+            combine(
+                foregroundSyncController.isSyncing,
+                isRangeChangingState,
+                selectedTrainingLoadMetricState,
+                createWorkoutsLayoutStateFlow(cardStateFlow, chartStateFlow, historyStateFlow),
+            ) { syncing, rangeChanging, metric, layout ->
+                WorkoutsChromeState(syncing, rangeChanging, metric, layout)
+            }.distinctUntilChanged()
+
         private val _currentPage = MutableStateFlow(1)
         val currentPage = _currentPage.asStateFlow()
-
-        private val boundaryPreferences =
-            repositories.settings.userPreferences
-                .map { it.scoringZone() to it.strainLoadSourceMode }
-                .distinctUntilChanged()
 
         @OptIn(ExperimentalCoroutinesApi::class)
         val uiState =
@@ -124,109 +127,12 @@ class WorkoutsViewModel
                     }
                 }.filterNotNull()
                 .distinctUntilChanged()
-                .combine(boundaryPreferences) { params, boundary -> params to boundary }
-                .flatMapLatest { (params, boundary) ->
-                    val zoneId = boundary.first
-                    val window = resolveWorkoutsRangeWindow(params.range, params.date, zoneId)
-
-                    val summaryFlow =
-                        if (params.date == LocalDate.now(clock.withZone(zoneId))) {
-                            repositories.dailySummary.observeLatest()
-                        } else {
-                            flow {
-                                emit(repositories.dailySummary.getByDate(window.selectedMidnightMs))
-                            }.flowOn(dispatchers.io)
-                        }
-
-                    combine(
-                        summaryFlow,
-                        repositories.dailySummary.observeSince(window.fetchFromMs),
-                        repositories.dailySummary.observeSince(window.rasFromMs),
-                        repositories.settings.userPreferences,
-                    ) { latest, trimpSummaries, rasSummaries, prefs ->
-                        val earliestLocalDate =
-                            resolveEarliestLocalDate(
-                                prefs = prefs,
-                                trimpSummaries = trimpSummaries,
-                                zoneId = zoneId,
-                                getEarliestWorkoutTimestamp = repositories.workout::getEarliestWorkoutTimestamp,
-                            )
-
-                        val pageSize = 10
-                        val totalItems =
-                            repositories.workout.countByTimeRange(
-                                window.displayFromMs,
-                                window.selectedDayEndMs,
-                            )
-                        val totalPages = maxOf(1, (totalItems + pageSize - 1) / pageSize)
-                        val clampedPage = params.page.coerceIn(1, totalPages)
-                        val pageWorkouts =
-                            repositories.workout.getInRangePaged(
-                                window.displayFromMs,
-                                window.selectedDayEndMs,
-                                pageSize,
-                                (clampedPage - 1) * pageSize,
-                            )
-
-                        val recentItems = dataLoader.loadRecentWorkouts(pageWorkouts, prefs, trimpSummaries)
-                        val workoutOnlyGains = dataLoader.loadWorkoutOnlyGains(window, prefs, trimpSummaries)
-                        val weeklyTraining = dataLoader.loadWeeklyTraining(params.date, prefs, zoneId)
-                        val hasDistancePermission = useCases.distancePermissionGate.isGranted()
-                        val fatigueCurve =
-                            dataLoader.loadResidualFatigueCurve(params.date, params.fatigueRange, window, prefs, zoneId)
-
-                        buildWorkoutsState(
-                            WorkoutsStateInputs(
-                                scoringCalculator = scoringCalculators.scoringCalculator,
-                                trainingStressBalanceCalculator = scoringCalculators.trainingStressBalanceCalculator,
-                                latestSummary = latest,
-                                trimpSummaries = trimpSummaries,
-                                rasSummaries = rasSummaries,
-                                prefs = prefs,
-                                range = params.range,
-                                selectedDate = params.date,
-                                zoneId = zoneId,
-                                recentWorkouts = recentItems,
-                                currentPage = clampedPage,
-                                totalPages = totalPages,
-                                earliestLocalDate = earliestLocalDate,
-                                workoutOnlyGains = workoutOnlyGains,
-                                weeklyTraining = weeklyTraining,
-                                hasDistancePermission = hasDistancePermission,
-                                residualFatigueCurve = fatigueCurve,
-                                selectedFatigueRange = params.fatigueRange,
-                            ),
-                        )
-                    }
-                }.distinctUntilChanged()
-                .map { state ->
-                    isRangeChangingState.value = false
-                    state
-                }.combine(foregroundSyncController.isSyncing) { state, syncing ->
-                    state.copy(
-                        isLoading = syncing && (state.latestSummary == null && state.recentWorkouts.isEmpty()),
-                        isRefreshing = syncing,
-                    )
-                }.combine(isRangeChangingState) { state, isChanging ->
-                    state.copy(isRangeChanging = isChanging)
-                }.combine(selectedTrainingLoadMetricState) { state, metric ->
-                    state.copy(selectedTrainingLoadMetric = metric)
-                }.combine(cardStateFlow) { state, cardState ->
-                    state.copy(
-                        cardConfigurations = cardState.pendingConfiguration ?: cardState.cardConfigurations,
-                        isManagingCards = cardState.isManagingCards,
-                    )
-                }.combine(chartStateFlow) { state, chartState ->
-                    state.copy(
-                        chartConfigurations = chartState.pendingConfiguration ?: chartState.chartConfigurations,
-                        isManagingCharts = chartState.isManagingCharts,
-                    )
-                }.combine(historyStateFlow) { state, historyState ->
-                    state.copy(
-                        historyConfigurations = historyState.pendingConfiguration ?: historyState.historyConfigurations,
-                        isManagingHistory = historyState.isManagingHistory,
-                    )
-                }.flowOn(dispatchers.default)
+                .combine(dataLoader.boundaryPreferences) { params, boundary -> params to boundary }
+                .flatMapLatest { (params, boundary) -> dataLoader.observeState(params, zoneId = boundary.first) }
+                .distinctUntilChanged()
+                .onEach { isRangeChangingState.value = false }
+                .combine(chromeState) { state, chrome -> chrome.applyTo(state) }
+                .flowOn(dispatchers.default)
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5_000),

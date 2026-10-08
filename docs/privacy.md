@@ -79,6 +79,25 @@ exception class names, and bounded stack frames — raw exception messages,
 source/device IDs, GPS coordinates, and private health payloads are never
 logged or stored.
 
+### What a diagnostic log entry contains
+
+Each entry in the on-device diagnostic log contains only:
+
+- a reason code — operation failed, permission denied, backup failed, restore failed, or log write failed;
+- the names of the error types involved and up to 32 code locations per error (file positions in
+  Readylytics' own code, never your data);
+- optionally, for sync and recalculation problems: which Health Connect data type was involved
+  (for example heart rate), which step was running (ingest, prune, reconcile, or recompute), how many
+  days before today the affected day is (for example "3 days ago" — never the calendar date), and a
+  coarse record-count range (none, 1–10, 11–100, or more than 100).
+
+It never contains message text, dates or timestamps, record IDs, device or app names, health values,
+or exact counts.
+
+A logcat export you choose to share contains the same entries, but Android adds its own date and time
+to every logcat line. Combined with the "days before today" value, that timestamp can reveal the
+calendar date of the affected day.
+
 Diagnostic, crash, logcat export, and backup staging files are written to the app's internal
 cache and are excluded from Android auto-backup and device-to-device transfer.
 The app prunes these cache directories on startup, so transient staging and diagnostic

@@ -534,7 +534,7 @@ A few smaller modifiers shape the numbers behind the scenes. We list them here f
 - **Readylytics Activity Score (RAS).** RAS is a PAI-style motivational activity metric with a daily cap and rolling 7-day accumulation. It is separate from the physiological Load Score: RAS never feeds Readiness, and Readiness/load continue to use TRIMP → ATL → CTL → Strain Ratio → Load Score.
 - **Suspicious sleep-stage reweight.** If your wearable's sleep-stage data for a night looks implausible (e.g., no deep or REM sleep detected at all), we reweight the Sleep Score: Architecture and Fragmentation drop out and the score renormalizes Duration and Restoration according to your active weight profile. This avoids penalising you for a wearable data glitch rather than your actual sleep.
 - **Missing-day handling in load averages.** Acute and chronic training-load averages (ATL/CTL) are exponential moving averages where a day with no logged exercise counts as zero TRIMP, not "no data". When you only have one day of history, that single day's value is used directly as the starting average.
-- **Estimated max heart rate.** If you haven't entered your own max heart rate, we estimate it from your age using the Tanaka formula (`208 − 0.7 × age`), which is more accurate across adult age ranges than the older "220 − age" rule of thumb.
+- **Estimated max heart rate.** If you haven't entered your own max heart rate, we estimate it from your age using the Tanaka formula (`208 − 0.7 × age`), rounded down to a whole beat per minute (age 35 gives 183.5, so 183 bpm), which is more accurate across adult age ranges than the older "220 − age" rule of thumb.
 
 ## Determinism & timezone
 

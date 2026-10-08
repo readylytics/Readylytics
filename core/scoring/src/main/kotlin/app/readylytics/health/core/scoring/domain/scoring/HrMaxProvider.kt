@@ -33,6 +33,8 @@ class HrMaxProvider
             if (dbValue != null) return dbValue
 
             val prefs = settingsRepository.userPreferences.first()
+            // Float→Int only: resolveMaxHeartRate is already whole-numbered on both branches (the
+            // Tanaka branch truncates by design, SCORE-104), so this round never changes the value.
             return Math.round(HeartRateFormulas.resolveMaxHeartRate(prefs))
         }
     }

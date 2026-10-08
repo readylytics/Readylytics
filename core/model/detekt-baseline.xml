@@ -4,7 +4,6 @@
   <CurrentIssues>
     <ID>TooManyFunctions:DailyMetricsMapper.kt$DailyMetricsMapper</ID>
     <ID>TooManyFunctions:DateRangeService.kt$DateRangeService</ID>
-    <ID>TooManyFunctions:FeatureSettingsPorts.kt$DisplaySettings</ID>
     <ID>TooManyFunctions:FeatureSettingsPorts.kt$SleepSettings</ID>
     <ID>TooManyFunctions:HealthConnectRepository.kt$HealthConnectRepository : HealthConnectPermissionChecker</ID>
     <ID>TooManyFunctions:HealthMetricsService.kt$HealthMetricsService</ID>

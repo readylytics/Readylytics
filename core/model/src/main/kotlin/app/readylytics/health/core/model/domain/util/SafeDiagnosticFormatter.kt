@@ -20,9 +20,11 @@ object SafeDiagnosticFormatter {
     fun safeDiagnostic(
         reason: DiagnosticReason,
         failure: Throwable?,
+        fields: DiagnosticFields? = null,
     ): String =
         buildString {
-            appendLine(reason.name)
+            val renderedFields = fields?.render().orEmpty()
+            appendLine(if (renderedFields.isEmpty()) reason.name else "${reason.name} $renderedFields")
             val seen = Collections.newSetFromMap(IdentityHashMap<Throwable, Boolean>())
             val pending = ArrayDeque<Throwable>()
             failure?.let(pending::add)
@@ -43,5 +45,6 @@ object SafeDiagnosticFormatter {
 fun safeDiagnostic(
     reason: DiagnosticReason,
     failure: Throwable?,
-): String = SafeDiagnosticFormatter.safeDiagnostic(reason, failure)
+    fields: DiagnosticFields? = null,
+): String = SafeDiagnosticFormatter.safeDiagnostic(reason, failure, fields)
 
