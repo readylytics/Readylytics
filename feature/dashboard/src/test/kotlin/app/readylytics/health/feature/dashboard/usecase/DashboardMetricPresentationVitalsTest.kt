@@ -223,6 +223,9 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
 
         assertEquals(MetricStatus.CALIBRATING, sleepRhr.status)
         assertEquals(MetricStatus.CALIBRATING, restingHr.status)
+        // The reading is real data, so the card is tinted like its classified siblings.
+        assertEquals(MetricStatus.NEUTRAL, sleepRhr.colorStatus)
+        assertEquals(MetricStatus.NEUTRAL, restingHr.colorStatus)
         assertNull(sleepRhr.secondaryText)
         assertNull(restingHr.secondaryText)
         assertEquals("Average heart rate during sleep.\n\nNot enough data to calculate baseline.", sleepRhr.tooltip)
