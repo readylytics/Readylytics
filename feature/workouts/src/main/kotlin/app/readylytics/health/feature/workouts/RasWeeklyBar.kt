@@ -2,13 +2,17 @@ package app.readylytics.health.feature.workouts
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -34,6 +38,9 @@ import app.readylytics.health.core.ui.R as CoreUiR
 
 // 100 RAS fills 75% of the bar width
 private const val BAR_MAX = 100f / GOAL_FILL_CAP_FRACTION
+
+// Matches UniversalMetricCard's info action so the icon sits in the same corner position.
+private val TOOLTIP_CORNER_OFFSET = 14.dp
 
 internal enum class RasSummaryValueTextStyle {
     TITLE,
@@ -131,34 +138,47 @@ fun RasWeeklyCard(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
     ) {
-        Column(modifier = Modifier.padding(MaterialTheme.spacing.medium)) {
-            // Center-aligned so title, total and the 48dp tooltip touch target share one line.
+        // Same insets and header geometry as UniversalMetricCard so the RAS card lines up with
+        // the other cards in the Workouts grid.
+        Column(
+            modifier =
+                Modifier.padding(
+                    horizontal = MaterialTheme.spacing.medium,
+                    vertical = MaterialTheme.spacing.smallMedium,
+                ),
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.Top,
             ) {
                 Text(
                     text = stringResource(R.string.workout_stats_ras_title),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f, fill = false),
+                    modifier = Modifier.weight(1f),
                 )
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall),
-                    verticalAlignment = Alignment.CenterVertically,
+                totalRas?.let { total ->
+                    Text(
+                        text = total.toString(),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.width(MaterialTheme.spacing.small))
+                }
+                // The 48dp touch target overflows into the card corner instead of inflating the header.
+                Box(
+                    modifier =
+                        Modifier
+                            .size(MaterialTheme.dimens.iconStandard)
+                            .wrapContentSize(align = Alignment.TopEnd, unbounded = true),
                 ) {
-                    totalRas?.let { total ->
-                        Text(
-                            text = total.toString(),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    MetricTooltip(description = stringResource(CoreUiR.string.tooltip_ras))
+                    MetricTooltip(
+                        description = stringResource(CoreUiR.string.tooltip_ras),
+                        modifier = Modifier.offset(x = TOOLTIP_CORNER_OFFSET, y = -TOOLTIP_CORNER_OFFSET),
+                    )
                 }
             }
-            // No extra spacer: the tooltip's touch target already pads the header.
+            Spacer(Modifier.height(MaterialTheme.spacing.medium))
             RasWeeklyBar(
                 dailyBreakdown = dailyBreakdown,
                 totalRas = totalRas?.toFloat() ?: 0f,
