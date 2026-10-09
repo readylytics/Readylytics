@@ -7,6 +7,16 @@ on:
       - "v*"
     branches:
       - main
+    # Skip branch pushes that only touch non-app files. Tag pushes ignore path filters,
+    # so version tags always release.
+    paths-ignore:
+      - ".github/**"
+      - "docs/**"
+      - "internal-docs/**"
+      - ".claude/**"
+      - ".codegraph/**"
+      - ".vscode/**"
+      - "**/*.md"
 
 permissions:
   contents: read
