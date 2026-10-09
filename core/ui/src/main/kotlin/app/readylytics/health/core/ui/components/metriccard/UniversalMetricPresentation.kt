@@ -68,4 +68,24 @@ data class UniversalMetricPresentation(
 
     val gaugeUnitText: String
         get() = gaugeUnitTextOverride ?: unitText
+
+    /**
+     * Status that drives the card's colors. A reading whose personal baseline isn't ready yet --
+     * still calibrating, or today's baseline snapshot not written yet while a sync is in flight --
+     * is real data, so it is tinted like a neutral reading instead of the muted empty-card tone
+     * that made it look disabled next to its siblings. [status] still drives classification,
+     * tooltips and accessibility; cards without a value keep the empty-card tone.
+     */
+    val colorStatus: MetricStatus
+        get() =
+            if (status == MetricStatus.CALIBRATING && visual.hasValueAwaitingBaseline()) {
+                MetricStatus.NEUTRAL
+            } else {
+                status
+            }
 }
+
+private fun UniversalMetricVisual.hasValueAwaitingBaseline(): Boolean =
+    this is UniversalMetricVisual.PersonalBaseline &&
+        rawValue != null &&
+        unavailableReason == UniversalMetricUnavailableReason.BASELINE_NOT_READY

@@ -32,6 +32,7 @@ import app.readylytics.health.di.ReleaseLogSink
 import app.readylytics.health.domain.migration.DatabaseMigrationController
 import app.readylytics.health.ui.crashreport.CrashReportPrompt
 import app.readylytics.health.ui.migration.DatabaseReadinessContent
+import app.readylytics.health.ui.migration.shouldKeepStartupSplash
 import app.readylytics.health.ui.navigation.AppNavHost
 import app.readylytics.health.ui.recovery.DatabaseRecoveryScreen
 import app.readylytics.health.ui.sync.SyncViewModel
@@ -73,6 +74,19 @@ class MainActivity : ComponentActivity() {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Hold the splash through key validation and the initial readiness probe so the migration
+        // card is never flashed for the transient Checking state. ReadylyticsContent and the key
+        // recovery path replace this condition once they take over.
+        val splashStartMillis = android.os.SystemClock.elapsedRealtime()
+        splashScreen.setKeepOnScreenCondition {
+            shouldKeepStartupSplash(
+                isKeyValidationComplete = isKeyValidationComplete,
+                readiness = databaseMigrationController.state.value.readiness,
+                elapsedMs = android.os.SystemClock.elapsedRealtime() - splashStartMillis,
+                maxWaitMs = SPLASH_MAX_WAIT_MS,
+            )
+        }
 
         lifecycleScope.launch(Dispatchers.IO) {
             runCatching { sqlCipherKeyManager.get().validateKeyDecryption() }

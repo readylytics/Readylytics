@@ -84,7 +84,7 @@ fun UniversalGaugeRenderer(
         if (markerFraction == null) {
             MaterialTheme.colorScheme.onSurfaceVariant
         } else {
-            presentation.status.gaugeColor()
+            presentation.colorStatus.gaugeColor()
         }
 
     Column(
@@ -94,7 +94,7 @@ fun UniversalGaugeRenderer(
         M3MetricGaugeWithValue(
             markerFraction = markerFraction,
             activeColor = activeColor,
-            markerColor = presentation.status.containerColor(),
+            markerColor = presentation.colorStatus.containerColor(),
             valueText = presentation.gaugeValueText,
             unitText = presentation.gaugeUnitText,
             valueColor = activeColor,
@@ -142,7 +142,7 @@ fun UniversalBarRenderer(
         if (progressFraction == null) {
             MaterialTheme.colorScheme.onSurfaceVariant
         } else {
-            presentation.status.gaugeColor()
+            presentation.colorStatus.gaugeColor()
         }
     val trackColor = metricVisualizationTrackColor()
 
@@ -156,7 +156,7 @@ fun UniversalBarRenderer(
             progressFraction = progressFraction,
             activeColor = activeColor,
             trackColor = trackColor,
-            markerColor = presentation.status.containerColor(),
+            markerColor = presentation.colorStatus.containerColor(),
             barHeight = universalBarTrackThickness,
             showMarker = true,
             animateProgress = false,

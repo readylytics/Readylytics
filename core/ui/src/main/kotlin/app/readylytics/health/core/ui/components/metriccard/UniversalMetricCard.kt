@@ -63,7 +63,7 @@ fun UniversalMetricCard(
     onClick: (() -> Unit)? = null,
 ) {
     val contentDesc = resolveCardAccessibilityDescription(presentation, requestedMode, isEditing)
-    val contentColor = presentation.status.onContainerColor()
+    val contentColor = presentation.colorStatus.onContainerColor()
     val cardModifier =
         modifier
             .fillMaxWidth()
@@ -71,7 +71,7 @@ fun UniversalMetricCard(
             .testTag(UNIVERSAL_METRIC_CARD_TAG)
     val colors =
         CardDefaults.cardColors(
-            containerColor = presentation.status.containerColor(),
+            containerColor = presentation.colorStatus.containerColor(),
             contentColor = contentColor,
         )
 
