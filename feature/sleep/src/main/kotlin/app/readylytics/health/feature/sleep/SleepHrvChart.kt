@@ -1,7 +1,6 @@
 package app.readylytics.health.feature.sleep
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -16,6 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -31,6 +31,7 @@ import app.readylytics.health.core.ui.components.BaselineLegend
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
 import app.readylytics.health.core.ui.components.DayTimelineScale
+import app.readylytics.health.core.ui.components.detectLongPressSelection
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -212,6 +213,7 @@ private fun SleepHrvChartVisuals(
     var scaleX by state.interaction.scaleX
     var offsetX by state.interaction.offsetX
     var selectedSample by state.interaction.selectedSample
+    val hapticFeedback = LocalHapticFeedback.current
 
     Canvas(
         modifier =
@@ -230,18 +232,23 @@ private fun SleepHrvChartVisuals(
                         offsetX = newOffsetX
                     }
                 }.pointerInput(state.data.sortedSamples, state.session.id, scaleX, offsetX, state.scale) {
-                    detectTapGestures { tapOffset ->
-                        val tappedUnscaledX = leftLabelWidthPx + (tapOffset.x - leftLabelWidthPx - offsetX) / scaleX
-                        selectedSample =
-                            resolveTappedSleepHrvSample(
-                                tapOffset = tapOffset,
-                                tappedUnscaledX = tappedUnscaledX,
-                                leftLabelWidthPx = leftLabelWidthPx,
-                                plotW = plotW,
-                                sessionStartMs = state.session.startTime,
-                                scale = state.scale,
-                                sortedSamples = state.data.sortedSamples,
-                            ) ?: return@detectTapGestures
+                    // Long press selects, then scrubs; a short tap only dismisses, so a scroll
+                    // that starts on the chart never opens a tooltip.
+                    detectLongPressSelection(
+                        hapticFeedback = hapticFeedback,
+                        isVisible = { selectedSample != null },
+                        onDismiss = { selectedSample = null },
+                    ) { touch ->
+                        val tappedUnscaledX = leftLabelWidthPx + (touch.x - leftLabelWidthPx - offsetX) / scaleX
+                        resolveTappedSleepHrvSample(
+                            tapOffset = touch,
+                            tappedUnscaledX = tappedUnscaledX,
+                            leftLabelWidthPx = leftLabelWidthPx,
+                            plotW = plotW,
+                            sessionStartMs = state.session.startTime,
+                            scale = state.scale,
+                            sortedSamples = state.data.sortedSamples,
+                        )?.also { selectedSample = it } != null
                     }
                 },
     ) {

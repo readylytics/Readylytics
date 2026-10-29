@@ -28,6 +28,7 @@ import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.InvisibleMarker
 import app.readylytics.health.core.ui.components.VicoChartTooltipOverlay
 import app.readylytics.health.core.ui.components.ZoneBandDecoration
+import app.readylytics.health.core.ui.components.consumeGesturesWhileScrubbing
 import app.readylytics.health.feature.workouts.R
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
@@ -243,10 +244,7 @@ private fun TsbChartHost(
     modifier: Modifier,
 ) {
     val tsbLine = rememberTsbLine()
-    val yAxisFormatter =
-        remember {
-            CartesianValueFormatter { _, value, _ -> String.format(Locale.US, "%+d", value.roundToInt()) }
-        }
+    val yAxisFormatter = rememberTsbYAxisFormatter()
     val labelComponent = ChartDefaults.labelTextComponent()
     val axisLabelComponent = ChartDefaults.axisLabelTextComponent()
     val guidelineComponent = ChartDefaults.guidelineComponent()
@@ -254,7 +252,7 @@ private fun TsbChartHost(
     val chartModifier = if (config.hasData) modifier.testTag("TsbChart") else modifier
     val chartHeight = 220.dp
 
-    Box(modifier = chartModifier.fillMaxWidth()) {
+    Box(modifier = chartModifier.fillMaxWidth().consumeGesturesWhileScrubbing(config.tooltipState.markerController)) {
         CartesianChartHost(
             chart =
                 rememberCartesianChart(
@@ -280,6 +278,7 @@ private fun TsbChartHost(
                     decorations = config.decorations,
                     marker = InvisibleMarker,
                     markerVisibilityListener = config.tooltipState.markerVisibilityListener,
+                    markerController = config.tooltipState.markerController,
                 ),
             modelProducer = config.modelProducer,
             scrollState = scrollState,
@@ -303,6 +302,10 @@ private fun TsbChartHost(
         }
     }
 }
+
+@Composable
+private fun rememberTsbYAxisFormatter(): CartesianValueFormatter =
+    remember { CartesianValueFormatter { _, value, _ -> String.format(Locale.US, "%+d", value.roundToInt()) } }
 
 /**
  * Zero-centered Training Stress Balance (TSB = CTL - ATL) line chart. Background zone band colors

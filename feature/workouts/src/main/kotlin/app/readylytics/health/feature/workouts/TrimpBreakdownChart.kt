@@ -37,7 +37,9 @@ import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
 import app.readylytics.health.core.ui.components.InvisibleMarker
 import app.readylytics.health.core.ui.components.VicoChartTooltipOverlay
+import app.readylytics.health.core.ui.components.consumeGesturesWhileScrubbing
 import app.readylytics.health.core.ui.components.rememberChartMarkerVisibilityListener
+import app.readylytics.health.core.ui.components.rememberLongPressMarkerController
 import app.readylytics.health.feature.workouts.R
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
@@ -200,6 +202,8 @@ private fun HrChart(
                 selectedIndex = idx
             },
         )
+    val markerController =
+        rememberLongPressMarkerController(isVisible = { tooltipState != null }, onDismiss = { tooltipState = null })
     val prevActionLabel = stringResource(CoreUiR.string.action_previous_point)
     val nextActionLabel = stringResource(CoreUiR.string.action_next_point)
     val clearActionLabel = stringResource(CoreUiR.string.action_clear_selection)
@@ -331,6 +335,7 @@ private fun HrChart(
                         ),
                     marker = InvisibleMarker,
                     markerVisibilityListener = markerVisibilityListener,
+                    markerController = markerController,
                 ),
             modelProducer = modelProducer,
             zoomState =
@@ -338,7 +343,7 @@ private fun HrChart(
                     zoomEnabled = false,
                     initialZoom = Zoom.Content,
                 ),
-            modifier = Modifier.fillMaxWidth().height(200.dp),
+            modifier = Modifier.fillMaxWidth().height(200.dp).consumeGesturesWhileScrubbing(markerController),
         )
 
         VicoChartTooltipOverlay(

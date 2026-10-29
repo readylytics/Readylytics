@@ -20,7 +20,9 @@ import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.core.ui.components.DataPointTooltipData
+import app.readylytics.health.core.ui.components.LongPressMarkerController
 import app.readylytics.health.core.ui.components.rememberChartMarkerVisibilityListener
+import app.readylytics.health.core.ui.components.rememberLongPressMarkerController
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerVisibilityListener
 import java.util.Locale
@@ -31,6 +33,7 @@ internal data class TsbTooltipState(
     val selectedPointOffset: Offset?,
     val tooltipData: DataPointTooltipData?,
     val onDismissTooltip: () -> Unit,
+    val markerController: LongPressMarkerController,
 )
 
 internal data class TsbTooltipParams(
@@ -134,5 +137,7 @@ internal fun rememberTsbTooltipState(
         selectedPointOffset = selectedPointOffset,
         tooltipData = tooltipData,
         onDismissTooltip = clearTooltip,
+        markerController =
+            rememberLongPressMarkerController(isVisible = { tooltipData != null }, onDismiss = clearTooltip),
     )
 }

@@ -35,8 +35,11 @@ import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
 import app.readylytics.health.core.ui.components.InvisibleMarker
+import app.readylytics.health.core.ui.components.LongPressMarkerController
 import app.readylytics.health.core.ui.components.VicoChartTooltipOverlay
+import app.readylytics.health.core.ui.components.consumeGesturesWhileScrubbing
 import app.readylytics.health.core.ui.components.rememberChartMarkerVisibilityListener
+import app.readylytics.health.core.ui.components.rememberLongPressMarkerController
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
@@ -137,7 +140,7 @@ private fun ResidualFatigueChartContent(
         )
 
     // No onHidden wiring: Vico hides its marker on finger lift, so clearing selection there would
-    // dismiss the tooltip on the same tap that opened it. Selection is cleared explicitly instead
+    // dismiss the tooltip on the same long press that opened it. Selection is cleared explicitly instead
     // (tooltip dismiss, multi-touch, parent scroll, range change).
     val markerListener =
         rememberChartMarkerVisibilityListener { x, _, canvasX, canvasY ->
@@ -197,6 +200,8 @@ private fun ResidualFatigueChartBox(
     onMultiTouch: () -> Unit,
     onDismissTooltip: () -> Unit,
 ) {
+    val markerController =
+        rememberLongPressMarkerController(isVisible = { state.tooltip != null }, onDismiss = onDismissTooltip)
     Box(
         modifier =
             Modifier
@@ -224,6 +229,7 @@ private fun ResidualFatigueChartBox(
             range = range,
             zoneId = zoneId,
             markerListener = markerListener,
+            markerController = markerController,
         )
         VicoChartTooltipOverlay(
             selectedPointOffset =
@@ -250,6 +256,7 @@ private fun ResidualFatigueCartesianHost(
     range: FatigueCurveRange,
     zoneId: ZoneId,
     markerListener: CartesianMarkerVisibilityListener,
+    markerController: LongPressMarkerController,
 ) {
     val modelProducer = remember { CartesianChartModelProducer() }
     LaunchedEffect(points) {
@@ -302,9 +309,10 @@ private fun ResidualFatigueCartesianHost(
                     ),
                 marker = InvisibleMarker,
                 markerVisibilityListener = markerListener,
+                markerController = markerController,
             ),
         modelProducer = modelProducer,
         zoomState = rememberVicoZoomState(zoomEnabled = false, initialZoom = Zoom.Content),
-        modifier = Modifier.fillMaxWidth().height(200.dp),
+        modifier = Modifier.fillMaxWidth().height(200.dp).consumeGesturesWhileScrubbing(markerController),
     )
 }

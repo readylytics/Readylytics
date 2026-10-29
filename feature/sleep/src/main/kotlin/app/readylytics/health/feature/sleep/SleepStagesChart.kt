@@ -7,7 +7,6 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -37,6 +36,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -53,6 +53,7 @@ import app.readylytics.health.core.model.domain.repository.SleepSessionData
 import app.readylytics.health.core.model.domain.repository.SleepStageData
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
+import app.readylytics.health.core.ui.components.detectLongPressSelection
 import app.readylytics.health.feature.sleep.R
 import java.time.Instant
 import java.time.ZoneId
@@ -264,6 +265,7 @@ fun SleepStagesChart(
         )
 
     var selectedSegment by remember { mutableStateOf<SelectedSegmentState?>(null) }
+    val hapticFeedback = LocalHapticFeedback.current
 
     LaunchedEffect(session) {
         selectedSegment = null
@@ -435,7 +437,9 @@ fun SleepStagesChart(
                                 stateDescription = selectedValueDescription
                                 customActions = customActionsList
                             }.pointerInput(mergedTimeline, session) {
-                                detectTapGestures { tapOffset ->
+                                // Long press selects, then scrubs; a short tap only dismisses, so a scroll
+                                // that starts on the chart never opens a tooltip.
+                                fun segmentAt(touch: Offset): SelectedSegmentState? {
                                     val canvasWidth = size.width.toFloat()
                                     val laneHeightPx = LANE_HEIGHT.toPx()
                                     val insetPx = SHAPE_INSET.toPx()
@@ -455,26 +459,30 @@ fun SleepStagesChart(
                                                     (stageData.endTime - stageData.startTime).toFloat() /
                                                         sessionDuration * canvasWidth
                                                 ).coerceAtLeast(minW)
-                                            tapOffset.x in sx..(sx + w) && tapOffset.y in top..(top + height)
+                                            touch.x in sx..(sx + w) && touch.y in top..(top + height)
                                         }
-                                    selectedSegment =
-                                        hit?.let {
-                                            val laneIdx = getStageLaneIndex(it.stageType)
-                                            val sx =
-                                                (it.startTime - session.startTime).toFloat() /
+                                    return hit?.let {
+                                        val laneIdx = getStageLaneIndex(it.stageType)
+                                        val sx =
+                                            (it.startTime - session.startTime).toFloat() /
+                                                sessionDuration * canvasWidth
+                                        val w =
+                                            (
+                                                (it.endTime - it.startTime).toFloat() /
                                                     sessionDuration * canvasWidth
-                                            val w =
-                                                (
-                                                    (it.endTime - it.startTime).toFloat() /
-                                                        sessionDuration * canvasWidth
-                                                ).coerceAtLeast(minW)
-                                            SelectedSegmentState(
-                                                stage = it,
-                                                segmentCenterXPx = sx + w / 2f,
-                                                segmentCenterYPx = (laneIdx + 0.5f) * laneHeightPx,
-                                            )
-                                        }
+                                            ).coerceAtLeast(minW)
+                                        SelectedSegmentState(
+                                            stage = it,
+                                            segmentCenterXPx = sx + w / 2f,
+                                            segmentCenterYPx = (laneIdx + 0.5f) * laneHeightPx,
+                                        )
+                                    }
                                 }
+                                detectLongPressSelection(
+                                    hapticFeedback = hapticFeedback,
+                                    isVisible = { selectedSegment != null },
+                                    onDismiss = { selectedSegment = null },
+                                ) { touch -> segmentAt(touch)?.also { selectedSegment = it } != null }
                             },
                 ) {
                     val canvasWidth = size.width

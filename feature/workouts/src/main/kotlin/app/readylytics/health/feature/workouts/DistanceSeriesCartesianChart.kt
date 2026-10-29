@@ -12,7 +12,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.InvisibleMarker
+import app.readylytics.health.core.ui.components.consumeGesturesWhileScrubbing
 import app.readylytics.health.core.ui.components.rememberChartMarkerVisibilityListener
+import app.readylytics.health.core.ui.components.rememberLongPressMarkerController
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
@@ -26,6 +28,7 @@ import com.patrykandpatrick.vico.compose.cartesian.data.lineModel
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerController
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.compose.common.Fill
@@ -44,11 +47,16 @@ internal fun DistanceSeriesCartesianChart(
     lineColor: Color,
     selection: DistanceChartSelection,
 ) {
+    val markerController =
+        rememberLongPressMarkerController(
+            isVisible = { selection.tooltip != null },
+            onDismiss = { selection.clearTooltip() },
+        )
     CartesianChartHost(
-        chart = rememberDistanceCartesianChart(points, kind, units, lineColor, selection),
+        chart = rememberDistanceCartesianChart(points, kind, units, lineColor, selection, markerController),
         modelProducer = rememberDistanceSeriesModel(points),
         zoomState = rememberVicoZoomState(zoomEnabled = false, initialZoom = Zoom.Content),
-        modifier = Modifier.fillMaxWidth().height(DistanceChartHeight),
+        modifier = Modifier.fillMaxWidth().height(DistanceChartHeight).consumeGesturesWhileScrubbing(markerController),
     )
 }
 
@@ -76,6 +84,7 @@ private fun rememberDistanceCartesianChart(
     units: DistanceSeriesUnits,
     lineColor: Color,
     selection: DistanceChartSelection,
+    markerController: CartesianMarkerController,
 ): CartesianChart {
     val maxDistance = points.lastOrNull()?.first ?: 0.0
     val markerVisibilityListener =
@@ -94,6 +103,7 @@ private fun rememberDistanceCartesianChart(
         bottomAxis = rememberDistanceBottomAxis(units, maxDistance),
         marker = InvisibleMarker,
         markerVisibilityListener = markerVisibilityListener,
+        markerController = markerController,
         getXStep = { _, _, _ -> X_STEP },
     )
 }

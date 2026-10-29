@@ -39,8 +39,10 @@ import app.readylytics.health.core.ui.components.EmptyChartPlaceholder
 import app.readylytics.health.core.ui.components.InvisibleMarker
 import app.readylytics.health.core.ui.components.VicoChartTooltipOverlay
 import app.readylytics.health.core.ui.components.ZoneBandDecoration
+import app.readylytics.health.core.ui.components.consumeGesturesWhileScrubbing
 import app.readylytics.health.core.ui.components.formatTrendTooltipDate
 import app.readylytics.health.core.ui.components.rememberChartMarkerVisibilityListener
+import app.readylytics.health.core.ui.components.rememberLongPressMarkerController
 import app.readylytics.health.core.ui.components.rememberZoneBandColors
 import app.readylytics.health.feature.vitals.R
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
@@ -302,6 +304,9 @@ fun BloodPressureTrendChart(
             )
         }
 
+    val markerController =
+        rememberLongPressMarkerController(isVisible = { tooltipState != null }, onDismiss = { tooltipState = null })
+
     Box(
         modifier = modifier.fillMaxWidth(),
     ) {
@@ -335,11 +340,12 @@ fun BloodPressureTrendChart(
                     decorations = decorations,
                     marker = InvisibleMarker,
                     markerVisibilityListener = markerVisibilityListener,
+                    markerController = markerController,
                 ),
             modelProducer = modelProducer,
             scrollState = scrollState,
             zoomState = zoomState,
-            modifier = Modifier.fillMaxWidth().height(180.dp),
+            modifier = Modifier.fillMaxWidth().height(180.dp).consumeGesturesWhileScrubbing(markerController),
         )
 
         VicoChartTooltipOverlay(

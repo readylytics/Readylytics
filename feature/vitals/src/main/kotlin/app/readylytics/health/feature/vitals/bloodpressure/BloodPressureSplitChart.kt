@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -34,6 +35,7 @@ import app.readylytics.health.core.ui.common.rememberPeriodOrdinalLabel
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
 import app.readylytics.health.core.ui.components.EmptyChartPlaceholder
+import app.readylytics.health.core.ui.components.detectTapToDismiss
 import app.readylytics.health.core.ui.components.formatTrendTooltipDate
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
@@ -155,7 +157,14 @@ fun BloodPressureSplitChart(
             )
     }
 
-    Box(modifier = modifier.fillMaxWidth()) {
+    // The child charts run with showTooltip = false, so their own tap-to-dismiss sees no tooltip and
+    // lets the tap through to here, where the shared tooltip lives.
+    Box(
+        modifier =
+            modifier.fillMaxWidth().pointerInput(Unit) {
+                detectTapToDismiss(isVisible = { tooltipState != null }, onDismiss = { tooltipState = null })
+            },
+    ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             // Upper chart – systolic
             SingleBloodPressureChart(

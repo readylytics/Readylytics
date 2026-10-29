@@ -36,7 +36,10 @@ import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
 import app.readylytics.health.core.ui.components.InvisibleMarker
+import app.readylytics.health.core.ui.components.LongPressMarkerController
 import app.readylytics.health.core.ui.components.VicoChartTooltipOverlay
+import app.readylytics.health.core.ui.components.consumeGesturesWhileScrubbing
+import app.readylytics.health.core.ui.components.rememberLongPressMarkerController
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
@@ -151,6 +154,11 @@ private fun WeeklyVolumeTrendChart(
                 rangeProvider = rangeProvider,
                 weekdayLabels = weekdayLabels,
                 markerVisibilityListener = markerVisibilityListener,
+                markerController =
+                    rememberLongPressMarkerController(
+                        isVisible = { selectedState != null },
+                        onDismiss = { selectedState = null },
+                    ),
             ),
         selectedState = selectedState,
         tooltipData = tooltipData,
@@ -169,6 +177,7 @@ private data class WeeklyVolumeChartSpec(
     val rangeProvider: CartesianLayerRangeProvider,
     val weekdayLabels: List<String>,
     val markerVisibilityListener: CartesianMarkerVisibilityListener,
+    val markerController: LongPressMarkerController,
 )
 
 @Composable
@@ -316,7 +325,7 @@ private fun WeeklyVolumeTrendChartContent(
     val yAxisFormatter = remember { CartesianValueFormatter { _, value, _ -> value.toInt().toString() } }
     val itemPlacer = remember { HorizontalAxis.ItemPlacer.aligned(spacing = { 1 }, addExtremeLabelPadding = true) }
 
-    Box(modifier = modifier.fillMaxWidth()) {
+    Box(modifier = modifier.fillMaxWidth().consumeGesturesWhileScrubbing(spec.markerController)) {
         CartesianChartHost(
             chart =
                 rememberCartesianChart(
@@ -342,6 +351,7 @@ private fun WeeklyVolumeTrendChartContent(
                         ),
                     marker = InvisibleMarker,
                     markerVisibilityListener = spec.markerVisibilityListener,
+                    markerController = spec.markerController,
                 ),
             modelProducer = spec.modelProducer,
             scrollState = rememberVicoScrollState(scrollEnabled = false),

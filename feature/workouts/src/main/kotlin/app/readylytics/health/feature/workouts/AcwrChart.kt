@@ -41,6 +41,8 @@ import app.readylytics.health.core.ui.common.rememberPeriodOrdinalLabel
 import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
+import app.readylytics.health.core.ui.components.consumeGesturesWhileScrubbing
+import app.readylytics.health.core.ui.components.rememberLongPressMarkerController
 import app.readylytics.health.feature.workouts.R
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
@@ -499,6 +501,8 @@ private fun AcwrChart(
             ratioPoints = remappedRatioPoints,
             onStateChanged = { selectedState = it },
         )
+    val markerController =
+        rememberLongPressMarkerController(isVisible = { selectedState != null }, onDismiss = { selectedState = null })
 
     // ── Chart host + animated overlay ────────────────────────────────────────
     val chartHeight = 220.dp
@@ -565,11 +569,12 @@ private fun AcwrChart(
                         ),
                     marker = invisibleMarker,
                     markerVisibilityListener = markerVisibilityListener,
+                    markerController = markerController,
                 ),
             modelProducer = modelProducer,
             scrollState = scrollState,
             zoomState = zoomState,
-            modifier = Modifier.fillMaxWidth().height(chartHeight),
+            modifier = Modifier.fillMaxWidth().height(chartHeight).consumeGesturesWhileScrubbing(markerController),
         )
 
         // Vico's touch resolution can report only the TRIMP column target when the tap lands on a
