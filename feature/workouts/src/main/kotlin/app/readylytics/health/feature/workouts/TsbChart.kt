@@ -28,7 +28,7 @@ import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.InvisibleMarker
 import app.readylytics.health.core.ui.components.VicoChartTooltipOverlay
 import app.readylytics.health.core.ui.components.ZoneBandDecoration
-import app.readylytics.health.core.ui.components.consumeGesturesWhileScrubbing
+import app.readylytics.health.core.ui.components.rememberLongPressMarkerController
 import app.readylytics.health.feature.workouts.R
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
@@ -54,6 +54,9 @@ import kotlin.math.roundToInt
 
 private const val Y_AXIS_PADDING = 5f
 private const val Y_AXIS_STEP = 10f
+
+private val TsbYAxisFormatter =
+    CartesianValueFormatter { _, value, _ -> String.format(Locale.US, "%+d", value.roundToInt()) }
 
 @Composable
 private fun rememberTsbDecorations(
@@ -244,7 +247,7 @@ private fun TsbChartHost(
     modifier: Modifier,
 ) {
     val tsbLine = rememberTsbLine()
-    val yAxisFormatter = rememberTsbYAxisFormatter()
+    val markerController = rememberLongPressMarkerController()
     val labelComponent = ChartDefaults.labelTextComponent()
     val axisLabelComponent = ChartDefaults.axisLabelTextComponent()
     val guidelineComponent = ChartDefaults.guidelineComponent()
@@ -252,7 +255,7 @@ private fun TsbChartHost(
     val chartModifier = if (config.hasData) modifier.testTag("TsbChart") else modifier
     val chartHeight = 220.dp
 
-    Box(modifier = chartModifier.fillMaxWidth().consumeGesturesWhileScrubbing(config.tooltipState.markerController)) {
+    Box(modifier = chartModifier.fillMaxWidth()) {
         CartesianChartHost(
             chart =
                 rememberCartesianChart(
@@ -263,7 +266,7 @@ private fun TsbChartHost(
                     startAxis =
                         VerticalAxis.rememberStart(
                             label = labelComponent,
-                            valueFormatter = yAxisFormatter,
+                            valueFormatter = TsbYAxisFormatter,
                             titleComponent = axisLabelComponent,
                             title = { tsbTitle },
                             guideline = guidelineComponent,
@@ -278,12 +281,12 @@ private fun TsbChartHost(
                     decorations = config.decorations,
                     marker = InvisibleMarker,
                     markerVisibilityListener = config.tooltipState.markerVisibilityListener,
-                    markerController = config.tooltipState.markerController,
+                    markerController = markerController,
                 ),
             modelProducer = config.modelProducer,
             scrollState = scrollState,
             zoomState = zoomState,
-            modifier = Modifier.fillMaxWidth().height(chartHeight),
+            modifier = Modifier.fillMaxWidth().height(chartHeight).then(markerController.scrubGate),
         )
 
         VicoChartTooltipOverlay(
@@ -302,10 +305,6 @@ private fun TsbChartHost(
         }
     }
 }
-
-@Composable
-private fun rememberTsbYAxisFormatter(): CartesianValueFormatter =
-    remember { CartesianValueFormatter { _, value, _ -> String.format(Locale.US, "%+d", value.roundToInt()) } }
 
 /**
  * Zero-centered Training Stress Balance (TSB = CTL - ATL) line chart. Background zone band colors

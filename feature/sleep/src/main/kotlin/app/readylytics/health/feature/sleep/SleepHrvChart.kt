@@ -232,23 +232,17 @@ private fun SleepHrvChartVisuals(
                         offsetX = newOffsetX
                     }
                 }.pointerInput(state.data.sortedSamples, state.session.id, scaleX, offsetX, state.scale) {
-                    // Long press selects, then scrubs; a short tap only dismisses, so a scroll
-                    // that starts on the chart never opens a tooltip.
-                    detectLongPressSelection(
-                        hapticFeedback = hapticFeedback,
-                        isVisible = { selectedSample != null },
-                        onDismiss = { selectedSample = null },
-                    ) { touch ->
-                        val tappedUnscaledX = leftLabelWidthPx + (touch.x - leftLabelWidthPx - offsetX) / scaleX
-                        resolveTappedSleepHrvSample(
-                            tapOffset = touch,
-                            tappedUnscaledX = tappedUnscaledX,
+                    detectLongPressSelection(hapticFeedback, state.interaction.selectedSample) { touch ->
+                        val touchedUnscaledX = leftLabelWidthPx + (touch.x - leftLabelWidthPx - offsetX) / scaleX
+                        resolveTouchedSleepHrvSample(
+                            touchOffset = touch,
+                            touchedUnscaledX = touchedUnscaledX,
                             leftLabelWidthPx = leftLabelWidthPx,
                             plotW = plotW,
                             sessionStartMs = state.session.startTime,
                             scale = state.scale,
                             sortedSamples = state.data.sortedSamples,
-                        )?.also { selectedSample = it } != null
+                        )
                     }
                 },
     ) {

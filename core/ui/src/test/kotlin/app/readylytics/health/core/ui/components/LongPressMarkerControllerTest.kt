@@ -7,6 +7,7 @@ import com.patrykandpatrick.vico.compose.common.Point
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class LongPressMarkerControllerTest {
@@ -20,19 +21,8 @@ class LongPressMarkerControllerTest {
         )
 
     private var longPressCount = 0
-    private var dismissCount = 0
-    private var tooltipVisible = false
 
-    private val controller =
-        LongPressMarkerController(
-            onLongPress = { longPressCount++ },
-            onTap = {
-                dismissIfVisible(isVisible = { tooltipVisible }, onDismiss = {
-                    dismissCount++
-                    tooltipVisible = false
-                })
-            },
-        )
+    private val controller = LongPressMarkerController(onLongPress = { longPressCount++ })
 
     /** Mirrors Vico's host: shouldShowMarker is only consulted after the interaction is accepted. */
     private fun dispatch(
@@ -107,18 +97,10 @@ class LongPressMarkerControllerTest {
     }
 
     @Test
-    fun `tap dismisses a visible tooltip and is consumed`() {
-        tooltipVisible = true
-
-        assertEquals(false, dispatch(Interaction.Tap(point)))
-        assertEquals(1, dismissCount)
-        assertFalse(tooltipVisible)
-    }
-
-    @Test
-    fun `tap without a visible tooltip is not consumed`() {
+    fun `tap is ignored because the tooltip popup dismisses itself`() {
         assertEquals(null, dispatch(Interaction.Tap(point)))
-        assertEquals(0, dismissCount)
+        assertFalse(controller.isScrubbing)
+        assertEquals(0, longPressCount)
     }
 
     @Test
@@ -128,12 +110,7 @@ class LongPressMarkerControllerTest {
     }
 
     @Test
-    fun `dismissIfVisible only dismisses when visible`() {
-        var dismissed = 0
-
-        assertFalse(dismissIfVisible(isVisible = { false }, onDismiss = { dismissed++ }))
-        assertEquals(0, dismissed)
-        assertTrue(dismissIfVisible(isVisible = { true }, onDismiss = { dismissed++ }))
-        assertEquals(1, dismissed)
+    fun `scrub gate is one stable modifier per controller`() {
+        assertSame(controller.scrubGate, controller.scrubGate)
     }
 }

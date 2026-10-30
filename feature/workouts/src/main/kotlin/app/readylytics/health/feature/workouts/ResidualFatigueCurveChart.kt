@@ -1,7 +1,5 @@
 package app.readylytics.health.feature.workouts
 
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,7 +17,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -37,7 +34,7 @@ import app.readylytics.health.core.ui.components.DataPointTooltipData
 import app.readylytics.health.core.ui.components.InvisibleMarker
 import app.readylytics.health.core.ui.components.LongPressMarkerController
 import app.readylytics.health.core.ui.components.VicoChartTooltipOverlay
-import app.readylytics.health.core.ui.components.consumeGesturesWhileScrubbing
+import app.readylytics.health.core.ui.components.dismissOnMultiTouch
 import app.readylytics.health.core.ui.components.rememberChartMarkerVisibilityListener
 import app.readylytics.health.core.ui.components.rememberLongPressMarkerController
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
@@ -200,8 +197,7 @@ private fun ResidualFatigueChartBox(
     onMultiTouch: () -> Unit,
     onDismissTooltip: () -> Unit,
 ) {
-    val markerController =
-        rememberLongPressMarkerController(isVisible = { state.tooltip != null }, onDismiss = onDismissTooltip)
+    val markerController = rememberLongPressMarkerController()
     Box(
         modifier =
             Modifier
@@ -211,18 +207,7 @@ private fun ResidualFatigueChartBox(
                     contentDescription = state.summary
                     stateDescription = state.selectedValueDesc
                     customActions = state.actions
-                }.pointerInput(Unit) {
-                    awaitEachGesture {
-                        awaitFirstDown(requireUnconsumed = false)
-                        do {
-                            val event = awaitPointerEvent()
-                            val isMulti = event.changes.size > 1
-                            if (isMulti) {
-                                onMultiTouch()
-                            }
-                        } while (!isMulti && event.changes.any { it.pressed })
-                    }
-                },
+                }.dismissOnMultiTouch(onMultiTouch),
     ) {
         ResidualFatigueCartesianHost(
             points = points,
@@ -313,6 +298,6 @@ private fun ResidualFatigueCartesianHost(
             ),
         modelProducer = modelProducer,
         zoomState = rememberVicoZoomState(zoomEnabled = false, initialZoom = Zoom.Content),
-        modifier = Modifier.fillMaxWidth().height(200.dp).consumeGesturesWhileScrubbing(markerController),
+        modifier = Modifier.fillMaxWidth().height(200.dp).then(markerController.scrubGate),
     )
 }
