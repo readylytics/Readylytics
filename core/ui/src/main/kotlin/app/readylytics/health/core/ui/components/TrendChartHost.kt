@@ -76,8 +76,7 @@ internal fun TrendChartHostBox(
         })
     val chartContext =
         TrendChartContext(renderData, config, bounds, visuals, uiState.parentScrollInProgress, tooltipWrapper)
-    val markerController =
-        rememberLongPressMarkerController(isVisible = { tooltipState != null }, onDismiss = { tooltipState = null })
+    val markerController = rememberLongPressMarkerController()
     val chart = rememberTrendCartesianChart(chartContext, markerController)
 
     Box(modifier = modifier.fillMaxWidth()) {
@@ -90,7 +89,7 @@ internal fun TrendChartHostBox(
                 Modifier
                     .fillMaxWidth()
                     .height(TREND_CHART_HEIGHT_DP)
-                    .consumeGesturesWhileScrubbing(markerController),
+                    .then(markerController.scrubGate),
             chartAreaHeight = TREND_CHART_HEIGHT_DP,
         )
 

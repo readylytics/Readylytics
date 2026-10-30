@@ -41,7 +41,6 @@ import app.readylytics.health.core.ui.common.rememberPeriodOrdinalLabel
 import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
-import app.readylytics.health.core.ui.components.consumeGesturesWhileScrubbing
 import app.readylytics.health.core.ui.components.rememberLongPressMarkerController
 import app.readylytics.health.feature.workouts.R
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
@@ -501,8 +500,7 @@ private fun AcwrChart(
             ratioPoints = remappedRatioPoints,
             onStateChanged = { selectedState = it },
         )
-    val markerController =
-        rememberLongPressMarkerController(isVisible = { selectedState != null }, onDismiss = { selectedState = null })
+    val markerController = rememberLongPressMarkerController()
 
     // ── Chart host + animated overlay ────────────────────────────────────────
     val chartHeight = 220.dp
@@ -574,10 +572,10 @@ private fun AcwrChart(
             modelProducer = modelProducer,
             scrollState = scrollState,
             zoomState = zoomState,
-            modifier = Modifier.fillMaxWidth().height(chartHeight).consumeGesturesWhileScrubbing(markerController),
+            modifier = Modifier.fillMaxWidth().height(chartHeight).then(markerController.scrubGate),
         )
 
-        // Vico's touch resolution can report only the TRIMP column target when the tap lands on a
+        // Vico's touch resolution can report only the TRIMP column target when the touch lands on a
         // bar, leaving lineCanvasY null so the Strain Ratio pulse would not render. Recompute the
         // dot's canvas-y from the strain value + layer bounds so the ACWR point is always anchored.
         val overlayState =

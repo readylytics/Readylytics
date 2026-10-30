@@ -12,7 +12,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.InvisibleMarker
-import app.readylytics.health.core.ui.components.consumeGesturesWhileScrubbing
 import app.readylytics.health.core.ui.components.rememberChartMarkerVisibilityListener
 import app.readylytics.health.core.ui.components.rememberLongPressMarkerController
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChart
@@ -47,16 +46,12 @@ internal fun DistanceSeriesCartesianChart(
     lineColor: Color,
     selection: DistanceChartSelection,
 ) {
-    val markerController =
-        rememberLongPressMarkerController(
-            isVisible = { selection.tooltip != null },
-            onDismiss = { selection.clearTooltip() },
-        )
+    val markerController = rememberLongPressMarkerController()
     CartesianChartHost(
         chart = rememberDistanceCartesianChart(points, kind, units, lineColor, selection, markerController),
         modelProducer = rememberDistanceSeriesModel(points),
         zoomState = rememberVicoZoomState(zoomEnabled = false, initialZoom = Zoom.Content),
-        modifier = Modifier.fillMaxWidth().height(DistanceChartHeight).consumeGesturesWhileScrubbing(markerController),
+        modifier = Modifier.fillMaxWidth().height(DistanceChartHeight).then(markerController.scrubGate),
     )
 }
 

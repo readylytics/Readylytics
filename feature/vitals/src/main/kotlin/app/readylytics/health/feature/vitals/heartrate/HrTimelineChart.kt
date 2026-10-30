@@ -241,23 +241,17 @@ private fun HrTimelineChartVisuals(
                         offsetX = newOffsetX
                     }
                 }.pointerInput(state.data.samples, state.dayStartMs, scaleX, offsetX, state.scale) {
-                    // Long press selects, then scrubs; a short tap only dismisses, so a scroll
-                    // that starts on the chart never opens a tooltip.
-                    detectLongPressSelection(
-                        hapticFeedback = hapticFeedback,
-                        isVisible = { selectedSample != null },
-                        onDismiss = { selectedSample = null },
-                    ) { touch ->
-                        val tappedUnscaledX = leftLabelWidthPx + (touch.x - leftLabelWidthPx - offsetX) / scaleX
-                        resolveTappedHrTimelineSample(
-                            tapOffset = touch,
-                            tappedUnscaledX = tappedUnscaledX,
+                    detectLongPressSelection(hapticFeedback, state.interaction.selectedSample) { touch ->
+                        val touchedUnscaledX = leftLabelWidthPx + (touch.x - leftLabelWidthPx - offsetX) / scaleX
+                        resolveTouchedHrTimelineSample(
+                            touchOffset = touch,
+                            touchedUnscaledX = touchedUnscaledX,
                             leftLabelWidthPx = leftLabelWidthPx,
                             plotW = plotW,
                             dayStartMs = state.dayStartMs,
                             scale = state.scale,
                             samples = state.data.samples,
-                        )?.also { selectedSample = it } != null
+                        )
                     }
                 },
     ) {

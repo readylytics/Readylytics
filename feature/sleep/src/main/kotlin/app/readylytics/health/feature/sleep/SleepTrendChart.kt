@@ -46,7 +46,6 @@ import app.readylytics.health.core.ui.common.periodLabelFor
 import app.readylytics.health.core.ui.common.rememberPeriodOrdinalLabel
 import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.DataPointTooltip
-import app.readylytics.health.core.ui.components.consumeGesturesWhileScrubbing
 import app.readylytics.health.core.ui.components.rememberLongPressMarkerController
 import app.readylytics.health.feature.sleep.R
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
@@ -546,8 +545,7 @@ fun SleepTrendChart(
             granularity = granularity,
             onStateChanged = { selectedState = it },
         )
-    val markerController =
-        rememberLongPressMarkerController(isVisible = { selectedState != null }, onDismiss = { selectedState = null })
+    val markerController = rememberLongPressMarkerController()
 
     val chartHeight = 220.dp
     if (!hasData) {
@@ -617,7 +615,7 @@ fun SleepTrendChart(
                 modelProducer = modelProducer,
                 scrollState = scrollState,
                 zoomState = zoomState,
-                modifier = Modifier.fillMaxWidth().height(chartHeight).consumeGesturesWhileScrubbing(markerController),
+                modifier = Modifier.fillMaxWidth().height(chartHeight).then(markerController.scrubGate),
             )
 
             SleepTrendOverlay(

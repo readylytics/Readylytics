@@ -65,6 +65,7 @@ import app.readylytics.health.core.ui.R as CoreUiR
 private val LANE_HEIGHT = 56.dp
 private val SHAPE_INSET = 4.dp
 private val SHAPE_CORNER = 6.dp
+private val MIN_SHAPE_WIDTH = 4.dp
 private val LABEL_WIDTH = 64.dp
 private val CHART_TOTAL_HEIGHT = LANE_HEIGHT * 4
 
@@ -86,7 +87,7 @@ private const val REM_LANE_INDEX = 1
 private const val LIGHT_LANE_INDEX = 2
 private const val DEEP_LANE_INDEX = 3
 
-private fun getStageLaneIndex(stageType: String): Int =
+internal fun getStageLaneIndex(stageType: String): Int =
     when (stageType) {
         SleepStageType.AWAKE.value -> AWAKE_LANE_INDEX
         SleepStageType.REM.value -> REM_LANE_INDEX
@@ -192,12 +193,6 @@ private val LANES =
         LaneInfo(SleepStageType.DEEP.value, R.string.sleep_stage_deep),
     )
 
-private data class SelectedSegmentState(
-    val stage: SleepStageData,
-    val segmentCenterXPx: Float,
-    val segmentCenterYPx: Float,
-)
-
 @Composable
 fun SleepStagesChart(
     session: SleepSessionData?,
@@ -264,7 +259,8 @@ fun SleepStagesChart(
             label = "sleepHaloRadiusCoeff",
         )
 
-    var selectedSegment by remember { mutableStateOf<SelectedSegmentState?>(null) }
+    val selectedSegmentState = remember { mutableStateOf<SelectedSegmentState?>(null) }
+    var selectedSegment by selectedSegmentState
     val hapticFeedback = LocalHapticFeedback.current
 
     LaunchedEffect(session) {
@@ -339,24 +335,19 @@ fun SleepStagesChart(
                 remember(selectedSegment, mergedTimeline, session, chartWidth, density) {
                     val list = mutableListOf<CustomAccessibilityAction>()
                     if (mergedTimeline.isNotEmpty()) {
-                        val sessionDuration = (session.endTime - session.startTime).coerceAtLeast(1L)
-                        val laneHeightPx = with(density) { LANE_HEIGHT.toPx() }
-                        val minW = with(density) { 4.dp.toPx() }
-                        val canvasWidth = with(density) { chartWidth.toPx() }
+                        val geometry =
+                            with(density) {
+                                StageGeometry(
+                                    session = session,
+                                    canvasWidth = chartWidth.toPx(),
+                                    laneHeightPx = LANE_HEIGHT.toPx(),
+                                    insetPx = SHAPE_INSET.toPx(),
+                                    minWidthPx = MIN_SHAPE_WIDTH.toPx(),
+                                )
+                            }
 
                         fun selectIndex(idx: Int) {
-                            val it = mergedTimeline[idx]
-                            val laneIdx = getStageLaneIndex(it.stageType)
-                            val startDiff = (it.startTime - session.startTime).toFloat()
-                            val sx = startDiff / sessionDuration * canvasWidth
-                            val duration = (it.endTime - it.startTime).toFloat()
-                            val w = (duration / sessionDuration * canvasWidth).coerceAtLeast(minW)
-                            selectedSegment =
-                                SelectedSegmentState(
-                                    stage = it,
-                                    segmentCenterXPx = sx + w / 2f,
-                                    segmentCenterYPx = (laneIdx + 0.5f) * laneHeightPx,
-                                )
+                            selectedSegment = geometry.segmentOf(mergedTimeline[idx])
                         }
 
                         list.add(
@@ -437,52 +428,15 @@ fun SleepStagesChart(
                                 stateDescription = selectedValueDescription
                                 customActions = customActionsList
                             }.pointerInput(mergedTimeline, session) {
-                                // Long press selects, then scrubs; a short tap only dismisses, so a scroll
-                                // that starts on the chart never opens a tooltip.
-                                fun segmentAt(touch: Offset): SelectedSegmentState? {
-                                    val canvasWidth = size.width.toFloat()
-                                    val laneHeightPx = LANE_HEIGHT.toPx()
-                                    val insetPx = SHAPE_INSET.toPx()
-                                    val minW = 4.dp.toPx()
-                                    val sessionDuration = (session.endTime - session.startTime).coerceAtLeast(1L)
-
-                                    val hit =
-                                        mergedTimeline.firstOrNull { stageData ->
-                                            val laneIdx = getStageLaneIndex(stageData.stageType)
-                                            val top = laneIdx * laneHeightPx + insetPx
-                                            val height = laneHeightPx - 2 * insetPx
-                                            val sx =
-                                                (stageData.startTime - session.startTime).toFloat() /
-                                                    sessionDuration * canvasWidth
-                                            val w =
-                                                (
-                                                    (stageData.endTime - stageData.startTime).toFloat() /
-                                                        sessionDuration * canvasWidth
-                                                ).coerceAtLeast(minW)
-                                            touch.x in sx..(sx + w) && touch.y in top..(top + height)
-                                        }
-                                    return hit?.let {
-                                        val laneIdx = getStageLaneIndex(it.stageType)
-                                        val sx =
-                                            (it.startTime - session.startTime).toFloat() /
-                                                sessionDuration * canvasWidth
-                                        val w =
-                                            (
-                                                (it.endTime - it.startTime).toFloat() /
-                                                    sessionDuration * canvasWidth
-                                            ).coerceAtLeast(minW)
-                                        SelectedSegmentState(
-                                            stage = it,
-                                            segmentCenterXPx = sx + w / 2f,
-                                            segmentCenterYPx = (laneIdx + 0.5f) * laneHeightPx,
-                                        )
-                                    }
+                                detectLongPressSelection(hapticFeedback, selectedSegmentState) { touch ->
+                                    StageGeometry(
+                                        session = session,
+                                        canvasWidth = size.width.toFloat(),
+                                        laneHeightPx = LANE_HEIGHT.toPx(),
+                                        insetPx = SHAPE_INSET.toPx(),
+                                        minWidthPx = MIN_SHAPE_WIDTH.toPx(),
+                                    ).segmentAt(touch, mergedTimeline)
                                 }
-                                detectLongPressSelection(
-                                    hapticFeedback = hapticFeedback,
-                                    isVisible = { selectedSegment != null },
-                                    onDismiss = { selectedSegment = null },
-                                ) { touch -> segmentAt(touch)?.also { selectedSegment = it } != null }
                             },
                 ) {
                     val canvasWidth = size.width
@@ -519,7 +473,7 @@ fun SleepStagesChart(
                     }
 
                     // 3. Stage shapes — full-height fills with 4dp vertical inset and 6dp corners
-                    val minShapeWidthPx = 4.dp.toPx()
+                    val minShapeWidthPx = MIN_SHAPE_WIDTH.toPx()
                     mergedTimeline.forEachIndexed { index, stageData ->
                         val laneIndex = getStageLaneIndex(stageData.stageType)
                         val shapeTop = laneIndex * laneHeightPx + insetPx
@@ -566,15 +520,12 @@ fun SleepStagesChart(
                     // Values are read here (draw phase) so animation frames only trigger
                     // a redraw, not a full recomposition of SleepStagesChart.
                     selectedSegment?.let { sel ->
-                        val selSessionDuration = (session.endTime - session.startTime).coerceAtLeast(1L)
-                        val selSx =
-                            (sel.stage.startTime - session.startTime).toFloat() / selSessionDuration * canvasWidth
-                        val selW =
-                            (
-                                (sel.stage.endTime - sel.stage.startTime).toFloat() /
-                                    selSessionDuration * canvasWidth
-                            ).coerceAtLeast(4.dp.toPx())
-                        val centerX = selSx + selW / 2f
+                        val span =
+                            StageGeometry(session, canvasWidth, laneHeightPx, insetPx, minShapeWidthPx)
+                                .spanOf(sel.stage)
+                        val selSx = span.startX
+                        val selW = span.width
+                        val centerX = span.centerX
 
                         // Vertical indicator line
                         drawLine(
