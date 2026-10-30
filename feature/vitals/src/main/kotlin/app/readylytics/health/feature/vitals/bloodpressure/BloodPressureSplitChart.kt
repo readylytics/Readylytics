@@ -189,7 +189,7 @@ fun BloodPressureSplitChart(
                 showTooltip = false,
                 parentScrollInProgress = parentScrollInProgress,
             )
-            // Combined legend – mirrors the one from the original BloodPressureTrendChart
+            // Combined legend for both charts
             Spacer(Modifier.height(MaterialTheme.spacing.smallMedium))
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.medium),

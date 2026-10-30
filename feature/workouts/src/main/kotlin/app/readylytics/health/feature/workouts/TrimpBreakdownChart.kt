@@ -1,7 +1,5 @@
 package app.readylytics.health.feature.workouts
 
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -22,7 +20,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -37,7 +34,9 @@ import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
 import app.readylytics.health.core.ui.components.InvisibleMarker
 import app.readylytics.health.core.ui.components.VicoChartTooltipOverlay
+import app.readylytics.health.core.ui.components.dismissOnMultiTouch
 import app.readylytics.health.core.ui.components.rememberChartMarkerVisibilityListener
+import app.readylytics.health.core.ui.components.rememberLongPressMarkerController
 import app.readylytics.health.feature.workouts.R
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
@@ -200,6 +199,7 @@ private fun HrChart(
                 selectedIndex = idx
             },
         )
+    val markerController = rememberLongPressMarkerController()
     val prevActionLabel = stringResource(CoreUiR.string.action_previous_point)
     val nextActionLabel = stringResource(CoreUiR.string.action_next_point)
     val clearActionLabel = stringResource(CoreUiR.string.action_clear_selection)
@@ -268,22 +268,9 @@ private fun HrChart(
                     contentDescription = chartSummary
                     stateDescription = selectedValueDescription
                     customActions = customActionsList
-                }.pointerInput(Unit) {
-                    awaitEachGesture {
-                        awaitFirstDown(requireUnconsumed = false)
-                        var isMultiTouch = false
-                        while (!isMultiTouch) {
-                            val event = awaitPointerEvent()
-                            // Stop polling once all fingers are lifted
-                            if (event.changes.none { it.pressed }) break
-                            if (event.changes.size > 1) {
-                                // Multi-touch: pan/zoom detected — clear tooltip
-                                isMultiTouch = true
-                                tooltipState = null
-                                selectedPointOffset = null
-                            }
-                        }
-                    }
+                }.dismissOnMultiTouch {
+                    tooltipState = null
+                    selectedPointOffset = null
                 },
     ) {
         CartesianChartHost(
@@ -331,6 +318,7 @@ private fun HrChart(
                         ),
                     marker = InvisibleMarker,
                     markerVisibilityListener = markerVisibilityListener,
+                    markerController = markerController,
                 ),
             modelProducer = modelProducer,
             zoomState =
@@ -338,7 +326,7 @@ private fun HrChart(
                     zoomEnabled = false,
                     initialZoom = Zoom.Content,
                 ),
-            modifier = Modifier.fillMaxWidth().height(200.dp),
+            modifier = Modifier.fillMaxWidth().height(200.dp).then(markerController.scrubGate),
         )
 
         VicoChartTooltipOverlay(

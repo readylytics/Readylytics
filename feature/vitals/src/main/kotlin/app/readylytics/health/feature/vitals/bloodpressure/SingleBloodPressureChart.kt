@@ -35,6 +35,7 @@ import app.readylytics.health.core.ui.components.VicoChartTooltipOverlay
 import app.readylytics.health.core.ui.components.ZoneBandDecoration
 import app.readylytics.health.core.ui.components.formatTrendTooltipDate
 import app.readylytics.health.core.ui.components.rememberChartMarkerVisibilityListener
+import app.readylytics.health.core.ui.components.rememberLongPressMarkerController
 import app.readylytics.health.core.ui.components.rememberZoneBandColors
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
@@ -274,6 +275,8 @@ fun SingleBloodPressureChart(
             )
         }
 
+    val markerController = rememberLongPressMarkerController()
+
     Box(
         modifier = modifier.fillMaxWidth(),
     ) {
@@ -307,11 +310,12 @@ fun SingleBloodPressureChart(
                     decorations = decorations,
                     marker = InvisibleMarker,
                     markerVisibilityListener = markerVisibilityListener,
+                    markerController = markerController,
                 ),
             modelProducer = modelProducer,
             scrollState = scrollState,
             zoomState = zoomState,
-            modifier = Modifier.fillMaxWidth().height(180.dp),
+            modifier = Modifier.fillMaxWidth().height(180.dp).then(markerController.scrubGate),
         )
         VicoChartTooltipOverlay(
             // In coordinated mode selectedPointOffset is always null;

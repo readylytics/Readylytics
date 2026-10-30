@@ -1,7 +1,5 @@
 package app.readylytics.health.feature.workouts
 
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,7 +17,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -35,8 +32,11 @@ import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
 import app.readylytics.health.core.ui.components.InvisibleMarker
+import app.readylytics.health.core.ui.components.LongPressMarkerController
 import app.readylytics.health.core.ui.components.VicoChartTooltipOverlay
+import app.readylytics.health.core.ui.components.dismissOnMultiTouch
 import app.readylytics.health.core.ui.components.rememberChartMarkerVisibilityListener
+import app.readylytics.health.core.ui.components.rememberLongPressMarkerController
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
@@ -137,7 +137,7 @@ private fun ResidualFatigueChartContent(
         )
 
     // No onHidden wiring: Vico hides its marker on finger lift, so clearing selection there would
-    // dismiss the tooltip on the same tap that opened it. Selection is cleared explicitly instead
+    // dismiss the tooltip on the same long press that opened it. Selection is cleared explicitly instead
     // (tooltip dismiss, multi-touch, parent scroll, range change).
     val markerListener =
         rememberChartMarkerVisibilityListener { x, _, canvasX, canvasY ->
@@ -197,6 +197,7 @@ private fun ResidualFatigueChartBox(
     onMultiTouch: () -> Unit,
     onDismissTooltip: () -> Unit,
 ) {
+    val markerController = rememberLongPressMarkerController()
     Box(
         modifier =
             Modifier
@@ -206,24 +207,14 @@ private fun ResidualFatigueChartBox(
                     contentDescription = state.summary
                     stateDescription = state.selectedValueDesc
                     customActions = state.actions
-                }.pointerInput(Unit) {
-                    awaitEachGesture {
-                        awaitFirstDown(requireUnconsumed = false)
-                        do {
-                            val event = awaitPointerEvent()
-                            val isMulti = event.changes.size > 1
-                            if (isMulti) {
-                                onMultiTouch()
-                            }
-                        } while (!isMulti && event.changes.any { it.pressed })
-                    }
-                },
+                }.dismissOnMultiTouch(onMultiTouch),
     ) {
         ResidualFatigueCartesianHost(
             points = points,
             range = range,
             zoneId = zoneId,
             markerListener = markerListener,
+            markerController = markerController,
         )
         VicoChartTooltipOverlay(
             selectedPointOffset =
@@ -250,6 +241,7 @@ private fun ResidualFatigueCartesianHost(
     range: FatigueCurveRange,
     zoneId: ZoneId,
     markerListener: CartesianMarkerVisibilityListener,
+    markerController: LongPressMarkerController,
 ) {
     val modelProducer = remember { CartesianChartModelProducer() }
     LaunchedEffect(points) {
@@ -302,9 +294,10 @@ private fun ResidualFatigueCartesianHost(
                     ),
                 marker = InvisibleMarker,
                 markerVisibilityListener = markerListener,
+                markerController = markerController,
             ),
         modelProducer = modelProducer,
         zoomState = rememberVicoZoomState(zoomEnabled = false, initialZoom = Zoom.Content),
-        modifier = Modifier.fillMaxWidth().height(200.dp),
+        modifier = Modifier.fillMaxWidth().height(200.dp).then(markerController.scrubGate),
     )
 }

@@ -33,6 +33,7 @@ import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.compose.cartesian.data.lineModel
 import com.patrykandpatrick.vico.compose.cartesian.decoration.Decoration
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerController
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -75,7 +76,8 @@ internal fun TrendChartHostBox(
         })
     val chartContext =
         TrendChartContext(renderData, config, bounds, visuals, uiState.parentScrollInProgress, tooltipWrapper)
-    val chart = rememberTrendCartesianChart(chartContext)
+    val markerController = rememberLongPressMarkerController()
+    val chart = rememberTrendCartesianChart(chartContext, markerController)
 
     Box(modifier = modifier.fillMaxWidth()) {
         CartesianChartHost(
@@ -83,7 +85,11 @@ internal fun TrendChartHostBox(
             modelProducer = modelProducer,
             scrollState = uiState.scrollState,
             zoomState = uiState.zoomState,
-            modifier = Modifier.fillMaxWidth().height(TREND_CHART_HEIGHT_DP),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(TREND_CHART_HEIGHT_DP)
+                    .then(markerController.scrubGate),
             chartAreaHeight = TREND_CHART_HEIGHT_DP,
         )
 
@@ -148,7 +154,10 @@ private fun rememberTrendModelProducer(
 }
 
 @Composable
-private fun rememberTrendCartesianChart(context: TrendChartContext): CartesianChart {
+private fun rememberTrendCartesianChart(
+    context: TrendChartContext,
+    markerController: CartesianMarkerController,
+): CartesianChart {
     val decorations = rememberChartDecorations(context)
     val lineProvider =
         rememberTrendLineProvider(
@@ -168,6 +177,7 @@ private fun rememberTrendCartesianChart(context: TrendChartContext): CartesianCh
         decorations = decorations,
         marker = InvisibleMarker,
         markerVisibilityListener = markerListener,
+        markerController = markerController,
     )
 }
 

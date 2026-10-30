@@ -4,12 +4,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.unit.IntOffset
+import app.readylytics.health.core.ui.common.nearestByTime
 import app.readylytics.health.core.ui.components.DataPointTooltipData
 import app.readylytics.health.core.ui.components.DayTimelineScale
 import app.readylytics.health.core.ui.model.HrSample
 import java.time.Instant
 import java.time.ZoneId
-import kotlin.math.abs
 import kotlin.math.roundToInt
 
 // See the file-header comment in HrTimelineChart.kt: pure (non-Composable) plot math extracted
@@ -41,25 +41,26 @@ internal fun hrTimelineZoomPan(
     return newScaleX to newOffsetX
 }
 
-internal fun findTappedHrTimelineSample(
-    tapOffset: Offset,
-    tappedUnscaledX: Float,
+/** Nearest sample to the touch inside [plotRect]; [samples] must be sorted ascending by time. */
+internal fun findTouchedHrTimelineSample(
+    touchOffset: Offset,
+    touchedUnscaledX: Float,
     plotRect: Rect,
     plotW: Float,
     dayStartMs: Long,
     scale: DayTimelineScale,
     samples: List<HrSample>,
 ): HrSample? {
-    if (!plotRect.contains(tapOffset)) return null
-    val tapFrac = ((tappedUnscaledX - plotRect.left) / plotW).coerceIn(0f, 1f)
-    val tapMs = dayStartMs + (tapFrac * scale.durationMs).toLong()
-    return samples.minByOrNull { abs(it.timeMs - tapMs) }
+    if (!plotRect.contains(touchOffset)) return null
+    val touchFrac = ((touchedUnscaledX - plotRect.left) / plotW).coerceIn(0f, 1f)
+    val touchMs = dayStartMs + (touchFrac * scale.durationMs).toLong()
+    return samples.nearestByTime(touchMs) { it.timeMs }
 }
 
-/** Resolves the tapped gesture coordinate to the nearest sample, using the PointerInputScope's own size/density. */
-internal fun PointerInputScope.resolveTappedHrTimelineSample(
-    tapOffset: Offset,
-    tappedUnscaledX: Float,
+/** Resolves the touched gesture coordinate to the nearest sample, using the PointerInputScope's own size/density. */
+internal fun PointerInputScope.resolveTouchedHrTimelineSample(
+    touchOffset: Offset,
+    touchedUnscaledX: Float,
     leftLabelWidthPx: Float,
     plotW: Float,
     dayStartMs: Long,
@@ -68,7 +69,7 @@ internal fun PointerInputScope.resolveTappedHrTimelineSample(
 ): HrSample? {
     val bottomLabelHeightPx = HR_TIMELINE_BOTTOM_LABEL_HEIGHT.toPx()
     val plotRect = Rect(leftLabelWidthPx, 0f, size.width.toFloat(), size.height.toFloat() - bottomLabelHeightPx)
-    return findTappedHrTimelineSample(tapOffset, tappedUnscaledX, plotRect, plotW, dayStartMs, scale, samples)
+    return findTouchedHrTimelineSample(touchOffset, touchedUnscaledX, plotRect, plotW, dayStartMs, scale, samples)
 }
 
 internal fun computeHrTimelineTooltip(
