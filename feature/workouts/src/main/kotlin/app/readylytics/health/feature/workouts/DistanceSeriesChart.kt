@@ -1,7 +1,5 @@
 package app.readylytics.health.feature.workouts
 
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,7 +15,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -30,6 +27,7 @@ import app.readylytics.health.core.model.domain.preferences.UnitSystem
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
 import app.readylytics.health.core.ui.components.VicoChartTooltipOverlay
+import app.readylytics.health.core.ui.components.dismissOnMultiTouch
 import app.readylytics.health.core.ui.R as CoreUiR
 
 /** Selection + tooltip state shared by one chart's effects, semantics and gesture handling. */
@@ -97,7 +95,7 @@ internal fun DistanceSeriesChart(
                     contentDescription = semanticsState.summary
                     stateDescription = semanticsState.selection
                     customActions = semanticsState.actions
-                }.dismissTooltipOnMultiTouch(selection),
+                }.dismissOnMultiTouch { selection.clearTooltip() },
     ) {
         DistanceSeriesCartesianChart(points, kind, units, lineColor, selection)
         VicoChartTooltipOverlay(
@@ -228,21 +226,5 @@ private fun buildSelectionActions(
                     true
                 },
             )
-        }
-    }
-
-private fun Modifier.dismissTooltipOnMultiTouch(selection: DistanceChartSelection): Modifier =
-    pointerInput(Unit) {
-        awaitEachGesture {
-            awaitFirstDown(requireUnconsumed = false)
-            var isMultiTouch = false
-            while (!isMultiTouch) {
-                val event = awaitPointerEvent()
-                if (event.changes.none { it.pressed }) break
-                if (event.changes.size > 1) {
-                    isMultiTouch = true
-                    selection.clearTooltip()
-                }
-            }
         }
     }

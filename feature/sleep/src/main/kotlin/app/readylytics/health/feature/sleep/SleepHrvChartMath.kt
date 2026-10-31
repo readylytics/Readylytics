@@ -5,37 +5,37 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.unit.IntOffset
 import app.readylytics.health.core.model.domain.repository.HrvRecordData
+import app.readylytics.health.core.ui.common.nearestByTime
 import app.readylytics.health.core.ui.components.DataPointTooltipData
 import app.readylytics.health.core.ui.components.DayTimelineScale
 import java.time.Instant
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import kotlin.math.abs
 import kotlin.math.roundToInt
 
 // Pure (non-Composable) plot math for the nightly HRV chart, mirroring SleepHrChartMath.kt's
-// tap-resolution/tooltip helpers for HrvRecordData. sleepHrZoomedX/sleepHrZoomPan are geometry-only
+// touch-resolution/tooltip helpers for HrvRecordData. sleepHrZoomedX/sleepHrZoomPan are geometry-only
 // (no HR-specific types) so this chart reuses them directly instead of duplicating.
 
-internal fun findTappedSleepHrvSample(
-    tapOffset: Offset,
-    tappedUnscaledX: Float,
+internal fun findTouchedSleepHrvSample(
+    touchOffset: Offset,
+    touchedUnscaledX: Float,
     plotRect: Rect,
     plotW: Float,
     sessionStartMs: Long,
     scale: DayTimelineScale,
     sortedSamples: List<HrvRecordData>,
 ): HrvRecordData? {
-    if (!plotRect.contains(tapOffset)) return null
-    val tapFrac = ((tappedUnscaledX - plotRect.left) / plotW).coerceIn(0f, 1f)
-    val tapMs = sessionStartMs + (tapFrac * scale.durationMs).toLong()
-    return sortedSamples.minByOrNull { abs(it.timestampMs - tapMs) }
+    if (!plotRect.contains(touchOffset)) return null
+    val touchFrac = ((touchedUnscaledX - plotRect.left) / plotW).coerceIn(0f, 1f)
+    val touchMs = sessionStartMs + (touchFrac * scale.durationMs).toLong()
+    return sortedSamples.nearestByTime(touchMs) { it.timestampMs }
 }
 
-/** Resolves the tapped gesture coordinate to the nearest sample, using the PointerInputScope's own size/density. */
-internal fun PointerInputScope.resolveTappedSleepHrvSample(
-    tapOffset: Offset,
-    tappedUnscaledX: Float,
+/** Resolves the touched gesture coordinate to the nearest sample, using the PointerInputScope's own size/density. */
+internal fun PointerInputScope.resolveTouchedSleepHrvSample(
+    touchOffset: Offset,
+    touchedUnscaledX: Float,
     leftLabelWidthPx: Float,
     plotW: Float,
     sessionStartMs: Long,
@@ -46,7 +46,15 @@ internal fun PointerInputScope.resolveTappedSleepHrvSample(
     val topLabelPaddingPx = SLEEP_HRV_TOP_LABEL_PADDING.toPx()
     val plotRect =
         Rect(leftLabelWidthPx, topLabelPaddingPx, size.width.toFloat(), size.height.toFloat() - bottomLabelHeightPx)
-    return findTappedSleepHrvSample(tapOffset, tappedUnscaledX, plotRect, plotW, sessionStartMs, scale, sortedSamples)
+    return findTouchedSleepHrvSample(
+        touchOffset,
+        touchedUnscaledX,
+        plotRect,
+        plotW,
+        sessionStartMs,
+        scale,
+        sortedSamples,
+    )
 }
 
 internal fun computeSleepHrvTooltip(

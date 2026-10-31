@@ -36,7 +36,9 @@ import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
 import app.readylytics.health.core.ui.components.InvisibleMarker
+import app.readylytics.health.core.ui.components.LongPressMarkerController
 import app.readylytics.health.core.ui.components.VicoChartTooltipOverlay
+import app.readylytics.health.core.ui.components.rememberLongPressMarkerController
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
@@ -140,6 +142,7 @@ private fun WeeklyVolumeTrendChart(
     val markerVisibilityListener =
         rememberWeeklyVolumeMarkerVisibilityListener(onStateChanged = { selectedState = it })
     val tooltipData = rememberWeeklyVolumeTooltipData(daily, selectedState)
+    val markerController = rememberLongPressMarkerController()
 
     WeeklyVolumeTrendChartContent(
         modifier = modifier,
@@ -151,6 +154,7 @@ private fun WeeklyVolumeTrendChart(
                 rangeProvider = rangeProvider,
                 weekdayLabels = weekdayLabels,
                 markerVisibilityListener = markerVisibilityListener,
+                markerController = markerController,
             ),
         selectedState = selectedState,
         tooltipData = tooltipData,
@@ -160,7 +164,8 @@ private fun WeeklyVolumeTrendChart(
 
 /**
  * Bundles the Vico building blocks for the chart so [WeeklyVolumeTrendChartContent] stays within
- * detekt's parameter budget. All members are remembered upstream and never mutated.
+ * detekt's parameter budget. All members are remembered upstream and the spec is never mutated,
+ * but [markerController] keeps the live scrub flag that Vico flips during a gesture.
  */
 private data class WeeklyVolumeChartSpec(
     val modelProducer: CartesianChartModelProducer,
@@ -169,6 +174,7 @@ private data class WeeklyVolumeChartSpec(
     val rangeProvider: CartesianLayerRangeProvider,
     val weekdayLabels: List<String>,
     val markerVisibilityListener: CartesianMarkerVisibilityListener,
+    val markerController: LongPressMarkerController,
 )
 
 @Composable
@@ -342,11 +348,12 @@ private fun WeeklyVolumeTrendChartContent(
                         ),
                     marker = InvisibleMarker,
                     markerVisibilityListener = spec.markerVisibilityListener,
+                    markerController = spec.markerController,
                 ),
             modelProducer = spec.modelProducer,
             scrollState = rememberVicoScrollState(scrollEnabled = false),
             zoomState = rememberVicoZoomState(zoomEnabled = false, initialZoom = Zoom.Content),
-            modifier = Modifier.fillMaxWidth().height(CHART_HEIGHT_DP.dp),
+            modifier = Modifier.fillMaxWidth().height(CHART_HEIGHT_DP.dp).then(spec.markerController.scrubGate),
         )
 
         VicoChartTooltipOverlay(

@@ -1,7 +1,6 @@
 package app.readylytics.health.feature.vitals.heartrate
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -16,6 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -28,6 +28,7 @@ import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
 import app.readylytics.health.core.ui.components.DayTimelineScale
 import app.readylytics.health.core.ui.components.EmptyChartPlaceholder
+import app.readylytics.health.core.ui.components.detectLongPressSelection
 import app.readylytics.health.core.ui.model.HrSample
 import java.time.Instant
 import java.time.ZoneId
@@ -221,6 +222,7 @@ private fun HrTimelineChartVisuals(
     var scaleX by state.interaction.scaleX
     var offsetX by state.interaction.offsetX
     var selectedSample by state.interaction.selectedSample
+    val hapticFeedback = LocalHapticFeedback.current
 
     Canvas(
         modifier =
@@ -239,18 +241,17 @@ private fun HrTimelineChartVisuals(
                         offsetX = newOffsetX
                     }
                 }.pointerInput(state.data.samples, state.dayStartMs, scaleX, offsetX, state.scale) {
-                    detectTapGestures { tapOffset ->
-                        val tappedUnscaledX = leftLabelWidthPx + (tapOffset.x - leftLabelWidthPx - offsetX) / scaleX
-                        selectedSample =
-                            resolveTappedHrTimelineSample(
-                                tapOffset = tapOffset,
-                                tappedUnscaledX = tappedUnscaledX,
-                                leftLabelWidthPx = leftLabelWidthPx,
-                                plotW = plotW,
-                                dayStartMs = state.dayStartMs,
-                                scale = state.scale,
-                                samples = state.data.samples,
-                            ) ?: return@detectTapGestures
+                    detectLongPressSelection(hapticFeedback, state.interaction.selectedSample) { touch ->
+                        val touchedUnscaledX = leftLabelWidthPx + (touch.x - leftLabelWidthPx - offsetX) / scaleX
+                        resolveTouchedHrTimelineSample(
+                            touchOffset = touch,
+                            touchedUnscaledX = touchedUnscaledX,
+                            leftLabelWidthPx = leftLabelWidthPx,
+                            plotW = plotW,
+                            dayStartMs = state.dayStartMs,
+                            scale = state.scale,
+                            samples = state.data.samples,
+                        )
                     }
                 },
     ) {

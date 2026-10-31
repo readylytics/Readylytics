@@ -1981,8 +1981,8 @@ The calculation is always on; users can optionally visualize Residual Fatigue ac
        X-axis ticks and labels from ResidualFatigueAxis.kt (real zoned midnights / wall-clock hours,
        so a DST day's boundaries are not assumed to sit on multiples of 1440 minutes),
        a "now" dot on the final sample whenever the curve stops short of the axis maximum,
-       and interactive touch drag-scrubber with tooltip readout (HH:mm for 1D, EEE, MMM d, HH:mm
-       for 3D/7D, both read off the sample's own instant).
+       and an interactive long-press scrubber (press and hold, then drag) with tooltip readout
+       (HH:mm for 1D, EEE, MMM d, HH:mm for 3D/7D, both read off the sample's own instant).
      ```
 
 ### 2.9 Cardio Fitness (VO2 Max)
@@ -2357,7 +2357,8 @@ so a burst of ingest-batch invalidations collapses into one re-render.
 | `TrainingMixSection` / `TrainingMixCard`                                                      | `feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts/`                                 | Custom `Canvas` donut chart visualization of weekly training distribution by activity type.                                                |
 | `RouteContourCard` / `WorkoutPerformanceCharts`                                               | `feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts/`                                 | Custom on-device `Canvas` route contour visualization (Douglas-Peucker line simplification) and pace/speed/elevation charts.               |
 | `SleepStagesChart` / `SleepArchitectureBar` / `SleepHrChart`                                  | `feature/sleep/src/main/kotlin/app/readylytics/health/feature/sleep/`              | Sleep stage + sleep HR Canvas visualizations.                                                                                              |
-| `VicoChartTooltipOverlay` / `DataPointTooltip`                                                | `ui/components/`                                  | Touch interception + floating tooltip overlay for Vico charts.                                                                             |
+| `VicoChartTooltipOverlay` / `DataPointTooltip`                                                | `ui/components/`                                  | Passive point-highlight overlay + floating tooltip popup for charts; the popup dismisses itself on the next outside touch.                 |
+| `LongPressMarkerController` / `detectLongPressSelection` / `dismissOnMultiTouch`              | `ui/components/`                                  | Long-press-to-open chart tooltips (Vico marker controller + scrub gate, Canvas selection, multi-touch dismissal), so scrolling over a chart never flashes one.|
 | `ReorderableCardGrid` (+ `reorder/DragController`)                                            | `ui/components/`                                  | Drag-and-drop dashboard card grid.                                                                                                         |
 | `SleepTrendChart`                                                                             | `feature/sleep/src/main/kotlin/app/readylytics/health/feature/sleep/SleepTrendChart.kt` | Vico stacked column & line dual-axis sleep window & duration chart.                                                                        |                                                                        |
 
@@ -2575,7 +2576,7 @@ Feature paths and ViewModels maintain strict ownership of time queries by accept
 | `feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard/usecase/LiveResidualFatigue.kt` | Domain — tri-state | separates "use the snapshot" from "unknown", so a gated today cannot render the understated snapshot (§2.8) |
 | `feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard/DashboardFatigueTicker.kt` | UI — refresh cadence | minute-bucket flow driving live fatigue re-decay while the dashboard is subscribed (§2.8) |
 | `core/database/src/main/kotlin/app/readylytics/health/core/database/data/repository/FinalSummaryAssembler.kt` | Processing — summary assembly | stamps `residualFatigue`, then computes/stores both source-specific Training Readiness projections with the applied S/w pair (§2.8) |
-| `feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts/ResidualFatigueCurveChart.kt`     | UI — Canvas chart                                   | 1D/3D/7D continuous residual fatigue decay curve with touch scrubber and "now" dot |
+| `feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts/ResidualFatigueCurveChart.kt`     | UI — Canvas chart                                   | 1D/3D/7D continuous residual fatigue decay curve with long-press scrubber and "now" dot |
 | `feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts/ResidualFatigueAxis.kt`           | UI — chart axis                                     | DST-aware x-axis tick positions and labels for the residual fatigue curve |
 | `feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard/DashboardViewModel.kt` | UI — dashboard state                                | summary, cards, RAS, recalc progress                                                     |
 | `ui/sync/SyncViewModel.kt`                                                 | UI — sync state                                     | `recalcProgress` forward                                                                 |
