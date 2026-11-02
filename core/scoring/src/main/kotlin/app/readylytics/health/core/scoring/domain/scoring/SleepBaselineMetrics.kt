@@ -71,12 +71,13 @@ internal fun isStagesSuspicious(
     session: SleepSession,
     validation: ScoringCalculator.NightValidationResult,
 ): Boolean {
-    val hasNoStageBreakdown =
-        session.durationMinutes > 0 &&
-            session.deepSleepMinutes == 0 &&
-            session.remSleepMinutes == 0 &&
-            session.lightSleepMinutes == 0
-    return hasNoStageBreakdown || !validation.stagesValid || validation.stagesSuspicious
+    val status = StageIntegrityEvaluator.evaluate(
+        durationMinutes = session.durationMinutes,
+        deepMinutes = session.deepSleepMinutes,
+        remMinutes = session.remSleepMinutes,
+        validation = validation,
+    )
+    return status != StageIntegrityStatus.VALID
 }
 
 internal fun computeBaselineMetrics(
