@@ -71,4 +71,35 @@ class SleepDataMapperTest {
         assertEquals(480, entity.durationMinutes, "Duration is the sum of real stage minutes, same as before")
         assertEquals(100f, entity.efficiency)
     }
+
+    @Test
+    fun `mapSleepSession and mapSleepSessionStages preserve sub-minute segments via unbiased rounding`() {
+        val start = Instant.parse("2026-01-01T23:00:00Z")
+        val stages =
+            listOf(
+                DomainSleepStage(start, start.plusSeconds(45), DomainSleepStageType.LIGHT),
+                DomainSleepStage(start.plusSeconds(45), start.plusSeconds(90), DomainSleepStageType.LIGHT),
+            )
+        val session =
+            DomainSleepSessionRecord(
+                id = "sub-min-mapper",
+                startTime = start,
+                endTime = start.plusSeconds(90),
+                startZoneOffsetSeconds = null,
+                endZoneOffsetSeconds = null,
+                deviceName = "Watch",
+                stages = stages,
+            )
+
+        val sessionInput = SleepDataMapper.mapSleepSession(session)
+        val stageInputs = SleepDataMapper.mapSleepSessionStages(session)
+
+        // 45s + 45s = 90s = 2 minutes total light sleep
+        assertEquals(2, sessionInput.lightSleepMinutes)
+        assertEquals(2, sessionInput.durationMinutes)
+        assertEquals(2, stageInputs.size)
+        // Each 45s segment rounds to 1 minute instead of truncating to 0
+        assertEquals(1, stageInputs[0].durationMinutes)
+        assertEquals(1, stageInputs[1].durationMinutes)
+    }
 }
