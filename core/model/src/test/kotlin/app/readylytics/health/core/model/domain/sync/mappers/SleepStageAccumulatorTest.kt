@@ -73,4 +73,54 @@ class SleepStageAccumulatorTest {
         assertEquals(0, breakdown.lightMinutes)
         assertEquals(0, breakdown.awakeMinutes)
     }
+
+    @Test
+    fun `negative stage duration clamps to zero`() {
+        val start = Instant.parse("2026-01-01T23:00:00Z")
+        val stages = listOf(
+            DomainSleepStage(start.plusSeconds(60), start, DomainSleepStageType.DEEP),
+        )
+        val session = DomainSleepSessionRecord(
+            id = "test-negative-duration",
+            startTime = start,
+            endTime = start.plusSeconds(3600),
+            startZoneOffsetSeconds = null,
+            endZoneOffsetSeconds = null,
+            deviceName = "Watch",
+            stages = stages,
+        )
+
+        val breakdown = SleepStageAccumulator.accumulate(session)
+
+        assertEquals(0, breakdown.deepMinutes)
+        assertEquals(0, breakdown.totalSleepMinutes)
+        assertEquals(0, breakdown.durationMinutes)
+        assertEquals(0f, breakdown.efficiency)
+    }
+
+    @Test
+    fun `efficiency is clamped to 100 percent when stage durations exceed time in bed`() {
+        val start = Instant.parse("2026-01-01T23:00:00Z")
+        val stages = listOf(
+            DomainSleepStage(start, start.plusSeconds(3600), DomainSleepStageType.DEEP),
+            DomainSleepStage(start, start.plusSeconds(3600), DomainSleepStageType.REM),
+        )
+        val session = DomainSleepSessionRecord(
+            id = "test-overlapping-stages",
+            startTime = start,
+            endTime = start.plusSeconds(3600),
+            startZoneOffsetSeconds = null,
+            endZoneOffsetSeconds = null,
+            deviceName = "Watch",
+            stages = stages,
+        )
+
+        val breakdown = SleepStageAccumulator.accumulate(session)
+
+        assertEquals(60, breakdown.timeInBedMinutes)
+        assertEquals(120, breakdown.totalSleepMinutes)
+        assertEquals(120, breakdown.durationMinutes)
+        assertEquals(100f, breakdown.efficiency)
+    }
 }
+

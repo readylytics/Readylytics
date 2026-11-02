@@ -29,7 +29,8 @@ object SleepStageAccumulator {
         var awakeMillis = 0L
 
         for (stage in session.stages) {
-            val durationMs = stage.endTime.toEpochMilli() - stage.startTime.toEpochMilli()
+            val durationMs =
+                (stage.endTime.toEpochMilli() - stage.startTime.toEpochMilli()).coerceAtLeast(0L)
             when (stage.stageType) {
                 DomainSleepStageType.DEEP -> deepMillis += durationMs
                 DomainSleepStageType.REM -> remMillis += durationMs
@@ -49,7 +50,8 @@ object SleepStageAccumulator {
         val timeInBedMinutes = toMinutes(timeInBedMillis)
 
         val durationMinutes = if (session.stages.isEmpty()) timeInBedMinutes else totalSleepMinutes
-        val efficiency = durationMinutes.toFloat() / max(timeInBedMinutes, 1) * 100f
+        val efficiency =
+            (durationMinutes.toFloat() / max(timeInBedMinutes, 1) * 100f).coerceIn(0f, 100f)
 
         return SleepStageBreakdown(
             deepMinutes = deepMinutes,
