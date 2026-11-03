@@ -301,13 +301,57 @@ class ComputeSleepMetricsUseCaseTest {
             // responsible for not routing a mismatched row into the calibrated branch at all.)
             coVerify(exactly = 0) { scoringHistoryRepository.countEligibleSleepDaysThrough(any(), any()) }
         }
+
+    @Test
+    fun invoke_passesArchitectureDurationMinutesToScoringCalculator() =
+        runTest {
+            val targetDate = LocalDate.of(2026, 5, 31)
+            val summary = DailySummary(date = targetDate)
+            val scoringHistoryRepository = mockk<ScoringHistoryRepository>(relaxed = true)
+            coEvery { scoringHistoryRepository.getDailySummaryByDate(any(), any()) } returns null
+            val scoringCalculator = mockk<ScoringCalculator>(relaxed = true)
+            val useCase = calibrationUseCase(scoringHistoryRepository, true, scoringCalculator)
+
+            val request =
+                calibrationRequest(summary, targetDate).copy(
+                    architectureDurationMinutes = 420,
+                )
+
+            useCase(request)
+
+            coVerify {
+                scoringCalculator.computeSleepScore(
+                    durationMinutes = any(),
+                    efficiency = any(),
+                    deepSleepMinutes = any(),
+                    remSleepMinutes = any(),
+                    goalSleepHours = any(),
+                    sRest = any(),
+                    userAge = any(),
+                    stagesSuspicious = any(),
+                    sleepTargets = any(),
+                    fragmentation = any(),
+                    weightProfile = any(),
+                    regularityScore = any(),
+                    hypersomniaOnsetRatio = any(),
+                    architectureDurationMinutes = 420,
+                )
+                scoringCalculator.computeArchSubScore(
+                    deepSleepMinutes = any(),
+                    remSleepMinutes = any(),
+                    durationMinutes = 420,
+                    userAge = any(),
+                    sleepTargets = any(),
+                )
+            }
+        }
 }
 
 private fun calibrationUseCase(
     scoringHistoryRepository: ScoringHistoryRepository,
     canContributeToBaseline: Boolean,
+    scoringCalculator: ScoringCalculator = mockk<ScoringCalculator>(relaxed = true),
 ): ComputeSleepMetricsUseCase {
-    val scoringCalculator = mockk<ScoringCalculator>(relaxed = true)
     coEvery {
         scoringCalculator.validateNight(any(), any(), any(), any(), any(), any())
     } returns

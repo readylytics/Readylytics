@@ -145,6 +145,7 @@ class CompositeScoringCalculator
             weightProfile: SleepScoreWeightProfile,
             regularityScore: Float?,
             hypersomniaOnsetRatio: Float,
+            architectureDurationMinutes: Int,
         ): Float =
             sleepStrategy.computeSleepScore(
                 durationMinutes,
@@ -160,6 +161,7 @@ class CompositeScoringCalculator
                 weightProfile,
                 regularityScore,
                 hypersomniaOnsetRatio,
+                architectureDurationMinutes,
             )
 
         override fun computeRecoveryFlags(

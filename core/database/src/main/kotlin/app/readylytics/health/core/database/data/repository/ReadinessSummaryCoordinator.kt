@@ -310,6 +310,7 @@ class ReadinessSummaryCoordinator
                         dayEndMs = context.nextDayMidnightMs,
                         currentSessionIds = base.currentSessionIds,
                         prefetchedSessions = context.baselineContext?.sessions,
+                        architectureDurationMinutes = base.architectureDurationMinutes ?: base.session.durationMinutes,
                     ),
                 ).getOrNull() ?: withHrvBaseline
             } else {
@@ -363,6 +364,7 @@ data class ReadinessBaseInputs(
     val avgSpo2: Float?,
     val avgBodyTemp: Float?,
     val coreRecoveryInput: CoreRecoveryInput? = null,
+    val architectureDurationMinutes: Int? = null,
 )
 
 data class CalibratedScoringContext(

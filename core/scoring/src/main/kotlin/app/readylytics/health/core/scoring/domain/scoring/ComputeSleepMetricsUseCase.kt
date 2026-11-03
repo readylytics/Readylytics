@@ -251,6 +251,7 @@ class ComputeSleepMetricsUseCase
                                 loadScoreEverydayHr = loadScoreEverydayHr,
                                 summary = summary,
                                 hrvSigma = hrvSigma,
+                                architectureDurationMinutes = request.architectureDurationMinutes,
                             ),
                         )
                     } else {
@@ -405,19 +406,20 @@ class ComputeSleepMetricsUseCase
             sRest: Float,
         ): Float =
             collaborators.scoringCalculator.computeSleepScore(
-                input.session.durationMinutes,
-                input.session.efficiency,
-                input.session.deepSleepMinutes,
-                input.session.remSleepMinutes,
-                input.prefs.goalSleepHours,
-                sRest,
-                input.prefs.age,
-                input.stagesSuspicious,
-                input.scoringConfig.sleepTargets,
-                input.sleepModifiers.fragmentation,
-                input.scoringConfig.sleepWeightProfile,
-                input.sleepModifiers.regularityScore,
-                input.scoringConfig.hypersomniaOnsetRatio,
+                durationMinutes = input.session.durationMinutes,
+                efficiency = input.session.efficiency,
+                deepSleepMinutes = input.session.deepSleepMinutes,
+                remSleepMinutes = input.session.remSleepMinutes,
+                goalSleepHours = input.prefs.goalSleepHours,
+                sRest = sRest,
+                userAge = input.prefs.age,
+                stagesSuspicious = input.stagesSuspicious,
+                sleepTargets = input.scoringConfig.sleepTargets,
+                fragmentation = input.sleepModifiers.fragmentation,
+                weightProfile = input.scoringConfig.sleepWeightProfile,
+                regularityScore = input.sleepModifiers.regularityScore,
+                hypersomniaOnsetRatio = input.scoringConfig.hypersomniaOnsetRatio,
+                architectureDurationMinutes = input.architectureDurationMinutes,
             )
 
         private fun computeZScores(input: NocturnalScoringInput): BaselineZScoreComputer.ZScoreResults =
@@ -515,7 +517,7 @@ class ComputeSleepMetricsUseCase
                 collaborators.scoringCalculator.computeArchSubScore(
                     input.session.deepSleepMinutes,
                     input.session.remSleepMinutes,
-                    input.session.durationMinutes,
+                    input.architectureDurationMinutes,
                     input.prefs.age,
                     input.scoringConfig.sleepTargets,
                 )

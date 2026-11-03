@@ -7,6 +7,7 @@ import app.readylytics.health.core.scoring.domain.scoring.strategies.SleepScorin
 import app.readylytics.health.core.model.domain.model.RecoveryFlag
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
+import app.readylytics.health.core.scoring.domain.scoring.components.SleepArchitectureTargets
 import app.readylytics.health.core.scoring.domain.scoring.components.SleepContinuityCurves
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepFragmentation
 import org.junit.Assert.assertEquals
@@ -22,6 +23,47 @@ private const val DELTA = 0.5f
 class SleepScoringStrategyTest {
     private val loadStrategy = LoadScoringStrategy()
     private val sleepStrategy = SleepScoringStrategy(loadStrategy)
+
+    @Test
+    fun `computeSleepScore uses architectureDurationMinutes for architecture sub-score`() {
+        val targets = SleepArchitectureTargets(deepPercentage = 0.20f, remPercentage = 0.20f)
+        // 420m core with 84m deep (20%) and 84m rem (20%) -> 100% architecture sub-score
+        // plus a 60m stage-less nap -> total duration = 480m, but architecture duration = 420m
+        val scoreWithArchitectureDuration =
+            sleepStrategy.computeSleepScore(
+                durationMinutes = 480,
+                efficiency = 0.95f,
+                deepSleepMinutes = 84,
+                remSleepMinutes = 84,
+                goalSleepHours = 8.0f,
+                sRest = 80f,
+                userAge = 30,
+                stagesSuspicious = false,
+                sleepTargets = targets,
+                fragmentation = SleepFragmentation(wasoMinutes = 15f, awakeningCount = 1),
+                hypersomniaOnsetRatio = 1.5f,
+                architectureDurationMinutes = 420,
+            )
+
+        val scoreDilutedWithoutArchitectureDuration =
+            sleepStrategy.computeSleepScore(
+                durationMinutes = 480,
+                efficiency = 0.95f,
+                deepSleepMinutes = 84,
+                remSleepMinutes = 84,
+                goalSleepHours = 8.0f,
+                sRest = 80f,
+                userAge = 30,
+                stagesSuspicious = false,
+                sleepTargets = targets,
+                fragmentation = SleepFragmentation(wasoMinutes = 15f, awakeningCount = 1),
+                hypersomniaOnsetRatio = 1.5f,
+                architectureDurationMinutes = 480,
+            )
+
+        // Architecture score should be higher when not diluted by the 60m stage-less nap
+        assertTrue(scoreWithArchitectureDuration > scoreDilutedWithoutArchitectureDuration)
+    }
 
     @Test
     fun `durationSubScore full TST excellent efficiency scores near ceiling`() {
