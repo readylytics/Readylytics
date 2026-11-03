@@ -28,9 +28,9 @@ object CircadianWakeBaseline {
     private const val NOON_MINUTES = 12 * 60
 
     /**
-     * Habitual bedtime and wake time, both in the "past midnight" normalized space produced by
-     * [normalizeMinutes] (a 07:00 wake reads as 1860, not 420). Consumers that need clock minutes
-     * take the value modulo 1440.
+     * Habitual bedtime in the "past midnight" normalized space produced by [normalizeMinutes]
+     * (consumers that need clock minutes take the value modulo 1440), and habitual wake time
+     * in `[0, 1440)` produced by [CircadianTimeMath.circularMedianMinutes].
      */
     data class Baseline(
         val medianBedtimeMinutes: Int,
@@ -69,7 +69,10 @@ object CircadianWakeBaseline {
         if (baselineSessions.size < MIN_BASELINE_SESSIONS) return null
         return Baseline(
             medianBedtimeMinutes = baselineSessions.map { normalizeMinutes(it.startTime, zone) }.median(),
-            medianWakeMinutes = baselineSessions.map { normalizeMinutes(it.endTime, zone) }.median(),
+            medianWakeMinutes =
+                CircadianTimeMath.circularMedianMinutes(
+                    baselineSessions.map { CircadianTimeMath.minuteOfDay(it.endTime, zone) },
+                ),
         )
     }
 
