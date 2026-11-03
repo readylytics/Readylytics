@@ -144,6 +144,36 @@ class CircadianConsistencyRepositoryTest {
         }
 
     @Test
+    fun `wake times of 11-55 and 12-05 deviate by 10 minutes and receive perfect score`() =
+        runTest {
+            // Habitual wake time is 12:00 noon.
+            // On evaluation day, user woke at 12:05 (5m deviation) and 11:55 (5m deviation).
+            // Under old linear subtraction with noon-pivot, 11:55 mapped to 2155 and
+            // 12:05 mapped to 725 (1430m diff -> score 0).
+            val baseDay = LocalDate.of(2026, 6, 15)
+            val sessions = (0 until 14).map { i ->
+                val wakeHour = if (i % 2 == 0) 12 else 11
+                val wakeMin = if (i % 2 == 0) 5 else 55
+                fakeSleepSession(
+                    id = "s$i",
+                    bedHour = 23,
+                    wakeHour = wakeHour,
+                    wakeMin = wakeMin,
+                    daysAgo = i,
+                    anchorDate = baseDay,
+                )
+            }
+
+            val repo = buildRepo(sessions)
+            val result = repo.resultFor(baseDay).first()
+
+            assertTrue("Expected Ready, got $result", result is CircadianConsistencyResult.Ready)
+            val ready = result as CircadianConsistencyResult.Ready
+            // With threshold = 30 minutes, 5-minute deviations must score 100%
+            assertEquals(100f, ready.score, 0.5f)
+        }
+
+    @Test
     fun `emits Ready with degraded score when schedule is inconsistent`() =
         runTest {
             // Even nights: bedtime 23:00 / Odd nights: bedtime 01:00 — large deviation
