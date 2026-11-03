@@ -264,6 +264,7 @@ class SleepNadirAnalyzerTest {
                 mockSession(
                     id = "1",
                     startTime = 1000L,
+                    endTime = 1000L + 480 * 60_000L,
                     durationMinutes = 480,
                     endZoneOffsetSeconds = 0,
                 )
@@ -287,8 +288,9 @@ class SleepNadirAnalyzerTest {
                 mockSession(
                     id = "1",
                     startTime = 1000L,
+                    endTime = 1000L + 480 * 60_000L,
                     durationMinutes = 480,
-                    endZoneOffsetSeconds = 3600,
+                    endZoneOffsetSeconds = 7200,
                 )
             val historical = listOf(mockSession(endZoneOffsetSeconds = 0, endTime = 500L))
 
