@@ -27,10 +27,9 @@ object SleepDataMapper {
         )
     }
 
-    fun mapSleepSessionStages(session: DomainSleepSessionRecord): List<SleepStageInput> =
-        session.stages.map { stage ->
-            val durationMs = stage.endTime.toEpochMilli() - stage.startTime.toEpochMilli()
-            val durationMin = SleepStageAccumulator.toMinutes(durationMs)
+    fun mapSleepSessionStages(session: DomainSleepSessionRecord): List<SleepStageInput> {
+        val segmentMinutes = SleepStageAccumulator.allocateSegmentMinutes(session)
+        return session.stages.mapIndexed { index, stage ->
             val stageType =
                 when (stage.stageType) {
                     DomainSleepStageType.DEEP -> SleepStageType.DEEP.value
@@ -44,7 +43,8 @@ object SleepDataMapper {
                 stageType = stageType,
                 startTime = stage.startTime.toEpochMilli(),
                 endTime = stage.endTime.toEpochMilli(),
-                durationMinutes = durationMin,
+                durationMinutes = segmentMinutes[index],
             )
         }
+    }
 }

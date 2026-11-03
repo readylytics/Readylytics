@@ -3,6 +3,7 @@ package app.readylytics.health.core.healthconnect.data.healthconnect
 import app.readylytics.health.core.model.domain.model.DomainSleepSessionRecord
 import app.readylytics.health.core.model.domain.model.DomainSleepStage
 import app.readylytics.health.core.model.domain.model.DomainSleepStageType
+import app.readylytics.health.core.model.domain.model.SleepStageType
 import app.readylytics.health.core.model.domain.sync.mappers.SleepDataMapper
 import org.junit.Test
 import java.time.Instant
@@ -101,5 +102,36 @@ class SleepDataMapperTest {
         // Each 45s segment rounds to 1 minute instead of truncating to 0
         assertEquals(1, stageInputs[0].durationMinutes)
         assertEquals(1, stageInputs[1].durationMinutes)
+    }
+
+    @Test
+    fun `stored stage rows sum to the session stage minutes`() {
+        val start = Instant.parse("2026-01-01T23:00:00Z")
+        val stages =
+            (0 until 40).map { i ->
+                DomainSleepStage(
+                    start.plusSeconds(i * 90L),
+                    start.plusSeconds((i + 1) * 90L),
+                    if (i % 2 == 0) DomainSleepStageType.DEEP else DomainSleepStageType.REM,
+                )
+            }
+        val session =
+            DomainSleepSessionRecord(
+                id = "sum-check",
+                startTime = start,
+                endTime = start.plusSeconds(40 * 90L),
+                startZoneOffsetSeconds = null,
+                endZoneOffsetSeconds = null,
+                deviceName = "Watch",
+                stages = stages,
+            )
+
+        val sessionInput = SleepDataMapper.mapSleepSession(session)
+        val rows = SleepDataMapper.mapSleepSessionStages(session)
+
+        fun rowMinutes(type: SleepStageType) =
+            rows.filter { it.stageType == type.value }.sumOf { it.durationMinutes }
+        assertEquals(sessionInput.deepSleepMinutes, rowMinutes(SleepStageType.DEEP))
+        assertEquals(sessionInput.remSleepMinutes, rowMinutes(SleepStageType.REM))
     }
 }

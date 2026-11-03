@@ -40,4 +40,13 @@ class HrCoverageValidatorBehaviorTest {
 
         assertTrue(isValid)
     }
+
+    @Test
+    fun `sparse sampling every 10 minutes passes 70 percent coverage`() {
+        val start = 0L
+        val end = 8 * 3600 * 1000L
+        val records = (0..(8 * 6)).map { hr(it * 10 * 60 * 1000L) }
+
+        assertTrue(validator.isValid(start, end, records))
+    }
 }

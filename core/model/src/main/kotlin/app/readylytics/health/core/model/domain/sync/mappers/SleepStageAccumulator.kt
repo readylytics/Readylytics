@@ -20,7 +20,26 @@ object SleepStageAccumulator {
     private const val ROUNDING_OFFSET_MILLIS = 30_000L
 
     fun toMinutes(millis: Long): Int =
-        ((millis + ROUNDING_OFFSET_MILLIS) / MILLIS_PER_MINUTE).toInt()
+        ((millis.coerceAtLeast(0L) + ROUNDING_OFFSET_MILLIS) / MILLIS_PER_MINUTE).toInt()
+
+    /**
+     * Per-segment minutes such that, for every stage type, the segment minutes sum exactly to
+     * `toMinutes(total milliseconds of that type)` -- the same value [accumulate] reports on the
+     * session. Each segment gets the delta of the rounded running total instead of its own rounded
+     * duration, so no per-segment rounding bias accumulates and stored stage rows agree with the
+     * session's deep/REM/light/awake minutes.
+     */
+    fun allocateSegmentMinutes(session: DomainSleepSessionRecord): List<Int> {
+        val runningMillisByType = mutableMapOf<DomainSleepStageType, Long>()
+        return session.stages.map { stage ->
+            val durationMs =
+                (stage.endTime.toEpochMilli() - stage.startTime.toEpochMilli()).coerceAtLeast(0L)
+            val before = runningMillisByType[stage.stageType] ?: 0L
+            val after = before + durationMs
+            runningMillisByType[stage.stageType] = after
+            toMinutes(after) - toMinutes(before)
+        }
+    }
 
     fun accumulate(session: DomainSleepSessionRecord): SleepStageBreakdown {
         var deepMillis = 0L
@@ -49,7 +68,9 @@ object SleepStageAccumulator {
         val timeInBedMillis = session.endTime.toEpochMilli() - session.startTime.toEpochMilli()
         val timeInBedMinutes = toMinutes(timeInBedMillis)
 
-        val durationMinutes = if (session.stages.isEmpty()) timeInBedMinutes else totalSleepMinutes
+        // Per-type rounding can push the stage sum 1-2 min past the (separately rounded) time in bed.
+        val durationMinutes =
+            if (session.stages.isEmpty()) timeInBedMinutes else totalSleepMinutes.coerceAtMost(timeInBedMinutes)
         val efficiency =
             (durationMinutes.toFloat() / max(timeInBedMinutes, 1) * 100f).coerceIn(0f, 100f)
 

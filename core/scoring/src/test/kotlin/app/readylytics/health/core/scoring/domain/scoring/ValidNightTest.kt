@@ -116,4 +116,18 @@ class ValidNightTest {
     fun `canContributeToBaseline is true for a good night`() {
         assertTrue(validate().canContributeToBaseline)
     }
+
+    // ─── No stage breakdown (generic SLEEPING stage) ──────────────────────────
+    @Test
+    fun `deep and rem both zero with positive duration is suspicious`() {
+        val result = validate(deepMinutes = 0, remMinutes = 0)
+        assertTrue(result.stagesValid)
+        assertTrue(result.stagesSuspicious)
+    }
+
+    @Test
+    fun `deep or rem present is not flagged as no breakdown`() {
+        assertFalse(validate(deepMinutes = 90, remMinutes = 0).stagesSuspicious)
+        assertFalse(validate(deepMinutes = 0, remMinutes = 90).stagesSuspicious)
+    }
 }

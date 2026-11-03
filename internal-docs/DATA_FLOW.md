@@ -331,7 +331,7 @@ so re-ingestion is idempotent, but entity construction itself happens one layer 
 
 | Mapper                       | Path                                        | DTO → Input                                                                                                                                       |
 | :--------------------------- | :------------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SleepDataMapper`            | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/sync/mappers/SleepDataMapper.kt`     | `DomainSleepSessionRecord` → `SleepSessionInput` + `List<SleepStageInput>` (sums deep/REM/light/awake, computes efficiency). Stage milliseconds are accumulated across all segments for each stage type before applying unbiased rounding (`(ms + 30_000L) / 60_000L`) via `SleepStageAccumulator` to eliminate downward per-segment truncation bias. **HC-006/WP-11:** when `stages` is empty (a stage-less HC session), `durationMinutes` falls back to the raw session span (`endTime - startTime`) instead of the stage-minute sum (which would be 0) — see 2.5's note on the Architecture reweight. |
+| `SleepDataMapper`            | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/sync/mappers/SleepDataMapper.kt`     | `DomainSleepSessionRecord` → `SleepSessionInput` + `List<SleepStageInput>` (sums deep/REM/light/awake, computes efficiency). Stage milliseconds are accumulated across all segments for each stage type before applying unbiased rounding (`(ms + 30_000L) / 60_000L`) via `SleepStageAccumulator` to eliminate downward per-segment truncation bias. Persisted `sleep_stages.durationMinutes` rows come from `allocateSegmentMinutes` (each segment gets the delta of its stage type's rounded running total), so per-type row sums equal the session's deep/REM/light/awake minutes; the session `durationMinutes` is capped at time-in-bed. **HC-006/WP-11:** when `stages` is empty (a stage-less HC session), `durationMinutes` falls back to the raw session span (`endTime - startTime`) instead of the stage-minute sum (which would be 0) — see 2.5's note on the Architecture reweight. |
 | `HeartRateMapper`            | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/sync/mappers/HeartRateMapper.kt`     | `List<DomainHeartRateRecord>` → `List<HeartRateInput>`; assigns `recordType` (SLEEP / EXERCISE / RESTING) and `sessionId` via `SessionLinkSweep`. |
 | `HrvMapper`                  | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/sync/mappers/HrvMapper.kt`           | RMSSD records → `List<HrvInput>`; links to sleep session or marks RESTING via `SessionLinkSweep`.                                                                        |
 | `WorkoutMapper`              | `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/sync/mappers/WorkoutMapper.kt`               | `DomainExerciseSessionRecord` → `WorkoutInput`; derives elapsed `durationMinutes` only. Zone minutes/avg HR/TRIMP are zero at this stage — populated later by `ZoneThresholds.computeMetrics` during the reconcile pass (see 1.2.1). Workout load/intensity categories are **not** persisted here. Maps the session's route points into `WorkoutInput.routePoints` (→ `workout_route_points` rows, §1.4) and, when Health Connect supplies no direct distance/speed/elevation aggregates, derives fallback `totalDistanceMeters`/`avgSpeedKmh`/`elevationGainMeters` from the route via `RouteDistanceCalculator` (`core/model/.../domain/util/RouteDistanceCalculator.kt`, pure haversine path sum + 3 m ascent-anchored elevation gain). `routeState` (IMPORTED / PERMISSION_REQUIRED / NOT_AVAILABLE) is captured verbatim from `ExerciseRouteResult`. |
@@ -749,7 +749,7 @@ keep **that bucket's own** `recordType`/`sessionId`/`deviceName`
 (`List<HrMinuteBucketEntity>.reconstructAsRecords`), so downstream filters such as
 `ComputeSleepMetricsUseCase`'s `recordType == SLEEP && sessionId in currentSessionIds` still select
 correctly. This is load-bearing on a scoring path: `ScoringHistoryRepositoryImpl
-.getHeartRateRecordsByTimeRange` feeds `HrCoverageValidator.isValid` (which caps inter-sample gaps at 5 minutes [`300_000L`] via `IntervalCoverageAccumulator`), which fails an empty list, so a
+.getHeartRateRecordsByTimeRange` feeds `HrCoverageValidator.isValid` (which caps inter-sample gaps at 15 minutes [`900_000L`] via `IntervalCoverageAccumulator`), which fails an empty list, so a
 raw-only read would withhold the sleep score of any night whose minutes have rolled up or been
 OD-1-quarantined. `HeartRateRepositoryImpl.getByTimeRange`/`observeByTimeRange` (workout HR via
 `GetWorkoutDisplayMetricsUseCase` and `WorkoutHeartRateBatcher`) merge for the same reason.
@@ -1751,8 +1751,9 @@ sleep session has zero deep/rem/light minutes despite a positive (raw-span fallb
 `LoadScoringStrategy.validateNight`'s deep/rem *fraction* checks read 0/duration as trivially valid
 (not the intended signal). To handle both stage-less sessions and devices emitting generic `STAGE_TYPE_SLEEPING`
 without stage breakdown, nights where `durationMinutes > 0 && deepSleepMinutes == 0 && remSleepMinutes == 0`
-are evaluated as `NO_BREAKDOWN` by `StageIntegrityEvaluator` (`SleepBaselineMetrics.isStagesSuspicious`),
-triggering the documented Duration + Restoration reweighting (`stagesSuspicious = true` in
+are flagged `stagesSuspicious` by `LoadScoringStrategy.validateNight` (via `StageIntegrity.hasNoStageBreakdown`;
+`SleepBaselineMetrics.isStagesSuspicious` just reads the validation result, so `validateNight` is the single
+source of truth), triggering the documented Duration + Restoration reweighting (`stagesSuspicious = true` in
 `SleepScoringStrategy.computeSleepScore`: Architecture and Fragmentation drop out to 0%, and the score
 renormalizes Duration and Restoration according to the active weight profile).
 `ScoringRepositoryImpl.toSleepDaySegment` and `BaselineComputer.toSleepDaySegment` both also fall back
@@ -1765,10 +1766,19 @@ throwing for those rows.
 sleep restoration and RHR calculation (`ComputeSleepMetricsUseCase`), `HrCoverageValidator.isValid(sessionStartMs, sessionEndMs, hrRecords)`
 requires that heart-rate samples cover at least 70% of the session span. To evaluate active coverage
 rather than sample span (preventing boundary-only samples from faking full coverage),
-`HrCoverageValidator` caps inter-sample gaps at 5 minutes (`300_000L`) using `IntervalCoverageAccumulator`
-(`core/scoring/.../domain/scoring/sleep/IntervalCoverageAccumulator.kt`). Any gap between consecutive samples
-exceeding 5 minutes accumulates only 5 minutes of valid coverage, and leading/trailing gaps before the first
-or after the last sample are similarly bounded.
+`HrCoverageValidator` caps each inter-sample gap at 15 minutes (`900_000L`, above the sparsest common
+sleep-HR cadence of about 10 minutes, so those devices still pass) using `IntervalCoverageAccumulator`
+(`core/scoring/.../domain/scoring/sleep/IntervalCoverageAccumulator.kt`). Coverage is the sum of capped
+gaps between consecutive in-session samples plus a fixed 1-minute allowance; time before the first and after
+the last sample earns no credit.
+
+**Coverage does not gate eligibility.** The live "+1 for tonight" maturity count
+(`ComputeSleepMetricsUseCase` → `isEligibleIgnoringHrCoverage`) deliberately ignores `hrCoverageValid`, because
+every historical eligibility path (`HistoricalSleepDayAssembler` with `assumeCoverageValid`,
+`ScoringHistoryRepositoryImpl.isEligibleForBaseline`) has no HR timestamps and assumes coverage valid. Gating
+tonight on it would let a night count live but not after the next recompute/resync, breaking determinism
+(`ScoringSyncScopeOutputsDeterminismTest`). The validator result is still carried on `NightValidationResult`;
+revisit once the batch paths can evaluate coverage.
 
 ### 2.6 Everyday Heart-Rate Load
 
@@ -2562,8 +2572,8 @@ Feature paths and ViewModels maintain strict ownership of time queries by accept
 | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/ComputeSleepMetricsUseCase.kt`                             | Processing — sleep metrics assembly                 | sleep + restoration                                                                      |
 | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/BaselineZScoreComputer.kt`                                 | Processing — Z-score computation                    | HRV & RHR Z-scores, nocturnal RHR delta BPM                                              |
 | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/RestorationScoreAssembler.kt` | Processing — restoration assembly | restoration score (sRest) assembly and contributor subscores |
-| `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/StageIntegrityStatus.kt`                                | Processing — stage integrity                        | `StageIntegrityStatus` enum (`VALID`, `NO_BREAKDOWN`, `IMPLAUSIBLE_RATIO`) & `StageIntegrityEvaluator` |
-| `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/sleep/IntervalCoverageAccumulator.kt`                  | Processing — coverage accumulator                   | accumulates HR timestamps capping gaps at 5 minutes (`300_000L`)                         |
+| `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/StageIntegrity.kt`                                      | Processing — stage integrity                        | `StageIntegrity.hasNoStageBreakdown` (deep == rem == 0 with duration > 0) used by `validateNight` |
+| `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/sleep/IntervalCoverageAccumulator.kt`                  | Processing — coverage accumulator                   | accumulates HR timestamps capping gaps at 15 minutes (`900_000L`)                         |
 | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/sleep/HrCoverageValidator.kt`                           | Processing — coverage validation                    | validates ≥70% nocturnal HR coverage using `IntervalCoverageAccumulator`                 |
 | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/ComputeResidualFatigueUseCase.kt` | Processing — residual fatigue (pure) | `compute()` summation + `advanceAccumulator()` decay/add step (§2.8) |
 | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/ComputeTrainingReadinessUseCase.kt` | Processing — Training Readiness (pure) | converts Residual Fatigue to acute recovery, blends the source-matched Load Score, and delegates final scoring to the existing Readiness calculator (§2.8); ABOUT.md owns formula details |

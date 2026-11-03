@@ -67,18 +67,8 @@ internal fun isPreviousHrvOptimal(
         prevHrv.toFloat() / yesterdayHrvBaseline >= threshold
 }
 
-internal fun isStagesSuspicious(
-    session: SleepSession,
-    validation: ScoringCalculator.NightValidationResult,
-): Boolean {
-    val status = StageIntegrityEvaluator.evaluate(
-        durationMinutes = session.durationMinutes,
-        deepMinutes = session.deepSleepMinutes,
-        remMinutes = session.remSleepMinutes,
-        validation = validation,
-    )
-    return status != StageIntegrityStatus.VALID
-}
+internal fun isStagesSuspicious(validation: ScoringCalculator.NightValidationResult): Boolean =
+    !validation.stagesValid || validation.stagesSuspicious
 
 internal fun computeBaselineMetrics(
     input: BaselineMetricsInput,
@@ -111,7 +101,7 @@ internal fun computeBaselineMetrics(
             null
         }
 
-    val stagesSuspicious = isStagesSuspicious(input.session, input.validation)
+    val stagesSuspicious = isStagesSuspicious(input.validation)
 
     return BaselineMetricsResult(
         effectiveSigmaHistory = effectiveSigmaHistory,

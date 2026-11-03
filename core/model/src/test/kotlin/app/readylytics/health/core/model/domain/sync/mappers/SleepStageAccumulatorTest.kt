@@ -99,7 +99,7 @@ class SleepStageAccumulatorTest {
     }
 
     @Test
-    fun `efficiency is clamped to 100 percent when stage durations exceed time in bed`() {
+    fun `duration and efficiency are capped when stage durations exceed time in bed`() {
         val start = Instant.parse("2026-01-01T23:00:00Z")
         val stages = listOf(
             DomainSleepStage(start, start.plusSeconds(3600), DomainSleepStageType.DEEP),
@@ -119,8 +119,82 @@ class SleepStageAccumulatorTest {
 
         assertEquals(60, breakdown.timeInBedMinutes)
         assertEquals(120, breakdown.totalSleepMinutes)
-        assertEquals(120, breakdown.durationMinutes)
+        assertEquals(60, breakdown.durationMinutes, "duration is capped at time in bed")
         assertEquals(100f, breakdown.efficiency)
     }
-}
 
+    private fun session(
+        vararg stages: DomainSleepStage,
+        end: Instant,
+        start: Instant,
+    ) = DomainSleepSessionRecord(
+        id = "s",
+        startTime = start,
+        endTime = end,
+        startZoneOffsetSeconds = null,
+        endZoneOffsetSeconds = null,
+        deviceName = "Watch",
+        stages = stages.toList(),
+    )
+
+    @Test
+    fun `toMinutes clamps negative durations to zero`() {
+        assertEquals(0, SleepStageAccumulator.toMinutes(-120_000L))
+    }
+
+    @Test
+    fun `allocated segment minutes sum to the rounded per-type total`() {
+        val start = Instant.parse("2026-01-01T23:00:00Z")
+        // 100 deep segments of 90 s = 150 min total; per-segment rounding would give 200.
+        val stages = (0 until 100).map { i ->
+            DomainSleepStage(
+                start.plusSeconds(i * 90L),
+                start.plusSeconds((i + 1) * 90L),
+                DomainSleepStageType.DEEP,
+            )
+        }
+        val s = session(*stages.toTypedArray(), start = start, end = start.plusSeconds(100 * 90L))
+
+        val minutes = SleepStageAccumulator.allocateSegmentMinutes(s)
+
+        assertEquals(SleepStageAccumulator.accumulate(s).deepMinutes, minutes.sum())
+        assertEquals(150, minutes.sum())
+    }
+
+    @Test
+    fun `allocated segment minutes are tracked independently per stage type`() {
+        val start = Instant.parse("2026-01-01T23:00:00Z")
+        val s = session(
+            DomainSleepStage(start, start.plusSeconds(90), DomainSleepStageType.DEEP),
+            DomainSleepStage(start.plusSeconds(90), start.plusSeconds(180), DomainSleepStageType.REM),
+            DomainSleepStage(start.plusSeconds(180), start.plusSeconds(270), DomainSleepStageType.DEEP),
+            DomainSleepStage(start.plusSeconds(270), start.plusSeconds(360), DomainSleepStageType.REM),
+            start = start,
+            end = start.plusSeconds(360),
+        )
+
+        val minutes = SleepStageAccumulator.allocateSegmentMinutes(s)
+
+        val breakdown = SleepStageAccumulator.accumulate(s)
+        assertEquals(breakdown.deepMinutes, minutes[0] + minutes[2])
+        assertEquals(breakdown.remMinutes, minutes[1] + minutes[3])
+    }
+
+    @Test
+    fun `duration never exceeds time in bed`() {
+        val start = Instant.parse("2026-01-01T23:00:00Z")
+        // 3 x 90 s stages in a 270 s session: each rounds up (2+2+2=6) vs 4.5 -> TIB 5 min.
+        val s = session(
+            DomainSleepStage(start, start.plusSeconds(90), DomainSleepStageType.DEEP),
+            DomainSleepStage(start.plusSeconds(90), start.plusSeconds(180), DomainSleepStageType.REM),
+            DomainSleepStage(start.plusSeconds(180), start.plusSeconds(270), DomainSleepStageType.LIGHT),
+            start = start,
+            end = start.plusSeconds(270),
+        )
+
+        val breakdown = SleepStageAccumulator.accumulate(s)
+
+        assertEquals(5, breakdown.timeInBedMinutes)
+        assertEquals(5, breakdown.durationMinutes)
+    }
+}
