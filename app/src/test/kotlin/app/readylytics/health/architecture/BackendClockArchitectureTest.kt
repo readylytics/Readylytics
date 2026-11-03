@@ -239,7 +239,7 @@ class BackendClockArchitectureTest {
         val allViolations = mutableListOf<String>()
 
         for (file in scannedFiles.distinct()) {
-            val relPath = file.relativeTo(repoRoot).path
+            val relPath = file.relativeTo(repoRoot).invariantSeparatorsPath
             var content = file.readText()
 
             // Mask allow-listed symbol snippets in allow-listed files
