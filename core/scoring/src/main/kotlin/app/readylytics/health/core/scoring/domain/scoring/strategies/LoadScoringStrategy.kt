@@ -7,6 +7,7 @@ import app.readylytics.health.core.model.domain.scoring.ScoringConstants.Readine
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants.Restoration
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants.Strain
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
+import app.readylytics.health.core.scoring.domain.scoring.StageIntegrity
 import app.readylytics.health.core.scoring.domain.scoring.components.EmergencyFlagThresholds
 import app.readylytics.health.core.scoring.domain.scoring.components.RecoveryFlagContext
 import app.readylytics.health.core.scoring.domain.scoring.components.RecoveryFlagEvaluator
@@ -196,7 +197,10 @@ class LoadScoringStrategy
                     remFrac > ScoringConstants.MAX_VALID_REM_FRACTION
             val stagesSuspicious =
                 !stagesInvalid &&
-                    (deepFrac + remFrac) > ScoringConstants.MAX_VALID_DEEP_REM_SUM
+                    (
+                        StageIntegrity.hasNoStageBreakdown(durationMinutes, deepMinutes, remMinutes) ||
+                            (deepFrac + remFrac) > ScoringConstants.MAX_VALID_DEEP_REM_SUM
+                    )
 
             return ScoringCalculator.NightValidationResult(
                 rmssdValid = rmssdValid,

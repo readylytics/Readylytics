@@ -209,7 +209,7 @@ class ComputeSleepMetricsUseCase
                     if (frozenObservationCount == null && frozenPhase == null) {
                         collaborators.scoringHistoryRepository
                             .countEligibleSleepDaysThrough(targetDate.minusDays(1), zoneId)
-                            ?.plus(if (validation.canContributeToBaseline) 1 else 0)
+                            ?.plus(if (validation.isEligibleIgnoringHrCoverage) 1 else 0)
                     } else {
                         null
                     }

@@ -13,17 +13,15 @@ class HrCoverageValidator
             sessionEndMs: Long,
             hrRecords: List<HeartRateRecord>,
         ): Boolean {
-            val filtered = hrRecords.filter { it.timestampMs in sessionStartMs..sessionEndMs }
-            if (filtered.isEmpty()) return false
-
             val sleepDurationMs = sessionEndMs - sessionStartMs
-            val coverageMs =
-                if (filtered.size > 1) {
-                    filtered.zipWithNext { current, next -> next.timestampMs - current.timestampMs }.sum()
-                } else {
-                    0L
-                }
-            val totalCoverage = (coverageMs + if (filtered.isNotEmpty()) 60000L else 0L).coerceAtMost(sleepDurationMs)
+            if (sleepDurationMs <= 0) return false
+
+            val totalCoverage =
+                IntervalCoverageAccumulator.calculateCoverageMs(
+                    sessionStartMs = sessionStartMs,
+                    sessionEndMs = sessionEndMs,
+                    hrRecords = hrRecords,
+                )
             val coveragePercent = (totalCoverage.toFloat() / sleepDurationMs.toFloat()) * 100f
             return coveragePercent >= 70f
         }

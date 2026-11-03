@@ -183,8 +183,18 @@ interface ScoringCalculator {
         val stagesSuspicious: Boolean,
         val hrCoverageValid: Boolean = true,
     ) {
+        /**
+         * Eligibility for the live "+1 for tonight" maturity count. HR coverage is excluded: every
+         * historical eligibility path (`HistoricalSleepDayAssembler` with `assumeCoverageValid`,
+         * `ScoringHistoryRepositoryImpl.isEligibleForBaseline`) has no HR timestamps and assumes
+         * coverage valid, so gating tonight on it would make a night count live but not after the
+         * next recompute/resync (breaks determinism). Revisit once those paths can evaluate coverage.
+         */
+        val isEligibleIgnoringHrCoverage: Boolean
+            get() = rmssdValid && rhrValid && durationValid
+
         val canContributeToBaseline: Boolean
-            get() = rmssdValid && rhrValid && durationValid && hrCoverageValid
+            get() = isEligibleIgnoringHrCoverage && hrCoverageValid
     }
 
     fun validateNight(

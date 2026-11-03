@@ -1915,7 +1915,7 @@
         "snapshotCalibrationPhase": "MATURING",
         "hrvSigmaPrior": 0.15,
         "rasScalingFactor": 0.2,
-        "baselineObservationCount": 29,
+        "baselineObservationCount": 30,
         "trimpWorkoutOnly": 93.05347,
         "trimpEverydayHr": 93.05347,
         "rasWorkoutOnly": 18.6,

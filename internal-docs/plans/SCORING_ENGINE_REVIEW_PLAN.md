@@ -176,24 +176,58 @@ Impact is limited today, because historical nights use `assumeCoverageValid = tr
 
 ---
 
-## Implementation plan (Tier 1)
+## Implementation plan (Tier 1 Phased Roadmap)
 
-Order: the cheapest, most isolated fixes first.
+The 11 Tier 1 defects are decomposed into 4 sequential, isolated phases to minimize risk, keep review diffs focused, and preserve architectural integrity. Each phase carries its own independent test suite, documentation synchronization, and review cycle.
 
-1. **Ingestion and validation:** #2 (`SleepDataMapper`), #3 (`isStagesSuspicious`), #10 (`HrCoverageValidator`).
-2. **Baselines:** #4 (blend constant), #5 (RHR σ floor in `LoadScoringStrategy.computeRhrZScore` and `computeBaselineMetrics`), #6 (unified RHR μ population, `roundToInt`, persist σ).
-3. **Sleep timing and composition:** #7 (`SleepNadirAnalyzer` uses `clockDurationMinutes`), #8 (architecture denominator in `ReadinessSummaryCoordinator`), #9 (circular math in `CircadianWakeBaseline`), #11.
-4. **Load:** #1.
-    - Write a single EWMA (series plus point evaluation) in `RasScoringStrategy`, zero-initialised over every calendar day from a fixed origin.
-    - Add the minimum-history guard in `BuildLoadSeriesUseCase`.
-    - Make `WorkoutsStateFactory` and `ObserveDashboardStrainIncreaseUseCase` use the same function.
-    - Remove the legacy list-based `computeEma`.
-5. **Documentation sync**, which CLAUDE.md requires in the same change:
-    - `internal-docs/DATA_FLOW.md` (ingestion, baselines, load).
-    - `ABOUT.md` and `docs/about.md` (σ blend, stage-less reweight, load cold-start, circadian).
-    - The `about_*` / `tooltip_*` strings in `app/src/main/res/values/strings.xml`.
-    - The `DocumentationDriftTest` expectations.
-6. **History:** historical scores change only when the user runs the existing "Recalculate scores" / "Resync Health Connect data" flows. No new triggers are added.
+### Phase 1: Ingestion & Data Validation (#2, #3, #10)
+*Status: Planned (`docs/superpowers/specs/2026-11-02-scoring-engine-phase1-ingestion-validation-design.md`, `docs/superpowers/plans/2026-11-02-scoring-engine-phase1-ingestion-validation.md`)*
+
+- **Task 1.1:** Create `SleepStageAccumulator` in `core:model` for sub-minute stage duration aggregation in milliseconds with unbiased rounding `(ms + 30_000L) / 60_000L` (#2).
+- **Task 1.2:** Integrate `SleepStageAccumulator` into `SleepDataMapper` (`mapSleepSession` and `mapSleepSessionStages`) to eliminate per-segment truncation loss (#2).
+- **Task 1.3:** Create `StageIntegrityStatus` enum (`VALID`, `NO_BREAKDOWN`, `IMPLAUSIBLE_RATIO`) and `StageIntegrityEvaluator` in `core:scoring` (#3).
+- **Task 1.4:** Integrate `StageIntegrityEvaluator` into `SleepBaselineMetrics.isStagesSuspicious` to treat `deep == 0 && rem == 0` as `NO_BREAKDOWN` and trigger the Duration + Restoration reweighting for generic `STAGE_TYPE_SLEEPING` devices (#3).
+- **Task 1.5:** Create `IntervalCoverageAccumulator` in `core:scoring` to cap inter-sample HR gaps at 5 minutes (`300_000L`) (#10).
+- **Task 1.6:** Integrate `IntervalCoverageAccumulator` into `HrCoverageValidator.isValid` to evaluate active coverage instead of sample span (#10).
+- **Task 1.7:** Synchronize `internal-docs/DATA_FLOW.md` (§Ingestion, §Suspicious stages, §Coverage validation), verify `DocumentationDriftTest`, and run full pre-commit verification suite.
+
+---
+
+### Phase 2: Sleep Timing, Naps & Circadian (#7, #8, #9, #11)
+*Status: Proposed*
+
+- **Task 2.1:** Late-Nadir Clock Time: Update `SleepNadirAnalyzer` to compare nadir elapsed clock time with `RecoveryWindow.clockDurationMinutes` instead of total sleep time (`coreSleepDurationMinutes`) (#7).
+- **Task 2.2:** Nap Architecture Denominator: Update `ReadinessSummaryCoordinator` and `SleepDayAggregator` so deep and REM percentages divide by the sleep minutes of stage-eligible segments only, preventing stage-less naps from diluting architecture (#8).
+- **Task 2.3:** Circular Circadian Deviation: Update `CircadianWakeBaseline` and `CircadianConsistencyRepository` to compute wake time deviations circularly (wrapping to ±720 min) and use a safe circular median across noon (#9).
+- **Task 2.4:** Contributors Hypersomnia Ratio: Pass `scoringConfig.hypersomniaOnsetRatio` in `ComputeSleepMetricsUseCase` to align displayed duration contributor score with the actual sleep score (#11).
+- **Task 2.5:** Synchronize `DATA_FLOW.md` and `ABOUT.md` circadian/timing sections and add unit tests.
+
+---
+
+### Phase 3: Baselines & Statistical Calibration (#4, #5, #6)
+*Status: Proposed*
+
+- **Task 3.1:** Personal HRV σ Blend Ceiling: Set `HRV_SIGMA_BLEND_MAX_N = HRV_SIGMA_WINDOW_DAYS` (56) in `ScoringConstants.kt` so personal variability reaches 1.0 weight at maturity, and align documentation (#4).
+- **Task 3.2:** RHR σ Floor: Add `RHR_MIN_SIGMA_BPM = 1.5` in `ScoringConstants` and apply in `LoadScoringStrategy.computeRhrZScore` and `computeBaselineMetrics` (#5).
+- **Task 3.3:** RHR Self-Inclusion Resolution: Revisit decision OD-5 regarding current-night inclusion in the baseline median/stdev population (#5).
+- **Task 3.4:** RHR Live vs. Frozen Baseline Alignment: Unify RHR μ population between live and frozen passes, enforce `roundToInt()` consistently, and persist σ even when HRV is null (#6).
+- **Task 3.5:** Synchronize `DATA_FLOW.md` and `ABOUT.md` baseline sections and verify baseline freeze behavior tests.
+
+---
+
+### Phase 4: Training Load & Unified EWMA Engine (#1)
+*Status: Proposed*
+
+- **Task 4.1:** Unified Calendar-Day EWMA: Implement a single calendar-day EWMA (point evaluation + series) in `RasScoringStrategy`, zero-initialized over every calendar day from a fixed origin, removing the `size == 1` cliff (#1).
+- **Task 4.2:** Load History Guard: Add minimum history guard in `BuildLoadSeriesUseCase` (return neutral Load = 100 with insufficient history flag until 28 days of history or CTL floor) (#1).
+- **Task 4.3:** Unify UI Chart & Dashboard Callers: Point `WorkoutsStateFactory` and `ObserveDashboardStrainIncreaseUseCase` at the unified EWMA implementation (#1).
+- **Task 4.4:** Clean Legacy EWMA Code: Remove legacy list-based `computeEma` and backfill placeholder code (#1).
+- **Task 4.5:** Synchronize `DATA_FLOW.md` (§Load) and `ABOUT.md` (§Training Load), update strings/tooltips, and verify chart/load equivalence tests.
+
+---
+
+### History & Rollout
+Historical scores change only when the user runs the existing "Recalculate scores" / "Resync Health Connect data" flows. No new triggers or database schema migrations are added.
 
 **Constraints:**
 - Stay within the ≤ 400 lines/file target.
