@@ -23,7 +23,9 @@ import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepPercentileR
 import app.readylytics.health.core.model.domain.security.EncryptionManager
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -31,6 +33,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -342,6 +345,60 @@ class ComputeSleepMetricsUseCaseTest {
                     durationMinutes = 420,
                     userAge = any(),
                     sleepTargets = any(),
+                )
+            }
+        }
+
+    @Test
+    fun `buildReadinessResult passes scoringConfig hypersomniaOnsetRatio to durationSubScore`() =
+        runTest {
+            val targetDate = LocalDate.of(2026, 5, 31)
+            val summary = DailySummary(date = targetDate)
+            val scoringHistoryRepository = mockk<ScoringHistoryRepository>(relaxed = true)
+            coEvery { scoringHistoryRepository.getDailySummaryByDate(any(), any()) } returns null
+
+            val customHypersomniaRatio = 1.40f
+            val customHypersomniaPercent = 140
+            val session =
+                calibrationSession().copy(
+                    durationMinutes = 600,
+                    efficiency = 95f,
+                )
+
+            val scoringCalculator = mockk<ScoringCalculator>(relaxed = true)
+            every {
+                scoringCalculator.computeDurationSubScore(
+                    durationMinutes = 600,
+                    efficiency = 95f,
+                    goalSleepHours = 8.0f,
+                    hypersomniaOnsetRatio = customHypersomniaRatio,
+                )
+            } returns 82.5f
+
+            val useCase = calibrationUseCase(scoringHistoryRepository, true, scoringCalculator)
+
+            val request =
+                calibrationRequest(summary, targetDate).copy(
+                    session = session,
+                    core = testCoreRecoveryInput(session),
+                    prefs =
+                        UserPreferences(
+                            goalSleepHours = 8.0f,
+                            hypersomniaOnsetPercent = customHypersomniaPercent,
+                        ),
+                )
+
+            val result = useCase(request)
+
+            assertTrue(result.isSuccess)
+            val computedSummary = result.getOrThrow()
+            assertEquals(82.5f, computedSummary.readinessResult.contributors.durationScore)
+            verify {
+                scoringCalculator.computeDurationSubScore(
+                    durationMinutes = 600,
+                    efficiency = 95f,
+                    goalSleepHours = 8.0f,
+                    hypersomniaOnsetRatio = customHypersomniaRatio,
                 )
             }
         }

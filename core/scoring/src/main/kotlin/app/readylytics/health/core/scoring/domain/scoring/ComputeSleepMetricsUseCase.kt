@@ -512,6 +512,7 @@ class ComputeSleepMetricsUseCase
                     input.session.durationMinutes,
                     input.session.efficiency,
                     input.prefs.goalSleepHours,
+                    input.scoringConfig.hypersomniaOnsetRatio,
                 )
             val archSubScore =
                 collaborators.scoringCalculator.computeArchSubScore(
