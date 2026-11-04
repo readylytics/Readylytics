@@ -291,7 +291,12 @@ class ReadinessSummaryCoordinator
                 summaryHrvMuMssd = withHrvAndSleep.hrvMuMssd,
                 summaryHrvSigmaMssd = withHrvAndSleep.hrvSigmaMssd,
                 summaryRhrSigma = withHrvAndSleep.rhrSigma,
-                rhrBaselineValue = context.initialBaselines.rhrBaselineValue,
+                rhrBaselineValue =
+                    if (base.session != null && withHrvAndSleep.sleepScore != null) {
+                        withHrvAndSleep.rhrBpm
+                    } else {
+                        context.initialBaselines.rhrBaselineValue
+                    },
             )
 
             return assembleDailySummaryUseCase.assembleCalibrated(

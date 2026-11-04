@@ -653,12 +653,17 @@ class DocumentationDriftTest {
         for ((surface, text) in listOf(
             "ABOUT.md" to aboutMd,
             "docs/about.md" to publicAboutMd,
+            "in-app About strings" to aboutStringsXml,
             "DATA_FLOW.md" to dataFlowMd,
         )) {
             val normalized = normalizeWhitespace(text)
             assertTrue(
                 normalized.contains("1.5 bpm") || normalized.contains("1.5f"),
                 "$surface must document the 1.5 bpm RHR variability floor",
+            )
+            assertTrue(
+                normalized.contains("56 nights") || normalized.contains("56-day") || normalized.contains("56"),
+                "$surface must document the 56-night HRV sigma blend completion",
             )
         }
     }
@@ -672,6 +677,7 @@ class DocumentationDriftTest {
                 "zero-initialized",
                 "28 days",
                 "84 days",
+                "chronic load (CTL) reaches at least 5",
             )
         for (phrase in requiredPhrases) {
             assertTrue(aboutMd.contains(phrase), "ABOUT.md must contain '$phrase'")

@@ -12,6 +12,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -110,5 +111,70 @@ class BaselineLiveFrozenEquivalenceTest {
             assertEquals("rhrSigma must match", liveSummary.rhrSigma, frozenSummary.rhrSigma)
             assertEquals("hrvMuMssd must match", liveSummary.hrvMuMssd, frozenSummary.hrvMuMssd)
             assertEquals("hrvSigmaMssd must match", liveSummary.hrvSigmaMssd, frozenSummary.hrvSigmaMssd)
+        }
+
+    @Test
+    fun `calibrated day with no historical RHR nadirs in 30-day window scores identically live and frozen`() =
+        runTest {
+            val prefs =
+                UserPreferences(
+                    scoringZoneId = zoneId.id,
+                    physiologyProfile = PhysiologyProfile.ACTIVE,
+                    installDate = targetDate.minusDays(90).atStartOfDay(zoneId).toInstant().toEpochMilli(),
+                )
+            val settingsRepo = FakeSettingsRepository(prefs)
+            val scoringRepo = GoldenScoringRepositoryFactory(db).create(settingsRepo)
+            // Seed 10 calibrated nights >30 days ago (so user is calibrated, but 30-day RHR window is empty)
+            val oldAnchor = targetDate.minusDays(40)
+            val oldFixtures = GoldenSleepFixtures(db, oldAnchor, zoneId)
+            oldFixtures.seedCalibratedHistory(days = 10)
+
+            // Seed tonight's sleep session on targetDate
+            val fixtures = GoldenSleepFixtures(db, targetDate, zoneId)
+            val sessionDate = targetDate.minusDays(1)
+            val sleepStart = sessionDate.atTime(23, 0).atZone(zoneId).toInstant().toEpochMilli()
+            val sleepEnd = targetDate.atTime(7, 0).atZone(zoneId).toInstant().toEpochMilli()
+            val tonightSessionId = "tonight_sleep_empty_rhr_window"
+
+            val tonightSession =
+                SleepSessionEntity(
+                    id = tonightSessionId,
+                    startTime = sleepStart,
+                    endTime = sleepEnd,
+                    durationMinutes = 480,
+                    efficiency = 92f,
+                    deepSleepMinutes = 95,
+                    remSleepMinutes = 90,
+                    lightSleepMinutes = 265,
+                    awakeMinutes = 30,
+                    deviceName = "Pixel",
+                )
+            db.sleepSessionDao().upsertAll(listOf(tonightSession))
+            fixtures.seedMidnightSleepStages(tonightSessionId, sleepStart, sleepEnd)
+            fixtures.seedMidnightSleepHr(tonightSessionId, sleepStart)
+
+            // Pass 1: Live scoring pass (unfrozen)
+            val liveSummary = checkNotNull(scoringRepo.computeDailySummary(targetDate))
+            assertNull("zRhr must be null when 30-day RHR window is empty", liveSummary.zRhr)
+            assertNull("rhrBpm must not freeze DEFAULT_RHR_BPM when 30-day RHR window is empty", liveSummary.rhrBpm)
+
+            // Persist the summary with baselineCalculatedAtDate set (freezing it)
+            val entity = DailySummaryMapper.toEntity(liveSummary, zoneId)
+            db.dailySummaryDao().upsert(entity)
+
+            // Pass 2: Frozen scoring pass
+            val frozenSummary = checkNotNull(scoringRepo.computeDailySummary(targetDate))
+
+            assertEquals("zRhr must remain null on frozen replay", liveSummary.zRhr, frozenSummary.zRhr)
+            assertEquals("zLnHrv must be bit-identical", liveSummary.zLnHrv, frozenSummary.zLnHrv)
+            assertEquals("sRest must be bit-identical", liveSummary.sRest, frozenSummary.sRest)
+            assertEquals("sleepScore must be bit-identical", liveSummary.sleepScore, frozenSummary.sleepScore)
+            assertEquals(
+                "readiness must be bit-identical",
+                liveSummary.readinessWorkoutOnly,
+                frozenSummary.readinessWorkoutOnly,
+            )
+            assertEquals("recoveryFlags must match", liveSummary.recoveryFlags, frozenSummary.recoveryFlags)
+            assertEquals("rhrBpm must match", liveSummary.rhrBpm, frozenSummary.rhrBpm)
         }
 }

@@ -223,6 +223,12 @@ class ComputeSleepMetricsUseCase
                     )
                 val isCalibrating = calibrationState.isCalibrating
 
+                val liveBaselineRhr =
+                    if (frozenBaseline) {
+                        null
+                    } else {
+                        rhrBaselineValue.takeIf { rhrValues.isNotEmpty() || prefs.rhrBaselineOverride != null }
+                    }
                 val nocturnalScoring =
                     if (currentNocturnalRhr != null) {
                         computeNocturnalScores(
@@ -242,7 +248,7 @@ class ComputeSleepMetricsUseCase
                                 frozenRhr = frozenRhr,
                                 effectiveRhrSigma = effectiveRhrSigma,
                                 baselineRhrValue = baselineRhrValue,
-                                liveBaselineRhr = if (frozenBaseline) null else rhrBaselineValue,
+                                liveBaselineRhr = liveBaselineRhr,
                                 prefs = prefs,
                                 scoringConfig = scoringConfig,
                                 stagesSuspicious = stagesSuspicious,
@@ -309,6 +315,7 @@ class ComputeSleepMetricsUseCase
                             currentRestingHr = currentRestingHr,
                             restingHrRatio = restingHrRatio,
                             restingHrBaseline = restingHrBaseline,
+                            liveBaselineRhr = liveBaselineRhr,
                             frozenBaseline = frozenBaseline,
                             muHrvHistory = muHrvHistory,
                             hrvSigma = hrvSigma,

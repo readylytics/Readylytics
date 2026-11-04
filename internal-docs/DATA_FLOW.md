@@ -1322,7 +1322,7 @@ the full retention window through today may advance it. A killed or failed pass 
 the version unchanged, so a later full/unbounded run (or another launch's startup gate) still converges
 it.
 
-The Phase 2 sleep fixes raise the current scoring version to **6**: the late-nadir penalty now compares
+The Phase 2–4 scoring fixes raise the current scoring version to **8** (v6: late-nadir penalty compares the nadir offset against the core cluster's clock recovery window, and the deep/REM architecture denominator uses `SleepDayAggregate.architectureDurationMinutes`; v7: RHR baseline window excludes the scored night, RHR σ is floored at 1.5 bpm, and the HRV σ blend reaches 100% at 56 nights; v8: ATL/CTL use the unified zero-initialized calendar-day EWMA with a 28-day history and `CTL >= 5` floor guard, circadian consistency excludes evaluation nights from its baseline, and live/frozen RHR baselines converge on the unrounded nadir median): the late-nadir penalty now compares
 the nadir offset against the core cluster's clock recovery window, and the deep/REM architecture
 denominator — together with the `validateNight` stage-fraction and duration gates on both the live
 (`ComputeSleepMetricsUseCase`) and historical (`HistoricalSleepDayAssembler`) paths — uses
