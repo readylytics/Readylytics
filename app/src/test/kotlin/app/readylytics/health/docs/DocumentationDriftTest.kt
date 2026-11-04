@@ -53,9 +53,7 @@ class DocumentationDriftTest {
             "feature/settings/src/main/res/values/strings.xml",
             "feature/onboarding/src/main/res/values/strings.xml",
         ).mapNotNull { path ->
-            listOf(File(path), File("../$path"), File("../../$path"))
-                .firstOrNull { it.exists() }
-                ?.readText()
+            listOf(File(path), File("../$path"), File("../../$path")).firstOrNull { it.exists() }?.readText()
         }.joinToString("\n")
     private val customizationMd = readRepoFile("docs/customization.md")
     private val dataFlowMd = readRepoFile("internal-docs/DATA_FLOW.md")
@@ -63,12 +61,6 @@ class DocumentationDriftTest {
     private val settingsStringsXml = readRepoFile("feature/settings/src/main/res/values/strings.xml")
     private val coreUiStringsXml = readRepoFile("core/ui/src/main/res/values/strings.xml")
     private val buildGradleKts = readRepoFile("app/build.gradle.kts")
-    private val governanceDocPaths =
-        listOf(
-            ".claude/CLAUDE.md",
-            "GEMINI.md",
-            "AGENTS.md",
-        )
     private val configFactory = ScoringConfigFactory()
 
     @Test
@@ -240,14 +232,6 @@ class DocumentationDriftTest {
         assertAgeBandInAboutMd("60+", SleepArchitectureTargetFactory.create(70))
     }
 
-    private val ageBandTolerances =
-        mapOf(
-            "18–29" to 0.004f,
-            "30–49" to 0.004f,
-            "50–59" to 0.005f,
-            "60+" to 0.011f,
-        )
-
     private fun assertAgeBandInAboutMd(
         ageRangeLabel: String,
         targets: app.readylytics.health.core.scoring.domain.scoring.components.SleepArchitectureTargets,
@@ -258,7 +242,7 @@ class DocumentationDriftTest {
         val deepPercent = parts[1].removeSuffix("%").toFloat() / 100f
         val remPercent = parts[2].removeSuffix("%").toFloat() / 100f
         val tolerance =
-            ageBandTolerances[ageRangeLabel]
+            AGE_BAND_TOLERANCES[ageRangeLabel]
                 ?: error("No tolerance defined for age band $ageRangeLabel")
         assertEquals(targets.deepPercentage, deepPercent, tolerance, "Deep target mismatch for $ageRangeLabel")
         assertEquals(targets.remPercentage, remPercent, tolerance, "REM target mismatch for $ageRangeLabel")
@@ -399,7 +383,7 @@ class DocumentationDriftTest {
             Regex("""targetSdk\s*=\s*(\d+)""").find(buildGradleKts)?.groupValues?.get(1)
                 ?: error("could not find targetSdk in app/build.gradle.kts")
 
-        for (path in governanceDocPaths) {
+        for (path in GOVERNANCE_DOC_PATHS) {
             val text = readRepoFile(path)
             assertTrue(
                 text.contains("minSdk=$minSdk, targetSdk=$targetSdk"),
@@ -679,18 +663,51 @@ class DocumentationDriftTest {
         }
     }
 
-    /** Collapses whitespace runs (including line wraps) to a single space for wrap-tolerant matching. */
-    private fun normalizeWhitespace(text: String): String = text.replace(Regex("\\s+"), " ")
-
-    private fun readRepoFile(pathFromRepoRoot: String): String {
-        val candidates =
+    @Test
+    fun `missing day handling and EWMA ramp-up documentation is synchronized`() {
+        val requiredPhrases =
             listOf(
-                File(pathFromRepoRoot),
-                File("../$pathFromRepoRoot"),
-                File("../../$pathFromRepoRoot"),
+                "exponential moving averages",
+                "zero TRIMP",
+                "zero-initialized",
+                "28 days",
+                "5.0",
             )
-        val file = candidates.firstOrNull { it.exists() }
-        assertTrue(file != null, "could not locate $pathFromRepoRoot from working dir ${File(".").absolutePath}")
-        return file.readText()
+        for (phrase in requiredPhrases) {
+            assertTrue(aboutMd.contains(phrase), "ABOUT.md must contain '$phrase'")
+            assertTrue(publicAboutMd.contains(phrase), "docs/about.md must contain '$phrase'")
+        }
+        assertTrue(dataFlowMd.contains("BuildLoadSeriesUseCase"))
+        assertTrue(dataFlowMd.contains("MIN_HISTORY_DAYS_FOR_LOAD"))
     }
+}
+
+private val GOVERNANCE_DOC_PATHS =
+    listOf(
+        ".claude/CLAUDE.md",
+        "GEMINI.md",
+        "AGENTS.md",
+    )
+
+private val AGE_BAND_TOLERANCES =
+    mapOf(
+        "18–29" to 0.004f,
+        "30–49" to 0.004f,
+        "50–59" to 0.005f,
+        "60+" to 0.011f,
+    )
+
+/** Collapses whitespace runs (including line wraps) to a single space for wrap-tolerant matching. */
+private fun normalizeWhitespace(text: String): String = text.replace(Regex("\\s+"), " ")
+
+private fun readRepoFile(pathFromRepoRoot: String): String {
+    val candidates =
+        listOf(
+            File(pathFromRepoRoot),
+            File("../$pathFromRepoRoot"),
+            File("../../$pathFromRepoRoot"),
+        )
+    val file = candidates.firstOrNull { it.exists() }
+    assertTrue(file != null, "could not locate $pathFromRepoRoot from working dir ${File(".").absolutePath}")
+    return file.readText()
 }
