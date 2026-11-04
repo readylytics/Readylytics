@@ -1,6 +1,6 @@
 # Code-Quality Evaluation — Clean Code, DI, DRY, SOLID
 
-**Date:** 2026-11-04 · **Scope:** whole repository (`app`, `feature:*` ×8, `core:*` ×7, ~1,780 Kotlin files / ~127k LOC) · **Type:** read-only assessment, no code changed.
+**Date:** 2026-11-04 · **Baseline:** `origin/main` @ `9eeddcc` · **Scope:** whole repository (`app`, `feature:*` ×8, `core:*` ×7, ~1,780 Kotlin files / ~127k LOC) · **Type:** read-only assessment, no code changed.
 
 ## 1. Purpose
 
@@ -73,9 +73,9 @@ These files are at or near the 800-line hard limit (target is ≤400):
 | `feature/sleep/.../SleepTrendChart.kt` | 689 |
 | `feature/sleep/.../SleepStagesChart.kt` | 682 |
 | `feature/dashboard/.../usecase/DashboardMetricPresentationFactory.kt` | 665 |
-| `core/scoring/.../domain/scoring/ComputeSleepMetricsUseCase.kt` | 627 |
+| `core/scoring/.../domain/scoring/ComputeSleepMetricsUseCase.kt` | 636 |
 | `feature/workouts/.../AcwrChart.kt` | 626 |
-| `core/database/.../data/repository/ScoringRepositoryImpl.kt` | 589 |
+| `core/database/.../data/repository/ScoringRepositoryImpl.kt` | 590 |
 | `core/healthconnect/.../domain/sync/HealthIngestionCoordinator.kt` | 584 |
 | `feature/dashboard/.../DashboardViewModel.kt` | 539 |
 
@@ -95,7 +95,7 @@ Every new record type grows the same class, and every consumer depends on the wh
 
 ### 5.2 DI — hidden dependencies, dead defaults, bypassed abstractions
 
-1. **Inline construction.** `ScoringRepositoryImpl.kt:54-90` builds its collaborators itself: `ScoringDayContextResolver(...)`, `DailyTrimpComputer(...)`, `BaseSummaryAssembler(...)` and others. These dependencies are hidden and can't be substituted, so tests cannot replace them.
+1. **Inline construction.** `ScoringRepositoryImpl.kt:56-90` builds its collaborators itself: `ScoringDayContextResolver(...)`, `DailyTrimpComputer(...)`, `BaseSummaryAssembler(...)` and others. These dependencies are hidden and can't be substituted, so tests cannot replace them.
 2. **Parameter-object holders.** `ScoringDataLoaders`, `ScoringDayUseCases`, `DashboardRepositories` and `DashboardUseCases` exist mainly to pass detekt's `LongParameterList`. Grouping cohesive dependencies is fine. Here the holders mostly hide that one class has more than 10 collaborators, which is a symptom of the SRP problem in 5.1, not a fix for it.
 3. **Dead `Clock` defaults.**
    - About 15 `@Inject` constructors declare `clock: Clock = Clock.systemDefaultZone()`, for example `ResyncRangeUseCase.kt:141`, `HistoricalIngestPhase.kt:136`, `RoomHealthIngestionStore.kt:51`, `SyncPreferences.kt:15`.
