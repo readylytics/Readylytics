@@ -270,7 +270,7 @@
         weight at 56 nights. A confidence indicator becomes visible.</string>
     <string name="about_phase_mature">**Mature (60+ nights, confidence: High).** All scores use
         your own personal baselines for both the average and the variability (the personal
-        variability weight already reached 100% at 56 nights, before this phase begins). This is
+        variability weight already reached 100%% at 56 nights, before this phase begins). This is
         when small day-to-day differences become trustworthy.</string>
     <string name="about_tracker_frequency">Progress through these phases depends on the number of
         nights with usable HRV/RHR data, not calendar age. If you wear your tracker only 3-5
