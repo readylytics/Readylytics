@@ -163,45 +163,69 @@ class BaselineZScoreComputerTest {
     }
 
     @Test
-    fun `computeZScores evaluates against baselineRhrValue on live passes when rhrValues is empty or matching`() {
-        val rhrParamsLive =
+    fun `live pass uses the unrounded baseline so it matches a frozen replay of the same night`() {
+        // Even-count nadir median 58.5: live must NOT round to 59 while frozen keeps 58.5.
+        val live =
             BaselineZScoreComputer.RhrZScoreParams(
-                currentNocturnalRhr = 65,
-                rhrValues = listOf(60, 60, 60),
-                rhrBaselineOverride = null,
+                currentNocturnalRhr = 63,
+                rhrValues = listOf(58, 59),
+                effectiveRhrSigma = 1.5f,
+                baselineRhrValue = 59,
+                liveBaselineRhr = 58.5f,
+            )
+        val frozen =
+            BaselineZScoreComputer.RhrZScoreParams(
+                currentNocturnalRhr = 63,
+                rhrValues = emptyList(),
+                frozenRhr = 58.5f,
+                effectiveRhrSigma = 1.5f,
+                baselineRhrValue = 59,
+            )
+
+        val liveZ = computer.computeRhrZScore(live)
+        val frozenZ = computer.computeRhrZScore(frozen)
+
+        assertEquals(3.0f, liveZ!!, 0.001f)
+        assertEquals(liveZ, frozenZ)
+    }
+
+    @Test
+    fun `live pass with no prior nights returns null rather than scoring against the default baseline`() {
+        val firstNight =
+            BaselineZScoreComputer.RhrZScoreParams(
+                currentNocturnalRhr = 45,
+                rhrValues = emptyList(),
+                baselineRhrValue = 60,
+                liveBaselineRhr = 60f,
+            )
+
+        assertNull(computer.computeRhrZScore(firstNight))
+    }
+
+    @Test
+    fun `frozen day without a frozen rhr baseline returns null zRhr`() {
+        val frozenNoBaseline =
+            BaselineZScoreComputer.RhrZScoreParams(
+                currentNocturnalRhr = 45,
+                rhrValues = emptyList(),
                 frozenRhr = null,
-                effectiveRhrSigma = 2.0f,
                 baselineRhrValue = 60,
             )
-        val rhrParamsLiveEmpty =
+
+        assertNull(computer.computeRhrZScore(frozenNoBaseline))
+    }
+
+    @Test
+    fun `explicit rhr baseline override applies even with no prior nights`() {
+        val override =
             BaselineZScoreComputer.RhrZScoreParams(
                 currentNocturnalRhr = 65,
                 rhrValues = emptyList(),
-                rhrBaselineOverride = null,
-                frozenRhr = null,
-                effectiveRhrSigma = 2.0f,
-                baselineRhrValue = 60,
-            )
-        val rhrParamsFrozen =
-            BaselineZScoreComputer.RhrZScoreParams(
-                currentNocturnalRhr = 65,
-                rhrValues = emptyList(),
-                rhrBaselineOverride = null,
-                frozenRhr = 60f,
+                rhrBaselineOverride = 60f,
                 effectiveRhrSigma = 2.0f,
                 baselineRhrValue = 60,
             )
 
-        val liveResult = computer.computeRhrZScore(rhrParamsLive)
-        val liveEmptyResult = computer.computeRhrZScore(rhrParamsLiveEmpty)
-        val frozenResult = computer.computeRhrZScore(rhrParamsFrozen)
-
-        assertNotNull(liveResult)
-        assertNotNull(liveEmptyResult)
-        assertNotNull(frozenResult)
-        assertEquals(2.5f, liveResult!!, 0.001f)
-        assertEquals(2.5f, liveEmptyResult!!, 0.001f)
-        assertEquals(2.5f, frozenResult!!, 0.001f)
-        assertEquals(liveResult, frozenResult)
+        assertEquals(2.5f, computer.computeRhrZScore(override)!!, 0.001f)
     }
 }

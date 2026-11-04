@@ -480,7 +480,7 @@ Biological baselines take time to learn. We are explicit about the phases:
 - **Calibration (0–6 valid nights, confidence: Not Ready).** We collect baseline data and show raw sleep/recovery measurements where available, but Sleep Score, Load Score, and Readiness stay hidden until there are at least 7 valid nights. This avoids unstable early scores while HRV and RHR baselines are still forming.
 - **Early Baseline (7–20 nights, confidence: Low).** We start showing all three scores, but Restoration uses a population-typical estimate of how much your HRV varies night to night (tiered by your profile). Expect more variability than the mature score.
 - **Maturing (21–59 nights, confidence: Medium).** Your personal HRV mean is settled, and we begin blending your personal night-to-night variability with the population estimate across the 56-day observation window. A confidence indicator becomes visible.
-- **Mature (60+ nights, confidence: High).** All scores use your own personal baselines for both the average and the variability (reaching 100% personal variability weight at 56 nights). This is when small day-to-day differences become trustworthy.
+- **Mature (60+ nights, confidence: High).** All scores use your own personal baselines for both the average and the variability (the personal variability weight already reached 100% at 56 nights, before this phase begins). This is when small day-to-day differences become trustworthy.
 
 Progress through these phases depends on the number of nights with usable HRV/RHR data, not calendar age. If you wear your tracker only 3–5 nights a week, the timeline lengthens proportionally.
 

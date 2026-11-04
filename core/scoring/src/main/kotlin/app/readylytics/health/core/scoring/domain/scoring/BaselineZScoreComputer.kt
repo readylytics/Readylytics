@@ -35,7 +35,14 @@ class BaselineZScoreComputer
             val rhrBaselineOverride: Float? = null,
             val frozenRhr: Float? = null,
             val effectiveRhrSigma: Float? = null,
+            /** Rounded baseline, used only for the display delta (rhr - baseline). */
             val baselineRhrValue: Int = 0,
+            /**
+             * Unrounded live baseline (nadir median). Mirrors the unrounded `frozenRhr` so a live
+             * pass and a frozen replay of the same night use the identical mu. Only honored when
+             * [rhrValues] has prior nights; with no prior nights the z-score stays null (calibrating).
+             */
+            val liveBaselineRhr: Float? = null,
         )
 
         fun computeHrvZScore(params: HrvZScoreParams): Float? {
@@ -56,7 +63,9 @@ class BaselineZScoreComputer
         fun computeRhrZScore(params: RhrZScoreParams): Float? {
             val rhr = params.currentNocturnalRhr ?: return null
             val effectiveBaseline =
-                params.frozenRhr ?: params.rhrBaselineOverride ?: params.baselineRhrValue.toFloat()
+                params.frozenRhr
+                    ?: params.rhrBaselineOverride
+                    ?: params.liveBaselineRhr?.takeIf { params.rhrValues.isNotEmpty() }
             return scoringCalculator.computeRhrZScore(
                 rhr.toFloat(),
                 params.rhrValues,

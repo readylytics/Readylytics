@@ -455,6 +455,18 @@ class LoadScoringStrategyTest {
     }
 
     @Test
+    fun `rhrZScore does not re-floor a persisted frozenSigma so frozen days replay as stored`() {
+        val result =
+            loadStrategy.computeRhrZScore(
+                currentRhrBpm = 61f,
+                rhrHistory = emptyList(),
+                baselineOverride = 60f,
+                frozenSigma = 0.8f,
+            )
+        assertEquals(1.25f, result!!, 0.001f)
+    }
+
+    @Test
     fun `rhrZScore uses fallback when frozenSigma is null and rhrHistory is empty`() {
         val result =
             loadStrategy.computeRhrZScore(

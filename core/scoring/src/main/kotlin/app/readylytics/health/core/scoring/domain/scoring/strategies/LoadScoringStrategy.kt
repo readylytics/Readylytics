@@ -8,6 +8,7 @@ import app.readylytics.health.core.model.domain.scoring.ScoringConstants.Restora
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants.Strain
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.StageIntegrity
+import app.readylytics.health.core.scoring.domain.scoring.flooredRhrSigma
 import app.readylytics.health.core.scoring.domain.scoring.components.EmergencyFlagThresholds
 import app.readylytics.health.core.scoring.domain.scoring.components.RecoveryFlagContext
 import app.readylytics.health.core.scoring.domain.scoring.components.RecoveryFlagEvaluator
@@ -96,11 +97,13 @@ class LoadScoringStrategy
         ): Float? {
             if (rhrHistory.isEmpty() && baselineOverride == null) return null
             val mu = baselineOverride ?: rhrHistory.median()
-            val rawSigma =
-                frozenSigma ?: rhrHistory
-                    .takeIf { it.size > 1 }
-                    ?.stdevOrNull() ?: max(0.05f * mu, Restoration.RHR_MIN_SIGMA_BPM)
-            val sigma = rawSigma.coerceAtLeast(Restoration.RHR_MIN_SIGMA_BPM)
+            val sigma =
+                frozenSigma?.takeIf { it > 0f }
+                    ?: rhrHistory
+                        .takeIf { it.size > 1 }
+                        ?.stdevOrNull()
+                        ?.flooredRhrSigma()
+                    ?: max(0.05f * mu, Restoration.RHR_MIN_SIGMA_BPM)
             return (currentRhrBpm - mu) / sigma
         }
 

@@ -242,6 +242,7 @@ class ComputeSleepMetricsUseCase
                                 frozenRhr = frozenRhr,
                                 effectiveRhrSigma = effectiveRhrSigma,
                                 baselineRhrValue = baselineRhrValue,
+                                liveBaselineRhr = if (frozenBaseline) null else rhrBaselineValue,
                                 prefs = prefs,
                                 scoringConfig = scoringConfig,
                                 stagesSuspicious = stagesSuspicious,
@@ -445,6 +446,7 @@ class ComputeSleepMetricsUseCase
                         frozenRhr = input.frozenRhr,
                         effectiveRhrSigma = input.effectiveRhrSigma,
                         baselineRhrValue = input.baselineRhrValue,
+                        liveBaselineRhr = input.liveBaselineRhr,
                     ),
             )
 

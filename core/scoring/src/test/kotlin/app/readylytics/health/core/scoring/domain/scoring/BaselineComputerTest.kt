@@ -6,7 +6,6 @@ import app.readylytics.health.core.model.domain.model.SleepSession
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayPolicy
-import app.readylytics.health.core.scoring.domain.util.weightedPercentile
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
@@ -36,39 +35,6 @@ class BaselineComputerTest {
             )
         }
     private val baselineComputer = BaselineComputer(repository, scoringCalculator)
-
-    @Test
-    fun `rhrHistory computes percentile matching weightedPercentile`() =
-        runTest {
-            val now = Instant.parse("2026-06-01T00:00:00Z")
-            val session =
-                SleepSession(
-                    id = "s1",
-                    startTime = now.minus(8, ChronoUnit.HOURS).toEpochMilli(),
-                    endTime = now.toEpochMilli(),
-                    durationMinutes = 480,
-                    efficiency = 0.9f,
-                    deepSleepMinutes = 90,
-                    remSleepMinutes = 90,
-                    lightSleepMinutes = 270,
-                    awakeMinutes = 30,
-                )
-            // 10 samples from 50 to 95 step 5
-            val samples = (50..95 step 5).map { SleepHrSample("s1", it) }
-            val values = samples.map { it.beatsPerMinute }.toIntArray()
-            val weights = IntArray(values.size) { 1 }
-
-            coEvery { repository.getSleepSessionsBetween(any(), any()) } returns listOf(session)
-            coEvery { repository.getSleepHrProjectionForSessions(listOf("s1")) } returns samples
-
-            val p5 = baselineComputer.rhrHistory(now, percentile = 5)
-            val p50 = baselineComputer.rhrHistory(now, percentile = 50)
-            val p95 = baselineComputer.rhrHistory(now, percentile = 95)
-
-            assertEquals(listOf(weightedPercentile(values, weights, 0.05)), p5)
-            assertEquals(listOf(weightedPercentile(values, weights, 0.50)), p50)
-            assertEquals(listOf(weightedPercentile(values, weights, 0.95)), p95)
-        }
 
     @Test
     fun `rhrHistoryBetween computes percentile bit-identical to expanded samples`() =
