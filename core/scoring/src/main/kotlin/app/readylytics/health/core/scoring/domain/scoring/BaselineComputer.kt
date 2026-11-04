@@ -128,10 +128,12 @@ class BaselineComputer
                     snapshotId = snapshotId,
                 )
             // WP-11: same RHR membership selector as the backfill and adaptive-baseline paths, so
-            // this "display percentile" population (ungated by canContributeToBaseline, same as
+            // this "display percentile" population (gated by canContributeToBaseline, same as
             // BackfillBaseline.rhrHistory) shares membership policy with them too.
             val targetScoreDay = Instant.ofEpochMilli(fromMs).atZone(zoneId).toLocalDate()
-            return historicalRhrWindow(historicalSleepDays, targetScoreDay).mapNotNull { it.rhrPercentileBpm }
+            return historicalRhrWindow(historicalSleepDays, targetScoreDay)
+                .filter { it.canContributeToBaseline }
+                .mapNotNull { it.rhrPercentileBpm }
         }
 
         /**
@@ -457,12 +459,11 @@ class BaselineComputer
             val muHistory = sigmaHistory.takeLast(ScoringConstants.HRV_MU_WINDOW_DAYS)
 
             // Shared RHR membership window (WP-11): same selector as the live paths below, so
-            // backfill and live never disagree on which nights count. Preserves the existing split
-            // between the nadir population (gated by canContributeToBaseline, feeding rhrBpm) and
-            // the display-percentile population (rhrHistory, ungated) -- only WHICH days are
-            // considered changes here, not the two populations' distinct eligibility filters.
-            val rhrDays = historicalRhrWindow(historicalSleepDays, scoreDay)
-            val nadirs = rhrDays.filter { it.canContributeToBaseline }.mapNotNull { it.nadirBpm }
+            // backfill and live never disagree on which nights count. Both the nadir population
+            // (feeding rhrBpm) and the display-percentile population (rhrHistory) are gated by
+            // canContributeToBaseline.
+            val rhrDays = historicalRhrWindow(historicalSleepDays, scoreDay).filter { it.canContributeToBaseline }
+            val nadirs = rhrDays.mapNotNull { it.nadirBpm }
             val rhrBpm = if (nadirs.isEmpty()) ScoringConstants.DEFAULT_RHR_BPM else nadirs.median()
             val rhrHistory = rhrDays.mapNotNull { it.rhrPercentileBpm }
 

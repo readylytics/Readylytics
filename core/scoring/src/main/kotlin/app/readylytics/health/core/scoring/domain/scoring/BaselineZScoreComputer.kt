@@ -55,10 +55,12 @@ class BaselineZScoreComputer
 
         fun computeRhrZScore(params: RhrZScoreParams): Float? {
             val rhr = params.currentNocturnalRhr ?: return null
+            val effectiveBaseline =
+                params.frozenRhr ?: params.rhrBaselineOverride ?: params.baselineRhrValue.toFloat()
             return scoringCalculator.computeRhrZScore(
                 rhr.toFloat(),
                 params.rhrValues,
-                params.frozenRhr ?: params.rhrBaselineOverride,
+                effectiveBaseline,
                 params.effectiveRhrSigma,
             )
         }

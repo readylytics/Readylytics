@@ -129,9 +129,9 @@ class ComputeSleepMetricsUseCase
                 val currentNocturnalRhr = currentRestingHr
                 val baselineRhrValue =
                     if (frozenBaseline && frozenRhr != null) {
-                        frozenRhr.toInt()
+                        frozenRhr.roundToInt()
                     } else if (frozenBaseline && frozenRhr == null) {
-                        (prefs.rhrBaselineOverride ?: ScoringConstants.DEFAULT_RHR_BPM).toInt()
+                        (prefs.rhrBaselineOverride ?: ScoringConstants.DEFAULT_RHR_BPM).roundToInt()
                     } else {
                         rhrBaselineValue.roundToInt()
                     }

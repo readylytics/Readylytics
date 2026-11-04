@@ -161,4 +161,47 @@ class BaselineZScoreComputerTest {
         assertEquals(0f, result.zRhr!!, 0.05f)
         assertEquals(0f, result.rhrDeltaBpm!!, 0.01f)
     }
+
+    @Test
+    fun `computeZScores evaluates against baselineRhrValue on live passes when rhrValues is empty or matching`() {
+        val rhrParamsLive =
+            BaselineZScoreComputer.RhrZScoreParams(
+                currentNocturnalRhr = 65,
+                rhrValues = listOf(60, 60, 60),
+                rhrBaselineOverride = null,
+                frozenRhr = null,
+                effectiveRhrSigma = 2.0f,
+                baselineRhrValue = 60,
+            )
+        val rhrParamsLiveEmpty =
+            BaselineZScoreComputer.RhrZScoreParams(
+                currentNocturnalRhr = 65,
+                rhrValues = emptyList(),
+                rhrBaselineOverride = null,
+                frozenRhr = null,
+                effectiveRhrSigma = 2.0f,
+                baselineRhrValue = 60,
+            )
+        val rhrParamsFrozen =
+            BaselineZScoreComputer.RhrZScoreParams(
+                currentNocturnalRhr = 65,
+                rhrValues = emptyList(),
+                rhrBaselineOverride = null,
+                frozenRhr = 60f,
+                effectiveRhrSigma = 2.0f,
+                baselineRhrValue = 60,
+            )
+
+        val liveResult = computer.computeRhrZScore(rhrParamsLive)
+        val liveEmptyResult = computer.computeRhrZScore(rhrParamsLiveEmpty)
+        val frozenResult = computer.computeRhrZScore(rhrParamsFrozen)
+
+        assertNotNull(liveResult)
+        assertNotNull(liveEmptyResult)
+        assertNotNull(frozenResult)
+        assertEquals(2.5f, liveResult!!, 0.001f)
+        assertEquals(2.5f, liveEmptyResult!!, 0.001f)
+        assertEquals(2.5f, frozenResult!!, 0.001f)
+        assertEquals(liveResult, frozenResult)
+    }
 }

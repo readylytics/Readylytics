@@ -108,6 +108,48 @@ class BaselineComputerTest {
         }
 
     @Test
+    fun `rhrHistoryBetween excludes nights failing validation`() =
+        runTest {
+            val customCalculator =
+                mockk<ScoringCalculator>().apply {
+                    io.mockk.every {
+                        validateNight(any(), any(), any(), any(), any(), any())
+                    } returns ScoringCalculator.NightValidationResult(
+                        rmssdValid = true,
+                        rhrValid = false,
+                        durationValid = true,
+                        stagesValid = true,
+                        stagesSuspicious = false,
+                        hrCoverageValid = true,
+                    )
+                }
+            val computerWithCustomValidation = BaselineComputer(repository, customCalculator)
+            val fromMs = Instant.parse("2026-06-03T00:00:00Z").toEpochMilli()
+            val toMs = Instant.parse("2026-06-04T00:00:00Z").toEpochMilli()
+            val session =
+                createSession(
+                    id = "s_invalid_rhr_history",
+                    startIso = "2026-06-01T23:00:00Z",
+                    endIso = "2026-06-02T07:00:00Z",
+                )
+            coEvery { repository.getDailySummaryByDate(fromMs, any()) } returns null
+            coEvery { repository.getSleepSessionsBetween(any(), any()) } returns listOf(session)
+            coEvery { repository.getSleepRmssdForSessionsMap(any()) } returns emptyMap()
+            coEvery {
+                repository.getSleepHrProjectionForSessions(any())
+            } returns listOf(SleepHrSample("s_invalid_rhr_history", 60))
+
+            val result =
+                computerWithCustomValidation.rhrHistoryBetween(
+                    fromMs = fromMs,
+                    toMs = toMs,
+                    percentile = 10,
+                    zoneId = ZoneId.of("UTC"),
+                )
+            assertEquals(emptyList(), result)
+        }
+
+    @Test
     fun `computeBackfillBaselines computes RHR percentile accurately`() =
         runTest {
             val zone = ZoneId.of("UTC")

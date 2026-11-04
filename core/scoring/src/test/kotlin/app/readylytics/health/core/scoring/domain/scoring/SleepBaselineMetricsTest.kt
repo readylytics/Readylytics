@@ -55,4 +55,26 @@ class SleepBaselineMetricsTest {
         assertEquals(ScoringConstants.Restoration.RHR_MIN_SIGMA_BPM, result.calculatedRhrSigma!!, 0.001f)
         assertEquals(ScoringConstants.Restoration.RHR_MIN_SIGMA_BPM, result.effectiveRhrSigma!!, 0.001f)
     }
+
+    @Test
+    fun `computeBaselineMetrics preserves hrvSigma when sessionHrvSamples is empty but sigma history present`() {
+        val sigmaHistory = listOf(50f, 52f, 48f, 55f)
+        val input =
+            BaselineMetricsInput(
+                frozenBaseline = false,
+                frozenHrvSigma = null,
+                sigmaHrvHistory = sigmaHistory,
+                sigmaPrior = 0.15f,
+                sessionHrvSamples = emptyList(), // Tonight has no HRV samples yet
+                rhrValues = listOf(60, 62, 58),
+                frozenRhrSigma = null,
+                session = testSession(),
+                validation = validNightResult(),
+            )
+
+        val result = computeBaselineMetrics(input, calculator)
+
+        // hrvSigma must not be null so that frozen baselines preserve user's historical HRV sigma
+        assertNotNull(result.hrvSigma)
+    }
 }

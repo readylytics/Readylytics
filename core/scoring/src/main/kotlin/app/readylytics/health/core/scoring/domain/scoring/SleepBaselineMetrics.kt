@@ -92,13 +92,11 @@ internal fun computeBaselineMetrics(
     val effectiveRhrSigma = input.frozenRhrSigma ?: calculatedRhrSigma
 
     val hrvSigma =
-        if (input.sessionHrvSamples.isNotEmpty()) {
-            if (input.frozenBaseline && input.frozenHrvSigma != null) {
-                input.frozenHrvSigma
-            } else {
-                val lnSigmaHistory = effectiveSigmaHistory.map { ln(it.coerceAtLeast(0.001f)) }
-                scoringCalculator.hrvSigma(lnSigmaHistory, input.sigmaPrior)
-            }
+        if (input.frozenBaseline && input.frozenHrvSigma != null) {
+            input.frozenHrvSigma
+        } else if (effectiveSigmaHistory.isNotEmpty()) {
+            val lnSigmaHistory = effectiveSigmaHistory.map { ln(it.coerceAtLeast(0.001f)) }
+            scoringCalculator.hrvSigma(lnSigmaHistory, input.sigmaPrior)
         } else {
             null
         }

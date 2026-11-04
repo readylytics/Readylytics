@@ -1,12 +1,10 @@
 package app.readylytics.health.core.scoring.domain.scoring
 
-import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
-import app.readylytics.health.core.scoring.domain.scoring.ComputeHistoricalBaselinesUseCase
-
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayPolicy
 import app.readylytics.health.core.scoring.domain.scoring.strategies.LoadScoringStrategy
 import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
@@ -76,7 +74,7 @@ class ComputeHistoricalBaselinesUseCase
                 windows.rhrHistory
                     .takeIf { it.size > 1 }
                     ?.stdevOrNull()
-                    ?.takeIf { it > 0f }
+                    ?.coerceAtLeast(ScoringConstants.Restoration.RHR_MIN_SIGMA_BPM)
 
             summary.copy(
                 hrvMuMssd = hrvMu,
