@@ -5,7 +5,9 @@ import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
 import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.model.DomainError
 import app.readylytics.health.core.model.domain.model.InsightType
+import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.preferences.SettingsDefaults
 import app.readylytics.health.core.model.domain.sync.RecalcProgress
 import app.readylytics.health.core.model.domain.sync.ResyncPhase
@@ -73,6 +75,9 @@ class DashboardViewModelTest : DashboardViewModelTestBase() {
     fun validateSelectedDate_futureDate_fails() {
         val result = viewModel.validateSelectedDate(LocalDate.now().plusDays(1))
         assert(result.isFailure) { "Future date should be invalid" }
+        val failure = result as Result.Failure
+        assertEquals(DomainError.InvalidDate, failure.error)
+        assertEquals("INVALID_DATE", failure.code)
     }
 
     @Test

@@ -27,6 +27,21 @@ class ResultTest {
     }
 
     @Test
+    fun failure_fromDomainError_preservesMessageCodeAndError() {
+        val failure = Result.failure(DomainError.InvalidDate) as Result.Failure
+        assertEquals(DomainError.InvalidDate.message, failure.reason)
+        assertEquals(DomainError.InvalidDate.code, failure.code)
+        assertEquals(DomainError.InvalidDate, failure.error)
+    }
+
+    @Test
+    fun failure_fromCardGenerationDomainError_preservesCode() {
+        val failure = Result.failure(DomainError.CardGenerationError) as Result.Failure
+        assertEquals("CARD_GENERATION_ERROR", failure.code)
+        assertEquals(DomainError.CardGenerationError, failure.error)
+    }
+
+    @Test
     fun failure_default_code_isUnknown() {
         val r = Result.Failure("oops")
         assertEquals(Result.UNKNOWN_CODE, r.code)

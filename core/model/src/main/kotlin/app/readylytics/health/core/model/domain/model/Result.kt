@@ -20,6 +20,7 @@ sealed class Result<out T> {
     data class Failure(
         val reason: String,
         val code: String = UNKNOWN_CODE,
+        val error: DomainError? = null,
     ) : Result<Nothing>()
 
     /** True iff this is a [Success]. */
@@ -35,11 +36,15 @@ sealed class Result<out T> {
         /** Build a [Success] result. */
         fun <T> success(data: T): Result<T> = Success(data)
 
-        /** Build a [Failure] result. */
+        /** Build a [Failure] result from an error string. */
         fun failure(
             reason: String,
             code: String = UNKNOWN_CODE,
-        ): Result<Nothing> = Failure(reason, code)
+        ): Result<Nothing> = Failure(reason = reason, code = code, error = DomainError.Generic(code, reason))
+
+        /** Build a [Failure] result from a typed [DomainError]. */
+        fun failure(error: DomainError): Result<Nothing> =
+            Failure(reason = error.message, code = error.code, error = error)
     }
 }
 

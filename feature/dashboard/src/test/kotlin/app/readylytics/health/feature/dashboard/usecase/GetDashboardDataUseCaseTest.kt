@@ -2,6 +2,7 @@ package app.readylytics.health.feature.dashboard.usecase
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.model.DomainError
 import app.readylytics.health.core.model.domain.model.MetricStatus
 import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.model.getOrNull
@@ -13,9 +14,12 @@ import app.readylytics.health.core.scoring.domain.cardio.CooperNormsClassifier
 import app.readylytics.health.core.scoring.domain.cardio.TrainingStressBalanceCalculator
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CancellationException
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
@@ -320,5 +324,49 @@ class GetDashboardDataUseCaseTest {
         val card = result.getOrNull()?.cardDataMap?.get(CardId.RESIDUAL_FATIGUE)
         assertNotNull(card)
         assertEquals("97.8", card?.valueText)
+    }
+
+    @Test
+    fun `invoke rethrows CancellationException when factory throws CancellationException`() {
+        val mockFactory = mockk<DashboardMetricPresentationFactory>()
+        every {
+            mockFactory.build(any(), any(), any(), any(), any(), any(), any(), any(), any())
+        } throws CancellationException("job cancelled")
+
+        val uc = GetDashboardDataUseCase(mockFactory)
+
+        assertThrows(CancellationException::class.java) {
+            uc(
+                summary = null,
+                prefs = mockk(relaxed = true),
+                date = LocalDate.now(),
+                lastSleepSession = null,
+                rasSummaries = emptyList(),
+            )
+        }
+    }
+
+    @Test
+    fun `invoke returns CardGenerationError when factory throws Exception`() {
+        val mockFactory = mockk<DashboardMetricPresentationFactory>()
+        every {
+            mockFactory.build(any(), any(), any(), any(), any(), any(), any(), any(), any())
+        } throws RuntimeException("Unexpected error")
+
+        val uc = GetDashboardDataUseCase(mockFactory)
+
+        val result =
+            uc(
+                summary = null,
+                prefs = mockk(relaxed = true),
+                date = LocalDate.now(),
+                lastSleepSession = null,
+                rasSummaries = emptyList(),
+            )
+
+        assertTrue(result.isFailure)
+        val failure = result as Result.Failure
+        assertEquals(DomainError.CardGenerationError, failure.error)
+        assertEquals("CARD_GENERATION_ERROR", failure.code)
     }
 }

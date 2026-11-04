@@ -8,6 +8,7 @@ import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.dashboard.CardManagementDelegate
 import app.readylytics.health.core.model.domain.model.DailyMetricsMapper
 import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.model.DomainError
 import app.readylytics.health.core.model.domain.model.InsightType
 import app.readylytics.health.core.model.domain.model.MetricStatus
 import app.readylytics.health.core.model.domain.model.Result
@@ -68,7 +69,7 @@ class DashboardViewModel
             if (date <= LocalDate.now(clock)) {
                 Result.success(date)
             } else {
-                Result.failure("Cannot select future dates", "INVALID_DATE")
+                Result.failure(DomainError.InvalidDate)
             }
 
         private val cardManagementDelegate =
