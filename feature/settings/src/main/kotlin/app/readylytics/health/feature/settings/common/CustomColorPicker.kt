@@ -60,7 +60,7 @@ private fun FallbackThemeColor.labelRes(): Int =
 private fun contentColorFor(background: Color): Color =
     if (background.luminance() > 0.179f) Color.Black else Color.White
 
-private fun parseHexColor(hex: String): Color? {
+internal fun parseHexColor(hex: String): Color? {
     val cleanHex = hex.trim().removePrefix("#")
     return try {
         if (cleanHex.length == 6) {
@@ -70,7 +70,7 @@ private fun parseHexColor(hex: String): Color? {
         } else {
             null
         }
-    } catch (e: Exception) {
+    } catch (e: IllegalArgumentException) {
         logD("CustomColorPicker") { "Invalid color input: ${e.message}" }
         null
     }
