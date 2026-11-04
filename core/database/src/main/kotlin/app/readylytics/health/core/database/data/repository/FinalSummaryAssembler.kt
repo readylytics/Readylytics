@@ -149,6 +149,7 @@ class FinalSummaryAssembler(
                 avgSpo2 = bodyMetricsDataLoader.loadAvgSpo2(inputs.session),
                 avgBodyTemp = bodyMetricsDataLoader.loadAvgBodyTemp(inputs.session),
                 coreRecoveryInput = inputs.aggregatedSleep?.coreRecoveryInput,
+                architectureDurationMinutes = inputs.aggregatedSleep?.aggregate?.architectureDurationMinutes,
             )
         } catch (e: CancellationException) {
             throw e

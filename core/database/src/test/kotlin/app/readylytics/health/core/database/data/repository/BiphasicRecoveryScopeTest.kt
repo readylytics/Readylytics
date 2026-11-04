@@ -132,6 +132,35 @@ class BiphasicRecoveryScopeTest {
         }
 
     @Test
+    fun `nap does not dilute core architecture percentage or change architecture duration`() =
+        runTest {
+            val coreToday =
+                sleepSession(
+                    id = "core-today",
+                    start = LocalDate.of(2026, 7, 8).atTime(23, 0),
+                    end = LocalDate.of(2026, 7, 9).atTime(7, 0),
+                    durationMinutes = 480,
+                )
+            val stagelessNapToday =
+                sleepSession(
+                    id = "nap-today",
+                    start = LocalDate.of(2026, 7, 9).atTime(13, 0),
+                    end = LocalDate.of(2026, 7, 9).atTime(14, 0),
+                    durationMinutes = 60,
+                ).copy(deepSleepMinutes = 0, remSleepMinutes = 0, lightSleepMinutes = 0)
+
+            coEvery { sleepSessionDao.getOverlapping(any(), any()) } returns listOf(coreToday)
+            val withoutNap = requireNotNull(coordinator.resolveSleepAggregation(targetDate, zoneId, UserPreferences()))
+            assertEquals(480, withoutNap.aggregate.totalDurationMinutes)
+            assertEquals(480, withoutNap.aggregate.architectureDurationMinutes)
+
+            coEvery { sleepSessionDao.getOverlapping(any(), any()) } returns listOf(coreToday, stagelessNapToday)
+            val withNap = requireNotNull(coordinator.resolveSleepAggregation(targetDate, zoneId, UserPreferences()))
+            assertEquals(540, withNap.aggregate.totalDurationMinutes)
+            assertEquals(480, withNap.aggregate.architectureDurationMinutes)
+        }
+
+    @Test
     fun `no prior session yields no previous-core offset`() =
         runTest {
             val coreToday =

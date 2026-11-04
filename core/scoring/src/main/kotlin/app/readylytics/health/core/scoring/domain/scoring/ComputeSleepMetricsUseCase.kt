@@ -160,7 +160,9 @@ class ComputeSleepMetricsUseCase
                     collaborators.scoringCalculator.validateNight(
                         rmssdMs = if (sessionHrvSamples.isNotEmpty()) currentHrvMean else null,
                         rhrBpm = currentNocturnalRhr?.toFloat(),
-                        durationMinutes = session.durationMinutes,
+                        // Deep/REM are architecture-eligible totals, so the stage fractions must use
+                        // the matching architecture-eligible duration, not the nap-inclusive one.
+                        durationMinutes = request.architectureDurationMinutes,
                         deepMinutes = session.deepSleepMinutes,
                         remMinutes = session.remSleepMinutes,
                         hrCoverageValid = currentHrCoverage,
@@ -251,6 +253,7 @@ class ComputeSleepMetricsUseCase
                                 loadScoreEverydayHr = loadScoreEverydayHr,
                                 summary = summary,
                                 hrvSigma = hrvSigma,
+                                architectureDurationMinutes = request.architectureDurationMinutes,
                             ),
                         )
                     } else {
@@ -405,19 +408,20 @@ class ComputeSleepMetricsUseCase
             sRest: Float,
         ): Float =
             collaborators.scoringCalculator.computeSleepScore(
-                input.session.durationMinutes,
-                input.session.efficiency,
-                input.session.deepSleepMinutes,
-                input.session.remSleepMinutes,
-                input.prefs.goalSleepHours,
-                sRest,
-                input.prefs.age,
-                input.stagesSuspicious,
-                input.scoringConfig.sleepTargets,
-                input.sleepModifiers.fragmentation,
-                input.scoringConfig.sleepWeightProfile,
-                input.sleepModifiers.regularityScore,
-                input.scoringConfig.hypersomniaOnsetRatio,
+                durationMinutes = input.session.durationMinutes,
+                efficiency = input.session.efficiency,
+                deepSleepMinutes = input.session.deepSleepMinutes,
+                remSleepMinutes = input.session.remSleepMinutes,
+                goalSleepHours = input.prefs.goalSleepHours,
+                sRest = sRest,
+                userAge = input.prefs.age,
+                stagesSuspicious = input.stagesSuspicious,
+                sleepTargets = input.scoringConfig.sleepTargets,
+                fragmentation = input.sleepModifiers.fragmentation,
+                weightProfile = input.scoringConfig.sleepWeightProfile,
+                regularityScore = input.sleepModifiers.regularityScore,
+                hypersomniaOnsetRatio = input.scoringConfig.hypersomniaOnsetRatio,
+                architectureDurationMinutes = input.architectureDurationMinutes,
             )
 
         private fun computeZScores(input: NocturnalScoringInput): BaselineZScoreComputer.ZScoreResults =
@@ -510,12 +514,13 @@ class ComputeSleepMetricsUseCase
                     input.session.durationMinutes,
                     input.session.efficiency,
                     input.prefs.goalSleepHours,
+                    input.scoringConfig.hypersomniaOnsetRatio,
                 )
             val archSubScore =
                 collaborators.scoringCalculator.computeArchSubScore(
                     input.session.deepSleepMinutes,
                     input.session.remSleepMinutes,
-                    input.session.durationMinutes,
+                    input.architectureDurationMinutes,
                     input.prefs.age,
                     input.scoringConfig.sleepTargets,
                 )

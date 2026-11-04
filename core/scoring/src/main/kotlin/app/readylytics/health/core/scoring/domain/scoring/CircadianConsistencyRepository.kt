@@ -22,7 +22,6 @@ import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.math.abs
 
 sealed class CircadianConsistencyResult {
     data object Calibrating : CircadianConsistencyResult()
@@ -142,15 +141,17 @@ class CircadianConsistencyRepository
 
             val dailyScores =
                 evalSessions.map { session ->
-                    val bedDev = abs(normalizeMinutes(session.startTime, zone) - medianBed).toFloat()
-                    val wakeDev = abs(normalizeMinutes(session.endTime, zone) - medianWake).toFloat()
+                    val bedMinute = CircadianTimeMath.minuteOfDay(session.startTime, zone)
+                    val wakeMinute = CircadianTimeMath.minuteOfDay(session.endTime, zone)
+                    val bedDev = CircadianTimeMath.circularDeviationMinutes(bedMinute, medianBed).toFloat()
+                    val wakeDev = CircadianTimeMath.circularDeviationMinutes(wakeMinute, medianWake).toFloat()
                     val bedScore = scoreDeviation(bedDev, threshold.toFloat())
                     val wakeScore = scoreDeviation(wakeDev, threshold.toFloat())
                     (bedScore + wakeScore) / 2f
                 }
 
-            val rawBedtimeOffsetMinutes = normalizeMinutes(evalSessions.first().startTime, zone) - medianBed
-            val latestBedtimeOffsetMinutes = ((rawBedtimeOffsetMinutes + 720) % 1440 + 1440) % 1440 - 720
+            val firstBedMinute = CircadianTimeMath.minuteOfDay(evalSessions.first().startTime, zone)
+            val latestBedtimeOffsetMinutes = CircadianTimeMath.circularSignedOffsetMinutes(firstBedMinute, medianBed)
 
             return CircadianConsistencyResult.Ready(
                 score = dailyScores.average().toFloat(),
@@ -185,11 +186,4 @@ class CircadianConsistencyRepository
                 deviation <= threshold + 60f -> 100f * (1f - (deviation - threshold) / 60f)
                 else -> 0f
             }
-
-        // Times before noon are treated as "past midnight" (e.g., 1:00 AM → 25:00)
-        // so that sorting and median work correctly across the midnight boundary.
-        private fun normalizeMinutes(
-            epochMs: Long,
-            zone: ZoneId,
-        ): Int = CircadianWakeBaseline.normalizeMinutes(epochMs, zone)
     }

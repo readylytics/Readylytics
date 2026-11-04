@@ -325,10 +325,81 @@ class SleepDayAggregatorTest {
         assertEquals(core.stageTotals, aggregate.architectureTotals)
     }
 
+    @Test
+    fun `stage-less supplemental block does not inflate architectureDurationMinutes`() {
+        val core =
+            segment(
+                id = "core",
+                start = at(0, 0),
+                end = at(7, 0),
+                light = 240,
+                deep = 90,
+                rem = 90,
+            )
+        // 60-minute nap with no stages (all 0) -> architectureEligible is false
+        val stageLessNap =
+            segment(
+                id = "nap-stageless",
+                start = at(13, 0),
+                end = at(14, 0),
+                light = 0,
+                deep = 0,
+                rem = 0,
+            )
+
+        val result = SleepDayAggregator.aggregate(listOf(core, stageLessNap), defaultPolicy)
+        val aggregate = result.aggregates.single()
+
+        // Total duration includes both core and nap (420 + 60 = 480)
+        assertEquals(480, aggregate.totalDurationMinutes)
+        // Architecture duration includes only the core (420)
+        assertEquals(420, aggregate.architectureDurationMinutes)
+        assertEquals(90, aggregate.architectureTotals.deepMinutes)
+        assertEquals(90, aggregate.architectureTotals.remMinutes)
+    }
+
+    @Test
+    fun `stage-eligible supplemental block contributes to architectureDurationMinutes`() {
+        val core =
+            segment(
+                id = "core",
+                start = at(0, 0),
+                end = at(7, 0),
+                light = 240,
+                deep = 90,
+                rem = 90,
+            )
+        // 60-minute nap with full stages -> architectureEligible is true
+        val stagedNap =
+            segment(
+                id = "nap-staged",
+                start = at(13, 0),
+                end = at(14, 0),
+                light = 30,
+                deep = 15,
+                rem = 15,
+            )
+
+        val result = SleepDayAggregator.aggregate(listOf(core, stagedNap), defaultPolicy)
+        val aggregate = result.aggregates.single()
+
+        assertEquals(480, aggregate.totalDurationMinutes)
+        assertEquals(480, aggregate.architectureDurationMinutes)
+        assertEquals(105, aggregate.architectureTotals.deepMinutes)
+        assertEquals(105, aggregate.architectureTotals.remMinutes)
+    }
+
     private fun coreIdFor(vararg segments: SleepDaySegment): String =
         assertNotNull(
             SleepDayAggregator.aggregate(segments.toList(), policy()).aggregates.singleOrNull(),
         ).coreCluster.stableSessionTieBreakId
+
+    private val defaultPolicy = policy()
+
+    private fun at(
+        hour: Int,
+        minute: Int,
+    ): ZonedDateTime = at(2026, 7, 9, hour, minute)
 
     private fun policy(
         coreMergeGapMinutes: Int = 90,

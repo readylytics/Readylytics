@@ -335,6 +335,7 @@ class ScoringDeterminismRegressionTest {
         val actual =
             strategy.computeSleepScore(
                 durationMinutes = durationMinutes,
+                architectureDurationMinutes = durationMinutes,
                 efficiency = efficiency,
                 deepSleepMinutes = deep,
                 remSleepMinutes = rem,

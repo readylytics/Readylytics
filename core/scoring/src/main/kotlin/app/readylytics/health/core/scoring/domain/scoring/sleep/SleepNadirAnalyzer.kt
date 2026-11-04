@@ -1,9 +1,7 @@
 package app.readylytics.health.core.scoring.domain.scoring.sleep
 
-import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepNadirAnalyzer
-
-import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
+import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.abs
@@ -41,7 +39,7 @@ class SleepNadirAnalyzer
                     scoringCalculator.isLateNadir(
                         minHrTimestamp,
                         core.window.startTimeMs,
-                        core.window.coreSleepDurationMinutes,
+                        core.window.clockDurationMinutes,
                     )
             val isLateNadir = isLateNadirRaw && !isTimezoneJump
 

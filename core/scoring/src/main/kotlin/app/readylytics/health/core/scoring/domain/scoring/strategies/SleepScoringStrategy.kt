@@ -118,15 +118,17 @@ class SleepScoringStrategy
             remSleepMinutes: Int,
             goalSleepHours: Float,
             sRest: Float,
-            userAge: Int,
-            stagesSuspicious: Boolean,
-            sleepTargets: SleepArchitectureTargets?,
+            userAge: Int = 30,
+            stagesSuspicious: Boolean = false,
+            sleepTargets: SleepArchitectureTargets? = null,
             fragmentation: SleepFragmentation? = null,
             weightProfile: SleepScoreWeightProfile = SleepScoreWeightProfile.DEFAULT,
             regularityScore: Float? = null,
             hypersomniaOnsetRatio: Float = Sleep.DEFAULT_HYPERSOMNIA_ONSET_RATIO,
+            architectureDurationMinutes: Int,
         ): Float {
             require(durationMinutes >= 0) { "durationMinutes must be >= 0" }
+            require(architectureDurationMinutes >= 0) { "architectureDurationMinutes must be >= 0" }
             require(goalSleepHours > 0f) { "goalSleepHours must be > 0" }
 
             val sDur = computeDurationSubScore(durationMinutes, efficiency, goalSleepHours, hypersomniaOnsetRatio)
@@ -138,7 +140,7 @@ class SleepScoringStrategy
                         computeArchSubScore(
                             deepSleepMinutes,
                             remSleepMinutes,
-                            durationMinutes,
+                            architectureDurationMinutes,
                             userAge,
                             sleepTargets,
                         )
