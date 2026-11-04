@@ -43,7 +43,7 @@ class ObserveDashboardStrainIncreaseUseCase
                     val displayStartDate = date.minusDays(6)
                     val fetchFromMs =
                         displayStartDate
-                            .minusDays(ScoringConstants.CHRONIC_DAYS)
+                            .minusDays(ScoringConstants.CHRONIC_DAYS * 2)
                             .atStartOfDay(zoneId)
                             .toInstant()
                             .toEpochMilli()
@@ -125,8 +125,8 @@ class ObserveDashboardStrainIncreaseUseCase
                                         )
                                     val strainRatioWithDay =
                                         scoringCalculator.computeStrainRatio(
-                                            atlSeries[date] ?: ScoringConstants.DEFAULT_FITNESS_LEVEL,
-                                            ctlSeries[date] ?: ScoringConstants.DEFAULT_FITNESS_LEVEL,
+                                            atlSeries[date] ?: 0f,
+                                            ctlSeries[date] ?: 0f,
                                         )
                                     val trimpByDateWithoutDay =
                                         trimpByDate.toMutableMap().apply { put(date, 0f) }

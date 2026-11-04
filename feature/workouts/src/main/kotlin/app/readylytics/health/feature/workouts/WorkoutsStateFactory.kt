@@ -109,7 +109,7 @@ internal fun resolveWorkoutsRangeWindow(
         displayFromMs = displayStartDate.atStartOfDay(zoneId).toInstant().toEpochMilli(),
         fetchFromMs =
             displayStartDate
-                .minusDays(ScoringConstants.CHRONIC_DAYS)
+                .minusDays(ScoringConstants.CHRONIC_DAYS * 2)
                 .atStartOfDay(zoneId)
                 .toInstant()
                 .toEpochMilli(),
@@ -287,8 +287,8 @@ private fun buildDailySeries(
                 0
             }
 
-        val ctl = ctlSeries[currentDayDate] ?: ScoringConstants.DEFAULT_FITNESS_LEVEL
-        val atl = atlSeries[currentDayDate] ?: ScoringConstants.DEFAULT_FITNESS_LEVEL
+        val ctl = ctlSeries[currentDayDate] ?: 0f
+        val atl = atlSeries[currentDayDate] ?: 0f
 
         val sr =
             if (dataTenureDays >= 7) {
@@ -339,9 +339,9 @@ private fun resolveTodayStrainIncrease(
                 val trimpByDateWithout =
                     ctx.trimpByDate.toMutableMap().apply { put(selectedDate, 0f) }
                 val ctlWith =
-                    ctx.ctlSeries[selectedDate] ?: ScoringConstants.DEFAULT_FITNESS_LEVEL
+                    ctx.ctlSeries[selectedDate] ?: 0f
                 val atlWith =
-                    ctx.atlSeries[selectedDate] ?: ScoringConstants.DEFAULT_FITNESS_LEVEL
+                    ctx.atlSeries[selectedDate] ?: 0f
                 val strainRatioWithDay =
                     scoringCalculator.computeStrainRatio(atlWith, ctlWith)
                 val ctlWithout =
