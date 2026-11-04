@@ -79,24 +79,7 @@ class RasScoringStrategy
             dailyTrimpByDate: Map<LocalDate, Float>,
             windowDays: Long,
             rangeEnd: LocalDate,
-        ): Float {
-            if (dailyTrimpByDate.isEmpty()) return ScoringConstants.DEFAULT_FITNESS_LEVEL
-            if (dailyTrimpByDate.size == 1) return dailyTrimpByDate.values.first()
-
-            val earliestDataDate = dailyTrimpByDate.keys.minOrNull() ?: rangeEnd
-            val defaultStart = rangeEnd.minusDays(windowDays - 1)
-            val rangeStart = if (earliestDataDate.isBefore(defaultStart)) earliestDataDate else defaultStart
-
-            val alpha = 2.0 / (windowDays + 1)
-            var ewma = dailyTrimpByDate[rangeStart]?.toDouble() ?: 0.0
-            var date = rangeStart.plusDays(1)
-            while (!date.isAfter(rangeEnd)) {
-                val trimp = dailyTrimpByDate[date]?.toDouble() ?: 0.0
-                ewma = trimp * alpha + ewma * (1.0 - alpha)
-                date = date.plusDays(1)
-            }
-            return ewma.toFloat()
-        }
+        ): Float = computeEmaSeries(dailyTrimpByDate, windowDays, rangeEnd, rangeEnd)[rangeEnd] ?: 0f
 
         private fun computeEmaSeries(
             dailyTrimpByDate: Map<LocalDate, Float>,
@@ -104,37 +87,25 @@ class RasScoringStrategy
             seriesStart: LocalDate,
             seriesEnd: LocalDate,
         ): Map<LocalDate, Float> {
-            val result = mutableMapOf<LocalDate, Float>()
+            if (seriesStart.isAfter(seriesEnd)) return emptyMap()
+
+            val result = LinkedHashMap<LocalDate, Float>()
             if (dailyTrimpByDate.isEmpty()) {
                 var date = seriesStart
                 while (!date.isAfter(seriesEnd)) {
-                    result[date] = ScoringConstants.DEFAULT_FITNESS_LEVEL
-                    date = date.plusDays(1)
-                }
-                return result
-            }
-            if (dailyTrimpByDate.size == 1) {
-                val singleValue = dailyTrimpByDate.values.first()
-                var date = seriesStart
-                while (!date.isAfter(seriesEnd)) {
-                    result[date] = singleValue
+                    result[date] = 0f
                     date = date.plusDays(1)
                 }
                 return result
             }
 
-            val earliestDataDate = dailyTrimpByDate.keys.minOrNull() ?: seriesEnd
-            val defaultStart = seriesEnd.minusDays(windowDays - 1)
-            val calcStart = if (earliestDataDate.isBefore(defaultStart)) earliestDataDate else defaultStart
+            val earliestDataDate = dailyTrimpByDate.keys.minOrNull() ?: seriesStart
+            val calcStart = if (earliestDataDate.isBefore(seriesStart)) earliestDataDate else seriesStart
 
-            val alpha = 2.0 / (windowDays + 1)
-            var ewma = dailyTrimpByDate[calcStart]?.toDouble() ?: 0.0
+            val alpha = 2.0 / (windowDays + 1.0)
+            var ewma = 0.0
 
-            if (!calcStart.isBefore(seriesStart) && !calcStart.isAfter(seriesEnd)) {
-                result[calcStart] = ewma.toFloat()
-            }
-
-            var date = calcStart.plusDays(1)
+            var date = calcStart
             while (!date.isAfter(seriesEnd)) {
                 val trimp = dailyTrimpByDate[date]?.toDouble() ?: 0.0
                 ewma = trimp * alpha + ewma * (1.0 - alpha)
@@ -142,12 +113,6 @@ class RasScoringStrategy
                     result[date] = ewma.toFloat()
                 }
                 date = date.plusDays(1)
-            }
-
-            var fillDate = seriesStart
-            while (fillDate.isBefore(calcStart) && !fillDate.isAfter(seriesEnd)) {
-                result[fillDate] = ScoringConstants.DEFAULT_FITNESS_LEVEL
-                fillDate = fillDate.plusDays(1)
             }
 
             return result
