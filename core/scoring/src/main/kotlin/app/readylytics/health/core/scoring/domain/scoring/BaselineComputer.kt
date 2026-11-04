@@ -11,7 +11,6 @@ import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayPolicy
 import app.readylytics.health.core.scoring.domain.util.mean
 import app.readylytics.health.core.scoring.domain.util.median
 import app.readylytics.health.core.scoring.domain.util.medianOrNull
-import app.readylytics.health.core.scoring.domain.util.weightedPercentile
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -69,34 +68,6 @@ class BaselineComputer
         // every windowed and live baseline method below lives in this extracted assembler.
         private val sleepDayAssembler = HistoricalSleepDayAssembler(scoringHistoryRepository, scoringCalculator)
 
-        suspend fun rhrHistory(
-            dayMidnight: Instant,
-            percentile: Int,
-        ): List<Int> {
-            val baselineFromMs =
-                dayMidnight
-                    .minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
-                    .toEpochMilli()
-            // WP-11: bound the fallback read to dayMidnight's own scoring-zone day end -- never
-            // Clock.now()/system zone -- so a request for a past day never reads sessions dated
-            // after it.
-            val dayEndMs = dayMidnight.plus(1, ChronoUnit.DAYS).toEpochMilli() - 1
-            val sessions = scoringHistoryRepository.getSleepSessionsBetween(baselineFromMs.coerceAtLeast(0), dayEndMs)
-            val sessionIds = sessions.map { it.id }
-            if (sessionIds.isEmpty()) return emptyList()
-
-            val allHrRecords = scoringHistoryRepository.getSleepHrProjectionForSessions(sessionIds)
-            val samplesBySession = allHrRecords.groupBy { it.sessionId }
-
-            return sessions.mapNotNull { session ->
-                val samples = samplesBySession[session.id] ?: return@mapNotNull null
-                if (samples.isEmpty()) return@mapNotNull null
-                val values = samples.map { it.beatsPerMinute }.toIntArray()
-                val weights = IntArray(values.size) { 1 }
-                weightedPercentile(values, weights, percentile / 100.0)
-            }
-        }
-
         suspend fun rhrHistoryBetween(
             fromMs: Long,
             toMs: Long,
@@ -128,10 +99,12 @@ class BaselineComputer
                     snapshotId = snapshotId,
                 )
             // WP-11: same RHR membership selector as the backfill and adaptive-baseline paths, so
-            // this "display percentile" population (ungated by canContributeToBaseline, same as
+            // this "display percentile" population (gated by canContributeToBaseline, same as
             // BackfillBaseline.rhrHistory) shares membership policy with them too.
             val targetScoreDay = Instant.ofEpochMilli(fromMs).atZone(zoneId).toLocalDate()
-            return historicalRhrWindow(historicalSleepDays, targetScoreDay).mapNotNull { it.rhrPercentileBpm }
+            return historicalRhrWindow(historicalSleepDays, targetScoreDay)
+                .filter { it.canContributeToBaseline }
+                .mapNotNull { it.rhrPercentileBpm }
         }
 
         /**
@@ -428,7 +401,7 @@ class BaselineComputer
                 BackfillBaseline(
                     emptyList(),
                     emptyList(),
-                    ScoringConstants.DEFAULT_RHR_BPM,
+                    null,
                     emptyList(),
                 )
 
@@ -457,13 +430,14 @@ class BaselineComputer
             val muHistory = sigmaHistory.takeLast(ScoringConstants.HRV_MU_WINDOW_DAYS)
 
             // Shared RHR membership window (WP-11): same selector as the live paths below, so
-            // backfill and live never disagree on which nights count. Preserves the existing split
-            // between the nadir population (gated by canContributeToBaseline, feeding rhrBpm) and
-            // the display-percentile population (rhrHistory, ungated) -- only WHICH days are
-            // considered changes here, not the two populations' distinct eligibility filters.
-            val rhrDays = historicalRhrWindow(historicalSleepDays, scoreDay)
-            val nadirs = rhrDays.filter { it.canContributeToBaseline }.mapNotNull { it.nadirBpm }
-            val rhrBpm = if (nadirs.isEmpty()) ScoringConstants.DEFAULT_RHR_BPM else nadirs.median()
+            // backfill and live never disagree on which nights count. Both the nadir population
+            // (feeding rhrBpm) and the display-percentile population (rhrHistory) are gated by
+            // canContributeToBaseline.
+            val rhrDays = historicalRhrWindow(historicalSleepDays, scoreDay).filter { it.canContributeToBaseline }
+            val nadirs = rhrDays.mapNotNull { it.nadirBpm }
+            // No prior eligible nights -> no RHR baseline (null), NOT DEFAULT_RHR_BPM: freezing a
+            // population-default as the day's mu would replay a non-neutral z-score forever.
+            val rhrBpm = nadirs.medianOrNull()
             val rhrHistory = rhrDays.mapNotNull { it.rhrPercentileBpm }
 
             return BackfillBaseline(muHistory, sigmaHistory, rhrBpm, rhrHistory)
@@ -532,12 +506,12 @@ class BaselineComputer
 
         /**
          * Per-day baseline inputs produced by [computeBackfillBaselines]: the HRV mu/sigma history
-         * windows and the resolved RHR baseline (already defaulted when no valid nadirs exist).
+         * windows and the RHR baseline (null when no prior eligible nadirs exist).
          */
         data class BackfillBaseline(
             val muHistory: List<Float>,
             val sigmaHistory: List<Float>,
-            val rhrBpm: Float,
+            val rhrBpm: Float?,
             val rhrHistory: List<Int> = emptyList(),
         )
     }

@@ -34,7 +34,9 @@ object SettingsDefaults {
     // v6: late-nadir threshold uses the core clock recovery window and the deep/REM architecture
     // denominator (plus the stage-fraction plausibility gates) uses stage-eligible duration, so
     // retained history must be recomputed to converge with the live pipeline.
-    const val CURRENT_SCORING_VERSION = 6
+    // v7: RHR baseline window excludes the scored night, RHR sigma is floored at 1.5 bpm, and the
+    // HRV sigma blend completes at 56 nights, so retained history must be recomputed to match.
+    const val CURRENT_SCORING_VERSION = 7
     const val CORE_MERGE_GAP_MINUTES = 180
     const val MIN_CORE_MERGE_GAP_MINUTES = 30
     const val MAX_CORE_MERGE_GAP_MINUTES = 240

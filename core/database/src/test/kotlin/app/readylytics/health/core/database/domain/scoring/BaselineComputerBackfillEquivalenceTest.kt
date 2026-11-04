@@ -26,6 +26,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 /**
  * Equivalence oracle for [BaselineComputer.computeBackfillBaselines].
@@ -204,7 +205,11 @@ class BaselineComputerBackfillEquivalenceTest {
             actual.sigmaHistory,
             "sigmaHistory mismatch for day $dayMidnightMs",
         )
-        assertEquals(expectedRhr, actual.rhrBpm, "rhrBpm mismatch for day $dayMidnightMs")
+        assertEquals(
+            expectedRhr,
+            actual.rhrBpm ?: ScoringConstants.DEFAULT_RHR_BPM,
+            "rhrBpm mismatch for day $dayMidnightMs",
+        )
         assertEquals(expectedRhrHistory, actual.rhrHistory, "rhrHistory mismatch for day $dayMidnightMs")
     }
 
@@ -308,7 +313,10 @@ class BaselineComputerBackfillEquivalenceTest {
                 withFuture[dDate]?.rhrHistory,
                 "future nights leaked into D's rhrHistory",
             )
-            assertEquals(expectedRhr, withFuture[dDate]?.rhrBpm, "backfill and live selectors disagree for D")
+            assertEquals(
+                expectedRhr,
+                withFuture[dDate]?.rhrBpm ?: ScoringConstants.DEFAULT_RHR_BPM,
+                "backfill and live selectors disagree for D")
             assertEquals(
                 expectedHistory,
                 withFuture[dDate]?.rhrHistory,
@@ -401,13 +409,13 @@ class BaselineComputerBackfillEquivalenceTest {
             )
             assertEquals(
                 liveRhr,
-                withFuture[dDate]?.rhrBpm,
+                withFuture[dDate]?.rhrBpm ?: ScoringConstants.DEFAULT_RHR_BPM,
                 "backfill/live RHR disagree across the DST transition",
             )
         }
 
     @Test
-    fun `empty history yields default rhr and empty windows for every requested day`() =
+    fun `empty history yields null rhr baseline and empty windows for every requested day`() =
         runTest {
             sessions.clear()
             val summaries = listOf(0, 5, 10).map { DailySummaryEntity(dateMidnightMs = dayStartMs(it)) }
@@ -423,7 +431,7 @@ class BaselineComputerBackfillEquivalenceTest {
             batched.values.forEach {
                 assertEquals(emptyList(), it.muHistory)
                 assertEquals(emptyList(), it.sigmaHistory)
-                assertEquals(ScoringConstants.DEFAULT_RHR_BPM, it.rhrBpm)
+                assertNull(it.rhrBpm)
                 assertEquals(emptyList(), it.rhrHistory)
             }
         }

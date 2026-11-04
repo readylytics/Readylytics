@@ -6,7 +6,6 @@ import app.readylytics.health.core.model.domain.model.SleepSession
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayPolicy
-import app.readylytics.health.core.scoring.domain.util.weightedPercentile
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
@@ -38,49 +37,17 @@ class BaselineComputerTest {
     private val baselineComputer = BaselineComputer(repository, scoringCalculator)
 
     @Test
-    fun `rhrHistory computes percentile matching weightedPercentile`() =
-        runTest {
-            val now = Instant.parse("2026-06-01T00:00:00Z")
-            val session =
-                SleepSession(
-                    id = "s1",
-                    startTime = now.minus(8, ChronoUnit.HOURS).toEpochMilli(),
-                    endTime = now.toEpochMilli(),
-                    durationMinutes = 480,
-                    efficiency = 0.9f,
-                    deepSleepMinutes = 90,
-                    remSleepMinutes = 90,
-                    lightSleepMinutes = 270,
-                    awakeMinutes = 30,
-                )
-            // 10 samples from 50 to 95 step 5
-            val samples = (50..95 step 5).map { SleepHrSample("s1", it) }
-            val values = samples.map { it.beatsPerMinute }.toIntArray()
-            val weights = IntArray(values.size) { 1 }
-
-            coEvery { repository.getSleepSessionsBetween(any(), any()) } returns listOf(session)
-            coEvery { repository.getSleepHrProjectionForSessions(listOf("s1")) } returns samples
-
-            val p5 = baselineComputer.rhrHistory(now, percentile = 5)
-            val p50 = baselineComputer.rhrHistory(now, percentile = 50)
-            val p95 = baselineComputer.rhrHistory(now, percentile = 95)
-
-            assertEquals(listOf(weightedPercentile(values, weights, 0.05)), p5)
-            assertEquals(listOf(weightedPercentile(values, weights, 0.50)), p50)
-            assertEquals(listOf(weightedPercentile(values, weights, 0.95)), p95)
-        }
-
-    @Test
     fun `rhrHistoryBetween computes percentile bit-identical to expanded samples`() =
         runTest {
-            val fromMs = Instant.parse("2026-06-01T00:00:00Z").toEpochMilli()
-            val toMs = Instant.parse("2026-06-02T00:00:00Z").toEpochMilli()
+            val sessionDate = Instant.parse("2026-06-01T00:00:00Z").toEpochMilli()
+            val queryDate = Instant.parse("2026-06-02T00:00:00Z").toEpochMilli()
+            val nextDay = Instant.parse("2026-06-03T00:00:00Z").toEpochMilli()
             val zone = ZoneId.of("UTC")
             val session =
                 SleepSession(
                     id = "s2",
-                    startTime = fromMs + 1000,
-                    endTime = fromMs + 28800000,
+                    startTime = sessionDate + 1000,
+                    endTime = sessionDate + 28800000,
                     durationMinutes = 480,
                     efficiency = 0.95f,
                     deepSleepMinutes = 100,
@@ -96,13 +63,56 @@ class BaselineComputerTest {
             coEvery { repository.getSleepRmssdForSessionsMap(any()) } returns mapOf("s2" to listOf(45f))
             coEvery { repository.getSleepHrProjectionForSessions(listOf("s2")) } returns hrSamples
 
-            val result = baselineComputer.rhrHistoryBetween(fromMs, toMs, percentile = 10, zoneId = zone)
+            val result = baselineComputer.rhrHistoryBetween(queryDate, nextDay, percentile = 10, zoneId = zone)
 
-            val expected = rawSamples.let { list ->
-                val index = round(0.10 * (list.size - 1)).toInt()
-                list[index]
-            }
+            val expected =
+                rawSamples.let { list ->
+                    val index = round(0.10 * (list.size - 1)).toInt()
+                    list[index]
+                }
             assertEquals(listOf(expected), result)
+        }
+
+    @Test
+    fun `rhrHistoryBetween excludes nights failing validation`() =
+        runTest {
+            val customCalculator =
+                mockk<ScoringCalculator>().apply {
+                    io.mockk.every {
+                        validateNight(any(), any(), any(), any(), any(), any())
+                    } returns ScoringCalculator.NightValidationResult(
+                        rmssdValid = true,
+                        rhrValid = false,
+                        durationValid = true,
+                        stagesValid = true,
+                        stagesSuspicious = false,
+                        hrCoverageValid = true,
+                    )
+                }
+            val computerWithCustomValidation = BaselineComputer(repository, customCalculator)
+            val fromMs = Instant.parse("2026-06-03T00:00:00Z").toEpochMilli()
+            val toMs = Instant.parse("2026-06-04T00:00:00Z").toEpochMilli()
+            val session =
+                createSession(
+                    id = "s_invalid_rhr_history",
+                    startIso = "2026-06-01T23:00:00Z",
+                    endIso = "2026-06-02T07:00:00Z",
+                )
+            coEvery { repository.getDailySummaryByDate(fromMs, any()) } returns null
+            coEvery { repository.getSleepSessionsBetween(any(), any()) } returns listOf(session)
+            coEvery { repository.getSleepRmssdForSessionsMap(any()) } returns emptyMap()
+            coEvery {
+                repository.getSleepHrProjectionForSessions(any())
+            } returns listOf(SleepHrSample("s_invalid_rhr_history", 60))
+
+            val result =
+                computerWithCustomValidation.rhrHistoryBetween(
+                    fromMs = fromMs,
+                    toMs = toMs,
+                    percentile = 10,
+                    zoneId = ZoneId.of("UTC"),
+                )
+            assertEquals(emptyList(), result)
         }
 
     @Test
@@ -110,7 +120,8 @@ class BaselineComputerTest {
         runTest {
             val zone = ZoneId.of("UTC")
             val date = LocalDate.of(2026, 6, 1)
-            val summary = DailySummary(date = date)
+            val targetDate = date.plusDays(1)
+            val summary = DailySummary(date = targetDate)
             val midnight = date.atStartOfDay(zone).toInstant()
             val session =
                 SleepSession(
@@ -131,7 +142,7 @@ class BaselineComputerTest {
             coEvery { repository.getSleepHrProjectionForSessions(any()) } returns samples
 
             val baselines = baselineComputer.computeBackfillBaselines(listOf(summary), percentile = 10, zoneId = zone)
-            val baseline = baselines[date]
+            val baseline = baselines[targetDate]
 
             assertEquals(52f, baseline?.rhrBpm)
         }

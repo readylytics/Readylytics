@@ -98,6 +98,7 @@ internal data class NocturnalScoringInput(
     val frozenRhr: Float?,
     val effectiveRhrSigma: Float?,
     val baselineRhrValue: Int,
+    val liveBaselineRhr: Float?,
     val prefs: UserPreferences,
     val scoringConfig: ScoringConfig,
     val stagesSuspicious: Boolean,

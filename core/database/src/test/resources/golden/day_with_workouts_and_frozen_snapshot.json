@@ -15,7 +15,7 @@
         "zRhr": 0.2777778,
         "lnSigma": 0.25,
         "rollingMu": 3.95,
-        "rhrDeltaBpm": 1.0,
+        "rhrDeltaBpm": 0.0,
         "configHashCode": -146785848,
         "phaseName": "Mature"
     },

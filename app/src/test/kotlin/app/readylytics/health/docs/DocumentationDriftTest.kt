@@ -660,6 +660,25 @@ class DocumentationDriftTest {
         }
     }
 
+    @Test
+    fun `HRV and RHR baseline statistical calibration constants match documentation`() {
+        assertEquals(56, ScoringConstants.HRV_SIGMA_BLEND_MAX_N)
+        assertEquals(56, ScoringConstants.HRV_SIGMA_WINDOW_DAYS)
+        assertEquals(1.5f, ScoringConstants.Restoration.RHR_MIN_SIGMA_BPM)
+
+        for ((surface, text) in listOf(
+            "ABOUT.md" to aboutMd,
+            "docs/about.md" to publicAboutMd,
+            "DATA_FLOW.md" to dataFlowMd,
+        )) {
+            val normalized = normalizeWhitespace(text)
+            assertTrue(
+                normalized.contains("1.5 bpm") || normalized.contains("1.5f"),
+                "$surface must document the 1.5 bpm RHR variability floor",
+            )
+        }
+    }
+
     /** Collapses whitespace runs (including line wraps) to a single space for wrap-tolerant matching. */
     private fun normalizeWhitespace(text: String): String = text.replace(Regex("\\s+"), " ")
 

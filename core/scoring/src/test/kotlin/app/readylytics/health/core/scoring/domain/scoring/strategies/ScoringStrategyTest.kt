@@ -455,6 +455,18 @@ class LoadScoringStrategyTest {
     }
 
     @Test
+    fun `rhrZScore does not re-floor a persisted frozenSigma so frozen days replay as stored`() {
+        val result =
+            loadStrategy.computeRhrZScore(
+                currentRhrBpm = 61f,
+                rhrHistory = emptyList(),
+                baselineOverride = 60f,
+                frozenSigma = 0.8f,
+            )
+        assertEquals(1.25f, result!!, 0.001f)
+    }
+
+    @Test
     fun `rhrZScore uses fallback when frozenSigma is null and rhrHistory is empty`() {
         val result =
             loadStrategy.computeRhrZScore(
@@ -479,15 +491,30 @@ class LoadScoringStrategyTest {
     }
 
     @Test
-    fun `rhrZScore fallback respects floor of 1 when 0_05 times mu is less than 1`() {
+    fun `rhrZScore fallback respects floor of 1_5 when 0_05 times mu is less than 1_5`() {
         val result =
             loadStrategy.computeRhrZScore(
-                currentRhrBpm = 12f,
+                currentRhrBpm = 13f,
                 rhrHistory = listOf(10),
                 baselineOverride = null,
                 frozenSigma = null,
             )
-        // mu = 10, 0.05 * 10 = 0.5 < 1 -> sigma = 1f -> (12 - 10) / 1 = 2f
+        // mu = 10, 0.05 * 10 = 0.5 < 1.5 -> sigma = 1.5f -> (13 - 10) / 1.5 = 2.0f
+        assertEquals(2.0f, result!!, 0.001f)
+    }
+
+    @Test
+    fun `rhrZScore floors standard deviation at RHR_MIN_SIGMA_BPM for stable sleepers`() {
+        // SD of [60, 60, 61, 60, 60] is ~0.447 bpm (< 1.5 bpm)
+        // currentRhr = 63 bpm. Without floor, z = (63 - 60) / 0.447 ≈ 6.71 (severe false positive).
+        // With RHR_MIN_SIGMA_BPM = 1.5f, z = (63 - 60) / 1.5 = 2.0f.
+        val result =
+            loadStrategy.computeRhrZScore(
+                currentRhrBpm = 63f,
+                rhrHistory = listOf(60, 60, 61, 60, 60),
+                baselineOverride = 60f,
+                frozenSigma = null,
+            )
         assertEquals(2.0f, result!!, 0.001f)
     }
 

@@ -83,20 +83,18 @@ internal fun computeBaselineMetrics(
 
     val calculatedRhrSigma =
         if (!input.frozenBaseline && input.rhrValues.size > 1) {
-            input.rhrValues.stdevOrNull()?.takeIf { it > 0f }
+            input.rhrValues.stdevOrNull()?.flooredRhrSigma()
         } else {
             null
         }
     val effectiveRhrSigma = input.frozenRhrSigma ?: calculatedRhrSigma
 
     val hrvSigma =
-        if (input.sessionHrvSamples.isNotEmpty()) {
-            if (input.frozenBaseline && input.frozenHrvSigma != null) {
-                input.frozenHrvSigma
-            } else {
-                val lnSigmaHistory = effectiveSigmaHistory.map { ln(it.coerceAtLeast(0.001f)) }
-                scoringCalculator.hrvSigma(lnSigmaHistory, input.sigmaPrior)
-            }
+        if (input.frozenBaseline && input.frozenHrvSigma != null) {
+            input.frozenHrvSigma
+        } else if (effectiveSigmaHistory.isNotEmpty()) {
+            val lnSigmaHistory = effectiveSigmaHistory.map { ln(it.coerceAtLeast(0.001f)) }
+            scoringCalculator.hrvSigma(lnSigmaHistory, input.sigmaPrior)
         } else {
             null
         }

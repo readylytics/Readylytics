@@ -18,7 +18,7 @@ object ScoringConstants {
     const val HRV_MU_WINDOW_DAYS = 7
     const val HRV_SIGMA_WINDOW_DAYS = 56
     const val HRV_SIGMA_BLEND_MIN_N = 7
-    const val HRV_SIGMA_BLEND_MAX_N = 60
+    const val HRV_SIGMA_BLEND_MAX_N = HRV_SIGMA_WINDOW_DAYS
 
     /** Lookback for circadian-consistency regularity scoring (anchor-night-1 minus 60 days). */
     const val CIRCADIAN_CONSISTENCY_WINDOW_DAYS = 60
@@ -110,6 +110,9 @@ object ScoringConstants {
 
         // ln-scale σ floor — REF: Plews 2014 Int J Sports Physiol Perform; Schaffarczyk 2024; Kubios practice
         const val MIN_LN_SIGMA = 0.04f
+
+        // RHR σ floor (bpm) — prevents inflated z-scores for stable sleepers (SD < 1 bpm)
+        const val RHR_MIN_SIGMA_BPM = 1.5f
     }
 
     object Readiness {

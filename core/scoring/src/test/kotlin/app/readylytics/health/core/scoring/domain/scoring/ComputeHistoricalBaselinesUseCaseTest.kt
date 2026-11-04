@@ -1,14 +1,12 @@
 package app.readylytics.health.core.scoring.domain.scoring
 
-import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
-import app.readylytics.health.core.scoring.domain.scoring.ComputeHistoricalBaselinesUseCase
-
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.scoring.domain.scoring.strategies.LoadScoringStrategy
-import app.readylytics.health.core.scoring.domain.util.stdev
+import app.readylytics.health.core.scoring.domain.util.stdevOrNull
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -164,7 +162,22 @@ class ComputeHistoricalBaselinesUseCaseTest {
 
             val result = useCase.computeHistoricalBaselines(listOf(summary), UserPreferences())
 
-            assertEquals(rhrHistory.stdev(), result.first().rhrSigma)
+            assertEquals(rhrHistory.stdevOrNull(), result.first().rhrSigma)
+        }
+
+    @Test
+    fun `rhr sigma is coerced to RHR_MIN_SIGMA_BPM when sample variance is small`() =
+        runTest {
+            val summary = fakeSummary(LocalDate.of(2026, 1, 1))
+            val lowVarianceRhr = listOf(60, 61, 60, 61, 60)
+            coEvery { baselineComputer.computeBackfillBaselines(any(), any(), any(), any()) } returns
+                mapOf(summary.date to fakeBaseline(rhrHistory = lowVarianceRhr))
+            every { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
+            stubEligibleDayCounts()
+
+            val result = useCase.computeHistoricalBaselines(listOf(summary), UserPreferences())
+
+            assertEquals(ScoringConstants.Restoration.RHR_MIN_SIGMA_BPM, result.first().rhrSigma)
         }
 
     @Test

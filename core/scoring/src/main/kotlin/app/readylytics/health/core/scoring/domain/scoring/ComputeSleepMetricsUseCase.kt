@@ -129,9 +129,9 @@ class ComputeSleepMetricsUseCase
                 val currentNocturnalRhr = currentRestingHr
                 val baselineRhrValue =
                     if (frozenBaseline && frozenRhr != null) {
-                        frozenRhr.toInt()
+                        frozenRhr.roundToInt()
                     } else if (frozenBaseline && frozenRhr == null) {
-                        (prefs.rhrBaselineOverride ?: ScoringConstants.DEFAULT_RHR_BPM).toInt()
+                        (prefs.rhrBaselineOverride ?: ScoringConstants.DEFAULT_RHR_BPM).roundToInt()
                     } else {
                         rhrBaselineValue.roundToInt()
                     }
@@ -242,6 +242,7 @@ class ComputeSleepMetricsUseCase
                                 frozenRhr = frozenRhr,
                                 effectiveRhrSigma = effectiveRhrSigma,
                                 baselineRhrValue = baselineRhrValue,
+                                liveBaselineRhr = if (frozenBaseline) null else rhrBaselineValue,
                                 prefs = prefs,
                                 scoringConfig = scoringConfig,
                                 stagesSuspicious = stagesSuspicious,
@@ -445,6 +446,7 @@ class ComputeSleepMetricsUseCase
                         frozenRhr = input.frozenRhr,
                         effectiveRhrSigma = input.effectiveRhrSigma,
                         baselineRhrValue = input.baselineRhrValue,
+                        liveBaselineRhr = input.liveBaselineRhr,
                     ),
             )
 
