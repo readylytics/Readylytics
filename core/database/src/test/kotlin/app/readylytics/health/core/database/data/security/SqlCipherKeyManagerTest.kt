@@ -72,6 +72,24 @@ class SqlCipherKeyManagerTest {
     }
 
     @Test
+    fun validateKeyDecryption_withUnexpectedException_propagatesWithoutSettingCorruptionState() {
+        val throwingKeyProvider =
+            object : KeyProvider {
+                override fun getOrCreateKey(alias: String): SecretKey {
+                    error("Unexpected Keystore failure")
+                }
+            }
+        val manager = SqlCipherKeyManager(context, throwingKeyProvider)
+        setupCorruptedPrefs()
+
+        assertThrows(IllegalStateException::class.java) {
+            manager.validateKeyDecryption()
+        }
+
+        assertFalse(manager.isKeyCorrupted.value)
+    }
+
+    @Test
     fun resetKeyAndDatabase_clearsCorruptionState() {
         setupCorruptedPrefs()
 

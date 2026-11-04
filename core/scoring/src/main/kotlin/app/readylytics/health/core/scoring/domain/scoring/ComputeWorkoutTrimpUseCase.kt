@@ -56,7 +56,7 @@ class ComputeWorkoutTrimpUseCase
                         )
                     }
                 Result.success(computedTrimp)
-            } catch (e: Exception) {
+            } catch (e: IllegalArgumentException) {
                 logE("ComputeWorkoutTrimp", e) {
                     "TRIMP failed for workout $workoutStartTime..$workoutEndTime"
                 }
