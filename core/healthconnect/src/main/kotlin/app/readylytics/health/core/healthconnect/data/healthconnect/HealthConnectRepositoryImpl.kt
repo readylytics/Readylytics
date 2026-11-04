@@ -22,6 +22,7 @@ import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import app.readylytics.health.core.healthconnect.BuildConfig
 import app.readylytics.health.core.healthconnect.domain.sync.retryWithBackoff
 import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.core.model.domain.model.DomainBloodPressureRecord
@@ -43,6 +44,10 @@ import app.readylytics.health.core.model.domain.repository.ReadRetryScope
 import app.readylytics.health.core.model.domain.repository.ReadOutcome
 import app.readylytics.health.core.model.domain.repository.getOrNull
 import app.readylytics.health.core.model.domain.repository.valueOrPrevious
+import app.readylytics.health.core.model.domain.util.logD
+import app.readylytics.health.core.model.domain.util.logE
+import app.readylytics.health.core.model.domain.util.logI
+import app.readylytics.health.core.model.domain.util.logW
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -149,11 +154,11 @@ class HealthConnectRepositoryImpl
 
         override suspend fun checkPermissions(): PermissionStatus =
             withContext(ioDispatcher) {
-                app.readylytics.health.core.model.domain.util.logD(
+                logD(
                     "HealthConnectRepository",
                 ) { "Checking permissions..." }
                 if (!isAvailable()) {
-                    app.readylytics.health.core.model.domain.util.logD(
+                    logD(
                         "HealthConnectRepository",
                     ) { "SDK not available" }
                     return@withContext PermissionStatus.Unavailable
@@ -164,37 +169,37 @@ class HealthConnectRepositoryImpl
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        app.readylytics.health.core.model.domain.util.logE("HealthConnectRepository", e) {
+                        logE("HealthConnectRepository", e) {
                             "Failed to get granted permissions"
                         }
                         throw e
                     }
-                if (app.readylytics.health.core.healthconnect.BuildConfig.DEBUG) {
-                    app.readylytics.health.core.model.domain.util.logD(
+                if (BuildConfig.DEBUG) {
+                    logD(
                         "HealthConnectRepository",
                     ) { "Granted permissions: $granted" }
-                    app.readylytics.health.core.model.domain.util.logD("HealthConnectRepository") {
+                    logD("HealthConnectRepository") {
                         "Required permissions: $requiredPermissions"
                     }
                 } else {
-                    app.readylytics.health.core.model.domain.util.logD(
+                    logD(
                         "HealthConnectRepository",
                     ) { "Granted permissions count: ${granted.size}" }
                 }
 
                 if (granted.containsAll(requiredPermissions)) {
-                    app.readylytics.health.core.model.domain.util.logD(
+                    logD(
                         "HealthConnectRepository",
                     ) { "All required permissions granted" }
                     PermissionStatus.Granted
                 } else {
                     val missing = requiredPermissions - granted
-                    if (app.readylytics.health.core.healthconnect.BuildConfig.DEBUG) {
-                        app.readylytics.health.core.model.domain.util.logI(
+                    if (BuildConfig.DEBUG) {
+                        logI(
                             "HealthConnectRepository",
                         ) { "Missing permissions: $missing" }
                     } else {
-                        app.readylytics.health.core.model.domain.util.logD(
+                        logD(
                             "HealthConnectRepository",
                         ) { "Missing permissions count: ${missing.size}" }
                     }
@@ -236,7 +241,7 @@ class HealthConnectRepositoryImpl
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    app.readylytics.health.core.model.domain.util.logE("HealthConnectRepository", e) {
+                    logE("HealthConnectRepository", e) {
                         "Failed to check exercise routes permission"
                     }
                     false
@@ -255,7 +260,7 @@ class HealthConnectRepositoryImpl
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    app.readylytics.health.core.model.domain.util.logE("HealthConnectRepository", e) {
+                    logE("HealthConnectRepository", e) {
                         "Failed to check $label permission"
                     }
                     false
@@ -354,19 +359,19 @@ class HealthConnectRepositoryImpl
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: HealthConnectPermissionRevokedException) {
-                    app.readylytics.health.core.model.domain.util.logD("HealthConnectRepository") {
+                    logD("HealthConnectRepository") {
                         "Heart rate permission revoked: ${e.message}"
                     }
                     ReadOutcome.Denied
                 } catch (e: SecurityException) {
-                    app.readylytics.health.core.model.domain.util.logD("HealthConnectRepository") {
+                    logD("HealthConnectRepository") {
                         "Heart rate permission denied: ${e.message}"
                     }
                     ReadOutcome.Denied
                 } catch (e: Exception) {
                     val securityCause = e.asHealthConnectSecurityCause()
                     if (securityCause != null) {
-                        app.readylytics.health.core.model.domain.util.logD("HealthConnectRepository") {
+                        logD("HealthConnectRepository") {
                             "Heart rate permission denied: ${securityCause.message}"
                         }
                         ReadOutcome.Denied
@@ -399,19 +404,19 @@ class HealthConnectRepositoryImpl
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: HealthConnectPermissionRevokedException) {
-                    app.readylytics.health.core.model.domain.util.logD("HealthConnectRepository") {
+                    logD("HealthConnectRepository") {
                         "HRV permission revoked: ${e.message}"
                     }
                     ReadOutcome.Denied
                 } catch (e: SecurityException) {
-                    app.readylytics.health.core.model.domain.util.logD("HealthConnectRepository") {
+                    logD("HealthConnectRepository") {
                         "HRV permission denied: ${e.message}"
                     }
                     ReadOutcome.Denied
                 } catch (e: Exception) {
                     val securityCause = e.asHealthConnectSecurityCause()
                     if (securityCause != null) {
-                        app.readylytics.health.core.model.domain.util.logD("HealthConnectRepository") {
+                        logD("HealthConnectRepository") {
                             "HRV permission denied: ${securityCause.message}"
                         }
                         ReadOutcome.Denied
@@ -470,13 +475,13 @@ class HealthConnectRepositoryImpl
                             } catch (e: CancellationException) {
                                 throw e
                             } catch (e: SecurityException) {
-                                app.readylytics.health.core.model.domain.util.logW("HealthConnectRepository") {
+                                logW("HealthConnectRepository") {
                                     "Exercise route permission not granted: ${e.message}; omitting route"
                                 }
                                 ExerciseRouteResult.ConsentRequired()
                             } catch (e: Exception) {
                                 if (e.asHealthConnectSecurityCause() != null) {
-                                    app.readylytics.health.core.model.domain.util.logW("HealthConnectRepository") {
+                                    logW("HealthConnectRepository") {
                                         "Exercise route permission not granted; omitting route"
                                     }
                                     ExerciseRouteResult.ConsentRequired()
@@ -505,7 +510,7 @@ class HealthConnectRepositoryImpl
                 try {
                     val record = client.readRecord(ExerciseSessionRecord::class, id).record
                     val routeResult = record.exerciseRouteResult
-                    app.readylytics.health.core.model.domain.util.logD("HealthConnectRepository") {
+                    logD("HealthConnectRepository") {
                         "Read single exercise session $id (${record.exerciseType}) " +
                             "route result: ${routeResult.javaClass.simpleName}"
                     }
@@ -523,12 +528,12 @@ class HealthConnectRepositoryImpl
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: SecurityException) {
-                    app.readylytics.health.core.model.domain.util.logW("HealthConnectRepository") {
+                    logW("HealthConnectRepository") {
                         "SecurityException reading exercise session $id: ${e.message}"
                     }
                     null
                 } catch (e: Exception) {
-                    app.readylytics.health.core.model.domain.util.logE("HealthConnectRepository", e) {
+                    logE("HealthConnectRepository", e) {
                         "Failed to read exercise session $id"
                     }
                     null
@@ -631,23 +636,23 @@ class HealthConnectRepositoryImpl
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: HealthConnectPermissionRevokedException) {
-                    app.readylytics.health.core.model.domain.util.logD("HealthConnectRepository") {
+                    logD("HealthConnectRepository") {
                         "$label record permission not granted: ${e.message}"
                     }
                     ReadOutcome.Denied
                 } catch (e: SecurityException) {
-                    app.readylytics.health.core.model.domain.util.logD("HealthConnectRepository") {
+                    logD("HealthConnectRepository") {
                         "$label record permission not granted: ${e.message}"
                     }
                     ReadOutcome.Denied
                 } catch (e: Exception) {
                     if (e.asHealthConnectSecurityCause() != null) {
-                        app.readylytics.health.core.model.domain.util.logD("HealthConnectRepository") {
+                        logD("HealthConnectRepository") {
                             "$label record permission not granted: ${e.message}"
                         }
                         ReadOutcome.Denied
                     } else {
-                        app.readylytics.health.core.model.domain.util.logE("HealthConnectRepository", e) {
+                        logE("HealthConnectRepository", e) {
                             "Error reading $label records"
                         }
                         throw e
@@ -661,7 +666,7 @@ class HealthConnectRepositoryImpl
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                app.readylytics.health.core.model.domain.util.logW("HealthConnectRepository", e) {
+                logW("HealthConnectRepository", e) {
                     "Read failed; returning empty list"
                 }
                 emptyList()
@@ -683,7 +688,7 @@ class HealthConnectRepositoryImpl
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                app.readylytics.health.core.model.domain.util.logW("HealthConnectRepository", e) {
+                logW("HealthConnectRepository", e) {
                     "$label device scan failed; returning partial results"
                 }
             }
@@ -693,7 +698,7 @@ class HealthConnectRepositoryImpl
         override suspend fun discoverDevices(windowDays: Int): List<String> =
             withContext(ioDispatcher) {
                 try {
-                    app.readylytics.health.core.model.domain.util.logD(
+                    logD(
                         "HealthConnectRepository",
                     ) { "Discovering devices in $windowDays day window..." }
                     val from = clock.instant().minusSeconds(windowDays.toLong() * TimeUnit.DAYS.toSeconds(1))
@@ -754,7 +759,7 @@ class HealthConnectRepositoryImpl
                         bodyTemperatureRecordsDeferred.await().forEach { devices.add(it.deviceName) }
                     }
 
-                    app.readylytics.health.core.model.domain.util.logD(
+                    logD(
                         "HealthConnectRepository",
                     ) { "Device discovery found ${devices.size} unique devices" }
                     devices.sorted()
@@ -766,7 +771,7 @@ class HealthConnectRepositoryImpl
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    app.readylytics.health.core.model.domain.util.logE(
+                    logE(
                         "HealthConnectRepository",
                         e,
                     ) { "Device discovery failed" }
