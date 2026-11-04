@@ -53,10 +53,30 @@ class RasScoringStrategy
             seriesEnd: LocalDate,
         ): Map<LocalDate, Float> {
             val result = LinkedHashMap<LocalDate, Float>()
+            if (seriesStart.isAfter(seriesEnd)) return result
+            // Densify once into a primitive array covering [seriesStart - LOOKBACK, seriesEnd], so each
+            // value's anchored recurrence reads array slots instead of boxed LocalDate map lookups.
+            // The arithmetic and its order are identical to ewmaAt, so results stay bit-identical.
+            val base = seriesStart.minusDays(ScoringConstants.LOAD_LOOKBACK_DAYS)
+            val baseEpochDay = base.toEpochDay()
+            val seriesLength = (seriesEnd.toEpochDay() - base.toEpochDay() + 1).toInt()
+            val trimp = DoubleArray(seriesLength)
+            for ((day, value) in dailyTrimpByDate) {
+                val index = day.toEpochDay() - baseEpochDay
+                if (index in 0 until seriesLength) trimp[index.toInt()] = value.toDouble()
+            }
+            val alpha = emaAlpha(windowDays)
+            val lookback = ScoringConstants.LOAD_LOOKBACK_DAYS.toInt()
             var date = seriesStart
+            var dateIndex = lookback
             while (!date.isAfter(seriesEnd)) {
-                result[date] = ewmaAt(dailyTrimpByDate, windowDays, date)
+                var ewma = 0.0
+                for (i in (dateIndex - lookback)..dateIndex) {
+                    ewma = trimp[i] * alpha + ewma * (1.0 - alpha)
+                }
+                result[date] = ewma.toFloat()
                 date = date.plusDays(1)
+                dateIndex++
             }
             return result
         }
@@ -72,7 +92,7 @@ class RasScoringStrategy
             windowDays: Long,
             date: LocalDate,
         ): Float {
-            val alpha = 2.0 / (windowDays + 1.0)
+            val alpha = emaAlpha(windowDays)
             var ewma = 0.0
             var day = date.minusDays(ScoringConstants.LOAD_LOOKBACK_DAYS)
             while (!day.isAfter(date)) {
@@ -82,4 +102,6 @@ class RasScoringStrategy
             }
             return ewma.toFloat()
         }
+
+        private fun emaAlpha(windowDays: Long): Double = 2.0 / (windowDays + 1.0)
     }

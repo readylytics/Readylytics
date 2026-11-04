@@ -104,7 +104,7 @@ _Restoration/HRV Z-scores implemented in: `LoadScoringStrategy.kt`, `BaselineCom
 
 This score asks: **do you go to bed and wake up at roughly the same times each day?** Schedule regularity is independently linked to better metabolic, cognitive, and cardiovascular outcomes — sometimes more strongly than sleep duration itself (Windred et al. 2023, UK Biobank).
 
-We compare each night's bedtime and wake time to your _typical_ (median) bedtime and wake time over the last 14 days. The bigger the deviation, the lower the daily score. The number you see is a 7-day rolling average so a single late night doesn't tank it.
+We compare each night's bedtime and wake time to your _typical_ (median) bedtime and wake time over the 14 nights before the 7 nights being scored (until enough earlier nights exist, the recent nights are used). The bigger the deviation, the lower the daily score. The number you see is a 7-day rolling average so a single late night doesn't tank it.
 
 **Profile-specific thresholds**
 

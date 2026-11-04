@@ -4,7 +4,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.DailySummaryDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
 import app.readylytics.health.core.model.domain.model.TimestampedTrimp
-import java.time.Instant
+import app.readylytics.health.core.model.domain.util.toLocalDateIn
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
@@ -26,14 +26,24 @@ class ScoringSeriesLoader
         suspend fun loadEverydayTrimpPoints(fromMs: Long, toMs: Long): List<TimestampedTrimp> =
             dailySummaryDao.getEverydayTrimpPoints(fromMs, toMs)
 
-        /** True first workout (unbounded by any lookback window), for the minimum-history guard. */
-        suspend fun loadEarliestWorkoutDate(zoneId: ZoneId): LocalDate? =
-            workoutDao.getEarliestWorkoutTimestamp()?.toLocalDate(zoneId)
-
-        /** True first ingested day (unbounded by any lookback window), for the minimum-history guard. */
-        suspend fun loadEarliestSummaryDate(zoneId: ZoneId): LocalDate? =
-            dailySummaryDao.getEarliestDateMs()?.toLocalDate(zoneId)
-
-        private fun Long.toLocalDate(zoneId: ZoneId): LocalDate =
-            Instant.ofEpochMilli(this).atZone(zoneId).toLocalDate()
+        /**
+         * True first-data day for the minimum-history guard: the earlier of the first ingested
+         * daily summary and the first workout, unbounded by any lookback window. `null` means no
+         * data exists yet.
+         *
+         * The workout lookup is skipped once the summary date alone already satisfies
+         * [satisfiedBefore] (the guard cannot trigger for any earlier start), saving a query on
+         * the common established-user path. Pass `null` to always resolve the exact earliest day.
+         */
+        suspend fun loadTrackingStartDate(
+            zoneId: ZoneId,
+            satisfiedBefore: LocalDate? = null,
+        ): LocalDate? {
+            val summaryStart = dailySummaryDao.getEarliestDateMs()?.toLocalDateIn(zoneId)
+            if (summaryStart != null && satisfiedBefore != null && !summaryStart.isAfter(satisfiedBefore)) {
+                return summaryStart
+            }
+            val workoutStart = workoutDao.getEarliestWorkoutTimestamp()?.toLocalDateIn(zoneId)
+            return listOfNotNull(summaryStart, workoutStart).minOrNull()
+        }
     }

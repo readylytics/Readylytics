@@ -77,8 +77,9 @@
         cognitive, and cardiovascular outcomes — sometimes more strongly than sleep duration itself
         (Windred et al. 2023, UK Biobank).</string>
     <string name="about_circadian_mechanism">We compare each night\'s bedtime and wake time to your
-        *typical* (median) bedtime and wake time over the last 14 days. The bigger the deviation,
-        the lower the daily score. The number you see is a 7-day rolling average so a single late
+        *typical* (median) bedtime and wake time over the 14 nights before the 7 nights being
+        scored (until enough earlier nights exist, the recent nights are used). The bigger the
+        deviation, the lower the daily score. The number you see is a 7-day rolling average so a single late
         night doesn\'t tank it.</string>
     <string name="about_threshold_label">**Profile-specific thresholds**</string>
     <string name="about_threshold_athlete">**Athlete** — ±20 minutes: tight control for performance.</string>

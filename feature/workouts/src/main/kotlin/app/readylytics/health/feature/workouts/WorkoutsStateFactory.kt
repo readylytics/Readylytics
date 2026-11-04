@@ -11,6 +11,7 @@ import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.WorkoutData
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
+import app.readylytics.health.core.model.domain.util.toLocalDateIn
 import app.readylytics.health.core.model.domain.workouts.FatigueCurvePoint
 import app.readylytics.health.core.model.domain.workouts.FatigueCurveRange
 import app.readylytics.health.core.model.domain.workouts.WorkoutChartConfiguration
@@ -25,7 +26,6 @@ import app.readylytics.health.core.ui.common.PeriodAverageSummary
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.common.aggregateByRange
 import app.readylytics.health.core.ui.common.padBucketsToRange
-import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -137,9 +137,7 @@ internal suspend fun resolveEarliestLocalDate(
 ): LocalDate? =
     when (prefs.strainLoadSourceMode) {
         LoadSourceMode.WORKOUT_ONLY ->
-            getEarliestWorkoutTimestamp()?.let {
-                Instant.ofEpochMilli(it).atZone(zoneId).toLocalDate()
-            }
+            getEarliestWorkoutTimestamp()?.toLocalDateIn(zoneId)
         LoadSourceMode.EVERYDAY_HEART_RATE ->
             LoadSourceSelector.selectEarliestDataDate(trimpSummaries)
     }
@@ -278,7 +276,7 @@ private fun buildDailySeries(
             ),
         )
 
-        val currentDayDate = Instant.ofEpochMilli(dayMidnight).atZone(zoneId).toLocalDate()
+        val currentDayDate = dayMidnight.toLocalDateIn(zoneId)
 
         val dataTenureDays =
             if (earliestLocalDate != null) {

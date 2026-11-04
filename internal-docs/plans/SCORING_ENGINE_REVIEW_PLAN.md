@@ -188,6 +188,7 @@ The 11 Tier 1 defects are decomposed into 4 sequential, isolated phases to minim
 - **Task 1.3:** Create `StageIntegrityStatus` enum (`VALID`, `NO_BREAKDOWN`, `IMPLAUSIBLE_RATIO`) and `StageIntegrityEvaluator` in `core:scoring` (#3).
 - **Task 1.4:** Integrate `StageIntegrityEvaluator` into `SleepBaselineMetrics.isStagesSuspicious` to treat `deep == 0 && rem == 0` as `NO_BREAKDOWN` and trigger the Duration + Restoration reweighting for generic `STAGE_TYPE_SLEEPING` devices (#3).
 - **Task 1.5:** Create `IntervalCoverageAccumulator` in `core:scoring` to cap inter-sample HR gaps at 5 minutes (`300_000L`) (#10).
+  - **Recorded deviation:** implemented with a 15-minute cap (`900_000L`) plus a 1-minute base allowance. Item #10 gave 5 min only as an example ("for example at 5 min"); the sparsest common sleep-HR cadence is about 10 minutes, so a 5-minute cap would fail those devices' nights outright, while 15 minutes still prevents two boundary samples from spanning a night. Documented in `DATA_FLOW.md` (§Coverage validation).
 - **Task 1.6:** Integrate `IntervalCoverageAccumulator` into `HrCoverageValidator.isValid` to evaluate active coverage instead of sample span (#10).
 - **Task 1.7:** Synchronize `internal-docs/DATA_FLOW.md` (§Ingestion, §Suspicious stages, §Coverage validation), verify `DocumentationDriftTest`, and run full pre-commit verification suite.
 
@@ -199,6 +200,7 @@ The 11 Tier 1 defects are decomposed into 4 sequential, isolated phases to minim
 - **Task 2.1:** Late-Nadir Clock Time: Update `SleepNadirAnalyzer` to compare nadir elapsed clock time with `RecoveryWindow.clockDurationMinutes` instead of total sleep time (`coreSleepDurationMinutes`) (#7).
 - **Task 2.2:** Nap Architecture Denominator: Update `ReadinessSummaryCoordinator` and `SleepDayAggregator` so deep and REM percentages divide by the sleep minutes of stage-eligible segments only, preventing stage-less naps from diluting architecture (#8).
 - **Task 2.3:** Circular Circadian Deviation: Update `CircadianWakeBaseline` and `CircadianConsistencyRepository` to compute wake time deviations circularly (wrapping to ±720 min) and use a safe circular median across noon (#9).
+  - **Self-inclusion (item #9, second bullet):** the baseline median is now taken from the nights before the evaluation window (`validSessions.drop(evalCount)`), falling back to the inclusive baseline only while fewer than `MIN_BASELINE_SESSIONS` earlier nights exist.
 - **Task 2.4:** Contributors Hypersomnia Ratio: Pass `scoringConfig.hypersomniaOnsetRatio` in `ComputeSleepMetricsUseCase` to align displayed duration contributor score with the actual sleep score (#11).
 - **Task 2.5:** Synchronize `DATA_FLOW.md` and `ABOUT.md` circadian/timing sections and add unit tests.
 
@@ -220,6 +222,7 @@ The 11 Tier 1 defects are decomposed into 4 sequential, isolated phases to minim
 
 - **Task 4.1:** Unified Calendar-Day EWMA: Implement a single calendar-day EWMA (point evaluation + series) in `RasScoringStrategy`, zero-initialized over every calendar day from a fixed origin, removing the `size == 1` cliff (#1).
 - **Task 4.2:** Load History Guard: Add minimum history guard in `BuildLoadSeriesUseCase` (return neutral Load = 100 with insufficient history flag until 28 days of history or CTL floor) (#1).
+  - **Implemented as:** neutral until 28 days since the true first data (earlier of first workout / first daily summary) **and** CTL >= `MIN_CTL_FOR_LOAD` (5). The CTL floor is a lower bound that keeps the score neutral (not a bypass of the history requirement), because the layoff-comeback cliff in #1 occurs after the 28 days are satisfied.
 - **Task 4.3:** Unify UI Chart & Dashboard Callers: Point `WorkoutsStateFactory` and `ObserveDashboardStrainIncreaseUseCase` at the unified EWMA implementation (#1).
 - **Task 4.4:** Clean Legacy EWMA Code: Remove legacy list-based `computeEma` and backfill placeholder code (#1).
 - **Task 4.5:** Synchronize `DATA_FLOW.md` (§Load) and `ABOUT.md` (§Training Load), update strings/tooltips, and verify chart/load equivalence tests.

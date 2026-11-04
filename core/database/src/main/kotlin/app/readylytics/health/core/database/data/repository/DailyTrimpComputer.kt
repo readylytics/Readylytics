@@ -167,6 +167,8 @@ class DailyTrimpComputer(
         trimpContext?.let { ctx ->
             ctx.everydayTrimpByDate[targetDate] = trimpEverydayHr
             if (hasWorkouts) ctx.dailyTrimpByDate[targetDate] = dailyTrimpRaw
+            // The day just persisted a summary, so it is now part of tracked history.
+            ctx.registerTrackedDay(targetDate)
         }
     }
 }

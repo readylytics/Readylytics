@@ -64,10 +64,14 @@ class CircadianConsistencyRepositoryTest {
         daysAgo: Int = 0,
         anchorDate: LocalDate = LocalDate.now(),
     ): SleepSessionData {
-        val midnight = anchorDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        val baseMs = midnight - daysAgo * ONE_DAY_MS
-        val startMs = baseMs - (24 - bedHour) * 3600_000L - bedMin * 60_000L
-        val endMs = baseMs + wakeHour * 3600_000L + wakeMin * 60_000L
+        // Wall-clock arithmetic (not raw 24h millis) so a DST transition inside the generated
+        // window cannot shift a night's clock time and masquerade as schedule irregularity.
+        val zone = ZoneId.systemDefault()
+        val day = anchorDate.minusDays(daysAgo.toLong())
+        val startMs =
+            day.minusDays(1).atTime(bedHour, 0).minusMinutes(bedMin.toLong())
+                .atZone(zone).toInstant().toEpochMilli()
+        val endMs = day.atTime(wakeHour, wakeMin).atZone(zone).toInstant().toEpochMilli()
         val durationMinutes = ((endMs - startMs) / 60_000L).toInt().coerceAtLeast(FOUR_HOURS_MINUTES)
         return SleepSessionData(
             id = id,
@@ -141,6 +145,48 @@ class CircadianConsistencyRepositoryTest {
             assertTrue("Expected Ready, got $result", result is CircadianConsistencyResult.Ready)
             val ready = result as CircadianConsistencyResult.Ready
             assertEquals(100f, ready.score, 1f)
+        }
+
+    @Test
+    fun `evaluation nights do not define their own baseline`() =
+        runTest {
+            // 14 habitual nights (23:00 -> 07:00) followed by a 7-night evaluation window shifted by
+            // 2 hours. With self-inclusion the median would be dragged toward the shifted nights.
+            val sessions =
+                (0 until 21).map { i ->
+                    val shifted = i < 7
+                    fakeSleepSession(
+                        id = "s$i",
+                        bedHour = if (shifted) 1 else 23,
+                        wakeHour = if (shifted) 9 else 7,
+                        daysAgo = i,
+                    )
+                }
+            val repo = buildRepo(sessions)
+
+            val result = repo.resultFor(LocalDate.now()).first()
+
+            assertTrue("Expected Ready, got $result", result is CircadianConsistencyResult.Ready)
+            val ready = result as CircadianConsistencyResult.Ready
+            assertEquals(23 * 60, ready.medianBedtimeMinutes)
+            assertEquals(7 * 60, ready.medianWakeMinutes)
+            assertEquals(0f, ready.score, 0.5f)
+        }
+
+    @Test
+    fun `baseline falls back to recent nights while too few earlier nights exist`() =
+        runTest {
+            // 8 nights, 7 evaluated: only 1 earlier night (< MIN_BASELINE_SESSIONS), so the inclusive
+            // baseline is used instead of staying in Calibrating.
+            val sessions =
+                (0 until 8).map { i ->
+                    fakeSleepSession(id = "s$i", bedHour = 23, wakeHour = 7, daysAgo = i)
+                }
+            val repo = buildRepo(sessions)
+
+            val result = repo.resultFor(LocalDate.now()).first()
+
+            assertTrue("Expected Ready, got $result", result is CircadianConsistencyResult.Ready)
         }
 
     @Test

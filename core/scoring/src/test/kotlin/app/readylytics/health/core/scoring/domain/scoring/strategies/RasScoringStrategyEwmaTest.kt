@@ -128,4 +128,28 @@ class RasScoringStrategyEwmaTest {
             assertEquals(strategy.computeCtlEmaWithDecay(trimp, date), value, 0f)
         }
     }
+
+    @Test
+    fun `long series is bit-identical to point evaluation and ignores keys outside the range`() {
+        val start = LocalDate.of(2025, 1, 1)
+        val end = start.plusDays(400)
+        val trimp =
+            (-120L..520L).associate { offset -> start.plusDays(offset) to ((offset * 37) % 91 + 3).toFloat() }
+
+        val atl = strategy.computeAtlEmaSeries(trimp, start, end)
+        val ctl = strategy.computeCtlEmaSeries(trimp, start, end)
+
+        assertEquals(401, atl.size)
+        assertEquals(start, atl.keys.first())
+        assertEquals(end, atl.keys.last())
+        atl.forEach { (date, value) -> assertEquals(strategy.computeAtlEmaWithDecay(trimp, date), value, 0f) }
+        ctl.forEach { (date, value) -> assertEquals(strategy.computeCtlEmaWithDecay(trimp, date), value, 0f) }
+    }
+
+    @Test
+    fun `empty range returns an empty series`() {
+        val day = LocalDate.of(2026, 6, 1)
+
+        assertTrue(strategy.computeCtlEmaSeries(emptyMap(), day, day.minusDays(1)).isEmpty())
+    }
 }

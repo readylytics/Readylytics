@@ -25,18 +25,12 @@ class BuildLoadSeriesUseCaseTest {
 
     @Test
     fun `short history returns neutral load score even when CTL is high`() {
-        // A single hard first workout pushes CTL above 5; the guard must still hold.
+        // A single hard first workout pushes CTL above the floor; the history guard must still hold.
         val dailyTrimp = mapOf(targetDate to 300f)
         stubSeries(dailyTrimp, ctl = 13.9f, atl = 75f, sr = 5.4f)
         stubSeries(noEveryday, ctl = 0f, atl = 0f, sr = 0f)
 
-        val result =
-            useCase.execute(
-                targetDate,
-                dailyTrimp,
-                noEveryday,
-                BuildLoadSeriesUseCase.HistoryStart(workoutOnly = targetDate, everydayHr = null),
-            )
+        val result = useCase.execute(targetDate, dailyTrimp, noEveryday, trackingStart = targetDate)
 
         assertEquals(100f, result.loadScore, 0.001f)
         assertEquals(100f, result.loadScoreEverydayHr, 0.001f)
@@ -47,19 +41,13 @@ class BuildLoadSeriesUseCaseTest {
     }
 
     @Test
-    fun `history of 28 days since true first workout activates load score`() {
+    fun `history of 28 days since true first data activates load score`() {
         val dailyTrimp = mapOf(targetDate to 20f)
-        stubSeries(dailyTrimp, ctl = 3.0f, atl = 8.0f, sr = 2.67f)
+        stubSeries(dailyTrimp, ctl = 6.0f, atl = 8.0f, sr = 1.33f)
         stubSeries(noEveryday, ctl = 0f, atl = 0f, sr = 0f)
-        every { calculator.computeLoadScore(2.67f) } returns 35.0f
+        every { calculator.computeLoadScore(1.33f) } returns 35.0f
 
-        val result =
-            useCase.execute(
-                targetDate,
-                dailyTrimp,
-                noEveryday,
-                BuildLoadSeriesUseCase.HistoryStart(workoutOnly = targetDate.minusDays(27), everydayHr = null),
-            )
+        val result = useCase.execute(targetDate, dailyTrimp, noEveryday, targetDate.minusDays(27))
 
         assertEquals(35.0f, result.loadScore, 0.001f)
     }
@@ -67,16 +55,10 @@ class BuildLoadSeriesUseCaseTest {
     @Test
     fun `history of 27 days stays neutral`() {
         val dailyTrimp = mapOf(targetDate to 20f)
-        stubSeries(dailyTrimp, ctl = 3.0f, atl = 8.0f, sr = 2.67f)
+        stubSeries(dailyTrimp, ctl = 6.0f, atl = 8.0f, sr = 1.33f)
         stubSeries(noEveryday, ctl = 0f, atl = 0f, sr = 0f)
 
-        val result =
-            useCase.execute(
-                targetDate,
-                dailyTrimp,
-                noEveryday,
-                BuildLoadSeriesUseCase.HistoryStart(workoutOnly = targetDate.minusDays(26), everydayHr = null),
-            )
+        val result = useCase.execute(targetDate, dailyTrimp, noEveryday, targetDate.minusDays(26))
 
         assertEquals(100f, result.loadScore, 0.001f)
     }
@@ -84,52 +66,60 @@ class BuildLoadSeriesUseCaseTest {
     @Test
     fun `veteran with recent training gap is not treated as new`() {
         // Only 10 days of TRIMP survive in the 84-day window, but the user has years of history.
-        val dailyTrimp = mapOf(targetDate.minusDays(10) to 60f)
-        stubSeries(dailyTrimp, ctl = 2.0f, atl = 1.0f, sr = 0.5f)
+        val dailyTrimp = mapOf(targetDate.minusDays(10) to 600f)
+        stubSeries(dailyTrimp, ctl = 12.0f, atl = 6.0f, sr = 0.5f)
         stubSeries(noEveryday, ctl = 0f, atl = 0f, sr = 0f)
         every { calculator.computeLoadScore(0.5f) } returns 70.0f
 
-        val result =
-            useCase.execute(
-                targetDate,
-                dailyTrimp,
-                noEveryday,
-                BuildLoadSeriesUseCase.HistoryStart(workoutOnly = targetDate.minusDays(900), everydayHr = null),
-            )
+        val result = useCase.execute(targetDate, dailyTrimp, noEveryday, targetDate.minusDays(900))
 
         assertEquals(70.0f, result.loadScore, 0.001f)
+    }
+
+    @Test
+    fun `comeback session after a long layoff stays neutral because CTL is below the floor`() {
+        // One 100-TRIMP session after >84 days off: CTL ~4.65, SR ~5.4 would score near zero.
+        val dailyTrimp = mapOf(targetDate to 100f)
+        stubSeries(dailyTrimp, ctl = 4.65f, atl = 25f, sr = 5.4f)
+        stubSeries(noEveryday, ctl = 0f, atl = 0f, sr = 0f)
+
+        val result = useCase.execute(targetDate, dailyTrimp, noEveryday, targetDate.minusDays(365))
+
+        assertEquals(100f, result.loadScore, 0.001f)
+        // The raw ratio is still the physiological value.
+        assertEquals(5.4f, result.strainRatio, 0.001f)
+    }
+
+    @Test
+    fun `CTL exactly at the floor activates load score`() {
+        val dailyTrimp = mapOf(targetDate to 100f)
+        stubSeries(dailyTrimp, ctl = 5.0f, atl = 10f, sr = 2.0f)
+        stubSeries(noEveryday, ctl = 0f, atl = 0f, sr = 0f)
+        every { calculator.computeLoadScore(2.0f) } returns 55.0f
+
+        val result = useCase.execute(targetDate, dailyTrimp, noEveryday, targetDate.minusDays(365))
+
+        assertEquals(55.0f, result.loadScore, 0.001f)
     }
 
     @Test
     fun `no data at all returns neutral load score`() {
         stubSeries(noEveryday, ctl = 0f, atl = 0f, sr = 0f)
 
-        val result =
-            useCase.execute(
-                targetDate,
-                noEveryday,
-                noEveryday,
-                BuildLoadSeriesUseCase.HistoryStart(workoutOnly = null, everydayHr = null),
-            )
+        val result = useCase.execute(targetDate, noEveryday, noEveryday, trackingStart = null)
 
         assertEquals(100f, result.loadScore, 0.001f)
         assertEquals(100f, result.loadScoreEverydayHr, 0.001f)
     }
 
     @Test
-    fun `everyday HR guard is independent from workout guard`() {
+    fun `everyday HR load is scored from the shared tracking start while workout CTL is below floor`() {
         val everydayTrimp = mapOf(targetDate to 120f)
         stubSeries(noEveryday, ctl = 0f, atl = 0f, sr = 0f)
         stubSeries(everydayTrimp, ctl = 6.5f, atl = 10.0f, sr = 1.54f)
         every { calculator.computeLoadScore(1.54f) } returns 85.0f
 
-        val result =
-            useCase.execute(
-                targetDate,
-                noEveryday,
-                everydayTrimp,
-                BuildLoadSeriesUseCase.HistoryStart(workoutOnly = null, everydayHr = targetDate.minusDays(40)),
-            )
+        val result = useCase.execute(targetDate, noEveryday, everydayTrimp, targetDate.minusDays(40))
 
         assertEquals(85.0f, result.loadScoreEverydayHr, 0.001f)
         assertEquals(100f, result.loadScore, 0.001f)

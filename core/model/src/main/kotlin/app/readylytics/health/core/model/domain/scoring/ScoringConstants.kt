@@ -70,6 +70,14 @@ object ScoringConstants {
 
         // Minimum history (4 weeks = 28 days since the first recorded data) before ACWR load scoring activates
         const val MIN_HISTORY_DAYS_FOR_LOAD = 28
+
+        /**
+         * Chronic-load floor (TRIMP/day EWMA) below which the ACWR ratio is numerically unstable
+         * (ATL / CTL with CTL near zero). Load scoring stays neutral below it even once the
+         * history guard is satisfied, e.g. one session after a >84-day layoff: 100 TRIMP gives
+         * CTL ~4.65 and a meaningless ratio of ~5.4.
+         */
+        const val MIN_CTL_FOR_LOAD = 5f
     }
 
     object Sleep {

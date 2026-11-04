@@ -237,17 +237,18 @@ class ReadinessSummaryCoordinator
             return Pair(dailyTrimpByDate, everydayTrimpByDate)
         }
 
-        private suspend fun resolveHistoryStart(
-            context: CalibratedScoringContext,
-        ): BuildLoadSeriesUseCase.HistoryStart {
+        /**
+         * First-data day for the minimum-history guard. A walk-forward context carries it (a null
+         * there definitively means "no data yet", so it is never re-queried per day); the
+         * single-day path queries, skipping the workout lookup once the summary date alone proves
+         * the guard satisfied.
+         */
+        private suspend fun resolveTrackingStart(context: CalibratedScoringContext): LocalDate? {
             val trimpContext = context.trimpContext
-            return BuildLoadSeriesUseCase.HistoryStart(
-                workoutOnly =
-                    trimpContext?.earliestWorkoutDate
-                        ?: seriesLoader.loadEarliestWorkoutDate(context.zoneId),
-                everydayHr =
-                    trimpContext?.earliestEverydayDate
-                        ?: seriesLoader.loadEarliestSummaryDate(context.zoneId),
+            if (trimpContext != null) return trimpContext.trackingStartDate
+            return seriesLoader.loadTrackingStartDate(
+                context.zoneId,
+                satisfiedBefore = context.targetDate.minusDays(ScoringConstants.Strain.MIN_HISTORY_DAYS_FOR_LOAD - 1L),
             )
         }
 
@@ -261,7 +262,7 @@ class ReadinessSummaryCoordinator
                     context.targetDate,
                     dailyTrimpByDate,
                     everydayTrimpByDate,
-                    resolveHistoryStart(context),
+                    resolveTrackingStart(context),
                 )
             val withLoadSummary = base.baseSummary.copy(
                 atlWorkoutOnly = loadSeries.atl,

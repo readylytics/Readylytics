@@ -203,8 +203,7 @@ class ScoringRepositoryImpl
                             zoneId,
                         ),
                     ),
-                earliestWorkoutDate = seriesLoader.loadEarliestWorkoutDate(zoneId),
-                earliestEverydayDate = seriesLoader.loadEarliestSummaryDate(zoneId),
+                trackingStartDate = seriesLoader.loadTrackingStartDate(zoneId),
             )
         }
 

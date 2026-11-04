@@ -210,7 +210,7 @@ class ScoreInvalidationTest {
                 ScoringConstants.CIRCADIAN_CONSISTENCY_WINDOW_DAYS.toLong(),
                 ScoringConstants.MATURE_DATA_TENURE_DAYS.toLong(),
                 // the 84-day TRIMP fetch window (ScoringRepositoryImpl, DailyRecomputeSupport walk-forward)
-                ScoringConstants.CHRONIC_DAYS * 2,
+                ScoringConstants.LOAD_LOOKBACK_DAYS,
             )
         lookbacks.forEach { days ->
             assertTrue(
