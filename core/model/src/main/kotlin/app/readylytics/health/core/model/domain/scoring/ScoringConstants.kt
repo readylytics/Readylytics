@@ -47,7 +47,6 @@ object ScoringConstants {
     }
 
     // Defaults
-    const val DEFAULT_FITNESS_LEVEL = 35f
     const val DEFAULT_GOAL_SLEEP_HOURS = 8f
     const val DEFAULT_RHR_BPM = 60f
 

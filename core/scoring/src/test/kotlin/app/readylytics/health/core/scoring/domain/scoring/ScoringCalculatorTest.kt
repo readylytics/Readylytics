@@ -83,28 +83,6 @@ class StrainRatioTest {
 // ─── CTL EMA ──────────────────────────────────────────────────────────────────
 class ComputeCtlTest {
     @Test
-    fun `data tenure less than 7 returns seed`() =
-        assertEquals(35f, calculator.computeCtlEma(dailyTrimpList = List(3) { 50f }), DELTA)
-
-    @Test
-    fun `data tenure between 7 and 21 returns cumulative mean`() =
-        assertEquals(10f, calculator.computeCtlEma(dailyTrimpList = List(10) { 10f }), DELTA)
-
-    @Test
-    fun `data tenure 21 or more returns EMA`() {
-        val dailyTrimpList = List(21) { 20f } + 40f
-        assertEquals(20.93f, calculator.computeCtlEma(dailyTrimpList = dailyTrimpList), DELTA)
-    }
-
-    @Test
-    fun `steady training gives SR close to 1`() {
-        val dailyTrimpList = List(30) { 10f }
-        val ctl = calculator.computeCtlEma(dailyTrimpList = dailyTrimpList)
-        val sr = calculator.computeStrainRatio(10f, ctl)
-        assertEquals(1.0f, sr, 0.05f)
-    }
-
-    @Test
     fun `computeEmaWithDecay utilizes extended history for stabilization`() {
         val rangeEnd = LocalDate.of(2023, 12, 31)
         val windowDays = 42L // CTL standard

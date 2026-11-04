@@ -16,39 +16,6 @@ class RasScoringStrategy
             ctl: Float,
         ): Float = if (ctl > 0f) atl / ctl else 0f
 
-        fun computeCtlEma(
-            dailyTrimpList: List<Float>,
-            seedFitnessLevel: Float = ScoringConstants.DEFAULT_FITNESS_LEVEL,
-            windowDays: Long = ScoringConstants.CHRONIC_DAYS,
-        ): Float = computeEma(dailyTrimpList, seedFitnessLevel, windowDays)
-
-        fun computeAtlEma(
-            dailyTrimpList: List<Float>,
-            seedFatigueLevel: Float = ScoringConstants.DEFAULT_FITNESS_LEVEL,
-            windowDays: Long = ScoringConstants.ACUTE_DAYS,
-        ): Float = computeEma(dailyTrimpList, seedFatigueLevel, windowDays)
-
-        private fun computeEma(
-            data: List<Float>,
-            seed: Float,
-            windowDays: Long,
-        ): Float {
-            val n = data.size
-            if (n < ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION) return seed
-
-            val sma = data.take(ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION).average().toFloat()
-            if (n <= ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION) return sma
-
-            val alpha = 2f / (windowDays + 1f)
-            var currentEma = sma
-
-            for (i in ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION until data.size) {
-                currentEma = (data[i] * alpha) + (currentEma * (1f - alpha))
-            }
-
-            return currentEma
-        }
-
         fun computeCtlEmaWithDecay(
             dailyTrimpByDate: Map<LocalDate, Float>,
             rangeEnd: LocalDate,

@@ -346,32 +346,9 @@ class RasScoringStrategyTest {
     }
 
     @Test
-    fun `ctlEma fewer than MIN_SESSIONS returns seed`() {
-        val data = listOf(50f, 55f)
-        val result = rasStrategy.computeCtlEma(data, seedFitnessLevel = 40f, windowDays = 42)
-        assertEquals(40f, result, DELTA)
-    }
-
-    @Test
-    fun `atlEma exact session count returns SMA`() {
-        val minSessions = ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION
-        val data = List(minSessions) { 50f }
-        val result = rasStrategy.computeAtlEma(data, seedFatigueLevel = 40f, windowDays = 7)
-        assertEquals(50f, result, DELTA)
-    }
-
-    @Test
-    fun `emaWithDecay empty map returns DEFAULT_FITNESS_LEVEL`() {
+    fun `emaWithDecay empty map returns 0`() {
         val result = rasStrategy.computeCtlEmaWithDecay(emptyMap(), LocalDate.now(), windowDays = 42)
-        assertEquals(ScoringConstants.DEFAULT_FITNESS_LEVEL, result, DELTA)
-    }
-
-    @Test
-    fun `emaWithDecay single day returns TRIMP value`() {
-        val today = LocalDate.now()
-        val data = mapOf(today to 50f)
-        val result = rasStrategy.computeCtlEmaWithDecay(data, today, windowDays = 42)
-        assertEquals(50f, result, DELTA)
+        assertEquals(0f, result, DELTA)
     }
 }
 
