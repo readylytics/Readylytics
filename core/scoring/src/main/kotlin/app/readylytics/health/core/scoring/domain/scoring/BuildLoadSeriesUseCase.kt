@@ -42,7 +42,7 @@ class BuildLoadSeriesUseCase
             val atl = scoringCalculator.computeAtlEmaWithDecay(dailyTrimpByDate, targetDate)
             val sr = scoringCalculator.computeStrainRatio(atl, ctl)
 
-            val earliestWorkoutDate = dailyTrimpByDate.filterValues { it > 0f }.keys.minOrNull()
+            val earliestWorkoutDate = dailyTrimpByDate.entries.filter { it.value > 0f }.minOfOrNull { it.key }
             val workoutHistoryDays =
                 earliestWorkoutDate?.let {
                     ChronoUnit.DAYS.between(it, targetDate).toInt() + 1
@@ -62,7 +62,7 @@ class BuildLoadSeriesUseCase
             val atlEverydayHr = scoringCalculator.computeAtlEmaWithDecay(everydayTrimpByDate, targetDate)
             val srEverydayHr = scoringCalculator.computeStrainRatio(atlEverydayHr, ctlEverydayHr)
 
-            val earliestEverydayDate = everydayTrimpByDate.filterValues { it > 0f }.keys.minOrNull()
+            val earliestEverydayDate = everydayTrimpByDate.entries.filter { it.value > 0f }.minOfOrNull { it.key }
             val everydayHistoryDays =
                 earliestEverydayDate?.let {
                     ChronoUnit.DAYS.between(it, targetDate).toInt() + 1
