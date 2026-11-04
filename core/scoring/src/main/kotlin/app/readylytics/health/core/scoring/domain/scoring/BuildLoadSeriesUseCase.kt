@@ -1,9 +1,8 @@
 package app.readylytics.health.core.scoring.domain.scoring
 
-import app.readylytics.health.core.scoring.domain.scoring.BuildLoadSeriesUseCase
-import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
-
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -30,6 +29,8 @@ class BuildLoadSeriesUseCase
             val atlEverydayHr: Float,
             val strainRatioEverydayHr: Float,
             val loadScoreEverydayHr: Float,
+            val hasSufficientHistoryWorkoutOnly: Boolean = true,
+            val hasSufficientHistoryEverydayHr: Boolean = true,
         )
 
         fun execute(
@@ -40,12 +41,42 @@ class BuildLoadSeriesUseCase
             val ctl = scoringCalculator.computeCtlEmaWithDecay(dailyTrimpByDate, targetDate)
             val atl = scoringCalculator.computeAtlEmaWithDecay(dailyTrimpByDate, targetDate)
             val sr = scoringCalculator.computeStrainRatio(atl, ctl)
-            val loadScore = scoringCalculator.computeLoadScore(sr)
+
+            val earliestWorkoutDate = dailyTrimpByDate.filterValues { it > 0f }.keys.minOrNull()
+            val workoutHistoryDays =
+                earliestWorkoutDate?.let {
+                    ChronoUnit.DAYS.between(it, targetDate).toInt() + 1
+                } ?: 0
+            val hasSufficientWorkoutHistory =
+                workoutHistoryDays >= ScoringConstants.Strain.MIN_HISTORY_DAYS_FOR_LOAD ||
+                    ctl >= ScoringConstants.Strain.MIN_CTL_FLOOR
+
+            val loadScore =
+                if (hasSufficientWorkoutHistory) {
+                    scoringCalculator.computeLoadScore(sr)
+                } else {
+                    ScoringConstants.Strain.OPTIMAL_SWEET_SPOT_SCORE
+                }
 
             val ctlEverydayHr = scoringCalculator.computeCtlEmaWithDecay(everydayTrimpByDate, targetDate)
             val atlEverydayHr = scoringCalculator.computeAtlEmaWithDecay(everydayTrimpByDate, targetDate)
             val srEverydayHr = scoringCalculator.computeStrainRatio(atlEverydayHr, ctlEverydayHr)
-            val loadScoreEverydayHr = scoringCalculator.computeLoadScore(srEverydayHr)
+
+            val earliestEverydayDate = everydayTrimpByDate.filterValues { it > 0f }.keys.minOrNull()
+            val everydayHistoryDays =
+                earliestEverydayDate?.let {
+                    ChronoUnit.DAYS.between(it, targetDate).toInt() + 1
+                } ?: 0
+            val hasSufficientEverydayHistory =
+                everydayHistoryDays >= ScoringConstants.Strain.MIN_HISTORY_DAYS_FOR_LOAD ||
+                    ctlEverydayHr >= ScoringConstants.Strain.MIN_CTL_FLOOR
+
+            val loadScoreEverydayHr =
+                if (hasSufficientEverydayHistory) {
+                    scoringCalculator.computeLoadScore(srEverydayHr)
+                } else {
+                    ScoringConstants.Strain.OPTIMAL_SWEET_SPOT_SCORE
+                }
 
             return LoadSeriesResult(
                 ctl = ctl,
@@ -56,6 +87,8 @@ class BuildLoadSeriesUseCase
                 atlEverydayHr = atlEverydayHr,
                 strainRatioEverydayHr = srEverydayHr,
                 loadScoreEverydayHr = loadScoreEverydayHr,
+                hasSufficientHistoryWorkoutOnly = hasSufficientWorkoutHistory,
+                hasSufficientHistoryEverydayHr = hasSufficientEverydayHistory,
             )
         }
     }

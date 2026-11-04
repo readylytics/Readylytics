@@ -61,6 +61,10 @@ object ScoringConstants {
 
         // Smooth quadratic decay for SR > sweet spot; no artificial floor — REF: A.4 review
         const val QUADRATIC_PENALTY_K = 2.5f
+
+        // Minimum history (4 weeks = 28 days) or chronic load floor required before ACWR load scoring activates
+        const val MIN_HISTORY_DAYS_FOR_LOAD = 28
+        const val MIN_CTL_FLOOR = 5.0f
     }
 
     object Sleep {
