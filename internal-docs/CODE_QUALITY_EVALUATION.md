@@ -176,7 +176,112 @@ Ship these as small, independent PRs. None of them touch scoring formulas.
 | 7 | Regroup `*SupplementModule` DI modules by concern | `core/database/.../di/` | — |
 | 8 | Ongoing detekt-baseline burn-down (boyscout) | all modules | — |
 
-## 7. Acceptance criteria for remediation PRs
+## 7. Recommended rollout: phased, not all-in-one
+
+**Recommendation: roll out in phases, one or more small PRs per phase.** A single big-bang refactor is discouraged for four reasons:
+
+- **Determinism risk.** The ingestion and scoring paths carry strict determinism and idempotency invariants: chunk-independent session linking, frozen baselines, and golden-equivalence tests. A mixed diff makes any score drift impossible to attribute to a cause.
+- **Docs-sync rules.** Changes to the ingestion pipeline or the scoring coordinators must update `internal-docs/DATA_FLOW.md` in the same change. Isolating them keeps those doc updates small and reviewable.
+- **Detekt discipline.** The detekt baseline must never grow. Small diffs make it easy to show the count only goes down.
+- **Ordering dependencies.** Each later phase relies on safety nets from an earlier one. A deterministic `Clock` (Phase 2) must exist before the structural splits (Phase 4) can be verified with fixed-time tests.
+
+Phases run in order. Within a phase, PRs are independent and can land in any order or in parallel. Each phase ends with its exit criteria green on `main`.
+
+### Phase 0: Correctness hotfix
+*Risk: low · Behavior change: bug fix only · Est. 1 PR*
+
+| PR | Refactor | Files |
+|---|---|---|
+| 0.1 | Rethrow `CancellationException` before the broad catch in `refreshAvailableDevices()`, so state is not written after the scope is cancelled | `feature/settings/.../data/DataSourceSettingsViewModel.kt` |
+
+**Exit criteria**
+- A new unit test cancels `viewModelScope` mid-refresh and asserts that `availableDevicesFlow` is not written and that cancellation propagates.
+
+### Phase 1: Error-handling and clean-code hygiene
+*Risk: low · Behavior change: none intended · Est. 2–3 PRs*
+
+| PR | Refactor | Files |
+|---|---|---|
+| 1.1 | Audit the remaining broad catches (§5.3). Add a `CancellationException` rethrow in suspend contexts, and narrow the caught types where the failure is known (e.g. `DateTimeParseException` in `PhysiologySettingsViewModel.kt:70`) | `SqlCipherKeyManager`, `SafBackupStore`, `BackupSnapshotExporter`, `EncryptionManager`, `SecureFileStore`, `SecureFileLogSink`, `PhysiologySettingsViewModel`, `GetDashboardDataUseCase`, `ComputeWorkoutTrimpUseCase`, `CustomColorPicker` |
+| 1.2 | Replace fully-qualified calls with imports | `HealthConnectRepositoryImpl.kt` (27), `app/.../ui/sync/SyncViewModel.kt` (14), `ForegroundSyncController.kt` (7) |
+| 1.3 | Move the `"Cannot select future dates"` message to `strings.xml`. Introduce a sealed domain error type in place of the stringly-typed codes (`"INVALID_DATE"`, `"CARD_GENERATION_ERROR"`) | `DashboardViewModel.kt`, `GetDashboardDataUseCase.kt`, the shared `Result` type in `core:model` |
+
+**Exit criteria**
+- The existing test suite is green with no golden-test changes.
+- The detekt baseline count is ≤ the previous count.
+
+### Phase 2: Time and DI consistency
+*Risk: low–medium · Behavior change: none in production (Dagger already injects `Clock`); tests become deterministic · Est. 2–3 PRs*
+
+| PR | Refactor | Files |
+|---|---|---|
+| 2.1 | Move `provideClock` from `DataStoreModule` to `UtilModule`. Add an `@IoDispatcher`-qualified binding if one is missing. Inject it into `MainActivity` in place of `Dispatchers.IO` | `app/.../di/DataStoreModule.kt`, `UtilModule.kt`, `CoroutineDispatchersModule.kt`, `MainActivity.kt` |
+| 2.2 | Remove the dead `= Clock.system*()` defaults from the ~15 `@Inject` constructors. Pass a fixed `Clock` in tests. Resolve the `systemUTC()` vs `systemDefaultZone()` inconsistency in `RoomScanStagingStore` | `ResyncRangeUseCase`, `HistoricalIngestPhase`, `HistoricalPrunePhase`, `HistoricalRecomputePhase`, `HealthChangeSynchronizerImpl`, `RoomHealthIngestionStore`, `RoomHealthChangeIngestionStore`, `RoomScanStagingStore`, `SourcePayloadWriter`, `DailyRecomputeSupport`, `ScoringRepositoryImpl`, `SyncPreferences`, `PhysiologyPreferences`, `DatabaseReadyStartupInitializer` |
+| 2.3 | Inject `Clock` wherever `Instant.now()` or `LocalDate.now()` is called directly. Remove `LocalDate.now()` defaults from UI-state data classes and seed them from the VM's clock instead | `LocalBackupManager`, `LocalRestoreManager`, `BackupRotationService`, `RestoreRecommendationCoverageChecker`, `DatabaseKeyRotator`, `OnboardingViewModel`, `VitalsViewModel`, `HeartRateUiModels`, `WorkoutsStateFactory` |
+| 2.4 | Regroup the `*SupplementModule` DI modules by concern (e.g. `VitalsDaoModule`, `SourceDaoModule`, `JournalDaoModule`) instead of by function count | `core/database/.../di/` |
+
+**Exit criteria**
+- Running `grep -rn "Clock.system\|Instant.now()\|LocalDate.now()"` over production code finds only the single `provideClock` binding.
+- New fixed-`Clock` tests are deterministic across time zones.
+- The Hilt graph compiles: `assembleDebug` passes.
+
+### Phase 3: DRY consolidation (validation and UI state)
+*Risk: low–medium · Behavior change: none intended · Est. 2 PRs*
+
+| PR | Refactor | Files |
+|---|---|---|
+| 3.1 | Centralize birth-date and year-range validation in `SettingsValidators`, taking an injected `Clock`. VMs call it, and composables only render the result | `domain/validation/SettingsValidators`, `OnboardingViewModel`, `OnboardingScreen`, `core/ui/.../BirthdayDatePickerField.kt`, `PhysiologySettingsViewModel` |
+| 3.2 | Generalize the dashboard `CardManagementDelegate` into a shared chart and card management delegate. Replace the duplicated `onToggle*ChartVisibility` / `onReorder*Charts` handlers with it | `feature/dashboard/.../CardManagementDelegate`, the sleep and vitals VMs, target `core:ui` |
+
+**Exit criteria**
+- Boundary tests cover 1899, 1900, the current year and next year, plus future dates.
+- No validation logic remains in composables.
+
+### Phase 4: Structural SRP/DI refactors on the data path
+*Risk: **high** (ingestion and scoring pipeline) · Behavior change: none permitted · Est. 3–4 PRs, one at a time*
+
+| PR | Refactor | Files | Docs |
+|---|---|---|---|
+| 4.1 | Give the collaborators built inside `ScoringRepositoryImpl` (`ScoringDayContextResolver`, `DailyTrimpComputer`, `BaseSummaryAssembler`, …) `@Inject` constructors and take them as constructor parameters. Then re-evaluate whether `ScoringDataLoaders` / `ScoringDayUseCases` are still needed | `core/database/.../data/repository/ScoringRepositoryImpl.kt` and its collaborators, `ScoringSyncBindingsModule.kt` | `DATA_FLOW.md` |
+| 4.2 | Split `HealthConnectRepositoryImpl` (779 lines) behind its existing interface into `HealthConnectAvailability`, `HealthConnectPermissionGateway`, a shared paged-read and error-translation helper, and per-record-type readers. The public API stays unchanged | `core/healthconnect/.../data/healthconnect/` | `DATA_FLOW.md` |
+| 4.3 | Reduce `HealthIngestionCoordinator` (584 lines) by extracting cohesive phases, following the existing `Historical*Phase` pattern | `core/healthconnect/.../domain/sync/` | `DATA_FLOW.md` |
+| 4.4 | Split `ComputeSleepMetricsUseCase` (636 lines) into structural helpers. **No formula changes.** | `core/scoring/.../domain/scoring/` | `DATA_FLOW.md` pointer only |
+
+**Exit criteria**
+- The golden and determinism suites pass unchanged: `BaselineLiveFrozenEquivalenceTest`, `BaselineComputerBackfillEquivalenceTest`, `WorkoutModelTrimpIngestionDeterminismTest`, and the `DocumentationDriftTest` family.
+- Resync over two different retention windows produces identical scores.
+- No public interface changes in `core:model`.
+- `DATA_FLOW.md` is updated in the same PR.
+
+### Phase 5: UI and presentation decomposition
+*Risk: medium (visual regressions) · Behavior change: none intended · Est. 3–4 PRs*
+
+| PR | Refactor | Files |
+|---|---|---|
+| 5.1 | Extract the shared Vico scaffolding (axes, cubic-Bezier line spec, area gradient, marker, M3 palette mapping) into `core:ui`, building on `rememberTrendCartesianChart` / `rememberTrendChartDecorations` | `core/ui/...`, `feature/sleep/.../SleepTrendChart.kt`, `SleepStagesChart.kt`, `feature/workouts/.../AcwrChart.kt` |
+| 5.2 | Split `DashboardMetricPresentationFactory` (665 lines) into a separate factory per card family | `feature/dashboard/.../usecase/` |
+| 5.3 | Slim `DashboardViewModel` (539 lines) by moving the remaining orchestration into use cases and delegates | `feature/dashboard/...` |
+
+**Exit criteria**
+- Compose UI tests (e.g. `DashboardScreenTest`) pass.
+- Charts are checked manually on a device in light, dark and dynamic color.
+- Every touched file is ≤ 400 lines.
+
+### Ongoing: detekt baseline burn-down
+Apply the boyscout rule: every PR in Phases 0–5 removes the baseline entries for the methods it touches. Track the total entry count (about 205 today, 45 of them in `core:scoring`) at the end of each phase. The target is a monotonically decreasing count, with `LargeClass` and `LongParameterList` at zero after Phase 4.
+
+### Phase overview
+
+| Phase | Theme | Risk | Depends on | `DATA_FLOW.md` |
+|---|---|---|---|---|
+| 0 | Cancellation bug | Low | — | — |
+| 1 | Error handling and hygiene | Low | 0 | — |
+| 2 | Time and DI consistency | Low–Med | — | — |
+| 3 | DRY: validation and chart-management delegate | Low–Med | 2 (`Clock` in validators) | — |
+| 4 | Data-path SRP/DI splits | **High** | 1, 2 | Yes |
+| 5 | UI decomposition | Medium | 3 | — |
+
+## 8. Acceptance criteria for remediation PRs
 
 - Pre-commit gate passes: `./gradlew ktlintFormat && ./gradlew detekt && ./gradlew assembleDebug && ./gradlew testDebugUnitTest`, then `./gradlew lintRelease`.
 - The total entry count in `*/detekt-baseline.xml` must not increase. No new `@Suppress` without explicit human approval.
