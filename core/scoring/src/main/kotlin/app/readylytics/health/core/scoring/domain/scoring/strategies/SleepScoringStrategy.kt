@@ -125,7 +125,7 @@ class SleepScoringStrategy
             weightProfile: SleepScoreWeightProfile = SleepScoreWeightProfile.DEFAULT,
             regularityScore: Float? = null,
             hypersomniaOnsetRatio: Float = Sleep.DEFAULT_HYPERSOMNIA_ONSET_RATIO,
-            architectureDurationMinutes: Int = durationMinutes,
+            architectureDurationMinutes: Int,
         ): Float {
             require(durationMinutes >= 0) { "durationMinutes must be >= 0" }
             require(architectureDurationMinutes >= 0) { "architectureDurationMinutes must be >= 0" }

@@ -22,7 +22,11 @@ class StepShortfallRule : InsightRule {
 
         val circadian = context.circadianResult
         if (circadian is CircadianConsistencyResult.Ready) {
-            val earliestMinutes = circadian.medianBedtimeMinutes - InsightConstants.STEP_SHORTFALL_LEAD_TIME_MINUTES
+            // Bedtime is a clock minute in [0, 1440); a "past midnight" bedtime (before noon) is lifted
+            // into the next-day evening space so it stays comparable with nowMinutesOfDay.
+            val bedtime = circadian.medianBedtimeMinutes
+            val bedtimeInEveningSpace = if (bedtime < NOON_MINUTES) bedtime + MINUTES_PER_DAY else bedtime
+            val earliestMinutes = bedtimeInEveningSpace - InsightConstants.STEP_SHORTFALL_LEAD_TIME_MINUTES
             if (context.nowMinutesOfDay < earliestMinutes) return null
         }
 
@@ -30,5 +34,10 @@ class StepShortfallRule : InsightRule {
             type = InsightType.STEP_SHORTFALL,
             params = InsightParams.StepShortfall(stepCount = stepCount, stepGoal = context.stepGoal),
         )
+    }
+
+    private companion object {
+        const val NOON_MINUTES = 12 * 60
+        const val MINUTES_PER_DAY = 24 * 60
     }
 }

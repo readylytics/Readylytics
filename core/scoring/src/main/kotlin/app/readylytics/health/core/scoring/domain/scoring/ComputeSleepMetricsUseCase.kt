@@ -160,7 +160,9 @@ class ComputeSleepMetricsUseCase
                     collaborators.scoringCalculator.validateNight(
                         rmssdMs = if (sessionHrvSamples.isNotEmpty()) currentHrvMean else null,
                         rhrBpm = currentNocturnalRhr?.toFloat(),
-                        durationMinutes = session.durationMinutes,
+                        // Deep/REM are architecture-eligible totals, so the stage fractions must use
+                        // the matching architecture-eligible duration, not the nap-inclusive one.
+                        durationMinutes = request.architectureDurationMinutes,
                         deepMinutes = session.deepSleepMinutes,
                         remMinutes = session.remSleepMinutes,
                         hrCoverageValid = currentHrCoverage,

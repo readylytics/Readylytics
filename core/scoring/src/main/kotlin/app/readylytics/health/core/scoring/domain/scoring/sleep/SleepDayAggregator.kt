@@ -107,10 +107,6 @@ object SleepDayAggregator {
             architectureBlocks
                 .fold(coreCluster.stageTotals) { totals, block -> totals + block.segment.stageTotals }
 
-
-        val architectureDurationMinutes =
-            coreCluster.totalDurationMinutes + architectureBlocks.sumOf { it.durationMinutes }
-
         return SleepDayAggregate(
             scoreDay = scoreDay,
             policy = policy,
@@ -120,7 +116,6 @@ object SleepDayAggregator {
             totalDurationMinutes = coreCluster.totalDurationMinutes + supplementalBlocks.sumOf { it.durationMinutes },
             architectureTotals = architectureTotals,
             recoveryWindow = coreCluster.recoveryWindow,
-            architectureDurationMinutes = architectureDurationMinutes,
         )
     }
 

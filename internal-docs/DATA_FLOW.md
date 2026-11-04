@@ -1322,6 +1322,17 @@ the full retention window through today may advance it. A killed or failed pass 
 the version unchanged, so a later full/unbounded run (or another launch's startup gate) still converges
 it.
 
+The Phase 2 sleep fixes raise the current scoring version to **6**: the late-nadir penalty now compares
+the nadir offset against the core cluster's clock recovery window, and the deep/REM architecture
+denominator — together with the `validateNight` stage-fraction and duration gates on both the live
+(`ComputeSleepMetricsUseCase`) and historical (`HistoricalSleepDayAssembler`) paths — uses
+`SleepDayAggregate.architectureDurationMinutes` (core cluster plus architecture-eligible supplemental
+blocks). The unchanged startup gate (`storedScoringVersion < CURRENT_SCORING_VERSION`) therefore enqueues the
+recompute-only resync so stored historical scores converge with the live pipeline. The habitual bedtime
+and wake baselines (`CircadianWakeBaseline`) are both circular medians in `[0, 1440)`
+(`CircadianTimeMath.circularMedianMinutes`: the sample minimizing total circular distance is the local
+origin, then the median of signed offsets), so they stay correct across midnight and noon.
+
 **Correction/deletion example fan-out.** Correcting or deleting a workout can change which historical
 workouts are eligible as recommendation examples (§2.11.3's 30-day lookback) for every day up to 30
 days after it. `ScoreInvalidation.exampleFanOutRange(correctionDate, today, retentionStart)`

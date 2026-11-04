@@ -403,6 +403,7 @@ class SleepScoreIntegrationTest {
         val score =
             calculator.computeSleepScore(
                 durationMinutes = 480,
+                architectureDurationMinutes = 480,
                 efficiency = 85f,
                 deepSleepMinutes = 96,
                 remSleepMinutes = 96,
@@ -419,6 +420,7 @@ class SleepScoreIntegrationTest {
         val score =
             calculator.computeSleepScore(
                 durationMinutes = 100,
+                architectureDurationMinutes = 100,
                 efficiency = 100f,
                 deepSleepMinutes = 30,
                 remSleepMinutes = 30,

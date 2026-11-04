@@ -79,7 +79,7 @@ data class SleepMetricsRequest(
     val currentSessionIds: Set<String>,
     val prefetchedSessions: List<SleepSession>?,
     val forceLiveBaselines: Boolean = false,
-    val architectureDurationMinutes: Int = session.durationMinutes,
+    val architectureDurationMinutes: Int,
 )
 
 internal data class NocturnalScoringInput(
@@ -109,7 +109,7 @@ internal data class NocturnalScoringInput(
     val loadScoreEverydayHr: Float?,
     val summary: DailySummary,
     val hrvSigma: Float?,
-    val architectureDurationMinutes: Int = session.durationMinutes,
+    val architectureDurationMinutes: Int,
 )
 
 internal data class NocturnalScoringResult(

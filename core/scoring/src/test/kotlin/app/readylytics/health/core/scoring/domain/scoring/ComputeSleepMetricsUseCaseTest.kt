@@ -471,6 +471,7 @@ private fun calibrationRequest(
         dayEndMs = dayMidnight.toEpochMilli() + 86_400_000L,
         currentSessionIds = setOf("calibration-session"),
         prefetchedSessions = null,
+        architectureDurationMinutes = calibrationSession().durationMinutes,
     )
 }
 
@@ -522,6 +523,7 @@ private fun cancellationTestRequest(): SleepMetricsRequest =
         dayEndMs = 86400000L,
         currentSessionIds = emptySet(),
         prefetchedSessions = null,
+        architectureDurationMinutes = cancelledSession().durationMinutes,
     )
 
 private fun cancelledSession() =

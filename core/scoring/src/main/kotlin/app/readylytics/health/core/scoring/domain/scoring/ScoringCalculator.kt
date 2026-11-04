@@ -114,7 +114,7 @@ interface ScoringCalculator {
         weightProfile: SleepScoreWeightProfile = SleepScoreWeightProfile.DEFAULT,
         regularityScore: Float? = null,
         hypersomniaOnsetRatio: Float = ScoringConstants.Sleep.DEFAULT_HYPERSOMNIA_ONSET_RATIO,
-        architectureDurationMinutes: Int = durationMinutes,
+        architectureDurationMinutes: Int,
     ): Float
 
     fun computeRecoveryFlags(

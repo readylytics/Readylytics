@@ -1,7 +1,6 @@
 package app.readylytics.health.core.scoring.domain.scoring
 
 import app.readylytics.health.core.model.domain.repository.SleepSessionData
-import java.time.Instant
 import java.time.ZoneId
 
 /**
@@ -24,13 +23,9 @@ object CircadianWakeBaseline {
     /** Sessions shorter than this are naps, not nights, and never contribute to the baseline. */
     const val NAP_THRESHOLD_MINUTES = 180
 
-    private const val MINUTES_PER_DAY = 1440
-    private const val NOON_MINUTES = 12 * 60
-
     /**
-     * Habitual bedtime in the "past midnight" normalized space produced by [normalizeMinutes]
-     * (consumers that need clock minutes take the value modulo 1440), and habitual wake time
-     * in `[0, 1440)` produced by [CircadianTimeMath.circularMedianMinutes].
+     * Habitual bedtime and wake time as clock minutes in `[0, 1440)`, both produced by
+     * [CircadianTimeMath.circularMedianMinutes] so they are correct across midnight and noon.
      */
     data class Baseline(
         val medianBedtimeMinutes: Int,
@@ -68,30 +63,14 @@ object CircadianWakeBaseline {
         val baselineSessions = qualifyingSessions.take(baselineCount)
         if (baselineSessions.size < MIN_BASELINE_SESSIONS) return null
         return Baseline(
-            medianBedtimeMinutes = baselineSessions.map { normalizeMinutes(it.startTime, zone) }.median(),
+            medianBedtimeMinutes =
+                CircadianTimeMath.circularMedianMinutes(
+                    baselineSessions.map { CircadianTimeMath.minuteOfDay(it.startTime, zone) },
+                ),
             medianWakeMinutes =
                 CircadianTimeMath.circularMedianMinutes(
                     baselineSessions.map { CircadianTimeMath.minuteOfDay(it.endTime, zone) },
                 ),
         )
-    }
-
-    /**
-     * Minutes-of-day for [epochMs] in [zone], with times before noon treated as "past midnight"
-     * (01:00 becomes 25:00) so that sorting and medians work across the midnight boundary.
-     */
-    fun normalizeMinutes(
-        epochMs: Long,
-        zone: ZoneId,
-    ): Int {
-        val zdt = Instant.ofEpochMilli(epochMs).atZone(zone)
-        val minutes = zdt.hour * 60 + zdt.minute
-        return if (minutes < NOON_MINUTES) minutes + MINUTES_PER_DAY else minutes
-    }
-
-    private fun List<Int>.median(): Int {
-        val sorted = sorted()
-        val mid = size / 2
-        return if (size % 2 == 0) (sorted[mid - 1] + sorted[mid]) / 2 else sorted[mid]
     }
 }

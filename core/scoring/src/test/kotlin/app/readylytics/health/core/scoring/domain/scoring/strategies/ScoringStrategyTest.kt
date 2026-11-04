@@ -119,6 +119,7 @@ class SleepScoringStrategyTest {
         val result =
             sleepStrategy.computeSleepScore(
                 durationMinutes = 480,
+                architectureDurationMinutes = 480,
                 efficiency = 95f,
                 deepSleepMinutes = 86,
                 remSleepMinutes = 105,
@@ -161,6 +162,7 @@ class SleepScoringStrategyTest {
         val at89 =
             sleepStrategy.computeSleepScore(
                 durationMinutes = 450,
+                architectureDurationMinutes = 450,
                 efficiency = 89f,
                 deepSleepMinutes = 90,
                 remSleepMinutes = 100,
@@ -174,6 +176,7 @@ class SleepScoringStrategyTest {
         val at90 =
             sleepStrategy.computeSleepScore(
                 durationMinutes = 450,
+                architectureDurationMinutes = 450,
                 efficiency = 90f,
                 deepSleepMinutes = 90,
                 remSleepMinutes = 100,
@@ -193,6 +196,7 @@ class SleepScoringStrategyTest {
         fun scoreFor(minutes: Int) =
             sleepStrategy.computeSleepScore(
                 durationMinutes = minutes,
+                architectureDurationMinutes = minutes,
                 efficiency = 92f,
                 deepSleepMinutes = 90,
                 remSleepMinutes = 100,
@@ -216,6 +220,7 @@ class SleepScoringStrategyTest {
         fun scoreFor(minutes: Int) =
             sleepStrategy.computeSleepScore(
                 durationMinutes = minutes,
+                architectureDurationMinutes = minutes,
                 efficiency = 92f,
                 deepSleepMinutes = 110,
                 remSleepMinutes = 125,
@@ -235,6 +240,7 @@ class SleepScoringStrategyTest {
         val score =
             sleepStrategy.computeSleepScore(
                 durationMinutes = 480,
+                architectureDurationMinutes = 480,
                 efficiency = 92f,
                 deepSleepMinutes = 0,
                 remSleepMinutes = 0,
@@ -263,6 +269,7 @@ class SleepScoringStrategyTest {
         val score =
             sleepStrategy.computeSleepScore(
                 durationMinutes = 480,
+                architectureDurationMinutes = 480,
                 efficiency = 92f,
                 deepSleepMinutes = 0,
                 remSleepMinutes = 0,
@@ -287,6 +294,7 @@ class SleepScoringStrategyTest {
         fun scoreFor(regularity: Float?) =
             sleepStrategy.computeSleepScore(
                 durationMinutes = 480,
+                architectureDurationMinutes = 480,
                 efficiency = 92f,
                 deepSleepMinutes = 90,
                 remSleepMinutes = 100,
@@ -308,6 +316,7 @@ class SleepScoringStrategyTest {
         fun scoreFor(profile: SleepScoreWeightProfile) =
             sleepStrategy.computeSleepScore(
                 durationMinutes = 480,
+                architectureDurationMinutes = 480,
                 efficiency = 92f,
                 deepSleepMinutes = 90,
                 remSleepMinutes = 100,

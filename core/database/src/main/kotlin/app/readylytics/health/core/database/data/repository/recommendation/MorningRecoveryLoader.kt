@@ -266,6 +266,8 @@ class MorningRecoveryLoader
                     currentSessionIds = setOf(session.id),
                     prefetchedSessions = boundedSessions,
                     forceLiveBaselines = true,
+                    // Scored from a single session, so its full duration is the architecture denominator.
+                    architectureDurationMinutes = session.durationMinutes,
                     // Both the frozen snapshot and `context.initialBaselines` were resolved with a
                     // next-day-midnight window; honouring them would make a day score differently
                     // once it froze. See `SleepMetricsRequest.forceLiveBaselines`.

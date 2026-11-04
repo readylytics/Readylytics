@@ -71,4 +71,20 @@ class CircadianTimeMathTest {
         assertEquals(0, CircadianTimeMath.circularMedianMinutes(emptyList()))
         assertEquals(500, CircadianTimeMath.circularMedianMinutes(listOf(500)))
     }
+
+    @Test
+    fun `circularMedianMinutes is deterministic when samples cancel out`() {
+        // 00:00, 08:00, 16:00 have a ~zero resultant vector; the result must not depend on float noise.
+        val first = CircadianTimeMath.circularMedianMinutes(listOf(0, 480, 960))
+        val second = CircadianTimeMath.circularMedianMinutes(listOf(960, 0, 480))
+        assertEquals(first, second)
+        assertEquals(0, first)
+    }
+
+    @Test
+    fun `circularMedianMinutes stays near observed times for bimodal input`() {
+        // Cluster at 01:00-01:20 plus one outlier 12h away: result stays inside the cluster.
+        val result = CircadianTimeMath.circularMedianMinutes(listOf(60, 70, 80, 780))
+        assertEquals(75, result)
+    }
 }

@@ -184,7 +184,7 @@ internal class HistoricalSleepDayAssembler(
                 historicalSleepDay(
                     scoreDay = aggregate.scoreDay,
                     coreSessionIds = coreSessionIds,
-                    durationMinutes = aggregate.totalDurationMinutes,
+                    durationMinutes = aggregate.architectureDurationMinutes,
                     deepMinutes = aggregate.architectureTotals.deepMinutes,
                     remMinutes = aggregate.architectureTotals.remMinutes,
                     hrvMean = hrvMean,
@@ -193,7 +193,6 @@ internal class HistoricalSleepDayAssembler(
                     assumeCoverageValid = assumeCoverageValid,
                 )
             }
-
 
     private fun historicalSleepDay(
         scoreDay: LocalDate,

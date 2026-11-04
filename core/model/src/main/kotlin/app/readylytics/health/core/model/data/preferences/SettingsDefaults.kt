@@ -31,7 +31,10 @@ object SettingsDefaults {
     // v5: full retained-history recompute now also assembles a workout recommendation
     // (MorningRecommendationAssembler) for every day, backfilling `workoutRecommendationJson` on
     // pre-existing daily_summaries rows. See HealthResyncWorker.persistPostRecomputeState.
-    const val CURRENT_SCORING_VERSION = 5
+    // v6: late-nadir threshold uses the core clock recovery window and the deep/REM architecture
+    // denominator (plus the stage-fraction plausibility gates) uses stage-eligible duration, so
+    // retained history must be recomputed to converge with the live pipeline.
+    const val CURRENT_SCORING_VERSION = 6
     const val CORE_MERGE_GAP_MINUTES = 180
     const val MIN_CORE_MERGE_GAP_MINUTES = 30
     const val MAX_CORE_MERGE_GAP_MINUTES = 240

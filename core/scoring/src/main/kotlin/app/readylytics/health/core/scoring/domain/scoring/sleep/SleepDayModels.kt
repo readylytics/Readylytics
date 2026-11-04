@@ -161,10 +161,13 @@ data class SleepDayAggregate(
     val totalDurationMinutes: Int,
     val architectureTotals: SleepStageTotals,
     val recoveryWindow: RecoveryWindow,
-    val architectureDurationMinutes: Int =
-        coreCluster.totalDurationMinutes +
-            supplementalBlocks.filter { it.architectureEligible }.sumOf { it.durationMinutes },
 ) {
+    /** Core cluster plus architecture-eligible supplemental blocks: the deep/REM denominator. */
+    val architectureDurationMinutes: Int
+        get() =
+            coreCluster.totalDurationMinutes +
+                supplementalBlocks.filter { it.architectureEligible }.sumOf { it.durationMinutes }
+
     val supplementalSleepDurationMinutes: Int
         get() = supplementalBlocks.sumOf { it.durationMinutes }
 }
