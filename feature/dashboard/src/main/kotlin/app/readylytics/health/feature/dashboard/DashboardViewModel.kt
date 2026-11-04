@@ -306,8 +306,7 @@ class DashboardViewModel
             when (event) {
                 is DashboardEvent.DateSelected ->
                     viewModelScope.launch {
-                        val validation = validateSelectedDate(event.date)
-                        if (validation.isSuccess) {
+                        if (validateSelectedDate(event.date).isSuccess) {
                             repositories.selectedDate.updateSelectedDate(event.date)
                         } else {
                             _errorMessage.value = UiText.StringRes(R.string.error_cannot_select_future_dates)
