@@ -73,14 +73,15 @@ class BaselineComputerTest {
     @Test
     fun `rhrHistoryBetween computes percentile bit-identical to expanded samples`() =
         runTest {
-            val fromMs = Instant.parse("2026-06-01T00:00:00Z").toEpochMilli()
-            val toMs = Instant.parse("2026-06-02T00:00:00Z").toEpochMilli()
+            val sessionDate = Instant.parse("2026-06-01T00:00:00Z").toEpochMilli()
+            val queryDate = Instant.parse("2026-06-02T00:00:00Z").toEpochMilli()
+            val nextDay = Instant.parse("2026-06-03T00:00:00Z").toEpochMilli()
             val zone = ZoneId.of("UTC")
             val session =
                 SleepSession(
                     id = "s2",
-                    startTime = fromMs + 1000,
-                    endTime = fromMs + 28800000,
+                    startTime = sessionDate + 1000,
+                    endTime = sessionDate + 28800000,
                     durationMinutes = 480,
                     efficiency = 0.95f,
                     deepSleepMinutes = 100,
@@ -96,12 +97,13 @@ class BaselineComputerTest {
             coEvery { repository.getSleepRmssdForSessionsMap(any()) } returns mapOf("s2" to listOf(45f))
             coEvery { repository.getSleepHrProjectionForSessions(listOf("s2")) } returns hrSamples
 
-            val result = baselineComputer.rhrHistoryBetween(fromMs, toMs, percentile = 10, zoneId = zone)
+            val result = baselineComputer.rhrHistoryBetween(queryDate, nextDay, percentile = 10, zoneId = zone)
 
-            val expected = rawSamples.let { list ->
-                val index = round(0.10 * (list.size - 1)).toInt()
-                list[index]
-            }
+            val expected =
+                rawSamples.let { list ->
+                    val index = round(0.10 * (list.size - 1)).toInt()
+                    list[index]
+                }
             assertEquals(listOf(expected), result)
         }
 
@@ -110,7 +112,8 @@ class BaselineComputerTest {
         runTest {
             val zone = ZoneId.of("UTC")
             val date = LocalDate.of(2026, 6, 1)
-            val summary = DailySummary(date = date)
+            val targetDate = date.plusDays(1)
+            val summary = DailySummary(date = targetDate)
             val midnight = date.atStartOfDay(zone).toInstant()
             val session =
                 SleepSession(
@@ -131,7 +134,7 @@ class BaselineComputerTest {
             coEvery { repository.getSleepHrProjectionForSessions(any()) } returns samples
 
             val baselines = baselineComputer.computeBackfillBaselines(listOf(summary), percentile = 10, zoneId = zone)
-            val baseline = baselines[date]
+            val baseline = baselines[targetDate]
 
             assertEquals(52f, baseline?.rhrBpm)
         }
