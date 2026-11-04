@@ -91,7 +91,7 @@ class WorkoutExampleLoader
                     .toInstant()
                     .toEpochMilli()
             return dailySummaryRepository.getInRange(
-                fromMs = midnightOf(candidates.minOf { it.startTime }, ScoringConstants.CHRONIC_DAYS),
+                fromMs = midnightOf(candidates.minOf { it.startTime }, ScoringConstants.LOAD_LOOKBACK_DAYS),
                 toMs = midnightOf(candidates.maxOf { it.startTime }, 0L),
             )
         }

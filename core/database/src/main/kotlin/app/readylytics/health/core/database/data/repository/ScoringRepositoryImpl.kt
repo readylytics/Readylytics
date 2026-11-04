@@ -178,7 +178,7 @@ class ScoringRepositoryImpl
         ): WalkForwardTrimpContext {
             val fromMs =
                 startDate
-                    .minusDays(ScoringConstants.CHRONIC_DAYS * 2)
+                    .minusDays(ScoringConstants.LOAD_LOOKBACK_DAYS)
                     .atStartOfDay(zoneId)
                     .toInstant()
                     .toEpochMilli()
@@ -203,6 +203,8 @@ class ScoringRepositoryImpl
                             zoneId,
                         ),
                     ),
+                earliestWorkoutDate = seriesLoader.loadEarliestWorkoutDate(zoneId),
+                earliestEverydayDate = seriesLoader.loadEarliestSummaryDate(zoneId),
             )
         }
 

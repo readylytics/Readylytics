@@ -110,15 +110,15 @@ class GetWorkoutDisplayMetricsUseCase
         ): Map<LocalDate, Float> {
             val resolvedSummaries =
                 historicalSummaries?.filter {
-                    !it.date.isBefore(workoutDate.minusDays(ScoringConstants.CHRONIC_DAYS))
+                    !it.date.isBefore(workoutDate.minusDays(ScoringConstants.LOAD_LOOKBACK_DAYS))
                 } ?: run {
-                    val fortyTwoDaysAgo =
+                    val lookbackStart =
                         workoutDate
-                            .minusDays(ScoringConstants.CHRONIC_DAYS)
+                            .minusDays(ScoringConstants.LOAD_LOOKBACK_DAYS)
                             .atStartOfDay(zoneId)
                             .toInstant()
                             .toEpochMilli()
-                    dailySummaryRepository.getSince(fortyTwoDaysAgo)
+                    dailySummaryRepository.getSince(lookbackStart)
                 }
             return resolvedSummaries.associate {
                 it.date to (LoadSourceSelector.selectTrimp(it, prefs.strainLoadSourceMode) ?: 0f)

@@ -1,7 +1,5 @@
 package app.readylytics.health.core.scoring.domain.scoring.strategies
 
-import app.readylytics.health.core.scoring.domain.scoring.strategies.RasScoringStrategy
-
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import java.time.LocalDate
 import javax.inject.Inject
@@ -46,7 +44,7 @@ class RasScoringStrategy
             dailyTrimpByDate: Map<LocalDate, Float>,
             windowDays: Long,
             rangeEnd: LocalDate,
-        ): Float = computeEmaSeries(dailyTrimpByDate, windowDays, rangeEnd, rangeEnd)[rangeEnd] ?: 0f
+        ): Float = ewmaAt(dailyTrimpByDate, windowDays, rangeEnd)
 
         private fun computeEmaSeries(
             dailyTrimpByDate: Map<LocalDate, Float>,
@@ -54,34 +52,34 @@ class RasScoringStrategy
             seriesStart: LocalDate,
             seriesEnd: LocalDate,
         ): Map<LocalDate, Float> {
-            if (seriesStart.isAfter(seriesEnd)) return emptyMap()
-
             val result = LinkedHashMap<LocalDate, Float>()
-            if (dailyTrimpByDate.isEmpty()) {
-                var date = seriesStart
-                while (!date.isAfter(seriesEnd)) {
-                    result[date] = 0f
-                    date = date.plusDays(1)
-                }
-                return result
-            }
-
-            val earliestDataDate = dailyTrimpByDate.keys.minOrNull() ?: seriesStart
-            val calcStart = if (earliestDataDate.isBefore(seriesStart)) earliestDataDate else seriesStart
-
-            val alpha = 2.0 / (windowDays + 1.0)
-            var ewma = 0.0
-
-            var date = calcStart
+            var date = seriesStart
             while (!date.isAfter(seriesEnd)) {
-                val trimp = dailyTrimpByDate[date]?.toDouble() ?: 0.0
-                ewma = trimp * alpha + ewma * (1.0 - alpha)
-                if (!date.isBefore(seriesStart)) {
-                    result[date] = ewma.toFloat()
-                }
+                result[date] = ewmaAt(dailyTrimpByDate, windowDays, date)
                 date = date.plusDays(1)
             }
-
             return result
+        }
+
+        /**
+         * Zero-initialised calendar-day EWMA of [date], anchored at `date - LOAD_LOOKBACK_DAYS`.
+         * Anchoring per value (not per map) makes the result independent of how much older data
+         * the caller holds, so stored, workouts and dashboard tiers agree. Days without an entry
+         * count as zero TRIMP; entries before the anchor are ignored.
+         */
+        private fun ewmaAt(
+            dailyTrimpByDate: Map<LocalDate, Float>,
+            windowDays: Long,
+            date: LocalDate,
+        ): Float {
+            val alpha = 2.0 / (windowDays + 1.0)
+            var ewma = 0.0
+            var day = date.minusDays(ScoringConstants.LOAD_LOOKBACK_DAYS)
+            while (!day.isAfter(date)) {
+                val trimp = dailyTrimpByDate[day]?.toDouble() ?: 0.0
+                ewma = trimp * alpha + ewma * (1.0 - alpha)
+                day = day.plusDays(1)
+            }
+            return ewma.toFloat()
         }
     }

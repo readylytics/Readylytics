@@ -12,8 +12,13 @@ import java.util.TreeMap
  * reproduces the exact bounded-window `WHERE timestampMs >= :from AND timestampMs < :to` semantics
  * the per-day DB queries this replaces (`WorkoutDao.getTrimpPoints` / `DailySummaryDao
  * .getEverydayTrimpPoints`) used, in O(log n + k) instead of a full scan.
+ *
+ * [earliestWorkoutDate]/[earliestEverydayDate] are the true first-data dates (outside the 84-day
+ * window) fetched once for the minimum-history guard; `null` makes the per-day path query instead.
  */
 data class WalkForwardTrimpContext(
     val dailyTrimpByDate: TreeMap<LocalDate, Float>,
     val everydayTrimpByDate: TreeMap<LocalDate, Float>,
+    val earliestWorkoutDate: LocalDate? = null,
+    val earliestEverydayDate: LocalDate? = null,
 )

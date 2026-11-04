@@ -212,7 +212,7 @@ class ReadinessSummaryCoordinator
         private suspend fun resolveTrimpSeries(
             context: CalibratedScoringContext,
         ): Pair<Map<LocalDate, Float>, Map<LocalDate, Float>> {
-            val fromDate = context.targetDate.minusDays(ScoringConstants.CHRONIC_DAYS * 2)
+            val fromDate = context.targetDate.minusDays(ScoringConstants.LOAD_LOOKBACK_DAYS)
             val dailyTrimpByDate = (
                 context.trimpContext?.dailyTrimpByDate?.subMap(fromDate, true, context.targetDate, true)
                     ?: TrimpDateBucketer.bucket(
@@ -237,12 +237,32 @@ class ReadinessSummaryCoordinator
             return Pair(dailyTrimpByDate, everydayTrimpByDate)
         }
 
+        private suspend fun resolveHistoryStart(
+            context: CalibratedScoringContext,
+        ): BuildLoadSeriesUseCase.HistoryStart {
+            val trimpContext = context.trimpContext
+            return BuildLoadSeriesUseCase.HistoryStart(
+                workoutOnly =
+                    trimpContext?.earliestWorkoutDate
+                        ?: seriesLoader.loadEarliestWorkoutDate(context.zoneId),
+                everydayHr =
+                    trimpContext?.earliestEverydayDate
+                        ?: seriesLoader.loadEarliestSummaryDate(context.zoneId),
+            )
+        }
+
         suspend fun computeCalibratedSummary(
             base: ReadinessBaseInputs,
             context: CalibratedScoringContext,
         ): DailySummary {
             val (dailyTrimpByDate, everydayTrimpByDate) = resolveTrimpSeries(context)
-            val loadSeries = buildLoadSeriesUseCase.execute(context.targetDate, dailyTrimpByDate, everydayTrimpByDate)
+            val loadSeries =
+                buildLoadSeriesUseCase.execute(
+                    context.targetDate,
+                    dailyTrimpByDate,
+                    everydayTrimpByDate,
+                    resolveHistoryStart(context),
+                )
             val withLoadSummary = base.baseSummary.copy(
                 atlWorkoutOnly = loadSeries.atl,
                 ctlWorkoutOnly = loadSeries.ctl,

@@ -171,6 +171,7 @@ class WorkoutModelTrimpIngestionDeterminismTest {
                 targetDate = targetDate,
                 dailyTrimpByDate = trimpByDate,
                 everydayTrimpByDate = emptyMap(),
+                historyStart = BuildLoadSeriesUseCase.HistoryStart(workoutOnly = null, everydayHr = null),
             ).strainRatio
     }
 

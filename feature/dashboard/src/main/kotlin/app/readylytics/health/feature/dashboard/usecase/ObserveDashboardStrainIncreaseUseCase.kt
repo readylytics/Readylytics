@@ -43,7 +43,7 @@ class ObserveDashboardStrainIncreaseUseCase
                     val displayStartDate = date.minusDays(6)
                     val fetchFromMs =
                         displayStartDate
-                            .minusDays(ScoringConstants.CHRONIC_DAYS * 2)
+                            .minusDays(ScoringConstants.LOAD_LOOKBACK_DAYS)
                             .atStartOfDay(zoneId)
                             .toInstant()
                             .toEpochMilli()

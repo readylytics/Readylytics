@@ -98,4 +98,34 @@ class RasScoringStrategyEwmaTest {
         val atlPoint = strategy.computeAtlEmaWithDecay(trimpMap, today)
         assertEquals(atlPoint, atlSeries[today] ?: -1f, delta)
     }
+
+    @Test
+    fun `value is independent of data older than the lookback anchor`() {
+        val today = LocalDate.of(2026, 6, 1)
+        val recent = mapOf(today.minusDays(30) to 90f, today to 40f)
+        val withAncient = recent + mapOf(today.minusDays(400) to 500f, today.minusDays(200) to 300f)
+
+        assertEquals(
+            strategy.computeCtlEmaWithDecay(recent, today),
+            strategy.computeCtlEmaWithDecay(withAncient, today),
+            0f,
+        )
+        assertEquals(
+            strategy.computeAtlEmaWithDecay(recent, today),
+            strategy.computeAtlEmaWithDecay(withAncient, today),
+            0f,
+        )
+    }
+
+    @Test
+    fun `series value for a date equals a standalone point evaluation of that date`() {
+        val today = LocalDate.of(2026, 6, 1)
+        val trimp = mapOf(today.minusDays(100) to 200f, today.minusDays(50) to 70f, today.minusDays(3) to 55f)
+
+        val series = strategy.computeCtlEmaSeries(trimp, today.minusDays(6), today)
+
+        series.forEach { (date, value) ->
+            assertEquals(strategy.computeCtlEmaWithDecay(trimp, date), value, 0f)
+        }
+    }
 }

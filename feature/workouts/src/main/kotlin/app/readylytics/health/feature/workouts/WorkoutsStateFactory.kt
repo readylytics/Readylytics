@@ -109,7 +109,7 @@ internal fun resolveWorkoutsRangeWindow(
         displayFromMs = displayStartDate.atStartOfDay(zoneId).toInstant().toEpochMilli(),
         fetchFromMs =
             displayStartDate
-                .minusDays(ScoringConstants.CHRONIC_DAYS * 2)
+                .minusDays(ScoringConstants.LOAD_LOOKBACK_DAYS)
                 .atStartOfDay(zoneId)
                 .toInstant()
                 .toEpochMilli(),

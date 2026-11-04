@@ -671,7 +671,7 @@ class DocumentationDriftTest {
                 "zero TRIMP",
                 "zero-initialized",
                 "28 days",
-                "5.0",
+                "84 days",
             )
         for (phrase in requiredPhrases) {
             assertTrue(aboutMd.contains(phrase), "ABOUT.md must contain '$phrase'")
