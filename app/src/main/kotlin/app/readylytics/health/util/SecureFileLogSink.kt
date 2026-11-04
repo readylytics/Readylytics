@@ -9,6 +9,7 @@ import app.readylytics.health.core.model.domain.util.LogLevel
 import app.readylytics.health.core.model.domain.util.safeDiagnostic
 import app.readylytics.health.data.security.SecureFileStore
 import app.readylytics.health.data.security.TinkSecureFileStore
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -30,10 +31,10 @@ class SecureFileLogSink(
     private val secureFileStore: SecureFileStore = TinkSecureFileStore.create(context),
     private val flushLineThreshold: Int = DEFAULT_FLUSH_LINE_THRESHOLD,
     private val flushIntervalMs: Long = DEFAULT_FLUSH_INTERVAL_MS,
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + coroutineContext),
 ) : DomainLogSink {
     private val writeDispatcher: CoroutineContext = coroutineContext
     private val logDirectory = File(context.cacheDir, LOG_DIRECTORY_NAME)
-    private val scope = CoroutineScope(SupervisorJob() + writeDispatcher)
 
     // Slot rotation, crypto, and the active-slot memory buffer live here; this class only formats,
     // sanitizes, and batches. Confined to the single-threaded [writeDispatcher], so LogSlotStore
@@ -90,6 +91,8 @@ class SecureFileLogSink(
         scope.launch {
             try {
                 bufferSafeLog(safeText)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 // Deliberately broad: this is the logging sink itself, running detached in
                 // `scope.launch`. bufferSafeLog does file I/O, so a narrower type would let

@@ -10,10 +10,12 @@ import com.google.crypto.tink.StreamingAead
 import com.google.crypto.tink.integration.android.AndroidKeysetManager
 import com.google.crypto.tink.streamingaead.StreamingAeadConfig
 import java.io.File
+import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
+import java.security.GeneralSecurityException
 import java.security.KeyStore
 import javax.crypto.KeyGenerator
 
@@ -48,7 +50,10 @@ internal class TinkSecureFileStore internal constructor(
                     .bufferedReader(Charsets.UTF_8)
                     .use { it.readText() }
             }
-        } catch (e: Exception) {
+        } catch (e: IOException) {
+            logW(TAG, e) { "Failed to read ${file.name}; treating as empty" }
+            ""
+        } catch (e: GeneralSecurityException) {
             logW(TAG, e) { "Failed to decrypt ${file.name}; treating as empty" }
             ""
         }
@@ -73,9 +78,10 @@ internal class TinkSecureFileStore internal constructor(
                     }
             }
             replaceAtomically(tempFile, file)
-        } catch (e: Exception) {
-            tempFile.delete()
-            throw e
+        } finally {
+            if (tempFile.exists()) {
+                tempFile.delete()
+            }
         }
     }
 
@@ -90,7 +96,7 @@ internal class TinkSecureFileStore internal constructor(
                 StandardCopyOption.ATOMIC_MOVE,
                 StandardCopyOption.REPLACE_EXISTING,
             )
-        } catch (_: Exception) {
+        } catch (_: IOException) {
             Files.move(
                 source.toPath(),
                 target.toPath(),

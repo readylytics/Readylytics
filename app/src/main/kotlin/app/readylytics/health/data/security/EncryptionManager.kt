@@ -12,7 +12,10 @@ import com.google.crypto.tink.RegistryConfiguration
 import com.google.crypto.tink.aead.AeadConfig
 import com.google.crypto.tink.integration.android.AndroidKeysetManager
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.IOException
+import java.security.GeneralSecurityException
 import java.security.KeyStore
+import java.security.ProviderException
 import javax.crypto.KeyGenerator
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -45,16 +48,23 @@ class EncryptionManager
                     .keysetHandle
                     .getPrimitive(RegistryConfiguration.get(), Aead::class.java)
             } catch (e: Exception) {
-                logW("EncryptionManager", e) { "Versioned keyset unreadable; falling back to legacy master key" }
-                // Fallback to legacy master key if version 1 key fails to read/decrypt existing keyset
-                AndroidKeysetManager
-                    .Builder()
-                    .withSharedPref(context, KEYSET_NAME, PREF_FILE_NAME)
-                    .withKeyTemplate(KeyTemplates.get("AES256_GCM"))
-                    .withMasterKeyUri("android-keystore://master_key")
-                    .build()
-                    .keysetHandle
-                    .getPrimitive(RegistryConfiguration.get(), Aead::class.java)
+                when (e) {
+                    is GeneralSecurityException, is IOException -> {
+                        logW(
+                            "EncryptionManager",
+                            e,
+                        ) { "Versioned keyset unreadable; falling back to legacy master key" }
+                        AndroidKeysetManager
+                            .Builder()
+                            .withSharedPref(context, KEYSET_NAME, PREF_FILE_NAME)
+                            .withKeyTemplate(KeyTemplates.get("AES256_GCM"))
+                            .withMasterKeyUri("android-keystore://master_key")
+                            .build()
+                            .keysetHandle
+                            .getPrimitive(RegistryConfiguration.get(), Aead::class.java)
+                    }
+                    else -> throw e
+                }
             }
         }
 
@@ -71,12 +81,26 @@ class EncryptionManager
                 generateKey(alias, useStrongBox = true)
                 keyMetadataStore.setCurrentKey(CURRENT_KEY_VERSION, strongBoxBacked = true)
             } catch (e: Exception) {
-                logW("EncryptionManager", e) { "StrongBox key generation failed; retrying without StrongBox" }
-                try {
-                    generateKey(alias, useStrongBox = false)
-                    keyMetadataStore.setCurrentKey(CURRENT_KEY_VERSION, strongBoxBacked = false)
-                } catch (ex: Exception) {
-                    throw EncryptionInitException("Failed to generate master key", ex)
+                when (e) {
+                    is GeneralSecurityException, is ProviderException -> fallbackNonStrongBoxKey(alias, e)
+                    else -> throw e
+                }
+            }
+        }
+
+        private fun fallbackNonStrongBoxKey(
+            alias: String,
+            cause: Exception,
+        ) {
+            logW("EncryptionManager", cause) { "StrongBox key generation failed; retrying without StrongBox" }
+            try {
+                generateKey(alias, useStrongBox = false)
+                keyMetadataStore.setCurrentKey(CURRENT_KEY_VERSION, strongBoxBacked = false)
+            } catch (ex: Exception) {
+                when (ex) {
+                    is GeneralSecurityException, is ProviderException ->
+                        throw EncryptionInitException("Failed to generate master key", ex)
+                    else -> throw ex
                 }
             }
         }
@@ -119,8 +143,11 @@ class EncryptionManager
                 val decoded = Base64.decode(ciphertext, Base64.NO_WRAP)
                 val plaintext = aead.decrypt(decoded, null)
                 String(plaintext, Charsets.UTF_8)
-            } catch (e: Exception) {
+            } catch (e: GeneralSecurityException) {
                 logW("EncryptionManager", e) { "Decryption failed; returning null" }
+                null
+            } catch (e: IllegalArgumentException) {
+                logW("EncryptionManager", e) { "Base64 decoding failed; returning null" }
                 null
             }
 
