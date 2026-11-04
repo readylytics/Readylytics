@@ -150,5 +150,4 @@
     <string name="workout_recommendation_duration_with_hr_format">%1$d min • %2$d bpm avg</string>
     <string name="workout_recommendation_open_workout_cd">Open recorded %1$s workout</string>
 
-    <string name="error_cannot_select_future_dates">Cannot select future dates</string>
 </resources>
