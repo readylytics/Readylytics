@@ -4,6 +4,7 @@ import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.model.ReadinessResult
 import app.readylytics.health.core.model.domain.model.SleepSession
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
 import app.readylytics.health.core.scoring.domain.util.stdevOrNull
 import java.time.LocalDate
@@ -83,7 +84,8 @@ internal fun computeBaselineMetrics(
 
     val calculatedRhrSigma =
         if (!input.frozenBaseline && input.rhrValues.size > 1) {
-            input.rhrValues.stdevOrNull()?.takeIf { it > 0f }
+            input.rhrValues.stdevOrNull()
+                ?.coerceAtLeast(ScoringConstants.Restoration.RHR_MIN_SIGMA_BPM)
         } else {
             null
         }

@@ -96,11 +96,11 @@ class LoadScoringStrategy
         ): Float? {
             if (rhrHistory.isEmpty() && baselineOverride == null) return null
             val mu = baselineOverride ?: rhrHistory.median()
-            val sigma =
+            val rawSigma =
                 frozenSigma ?: rhrHistory
                     .takeIf { it.size > 1 }
-                    ?.stdevOrNull()
-                    ?.takeIf { it > 0f } ?: max(0.05f * mu, 1f)
+                    ?.stdevOrNull() ?: max(0.05f * mu, Restoration.RHR_MIN_SIGMA_BPM)
+            val sigma = rawSigma.coerceAtLeast(Restoration.RHR_MIN_SIGMA_BPM)
             return (currentRhrBpm - mu) / sigma
         }
 
