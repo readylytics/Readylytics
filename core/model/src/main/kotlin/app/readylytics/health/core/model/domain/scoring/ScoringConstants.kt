@@ -18,7 +18,7 @@ object ScoringConstants {
     const val HRV_MU_WINDOW_DAYS = 7
     const val HRV_SIGMA_WINDOW_DAYS = 56
     const val HRV_SIGMA_BLEND_MIN_N = 7
-    const val HRV_SIGMA_BLEND_MAX_N = 60
+    const val HRV_SIGMA_BLEND_MAX_N = HRV_SIGMA_WINDOW_DAYS
 
     /** Lookback for circadian-consistency regularity scoring (anchor-night-1 minus 60 days). */
     const val CIRCADIAN_CONSISTENCY_WINDOW_DAYS = 60
