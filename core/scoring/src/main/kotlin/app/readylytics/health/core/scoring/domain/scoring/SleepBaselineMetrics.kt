@@ -118,6 +118,7 @@ internal data class SummaryAssemblyContext(
     val currentRestingHr: Int?,
     val restingHrRatio: Float?,
     val restingHrBaseline: Int?,
+    val liveBaselineRhr: Float? = null,
     val frozenBaseline: Boolean,
     val muHrvHistory: List<Float>,
     val hrvSigma: Float?,
@@ -211,7 +212,7 @@ internal fun assembleDailySummary(ctx: SummaryAssemblyContext): DailySummary {
     val deepPercent = computeSleepStagePercent(durationMinutes, ctx.session.deepSleepMinutes)
     val remPercent = computeSleepStagePercent(durationMinutes, ctx.session.remSleepMinutes)
     val hrvMu = resolveRollingHrvMu(ctx.frozenBaseline, ctx.summary.hrvMuMssd, ctx.muHrvHistory)
-    val rhrBpm = if (ctx.frozenBaseline) ctx.summary.rhrBpm else ctx.restingHrBaseline?.toFloat()
+    val rhrBpm = if (ctx.frozenBaseline) ctx.summary.rhrBpm else ctx.liveBaselineRhr
     val rhrSigma = if (ctx.frozenBaseline) ctx.summary.rhrSigma else ctx.effectiveRhrSigma
     val hrvSigmaMssd = if (ctx.frozenBaseline) ctx.summary.hrvSigmaMssd else ctx.hrvSigma
     val snapshots = resolveCalibrationSnapshots(ctx)

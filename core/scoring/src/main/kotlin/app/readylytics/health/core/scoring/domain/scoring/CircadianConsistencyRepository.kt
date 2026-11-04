@@ -117,8 +117,13 @@ class CircadianConsistencyRepository
 
             val validSessions = CircadianWakeBaseline.qualifyingSessions(sessions)
 
+            // The baseline excludes the evaluation nights so a night never defines its own "usual"
+            // time (self-inclusion pulls deviations toward zero and overstates regularity). Until
+            // enough earlier nights exist for a baseline, fall back to the inclusive one rather
+            // than keeping a new user in Calibrating for evalCount extra nights.
             val baseline =
-                CircadianWakeBaseline.resolveFromQualifying(validSessions, baselineCount, zone)
+                CircadianWakeBaseline.resolveFromQualifying(validSessions.drop(evalCount), baselineCount, zone)
+                    ?: CircadianWakeBaseline.resolveFromQualifying(validSessions, baselineCount, zone)
                     ?: return CircadianConsistencyResult.Calibrating
 
             val startOfDayMs =

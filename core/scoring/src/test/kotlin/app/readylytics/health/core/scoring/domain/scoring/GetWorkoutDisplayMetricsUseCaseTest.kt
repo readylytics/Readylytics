@@ -75,13 +75,13 @@ class GetWorkoutDisplayMetricsUseCaseTest {
             every { summary.hrMax } returns null
             coEvery { dailySummaryRepository.getByDate(midnight) } returns summary
 
-            val fortyTwoDaysAgo =
+            val lookbackStart =
                 workoutDate
-                    .minusDays(ScoringConstants.CHRONIC_DAYS)
+                    .minusDays(ScoringConstants.LOAD_LOOKBACK_DAYS)
                     .atStartOfDay(zoneId)
                     .toInstant()
                     .toEpochMilli()
-            coEvery { dailySummaryRepository.getSince(fortyTwoDaysAgo) } returns emptyList()
+            coEvery { dailySummaryRepository.getSince(lookbackStart) } returns emptyList()
 
             val dbSamples =
                 listOf(
@@ -139,7 +139,7 @@ class GetWorkoutDisplayMetricsUseCaseTest {
 
             coVerify {
                 dailySummaryRepository.getByDate(midnight)
-                dailySummaryRepository.getSince(fortyTwoDaysAgo)
+                dailySummaryRepository.getSince(lookbackStart)
                 heartRateRepository.getByTimeRangeOfType("EXERCISE", workout.startTime, workout.endTime)
             }
         }
@@ -233,7 +233,7 @@ class GetWorkoutDisplayMetricsUseCaseTest {
         }
 
     @Test
-    fun `clamping ignores summaries outside the 42-day window`() =
+    fun `clamping ignores summaries outside the 84-day window`() =
         runTest {
             val zoneId = ZoneId.of("Pacific/Honolulu")
             val workoutDate = LocalDate.of(2026, 6, 9)
@@ -258,8 +258,8 @@ class GetWorkoutDisplayMetricsUseCaseTest {
                     classification = null,
                 )
 
-            val inWindow = workoutDate.minusDays(ScoringConstants.CHRONIC_DAYS)
-            val outOfWindow = workoutDate.minusDays(ScoringConstants.CHRONIC_DAYS + 1)
+            val inWindow = workoutDate.minusDays(ScoringConstants.LOAD_LOOKBACK_DAYS)
+            val outOfWindow = workoutDate.minusDays(ScoringConstants.LOAD_LOOKBACK_DAYS + 1)
 
             every {
                 computeWorkoutLoadMetricsUseCase.execute(
@@ -292,7 +292,7 @@ class GetWorkoutDisplayMetricsUseCaseTest {
         runTest {
             // C1 regression guard: the same workout must show the same gained strain on the
             // Dashboard / History list (which pass a wider pre-fetched window) as on Workout
-            // Detail (which lets the use case fetch its own 42-day window).
+            // Detail (which lets the use case fetch its own 84-day window).
             val zoneId = ZoneId.of("Pacific/Honolulu")
             val workoutDate = LocalDate.of(2026, 6, 9)
             val startMs = Instant.parse("2026-06-10T05:00:00Z").toEpochMilli()
@@ -321,9 +321,9 @@ class GetWorkoutDisplayMetricsUseCaseTest {
             coEvery { dailySummaryRepository.getByDate(midnight) } returns summary
             coEvery { heartRateRepository.getByTimeRangeOfType("EXERCISE", any(), any()) } returns emptyList()
 
-            // The DB-backed 42-day window the self-fetch path would return.
+            // The DB-backed 84-day window the self-fetch path would return.
             val dbWindow =
-                (0L..ScoringConstants.CHRONIC_DAYS).map { daysAgo ->
+                (0L..ScoringConstants.LOAD_LOOKBACK_DAYS).map { daysAgo ->
                     DailySummary(
                         date = workoutDate.minusDays(daysAgo),
                         trimpWorkoutOnly = 10f + daysAgo,
@@ -335,18 +335,18 @@ class GetWorkoutDisplayMetricsUseCaseTest {
                 dbWindow +
                     (1L..6L).map { extra ->
                         DailySummary(
-                            date = workoutDate.minusDays(ScoringConstants.CHRONIC_DAYS + extra),
+                            date = workoutDate.minusDays(ScoringConstants.LOAD_LOOKBACK_DAYS + extra),
                             trimpWorkoutOnly = 500f,
                         )
                     }
 
-            val fortyTwoDaysAgo =
+            val lookbackStart =
                 workoutDate
-                    .minusDays(ScoringConstants.CHRONIC_DAYS)
+                    .minusDays(ScoringConstants.LOAD_LOOKBACK_DAYS)
                     .atStartOfDay(zoneId)
                     .toInstant()
                     .toEpochMilli()
-            coEvery { dailySummaryRepository.getSince(fortyTwoDaysAgo) } returns dbWindow
+            coEvery { dailySummaryRepository.getSince(lookbackStart) } returns dbWindow
 
             // Real (non-mocked) EMA math: the gained strain must actually be a function of the
             // trimpByDate map it receives, otherwise this test proves nothing.

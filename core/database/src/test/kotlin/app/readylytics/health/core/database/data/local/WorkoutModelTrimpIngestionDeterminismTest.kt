@@ -171,6 +171,7 @@ class WorkoutModelTrimpIngestionDeterminismTest {
                 targetDate = targetDate,
                 dailyTrimpByDate = trimpByDate,
                 everydayTrimpByDate = emptyMap(),
+                trackingStart = null,
             ).strainRatio
     }
 

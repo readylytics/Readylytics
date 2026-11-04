@@ -9,6 +9,7 @@ import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.ui.common.TimeRange
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -300,19 +301,15 @@ class WorkoutsStateFactoryTest {
     }
 
     @Test
-    fun `resolveWorkoutsRangeWindow computes correct epoch boundaries`() {
+    fun `resolveWorkoutsRangeWindow computes correct epoch boundaries with 84-day lookback`() {
         val window = resolveWorkoutsRangeWindow(TimeRange.SEVEN_DAYS, selectedDate, zoneId)
-        val expectedStart = selectedDate.minusDays(6)
-        assertEquals(expectedStart, window.displayStartDate)
-        assertEquals(expectedStart.atStartOfDay(zoneId).toInstant().toEpochMilli(), window.displayFromMs)
-        assertEquals(
-            expectedStart
-                .minusDays(ScoringConstants.CHRONIC_DAYS)
-                .atStartOfDay(zoneId)
-                .toInstant()
-                .toEpochMilli(),
-            window.fetchFromMs,
-        )
+
+        val expectedDisplayStart = selectedDate.minusDays(6)
+        val expectedFetchStart = expectedDisplayStart.minusDays(ScoringConstants.CHRONIC_DAYS * 2)
+
+        assertEquals(expectedDisplayStart, window.displayStartDate)
+        assertEquals(expectedDisplayStart.atStartOfDay(zoneId).toInstant().toEpochMilli(), window.displayFromMs)
+        assertEquals(expectedFetchStart.atStartOfDay(zoneId).toInstant().toEpochMilli(), window.fetchFromMs)
         assertEquals(selectedDate.atStartOfDay(zoneId).toInstant().toEpochMilli(), window.selectedMidnightMs)
         assertEquals(
             selectedDate
@@ -330,5 +327,37 @@ class WorkoutsStateFactoryTest {
                 .toEpochMilli(),
             window.rasFromMs,
         )
+    }
+
+    @Test
+    fun `buildWorkoutsState falls back to 0f instead of default fitness level when series missing`() {
+        val summaries = listOf(DailySummary(date = selectedDate, trimpEverydayHr = 20f))
+        val prefs = UserPreferences(strainLoadSourceMode = LoadSourceMode.EVERYDAY_HEART_RATE)
+
+        every { scoringCalculator.computeCtlEmaSeries(any(), any(), any()) } returns emptyMap()
+        every { scoringCalculator.computeAtlEmaSeries(any(), any(), any()) } returns emptyMap()
+        every { scoringCalculator.computeStrainRatio(0f, 0f) } returns 0f
+        every { scoringCalculator.computeAtlEmaWithDecay(any(), any()) } returns 0f
+        every { scoringCalculator.computeCtlEmaWithDecay(any(), any()) } returns 0f
+
+        buildWorkoutsState(
+            WorkoutsStateInputs(
+                scoringCalculator = scoringCalculator,
+                trainingStressBalanceCalculator = trainingStressBalanceCalculator,
+                latestSummary = null,
+                trimpSummaries = summaries,
+                rasSummaries = emptyList(),
+                prefs = prefs,
+                range = TimeRange.SEVEN_DAYS,
+                selectedDate = selectedDate,
+                zoneId = zoneId,
+                recentWorkouts = emptyList(),
+                currentPage = 1,
+                totalPages = 1,
+                earliestLocalDate = selectedDate.minusDays(10),
+            ),
+        )
+
+        verify { scoringCalculator.computeStrainRatio(0f, 0f) }
     }
 }

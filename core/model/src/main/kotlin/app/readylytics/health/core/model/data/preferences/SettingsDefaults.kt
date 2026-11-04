@@ -36,7 +36,10 @@ object SettingsDefaults {
     // retained history must be recomputed to converge with the live pipeline.
     // v7: RHR baseline window excludes the scored night, RHR sigma is floored at 1.5 bpm, and the
     // HRV sigma blend completes at 56 nights, so retained history must be recomputed to match.
-    const val CURRENT_SCORING_VERSION = 7
+    // v8: ATL/CTL use the unified zero-initialized calendar-day EWMA with a 28-day history and
+    // CTL >= 5 floor guard, circadian consistency excludes evaluation nights from its baseline,
+    // and live/frozen RHR baselines converge on the unrounded nadir median.
+    const val CURRENT_SCORING_VERSION = 8
     const val CORE_MERGE_GAP_MINUTES = 180
     const val MIN_CORE_MERGE_GAP_MINUTES = 30
     const val MAX_CORE_MERGE_GAP_MINUTES = 240

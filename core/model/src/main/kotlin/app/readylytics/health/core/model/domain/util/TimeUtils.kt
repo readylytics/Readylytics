@@ -17,3 +17,6 @@ fun Long.truncateToDayMs(): Long {
 
 fun LocalDate.toMidnightEpochMilli(zoneId: ZoneId = ZoneId.systemDefault()): Long =
     this.atStartOfDay(zoneId).toInstant().toEpochMilli()
+
+/** Calendar day containing this epoch-ms instant in [zoneId] (inverse of [toMidnightEpochMilli]). */
+fun Long.toLocalDateIn(zoneId: ZoneId): LocalDate = Instant.ofEpochMilli(this).atZone(zoneId).toLocalDate()

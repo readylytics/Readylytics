@@ -9,6 +9,13 @@ object ScoringConstants {
     const val MIN_SESSIONS_FOR_CALIBRATION = 7
     const val ACUTE_DAYS = 7L
     const val CHRONIC_DAYS = 42L
+
+    /**
+     * Fixed lookback anchoring every ATL/CTL EWMA: a value for day `d` is a zero-initialised EWMA
+     * over `[d - LOAD_LOOKBACK_DAYS, d]`, so storage and presentation tiers agree regardless of how
+     * much older data a caller happens to hold.
+     */
+    const val LOAD_LOOKBACK_DAYS = CHRONIC_DAYS * 2
     const val BASELINE_DAYS = 30L
 
     // REF: Plews 2013b Sports Med 43:773; Kubios HRV — SD estimates require ≥30 readings; 60d is industry practice
@@ -47,7 +54,6 @@ object ScoringConstants {
     }
 
     // Defaults
-    const val DEFAULT_FITNESS_LEVEL = 35f
     const val DEFAULT_GOAL_SLEEP_HOURS = 8f
     const val DEFAULT_RHR_BPM = 60f
 
@@ -61,6 +67,17 @@ object ScoringConstants {
 
         // Smooth quadratic decay for SR > sweet spot; no artificial floor — REF: A.4 review
         const val QUADRATIC_PENALTY_K = 2.5f
+
+        // Minimum history (4 weeks = 28 days since the first recorded data) before ACWR load scoring activates
+        const val MIN_HISTORY_DAYS_FOR_LOAD = 28
+
+        /**
+         * Chronic-load floor (TRIMP/day EWMA) below which the ACWR ratio is numerically unstable
+         * (ATL / CTL with CTL near zero). Load scoring stays neutral below it even once the
+         * history guard is satisfied, e.g. one session after a >84-day layoff: 100 TRIMP gives
+         * CTL ~4.65 and a meaningless ratio of ~5.4.
+         */
+        const val MIN_CTL_FOR_LOAD = 5f
     }
 
     object Sleep {

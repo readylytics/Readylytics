@@ -28,12 +28,16 @@
     <string name="about_sleep_architecture_bullet">**Architecture (20%)** — how much of your sleep
         was deep (slow-wave) sleep and REM. Both matter. Deep sleep is when most physical recovery
         happens; REM is when your brain processes memory and emotion. Targets are age-specific to
-        account for the natural biological decline in deep sleep across the lifespan (Ohayon 2004).</string>
+        account for the natural biological decline in deep sleep across the lifespan (Ohayon 2004).
+        Only sleep that carries stage data counts toward these percentages: a nap without stage
+        records does not dilute your deep and REM share.</string>
     <string name="about_sleep_restoration_bullet">**Restoration (25%)** — how rested your estimated
         recovery-related physiology looks. We use the natural log of RMSSD (**lnRMSSD**) and
         overnight resting heart rate (**RHR**) to compute Z-scores. The log transformation is the
         scientific gold standard (Plews 2013, Buchheit 2014) for monitoring recovery, as it
-        normalises the skewed distribution of raw HRV data.</string>
+        normalises the skewed distribution of raw HRV data. To protect stable sleepers from
+        false-positive recovery drops when day-to-day RHR variation is very small (SD &lt; 1 bpm),
+        RHR variability is floored at a minimum of 1.5 bpm.</string>
     <string name="about_sleep_fragmentation_bullet">**Fragmentation (15%)** — sleep continuity based on
         Wake After Sleep Onset (WASO) and discrete awakenings (≥1.5 minutes), with a grace allowance
         for normal wakefulness.</string>
@@ -77,8 +81,9 @@
         cognitive, and cardiovascular outcomes — sometimes more strongly than sleep duration itself
         (Windred et al. 2023, UK Biobank).</string>
     <string name="about_circadian_mechanism">We compare each night\'s bedtime and wake time to your
-        *typical* (median) bedtime and wake time over the last 14 days. The bigger the deviation,
-        the lower the daily score. The number you see is a 7-day rolling average so a single late
+        *typical* (median) bedtime and wake time over the 14 nights before the 7 nights being
+        scored (until enough earlier nights exist, the recent nights are used). The bigger the
+        deviation, the lower the daily score. The number you see is a 7-day rolling average so a single late
         night doesn\'t tank it.</string>
     <string name="about_threshold_label">**Profile-specific thresholds**</string>
     <string name="about_threshold_athlete">**Athlete** — ±20 minutes: tight control for performance.</string>
@@ -255,14 +260,18 @@
         but Sleep Score, Load Score, and Readiness stay hidden until there are at least 7 valid
         nights. This avoids unstable early scores while HRV and RHR baselines are still forming.</string>
     <string name="about_phase_provisional">**Early Baseline (7-20 nights, confidence: Low).** We
-        start showing all three scores, but Restoration uses a population-typical estimate of how
-        much your HRV varies night to night. Expect more variability than the mature score.</string>
+        start showing all three scores, and begin blending your personal night-to-night HRV
+        variability with a population-typical estimate (tiered by your profile) starting after 7
+        valid nights. Expect more variability than the mature score while the population estimate
+        still carries most of the weight.</string>
     <string name="about_phase_maturing">**Maturing (21-59 nights, confidence: Medium).** Your
-        personal HRV mean is settled, and we begin blending your personal night-to-night
-        variability with the population estimate. A confidence indicator becomes visible.</string>
+        personal HRV mean is settled, and the blend continues shifting toward your personal
+        night-to-night variability across the 56-day observation window, reaching 100% personal
+        weight at 56 nights. A confidence indicator becomes visible.</string>
     <string name="about_phase_mature">**Mature (60+ nights, confidence: High).** All scores use
-        your own personal baselines for both the average and the variability. This is when small
-        day-to-day differences become trustworthy.</string>
+        your own personal baselines for both the average and the variability (the personal
+        variability weight already reached 100%% at 56 nights, before this phase begins). This is
+        when small day-to-day differences become trustworthy.</string>
     <string name="about_tracker_frequency">Progress through these phases depends on the number of
         nights with usable HRV/RHR data, not calendar age. If you wear your tracker only 3-5
         nights a week, the timeline lengthens proportionally.</string>

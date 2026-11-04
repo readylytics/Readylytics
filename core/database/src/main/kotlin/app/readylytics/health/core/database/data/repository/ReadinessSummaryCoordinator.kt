@@ -212,7 +212,7 @@ class ReadinessSummaryCoordinator
         private suspend fun resolveTrimpSeries(
             context: CalibratedScoringContext,
         ): Pair<Map<LocalDate, Float>, Map<LocalDate, Float>> {
-            val fromDate = context.targetDate.minusDays(ScoringConstants.CHRONIC_DAYS * 2)
+            val fromDate = context.targetDate.minusDays(ScoringConstants.LOAD_LOOKBACK_DAYS)
             val dailyTrimpByDate = (
                 context.trimpContext?.dailyTrimpByDate?.subMap(fromDate, true, context.targetDate, true)
                     ?: TrimpDateBucketer.bucket(
@@ -237,12 +237,33 @@ class ReadinessSummaryCoordinator
             return Pair(dailyTrimpByDate, everydayTrimpByDate)
         }
 
+        /**
+         * First-data day for the minimum-history guard. A walk-forward context carries it (a null
+         * there definitively means "no data yet", so it is never re-queried per day); the
+         * single-day path queries, skipping the workout lookup once the summary date alone proves
+         * the guard satisfied.
+         */
+        private suspend fun resolveTrackingStart(context: CalibratedScoringContext): LocalDate? {
+            val trimpContext = context.trimpContext
+            if (trimpContext != null) return trimpContext.trackingStartDate
+            return seriesLoader.loadTrackingStartDate(
+                context.zoneId,
+                satisfiedBefore = context.targetDate.minusDays(ScoringConstants.Strain.MIN_HISTORY_DAYS_FOR_LOAD - 1L),
+            )
+        }
+
         suspend fun computeCalibratedSummary(
             base: ReadinessBaseInputs,
             context: CalibratedScoringContext,
         ): DailySummary {
             val (dailyTrimpByDate, everydayTrimpByDate) = resolveTrimpSeries(context)
-            val loadSeries = buildLoadSeriesUseCase.execute(context.targetDate, dailyTrimpByDate, everydayTrimpByDate)
+            val loadSeries =
+                buildLoadSeriesUseCase.execute(
+                    context.targetDate,
+                    dailyTrimpByDate,
+                    everydayTrimpByDate,
+                    resolveTrackingStart(context),
+                )
             val withLoadSummary = base.baseSummary.copy(
                 atlWorkoutOnly = loadSeries.atl,
                 ctlWorkoutOnly = loadSeries.ctl,
@@ -270,7 +291,12 @@ class ReadinessSummaryCoordinator
                 summaryHrvMuMssd = withHrvAndSleep.hrvMuMssd,
                 summaryHrvSigmaMssd = withHrvAndSleep.hrvSigmaMssd,
                 summaryRhrSigma = withHrvAndSleep.rhrSigma,
-                rhrBaselineValue = context.initialBaselines.rhrBaselineValue,
+                rhrBaselineValue =
+                    if (base.session != null && withHrvAndSleep.sleepScore != null) {
+                        withHrvAndSleep.rhrBpm
+                    } else {
+                        context.initialBaselines.rhrBaselineValue
+                    },
             )
 
             return assembleDailySummaryUseCase.assembleCalibrated(

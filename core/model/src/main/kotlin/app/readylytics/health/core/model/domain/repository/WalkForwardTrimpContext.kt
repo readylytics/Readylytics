@@ -12,8 +12,22 @@ import java.util.TreeMap
  * reproduces the exact bounded-window `WHERE timestampMs >= :from AND timestampMs < :to` semantics
  * the per-day DB queries this replaces (`WorkoutDao.getTrimpPoints` / `DailySummaryDao
  * .getEverydayTrimpPoints`) used, in O(log n + k) instead of a full scan.
+ *
+ * [trackingStartDate] is the true first-data date (earliest workout or daily summary, outside the
+ * 84-day window) for the minimum-history guard. It is fetched once, then lowered as each
+ * walk-forward day commits (see `DailyTrimpComputer.publishTrimpToContext`), so a resync that
+ * backfills before the pre-existing first row sees the same history a second run would read from
+ * the DB. A context is always built from a completed lookup, so `null` unambiguously means
+ * "no data exists yet" -- never "not fetched".
  */
 data class WalkForwardTrimpContext(
     val dailyTrimpByDate: TreeMap<LocalDate, Float>,
     val everydayTrimpByDate: TreeMap<LocalDate, Float>,
-)
+    var trackingStartDate: LocalDate? = null,
+) {
+    /** Lowers [trackingStartDate] to [date] when [date] precedes it (or none is known yet). */
+    fun registerTrackedDay(date: LocalDate) {
+        val current = trackingStartDate
+        if (current == null || date.isBefore(current)) trackingStartDate = date
+    }
+}

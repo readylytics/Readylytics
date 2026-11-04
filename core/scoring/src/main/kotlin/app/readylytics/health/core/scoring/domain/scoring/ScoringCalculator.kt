@@ -26,18 +26,6 @@ interface ScoringCalculator {
         ctl: Float,
     ): Float
 
-    fun computeCtlEma(
-        dailyTrimpList: List<Float>,
-        seedFitnessLevel: Float = ScoringConstants.DEFAULT_FITNESS_LEVEL,
-        windowDays: Long = ScoringConstants.CHRONIC_DAYS,
-    ): Float
-
-    fun computeAtlEma(
-        dailyTrimpList: List<Float>,
-        seedFatigueLevel: Float = ScoringConstants.DEFAULT_FITNESS_LEVEL,
-        windowDays: Long = ScoringConstants.ACUTE_DAYS,
-    ): Float
-
     fun computeLoadScore(sr: Float): Float
 
     fun computeDurationSubScore(

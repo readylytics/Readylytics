@@ -226,12 +226,13 @@ internal class HistoricalSleepDayAssembler(
                 )
             }
 
+        val gatedRhrPercentileBpm = rhrPercentileBpm?.takeIf { hrSamples.size >= 10 }
         return HistoricalSleepDay(
             scoreDay = scoreDay,
             coreSessionIds = coreSessionIds,
             hrvMean = hrvMean,
-            nadirBpm = rhrPercentileBpm?.toFloat()?.takeIf { hrSamples.size >= 10 },
-            rhrPercentileBpm = rhrPercentileBpm,
+            nadirBpm = gatedRhrPercentileBpm?.toFloat(),
+            rhrPercentileBpm = gatedRhrPercentileBpm,
             canContributeToBaseline = validation.canContributeToBaseline,
         )
     }

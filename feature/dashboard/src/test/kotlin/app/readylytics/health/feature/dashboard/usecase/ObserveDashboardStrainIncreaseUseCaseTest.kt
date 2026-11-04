@@ -6,6 +6,7 @@ import app.readylytics.health.core.model.domain.repository.DailySummaryRepositor
 import app.readylytics.health.core.model.domain.repository.WorkoutData
 import app.readylytics.health.core.model.domain.repository.WorkoutRepository
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.scoring.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.WorkoutDisplayMetrics
@@ -35,7 +36,9 @@ class ObserveDashboardStrainIncreaseUseCaseTest {
     private val testDispatcher = StandardTestDispatcher()
     private val expectedHistoryStartMs =
         LocalDate
-            .of(2026, 6, 12)
+            .of(2026, 7, 30)
+            .minusDays(6)
+            .minusDays(ScoringConstants.CHRONIC_DAYS * 2)
             .atStartOfDay(ZoneId.of("UTC"))
             .toInstant()
             .toEpochMilli()
@@ -345,6 +348,55 @@ class ObserveDashboardStrainIncreaseUseCaseTest {
                     ).first()
 
             assertEquals(0.3f, result!!, 0.001f)
+        }
+
+    @Test
+    fun `everyday-heart-rate mode falls back to 0f when series does not contain date`() =
+        runTest(testDispatcher) {
+            val selectedDate = LocalDate.of(2026, 7, 30)
+            val summaries =
+                listOf(
+                    DailySummary(
+                        date = selectedDate.minusDays(10),
+                        trimpEverydayHr = 5f,
+                    ),
+                    DailySummary(
+                        date = selectedDate,
+                        trimpEverydayHr = 45f,
+                    ),
+                )
+            every {
+                workoutRepository.observeSince(expectedHistoryStartMs)
+            } returns flowOf(emptyList())
+            every { dailySummaryRepository.observeSince(expectedHistoryStartMs) } returns
+                flowOf(summaries)
+            every {
+                scoringCalculator.computeCtlEmaSeries(any(), selectedDate.minusDays(6), selectedDate)
+            } returns emptyMap()
+            every {
+                scoringCalculator.computeAtlEmaSeries(any(), selectedDate.minusDays(6), selectedDate)
+            } returns emptyMap()
+            every {
+                scoringCalculator.computeCtlEmaWithDecay(any(), any())
+            } returns 0f
+            every {
+                scoringCalculator.computeAtlEmaWithDecay(any(), any())
+            } returns 0f
+            every { scoringCalculator.computeStrainRatio(0f, 0f) } returns 0f
+
+            createUseCase()
+                .invoke(
+                    selectedDate = flowOf(selectedDate),
+                    preferences =
+                        flowOf(
+                            UserPreferences(
+                                scoringZoneId = "UTC",
+                                strainLoadSourceMode = LoadSourceMode.EVERYDAY_HEART_RATE,
+                            ),
+                        ),
+                ).first()
+
+            verify { scoringCalculator.computeStrainRatio(0f, 0f) }
         }
 
     private fun createUseCase() =

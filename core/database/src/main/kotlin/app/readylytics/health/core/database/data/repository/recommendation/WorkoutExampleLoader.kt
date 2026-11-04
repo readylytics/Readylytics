@@ -64,7 +64,9 @@ class WorkoutExampleLoader
         }
 
         /**
-         * The 42-day chronic window every candidate needs, fetched once for the whole batch.
+         * The `LOAD_LOOKBACK_DAYS` (84-day) EWMA anchor window every candidate needs, fetched once
+         * for the whole batch. It must not shrink below that: the stored-versus-chart ATL/CTL
+         * equivalence depends on every tier anchoring its EWMA at the same `date - 84`.
          *
          * Bounded at both ends. `GetWorkoutDisplayMetricsUseCase` clamps the lower end per workout
          * anyway and evaluates its ATL/CTL EMA *at* each workout's own date, so a summary dated after
@@ -91,7 +93,7 @@ class WorkoutExampleLoader
                     .toInstant()
                     .toEpochMilli()
             return dailySummaryRepository.getInRange(
-                fromMs = midnightOf(candidates.minOf { it.startTime }, ScoringConstants.CHRONIC_DAYS),
+                fromMs = midnightOf(candidates.minOf { it.startTime }, ScoringConstants.LOAD_LOOKBACK_DAYS),
                 toMs = midnightOf(candidates.maxOf { it.startTime }, 0L),
             )
         }

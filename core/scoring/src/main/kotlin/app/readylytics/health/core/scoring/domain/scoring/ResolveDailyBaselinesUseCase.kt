@@ -26,7 +26,7 @@ class ResolveDailyBaselinesUseCase
         data class FinalBaselines(
             val hrvMuMssd: Float?,
             val hrvSigmaMssd: Float?,
-            val rhrBpm: Float,
+            val rhrBpm: Float?,
             val rhrSigma: Float?,
         )
 
@@ -79,11 +79,11 @@ class ResolveDailyBaselinesUseCase
             summaryHrvMuMssd: Float?,
             summaryHrvSigmaMssd: Float?,
             summaryRhrSigma: Float?,
-            rhrBaselineValue: Float,
+            rhrBaselineValue: Float?,
         ): FinalBaselines {
             val hrvMuMssd = frozenSnapshot?.hrvMuMssd ?: summaryHrvMuMssd
             val hrvSigmaMssd = frozenSnapshot?.hrvSigmaMssd ?: summaryHrvSigmaMssd
-            val rhrBpm = frozenSnapshot?.rhrBpm ?: rhrBaselineValue
+            val rhrBpm = if (frozenSnapshot != null) frozenSnapshot.rhrBpm else rhrBaselineValue
             val rhrSigma = frozenSnapshot?.rhrSigma ?: summaryRhrSigma
 
             return FinalBaselines(

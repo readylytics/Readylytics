@@ -30,18 +30,6 @@ class CompositeScoringCalculator
             ctl: Float,
         ): Float = rasStrategy.computeStrainRatio(atl, ctl)
 
-        override fun computeCtlEma(
-            dailyTrimpList: List<Float>,
-            seedFitnessLevel: Float,
-            windowDays: Long,
-        ): Float = rasStrategy.computeCtlEma(dailyTrimpList, seedFitnessLevel, windowDays)
-
-        override fun computeAtlEma(
-            dailyTrimpList: List<Float>,
-            seedFatigueLevel: Float,
-            windowDays: Long,
-        ): Float = rasStrategy.computeAtlEma(dailyTrimpList, seedFatigueLevel, windowDays)
-
         override fun computeLoadScore(sr: Float): Float = loadStrategy.computeLoadScore(sr)
 
         override fun computeDurationSubScore(

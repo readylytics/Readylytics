@@ -53,7 +53,7 @@ class GetDailyPromptDataUseCase
                 today.minusMonths(ScoringConstants.AiRecommendation.LOOKBACK_MONTHS.toLong())
             val lookbackStartMidnight = lookbackStart.toMidnightEpochMilli(zoneId)
             val historicalStart =
-                yesterday.minusDays(ScoringConstants.CHRONIC_DAYS).toMidnightEpochMilli(zoneId)
+                yesterday.minusDays(ScoringConstants.LOAD_LOOKBACK_DAYS).toMidnightEpochMilli(zoneId)
             val sourceMode = preferences.strainLoadSourceMode
 
             val todaySummaryDeferred = async { dailySummaryRepository.getByDate(todayMidnight) }

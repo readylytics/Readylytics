@@ -8,6 +8,7 @@ import app.readylytics.health.core.model.domain.repository.DailySummaryRepositor
 import app.readylytics.health.core.model.domain.repository.WorkoutRepository
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
+import app.readylytics.health.core.model.domain.util.toLocalDateIn
 import app.readylytics.health.core.scoring.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.calculateDailyStrainIncrease
@@ -18,7 +19,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.mapLatest
-import java.time.Instant
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
@@ -43,7 +43,7 @@ class ObserveDashboardStrainIncreaseUseCase
                     val displayStartDate = date.minusDays(6)
                     val fetchFromMs =
                         displayStartDate
-                            .minusDays(ScoringConstants.CHRONIC_DAYS)
+                            .minusDays(ScoringConstants.LOAD_LOOKBACK_DAYS)
                             .atStartOfDay(zoneId)
                             .toInstant()
                             .toEpochMilli()
@@ -64,9 +64,7 @@ class ObserveDashboardStrainIncreaseUseCase
                             val earliestDate =
                                 when (prefs.strainLoadSourceMode) {
                                     LoadSourceMode.WORKOUT_ONLY ->
-                                        workoutRepository.getEarliestWorkoutTimestamp()?.let {
-                                            Instant.ofEpochMilli(it).atZone(zoneId).toLocalDate()
-                                        }
+                                        workoutRepository.getEarliestWorkoutTimestamp()?.toLocalDateIn(zoneId)
                                     LoadSourceMode.EVERYDAY_HEART_RATE ->
                                         LoadSourceSelector.selectEarliestDataDate(summaries)
                                 }
@@ -125,8 +123,8 @@ class ObserveDashboardStrainIncreaseUseCase
                                         )
                                     val strainRatioWithDay =
                                         scoringCalculator.computeStrainRatio(
-                                            atlSeries[date] ?: ScoringConstants.DEFAULT_FITNESS_LEVEL,
-                                            ctlSeries[date] ?: ScoringConstants.DEFAULT_FITNESS_LEVEL,
+                                            atlSeries[date] ?: 0f,
+                                            ctlSeries[date] ?: 0f,
                                         )
                                     val trimpByDateWithoutDay =
                                         trimpByDate.toMutableMap().apply { put(date, 0f) }
