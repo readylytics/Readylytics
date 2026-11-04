@@ -52,6 +52,7 @@ class DataSourceSettingsViewModelTest {
                         HistoricalResyncState(running = false, current = 0, total = 0),
                     )
             },
+        customDeviceSettings: DeviceSettings? = null,
     ): Triple<DataSourceSettingsViewModel, MutableStateFlow<Map<String, String>>, HistoricalResyncController> {
         val deviceByDataType = MutableStateFlow(initialPrefs.deviceByDataType)
         val prefsFlow =
@@ -65,7 +66,7 @@ class DataSourceSettingsViewModelTest {
                 every { userPreferences } returns prefsFlow
             }
         val deviceSettings =
-            mockk<DeviceSettings>(relaxed = true) {
+            customDeviceSettings ?: mockk<DeviceSettings>(relaxed = true) {
                 coEvery { getAvailableDevices() } returns listOf("Watch A", "Watch B")
                 coEvery { updateDeviceForDataType(any(), any()) } coAnswers {
                     val key = it.invocation.args[0] as String
@@ -203,6 +204,36 @@ class DataSourceSettingsViewModelTest {
             resyncStateFlow.value = HistoricalResyncState(running = true, current = 3, total = 3)
             advanceUntilIdle()
             assertTrue(viewModel.uiState.value.isResyncing)
+
+            job.cancel()
+        }
+
+    @Test
+    fun `refreshAvailableDevices rethrows cancellation and preserves devices`() =
+        runTest(testDispatcher) {
+            val customDeviceSettings =
+                mockk<DeviceSettings>(relaxed = true) {
+                    coEvery { getAvailableDevices() } returns listOf("Watch A", "Watch B")
+                }
+            val (viewModel, _, _) = buildViewModel(customDeviceSettings = customDeviceSettings)
+            val job =
+                backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                    viewModel.uiState.collect()
+                }
+            advanceUntilIdle()
+
+            // Confirm baseline device list is populated
+            assertEquals(listOf("Watch A", "Watch B"), viewModel.uiState.value.availableDevices)
+
+            coEvery { customDeviceSettings.clearDeviceCache() } throws
+                kotlinx.coroutines.CancellationException("Test cancellation")
+
+            viewModel.refreshAvailableDevices()
+            advanceUntilIdle()
+
+            // When cancelled, availableDevicesFlow must not be overwritten to emptyList() by generic catch
+            assertEquals(listOf("Watch A", "Watch B"), viewModel.uiState.value.availableDevices)
+            assertFalse(viewModel.uiState.value.isLoadingDevices)
 
             job.cancel()
         }
