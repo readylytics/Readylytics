@@ -306,13 +306,18 @@ class DashboardViewModel
             when (event) {
                 is DashboardEvent.DateSelected ->
                     viewModelScope.launch {
-                        repositories.selectedDate.updateSelectedDate(event.date)
+                        val validation = validateSelectedDate(event.date)
+                        if (validation.isSuccess) {
+                            repositories.selectedDate.updateSelectedDate(event.date)
+                        } else {
+                            _errorMessage.value = UiText.StringRes(R.string.error_cannot_select_future_dates)
+                        }
                     }
                 DashboardEvent.PreviousDay -> onPreviousDay()
                 DashboardEvent.NextDay -> onNextDay()
                 DashboardEvent.Refresh -> onRefresh()
                 DashboardEvent.ToggleCardManagement -> toggleCardManagement()
-                is DashboardEvent.DismissInsight -> {
+                is DashboardEvent.DismissInsight ->
                     viewModelScope.launch {
                         val zoneId =
                             repositories.settings.userPreferences
@@ -325,8 +330,7 @@ class DashboardViewModel
                                 .toEpochMilli()
                         repositories.insightDismissal.dismiss(dateMs, event.type)
                     }
-                }
-                DashboardEvent.RestoreInsights -> {
+                DashboardEvent.RestoreInsights ->
                     viewModelScope.launch {
                         val zoneId =
                             repositories.settings.userPreferences
@@ -339,8 +343,7 @@ class DashboardViewModel
                                 .toEpochMilli()
                         repositories.insightDismissal.restoreAllForDate(dateMs)
                     }
-                }
-                DashboardEvent.RequestDailyPromptCopy -> {
+                DashboardEvent.RequestDailyPromptCopy ->
                     viewModelScope.launch {
                         try {
                             val zoneId =
@@ -357,7 +360,6 @@ class DashboardViewModel
                             _errorMessage.value = UiText.StringRes(R.string.ai_recommendation_copy_failed)
                         }
                     }
-                }
             }
         }
 

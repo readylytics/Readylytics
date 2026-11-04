@@ -15,6 +15,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -689,5 +690,8 @@ class SecureFileLogSinkTest {
             )
             testScope.cancel()
             assertTrue(testScope.coroutineContext[kotlinx.coroutines.Job]?.isCancelled == true)
+            verify(exactly = 0) {
+                Log.println(Log.ERROR, any(), match { it.contains("LOG_WRITE_FAILED") })
+            }
         }
 }

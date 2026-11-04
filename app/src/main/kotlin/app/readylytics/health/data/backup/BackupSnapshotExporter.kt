@@ -4,7 +4,6 @@ import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.model.domain.sync.HealthMutationCoordinator
 import app.readylytics.health.core.model.domain.sync.HistoricalRunIdentity
 import app.readylytics.health.data.preferences.SettingsRepository
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -36,6 +35,7 @@ class BackupSnapshotExporter
             var snapshotIdentity: BackupSnapshotIdentity? = null
 
             healthMutationCoordinator.withMaintenance(operationId) {
+                var exported = false
                 try {
                     val mutationState = healthDatabase.healthMutationStateDao().current()
                     val sourceGeneration = mutationState.sourceGeneration
@@ -73,22 +73,16 @@ class BackupSnapshotExporter
                     }
 
                     snapshotIdentity = identity
-                } catch (e: CancellationException) {
-                    target.delete()
-                    withContext(NonCancellable) {
-                        runCatching {
-                            healthDatabase.healthMutationStateDao().setMaintenance(null, null)
+                    exported = true
+                } finally {
+                    if (!exported) {
+                        target.delete()
+                        withContext(NonCancellable) {
+                            runCatching {
+                                healthDatabase.healthMutationStateDao().setMaintenance(null, null)
+                            }
                         }
                     }
-                    throw e
-                } catch (e: Throwable) {
-                    target.delete()
-                    withContext(NonCancellable) {
-                        runCatching {
-                            healthDatabase.healthMutationStateDao().setMaintenance(null, null)
-                        }
-                    }
-                    throw e
                 }
             }
 
