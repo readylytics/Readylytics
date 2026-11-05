@@ -25,7 +25,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
-import java.time.Clock
 import java.time.ZoneId
 import javax.inject.Singleton
 
@@ -333,10 +332,6 @@ object DataStoreModule {
                 ),
             produceFile = { context.dataStoreFile("user_preferences.pb") },
         )
-
-    @Provides
-    @Singleton
-    fun provideClock(): Clock = Clock.systemDefaultZone()
 
     @Provides
     @Singleton
