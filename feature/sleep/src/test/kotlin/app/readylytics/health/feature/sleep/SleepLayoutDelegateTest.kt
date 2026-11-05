@@ -279,6 +279,55 @@ class SleepLayoutDelegateTest {
         }
 
     @Test
+    fun `display mode change in edit mode is persisted on save and null clears it`() =
+        runTest(testDispatcher) {
+            advanceUntilIdle()
+
+            fun enterEditMode() =
+                delegate.toggleSleepLayoutManagement(
+                    isManaging = false,
+                    currentTopCards = delegate.layoutStateFlow.value.sleepTopCardConfigurations,
+                    currentCharts = delegate.layoutStateFlow.value.sleepChartConfigurations,
+                    currentMetricCards = delegate.layoutStateFlow.value.sleepMetricCardConfigurations,
+                )
+
+            fun save() =
+                delegate.toggleSleepLayoutManagement(
+                    isManaging = true,
+                    currentTopCards = delegate.layoutStateFlow.value.sleepTopCardConfigurations,
+                    currentCharts = delegate.layoutStateFlow.value.sleepChartConfigurations,
+                    currentMetricCards = delegate.layoutStateFlow.value.sleepMetricCardConfigurations,
+                )
+
+            enterEditMode()
+            advanceUntilIdle()
+            delegate.onDisplayModeChanged(topCardId = SleepTopCardId.SLEEP_SCORE, mode = DashboardCardDisplayMode.BAR)
+            advanceUntilIdle()
+            save()
+            advanceUntilIdle()
+            coVerify {
+                sleepLayoutRepository.updateSleepTopCardConfigurations(
+                    match { configs ->
+                        configs.first { it.cardId == SleepTopCardId.SLEEP_SCORE }.requestedDisplayMode ==
+                            DashboardCardDisplayMode.BAR
+                    },
+                )
+            }
+
+            enterEditMode()
+            advanceUntilIdle()
+            delegate.onDisplayModeChanged(topCardId = SleepTopCardId.SLEEP_SCORE, mode = null)
+            delegate.onDisplayModeChanged(metricCardId = SleepMetricCardId.SLEEP_EFFICIENCY, mode = null)
+            advanceUntilIdle()
+            assertEquals(
+                null,
+                delegate.layoutStateFlow.value.sleepTopCardConfigurations
+                    .first { it.cardId == SleepTopCardId.SLEEP_SCORE }
+                    .requestedDisplayMode,
+            )
+        }
+
+    @Test
     fun `chart visibility and reorder work as expected`() =
         runTest(testDispatcher) {
             advanceUntilIdle()

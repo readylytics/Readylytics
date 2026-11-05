@@ -2760,7 +2760,7 @@ SleepManagementBottomSheet / SleepOverviewScreen (UI interaction)
   ▼ emits layout updates (reorder, toggle visibility, change display mode, reset defaults)
 SleepViewModel
   │
-  ▼ delegates to SleepLayoutDelegate (wrapping SleepTopCardManagementDelegate / LayoutManagementDelegate (charts) / SleepMetricCardManagementDelegate)
+  ▼ delegates to SleepLayoutDelegate (wrapping three generic LayoutManagementDelegate instances: top cards / charts / metric cards)
 SleepFlowIntermediate (combines repository flows with daily summary state)
   │
   ▼ updates layout state via
