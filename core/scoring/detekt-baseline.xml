@@ -2,11 +2,9 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>CyclomaticComplexMethod:ComputeSleepMetricsUseCase.kt$ComputeSleepMetricsUseCase$suspend operator fun invoke(request: SleepMetricsRequest): Result&lt;DailySummary&gt;</ID>
     <ID>CyclomaticComplexMethod:GetDailyPromptDataUseCase.kt$GetDailyPromptDataUseCase$suspend fun execute(today: LocalDate): DailyPromptData</ID>
     <ID>CyclomaticComplexMethod:InsightCauseRanker.kt$InsightCauseRanker$private fun score( insightId: InsightType, context: DailyInsightContext, hint: CauseRankHint, ): Int</ID>
     <ID>CyclomaticComplexMethod:RasScoringStrategy.kt$RasScoringStrategy$private fun computeEmaSeries( dailyTrimpByDate: Map&lt;LocalDate, Float&gt;, windowDays: Long, seriesStart: LocalDate, seriesEnd: LocalDate, ): Map&lt;LocalDate, Float&gt;</ID>
-    <ID>LongMethod:ComputeSleepMetricsUseCase.kt$ComputeSleepMetricsUseCase$suspend operator fun invoke(request: SleepMetricsRequest): Result&lt;DailySummary&gt;</ID>
     <ID>LongMethod:DailyPromptFormatterTest.kt$DailyPromptFormatterTest$private fun populatedPromptData(): DailyPromptData</ID>
     <ID>LongMethod:GetDailyPromptDataUseCase.kt$GetDailyPromptDataUseCase$suspend fun execute(today: LocalDate): DailyPromptData</ID>
     <ID>LongMethod:GetWorkoutDisplayMetricsUseCaseTest.kt$GetWorkoutDisplayMetricsUseCaseTest$@Test fun `executes calculations and fetches history in the scoring zone`()</ID>

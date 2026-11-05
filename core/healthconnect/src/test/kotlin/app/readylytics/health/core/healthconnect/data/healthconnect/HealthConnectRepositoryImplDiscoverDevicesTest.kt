@@ -32,7 +32,7 @@ import kotlin.test.assertEquals
  * readHeartRateSamplesPaged/readHrvSamplesPaged) rather than materializing every sample into one
  * list first. This test proves the *behavior* survives the switch across multiple pages; the
  * memory-boundedness itself is structural (no `mutableListOf<T>` accumulation across pages in the
- * streaming path -- verified by code inspection of readAllPagesStreaming).
+ * streaming path -- verified by code inspection of HealthConnectPagedReader.readStreaming).
  */
 class HealthConnectRepositoryImplDiscoverDevicesTest {
     private val context = mockk<Context>(relaxed = true)
