@@ -44,7 +44,6 @@ import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoader
-import app.readylytics.health.core.database.data.repository.MorningRecommendationDependencies
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringHeartRateDataLoader
@@ -84,8 +83,6 @@ import kotlin.math.roundToInt
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.fail
-import app.readylytics.health.core.database.data.repository.ScoringDayUseCases
-import app.readylytics.health.core.database.data.repository.ScoringDataLoaders
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ScoringSyncScopeOutputsDeterminismTest {

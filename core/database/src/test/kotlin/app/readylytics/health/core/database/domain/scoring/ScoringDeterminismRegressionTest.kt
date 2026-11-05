@@ -40,7 +40,6 @@ import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoader
-import app.readylytics.health.core.database.data.repository.MorningRecommendationDependencies
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringHeartRateDataLoader
@@ -63,8 +62,6 @@ import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.test.assertEquals
-import app.readylytics.health.core.database.data.repository.ScoringDayUseCases
-import app.readylytics.health.core.database.data.repository.ScoringDataLoaders
 
 /**
  * Determinism regression guard for forced recalculation.

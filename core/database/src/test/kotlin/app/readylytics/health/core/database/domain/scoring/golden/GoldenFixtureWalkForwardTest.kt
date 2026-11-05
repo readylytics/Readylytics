@@ -16,7 +16,6 @@ import app.readylytics.health.core.database.data.local.SessionLinkReconcilerImpl
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoader
-import app.readylytics.health.core.database.data.repository.MorningRecommendationDependencies
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringHeartRateDataLoader
@@ -60,8 +59,6 @@ import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
-import app.readylytics.health.core.database.data.repository.ScoringDayUseCases
-import app.readylytics.health.core.database.data.repository.ScoringDataLoaders
 
 /**
  * Golden regression lock (WP-01 of the architecture/HC/scoring remediation plan): seeds ~2 years

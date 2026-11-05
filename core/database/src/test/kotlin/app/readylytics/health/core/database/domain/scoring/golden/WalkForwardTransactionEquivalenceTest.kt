@@ -14,7 +14,6 @@ import app.readylytics.health.core.database.data.local.RoomTransactionRunner
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoader
-import app.readylytics.health.core.database.data.repository.MorningRecommendationDependencies
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringHeartRateDataLoader
@@ -55,8 +54,6 @@ import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.test.assertEquals
 import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
-import app.readylytics.health.core.database.data.repository.ScoringDayUseCases
-import app.readylytics.health.core.database.data.repository.ScoringDataLoaders
 
 /**
  * F7 equivalence lock. Wrapping the walk-forward in one Room transaction must not change a single

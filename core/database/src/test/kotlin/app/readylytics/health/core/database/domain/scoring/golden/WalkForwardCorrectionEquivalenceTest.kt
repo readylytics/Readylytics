@@ -11,11 +11,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.database.data.local.RoomTransactionRunner
 import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoader
-import app.readylytics.health.core.database.data.repository.MorningRecommendationDependencies
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
-import app.readylytics.health.core.database.data.repository.ScoringDataLoaders
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
-import app.readylytics.health.core.database.data.repository.ScoringDayUseCases
 import app.readylytics.health.core.database.data.repository.ScoringHeartRateDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl

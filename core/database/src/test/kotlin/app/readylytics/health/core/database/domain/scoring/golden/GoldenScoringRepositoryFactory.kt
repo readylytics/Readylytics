@@ -7,11 +7,8 @@ import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import app.readylytics.health.core.database.testutil.createScoringRepositoryForTest
 import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoader
-import app.readylytics.health.core.database.data.repository.MorningRecommendationDependencies
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
-import app.readylytics.health.core.database.data.repository.ScoringDataLoaders
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
-import app.readylytics.health.core.database.data.repository.ScoringDayUseCases
 import app.readylytics.health.core.database.data.repository.ScoringHeartRateDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
@@ -73,8 +70,8 @@ internal class GoldenScoringRepositoryFactory(
         val resolveBaselines = ResolveDailyBaselinesUseCase(baseline)
         val readiness =
             ReadinessSummaryCoordinator(
-                dataLoader = loaders.day,
-                seriesLoader = loaders.series,
+                dataLoader = loaders.dataLoader,
+                seriesLoader = loaders.seriesLoader,
                 scoringHistoryRepository = history,
                 baselineComputer = baseline,
                 buildLoadSeriesUseCase = BuildLoadSeriesUseCase(calculator),
@@ -83,12 +80,7 @@ internal class GoldenScoringRepositoryFactory(
                 assembleDailySummaryUseCase = AssembleDailySummaryUseCase(),
             )
         return createScoringRepositoryForTest(
-            loaders = ScoringTestLoaders(
-                dataLoader = loaders.day,
-                bodyMetricsDataLoader = loaders.bodyMetrics,
-                seriesLoader = loaders.series,
-                heartRateDataLoader = loaders.heartRate,
-            ),
+            loaders = loaders,
             useCases = ScoringTestUseCases(
                 computeDailyTrimp = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
                 resolveDailyBaselines = resolveBaselines,
@@ -104,7 +96,7 @@ internal class GoldenScoringRepositoryFactory(
     }
 
     private fun createLoaders() =
-        ScoringDataLoaders(
+        ScoringTestLoaders(
             ScoringDayDataLoader(db.workoutDao(), db.sleepSessionDao(), db.dailySummaryDao()),
             BodyMetricsDataLoader(
                 db.weightRecordDao(),
