@@ -90,6 +90,38 @@ class SqlCipherKeyManagerTest {
     }
 
     @Test
+    fun validateKeyDecryption_withMissingIv_setsCorruptionStateAndThrows() {
+        context
+            .getSharedPreferences(SqlCipherKeyManager.PREF_FILE_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(SqlCipherKeyManager.PREF_ENCRYPTED_KEY, "invalid")
+            .remove(SqlCipherKeyManager.PREF_IV)
+            .commit()
+
+        assertThrows(KeyDecryptionException::class.java) {
+            keyManager.validateKeyDecryption()
+        }
+
+        assertTrue(keyManager.isKeyCorrupted.value)
+    }
+
+    @Test
+    fun getOrCreateDbKey_withMissingIv_setsCorruptionStateAndThrows() {
+        context
+            .getSharedPreferences(SqlCipherKeyManager.PREF_FILE_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(SqlCipherKeyManager.PREF_ENCRYPTED_KEY, "invalid")
+            .remove(SqlCipherKeyManager.PREF_IV)
+            .commit()
+
+        assertThrows(KeyDecryptionException::class.java) {
+            keyManager.getOrCreateDbKeyForTest()
+        }
+
+        assertTrue(keyManager.isKeyCorrupted.value)
+    }
+
+    @Test
     fun resetKeyAndDatabase_clearsCorruptionState() {
         setupCorruptedPrefs()
 

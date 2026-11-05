@@ -200,10 +200,10 @@ class SqlCipherKeyManager
                 val keystoreKey = getOrCreateKeystoreKey()
                 val encryptedKeyBase64 =
                     prefs.getString(PREF_ENCRYPTED_KEY, null)
-                        ?: error("Encrypted key not found in preferences")
+                        ?: throw IllegalArgumentException("Encrypted key not found in preferences")
                 val ivBase64 =
                     prefs.getString(PREF_IV, null)
-                        ?: error("Encryption IV not found in preferences")
+                        ?: throw IllegalArgumentException("Encryption IV not found in preferences")
 
                 val encryptedKey = Base64.decode(encryptedKeyBase64, Base64.NO_WRAP)
                 val iv = Base64.decode(ivBase64, Base64.NO_WRAP)
