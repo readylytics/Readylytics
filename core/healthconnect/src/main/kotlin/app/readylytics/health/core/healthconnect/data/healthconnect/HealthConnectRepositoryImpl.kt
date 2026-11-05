@@ -16,10 +16,7 @@ import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
-import androidx.health.connect.client.request.ReadRecordsRequest
-import androidx.health.connect.client.time.TimeRangeFilter
 import app.readylytics.health.core.healthconnect.domain.sync.retryWithBackoff
-import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.core.model.domain.model.DomainBloodPressureRecord
 import app.readylytics.health.core.model.domain.model.DomainBodyFatRecord
 import app.readylytics.health.core.model.domain.model.DomainBodyTemperatureRecord
@@ -42,10 +39,8 @@ import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.model.domain.util.logW
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.withContext
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -58,7 +53,6 @@ import javax.inject.Singleton
 class HealthConnectRepositoryImpl
     @Inject
     constructor(
-        @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
         private val stepRecordReader: StepRecordReader,
         private val intervalTotalsReader: IntervalTotalsReader,
         private val clock: Clock,
@@ -66,6 +60,8 @@ class HealthConnectRepositoryImpl
         private val routeLookup: WorkoutRouteLookup,
         private val availability: HealthConnectAvailability,
         private val permissionGateway: HealthConnectPermissionGateway,
+        private val pagedReader: HealthConnectPagedReader,
+        private val readGuard: HealthConnectReadGuard,
     ) : HealthConnectRepository {
         override val criticalPermissions: Set<String>
             get() = permissionGateway.criticalPermissions
@@ -117,64 +113,13 @@ class HealthConnectRepositoryImpl
         override suspend fun hasExerciseRoutesPermission(): Boolean =
             permissionGateway.hasExerciseRoutesPermission()
 
-        private suspend inline fun <reified T : androidx.health.connect.client.records.Record> hasPermission(
-            label: String,
-        ): Boolean = permissionGateway.hasReadPermission(T::class, label)
-
-        private suspend inline fun <reified T : androidx.health.connect.client.records.Record> readAllPages(
-            from: Instant,
-            to: Instant,
-            retryScope: ReadRetryScope? = null,
-        ): List<T> {
-            val all = mutableListOf<T>()
-            readAllPagesStreaming<T>(from, to, retryScope = retryScope) { page, _ -> all.addAll(page) }
-            return all
-        }
-
-        /**
-         * Paged variant of [readAllPages]: invokes [onPage] once per Health Connect page instead of
-         * accumulating every page into one list, so a dense window never holds more than one page
-         * of raw HC records in memory at once (HC-001). Individual page reads are retried via
-         * [retryWithBackoff] (R2-HC-002).
-         */
-        private suspend inline fun <reified T : androidx.health.connect.client.records.Record> readAllPagesStreaming(
-            from: Instant,
-            to: Instant,
-            startPageToken: String? = null,
-            retryScope: ReadRetryScope? = null,
-            onPage: suspend (records: List<T>, nextPageToken: String?) -> Unit,
-        ) {
-            var pageToken: String? = startPageToken
-            try {
-                do {
-                    val currentToken = pageToken
-                    val response =
-                        retryWithBackoff(budget = retryScope) {
-                            client.readRecords(
-                                ReadRecordsRequest(
-                                    recordType = T::class,
-                                    timeRangeFilter = TimeRangeFilter.between(from, to),
-                                    pageToken = currentToken,
-                                ),
-                            )
-                        }
-                    pageToken = response.pageToken
-                    onPage(response.records, pageToken)
-                } while (pageToken != null)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                rethrowReadFailureOrOriginal(T::class.simpleName, e)
-            }
-        }
-
         override suspend fun readSleepSessions(
             from: Instant,
             to: Instant,
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainSleepSessionRecord>> =
-            safeReadRecords<SleepSessionRecord, _>("Sleep session") {
-                readAllPages<SleepSessionRecord>(from, to, retryScope).map { it.toDomain() }
+            readGuard.guardedRead(SleepSessionRecord::class, "Sleep session") {
+                pagedReader.readAll<SleepSessionRecord>(from, to, retryScope).map { it.toDomain() }
             }
 
         override suspend fun readHeartRateSamples(
@@ -182,8 +127,8 @@ class HealthConnectRepositoryImpl
             to: Instant,
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainHeartRateRecord>> =
-            safeReadRecords<HeartRateRecord, _>("Heart rate") {
-                readAllPages<HeartRateRecord>(from, to, retryScope).map { it.toDomain() }
+            readGuard.guardedRead(HeartRateRecord::class, "Heart rate") {
+                pagedReader.readAll<HeartRateRecord>(from, to, retryScope).map { it.toDomain() }
             }
 
         override suspend fun readHrvSamples(
@@ -191,8 +136,8 @@ class HealthConnectRepositoryImpl
             to: Instant,
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainHrvRecord>> =
-            safeReadRecords<HeartRateVariabilityRmssdRecord, _>("HRV") {
-                readAllPages<HeartRateVariabilityRmssdRecord>(from, to, retryScope).map { it.toDomain() }
+            readGuard.guardedRead(HeartRateVariabilityRmssdRecord::class, "HRV") {
+                pagedReader.readAll<HeartRateVariabilityRmssdRecord>(from, to, retryScope).map { it.toDomain() }
             }
 
         override suspend fun readHeartRateSamplesPaged(
@@ -202,36 +147,9 @@ class HealthConnectRepositoryImpl
             retryScope: ReadRetryScope?,
             onPage: suspend (List<DomainHeartRateRecord>, String?) -> Unit,
         ): ReadOutcome<Unit> =
-            withContext(ioDispatcher) {
-                if (!isAvailable()) return@withContext ReadOutcome.Unsupported
-                if (!hasPermission<HeartRateRecord>("Heart rate")) return@withContext ReadOutcome.Denied
-                try {
-                    readAllPagesStreaming<HeartRateRecord>(from, to, startPageToken, retryScope) { page, nextToken ->
-                        onPage(page.map { it.toDomain() }, nextToken)
-                    }
-                    ReadOutcome.Available(Unit)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: HealthConnectPermissionRevokedException) {
-                    logD("HealthConnectRepository") {
-                        "Heart rate permission revoked: ${e.message}"
-                    }
-                    ReadOutcome.Denied
-                } catch (e: SecurityException) {
-                    logD("HealthConnectRepository") {
-                        "Heart rate permission denied: ${e.message}"
-                    }
-                    ReadOutcome.Denied
-                } catch (e: Exception) {
-                    val securityCause = e.asHealthConnectSecurityCause()
-                    if (securityCause != null) {
-                        logD("HealthConnectRepository") {
-                            "Heart rate permission denied: ${securityCause.message}"
-                        }
-                        ReadOutcome.Denied
-                    } else {
-                        throw e
-                    }
+            readGuard.guardedRead(HeartRateRecord::class, "Heart rate", logUnexpected = false) {
+                pagedReader.readStreaming<HeartRateRecord>(from, to, startPageToken, retryScope) { page, nextToken ->
+                    onPage(page.map { it.toDomain() }, nextToken)
                 }
             }
 
@@ -242,41 +160,14 @@ class HealthConnectRepositoryImpl
             retryScope: ReadRetryScope?,
             onPage: suspend (List<DomainHrvRecord>, String?) -> Unit,
         ): ReadOutcome<Unit> =
-            withContext(ioDispatcher) {
-                if (!isAvailable()) return@withContext ReadOutcome.Unsupported
-                if (!hasPermission<HeartRateVariabilityRmssdRecord>("HRV")) return@withContext ReadOutcome.Denied
-                try {
-                    readAllPagesStreaming<HeartRateVariabilityRmssdRecord>(
-                        from,
-                        to,
-                        startPageToken,
-                        retryScope,
-                    ) { page, nextToken ->
-                        onPage(page.map { it.toDomain() }, nextToken)
-                    }
-                    ReadOutcome.Available(Unit)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: HealthConnectPermissionRevokedException) {
-                    logD("HealthConnectRepository") {
-                        "HRV permission revoked: ${e.message}"
-                    }
-                    ReadOutcome.Denied
-                } catch (e: SecurityException) {
-                    logD("HealthConnectRepository") {
-                        "HRV permission denied: ${e.message}"
-                    }
-                    ReadOutcome.Denied
-                } catch (e: Exception) {
-                    val securityCause = e.asHealthConnectSecurityCause()
-                    if (securityCause != null) {
-                        logD("HealthConnectRepository") {
-                            "HRV permission denied: ${securityCause.message}"
-                        }
-                        ReadOutcome.Denied
-                    } else {
-                        throw e
-                    }
+            readGuard.guardedRead(HeartRateVariabilityRmssdRecord::class, "HRV", logUnexpected = false) {
+                pagedReader.readStreaming<HeartRateVariabilityRmssdRecord>(
+                    from,
+                    to,
+                    startPageToken,
+                    retryScope,
+                ) { page, nextToken ->
+                    onPage(page.map { it.toDomain() }, nextToken)
                 }
             }
 
@@ -303,8 +194,8 @@ class HealthConnectRepositoryImpl
         ): ExerciseSessionRead {
             val completed = mutableSetOf<String>()
             val outcome =
-            safeReadRecords<ExerciseSessionRecord, _>("Exercise session") {
-                val sessions = readAllPages<ExerciseSessionRecord>(from, to, retryScope)
+            readGuard.guardedRead(ExerciseSessionRecord::class, LABEL_EXERCISE) {
+                val sessions = pagedReader.readAll<ExerciseSessionRecord>(from, to, retryScope)
                 if ((!scanEmptyWindow && sessions.isEmpty()) || !includeDetails) {
                     sessions.map { it.toDomain(null) }
                 } else {
@@ -358,9 +249,11 @@ class HealthConnectRepositoryImpl
         }
 
         override suspend fun readExerciseSession(id: String): DomainExerciseSessionRecord? =
-            withContext(ioDispatcher) {
-                if (!isAvailable()) return@withContext null
-                if (!hasPermission<ExerciseSessionRecord>("Exercise session")) return@withContext null
+            readGuard.runOnIo {
+                if (!isAvailable()) return@runOnIo null
+                if (!permissionGateway.hasReadPermission(ExerciseSessionRecord::class, LABEL_EXERCISE)) {
+                    return@runOnIo null
+                }
                 try {
                     val record = client.readRecord(ExerciseSessionRecord::class, id).record
                     val routeResult = record.exerciseRouteResult
@@ -429,8 +322,8 @@ class HealthConnectRepositoryImpl
             to: Instant,
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainWeightRecord>> =
-            safeReadRecords<WeightRecord, _>("Weight") {
-                readAllPages<WeightRecord>(from, to, retryScope).map { it.toDomain() }
+            readGuard.guardedRead(WeightRecord::class, "Weight") {
+                pagedReader.readAll<WeightRecord>(from, to, retryScope).map { it.toDomain() }
             }
 
         override suspend fun readBodyFatRecords(
@@ -438,8 +331,8 @@ class HealthConnectRepositoryImpl
             to: Instant,
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainBodyFatRecord>> =
-            safeReadRecords<BodyFatRecord, _>("Body fat") {
-                readAllPages<BodyFatRecord>(from, to, retryScope).map { it.toDomain() }
+            readGuard.guardedRead(BodyFatRecord::class, "Body fat") {
+                pagedReader.readAll<BodyFatRecord>(from, to, retryScope).map { it.toDomain() }
             }
 
         override suspend fun readBloodPressureRecords(
@@ -447,8 +340,8 @@ class HealthConnectRepositoryImpl
             to: Instant,
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainBloodPressureRecord>> =
-            safeReadRecords<BloodPressureRecord, _>("Blood pressure") {
-                readAllPages<BloodPressureRecord>(from, to, retryScope).map { it.toDomain() }
+            readGuard.guardedRead(BloodPressureRecord::class, "Blood pressure") {
+                pagedReader.readAll<BloodPressureRecord>(from, to, retryScope).map { it.toDomain() }
             }
 
         override suspend fun readOxygenSaturationRecords(
@@ -456,8 +349,8 @@ class HealthConnectRepositoryImpl
             to: Instant,
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainOxygenSaturationRecord>> =
-            safeReadRecords<OxygenSaturationRecord, _>("Oxygen saturation") {
-                readAllPages<OxygenSaturationRecord>(from, to, retryScope).map { it.toDomain() }
+            readGuard.guardedRead(OxygenSaturationRecord::class, "Oxygen saturation") {
+                pagedReader.readAll<OxygenSaturationRecord>(from, to, retryScope).map { it.toDomain() }
             }
 
         override suspend fun readBodyTemperatureRecords(
@@ -465,8 +358,8 @@ class HealthConnectRepositoryImpl
             to: Instant,
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainBodyTemperatureRecord>> =
-            safeReadRecords<BodyTemperatureRecord, _>("Body temperature") {
-                readAllPages<BodyTemperatureRecord>(from, to, retryScope).map { it.toDomain() }
+            readGuard.guardedRead(BodyTemperatureRecord::class, "Body temperature") {
+                pagedReader.readAll<BodyTemperatureRecord>(from, to, retryScope).map { it.toDomain() }
             }
 
         override suspend fun readVo2MaxRecords(
@@ -474,44 +367,8 @@ class HealthConnectRepositoryImpl
             endTime: Instant,
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainVo2MaxRecord>> =
-            safeReadRecords<Vo2MaxRecord, _>("VO2 max") {
-                readAllPages<Vo2MaxRecord>(startTime, endTime, retryScope).map { it.toDomain() }
-            }
-
-        private suspend inline fun <reified T : androidx.health.connect.client.records.Record, R> safeReadRecords(
-            label: String,
-            crossinline block: suspend () -> R,
-        ): ReadOutcome<R> =
-            withContext(ioDispatcher) {
-                if (!isAvailable()) return@withContext ReadOutcome.Unsupported
-                if (!hasPermission<T>(label)) return@withContext ReadOutcome.Denied
-                try {
-                    ReadOutcome.Available(block())
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: HealthConnectPermissionRevokedException) {
-                    logD("HealthConnectRepository") {
-                        "$label record permission not granted: ${e.message}"
-                    }
-                    ReadOutcome.Denied
-                } catch (e: SecurityException) {
-                    logD("HealthConnectRepository") {
-                        "$label record permission not granted: ${e.message}"
-                    }
-                    ReadOutcome.Denied
-                } catch (e: Exception) {
-                    if (e.asHealthConnectSecurityCause() != null) {
-                        logD("HealthConnectRepository") {
-                            "$label record permission not granted: ${e.message}"
-                        }
-                        ReadOutcome.Denied
-                    } else {
-                        logE("HealthConnectRepository", e) {
-                            "Error reading $label records"
-                        }
-                        throw e
-                    }
-                }
+            readGuard.guardedRead(Vo2MaxRecord::class, "VO2 max") {
+                pagedReader.readAll<Vo2MaxRecord>(startTime, endTime, retryScope).map { it.toDomain() }
             }
 
         private suspend fun <T> readOrEmpty(block: suspend () -> ReadOutcome<List<T>>): List<T> =
@@ -550,7 +407,7 @@ class HealthConnectRepositoryImpl
         }
 
         override suspend fun discoverDevices(windowDays: Int): List<String> =
-            withContext(ioDispatcher) {
+            readGuard.runOnIo {
                 try {
                     logD(
                         "HealthConnectRepository",
@@ -632,6 +489,10 @@ class HealthConnectRepositoryImpl
                     emptyList()
                 }
             }
+
+        private companion object {
+            const val LABEL_EXERCISE = "Exercise session"
+        }
     }
 
 
