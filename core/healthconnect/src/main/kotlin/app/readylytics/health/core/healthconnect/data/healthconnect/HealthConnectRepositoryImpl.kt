@@ -5,10 +5,7 @@ import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.DistanceRecord
-import androidx.health.connect.client.records.HeartRateRecord
-import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
-import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
@@ -51,9 +48,10 @@ class HealthConnectRepositoryImpl
         private val clock: Clock,
         private val availability: HealthConnectAvailability,
         private val permissionGateway: HealthConnectPermissionGateway,
-        private val pagedReader: HealthConnectPagedReader,
         private val readGuard: HealthConnectReadGuard,
         private val exerciseReader: HealthConnectExerciseReader,
+        private val vitalsReader: HealthConnectVitalsReader,
+        private val bodyMetricsReader: HealthConnectBodyMetricsReader,
     ) : HealthConnectRepository {
         override val criticalPermissions: Set<String>
             get() = permissionGateway.criticalPermissions
@@ -110,27 +108,21 @@ class HealthConnectRepositoryImpl
             to: Instant,
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainSleepSessionRecord>> =
-            readGuard.guardedRead(SleepSessionRecord::class, "Sleep session") {
-                pagedReader.readAll<SleepSessionRecord>(from, to, retryScope).map { it.toDomain() }
-            }
+            vitalsReader.readSleepSessions(from, to, retryScope)
 
         override suspend fun readHeartRateSamples(
             from: Instant,
             to: Instant,
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainHeartRateRecord>> =
-            readGuard.guardedRead(HeartRateRecord::class, "Heart rate") {
-                pagedReader.readAll<HeartRateRecord>(from, to, retryScope).map { it.toDomain() }
-            }
+            vitalsReader.readHeartRateSamples(from, to, retryScope)
 
         override suspend fun readHrvSamples(
             from: Instant,
             to: Instant,
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainHrvRecord>> =
-            readGuard.guardedRead(HeartRateVariabilityRmssdRecord::class, "HRV") {
-                pagedReader.readAll<HeartRateVariabilityRmssdRecord>(from, to, retryScope).map { it.toDomain() }
-            }
+            vitalsReader.readHrvSamples(from, to, retryScope)
 
         override suspend fun readHeartRateSamplesPaged(
             from: Instant,
@@ -139,11 +131,7 @@ class HealthConnectRepositoryImpl
             retryScope: ReadRetryScope?,
             onPage: suspend (List<DomainHeartRateRecord>, String?) -> Unit,
         ): ReadOutcome<Unit> =
-            readGuard.guardedRead(HeartRateRecord::class, "Heart rate", logUnexpected = false) {
-                pagedReader.readStreaming<HeartRateRecord>(from, to, startPageToken, retryScope) { page, nextToken ->
-                    onPage(page.map { it.toDomain() }, nextToken)
-                }
-            }
+            vitalsReader.readHeartRateSamplesPaged(from, to, startPageToken, retryScope, onPage)
 
         override suspend fun readHrvSamplesPaged(
             from: Instant,
@@ -152,16 +140,7 @@ class HealthConnectRepositoryImpl
             retryScope: ReadRetryScope?,
             onPage: suspend (List<DomainHrvRecord>, String?) -> Unit,
         ): ReadOutcome<Unit> =
-            readGuard.guardedRead(HeartRateVariabilityRmssdRecord::class, "HRV", logUnexpected = false) {
-                pagedReader.readStreaming<HeartRateVariabilityRmssdRecord>(
-                    from,
-                    to,
-                    startPageToken,
-                    retryScope,
-                ) { page, nextToken ->
-                    onPage(page.map { it.toDomain() }, nextToken)
-                }
-            }
+            vitalsReader.readHrvSamplesPaged(from, to, startPageToken, retryScope, onPage)
 
         override suspend fun readExerciseSessions(
             from: Instant,
@@ -215,54 +194,42 @@ class HealthConnectRepositoryImpl
             to: Instant,
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainWeightRecord>> =
-            readGuard.guardedRead(WeightRecord::class, "Weight") {
-                pagedReader.readAll<WeightRecord>(from, to, retryScope).map { it.toDomain() }
-            }
+            bodyMetricsReader.readWeightRecords(from, to, retryScope)
 
         override suspend fun readBodyFatRecords(
             from: Instant,
             to: Instant,
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainBodyFatRecord>> =
-            readGuard.guardedRead(BodyFatRecord::class, "Body fat") {
-                pagedReader.readAll<BodyFatRecord>(from, to, retryScope).map { it.toDomain() }
-            }
+            bodyMetricsReader.readBodyFatRecords(from, to, retryScope)
 
         override suspend fun readBloodPressureRecords(
             from: Instant,
             to: Instant,
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainBloodPressureRecord>> =
-            readGuard.guardedRead(BloodPressureRecord::class, "Blood pressure") {
-                pagedReader.readAll<BloodPressureRecord>(from, to, retryScope).map { it.toDomain() }
-            }
+            bodyMetricsReader.readBloodPressureRecords(from, to, retryScope)
 
         override suspend fun readOxygenSaturationRecords(
             from: Instant,
             to: Instant,
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainOxygenSaturationRecord>> =
-            readGuard.guardedRead(OxygenSaturationRecord::class, "Oxygen saturation") {
-                pagedReader.readAll<OxygenSaturationRecord>(from, to, retryScope).map { it.toDomain() }
-            }
+            bodyMetricsReader.readOxygenSaturationRecords(from, to, retryScope)
 
         override suspend fun readBodyTemperatureRecords(
             from: Instant,
             to: Instant,
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainBodyTemperatureRecord>> =
-            readGuard.guardedRead(BodyTemperatureRecord::class, "Body temperature") {
-                pagedReader.readAll<BodyTemperatureRecord>(from, to, retryScope).map { it.toDomain() }
-            }
+            bodyMetricsReader.readBodyTemperatureRecords(from, to, retryScope)
 
         override suspend fun readVo2MaxRecords(
             startTime: Instant,
             endTime: Instant,
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainVo2MaxRecord>> =
-            readGuard.guardedRead(Vo2MaxRecord::class, "VO2 max") {
-                pagedReader.readAll<Vo2MaxRecord>(startTime, endTime, retryScope).map { it.toDomain() }
-            }
+            bodyMetricsReader.readVo2MaxRecords(startTime, endTime, retryScope)
 
         private suspend fun <T> readOrEmpty(block: suspend () -> ReadOutcome<List<T>>): List<T> =
             try {

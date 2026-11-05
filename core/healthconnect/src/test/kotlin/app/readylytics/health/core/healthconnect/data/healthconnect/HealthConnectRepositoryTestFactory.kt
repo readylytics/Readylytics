@@ -36,7 +36,6 @@ internal fun createHealthConnectRepositoryForTest(
         clock = clock,
         availability = availability,
         permissionGateway = permissionGateway,
-        pagedReader = pagedReader,
         readGuard = readGuard,
         exerciseReader =
             HealthConnectExerciseReader(
@@ -50,5 +49,7 @@ internal fun createHealthConnectRepositoryForTest(
                     IntervalTotalsReader(context = context, ioDispatcher = ioDispatcher, client = client),
                 routeLookup = routeLookup,
             ),
+        vitalsReader = HealthConnectVitalsReader(pagedReader = pagedReader, guard = readGuard),
+        bodyMetricsReader = HealthConnectBodyMetricsReader(pagedReader = pagedReader, guard = readGuard),
     )
 }
