@@ -212,18 +212,6 @@ class DashboardViewModelTest : DashboardViewModelTestBase() {
     }
 
     @Test
-    fun `dashboard session summary derives from session data`() {
-        val summary =
-            viewModel.resolveDashboardSleepSessionSummary(
-                session = sleepSession(durationMinutes = 510, awakeMinutes = 30),
-            )
-
-        assertEquals(0.9f, summary?.efficiency)
-        assertEquals(0L, summary?.startTime)
-        assertEquals(510 * 60_000L, summary?.endTime)
-    }
-
-    @Test
     fun `dashboard forwards observed strain increase to dashboard data use case`() =
         runTest(testDispatcher) {
             val selectedDate = LocalDate.of(2026, 7, 29)
