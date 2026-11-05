@@ -22,6 +22,7 @@ import androidx.lifecycle.lifecycleScope
 import app.readylytics.health.benchmark.applyBenchmarkTestTagSemantics
 import app.readylytics.health.core.database.data.security.SqlCipherKeyManager
 import app.readylytics.health.core.model.data.preferences.AppTheme
+import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.core.model.domain.backup.RestoreResult
 import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.crashreport.CachePrune
@@ -41,7 +42,7 @@ import app.readylytics.health.util.SecureFileLogSink
 import dagger.Lazy
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -68,6 +69,10 @@ class MainActivity : ComponentActivity() {
     @ReleaseLogSink
     lateinit var secureLogSink: SecureFileLogSink
 
+    @Inject
+    @IoDispatcher
+    lateinit var ioDispatcher: CoroutineDispatcher
+
     private var isKeyValidationComplete by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -88,7 +93,7 @@ class MainActivity : ComponentActivity() {
             )
         }
 
-        lifecycleScope.launch(Dispatchers.IO) {
+        lifecycleScope.launch(ioDispatcher) {
             runCatching { sqlCipherKeyManager.get().validateKeyDecryption() }
             CachePrune.pruneCacheDirectories(this@MainActivity)
             isKeyValidationComplete = true
@@ -208,9 +213,9 @@ class MainActivity : ComponentActivity() {
     private fun sendMigrationDiagnostics() {
         lifecycleScope.launch {
             runCatching {
-                val logText = withContext(Dispatchers.IO) { secureLogSink.readLogsDecrypted() }
+                val logText = withContext(ioDispatcher) { secureLogSink.readLogsDecrypted() }
                 val file =
-                    withContext(Dispatchers.IO) {
+                    withContext(ioDispatcher) {
                         DiagnosticLogFileExport.write(cacheDir, logText)
                     }
                 startActivity(buildLogFileShareIntent(this@MainActivity, file))

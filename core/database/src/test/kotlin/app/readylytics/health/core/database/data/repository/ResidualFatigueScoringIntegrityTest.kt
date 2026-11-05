@@ -1,5 +1,6 @@
 package app.readylytics.health.core.database.data.repository
 
+import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -471,7 +472,12 @@ class ResidualFatigueScoringIntegrityTest {
     ): List<DailySummaryEntity> {
         val settingsRepo = MutableTestSettingsRepository(prefs)
         val scoringRepo = buildScoringRepo(database, settingsRepo)
-        val support = DailyRecomputeSupport(scoringRepo, settingsRepo, RoomTransactionRunner(database))
+        val support = DailyRecomputeSupport(
+            scoringRepo,
+            settingsRepo,
+            RoomTransactionRunner(database),
+            clock = FIXED_TEST_CLOCK,
+        )
         val runContext = ScoringRunContext.capture(prefs, startDate.atStartOfDay(zoneId).toInstant())
 
         support.inRecomputeTransaction {
@@ -565,7 +571,7 @@ class ResidualFatigueScoringIntegrityTest {
             ),
             scoringHistoryRepository = scoringHistoryRepository,
             readinessSummaryCoordinator = coordinator,
-            defaultDispatcher = UnconfinedTestDispatcher(),
+            runtime = ScoringRuntime(UnconfinedTestDispatcher(), FIXED_TEST_CLOCK),
             recommendationDependencies = fakeRecommendationDependencies(),
         )
     }

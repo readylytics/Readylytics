@@ -17,6 +17,7 @@ import app.readylytics.health.core.model.domain.workouts.WorkoutDetailLayoutRepo
 import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.security.EncryptionManager
+import app.readylytics.health.testutil.FIXED_TEST_CLOCK
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -159,6 +160,7 @@ class LocalBackupManagerRetentionSafetyTest {
             encryptionManager,
             auditTrailRepository,
             Dispatchers.Unconfined,
+            FIXED_TEST_CLOCK,
             customStoreFactory,
         )
     }

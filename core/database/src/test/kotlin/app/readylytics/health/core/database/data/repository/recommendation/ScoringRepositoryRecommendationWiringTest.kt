@@ -1,5 +1,7 @@
 package app.readylytics.health.core.database.data.repository.recommendation
 
+import app.readylytics.health.core.database.data.repository.ScoringRuntime
+import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import app.readylytics.health.core.database.data.mapper.WorkoutRecommendationCodec
 import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoader
 import app.readylytics.health.core.database.data.repository.MorningRecommendationDependencies
@@ -152,7 +154,7 @@ class ScoringRepositoryRecommendationWiringTest {
             ),
             scoringHistoryRepository,
             readinessSummaryCoordinator,
-            UnconfinedTestDispatcher(),
+            ScoringRuntime(UnconfinedTestDispatcher(), FIXED_TEST_CLOCK),
             recommendationDependencies,
         )
     }

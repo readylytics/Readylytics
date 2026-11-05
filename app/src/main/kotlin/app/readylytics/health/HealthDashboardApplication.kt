@@ -101,7 +101,8 @@ class HealthDashboardApplication :
     override fun onCreate() {
         super.onCreate()
         CachePrune.pruneCacheDirectories(this)
-        val crashReportHandler = CrashReportHandler(applicationContext, Thread.getDefaultUncaughtExceptionHandler())
+        val crashReportHandler =
+            CrashReportHandler(applicationContext, Thread.getDefaultUncaughtExceptionHandler(), clock)
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             if (sqlCipherKeyManager.get().isKeyCorrupted.value) {
                 // If the key is corrupted, Room's DB open fails and propagates an exception.

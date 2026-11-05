@@ -1,5 +1,6 @@
 package app.readylytics.health.core.database.data.local
 
+import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import app.readylytics.health.core.databaseschema.data.local.dao.BloodPressureRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.BodyFatRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.DailySummaryDao
@@ -80,6 +81,7 @@ class RoomHealthIngestionStoreZoneTest {
                 },
             vo2MaxRecordDao = noOpDao(),
             scanTypeStateDao = noOpDao(),
+            clock = FIXED_TEST_CLOCK,
         )
 
     private fun recordingClearCallDao(

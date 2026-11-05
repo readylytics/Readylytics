@@ -1,5 +1,6 @@
 package app.readylytics.health.core.database.domain.sync
 
+import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.ScoringRepository
@@ -52,7 +53,12 @@ class DailyRecomputeSupportDiagnosticsTest {
                     coEvery { computeAndPersistDailySummary(any(), any(), any(), any(), any()) } throws
                         IllegalStateException("boom")
                 }
-            val support = DailyRecomputeSupport(scoringRepository, mockk(relaxed = true), mockk(relaxed = true))
+            val support = DailyRecomputeSupport(
+                scoringRepository,
+                mockk(relaxed = true),
+                mockk(relaxed = true),
+                clock = FIXED_TEST_CLOCK,
+            )
             val prefs = UserPreferences()
             val runContext = ScoringRunContext.capture(prefs, Instant.parse("2026-10-08T12:00:00Z"))
 

@@ -6,7 +6,6 @@ import app.readylytics.health.core.database.data.repository.recommendation.Worko
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.model.data.preferences.scoringZone
-import app.readylytics.health.core.model.di.DefaultDispatcher
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.model.ReadinessResult
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
@@ -61,10 +60,12 @@ class ScoringRepositoryImpl
         private val useCases: ScoringDayUseCases,
         private val scoringHistoryRepository: ScoringHistoryRepository,
         private val readinessSummaryCoordinator: ReadinessSummaryCoordinator,
-        @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
+        runtime: ScoringRuntime,
         private val recommendationDependencies: MorningRecommendationDependencies,
-        private val clock: Clock = Clock.systemDefaultZone(),
     ) : ScoringRepository {
+        private val defaultDispatcher = runtime.defaultDispatcher
+        private val clock = runtime.clock
+
         // Every multi-day caller supplies one immutable ScoringRunContext. Single-day callers are
         // anchored here with the injected clock before any day-scoped loader is invoked.
         private val calculationMutex = Mutex()

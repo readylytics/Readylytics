@@ -1,4 +1,6 @@
 package app.readylytics.health.core.database.domain.scoring
+import app.readylytics.health.core.database.data.repository.ScoringRuntime
+import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
@@ -152,7 +154,7 @@ class ScoringDeterminismRegressionTest {
             ),
             scoringHistoryRepository,
             readinessSummaryCoordinator,
-            UnconfinedTestDispatcher(),
+            ScoringRuntime(UnconfinedTestDispatcher(), FIXED_TEST_CLOCK),
             MorningRecommendationDependencies(
                 sleepSessionRepository = mockk(relaxed = true),
                 computeSleepMetricsUseCase = mockk(relaxed = true),

@@ -1,4 +1,5 @@
 package app.readylytics.health.core.database.data.repository
+import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
 import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
@@ -143,7 +144,7 @@ abstract class ResidualFatigueWalkForwardTestBase {
             ),
             scoringHistoryRepository,
             readinessSummaryCoordinator,
-            UnconfinedTestDispatcher(),
+            ScoringRuntime(UnconfinedTestDispatcher(), FIXED_TEST_CLOCK),
             fakeRecommendationDependencies(),
         )
     }

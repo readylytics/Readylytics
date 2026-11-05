@@ -3,6 +3,7 @@ package app.readylytics.health.domain.security
 import app.readylytics.health.core.model.domain.audit.AuditEvent
 import app.readylytics.health.core.model.domain.audit.AuditTrailRepository
 import kotlinx.coroutines.CancellationException
+import java.time.Clock
 import java.time.Instant
 import javax.inject.Inject
 
@@ -12,6 +13,7 @@ class DatabaseKeyRotator
         private val rekeyDatabase: DatabaseRekeyer,
         private val persistNewKeyMetadata: KeyMetadataPersister,
         private val auditTrailRepository: AuditTrailRepository,
+        private val clock: Clock,
     ) {
         suspend fun rotate() {
             try {
@@ -20,7 +22,7 @@ class DatabaseKeyRotator
                 auditTrailRepository.append(
                     AuditEvent(
                         type = AuditEvent.Type.KEY_ROTATED,
-                        occurredAt = Instant.now(),
+                        occurredAt = Instant.now(clock),
                         detail = null,
                     ),
                 )
@@ -29,7 +31,7 @@ class DatabaseKeyRotator
                     auditTrailRepository.append(
                         AuditEvent(
                             type = AuditEvent.Type.KEY_ROTATION_FAILED,
-                            occurredAt = Instant.now(),
+                            occurredAt = Instant.now(clock),
                             detail = t::class.simpleName,
                         ),
                     )

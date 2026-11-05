@@ -46,105 +46,6 @@ class BackendClockArchitectureTest {
                     violation = "LocalDate.now()",
                     reason = "UI date picker selectable year bound in BirthdayDatePickerField",
                 ),
-                AllowedException(
-                    relativePath =
-                        "core/database/src/main/kotlin/app/readylytics/health/" +
-                            "core/database/domain/sync/DailyRecomputeSupport.kt",
-                    symbolSnippet = "private val clock: Clock = Clock.systemDefaultZone(),",
-                    violation = "Clock.systemDefaultZone()",
-                    reason = "Hilt injects the Clock binding; retained existing test-construction compatibility",
-                    owner = "class DailyRecomputeSupport",
-                ),
-                AllowedException(
-                    relativePath =
-                        "core/database/src/main/kotlin/app/readylytics/health/" +
-                            "core/database/data/local/RoomHealthIngestionStore.kt",
-                    symbolSnippet = "private val clock: Clock = Clock.systemDefaultZone(),",
-                    violation = "Clock.systemDefaultZone()",
-                    reason = "Hilt supplies Clock and the SourcePayloadWriter fallback forwards it",
-                    owner = "class RoomHealthIngestionStore",
-                ),
-                AllowedException(
-                    relativePath =
-                        "core/database/src/main/kotlin/app/readylytics/health/" +
-                            "core/database/data/local/RoomHealthChangeIngestionStore.kt",
-                    symbolSnippet = "private val clock: Clock = Clock.systemDefaultZone(),",
-                    violation = "Clock.systemDefaultZone()",
-                    reason = "Hilt injects the Clock binding for deletion-journal dates",
-                    owner = "class RoomHealthChangeIngestionStore",
-                ),
-                AllowedException(
-                    relativePath =
-                        "core/database/src/main/kotlin/app/readylytics/health/" +
-                            "core/database/data/local/RoomScanStagingStore.kt",
-                    symbolSnippet = "private val clock: Clock = Clock.systemUTC(),",
-                    violation = "Clock.systemUTC()",
-                    reason = "Hilt injects Clock for scan timestamps",
-                    owner = "class RoomScanStagingStore",
-                ),
-                AllowedException(
-                    relativePath =
-                        "core/database/src/main/kotlin/app/readylytics/health/" +
-                            "core/database/data/local/SourcePayloadWriter.kt",
-                    symbolSnippet = "private val clock: Clock = Clock.systemDefaultZone(),",
-                    violation = "Clock.systemDefaultZone()",
-                    reason = "Hilt supplies Clock; RoomHealthIngestionStore also explicitly forwards its Clock",
-                    owner = "class SourcePayloadWriter",
-                ),
-                AllowedException(
-                    relativePath =
-                        "core/database/src/main/kotlin/app/readylytics/health/" +
-                            "core/database/data/repository/ScoringRepositoryImpl.kt",
-                    symbolSnippet = "private val clock: Clock = Clock.systemDefaultZone(),",
-                    violation = "Clock.systemDefaultZone()",
-                    reason = "Hilt injects Clock into single-day scoring context",
-                    owner = "class ScoringRepositoryImpl",
-                ),
-                AllowedException(
-                    relativePath =
-                        "core/healthconnect/src/main/kotlin/app/readylytics/health/" +
-                            "core/healthconnect/domain/sync/HistoricalIngestPhase.kt",
-                    symbolSnippet = "private val clock: Clock = Clock.systemDefaultZone(),",
-                    violation = "Clock.systemDefaultZone()",
-                    reason = "Hilt supplies Clock; ResyncRangeUseCase fallback also forwards Clock",
-                    owner = "class HistoricalIngestPhase",
-                ),
-                AllowedException(
-                    relativePath =
-                        "core/healthconnect/src/main/kotlin/app/readylytics/health/" +
-                            "core/healthconnect/domain/sync/HistoricalPrunePhase.kt",
-                    symbolSnippet = "private val clock: Clock = Clock.systemDefaultZone(),",
-                    violation = "Clock.systemDefaultZone()",
-                    reason = "Hilt supplies Clock; ResyncRangeUseCase fallback also forwards Clock",
-                    owner = "class HistoricalPrunePhase",
-                ),
-                AllowedException(
-                    relativePath =
-                        "core/healthconnect/src/main/kotlin/app/readylytics/health/" +
-                            "core/healthconnect/domain/sync/HistoricalRecomputePhase.kt",
-                    symbolSnippet = "private val clock: Clock = Clock.systemDefaultZone(),",
-                    violation = "Clock.systemDefaultZone()",
-                    reason = "Hilt supplies Clock; ResyncRangeUseCase fallback also forwards Clock",
-                    owner = "class HistoricalRecomputePhase",
-                ),
-                AllowedException(
-                    relativePath =
-                        "core/healthconnect/src/main/kotlin/app/readylytics/health/" +
-                            "core/healthconnect/domain/sync/ResyncRangeUseCase.kt",
-                    symbolSnippet = "private val clock: Clock = Clock.systemDefaultZone(),",
-                    violation = "Clock.systemDefaultZone()",
-                    reason = "Hilt injects Clock and passes it to all fallback phases",
-                    owner = "class ResyncRangeUseCase",
-                ),
-                AllowedException(
-                    relativePath =
-                        "core/healthconnect/src/main/kotlin/app/readylytics/health/" +
-                            "core/healthconnect/data/healthconnect/HealthChangeSynchronizerImpl.kt",
-                    symbolSnippet = "private val clock: Clock = Clock.systemDefaultZone(),",
-                    violation = "Clock.systemDefaultZone()",
-                    reason = "Hilt injects Clock for changes synchronization timestamps",
-                    owner = "class HealthChangeSynchronizerImpl",
-                ),
             )
     }
 
@@ -188,39 +89,67 @@ class BackendClockArchitectureTest {
         }
     }
 
-    @Test
-    fun `scanned backend and feature sources do not contain unclocked time calls`() {
-        val repoRoot = resolveRepoRoot()
-        val scannedFiles = mutableListOf<File>()
+    private fun collectScannedFiles(repoRoot: File): List<File> =
+        (collectCoreAndAppDirectories(repoRoot) + collectClockedAppFiles(repoRoot) + collectFeatureFiles(repoRoot))
+            .distinct()
 
-        // 1. core/*/src/main/kotlin
-        val coreDir = File(repoRoot, "core")
-        coreDir.listFiles()?.forEach { moduleDir ->
-            val srcMainKotlin = File(moduleDir, "src/main/kotlin")
-            if (srcMainKotlin.exists()) {
-                scannedFiles.addAll(srcMainKotlin.walkTopDown().filter { it.isFile && it.extension == "kt" })
+    private fun kotlinFilesUnder(dir: File): List<File> =
+        dir
+            .walkTopDown()
+            .filter {
+                it.isFile && it.extension == "kt"
+            }.toList()
+
+    private fun requireFiles(
+        repoRoot: File,
+        relativePaths: List<String>,
+    ): List<File> =
+        relativePaths.map { relative ->
+            File(repoRoot, relative).also { check(it.exists()) { "Required scanned file missing: $relative" } }
+        }
+
+    private fun collectCoreAndAppDirectories(repoRoot: File): List<File> {
+        val appPrefix = "app/src/main/kotlin/app/readylytics/health"
+        val prefDir = File(repoRoot, "$appPrefix/data/preferences")
+        check(prefDir.exists()) { "Required scanned directory missing: $appPrefix/data/preferences" }
+        val coreSources =
+            File(repoRoot, "core").listFiles().orEmpty().flatMap { moduleDir ->
+                File(moduleDir, "src/main/kotlin").takeIf { it.exists() }?.let(::kotlinFilesUnder).orEmpty()
             }
-        }
+        val workers = File(repoRoot, "$appPrefix/workers").takeIf { it.exists() }?.let(::kotlinFilesUnder).orEmpty()
+        return coreSources +
+            workers +
+            kotlinFilesUnder(prefDir) +
+            requireFiles(repoRoot, listOf("$appPrefix/DatabaseReadyStartupInitializer.kt"))
+    }
 
-        // 2. app/.../workers
-        val workersDir = File(repoRoot, "app/src/main/kotlin/app/readylytics/health/workers")
-        if (workersDir.exists()) {
-            scannedFiles.addAll(workersDir.walkTopDown().filter { it.isFile && it.extension == "kt" })
-        }
+    // Backup/restore, key rotation and crash-report classes that take an injected Clock.
+    private fun collectClockedAppFiles(repoRoot: File): List<File> {
+        val appPrefix = "app/src/main/kotlin/app/readylytics/health"
+        return requireFiles(
+            repoRoot,
+            listOf(
+                "data/backup/LocalBackupManager.kt",
+                "data/backup/LocalRestoreManager.kt",
+                "data/backup/BackupRotationService.kt",
+                "data/backup/RestoreRecommendationCoverageChecker.kt",
+                "domain/security/DatabaseKeyRotator.kt",
+                "crashreport/CrashReportHandler.kt",
+                "crashreport/CrashReportFileExport.kt",
+                "crashreport/CrashReportShareIntent.kt",
+            ).map { "$appPrefix/$it" },
+        )
+    }
 
-        // 3. Preference mapper files
-        val prefPrefix = "app/src/main/kotlin/app/readylytics/health/data/preferences"
-        val mapper1 = File(repoRoot, "$prefPrefix/UserPreferencesMapper.kt")
-        val mapper2 = File(repoRoot, "$prefPrefix/UserPreferencesMapperExtensions.kt")
-        if (mapper1.exists()) scannedFiles.add(mapper1)
-        if (mapper2.exists()) scannedFiles.add(mapper2)
-
-        // 4. Identified feature VM/flow/loader files
+    // Identified feature VM/flow/loader files.
+    private fun collectFeatureFiles(repoRoot: File): List<File> {
         val dashPrefix = "feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard"
         val vitalsPrefix = "feature/vitals/src/main/kotlin/app/readylytics/health/feature/vitals"
         val workoutsPrefix = "feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts"
         val settingsPrefix = "feature/settings/src/main/kotlin/app/readylytics/health/feature/settings"
-        val featurePaths =
+        val onboardingPrefix = "feature/onboarding/src/main/kotlin/app/readylytics/health/feature/onboarding"
+        return requireFiles(
+            repoRoot,
             listOf(
                 "$dashPrefix/DashboardFlowIntermediate.kt",
                 "$dashPrefix/DashboardViewModel.kt",
@@ -229,16 +158,22 @@ class BackendClockArchitectureTest {
                 "$workoutsPrefix/WorkoutsViewModel.kt",
                 "$workoutsPrefix/WorkoutsDataLoader.kt",
                 "$settingsPrefix/PhysiologySettingsViewModel.kt",
-            )
-        for (fp in featurePaths) {
-            val f = File(repoRoot, fp)
-            check(f.exists()) { "Required scanned feature file missing: $fp" }
-            scannedFiles.add(f)
-        }
+                "$onboardingPrefix/OnboardingViewModel.kt",
+                "$vitalsPrefix/overview/VitalsViewModel.kt",
+                "$vitalsPrefix/heartrate/HeartRateUiModels.kt",
+                "$workoutsPrefix/WorkoutsStateFactory.kt",
+            ),
+        )
+    }
+
+    @Test
+    fun `scanned backend and feature sources do not contain unclocked time calls`() {
+        val repoRoot = resolveRepoRoot()
+        val scannedFiles = collectScannedFiles(repoRoot)
 
         val allViolations = mutableListOf<String>()
 
-        for (file in scannedFiles.distinct()) {
+        for (file in scannedFiles) {
             val relPath = file.relativeTo(repoRoot).invariantSeparatorsPath
             var content = file.readText()
 

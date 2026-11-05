@@ -1,5 +1,6 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
+import app.readylytics.health.core.healthconnect.testutil.FIXED_TEST_CLOCK
 import app.readylytics.health.core.model.domain.repository.ReadRetryScope
 import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.core.database.domain.sync.DailyRecomputeSupport
@@ -227,7 +228,12 @@ class FirstSetupDummyIngestionFlowTest {
         return DailySyncUseCase(
             settingsRepo = settingsRepo,
             rasSourceModeBootstrapUseCase = rasBootstrap,
-            recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, RecordingTransactionRunner()),
+            recomputeSupport = DailyRecomputeSupport(
+                scoringRepository,
+                settingsRepo,
+                RecordingTransactionRunner(),
+                clock = FIXED_TEST_CLOCK,
+            ),
             walDiagnostics = mockk<WalDiagnostics>(relaxed = true),
             ingestion =
                 DailySyncIngestionCollaborators(

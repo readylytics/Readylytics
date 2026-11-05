@@ -7,9 +7,14 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
 import kotlin.test.assertFailsWith
 
 class DatabaseKeyRotatorTest {
+    private val clock = Clock.fixed(Instant.parse("2026-03-04T05:06:07Z"), ZoneOffset.UTC)
+
     @Test
     fun rotateRecordsSuccessAuditEventAfterRekeySucceeds() =
         runTest {
@@ -19,6 +24,7 @@ class DatabaseKeyRotatorTest {
                     rekeyDatabase = { },
                     persistNewKeyMetadata = { },
                     auditTrailRepository = audit,
+                    clock = clock,
                 )
 
             rotator.rotate()
@@ -35,11 +41,46 @@ class DatabaseKeyRotatorTest {
                     rekeyDatabase = { error("boom") },
                     persistNewKeyMetadata = { },
                     auditTrailRepository = audit,
+                    clock = clock,
                 )
 
             assertFailsWith<IllegalStateException> { rotator.rotate() }
 
             assertEquals(listOf(AuditEvent.Type.KEY_ROTATION_FAILED), audit.events.map { it.type })
+        }
+
+    @Test
+    fun rotateStampsKeyRotatedEventWithInjectedClockInstant() =
+        runTest {
+            val audit = FakeAuditTrailRepository()
+            val rotator =
+                DatabaseKeyRotator(
+                    rekeyDatabase = { },
+                    persistNewKeyMetadata = { },
+                    auditTrailRepository = audit,
+                    clock = clock,
+                )
+
+            rotator.rotate()
+
+            assertEquals(listOf(clock.instant()), audit.events.map { it.occurredAt })
+        }
+
+    @Test
+    fun failedRotateStampsKeyRotationFailedEventWithInjectedClockInstant() =
+        runTest {
+            val audit = FakeAuditTrailRepository()
+            val rotator =
+                DatabaseKeyRotator(
+                    rekeyDatabase = { error("boom") },
+                    persistNewKeyMetadata = { },
+                    auditTrailRepository = audit,
+                    clock = clock,
+                )
+
+            assertFailsWith<IllegalStateException> { rotator.rotate() }
+
+            assertEquals(listOf(clock.instant()), audit.events.map { it.occurredAt })
         }
 
     private class FakeAuditTrailRepository : AuditTrailRepository {

@@ -13,6 +13,7 @@ import app.readylytics.health.core.model.domain.validation.ValidationResult
 import app.readylytics.health.core.ui.common.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import java.time.Clock
 import java.time.LocalDate
 import javax.inject.Inject
 
@@ -23,6 +24,7 @@ class OnboardingViewModel
         private val physiologySettings: PhysiologySettings,
         private val displaySettings: DisplaySettings,
         private val bmiService: BmiService,
+        private val clock: Clock,
     ) : BaseViewModel() {
         fun validateBirthdayDay(day: String): Result<Int> =
             try {
@@ -51,7 +53,7 @@ class OnboardingViewModel
         fun validateBirthdayYear(year: String): Result<Int> =
             try {
                 val y = year.toInt()
-                val now = LocalDate.now().year
+                val now = LocalDate.now(clock).year
                 if (y in 1900..now) {
                     Result.success(y)
                 } else {
@@ -87,7 +89,7 @@ class OnboardingViewModel
             heightCm: Float?,
             onComplete: () -> Unit,
         ) {
-            if (birthDate.isAfter(LocalDate.now())) {
+            if (birthDate.isAfter(LocalDate.now(clock))) {
                 return
             }
 

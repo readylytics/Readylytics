@@ -136,7 +136,12 @@ class WorkoutsViewModel
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5_000),
-                    initialValue = WorkoutsUiState(isLoading = true),
+                    initialValue =
+                        WorkoutsUiState(
+                            selectedDate = repositories.selectedDate.selectedDate.value,
+                            rangeStartMs = clock.millis(),
+                            isLoading = true,
+                        ),
                 )
 
         fun onFatigueRangeSelected(range: FatigueCurveRange) {

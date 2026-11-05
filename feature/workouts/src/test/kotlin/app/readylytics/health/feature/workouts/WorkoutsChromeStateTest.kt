@@ -47,7 +47,7 @@ class WorkoutsChromeStateTest {
 
     @Test
     fun `applyTo matches the legacy six-copy chain for every chrome input`() {
-        val emptyState = WorkoutsUiState()
+        val emptyState = WorkoutsUiState(selectedDate = LocalDate.of(2026, 10, 8), rangeStartMs = 0L)
         val loadedState = emptyState.copy(latestSummary = DailySummary(date = LocalDate.of(2026, 10, 8)))
         val flags = listOf(false, true)
         val chromes =
@@ -76,11 +76,18 @@ class WorkoutsChromeStateTest {
                 layout = layout(managing = false),
             )
 
-        val empty = chrome.applyTo(WorkoutsUiState())
+        val empty = chrome.applyTo(WorkoutsUiState(selectedDate = LocalDate.of(2026, 10, 8), rangeStartMs = 0L))
         assertEquals(true, empty.isLoading)
         assertEquals(true, empty.isRefreshing)
 
-        val loaded = chrome.applyTo(WorkoutsUiState(latestSummary = DailySummary(date = LocalDate.of(2026, 10, 8))))
+        val loaded =
+            chrome.applyTo(
+                WorkoutsUiState(
+                    selectedDate = LocalDate.of(2026, 10, 8),
+                    rangeStartMs = 0L,
+                    latestSummary = DailySummary(date = LocalDate.of(2026, 10, 8)),
+                ),
+            )
         assertEquals(false, loaded.isLoading)
         assertEquals(true, loaded.isRefreshing)
     }

@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
+import java.time.Clock
 import javax.inject.Inject
 
 /** Which stored report the startup prompt offers. A crash report always takes priority. */
@@ -28,6 +29,7 @@ class CrashReportViewModel
     constructor(
         private val crashReportStore: CrashReportStore,
         private val recalcDiagnosticStore: RecalcDiagnosticStore? = null,
+        val clock: Clock,
     ) : ViewModel() {
         private val _promptKind = MutableStateFlow(resolvePromptKind())
         val promptKind: StateFlow<StartupReportKind?> = _promptKind.asStateFlow()

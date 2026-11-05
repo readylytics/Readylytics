@@ -20,7 +20,7 @@ class RoomScanStagingStore
     constructor(
         private val scanStagingDao: ScanStagingDao,
         private val scanTypeStateDao: ScanTypeStateDao,
-        private val clock: Clock = Clock.systemUTC(),
+        private val clock: Clock,
     ) : ScanStagingStore {
         override suspend fun beginTypeScan(
             scan: ScanIdentity,

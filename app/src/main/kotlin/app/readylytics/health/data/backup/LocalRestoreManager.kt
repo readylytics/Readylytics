@@ -17,6 +17,7 @@ import kotlinx.coroutines.withContext
 import net.lingala.zip4j.ZipFile
 import net.lingala.zip4j.exception.ZipException
 import java.io.File
+import java.time.Clock
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -33,6 +34,7 @@ class LocalRestoreManager
         private val inventoryValidator: RestoreInventoryValidator,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
         private val restoreMaintenanceCoordinator: RestoreMaintenanceCoordinator,
+        private val clock: Clock,
     ) {
         suspend fun validate(
             backupUri: Uri,
@@ -166,7 +168,7 @@ class LocalRestoreManager
                 "LocalRestoreManager",
                 AuditEvent(
                     type = type,
-                    occurredAt = Instant.now(),
+                    occurredAt = Instant.now(clock),
                     detail = detail,
                 ),
             )

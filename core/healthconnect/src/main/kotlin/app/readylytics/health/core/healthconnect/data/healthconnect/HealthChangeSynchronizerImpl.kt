@@ -37,7 +37,7 @@ class HealthChangeSynchronizerImpl
         private val client: HealthConnectClient,
         private val tokenStore: HealthChangeTokenStore,
         private val settingsRepo: SettingsRepository,
-        private val clock: Clock = Clock.systemDefaultZone(),
+        private val clock: Clock,
         private val transactionRunner: TransactionRunner,
         private val healthIngestionStore: HealthIngestionStore,
         private val changeIngestionStore: HealthChangeIngestionStore,

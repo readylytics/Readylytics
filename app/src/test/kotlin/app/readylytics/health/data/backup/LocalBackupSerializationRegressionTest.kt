@@ -19,6 +19,7 @@ import app.readylytics.health.core.model.domain.workouts.WorkoutDetailLayoutRepo
 import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.security.EncryptionManager
+import app.readylytics.health.testutil.FIXED_TEST_CLOCK
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -107,6 +108,7 @@ class LocalBackupSerializationRegressionTest {
                 encryptionManager,
                 RecordingAuditTrailRepository(),
                 Dispatchers.Unconfined,
+                FIXED_TEST_CLOCK,
             )
     }
 

@@ -205,6 +205,7 @@ private fun handleSubmitIssueReport(
                     crashFile,
                     logcatText,
                     logcatFile,
+                    crashReportViewModel.clock,
                 )
         ) {
             is GithubIssueIntentResult.Ready -> {

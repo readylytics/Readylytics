@@ -90,7 +90,12 @@ class DailySyncUseCaseExampleFanOutTest {
             DailySyncUseCase(
                 settingsRepo = settingsRepo,
                 rasSourceModeBootstrapUseCase = rasSourceModeBootstrapUseCase,
-                recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner),
+                recomputeSupport = DailyRecomputeSupport(
+                    scoringRepository,
+                    settingsRepo,
+                    transactionRunner,
+                    clock = fixedClock,
+                ),
                 walDiagnostics = walDiagnostics,
                 ingestion =
                     DailySyncIngestionCollaborators(

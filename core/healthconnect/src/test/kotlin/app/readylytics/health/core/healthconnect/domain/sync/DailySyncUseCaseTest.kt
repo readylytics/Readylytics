@@ -113,6 +113,7 @@ abstract class DailySyncUseCaseTestFixture {
                     settingsRepo,
                     transactionRunner,
                     dirtyRangeStore = effectiveDirtyRangeStore,
+                    clock = fixedClock,
                 ),
             walDiagnostics = walDiagnostics,
             ingestion =

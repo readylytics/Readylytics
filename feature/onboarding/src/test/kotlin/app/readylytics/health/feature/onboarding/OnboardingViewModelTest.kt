@@ -2,6 +2,7 @@ package app.readylytics.health.feature.onboarding
 
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.data.preferences.UnitSystem
+import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.model.getOrNull
 import app.readylytics.health.core.model.domain.preferences.DisplaySettings
 import app.readylytics.health.core.model.domain.preferences.PhysiologySettings
@@ -16,10 +17,14 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneOffset
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class OnboardingViewModelTest {
+    private val clock = Clock.fixed(Instant.parse("2026-06-15T10:00:00Z"), ZoneOffset.UTC)
     private lateinit var physiologySettings: PhysiologySettings
     private lateinit var displaySettings: DisplaySettings
     private lateinit var viewModel: OnboardingViewModel
@@ -34,6 +39,7 @@ class OnboardingViewModelTest {
                 physiologySettings = physiologySettings,
                 displaySettings = displaySettings,
                 bmiService = BmiService(),
+                clock = clock,
             )
     }
 
@@ -129,6 +135,38 @@ class OnboardingViewModelTest {
         assert(result.isFailure) { "Too old year should be invalid" }
     }
 
+    @Test
+    fun validateBirthdayYear_clockYear_succeeds() {
+        assert(viewModel.validateBirthdayYear("2026").isSuccess) { "Current clock year should be valid" }
+    }
+
+    @Test
+    fun validateBirthdayYear_yearAfterClockYear_failsWithClockYearInMessage() {
+        val result = viewModel.validateBirthdayYear("2027")
+        assert(result is Result.Failure && result.reason == "Year must be 1900–2026") { "got $result" }
+    }
+
+    @Test
+    fun validateBirthdayYear_1900_succeedsAnd1899_fails() {
+        assert(viewModel.validateBirthdayYear("1900").isSuccess) { "1900 is the lower bound" }
+        assert(viewModel.validateBirthdayYear("1899").isFailure) { "1899 is below the lower bound" }
+    }
+
+    @Test
+    fun validateBirthdayYear_usesClockZoneAtYearBoundary() {
+        // 2026-12-31T23:30Z is already 2027-01-01 at UTC+14: the clock's zone decides the year.
+        val zonedClock = Clock.fixed(Instant.parse("2026-12-31T23:30:00Z"), ZoneOffset.ofHours(14))
+        val zonedViewModel =
+            OnboardingViewModel(
+                physiologySettings = physiologySettings,
+                displaySettings = displaySettings,
+                bmiService = BmiService(),
+                clock = zonedClock,
+            )
+        assert(zonedViewModel.validateBirthdayYear("2027").isSuccess) { "2027 is the clock-zone year" }
+        assert(zonedViewModel.validateBirthdayYear("2028").isFailure) { "2028 is after the clock-zone year" }
+    }
+
     // ─── validateHeight ────────────────────────────────────────────────────
     @Test
     fun validateHeight_175_succeeds() {
@@ -193,9 +231,24 @@ class OnboardingViewModelTest {
     }
 
     @Test
+    fun saveProfile_birthDateOnClockToday_callsRepository() {
+        val today = LocalDate.now(clock)
+        viewModel.saveProfile(
+            birthDate = today,
+            gender = "Male",
+            physiologyProfile = PhysiologyProfile.ATHLETE,
+            dynamicColorEnabled = true,
+            unitSystem = UnitSystem.METRIC,
+            heightCm = 175f,
+            onComplete = {},
+        )
+        coVerify(timeout = 1000) { physiologySettings.updateBirthday(today) }
+    }
+
+    @Test
     fun saveProfile_futureDate_doesNotCallRepository() {
         var completed = false
-        val futureDate = LocalDate.now().plusDays(1)
+        val futureDate = LocalDate.now(clock).plusDays(1)
         viewModel.saveProfile(
             birthDate = futureDate,
             gender = "Male",

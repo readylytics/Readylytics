@@ -3,7 +3,6 @@ package app.readylytics.health.data.backup
 import android.content.Context
 import android.net.Uri
 import androidx.core.net.toUri
-import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.core.model.domain.audit.AuditEvent
 import app.readylytics.health.core.model.domain.audit.AuditTrailRepository
 import app.readylytics.health.core.model.domain.backup.ArchiveRotationEntry
@@ -17,7 +16,6 @@ import app.readylytics.health.core.model.domain.security.EncryptionManager
 import app.readylytics.health.core.model.domain.util.logE
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -51,8 +49,10 @@ class BackupRotationService
         private val journal: BackupOperationJournal,
         private val verifiedPublisher: VerifiedArchivePublisher,
         private val auditTrailRepository: AuditTrailRepository,
-        @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+        runtime: BackupRuntime,
     ) {
+        private val ioDispatcher = runtime.ioDispatcher
+        private val clock = runtime.clock
         private val mutex = Mutex()
         private val _operationState = MutableStateFlow(BackupOperationState())
         val operationState: StateFlow<BackupOperationState> = _operationState.asStateFlow()
@@ -127,7 +127,7 @@ class BackupRotationService
                     encryptedNewPassword = newHash,
                     targetPasswordHash = newHash,
                     entries = entries,
-                    selectedGeneration = System.currentTimeMillis(),
+                    selectedGeneration = clock.millis(),
                 )
             journal.write(journalData)
             _operationState.value =
@@ -187,7 +187,7 @@ class BackupRotationService
         ): List<ArchiveRotationEntry> =
             entries.mapIndexed { index, entry ->
                 coroutineContext.ensureActive()
-                val stagedZip = File(stagingDir, "staged_${index}_${System.currentTimeMillis()}.zip")
+                val stagedZip = File(stagingDir, "staged_${index}_${clock.millis()}.zip")
                 val tempSource = File(stagingDir, "temp_source_$index.zip")
                 try {
                     store.read(BackupLocation(entry.originalLocation)).use { input ->
@@ -214,7 +214,7 @@ class BackupRotationService
             entries.forEachIndexed { index, entry ->
                 coroutineContext.ensureActive()
                 val stagedFile = File(entry.stagedLocation ?: error("Missing staged location"))
-                val targetName = generateTargetName(entry.originalLocation, index)
+                val targetName = generateTargetName(entry.originalLocation, index, clock.millis())
                 val location =
                     verifiedPublisher.publishAndVerify(
                         store,
@@ -309,7 +309,7 @@ class BackupRotationService
                     "BackupRotationService",
                     AuditEvent(
                         type = type,
-                        occurredAt = Instant.now(),
+                        occurredAt = Instant.now(clock),
                         detail = detail,
                     ),
                 )
@@ -320,12 +320,13 @@ class BackupRotationService
 private fun generateTargetName(
     originalLocation: String,
     index: Int,
+    timestampMs: Long,
 ): String {
     val decoded = Uri.decode(originalLocation)
     val segment = decoded.substringAfterLast('/').substringAfterLast(':')
     val baseName = segment.removeSuffix(".zip").ifBlank { "backup" }
     val safeBaseName = if (baseName.startsWith("backup")) baseName else "backup_$baseName"
-    return "${safeBaseName}_r${System.currentTimeMillis()}_$index.zip"
+    return "${safeBaseName}_r${timestampMs}_$index.zip"
 }
 
 private fun createZipEntryParameters(

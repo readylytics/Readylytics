@@ -20,8 +20,8 @@ import kotlinx.coroutines.withContext
 import net.lingala.zip4j.ZipFile
 import java.io.File
 import java.io.FileOutputStream
+import java.time.Clock
 import java.time.Instant
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 import javax.inject.Inject
@@ -37,6 +37,7 @@ class LocalBackupManager
         private val encryptionManager: EncryptionManager,
         private val auditTrailRepository: AuditTrailRepository,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+        private val clock: Clock,
         private val backupStoreFactory: BackupStoreFactory = DefaultBackupStoreFactory(context),
         private val inventoryValidator: RestoreInventoryValidator = RestoreInventoryValidator(),
         private val backupRotationService: BackupRotationService? = null,
@@ -53,7 +54,7 @@ class LocalBackupManager
                     val store = backupStoreFactory.create(customUri)
 
                     val timestamp =
-                        Instant.now().atZone(ZoneId.systemDefault()).format(FILENAME_FORMATTER)
+                        Instant.now(clock).atZone(clock.zone).format(FILENAME_FORMATTER)
                     val opId = UUID.randomUUID().toString()
                     val stagingDir = File(context.cacheDir, CachePrune.BACKUP_STAGING_DIR).apply { mkdirs() }
                     val tempZipFilename = "backup_${timestamp}_$opId.zip"
@@ -91,7 +92,7 @@ class LocalBackupManager
                         "LocalBackupManager",
                         AuditEvent(
                             type = AuditEvent.Type.BACKUP_CREATED,
-                            occurredAt = Instant.now(),
+                            occurredAt = Instant.now(clock),
                             detail = null,
                         ),
                     )

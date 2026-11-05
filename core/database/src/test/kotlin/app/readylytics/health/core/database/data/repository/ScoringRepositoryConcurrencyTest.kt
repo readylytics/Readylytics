@@ -1,5 +1,6 @@
 package app.readylytics.health.core.database.data.repository
 
+import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
 import app.readylytics.health.core.databaseschema.data.local.dao.BloodPressureRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.BodyFatRecordDao
@@ -113,7 +114,7 @@ class ScoringRepositoryConcurrencyTest {
             ),
             scoringHistoryRepository,
             readinessSummaryCoordinator,
-            dispatcher,
+            ScoringRuntime(dispatcher, FIXED_TEST_CLOCK),
             MorningRecommendationDependencies(
                 sleepSessionRepository = mockk(relaxed = true),
                 computeSleepMetricsUseCase = mockk(relaxed = true),

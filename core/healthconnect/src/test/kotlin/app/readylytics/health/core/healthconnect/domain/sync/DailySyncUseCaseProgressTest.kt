@@ -111,7 +111,12 @@ class DailySyncUseCaseProgressTest : DailySyncUseCaseTestFixture() {
                 DailySyncUseCase(
                     settingsRepo = settingsRepo,
                     rasSourceModeBootstrapUseCase = rasSourceModeBootstrapUseCase,
-                    recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner),
+                    recomputeSupport = DailyRecomputeSupport(
+                        scoringRepository,
+                        settingsRepo,
+                        transactionRunner,
+                        clock = historicalClock,
+                    ),
                     walDiagnostics = walDiagnostics,
                     ingestion =
                         DailySyncIngestionCollaborators(

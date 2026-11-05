@@ -28,6 +28,16 @@ import java.time.ZoneId
 @OptIn(ExperimentalCoroutinesApi::class)
 class VitalsViewModelTest : VitalsViewModelTestBase() {
     @Test
+    fun `initial state is seeded from the selected date store without reading wall time`() {
+        viewModel = createViewModel()
+
+        val initial = viewModel.uiState.value
+
+        assertEquals(selectedDateStore.selectedDate.value, initial.selectedDate)
+        assertEquals(0L, initial.rangeStartMs)
+    }
+
+    @Test
     fun `sync change preserves structurally equal chart series`() =
         runTest {
             viewModel = createViewModel()

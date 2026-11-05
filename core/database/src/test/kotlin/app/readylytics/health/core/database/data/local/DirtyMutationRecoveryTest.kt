@@ -1,5 +1,6 @@
 package app.readylytics.health.core.database.data.local
 
+import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -86,6 +87,7 @@ class DirtyMutationRecoveryTest {
                 dirtyRangeStore = dirtyRangeStore,
                 healthMutationStateDao = database.healthMutationStateDao(),
                 transactionRunner = transactionRunner,
+                clock = FIXED_TEST_CLOCK,
             )
         publisher =
             DirtySummaryPublisher(

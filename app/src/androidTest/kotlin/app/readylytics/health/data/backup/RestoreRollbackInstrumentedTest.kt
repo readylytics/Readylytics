@@ -18,6 +18,7 @@ import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepositor
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.security.EncryptionManager
+import app.readylytics.health.testutil.FIXED_TEST_CLOCK
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -104,7 +105,7 @@ class RestoreRollbackInstrumentedTest {
             app.readylytics.health.core.database.data.local
                 .HealthMutationCoordinatorImpl(db.healthMutationStateDao())
         val restoreJournal = RestoreOperationJournal(context, encryptionManager)
-        val coverageChecker = RestoreRecommendationCoverageChecker(db, settingsRepo, workerScheduler)
+        val coverageChecker = RestoreRecommendationCoverageChecker(db, settingsRepo, workerScheduler, FIXED_TEST_CLOCK)
         val coordinator =
             RestoreMaintenanceCoordinator(
                 healthMutationCoordinator = mutationCoordinator,
@@ -124,6 +125,7 @@ class RestoreRollbackInstrumentedTest {
                 inventoryValidator = RestoreInventoryValidator(),
                 ioDispatcher = Dispatchers.Unconfined,
                 restoreMaintenanceCoordinator = coordinator,
+                clock = FIXED_TEST_CLOCK,
             )
     }
 

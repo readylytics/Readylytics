@@ -19,6 +19,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import java.time.Clock
 import javax.inject.Qualifier
 import javax.inject.Singleton
 
@@ -60,6 +61,10 @@ abstract class UtilModule {
     ): app.readylytics.health.core.model.domain.security.EncryptionManager
 
     companion object {
+        @Provides
+        @Singleton
+        fun provideClock(): Clock = Clock.systemDefaultZone()
+
         @Provides
         @Singleton
         @ReleaseLogSink

@@ -14,6 +14,7 @@ import app.readylytics.health.core.model.domain.githubissue.IssueReportRequest
 import app.readylytics.health.core.model.domain.githubissue.ReportChannel
 import app.readylytics.health.core.model.domain.util.logW
 import java.io.File
+import java.time.Clock
 
 fun buildCrashReportShareIntent(
     context: Context,
@@ -109,6 +110,7 @@ private fun githubIssueResult(
     labels: String?,
     fullBody: String,
     filenamePrefix: String,
+    clock: Clock,
 ): GithubIssueIntentResult {
     val uri = buildGithubUri(title, labels, fullBody)
     return if (uri.toString().length <= GITHUB_ISSUE_URL_MAX_LENGTH) {
@@ -116,7 +118,7 @@ private fun githubIssueResult(
     } else {
         GithubIssueIntentResult.Oversized(
             fullReport = fullBody,
-            suggestedFilename = CrashReportFileExport.suggestedFilename(filenamePrefix),
+            suggestedFilename = CrashReportFileExport.suggestedFilename(filenamePrefix, clock),
             title = title,
             labels = labels,
         )
@@ -128,12 +130,14 @@ fun buildGithubIssueIntent(
     reportText: String,
     title: String = context.getString(R.string.crash_report_title),
     filenamePrefix: String = "readylytics_crash_report",
+    clock: Clock,
 ): GithubIssueIntentResult =
     githubIssueResult(
         title = title,
         labels = null,
         fullBody = buildGithubIssueBodyFull(reportText),
         filenamePrefix = filenamePrefix,
+        clock = clock,
     )
 
 fun buildBugReportIntent(
@@ -141,20 +145,26 @@ fun buildBugReportIntent(
     crashReportText: String? = null,
     logcatText: String? = null,
     logcatDurationMinutes: Int? = null,
+    clock: Clock,
 ): GithubIssueIntentResult =
     githubIssueResult(
         title = context.getString(R.string.github_issue_bug_title),
         labels = "bug",
         fullBody = buildBugReportGithubBody(context, crashReportText, logcatText, logcatDurationMinutes),
         filenamePrefix = "readylytics_crash_report",
+        clock = clock,
     )
 
-fun buildFeatureRequestIntent(context: Context): GithubIssueIntentResult =
+fun buildFeatureRequestIntent(
+    context: Context,
+    clock: Clock,
+): GithubIssueIntentResult =
     githubIssueResult(
         title = context.getString(R.string.github_issue_feature_title),
         labels = "enhancement",
         fullBody = buildFeatureRequestEmailBody(context),
         filenamePrefix = "readylytics_feature_request",
+        clock = clock,
     )
 
 // Body for the GitHub issue opened once an oversized report has been saved to a file: device info
@@ -233,12 +243,13 @@ fun buildIssueReportIntent(
     crashReportFile: File?,
     logcatText: String?,
     logcatFile: File?,
+    clock: Clock,
 ): GithubIssueIntentResult =
     when (request.issueType) {
         GitHubIssueType.BUG_REPORT ->
             when (request.channel) {
                 ReportChannel.GITHUB ->
-                    buildBugReportIntent(context, crashReportText, logcatText, request.logcatDurationMinutes)
+                    buildBugReportIntent(context, crashReportText, logcatText, request.logcatDurationMinutes, clock)
                 ReportChannel.EMAIL ->
                     GithubIssueIntentResult.Ready(
                         buildBugReportEmailIntent(
@@ -253,7 +264,7 @@ fun buildIssueReportIntent(
             }
         GitHubIssueType.FEATURE_REQUEST ->
             when (request.channel) {
-                ReportChannel.GITHUB -> buildFeatureRequestIntent(context)
+                ReportChannel.GITHUB -> buildFeatureRequestIntent(context, clock)
                 ReportChannel.EMAIL -> GithubIssueIntentResult.Ready(buildFeatureRequestEmailIntent(context))
             }
     }

@@ -35,6 +35,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
 
@@ -216,7 +217,8 @@ class ScanStagingScaleBenchmark {
         pageSize: Int = FIXTURE_PAGE_SIZE,
     ): IngestionWindowResult {
         val store = ScoringBenchmarkHelper.createRoomHealthIngestionStore(db, countingTxRunner)
-        val staging = RoomScanStagingStore(db.scanStagingDao(), db.scanTypeStateDao())
+        val staging =
+            RoomScanStagingStore(db.scanStagingDao(), db.scanTypeStateDao(), clock = Clock.systemDefaultZone())
         val fakeRepo =
             BenchmarkFakeHealthConnectRepository(
                 pagesSequence = HealthParentFixture.pages(parents, samplesEach, pageSize),

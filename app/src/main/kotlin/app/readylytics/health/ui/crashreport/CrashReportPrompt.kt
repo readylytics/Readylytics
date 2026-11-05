@@ -113,6 +113,7 @@ fun CrashReportPrompt(viewModel: CrashReportViewModel = hiltViewModel()) {
                                     viewModel.promptReportText(),
                                     title = copy.reportTitle,
                                     filenamePrefix = copy.filenamePrefix,
+                                    clock = viewModel.clock,
                                 )
                             when (result) {
                                 is GithubIssueIntentResult.Ready -> {

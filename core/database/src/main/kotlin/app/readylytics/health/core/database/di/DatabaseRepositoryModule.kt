@@ -1,11 +1,11 @@
 package app.readylytics.health.core.database.di
 
-import app.readylytics.health.core.database.data.local.RoomScanStagingStore
 import app.readylytics.health.core.database.data.repository.BloodPressureRepositoryImpl
 import app.readylytics.health.core.database.data.repository.BodyFatRepositoryImpl
 import app.readylytics.health.core.database.data.repository.DailyMetricsRepositoryImpl
 import app.readylytics.health.core.database.data.repository.DailySummaryRepositoryImpl
 import app.readylytics.health.core.database.data.repository.HeartRateRepositoryImpl
+import app.readylytics.health.core.database.data.repository.InsightDismissalRepositoryImpl
 import app.readylytics.health.core.database.data.repository.SleepSessionRepositoryImpl
 import app.readylytics.health.core.database.data.repository.WeightRepositoryImpl
 import app.readylytics.health.core.database.data.repository.WorkoutRepositoryImpl
@@ -14,10 +14,10 @@ import app.readylytics.health.core.model.domain.repository.BodyFatRepository
 import app.readylytics.health.core.model.domain.repository.DailyMetricsRepository
 import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
 import app.readylytics.health.core.model.domain.repository.HeartRateRepository
+import app.readylytics.health.core.model.domain.repository.InsightDismissalRepository
 import app.readylytics.health.core.model.domain.repository.SleepSessionRepository
 import app.readylytics.health.core.model.domain.repository.WeightRepository
 import app.readylytics.health.core.model.domain.repository.WorkoutRepository
-import app.readylytics.health.core.model.domain.sync.ScanStagingStore
 import app.readylytics.health.core.database.data.repository.RoomWorkoutRouteLookup
 import app.readylytics.health.core.model.domain.repository.WorkoutRouteLookup
 import dagger.Binds
@@ -67,5 +67,5 @@ abstract class DatabaseRepositoryModule {
 
     @Binds
     @Singleton
-    abstract fun bindScanStagingStore(impl: RoomScanStagingStore): ScanStagingStore
+    abstract fun bindInsightDismissalRepository(impl: InsightDismissalRepositoryImpl): InsightDismissalRepository
 }

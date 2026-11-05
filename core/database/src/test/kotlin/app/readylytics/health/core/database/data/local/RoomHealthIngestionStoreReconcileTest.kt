@@ -1,5 +1,6 @@
 package app.readylytics.health.core.database.data.local
 
+import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import app.readylytics.health.core.databaseschema.data.local.dao.DailySummaryDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.ScanTypeStateDao
@@ -65,6 +66,7 @@ class RoomHealthIngestionStoreReconcileTest {
             transactionRunner = transactionRunner,
             vo2MaxRecordDao = mockk(relaxed = true),
             scanTypeStateDao = scanTypeStateDao,
+            clock = FIXED_TEST_CLOCK,
         )
 
     private val zoneId = ZoneId.of("UTC")

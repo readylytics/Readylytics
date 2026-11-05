@@ -18,6 +18,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -226,7 +227,12 @@ class Phase0BaselineBenchmark {
                 val database = fixture.createDatabase("current-benchmark-p0-ingest-$total.db", true, callback)
                 val txRunner = CountingTransactionRunner(RoomTransactionRunner(database))
                 val store = ScoringBenchmarkHelper.createRoomHealthIngestionStore(database, txRunner)
-                val staging = RoomScanStagingStore(database.scanStagingDao(), database.scanTypeStateDao())
+                val staging =
+                    RoomScanStagingStore(
+                        database.scanStagingDao(),
+                        database.scanTypeStateDao(),
+                        clock = Clock.systemDefaultZone(),
+                    )
                 val fakeRepo = BenchmarkFakeHealthConnectRepository(BaselineScalePoints.densePages(total))
                 val coordinator = HealthIngestionCoordinator(fakeRepo, store, staging)
 

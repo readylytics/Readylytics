@@ -1,5 +1,6 @@
 package app.readylytics.health.core.database.data.local
 
+import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.readylytics.health.core.databaseschema.data.local.dao.getOrCreateSourceRef
@@ -89,7 +90,11 @@ class SourceMetadataGcTest {
         runBlocking {
             val daos = healthRecordDaos()
             val changeStore =
-                RoomHealthChangeIngestionStore(daos = daos, vo2MaxRecordDao = database.vo2MaxRecordDao())
+                RoomHealthChangeIngestionStore(
+                    daos = daos,
+                    vo2MaxRecordDao = database.vo2MaxRecordDao(),
+                    clock = FIXED_TEST_CLOCK,
+                )
             changeStore.persistIntervalEnrichment(
                 preparedWorkouts = emptyList(),
                 sourceUpserts =

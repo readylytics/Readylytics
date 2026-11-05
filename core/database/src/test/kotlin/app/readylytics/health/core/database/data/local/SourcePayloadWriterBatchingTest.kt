@@ -1,5 +1,6 @@
 package app.readylytics.health.core.database.data.local
 
+import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
@@ -48,7 +49,7 @@ class SourcePayloadWriterBatchingTest {
                 sourceRecordDao = database.sourceRecordDao(),
                 minuteBucketMaintenanceDao = database.minuteBucketMaintenanceDao(),
             )
-        writer = SourcePayloadWriter(daos = daos, transactionRunner = runner)
+        writer = SourcePayloadWriter(daos = daos, transactionRunner = runner, clock = FIXED_TEST_CLOCK)
     }
 
     @After

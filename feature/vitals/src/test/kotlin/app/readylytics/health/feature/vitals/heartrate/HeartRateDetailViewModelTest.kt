@@ -71,12 +71,14 @@ class HeartRateDetailViewModelTest {
             }
     }
 
-    private fun createViewModel(): HeartRateDetailViewModel =
+    private fun createViewModel(
+        clock: java.time.Clock = java.time.Clock.systemDefaultZone(),
+    ): HeartRateDetailViewModel =
         HeartRateDetailViewModel(
             heartRateRepository = heartRateRepository,
             settingsRepository = settingsRepo,
             selectedDateRepository = selectedDateRepo,
-            clock = java.time.Clock.systemDefaultZone(),
+            clock = clock,
             defaultDispatcher = testDispatcher,
         )
 
@@ -88,6 +90,18 @@ class HeartRateDetailViewModelTest {
         }
         Dispatchers.resetMain()
     }
+
+    @Test
+    fun `initial state takes today from the injected clock and the selected date from the store`() =
+        runTest {
+            val clock = java.time.Clock.fixed(java.time.Instant.parse("2026-06-15T10:00:00Z"), ZoneId.of("UTC"))
+            viewModel = createViewModel(clock)
+
+            val state = viewModel.uiState.value
+
+            assertEquals(selectedDateFlow.value, state.selectedDate)
+            assertEquals(LocalDate.of(2026, 6, 15), state.today)
+        }
 
     @Test
     fun `initial state has empty zone totals`() =
