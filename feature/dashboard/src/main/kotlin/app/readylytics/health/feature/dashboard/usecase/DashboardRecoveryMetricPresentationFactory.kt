@@ -17,7 +17,6 @@ import app.readylytics.health.core.ui.common.DateFormatUtils
 import app.readylytics.health.core.ui.components.GOAL_FILL_CAP_FRACTION
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricScalePreparer
-import app.readylytics.health.core.ui.components.metriccard.UniversalMetricUnavailableReason
 import javax.inject.Inject
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -29,6 +28,8 @@ class DashboardRecoveryMetricPresentationFactory
     constructor(
         private val resourceProvider: ResourceProvider,
     ) {
+        private val helpers = DashboardMetricPresentationHelpers(resourceProvider)
+
         fun build(
             summary: DailySummary?,
             metrics: DailyMetrics?,
@@ -39,8 +40,7 @@ class DashboardRecoveryMetricPresentationFactory
             todayRasIncrease: Float? = null,
         ): Map<CardId, UniversalMetricPresentation> =
             mapOf(
-                CardId.SLEEP_DURATION to
-                    sleepDurationPresentation(summary, metrics, preferences, lastSleepSession),
+                CardId.SLEEP_DURATION to sleepDurationPresentation(summary, metrics, preferences, lastSleepSession),
                 CardId.HRV to hrvPresentation(metrics, preferences, hrvAssessment),
                 CardId.SLEEP_RHR to rhrPresentation(metrics, preferences, rhrAssessment, isSleep = true),
                 CardId.RESTING_HR to rhrPresentation(metrics, preferences, rhrAssessment, isSleep = false),
@@ -67,13 +67,13 @@ class DashboardRecoveryMetricPresentationFactory
             val description =
                 when {
                     reason != null ->
-                        unavailableDescription(title, reason)
+                        helpers.unavailableDescription(title, reason)
                     durationVisual.isAboveTarget ->
                         resourceProvider.getString(
                             DashboardR.string.semantics_goal_above_target_status_format,
                             title,
                             valueText,
-                            classificationText(status),
+                            helpers.classificationText(status),
                         )
                     else ->
                         resourceProvider.getString(
@@ -81,7 +81,7 @@ class DashboardRecoveryMetricPresentationFactory
                             title,
                             valueText,
                             goalText,
-                            classificationText(status),
+                            helpers.classificationText(status),
                         )
                 }
             val tooltip = resourceProvider.getString(CoreUiR.string.tooltip_sleep_duration, goalText)
@@ -132,16 +132,11 @@ class DashboardRecoveryMetricPresentationFactory
                 title = title,
                 valueText = valueText,
                 unitText = unitText,
-                secondaryText =
-                    baselineDeltaText(
-                        arrow = baselineArrow(assessment.delta),
-                        difference = assessment.delta,
-                        unitText = unitText,
-                    ),
+                secondaryText = baselineDeltaText(baselineArrow(assessment.delta), assessment.delta, unitText),
                 status = status,
                 tooltip = hrvTooltip(metrics, assessment),
                 accessibilityDescription =
-                    visual.unavailableReason?.let { unavailableDescription(title, it) }
+                    visual.unavailableReason?.let { helpers.unavailableDescription(title, it) }
                         ?: personalBaselineDescription(
                             title,
                             "$valueText $unitText",
@@ -169,18 +164,16 @@ class DashboardRecoveryMetricPresentationFactory
             val valueText = metrics?.restingHeartRateRounded?.toString() ?: "—"
             val unitText = resourceProvider.getString(CoreUiR.string.unit_bpm)
             val status = assessment.status
-            val arrow = baselineArrow(assessment.delta)
-            val difference = assessment.delta
 
             return UniversalMetricPresentation(
                 title = title,
                 valueText = valueText,
                 unitText = unitText,
-                secondaryText = baselineDeltaText(arrow, difference, unitText),
+                secondaryText = baselineDeltaText(baselineArrow(assessment.delta), assessment.delta, unitText),
                 status = status,
                 tooltip = rhrTooltip(assessment, isSleep),
                 accessibilityDescription =
-                    visual.unavailableReason?.let { unavailableDescription(title, it) }
+                    visual.unavailableReason?.let { helpers.unavailableDescription(title, it) }
                         ?: personalBaselineDescription(
                             title,
                             "$valueText $unitText",
@@ -200,10 +193,7 @@ class DashboardRecoveryMetricPresentationFactory
             preferences: UserPreferences,
             todayRasIncrease: Float? = null,
         ): UniversalMetricPresentation {
-            val value =
-                summary?.let {
-                    LoadSourceSelector.selectTotalRas(it, preferences.rasSourceMode)
-                }
+            val value = summary?.let { LoadSourceSelector.selectTotalRas(it, preferences.rasSourceMode) }
             val visual =
                 UniversalMetricScalePreparer.score(
                     value,
@@ -234,13 +224,13 @@ class DashboardRecoveryMetricPresentationFactory
                 status = status,
                 tooltip = resourceProvider.getString(CoreUiR.string.tooltip_ras),
                 accessibilityDescription =
-                    visual.unavailableReason?.let { unavailableDescription(title, it) }
+                    visual.unavailableReason?.let { helpers.unavailableDescription(title, it) }
                         ?: resourceProvider.getString(
                             DashboardR.string.semantics_score_format,
                             title,
                             valueText,
                             "100",
-                            classificationText(status),
+                            helpers.classificationText(status),
                         ),
                 visual = visual,
             )
@@ -288,7 +278,7 @@ class DashboardRecoveryMetricPresentationFactory
                 title,
                 valueText,
                 resourceProvider.getString(relation),
-                classificationText(status),
+                helpers.classificationText(status),
             )
         }
 
@@ -314,23 +304,12 @@ class DashboardRecoveryMetricPresentationFactory
                             ),
                         )
                     else ->
-                        append(
-                            resourceProvider.getString(
-                                CoreUiR.string.tooltip_sleep_hrv_baseline_no_today,
-                                baseline,
-                            ),
-                        )
+                        append(resourceProvider.getString(CoreUiR.string.tooltip_sleep_hrv_baseline_no_today, baseline))
                 }
                 val zScore = metrics?.zLnHrvDisplay
                 val sigma = metrics?.hrvSigmaDisplay
                 if (zScore != null && sigma != null) {
-                    append(
-                        resourceProvider.getString(
-                            CoreUiR.string.tooltip_sleep_hrv_diagnostics,
-                            zScore,
-                            sigma,
-                        ),
-                    )
+                    append(resourceProvider.getString(CoreUiR.string.tooltip_sleep_hrv_diagnostics, zScore, sigma))
                 }
             }
 
@@ -349,12 +328,7 @@ class DashboardRecoveryMetricPresentationFactory
                 }
             val details =
                 if (baseline != null && arrow != null && difference != null) {
-                    resourceProvider.getString(
-                        tooltipResources.first,
-                        baseline,
-                        arrow,
-                        difference,
-                    )
+                    resourceProvider.getString(tooltipResources.first, baseline, arrow, difference)
                 } else {
                     resourceProvider.getString(tooltipResources.second)
                 }
@@ -394,38 +368,4 @@ class DashboardRecoveryMetricPresentationFactory
         }
 
         private fun formatTime(timestamp: Long): String = DateFormatUtils.epochMilliToTimeString(timestamp)
-
-        private fun classificationText(status: MetricStatus): String =
-            resourceProvider.getString(
-                when (status) {
-                    MetricStatus.OPTIMAL -> CoreUiR.string.metric_status_optimal
-                    MetricStatus.NEUTRAL -> CoreUiR.string.metric_status_neutral
-                    MetricStatus.WARNING -> CoreUiR.string.metric_status_warning
-                    MetricStatus.POOR -> CoreUiR.string.metric_status_poor
-                    MetricStatus.NO_DATA,
-                    MetricStatus.CALIBRATING,
-                    -> CoreUiR.string.metric_status_calibrating
-                },
-            )
-
-        private fun unavailableDescription(
-            title: String,
-            reason: UniversalMetricUnavailableReason,
-        ): String =
-            resourceProvider.getString(
-                DashboardR.string.semantics_unavailable_format,
-                title,
-                resourceProvider.getString(
-                    when (reason) {
-                        UniversalMetricUnavailableReason.MISSING_VALUE ->
-                            CoreUiR.string.metric_unavailable_missing_value
-                        UniversalMetricUnavailableReason.MISSING_TARGET ->
-                            CoreUiR.string.metric_unavailable_missing_target
-                        UniversalMetricUnavailableReason.BASELINE_NOT_READY ->
-                            CoreUiR.string.metric_unavailable_baseline_not_ready
-                        UniversalMetricUnavailableReason.MISSING_BMI ->
-                            CoreUiR.string.metric_unavailable_missing_bmi
-                    },
-                ),
-            )
     }
