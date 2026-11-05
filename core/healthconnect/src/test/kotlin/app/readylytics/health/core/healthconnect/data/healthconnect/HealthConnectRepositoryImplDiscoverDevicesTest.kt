@@ -20,14 +20,11 @@ import io.mockk.mockkObject
 import io.mockk.coVerify
 import io.mockk.coEvery
 import io.mockk.unmockkAll
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.time.Clock
 import java.time.Instant
-import java.time.ZoneId
 import kotlin.test.assertEquals
 
 /**
@@ -35,7 +32,7 @@ import kotlin.test.assertEquals
  * readHeartRateSamplesPaged/readHrvSamplesPaged) rather than materializing every sample into one
  * list first. This test proves the *behavior* survives the switch across multiple pages; the
  * memory-boundedness itself is structural (no `mutableListOf<T>` accumulation across pages in the
- * streaming path -- verified by code inspection of readAllPagesStreaming).
+ * streaming path -- verified by code inspection of HealthConnectPagedReader.readStreaming).
  */
 class HealthConnectRepositoryImplDiscoverDevicesTest {
     private val context = mockk<Context>(relaxed = true)
@@ -110,21 +107,7 @@ class HealthConnectRepositoryImplDiscoverDevicesTest {
                 every { pageToken } returns null
             }
 
-        val ioDispatcher = Dispatchers.Unconfined
-        val stepRecordReader =
-            StepRecordReader(context = context, ioDispatcher = ioDispatcher, client = client)
-        val intervalTotalsReader =
-            IntervalTotalsReader(context = context, ioDispatcher = ioDispatcher, client = client)
-        repo =
-            HealthConnectRepositoryImpl(
-                routeLookup = routeLookup,
-                context = context,
-                ioDispatcher = ioDispatcher,
-                stepRecordReader = stepRecordReader,
-                intervalTotalsReader = intervalTotalsReader,
-                clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
-                client = client,
-            )
+        repo = createHealthConnectRepositoryForTest(context = context, client = client, routeLookup = routeLookup)
         coEvery { client.permissionController.getGrantedPermissions() } returns repo.allPermissions
     }
 
