@@ -54,7 +54,7 @@ class IntervalTotalsReader
          * Streams distance totals page-by-page instead of materializing the whole [from]..[to]
          * range in memory (HC-001) -- a phone writing continuous distance can be as dense as steps.
          * [onPage] is invoked once per Health Connect page; callers fold each page into their own
-         * per-session running totals (see [HealthConnectRepositoryImpl.readExerciseSessions]).
+         * per-session running totals (see [HealthConnectExerciseReader.readExerciseSessions]).
          */
         suspend fun readDistanceTotalsPaged(
             from: Instant,

@@ -31,9 +31,7 @@ private const val MIN_EXAMPLE_DURATION_MINUTES = 15
  * and classifications are refreshed on every load so corrected workouts, HR samples, and
  * RHR baselines are reflected even when workout ids and preferences are unchanged.
  */
-// Hilt-annotated for a future direct binding, but currently constructed by hand in
-// `ScoringRepositoryImpl` (from `MorningRecommendationDependencies`) rather than injected --
-// the graph has no binding for this type today.
+// Injected by Hilt (singleton).
 @Singleton
 class WorkoutExampleLoader
     @Inject

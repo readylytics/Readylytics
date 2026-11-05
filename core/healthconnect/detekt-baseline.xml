@@ -3,10 +3,8 @@
   <ManuallySuppressedIssues/>
   <CurrentIssues>
     <ID>CyclomaticComplexMethod:DailySyncUseCase.kt$DailySyncUseCase$suspend fun run( windowDays: Int, onProgress: ((phase: ResyncPhase, current: Int, total: Int) -&gt; Unit)?, ): Result&lt;Unit&gt;</ID>
-    <ID>LargeClass:HealthConnectRepositoryImpl.kt$HealthConnectRepositoryImpl : HealthConnectRepository</ID>
     <ID>LongMethod:DailySyncUseCase.kt$DailySyncUseCase$suspend fun run( windowDays: Int, onProgress: ((phase: ResyncPhase, current: Int, total: Int) -&gt; Unit)?, ): Result&lt;Unit&gt;</ID>
     <ID>LongMethod:FirstSetupDummyIngestionFlowTest.kt$FirstSetupDummyIngestionFlowTest$@Test fun `daily sync persists deterministic dummy sleep workout hr and hrv batch`()</ID>
-    <ID>LongMethod:HealthConnectRepositoryImpl.kt$HealthConnectRepositoryImpl$override suspend fun discoverDevices(windowDays: Int): List&lt;String&gt;</ID>
     <ID>ReturnCount:DeviceLabel.kt$DeviceLabel$fun from( device: Device?, dataOrigin: DataOrigin, ): String</ID>
     <ID>TooManyFunctions:HealthConnectRecordConverters.kt$app.readylytics.health.core.healthconnect.data.healthconnect.HealthConnectRecordConverters.kt</ID>
     <ID>TooManyFunctions:HealthConnectRepositoryImpl.kt$HealthConnectRepositoryImpl : HealthConnectRepository</ID>

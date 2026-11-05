@@ -1,6 +1,7 @@
 package app.readylytics.health.core.database.domain.scoring.golden
-import app.readylytics.health.core.database.data.repository.ScoringRuntime
-import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
+import app.readylytics.health.core.database.testutil.ScoringTestLoaders
+import app.readylytics.health.core.database.testutil.ScoringTestUseCases
+import app.readylytics.health.core.database.testutil.createScoringRepositoryForTest
 import app.readylytics.health.core.database.data.local.AuthoritativeHeartRateReader
 import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
@@ -13,7 +14,6 @@ import app.readylytics.health.core.database.data.local.SessionLinkReconcilerImpl
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoader
-import app.readylytics.health.core.database.data.repository.MorningRecommendationDependencies
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringHeartRateDataLoader
@@ -22,16 +22,12 @@ import app.readylytics.health.core.database.data.repository.ScoringHistoryReposi
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.core.database.data.repository.SleepSessionRepositoryImpl
 import app.readylytics.health.core.model.domain.heartrate.ZoneThresholds
-import app.readylytics.health.core.scoring.domain.cardio.UthVo2MaxCalculator
-import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxSourceResolver
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
-import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
 import app.readylytics.health.core.scoring.domain.scoring.BuildLoadSeriesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.core.scoring.domain.scoring.CompositeScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
-import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.SleepMetricsCollaborators
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
@@ -46,7 +42,6 @@ import app.readylytics.health.core.scoring.domain.scoring.strategies.LoadScoring
 import app.readylytics.health.core.scoring.domain.scoring.strategies.RasScoringStrategy
 import app.readylytics.health.core.scoring.domain.scoring.strategies.SleepScoringStrategy
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
@@ -57,8 +52,6 @@ import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
-import app.readylytics.health.core.database.data.repository.ScoringDayUseCases
-import app.readylytics.health.core.database.data.repository.ScoringDataLoaders
 
 /**
  * Golden regression lock (WP-01 of the architecture/HC/scoring remediation plan): seeds ~2 years
@@ -218,38 +211,23 @@ class GoldenFixtureWalkForwardTest {
                 )
 
             val scoringRepository =
-                ScoringRepositoryImpl(
-                    loaders = ScoringDataLoaders(
-                        dataLoader,
-                        bodyMetricsDataLoader,
-                        seriesLoader,
-                        heartRateDataLoader,
+                createScoringRepositoryForTest(
+                    loaders = ScoringTestLoaders(
+                        dataLoader = dataLoader,
+                        bodyMetricsDataLoader = bodyMetricsDataLoader,
+                        seriesLoader = seriesLoader,
+                        heartRateDataLoader = heartRateDataLoader,
+                    ),
+                    useCases = ScoringTestUseCases(
+                        computeDailyTrimp = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
+                        resolveDailyBaselines = resolveDailyBaselinesUseCase,
+                        computeTrainingReadiness = ComputeTrainingReadinessUseCase(scoringCalculator),
                     ),
                     settingsRepo = settingsRepo,
                     baselineComputer = baselineComputer,
                     scoringConfigFactory = scoringConfigFactory,
-                    useCases =
-                        ScoringDayUseCases(
-                            ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
-                            ComputeResidualFatigueUseCase(),
-                            resolveDailyBaselinesUseCase,
-                            AssembleEverydayLoadInputUseCase(),
-                        ComputeTrainingReadinessUseCase(scoringCalculator),
-                            UthVo2MaxCalculator(),
-                            Vo2MaxSourceResolver(),
-                        ),
                     scoringHistoryRepository = scoringHistoryRepository,
                     readinessSummaryCoordinator = readinessSummaryCoordinator,
-                    runtime = ScoringRuntime(UnconfinedTestDispatcher(), FIXED_TEST_CLOCK),
-                    recommendationDependencies =
-                        MorningRecommendationDependencies(
-                            sleepSessionRepository = io.mockk.mockk(relaxed = true),
-                            computeSleepMetricsUseCase = io.mockk.mockk(relaxed = true),
-                            hrvResolver = io.mockk.mockk(relaxed = true),
-                            workoutRepository = io.mockk.mockk(relaxed = true),
-                            dailySummaryRepository = io.mockk.mockk(relaxed = true),
-                            getWorkoutDisplayMetricsUseCase = io.mockk.mockk(relaxed = true),
-                        ),
                 )
             // WP-11/HC-006 fix: this fixture's stage-less-night scenario (`stageLessNightDate`)
             // seeds a SleepSessionEntity with durationMinutes = 0 directly (mirroring a session

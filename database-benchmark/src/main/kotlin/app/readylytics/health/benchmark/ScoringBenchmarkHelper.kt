@@ -4,21 +4,31 @@ import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.database.data.local.HealthRecordDaos
 import app.readylytics.health.core.database.data.local.RoomHealthIngestionStore
 import app.readylytics.health.core.database.data.local.RoomTransactionRunner
+import app.readylytics.health.core.database.data.repository.BaseSummaryAssembler
 import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoader
+import app.readylytics.health.core.database.data.repository.CalibrationGate
 import app.readylytics.health.core.database.data.repository.DailySummaryRepositoryImpl
+import app.readylytics.health.core.database.data.repository.DailyTrimpComputer
+import app.readylytics.health.core.database.data.repository.DayAssembler
+import app.readylytics.health.core.database.data.repository.FinalSummaryAssembler
 import app.readylytics.health.core.database.data.repository.HeartRateRepositoryImpl
-import app.readylytics.health.core.database.data.repository.MorningRecommendationDependencies
+import app.readylytics.health.core.database.data.repository.RasTotalsComputer
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
-import app.readylytics.health.core.database.data.repository.ScoringDataLoaders
+import app.readylytics.health.core.database.data.repository.ResidualFatigueComputer
+import app.readylytics.health.core.database.data.repository.ScoringDayContextResolver
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
-import app.readylytics.health.core.database.data.repository.ScoringDayUseCases
 import app.readylytics.health.core.database.data.repository.ScoringHeartRateDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.core.database.data.repository.ScoringRuntime
 import app.readylytics.health.core.database.data.repository.ScoringSeriesLoader
 import app.readylytics.health.core.database.data.repository.SleepSessionRepositoryImpl
+import app.readylytics.health.core.database.data.repository.Vo2MaxScoringDependencies
+import app.readylytics.health.core.database.data.repository.WalkForwardContextLoader
 import app.readylytics.health.core.database.data.repository.WorkoutRepositoryImpl
+import app.readylytics.health.core.database.data.repository.recommendation.MorningRecommendationAssembler
+import app.readylytics.health.core.database.data.repository.recommendation.MorningRecoveryLoader
+import app.readylytics.health.core.database.data.repository.recommendation.WorkoutExampleLoader
 import app.readylytics.health.core.databaseschema.data.local.entity.HealthSourceRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity
@@ -29,6 +39,7 @@ import app.readylytics.health.core.model.domain.model.RecordType
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.security.EncryptionManager
+import app.readylytics.health.core.scoring.domain.cardio.MaterkoAdaptedVo2MaxCalculator
 import app.readylytics.health.core.scoring.domain.cardio.UthVo2MaxCalculator
 import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxSourceResolver
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
@@ -169,39 +180,75 @@ object ScoringBenchmarkHelper {
                     ),
                 canonicalWorkoutResolver = CanonicalWorkoutResolver(ComputeWorkoutTrimpUseCase()),
             )
+        // One shared instance of each, mirroring the Hilt @Singleton graph.
+        val residualFatigueComputer = ResidualFatigueComputer(dataLoader, ComputeResidualFatigueUseCase())
+        val calibrationGate = CalibrationGate(scoringHistoryRepository)
+        val morningRecommendationAssembler =
+            MorningRecommendationAssembler(
+                sleepSessionRepository,
+                MorningRecoveryLoader(
+                    sleepSessionRepository,
+                    computeSleepMetricsUseCase,
+                    CurrentNightHrvResolver(scoringHistoryRepository),
+                    residualFatigueComputer,
+                    scoringConfigFactory,
+                    baselineComputer,
+                    calibrationGate,
+                ),
+                WorkoutExampleLoader(workoutRepository, dailySummaryRepository, getWorkoutDisplayMetricsUseCase),
+            )
+        val finalSummaryAssembler =
+            FinalSummaryAssembler(
+                BaseSummaryAssembler(bodyMetricsDataLoader),
+                calibrationGate,
+                baselineComputer,
+                bodyMetricsDataLoader,
+                readinessSummaryCoordinator,
+                residualFatigueComputer,
+                ComputeTrainingReadinessUseCase(scoringCalculator),
+                Vo2MaxScoringDependencies(
+                    UthVo2MaxCalculator(),
+                    MaterkoAdaptedVo2MaxCalculator(),
+                    Vo2MaxSourceResolver(),
+                ),
+            )
+        val runtime = ScoringRuntime(kotlinx.coroutines.Dispatchers.Default, Clock.systemDefaultZone())
+        val dayAssembler =
+            DayAssembler(
+                readinessSummaryCoordinator = readinessSummaryCoordinator,
+                dataLoader = dataLoader,
+                dailyTrimpComputer =
+                    DailyTrimpComputer(
+                        dataLoader,
+                        ScoringHeartRateDataLoader(db.heartRateDao(), db.minuteBucketDao()),
+                        ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
+                        AssembleEverydayLoadInputUseCase(),
+                    ),
+                rasTotalsComputer = RasTotalsComputer(seriesLoader),
+                finalSummaryAssembler = finalSummaryAssembler,
+                morningRecommendationAssembler = morningRecommendationAssembler,
+                scoringDayContextResolver =
+                    ScoringDayContextResolver(
+                        scoringConfigFactory,
+                        resolveDailyBaselinesUseCase,
+                        scoringHistoryRepository,
+                    ),
+                defaultDispatcher = runtime.defaultDispatcher,
+            )
         return ScoringRepositoryImpl(
-            loaders =
-                ScoringDataLoaders(
-                    day = dataLoader,
-                    bodyMetrics = bodyMetricsDataLoader,
-                    series = seriesLoader,
-                    heartRate = ScoringHeartRateDataLoader(db.heartRateDao(), db.minuteBucketDao()),
-                ),
             settingsRepo = settingsRepo,
-            baselineComputer = baselineComputer,
-            scoringConfigFactory = scoringConfigFactory,
-            useCases =
-                ScoringDayUseCases(
-                    computeDailyTrimp = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
-                    computeResidualFatigue = ComputeResidualFatigueUseCase(),
-                    resolveDailyBaselines = resolveDailyBaselinesUseCase,
-                    assembleEverydayLoadInput = AssembleEverydayLoadInputUseCase(),
-                    computeTrainingReadiness = ComputeTrainingReadinessUseCase(scoringCalculator),
-                    uthVo2MaxCalculator = UthVo2MaxCalculator(),
-                    vo2MaxSourceResolver = Vo2MaxSourceResolver(),
+            dayAssembler = dayAssembler,
+            dataLoader = dataLoader,
+            residualFatigueComputer = residualFatigueComputer,
+            walkForwardContextLoader =
+                WalkForwardContextLoader(
+                    seriesLoader,
+                    bodyMetricsDataLoader,
+                    baselineComputer,
+                    scoringHistoryRepository,
+                    residualFatigueComputer,
                 ),
-            scoringHistoryRepository = scoringHistoryRepository,
-            readinessSummaryCoordinator = readinessSummaryCoordinator,
-            runtime = ScoringRuntime(kotlinx.coroutines.Dispatchers.Default, Clock.systemDefaultZone()),
-            recommendationDependencies =
-                MorningRecommendationDependencies(
-                    sleepSessionRepository = sleepSessionRepository,
-                    computeSleepMetricsUseCase = computeSleepMetricsUseCase,
-                    hrvResolver = CurrentNightHrvResolver(scoringHistoryRepository),
-                    workoutRepository = workoutRepository,
-                    dailySummaryRepository = dailySummaryRepository,
-                    getWorkoutDisplayMetricsUseCase = getWorkoutDisplayMetricsUseCase,
-                ),
+            runtime = runtime,
         )
     }
 

@@ -1,17 +1,14 @@
 package app.readylytics.health.core.database.domain.scoring
-import app.readylytics.health.core.database.data.repository.ScoringRuntime
-import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
+import app.readylytics.health.core.database.testutil.ScoringTestLoaders
+import app.readylytics.health.core.database.testutil.ScoringTestUseCases
+import app.readylytics.health.core.database.testutil.createScoringRepositoryForTest
 import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
-import app.readylytics.health.core.scoring.domain.cardio.UthVo2MaxCalculator
-import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxSourceResolver
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
-import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
 import app.readylytics.health.core.scoring.domain.scoring.BuildLoadSeriesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.CompositeScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
-import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.SleepMetricsCollaborators
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
@@ -41,13 +38,11 @@ import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoader
-import app.readylytics.health.core.database.data.repository.MorningRecommendationDependencies
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringHeartRateDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringSeriesLoader
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
-import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.core.database.data.repository.SleepSessionRepositoryImpl
 import app.readylytics.health.core.model.data.preferences.appliedTrainingReadinessConfig
 import app.readylytics.health.core.model.domain.model.LoadSourceSelector
@@ -71,7 +66,6 @@ import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.time.LocalDate
@@ -81,8 +75,6 @@ import kotlin.math.roundToInt
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.fail
-import app.readylytics.health.core.database.data.repository.ScoringDayUseCases
-import app.readylytics.health.core.database.data.repository.ScoringDataLoaders
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ScoringSyncScopeOutputsDeterminismTest {
@@ -477,38 +469,23 @@ class ScoringSyncScopeOutputsDeterminismTest {
             )
 
         val repo =
-            ScoringRepositoryImpl(
-                loaders = ScoringDataLoaders(
-                    dataLoader,
-                    bodyMetricsDataLoader,
-                    seriesLoader,
-                    heartRateDataLoader,
+            createScoringRepositoryForTest(
+                loaders = ScoringTestLoaders(
+                    dataLoader = dataLoader,
+                    bodyMetricsDataLoader = bodyMetricsDataLoader,
+                    seriesLoader = seriesLoader,
+                    heartRateDataLoader = heartRateDataLoader,
+                ),
+                useCases = ScoringTestUseCases(
+                    computeDailyTrimp = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
+                    resolveDailyBaselines = resolveDailyBaselinesUseCase,
+                    computeTrainingReadiness = ComputeTrainingReadinessUseCase(scoringCalculator),
                 ),
                 settingsRepo = settingsRepo,
                 baselineComputer = baselineComputer,
                 scoringConfigFactory = scoringConfigFactory,
-                useCases =
-                    ScoringDayUseCases(
-                        ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
-                        ComputeResidualFatigueUseCase(),
-                        resolveDailyBaselinesUseCase,
-                        AssembleEverydayLoadInputUseCase(),
-                        ComputeTrainingReadinessUseCase(scoringCalculator),
-                        UthVo2MaxCalculator(),
-                        Vo2MaxSourceResolver(),
-                    ),
                 scoringHistoryRepository = scoringHistoryRepository,
                 readinessSummaryCoordinator = readinessSummaryCoordinator,
-                runtime = ScoringRuntime(UnconfinedTestDispatcher(), FIXED_TEST_CLOCK),
-                recommendationDependencies =
-                    MorningRecommendationDependencies(
-                        sleepSessionRepository = mockk(relaxed = true),
-                        computeSleepMetricsUseCase = mockk(relaxed = true),
-                        hrvResolver = mockk(relaxed = true),
-                        workoutRepository = mockk(relaxed = true),
-                        dailySummaryRepository = mockk(relaxed = true),
-                        getWorkoutDisplayMetricsUseCase = mockk(relaxed = true),
-                    ),
             )
 
         val summary = repo.computeDailySummary(targetDate)

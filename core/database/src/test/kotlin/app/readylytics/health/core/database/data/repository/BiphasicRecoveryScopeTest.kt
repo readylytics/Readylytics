@@ -95,7 +95,7 @@ class BiphasicRecoveryScopeTest {
 
             // The previous-core lookup lives entirely inside sleep-day aggregation -- it must not
             // reach into the baseline/frozen-replay machinery (which on a frozen day short-circuits
-            // its own history window to empty; see ComputeSleepMetricsUseCase.resolveBaselineWindow).
+            // its own history window to empty; see SleepBaselineWindowResolver.resolve).
             coVerify(exactly = 0) {
                 baselineComputer.computeHrvWindowsBetween(any(), any(), any(), any(), any(), any())
             }

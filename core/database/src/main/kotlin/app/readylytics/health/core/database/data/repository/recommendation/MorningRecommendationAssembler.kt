@@ -57,9 +57,7 @@ internal val EXAMPLE_STATES =
  * The decision itself is [ComputeWorkoutRecommendationUseCase]'s alone; this class only feeds it and
  * decides whether examples are worth loading.
  */
-// Hilt-annotated for a future direct binding, but currently constructed by hand in
-// `ScoringRepositoryImpl` (from `MorningRecommendationDependencies`) rather than injected --
-// the graph has no binding for this type today.
+// Injected by Hilt (singleton).
 @Singleton
 class MorningRecommendationAssembler
     @Inject

@@ -3,8 +3,11 @@ package app.readylytics.health.core.database.data.repository
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.scoring.domain.scoring.EverydayHrLoadResult
 import app.readylytics.health.core.scoring.domain.scoring.freshDaySummary
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class BaseSummaryAssembler(
+@Singleton
+class BaseSummaryAssembler @Inject constructor(
     private val bodyMetricsDataLoader: BodyMetricsDataLoader,
 ) {
     suspend fun buildBaseSummary(

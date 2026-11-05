@@ -1,18 +1,15 @@
 package app.readylytics.health.core.database.domain.scoring
-import app.readylytics.health.core.database.data.repository.ScoringRuntime
-import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
+import app.readylytics.health.core.database.testutil.ScoringTestLoaders
+import app.readylytics.health.core.database.testutil.ScoringTestUseCases
+import app.readylytics.health.core.database.testutil.createScoringRepositoryForTest
 import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
 import app.readylytics.health.core.model.domain.scoring.LoadCoverageConfidence
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
-import app.readylytics.health.core.scoring.domain.cardio.UthVo2MaxCalculator
-import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxSourceResolver
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
-import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
 import app.readylytics.health.core.scoring.domain.scoring.BuildLoadSeriesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
-import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
@@ -31,7 +28,6 @@ import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoader
-import app.readylytics.health.core.database.data.repository.MorningRecommendationDependencies
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringHeartRateDataLoader
@@ -43,7 +39,6 @@ import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepPercentileR
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -54,8 +49,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
-import app.readylytics.health.core.database.data.repository.ScoringDayUseCases
-import app.readylytics.health.core.database.data.repository.ScoringDataLoaders
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ScoringPointInTimeRegressionTest {
@@ -109,44 +102,25 @@ class ScoringPointInTimeRegressionTest {
                 ResolveDailyBaselinesUseCase(baselineComputer),
                 AssembleDailySummaryUseCase(),
             )
-        return ScoringRepositoryImpl(
-            ScoringDataLoaders(
-                dataLoader,
-                bodyMetricsDataLoader,
-                seriesLoader,
-                heartRateDataLoader,
+        return createScoringRepositoryForTest(
+            loaders = ScoringTestLoaders(
+                dataLoader = dataLoader,
+                bodyMetricsDataLoader = bodyMetricsDataLoader,
+                seriesLoader = seriesLoader,
+                heartRateDataLoader = heartRateDataLoader,
             ),
-            settingsRepo,
-            baselineComputer,
-            scoringConfigFactory,
-            ScoringDayUseCases(
-                ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
-                ComputeResidualFatigueUseCase(),
-                ResolveDailyBaselinesUseCase(baselineComputer),
-                AssembleEverydayLoadInputUseCase(),
-                    ComputeTrainingReadinessUseCase(scoringCalculator),
-                UthVo2MaxCalculator(),
-                Vo2MaxSourceResolver(),
+            useCases = ScoringTestUseCases(
+                computeDailyTrimp = ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
+                resolveDailyBaselines = ResolveDailyBaselinesUseCase(baselineComputer),
+                computeTrainingReadiness = ComputeTrainingReadinessUseCase(scoringCalculator),
             ),
-            scoringHistoryRepository,
-            readinessSummaryCoordinator,
-            ScoringRuntime(UnconfinedTestDispatcher(), FIXED_TEST_CLOCK),
-            fakeRecommendationDependencies(),
+            settingsRepo = settingsRepo,
+            baselineComputer = baselineComputer,
+            scoringConfigFactory = scoringConfigFactory,
+            scoringHistoryRepository = scoringHistoryRepository,
+            readinessSummaryCoordinator = readinessSummaryCoordinator,
         )
     }
-
-    // The recommendation feature is orthogonal to this file's point-in-time regression coverage:
-    // relaxed mocks resolve to a NO_SLEEP snapshot (no session ends "today" in these fixtures)
-    // without needing real repositories wired up.
-    private fun fakeRecommendationDependencies() =
-        MorningRecommendationDependencies(
-            sleepSessionRepository = mockk(relaxed = true),
-            computeSleepMetricsUseCase = mockk(relaxed = true),
-            hrvResolver = mockk(relaxed = true),
-            workoutRepository = mockk(relaxed = true),
-            dailySummaryRepository = mockk(relaxed = true),
-            getWorkoutDisplayMetricsUseCase = mockk(relaxed = true),
-        )
 
     private fun setupFrozenSnapshot(dayMidnightMs: Long, today: LocalDate, zoneId: ZoneId) {
         val frozenSnapshot =

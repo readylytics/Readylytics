@@ -17,8 +17,11 @@ import app.readylytics.health.core.scoring.domain.scoring.LongInterval
 import app.readylytics.health.core.scoring.domain.scoring.WorkoutInputRevision
 import java.time.Instant
 import java.time.LocalDate
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class DailyTrimpComputer(
+@Singleton
+class DailyTrimpComputer @Inject constructor(
     private val dataLoader: ScoringDayDataLoader,
     private val heartRateDataLoader: ScoringHeartRateDataLoader,
     private val computeDailyTrimpUseCase: ComputeDailyTrimpUseCase,

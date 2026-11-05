@@ -6,7 +6,9 @@ import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.scoring.domain.scoring.components.Phase
 import app.readylytics.health.core.scoring.domain.scoring.resolveCalibrationState
 import javax.inject.Inject
+import javax.inject.Singleton
 
+@Singleton
 class CalibrationGate
     @Inject
     constructor(

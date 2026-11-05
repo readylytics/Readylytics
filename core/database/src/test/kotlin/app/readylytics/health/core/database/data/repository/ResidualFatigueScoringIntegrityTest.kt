@@ -1,5 +1,8 @@
 package app.readylytics.health.core.database.data.repository
 
+import app.readylytics.health.core.database.testutil.ScoringTestLoaders
+import app.readylytics.health.core.database.testutil.ScoringTestUseCases
+import app.readylytics.health.core.database.testutil.createScoringRepositoryForTest
 import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -26,16 +29,12 @@ import app.readylytics.health.core.model.domain.sync.ScoringRunContext
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
-import app.readylytics.health.core.scoring.domain.cardio.UthVo2MaxCalculator
-import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxSourceResolver
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
-import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
 import app.readylytics.health.core.scoring.domain.scoring.BuildLoadSeriesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.core.scoring.domain.scoring.CompositeScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
-import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
@@ -53,7 +52,6 @@ import app.readylytics.health.core.scoring.domain.scoring.strategies.SleepScorin
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
@@ -550,44 +548,25 @@ class ResidualFatigueScoringIntegrityTest {
         )
         val coordinator = createReadinessCoordinator(components)
 
-        return ScoringRepositoryImpl(
-            loaders = ScoringDataLoaders(
-                dataLoader,
-                bodyMetricsDataLoader,
-                seriesLoader,
-                heartRateDataLoader,
+        return createScoringRepositoryForTest(
+            loaders = ScoringTestLoaders(
+                dataLoader = dataLoader,
+                bodyMetricsDataLoader = bodyMetricsDataLoader,
+                seriesLoader = seriesLoader,
+                heartRateDataLoader = heartRateDataLoader,
+            ),
+            useCases = ScoringTestUseCases(
+                computeDailyTrimp = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
+                resolveDailyBaselines = ResolveDailyBaselinesUseCase(baselineComputer),
+                computeTrainingReadiness = ComputeTrainingReadinessUseCase(scoringCalculator),
             ),
             settingsRepo = settingsRepo,
             baselineComputer = baselineComputer,
             scoringConfigFactory = scoringConfigFactory,
-            useCases = ScoringDayUseCases(
-                ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
-                ComputeResidualFatigueUseCase(),
-                ResolveDailyBaselinesUseCase(baselineComputer),
-                AssembleEverydayLoadInputUseCase(),
-                        ComputeTrainingReadinessUseCase(scoringCalculator),
-                UthVo2MaxCalculator(),
-                Vo2MaxSourceResolver(),
-            ),
             scoringHistoryRepository = scoringHistoryRepository,
             readinessSummaryCoordinator = coordinator,
-            runtime = ScoringRuntime(UnconfinedTestDispatcher(), FIXED_TEST_CLOCK),
-            recommendationDependencies = fakeRecommendationDependencies(),
         )
     }
-
-    // The recommendation feature is orthogonal to residual-fatigue scoring integrity: relaxed mocks
-    // resolve to a NO_SLEEP snapshot (no session ends "today" in these fixtures) without needing
-    // real repositories wired up.
-    private fun fakeRecommendationDependencies() =
-        MorningRecommendationDependencies(
-            sleepSessionRepository = io.mockk.mockk(relaxed = true),
-            computeSleepMetricsUseCase = io.mockk.mockk(relaxed = true),
-            hrvResolver = io.mockk.mockk(relaxed = true),
-            workoutRepository = io.mockk.mockk(relaxed = true),
-            dailySummaryRepository = io.mockk.mockk(relaxed = true),
-            getWorkoutDisplayMetricsUseCase = io.mockk.mockk(relaxed = true),
-        )
 
     private fun createDataLoader(database: HealthDatabase): ScoringDayDataLoader =
         ScoringDayDataLoader(

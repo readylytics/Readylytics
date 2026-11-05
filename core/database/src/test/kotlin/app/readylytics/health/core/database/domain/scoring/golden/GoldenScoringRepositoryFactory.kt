@@ -1,14 +1,14 @@
 package app.readylytics.health.core.database.domain.scoring.golden
 
+import app.readylytics.health.core.database.testutil.ScoringTestLoaders
+import app.readylytics.health.core.database.testutil.ScoringTestUseCases
 import app.readylytics.health.core.database.data.repository.ScoringRuntime
 import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
+import app.readylytics.health.core.database.testutil.createScoringRepositoryForTest
 import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoader
-import app.readylytics.health.core.database.data.repository.MorningRecommendationDependencies
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
-import app.readylytics.health.core.database.data.repository.ScoringDataLoaders
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
-import app.readylytics.health.core.database.data.repository.ScoringDayUseCases
 import app.readylytics.health.core.database.data.repository.ScoringHeartRateDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
@@ -16,16 +16,12 @@ import app.readylytics.health.core.database.data.repository.ScoringSeriesLoader
 import app.readylytics.health.core.database.data.repository.SleepSessionRepositoryImpl
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
-import app.readylytics.health.core.scoring.domain.cardio.UthVo2MaxCalculator
-import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxSourceResolver
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
-import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
 import app.readylytics.health.core.scoring.domain.scoring.BuildLoadSeriesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.core.scoring.domain.scoring.CompositeScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
-import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
@@ -70,8 +66,8 @@ internal class GoldenScoringRepositoryFactory(
         val resolveBaselines = ResolveDailyBaselinesUseCase(baseline)
         val readiness =
             ReadinessSummaryCoordinator(
-                dataLoader = loaders.day,
-                seriesLoader = loaders.series,
+                dataLoader = loaders.dataLoader,
+                seriesLoader = loaders.seriesLoader,
                 scoringHistoryRepository = history,
                 baselineComputer = baseline,
                 buildLoadSeriesUseCase = BuildLoadSeriesUseCase(calculator),
@@ -79,42 +75,24 @@ internal class GoldenScoringRepositoryFactory(
                 resolveDailyBaselinesUseCase = resolveBaselines,
                 assembleDailySummaryUseCase = AssembleDailySummaryUseCase(),
             )
-        return ScoringRepositoryImpl(
+        return createScoringRepositoryForTest(
             loaders = loaders,
+            useCases = ScoringTestUseCases(
+                computeDailyTrimp = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
+                resolveDailyBaselines = resolveBaselines,
+                computeTrainingReadiness = ComputeTrainingReadinessUseCase(calculator),
+            ),
             settingsRepo = settingsRepository,
             baselineComputer = baseline,
             scoringConfigFactory = configFactory,
-            useCases = createDayUseCases(calculator, resolveBaselines),
             scoringHistoryRepository = history,
             readinessSummaryCoordinator = readiness,
             runtime = ScoringRuntime(UnconfinedTestDispatcher(), FIXED_TEST_CLOCK),
-            recommendationDependencies =
-                MorningRecommendationDependencies(
-                    sleepSessionRepository = io.mockk.mockk(relaxed = true),
-                    computeSleepMetricsUseCase = io.mockk.mockk(relaxed = true),
-                    hrvResolver = io.mockk.mockk(relaxed = true),
-                    workoutRepository = io.mockk.mockk(relaxed = true),
-                    dailySummaryRepository = io.mockk.mockk(relaxed = true),
-                    getWorkoutDisplayMetricsUseCase = io.mockk.mockk(relaxed = true),
-                ),
         )
     }
 
-    private fun createDayUseCases(
-        calculator: CompositeScoringCalculator,
-        resolveBaselines: ResolveDailyBaselinesUseCase,
-    ) = ScoringDayUseCases(
-        ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
-        ComputeResidualFatigueUseCase(),
-        resolveBaselines,
-        AssembleEverydayLoadInputUseCase(),
-        ComputeTrainingReadinessUseCase(calculator),
-        UthVo2MaxCalculator(),
-        Vo2MaxSourceResolver(),
-    )
-
     private fun createLoaders() =
-        ScoringDataLoaders(
+        ScoringTestLoaders(
             ScoringDayDataLoader(db.workoutDao(), db.sleepSessionDao(), db.dailySummaryDao()),
             BodyMetricsDataLoader(
                 db.weightRecordDao(),

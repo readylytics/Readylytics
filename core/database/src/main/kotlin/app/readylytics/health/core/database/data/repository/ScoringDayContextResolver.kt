@@ -12,6 +12,8 @@ import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayPolicy
 import java.time.LocalDate
 import java.time.ZoneId
+import javax.inject.Inject
+import javax.inject.Singleton
 
 data class ScoringDayContext(
     val targetDate: LocalDate,
@@ -27,7 +29,8 @@ data class ScoringDayContext(
 )
 
 /** Translates one immutable run context into the date-scoped inputs consumed by scoring loaders. */
-class ScoringDayContextResolver(
+@Singleton
+class ScoringDayContextResolver @Inject constructor(
     private val scoringConfigFactory: ScoringConfigFactory,
     private val resolveDailyBaselinesUseCase: ResolveDailyBaselinesUseCase,
     private val scoringHistoryRepository: ScoringHistoryRepository,

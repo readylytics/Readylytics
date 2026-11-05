@@ -1,5 +1,7 @@
 package app.readylytics.health.core.database.data.repository
-import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
+import app.readylytics.health.core.database.testutil.ScoringTestLoaders
+import app.readylytics.health.core.database.testutil.ScoringTestUseCases
+import app.readylytics.health.core.database.testutil.createScoringRepositoryForTest
 import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
 import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
@@ -28,10 +30,7 @@ import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
 import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.core.model.domain.scoring.ResidualFatigueConfig
 import app.readylytics.health.core.model.domain.sync.ScoringRunContext
-import app.readylytics.health.core.scoring.domain.cardio.UthVo2MaxCalculator
-import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxSourceResolver
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
-import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
 import app.readylytics.health.core.scoring.domain.scoring.BuildLoadSeriesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
@@ -44,7 +43,6 @@ import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.Before
 import java.time.Instant
 import java.time.LocalDate
@@ -123,44 +121,25 @@ abstract class ResidualFatigueWalkForwardTestBase {
                 ResolveDailyBaselinesUseCase(baselineComputer),
                 AssembleDailySummaryUseCase(),
             )
-        return ScoringRepositoryImpl(
-            ScoringDataLoaders(
-                dataLoader,
-                bodyMetricsDataLoader,
-                seriesLoader,
-                heartRateDataLoader,
+        return createScoringRepositoryForTest(
+            loaders = ScoringTestLoaders(
+                dataLoader = dataLoader,
+                bodyMetricsDataLoader = bodyMetricsDataLoader,
+                seriesLoader = seriesLoader,
+                heartRateDataLoader = heartRateDataLoader,
             ),
-            settingsRepo,
-            baselineComputer,
-            scoringConfigFactory,
-            ScoringDayUseCases(
-                ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
-                ComputeResidualFatigueUseCase(),
-                ResolveDailyBaselinesUseCase(baselineComputer),
-                AssembleEverydayLoadInputUseCase(),
-                        ComputeTrainingReadinessUseCase(scoringCalculator),
-                UthVo2MaxCalculator(),
-                Vo2MaxSourceResolver(),
+            useCases = ScoringTestUseCases(
+                computeDailyTrimp = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
+                resolveDailyBaselines = ResolveDailyBaselinesUseCase(baselineComputer),
+                computeTrainingReadiness = ComputeTrainingReadinessUseCase(scoringCalculator),
             ),
-            scoringHistoryRepository,
-            readinessSummaryCoordinator,
-            ScoringRuntime(UnconfinedTestDispatcher(), FIXED_TEST_CLOCK),
-            fakeRecommendationDependencies(),
+            settingsRepo = settingsRepo,
+            baselineComputer = baselineComputer,
+            scoringConfigFactory = scoringConfigFactory,
+            scoringHistoryRepository = scoringHistoryRepository,
+            readinessSummaryCoordinator = readinessSummaryCoordinator,
         )
     }
-
-    // The recommendation feature is orthogonal to residual-fatigue walk-forward equivalence: relaxed
-    // mocks resolve to a NO_SLEEP snapshot (no session ends "today" in these fixtures) without needing
-    // real repositories wired up.
-    private fun fakeRecommendationDependencies() =
-        MorningRecommendationDependencies(
-            sleepSessionRepository = mockk(relaxed = true),
-            computeSleepMetricsUseCase = mockk(relaxed = true),
-            hrvResolver = mockk(relaxed = true),
-            workoutRepository = mockk(relaxed = true),
-            dailySummaryRepository = mockk(relaxed = true),
-            getWorkoutDisplayMetricsUseCase = mockk(relaxed = true),
-        )
 
     private fun stubScoringDependencies() {
         every { settingsRepo.userPreferences } returns

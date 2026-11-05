@@ -158,7 +158,7 @@ class RoomHealthIngestionStoreReconcileTest {
 
     /**
      * WP-15: steps is now streamed/staged page-by-page like HR/HRV, and a denied or failed page
-     * never calls `markTypeScanComplete` (see `HealthIngestionCoordinator.streamSteps`) -- so the
+     * never calls `markTypeScanComplete` (see `DenseWindowStreamPhase.streamSteps`) -- so the
      * scan this reconcile call sees is still SCANNING, not COMPLETE. [StagedDeletionReconciler]
      * must bail out before touching `step_records` at all in that case: existing rows from a prior
      * successful scan must survive a denial/failure on the next one untouched.
