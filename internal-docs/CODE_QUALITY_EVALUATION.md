@@ -237,6 +237,10 @@ Phases run in order. Within a phase, PRs are independent and can land in any ord
 - Boundary tests cover 1899, 1900, the current year and next year, plus future dates.
 - No validation logic remains in composables.
 
+**Phase 3 outcome (2026-11-05).**
+- PR 3.1 shipped as `BirthdayBounds` in `core:model` (`SettingsValidators.birthdayBounds(clock)`). `BirthdayDateRule`, `OnboardingViewModel`, `PhysiologySettingsViewModel`, `BirthdayDatePickerField` and `OnboardingScreen` all take their limits from it. The `BackendClockArchitectureTest` birthday-picker allow-list entries are gone and both UI files are scanned.
+- PR 3.2 differed from §5.4.2 as written: the chart toggle/reorder handlers already forwarded to the generic `LayoutManagementDelegate`. What was still duplicated was the edit-mode state machine in `SleepTopCardManagementDelegate`, `SleepMetricCardManagementDelegate` and `CardManagementDelegate`. `LayoutManagementDelegate` gained an optional display-mode hook, the two Sleep delegates were deleted, and `CardManagementDelegate` is now a thin facade (card-id validation and Health Connect permission gating on persist) over it. The shared delegate stayed in `core:model` (pure Kotlin), not `core:ui`.
+
 ### Phase 4: Structural SRP/DI refactors on the data path
 *Risk: **high** (ingestion and scoring pipeline) · Behavior change: none permitted · Est. 3–4 PRs, one at a time*
 
