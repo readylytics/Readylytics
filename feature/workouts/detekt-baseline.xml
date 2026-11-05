@@ -2,7 +2,6 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>CyclomaticComplexMethod:AcwrChart.kt$@Composable private fun AcwrChart( trimpPoints: List&lt;DailyDataPoint&gt;, ratioPoints: List&lt;DailyDataPoint&gt;, rangeStartMs: Long, rangeDays: Int, scrollState: VicoScrollState, zoomState: VicoZoomState, modifier: Modifier = Modifier, parentScrollInProgress: () -&gt; Boolean = { false }, granularity: TrendGranularity = TrendGranularity.DAILY, )</ID>
     <ID>CyclomaticComplexMethod:RouteContourCard.kt$@Composable fun RouteContourCard( uiState: RouteUiState, onGrantPermissionClick: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>CyclomaticComplexMethod:TrimpBreakdownChart.kt$@Composable private fun HrChart( chartData: List&lt;Pair&lt;Double, Double&gt;&gt;, durationMinutes: Int, parentScrollInProgress: () -&gt; Boolean = { false }, )</ID>
     <ID>LongMethod:AcwrChart.kt$@Composable private fun AcwrChart( trimpPoints: List&lt;DailyDataPoint&gt;, ratioPoints: List&lt;DailyDataPoint&gt;, rangeStartMs: Long, rangeDays: Int, scrollState: VicoScrollState, zoomState: VicoZoomState, modifier: Modifier = Modifier, parentScrollInProgress: () -&gt; Boolean = { false }, granularity: TrendGranularity = TrendGranularity.DAILY, )</ID>
