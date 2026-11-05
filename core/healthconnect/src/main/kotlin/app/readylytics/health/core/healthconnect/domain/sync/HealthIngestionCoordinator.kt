@@ -1,6 +1,5 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
-import app.readylytics.health.core.model.domain.model.DomainStepsRecord
 import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.preferences.scoringZone
@@ -8,13 +7,11 @@ import app.readylytics.health.core.model.domain.repository.HealthConnectReposito
 import app.readylytics.health.core.model.domain.repository.HealthConnectWindowTimeoutException
 import app.readylytics.health.core.model.domain.repository.ReadOutcome
 import app.readylytics.health.core.model.domain.sync.CompleteTypeScan
-import app.readylytics.health.core.model.domain.sync.HealthIngestionBatch
 import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
 import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import app.readylytics.health.core.model.domain.sync.ScanIdentity
 import app.readylytics.health.core.model.domain.sync.ScanStagingStore
 import app.readylytics.health.core.model.domain.sync.ScoreInvalidation
-import app.readylytics.health.core.model.domain.sync.StepRecordInput
 import app.readylytics.health.core.model.domain.sync.TypeScanState
 import app.readylytics.health.core.model.domain.util.logD
 import java.time.Instant
@@ -56,7 +53,7 @@ class HealthIngestionCoordinator
         private val healthIngestionStore: HealthIngestionStore,
         private val staging: ScanStagingStore,
     ) {
-        private val streamer: HeartSampleStreamer = HeartSampleStreamer(hcRepo, healthIngestionStore, staging)
+        private val densePhase: DenseWindowStreamPhase = DenseWindowStreamPhase(hcRepo, healthIngestionStore, staging)
         private val bulkPhase: BulkWindowIngestPhase = BulkWindowIngestPhase(hcRepo, healthIngestionStore)
 
         suspend fun ingestWindow(
@@ -119,7 +116,7 @@ class HealthIngestionCoordinator
                         params.prefs,
                         params.retryBudget,
                     )
-                streamAndPersistDenseRecords(params, sessionContext)
+                densePhase.streamAll(params, sessionContext)
                 val scans = stageBulkScans(params, rawRecords)
                 val affectedRange =
                     if (params.reconcileDeletions) {
@@ -133,74 +130,6 @@ class HealthIngestionCoordinator
                     completedIntervalTypes = rawRecords.completedIntervalTypes,
                 )
             }
-        }
-
-        private suspend fun streamAndPersistDenseRecords(
-            params: IngestWindowParams,
-            sessionContext: IngestionSessionContext,
-        ) {
-            var pagesIngested = 0
-            val deviceByType = params.prefs.deviceByDataType
-            fun deviceFor(type: HealthDataType): String? = deviceByType[type.name]?.takeIf { it.isNotBlank() }
-
-            streamer.streamHeartRate(
-                params = params,
-                sessionContext = sessionContext,
-                device = deviceFor(HealthDataType.HEART_RATE),
-            ) {
-                pagesIngested++
-                params.onProgress?.invoke(ResyncPhase.INGEST, pagesIngested, 0)
-            }
-
-            streamer.streamHrv(
-                params = params,
-                sessionContext = sessionContext,
-                device = deviceFor(HealthDataType.HRV),
-            ) {
-                pagesIngested++
-                params.onProgress?.invoke(ResyncPhase.INGEST, pagesIngested, 0)
-            }
-
-            streamSteps(params, device = deviceFor(HealthDataType.STEPS)) {
-                pagesIngested++
-                params.onProgress?.invoke(ResyncPhase.INGEST, pagesIngested, 0)
-            }
-        }
-
-        /**
-         * Steps can be as dense as HR/HRV (a continuously-recorded day reaches tens of thousands of
-         * rows), so it is streamed page-by-page the same way (HC-001) rather than bulk-fetched with
-         * the low-cardinality vitals in [fetchBulkRecords]. Unlike HR/HRV, steps rows carry no
-         * session relationship, so each page is staged (raw, unfiltered ids -- WP-18) and persisted
-         * (device-filtered) directly, with no mapper/session lookup involved. The scan is only ever
-         * marked COMPLETE once the whole paged read succeeds (HC-005): a denied or failed page leaves
-         * it INCOMPLETE, so [HealthIngestionStore.reconcileWindow] never deletes rows against a
-         * partial id set.
-         */
-        private suspend fun streamSteps(
-            params: IngestWindowParams,
-            device: String?,
-            onPageDone: () -> Unit,
-        ): ReadOutcome<Unit> {
-            staging.beginTypeScan(params.scanIdentity, HealthDataType.STEPS, resume = false)
-            var persisted = 0
-            val outcome =
-                hcRepo.readStepsRecordsPaged(
-                    from = params.windowStart,
-                    to = params.windowEnd,
-                    retryScope = params.retryBudget,
-                ) { page ->
-                    staging.stageIds(params.scanIdentity, HealthDataType.STEPS, page.map { it.id })
-                    val filtered = DeviceSourceFilter.filterToDevice(page, device) { it.deviceName }
-                    healthIngestionStore.persist(stepsOnlyBatch(filtered))
-                    persisted += filtered.size
-                    onPageDone()
-                }
-            if (outcome is ReadOutcome.Available) {
-                staging.markTypeScanComplete(params.scanIdentity, HealthDataType.STEPS)
-            }
-            logD(TELEMETRY_TAG) { "[INGESTION] steps records persisted: $persisted" }
-            return outcome
         }
 
         private suspend fun reconcileDeletions(
@@ -278,7 +207,7 @@ class HealthIngestionCoordinator
 
         /**
          * HEART_RATE, HRV, and STEPS are streamed/staged page-by-page (not bulk-staged by [stage])
-         * via [streamAndPersistDenseRecords], so their scan only reaches [TypeScanState.COMPLETE]
+         * via [DenseWindowStreamPhase.streamAll], so their scan only reaches [TypeScanState.COMPLETE]
          * once the whole paged read has succeeded -- this just reads that already-settled state.
          */
         private suspend fun MutableList<CompleteTypeScan>.addPagedScans(
@@ -332,37 +261,10 @@ internal data class IngestWindowParams(
     val onTokenUpdated: (suspend (hrToken: String?, hrvToken: String?) -> Unit)?,
     val reconcileDeletions: Boolean,
     // HC-005/PERF-001: one bounded retry budget shared by every read of this window (the 8 bulk
-    // BulkWindowIngestPhase.fetchBulkRecords reads plus the HR/HRV/steps paged reads), replacing the old per-read +
-    // outer-window nested retryWithBackoff wrapping. Always fresh per ingestWindow call.
+    // BulkWindowIngestPhase.fetchBulkRecords reads plus the HR/HRV/steps paged reads), replacing the old
+    // per-read + outer-window nested retryWithBackoff wrapping. Always fresh per ingestWindow call.
     val retryBudget: ReadRetryBudget = ReadRetryBudget(),
 )
-
-/**
- * Minimal [HealthIngestionBatch] carrying only one page of steps rows -- used by
- * [HealthIngestionCoordinator.streamSteps] so each page commits independently instead of waiting
- * for the whole window's steps to be read (HC-001).
- */
-private fun stepsOnlyBatch(records: List<DomainStepsRecord>): HealthIngestionBatch =
-    HealthIngestionBatch(
-        sleepSessions = emptyList(),
-        sleepStages = emptyList(),
-        workouts = emptyList(),
-        weights = emptyList(),
-        bodyFatSamples = emptyList(),
-        bloodPressureSamples = emptyList(),
-        oxygenSaturationSamples = emptyList(),
-        bodyTemperatureSamples = emptyList(),
-        stepRecords =
-            records.map { record ->
-                StepRecordInput(
-                    id = record.id,
-                    startTime = record.startTime.toEpochMilli(),
-                    endTime = record.endTime.toEpochMilli(),
-                    count = record.count,
-                    deviceName = record.deviceName,
-                )
-            },
-    )
 
 private inline fun <T> ReadOutcome<List<T>>.toIds(crossinline idSelector: (T) -> String): ReadOutcome<List<String>> =
     when (this) {
