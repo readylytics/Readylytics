@@ -1,5 +1,7 @@
 package app.readylytics.health.core.database.domain.scoring.golden
 
+import app.readylytics.health.core.database.testutil.ScoringTestLoaders
+import app.readylytics.health.core.database.testutil.ScoringTestUseCases
 import app.readylytics.health.core.database.data.repository.ScoringRuntime
 import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import app.readylytics.health.core.database.testutil.createScoringRepositoryForTest
@@ -208,18 +210,22 @@ class WalkForwardCorrectionEquivalenceTest {
         val heartRateDataLoader = ScoringHeartRateDataLoader(db.heartRateDao(), db.minuteBucketDao())
         val scoringRepo =
             createScoringRepositoryForTest(
-                dataLoader = dataLoader,
-                bodyMetricsDataLoader = bodyMetricsLoader,
-                seriesLoader = seriesLoader,
-                heartRateDataLoader = heartRateDataLoader,
+                loaders = ScoringTestLoaders(
+                    dataLoader = dataLoader,
+                    bodyMetricsDataLoader = bodyMetricsLoader,
+                    seriesLoader = seriesLoader,
+                    heartRateDataLoader = heartRateDataLoader,
+                ),
+                useCases = ScoringTestUseCases(
+                    computeDailyTrimp = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
+                    resolveDailyBaselines = resolveDailyBaselinesUseCase,
+                    computeTrainingReadiness = ComputeTrainingReadinessUseCase(calculator),
+                ),
                 settingsRepo = settingsRepo,
                 baselineComputer = baselineComputer,
                 scoringConfigFactory = configFactory,
                 scoringHistoryRepository = historyRepo,
                 readinessSummaryCoordinator = readinessCoordinator,
-                computeDailyTrimp = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
-                resolveDailyBaselines = resolveDailyBaselinesUseCase,
-                computeTrainingReadiness = ComputeTrainingReadinessUseCase(calculator),
                 runtime = ScoringRuntime(UnconfinedTestDispatcher(), FIXED_TEST_CLOCK),
             )
         return DailyRecomputeSupport(scoringRepo, settingsRepo, RoomTransactionRunner(db), clock = FIXED_TEST_CLOCK)

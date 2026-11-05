@@ -1,5 +1,7 @@
 package app.readylytics.health.core.database.domain.scoring.golden
 
+import app.readylytics.health.core.database.testutil.ScoringTestLoaders
+import app.readylytics.health.core.database.testutil.ScoringTestUseCases
 import app.readylytics.health.core.database.data.repository.ScoringRuntime
 import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import app.readylytics.health.core.database.testutil.createScoringRepositoryForTest
@@ -81,18 +83,22 @@ internal class GoldenScoringRepositoryFactory(
                 assembleDailySummaryUseCase = AssembleDailySummaryUseCase(),
             )
         return createScoringRepositoryForTest(
-            dataLoader = loaders.day,
-            bodyMetricsDataLoader = loaders.bodyMetrics,
-            seriesLoader = loaders.series,
-            heartRateDataLoader = loaders.heartRate,
+            loaders = ScoringTestLoaders(
+                dataLoader = loaders.day,
+                bodyMetricsDataLoader = loaders.bodyMetrics,
+                seriesLoader = loaders.series,
+                heartRateDataLoader = loaders.heartRate,
+            ),
+            useCases = ScoringTestUseCases(
+                computeDailyTrimp = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
+                resolveDailyBaselines = resolveBaselines,
+                computeTrainingReadiness = ComputeTrainingReadinessUseCase(calculator),
+            ),
             settingsRepo = settingsRepository,
             baselineComputer = baseline,
             scoringConfigFactory = configFactory,
             scoringHistoryRepository = history,
             readinessSummaryCoordinator = readiness,
-            computeDailyTrimp = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
-            resolveDailyBaselines = resolveBaselines,
-            computeTrainingReadiness = ComputeTrainingReadinessUseCase(calculator),
             runtime = ScoringRuntime(UnconfinedTestDispatcher(), FIXED_TEST_CLOCK),
         )
     }

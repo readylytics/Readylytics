@@ -1,5 +1,7 @@
 package app.readylytics.health.core.database.data.repository
 
+import app.readylytics.health.core.database.testutil.ScoringTestLoaders
+import app.readylytics.health.core.database.testutil.ScoringTestUseCases
 import app.readylytics.health.core.database.testutil.createScoringRepositoryForTest
 import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
@@ -104,19 +106,23 @@ class ScoringRepositoryVo2MaxTest {
             )
         repo =
             createScoringRepositoryForTest(
-            dataLoader = dataLoader,
-            bodyMetricsDataLoader = bodyMetricsDataLoader,
-            seriesLoader = seriesLoader,
-            heartRateDataLoader = heartRateDataLoader,
-            settingsRepo = settingsRepo,
-            baselineComputer = baselineComputer,
-            scoringConfigFactory = scoringConfigFactory,
-            scoringHistoryRepository = scoringHistoryRepository,
-            readinessSummaryCoordinator = readinessSummaryCoordinator,
-            computeDailyTrimp = ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
-            resolveDailyBaselines = ResolveDailyBaselinesUseCase(baselineComputer),
-            computeTrainingReadiness = ComputeTrainingReadinessUseCase(scoringCalculator),
-        )
+                loaders = ScoringTestLoaders(
+                    dataLoader = dataLoader,
+                    bodyMetricsDataLoader = bodyMetricsDataLoader,
+                    seriesLoader = seriesLoader,
+                    heartRateDataLoader = heartRateDataLoader,
+                ),
+                useCases = ScoringTestUseCases(
+                    computeDailyTrimp = ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
+                    resolveDailyBaselines = ResolveDailyBaselinesUseCase(baselineComputer),
+                    computeTrainingReadiness = ComputeTrainingReadinessUseCase(scoringCalculator),
+                ),
+                settingsRepo = settingsRepo,
+                baselineComputer = baselineComputer,
+                scoringConfigFactory = scoringConfigFactory,
+                scoringHistoryRepository = scoringHistoryRepository,
+                readinessSummaryCoordinator = readinessSummaryCoordinator,
+            )
     }
 
     @Test

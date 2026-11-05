@@ -1,4 +1,6 @@
 package app.readylytics.health.core.database.domain.scoring.golden
+import app.readylytics.health.core.database.testutil.ScoringTestLoaders
+import app.readylytics.health.core.database.testutil.ScoringTestUseCases
 import app.readylytics.health.core.database.testutil.createScoringRepositoryForTest
 import app.readylytics.health.core.database.data.repository.ScoringRuntime
 import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
@@ -220,19 +222,23 @@ class GoldenFixtureWalkForwardTest {
 
             val scoringRepository =
                 createScoringRepositoryForTest(
-            dataLoader = dataLoader,
-            bodyMetricsDataLoader = bodyMetricsDataLoader,
-            seriesLoader = seriesLoader,
-            heartRateDataLoader = heartRateDataLoader,
-            settingsRepo = settingsRepo,
-            baselineComputer = baselineComputer,
-            scoringConfigFactory = scoringConfigFactory,
-            scoringHistoryRepository = scoringHistoryRepository,
-            readinessSummaryCoordinator = readinessSummaryCoordinator,
-            computeDailyTrimp = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
-            resolveDailyBaselines = resolveDailyBaselinesUseCase,
-            computeTrainingReadiness = ComputeTrainingReadinessUseCase(scoringCalculator),
-        )
+                    loaders = ScoringTestLoaders(
+                        dataLoader = dataLoader,
+                        bodyMetricsDataLoader = bodyMetricsDataLoader,
+                        seriesLoader = seriesLoader,
+                        heartRateDataLoader = heartRateDataLoader,
+                    ),
+                    useCases = ScoringTestUseCases(
+                        computeDailyTrimp = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
+                        resolveDailyBaselines = resolveDailyBaselinesUseCase,
+                        computeTrainingReadiness = ComputeTrainingReadinessUseCase(scoringCalculator),
+                    ),
+                    settingsRepo = settingsRepo,
+                    baselineComputer = baselineComputer,
+                    scoringConfigFactory = scoringConfigFactory,
+                    scoringHistoryRepository = scoringHistoryRepository,
+                    readinessSummaryCoordinator = readinessSummaryCoordinator,
+                )
             // WP-11/HC-006 fix: this fixture's stage-less-night scenario (`stageLessNightDate`)
             // seeds a SleepSessionEntity with durationMinutes = 0 directly (mirroring a session
             // ingested before ScoringRepositoryImpl.toSleepDaySegment's defensive raw-span

@@ -1,5 +1,7 @@
 package app.readylytics.health.core.database.data.repository
 
+import app.readylytics.health.core.database.testutil.ScoringTestLoaders
+import app.readylytics.health.core.database.testutil.ScoringTestUseCases
 import app.readylytics.health.core.database.testutil.createScoringRepositoryForTest
 import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import androidx.room.Room
@@ -552,18 +554,22 @@ class ResidualFatigueScoringIntegrityTest {
         val coordinator = createReadinessCoordinator(components)
 
         return createScoringRepositoryForTest(
-            dataLoader = dataLoader,
-            bodyMetricsDataLoader = bodyMetricsDataLoader,
-            seriesLoader = seriesLoader,
-            heartRateDataLoader = heartRateDataLoader,
+            loaders = ScoringTestLoaders(
+                dataLoader = dataLoader,
+                bodyMetricsDataLoader = bodyMetricsDataLoader,
+                seriesLoader = seriesLoader,
+                heartRateDataLoader = heartRateDataLoader,
+            ),
+            useCases = ScoringTestUseCases(
+                computeDailyTrimp = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
+                resolveDailyBaselines = ResolveDailyBaselinesUseCase(baselineComputer),
+                computeTrainingReadiness = ComputeTrainingReadinessUseCase(scoringCalculator),
+            ),
             settingsRepo = settingsRepo,
             baselineComputer = baselineComputer,
             scoringConfigFactory = scoringConfigFactory,
             scoringHistoryRepository = scoringHistoryRepository,
             readinessSummaryCoordinator = coordinator,
-            computeDailyTrimp = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
-            resolveDailyBaselines = ResolveDailyBaselinesUseCase(baselineComputer),
-            computeTrainingReadiness = ComputeTrainingReadinessUseCase(scoringCalculator),
         )
     }
 

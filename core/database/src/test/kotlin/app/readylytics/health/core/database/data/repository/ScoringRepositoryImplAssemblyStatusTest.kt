@@ -1,5 +1,7 @@
 package app.readylytics.health.core.database.data.repository
 
+import app.readylytics.health.core.database.testutil.ScoringTestLoaders
+import app.readylytics.health.core.database.testutil.ScoringTestUseCases
 import app.readylytics.health.core.database.testutil.createScoringRepositoryForTest
 import app.readylytics.health.core.database.testutil.RecommendationTestDeps
 import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
@@ -128,18 +130,22 @@ class ScoringRepositoryImplAssemblyStatusTest {
                 AssembleDailySummaryUseCase(),
             )
         return createScoringRepositoryForTest(
-            dataLoader = dataLoader,
-            bodyMetricsDataLoader = bodyMetricsDataLoader,
-            seriesLoader = seriesLoader,
-            heartRateDataLoader = heartRateDataLoader,
+            loaders = ScoringTestLoaders(
+                dataLoader = dataLoader,
+                bodyMetricsDataLoader = bodyMetricsDataLoader,
+                seriesLoader = seriesLoader,
+                heartRateDataLoader = heartRateDataLoader,
+            ),
+            useCases = ScoringTestUseCases(
+                computeDailyTrimp = ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
+                resolveDailyBaselines = ResolveDailyBaselinesUseCase(baselineComputer),
+                computeTrainingReadiness = ComputeTrainingReadinessUseCase(scoringCalculator),
+            ),
             settingsRepo = settingsRepo,
             baselineComputer = baselineComputer,
             scoringConfigFactory = scoringConfigFactory,
             scoringHistoryRepository = scoringHistoryRepository,
             readinessSummaryCoordinator = readinessSummaryCoordinator,
-            computeDailyTrimp = ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
-            resolveDailyBaselines = ResolveDailyBaselinesUseCase(baselineComputer),
-            computeTrainingReadiness = ComputeTrainingReadinessUseCase(scoringCalculator),
             runtime = ScoringRuntime(dispatcher, FIXED_TEST_CLOCK),
             recommendation = RecommendationTestDeps(
                 sleepSessionRepository = sleepSessionRepository,
