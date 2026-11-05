@@ -77,6 +77,7 @@ class PhysiologySettingsViewModel
                         physiologyProfile = prefs.physiologyProfile,
                         age = prefs.age,
                         birthDate = birthDate,
+                        birthdayBounds = SettingsValidators.birthdayBounds(clock.withZone(prefs.scoringZone())),
                         gender = prefs.gender,
                         heightCm = prefs.heightCm,
                         unitSystem = prefs.unitSystem,
@@ -86,7 +87,7 @@ class PhysiologySettingsViewModel
                 }.stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5000),
-                    initialValue = PhysiologySettingsState(),
+                    initialValue = PhysiologySettingsState(birthdayBounds = SettingsValidators.birthdayBounds(clock)),
                 )
 
         fun onEvent(event: SettingsEvent) {

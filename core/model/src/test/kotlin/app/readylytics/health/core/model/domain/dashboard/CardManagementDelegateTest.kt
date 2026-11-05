@@ -363,6 +363,55 @@ class CardManagementDelegateTest {
         }
 
     @Test
+    fun `reset then save strips steps when steps permission is denied`() =
+        testScope.runTest {
+            assertTrue(SettingsDefaults.DEFAULT_DASHBOARD_CARDS.any { it.cardId == CardId.STEPS })
+            val gated =
+                CardManagementDelegate(
+                    defaultConfigurations = SettingsDefaults.DEFAULT_DASHBOARD_CARDS,
+                    persist = { persistedConfigs += it },
+                    scope = delegateScope,
+                    hasStepsPermission = { false },
+                )
+            gated.enterEditMode(sampleConfigs)
+            gated.onResetToDefaults()
+            gated.saveChanges()
+            advanceUntilIdle()
+            assertTrue(persistedConfigs.single().none { it.cardId == CardId.STEPS })
+            assertTrue(persistedConfigs.single().any { it.cardId == CardId.SLEEP_SCORE })
+        }
+
+    @Test
+    fun `display mode change applies to pending configs and is persisted on save`() =
+        testScope.runTest {
+            delegate.enterEditMode(sampleConfigs)
+            delegate.onEvent(CardManagementEvent.DisplayModeChanged(CardId.READINESS, DashboardCardDisplayMode.BAR))
+            assertEquals(
+                DashboardCardDisplayMode.BAR,
+                delegate.pendingConfigs.value!!.first { it.cardId == CardId.READINESS }.requestedDisplayMode,
+            )
+            assertNull(delegate.pendingConfigs.value!!.first { it.cardId == CardId.SLEEP_SCORE }.requestedDisplayMode)
+            delegate.saveChanges()
+            advanceUntilIdle()
+            assertEquals(
+                DashboardCardDisplayMode.BAR,
+                persistedConfigs.single().first { it.cardId == CardId.READINESS }.requestedDisplayMode,
+            )
+        }
+
+    @Test
+    fun `display mode change outside edit mode is ignored`() {
+        delegate.onEvent(CardManagementEvent.DisplayModeChanged(CardId.READINESS, DashboardCardDisplayMode.BAR))
+        assertNull(delegate.pendingConfigs.value)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `display mode change for unknown card throws`() {
+        delegate.enterEditMode(sampleConfigs)
+        delegate.onEvent(CardManagementEvent.DisplayModeChanged(CardId.STEPS, DashboardCardDisplayMode.BAR))
+    }
+
+    @Test
     fun `reset then save strips body temperature from persisted configs when permission is denied`() =
         testScope.runTest {
             // Reset to defaults writes the raw SettingsDefaults.DEFAULT_DASHBOARD_CARDS (which

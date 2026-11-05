@@ -9,10 +9,8 @@ import app.readylytics.health.core.model.domain.sleep.SleepChartId
 import app.readylytics.health.core.model.domain.sleep.SleepLayoutRepository
 import app.readylytics.health.core.model.domain.sleep.SleepMetricCardConfiguration
 import app.readylytics.health.core.model.domain.sleep.SleepMetricCardId
-import app.readylytics.health.core.model.domain.sleep.SleepMetricCardManagementDelegate
 import app.readylytics.health.core.model.domain.sleep.SleepTopCardConfiguration
 import app.readylytics.health.core.model.domain.sleep.SleepTopCardId
-import app.readylytics.health.core.model.domain.sleep.SleepTopCardManagementDelegate
 import app.readylytics.health.feature.sleep.overview.createSleepChartStateFlow
 import app.readylytics.health.feature.sleep.overview.createSleepMetricCardStateFlow
 import app.readylytics.health.feature.sleep.overview.createSleepTopCardStateFlow
@@ -41,10 +39,13 @@ class SleepLayoutDelegate(
     scope: CoroutineScope,
 ) {
     private val sleepTopCardManagementDelegate =
-        SleepTopCardManagementDelegate(
+        LayoutManagementDelegate(
             defaultConfigurations = SettingsDefaults.DEFAULT_SLEEP_TOP_CARDS,
             persist = sleepLayoutRepository::updateSleepTopCardConfigurations,
             scope = scope,
+            withVisibility = { config, visible -> config.copy(isVisible = visible) },
+            withPosition = { config, pos -> config.copy(position = pos) },
+            withDisplayMode = { config, mode -> config.copy(requestedDisplayMode = mode) },
         )
 
     private val sleepChartManagementDelegate =
@@ -57,10 +58,13 @@ class SleepLayoutDelegate(
         )
 
     private val sleepMetricCardManagementDelegate =
-        SleepMetricCardManagementDelegate(
+        LayoutManagementDelegate(
             defaultConfigurations = SettingsDefaults.DEFAULT_SLEEP_METRIC_CARDS,
             persist = sleepLayoutRepository::updateSleepMetricCardConfigurations,
             scope = scope,
+            withVisibility = { config, visible -> config.copy(isVisible = visible) },
+            withPosition = { config, pos -> config.copy(position = pos) },
+            withDisplayMode = { config, mode -> config.copy(requestedDisplayMode = mode) },
         )
 
     internal val sleepTopCardStateFlow =

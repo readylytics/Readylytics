@@ -6,9 +6,9 @@ import app.readylytics.health.core.model.domain.sleep.SleepChartConfiguration
 import app.readylytics.health.core.model.domain.sleep.SleepChartId
 import app.readylytics.health.core.model.domain.sleep.SleepLayoutRepository
 import app.readylytics.health.core.model.domain.sleep.SleepMetricCardConfiguration
-import app.readylytics.health.core.model.domain.sleep.SleepMetricCardManagementDelegate
+import app.readylytics.health.core.model.domain.sleep.SleepMetricCardId
 import app.readylytics.health.core.model.domain.sleep.SleepTopCardConfiguration
-import app.readylytics.health.core.model.domain.sleep.SleepTopCardManagementDelegate
+import app.readylytics.health.core.model.domain.sleep.SleepTopCardId
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 
@@ -31,7 +31,7 @@ internal data class SleepMetricCardState(
 )
 
 internal fun createSleepTopCardStateFlow(
-    delegate: SleepTopCardManagementDelegate,
+    delegate: LayoutManagementDelegate<SleepTopCardConfiguration, SleepTopCardId>,
     repository: SleepLayoutRepository,
 ): Flow<SleepTopCardState> =
     combine(
@@ -61,7 +61,7 @@ internal fun createSleepChartStateFlow(
     }
 
 internal fun createSleepMetricCardStateFlow(
-    delegate: SleepMetricCardManagementDelegate,
+    delegate: LayoutManagementDelegate<SleepMetricCardConfiguration, SleepMetricCardId>,
     repository: SleepLayoutRepository,
 ): Flow<SleepMetricCardState> =
     combine(

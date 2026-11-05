@@ -2,6 +2,7 @@ package app.readylytics.health.feature.onboarding
 
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.data.preferences.UnitSystem
+import app.readylytics.health.core.model.domain.validation.BirthdayBounds
 import java.time.LocalDate
 
 /**
@@ -10,6 +11,7 @@ import java.time.LocalDate
  */
 internal data class ProfileSetupState(
     val birthDate: LocalDate,
+    val birthdayBounds: BirthdayBounds,
     val onBirthDateChange: (LocalDate) -> Unit,
     val showBirthdatePicker: Boolean,
     val onShowBirthdatePickerChange: (Boolean) -> Unit,

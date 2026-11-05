@@ -16,6 +16,7 @@ import app.readylytics.health.core.model.domain.preferences.Vo2MaxSourceMode
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
+import app.readylytics.health.core.model.domain.validation.BirthdayBounds
 import app.readylytics.health.core.ui.common.UiText
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -55,6 +56,7 @@ data class PhysiologySettingsState(
     val physiologyProfile: PhysiologyProfile = SettingsDefaults.PHYSIOLOGY_PROFILE,
     val age: Int = SettingsDefaults.AGE,
     val birthDate: LocalDate? = null,
+    val birthdayBounds: BirthdayBounds,
     val gender: Gender? = null,
     val heightCm: Float? = SettingsDefaults.HEIGHT_CM,
     val unitSystem: UnitSystem = UnitSystem.METRIC,

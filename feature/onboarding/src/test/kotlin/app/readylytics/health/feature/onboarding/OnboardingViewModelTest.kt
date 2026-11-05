@@ -262,6 +262,29 @@ class OnboardingViewModelTest {
         assert(!completed) { "onComplete should not be called with future date" }
     }
 
+    @Test
+    fun saveProfile_preNineteenHundredDate_doesNotCallRepository() {
+        var completed = false
+        viewModel.saveProfile(
+            birthDate = LocalDate.of(1899, 12, 31),
+            gender = "Male",
+            physiologyProfile = PhysiologyProfile.ATHLETE,
+            dynamicColorEnabled = true,
+            unitSystem = UnitSystem.METRIC,
+            heightCm = 175f,
+            onComplete = { completed = true },
+        )
+        coVerify(timeout = 100, inverse = true) { physiologySettings.updateBirthday(any()) }
+        assert(!completed) { "onComplete should not be called with a pre-1900 date" }
+    }
+
+    @Test
+    fun birthdayBounds_reflectsInjectedClock() {
+        val bounds = viewModel.birthdayBounds()
+        assert(bounds.yearRange == 1900..2026) { "year range should end at the clock year" }
+        assert(bounds.maxDate == LocalDate.of(2026, 6, 15)) { "maxDate should be the clock date" }
+    }
+
     // ─── saveRetention ───────────────────────────────────────────────────────
     @Test
     fun saveRetention_validRetention_callsRepository() {

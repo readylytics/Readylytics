@@ -37,6 +37,7 @@ internal fun ProfileSetupContent(state: ProfileSetupState) {
         // Birthday and gender fields
         BirthdayAndGenderFields(
             birthDate = state.birthDate,
+            birthdayBounds = state.birthdayBounds,
             onBirthDateChange = state.onBirthDateChange,
             showBirthdatePicker = state.showBirthdatePicker,
             onShowBirthdatePickerChange = state.onShowBirthdatePickerChange,
@@ -64,6 +65,7 @@ internal fun ProfileSetupContent(state: ProfileSetupState) {
         // Submit button
         ProfileSetupSubmitButton(
             birthDate = state.birthDate,
+            birthdayBounds = state.birthdayBounds,
             heightHasError = state.heightHasError,
             onSubmit = state.onSubmit,
         )

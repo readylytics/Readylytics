@@ -25,12 +25,15 @@ import androidx.compose.ui.res.stringResource
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.data.preferences.UnitSystem
+import app.readylytics.health.core.model.domain.validation.BirthdayBounds
 import app.readylytics.health.core.ui.components.SettingsToggleItem
 import app.readylytics.health.core.ui.components.settings.BirthdayDatePickerField
 import app.readylytics.health.core.ui.settings.common.UnitSystemSelector
 import app.readylytics.health.feature.onboarding.R
 import java.time.LocalDate
 import app.readylytics.health.core.ui.R as CoreR
+
+private const val DEFAULT_AGE_YEARS = 30L
 
 @Composable
 fun OnboardingScreen(
@@ -39,6 +42,7 @@ fun OnboardingScreen(
     onOpenSettingsClick: () -> Unit,
     permissions: OnboardingPermissionsState,
     restoreCallbacks: OnboardingRestoreCallbacks,
+    birthdayBounds: BirthdayBounds,
     modifier: Modifier = Modifier,
 ) {
     var step by rememberSaveable { mutableIntStateOf(0) }
@@ -68,6 +72,7 @@ fun OnboardingScreen(
                 )
             else ->
                 ProfileSetupScreen(
+                    birthdayBounds = birthdayBounds,
                     onNextClick = { result ->
                         onProfileSetupComplete(result) {
                             step = 3
@@ -79,8 +84,11 @@ fun OnboardingScreen(
 }
 
 @Composable
-private fun ProfileSetupScreen(onNextClick: (result: ProfileSetupResult) -> Unit) {
-    var birthDate by remember { mutableStateOf(LocalDate.now().minusYears(30)) }
+private fun ProfileSetupScreen(
+    birthdayBounds: BirthdayBounds,
+    onNextClick: (result: ProfileSetupResult) -> Unit,
+) {
+    var birthDate by remember { mutableStateOf(birthdayBounds.maxDate.minusYears(DEFAULT_AGE_YEARS)) }
     var showBirthdatePicker by remember { mutableStateOf(false) }
     var gender by remember { mutableStateOf("Other") }
     var physiologyProfile by remember { mutableStateOf(PhysiologyProfile.ACTIVE) }
@@ -105,6 +113,7 @@ private fun ProfileSetupScreen(onNextClick: (result: ProfileSetupResult) -> Unit
     val state =
         ProfileSetupState(
             birthDate = birthDate,
+            birthdayBounds = birthdayBounds,
             onBirthDateChange = { birthDate = it },
             showBirthdatePicker = showBirthdatePicker,
             onShowBirthdatePickerChange = { showBirthdatePicker = it },
@@ -149,13 +158,11 @@ internal fun ProfileSetupHeader() {
 @Composable
 internal fun ProfileSetupSubmitButton(
     birthDate: LocalDate,
+    birthdayBounds: BirthdayBounds,
     heightHasError: Boolean,
     onSubmit: () -> Unit,
 ) {
-    val isInputValid =
-        !birthDate.isAfter(LocalDate.now()) &&
-            birthDate.year in 1900..LocalDate.now().year &&
-            !heightHasError
+    val isInputValid = birthDate in birthdayBounds && !heightHasError
 
     Button(
         onClick = onSubmit,
@@ -169,6 +176,7 @@ internal fun ProfileSetupSubmitButton(
 @Composable
 internal fun BirthdayAndGenderFields(
     birthDate: LocalDate,
+    birthdayBounds: BirthdayBounds,
     onBirthDateChange: (LocalDate) -> Unit,
     showBirthdatePicker: Boolean,
     onShowBirthdatePickerChange: (Boolean) -> Unit,
@@ -177,6 +185,7 @@ internal fun BirthdayAndGenderFields(
 ) {
     BirthdayDatePickerField(
         birthDate = birthDate,
+        bounds = birthdayBounds,
         onDateSelected = onBirthDateChange,
         showDialog = showBirthdatePicker,
         onDialogDismiss = { onShowBirthdatePickerChange(false) },

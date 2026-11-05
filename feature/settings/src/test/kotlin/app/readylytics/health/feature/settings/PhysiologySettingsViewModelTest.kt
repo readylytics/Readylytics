@@ -23,6 +23,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
@@ -86,6 +87,18 @@ class PhysiologySettingsViewModelTest {
             advanceUntilIdle()
 
             assertNull(viewModel.uiState.value.birthDate)
+            job.cancel()
+        }
+
+    @Test
+    fun `uiState birthdayBounds follows scoring zone`() =
+        runTest(testDispatcher) {
+            // Clock is 2026-01-01 00:30 in Honolulu but already 2026-01-02 00:30 in Kiritimati (scoring zone).
+            val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
+            advanceUntilIdle()
+
+            assertEquals(LocalDate.of(2026, 1, 2), viewModel.uiState.value.birthdayBounds.maxDate)
+            assertEquals(1900..2026, viewModel.uiState.value.birthdayBounds.yearRange)
             job.cancel()
         }
 

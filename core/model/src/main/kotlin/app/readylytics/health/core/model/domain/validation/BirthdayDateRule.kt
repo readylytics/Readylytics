@@ -9,12 +9,11 @@ class BirthdayDateRule(
     override val errorMessage: String = "Birthday must be in the past"
 
     override fun validate(value: LocalDate): ValidationResult {
-        val today = LocalDate.now(clock)
-        val minYear = 1900
+        val bounds = BirthdayBounds.at(clock)
 
         return when {
-            value > today -> ValidationResult.Invalid(errorMessage)
-            value.year < minYear -> ValidationResult.Invalid("Year must be 1900 or later")
+            value > bounds.maxDate -> ValidationResult.Invalid(errorMessage)
+            value.year < bounds.minYear -> ValidationResult.Invalid("Year must be ${bounds.minYear} or later")
             else -> ValidationResult.Valid
         }
     }
