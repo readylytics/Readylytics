@@ -1,6 +1,7 @@
 package app.readylytics.health.feature.dashboard.usecase
 
 import app.readylytics.health.core.model.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.model.DailyMetrics
 import app.readylytics.health.core.model.domain.model.DailyMetricsMapper
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.model.SleepSessionSummary
@@ -68,29 +69,12 @@ class DashboardMetricPresentationFactory
             val scoreMaximumText = resourceProvider.getString(CoreUiR.string.score_maximum)
             val m = if (summary != null) DailyMetricsMapper.toMetrics(summary, preferences) else null
 
-            val hrvAssessment =
-                assessHrv(
-                    value = summary?.nocturnalHrv,
-                    baseline = m?.hrvBaselineRounded,
-                    optimalRatio = preferences.hrvOptimalThreshold,
-                    warningRatio = preferences.hrvWarningThreshold,
-                )
-            val rhrAssessment =
-                assessRhr(
-                    value = summary?.restingHeartRate,
-                    baseline = m?.rhrBaselineRounded,
-                    optimalRatio = preferences.rhrOptimalThreshold,
-                    warningRatio = preferences.rhrWarningThreshold,
-                )
-
             map.putAll(
-                recoveryFactory.build(
+                buildRecoveryMap(
                     summary = summary,
                     metrics = m,
                     preferences = preferences,
                     lastSleepSession = lastSleepSession,
-                    hrvAssessment = hrvAssessment,
-                    rhrAssessment = rhrAssessment,
                     todayRasIncrease = todayRasIncrease,
                 ),
             )
@@ -102,14 +86,6 @@ class DashboardMetricPresentationFactory
                     unavailableValueText = unavailableValueText,
                     scoreMaximumText = scoreMaximumText,
                     todayStrainIncrease = todayStrainIncrease,
-                ),
-            )
-
-            map.putAll(
-                bodyCompositionFactory.build(
-                    summary = summary,
-                    preferences = preferences,
-                    unavailableValueText = unavailableValueText,
                 ),
             )
 
@@ -133,6 +109,65 @@ class DashboardMetricPresentationFactory
                 ),
             )
 
+            map.putAll(
+                buildOtherPresentations(
+                    summary = summary,
+                    preferences = preferences,
+                    unavailableValueText = unavailableValueText,
+                    liveResidualFatigue = liveResidualFatigue,
+                ),
+            )
+
+            return map
+        }
+
+        private fun buildRecoveryMap(
+            summary: DailySummary?,
+            metrics: DailyMetrics?,
+            preferences: UserPreferences,
+            lastSleepSession: SleepSessionSummary?,
+            todayRasIncrease: Float?,
+        ): Map<CardId, UniversalMetricPresentation> {
+            val hrvAssessment =
+                assessHrv(
+                    value = summary?.nocturnalHrv,
+                    baseline = metrics?.hrvBaselineRounded,
+                    optimalRatio = preferences.hrvOptimalThreshold,
+                    warningRatio = preferences.hrvWarningThreshold,
+                )
+            val rhrAssessment =
+                assessRhr(
+                    value = summary?.restingHeartRate,
+                    baseline = metrics?.rhrBaselineRounded,
+                    optimalRatio = preferences.rhrOptimalThreshold,
+                    warningRatio = preferences.rhrWarningThreshold,
+                )
+
+            return recoveryFactory.build(
+                summary = summary,
+                metrics = metrics,
+                preferences = preferences,
+                lastSleepSession = lastSleepSession,
+                hrvAssessment = hrvAssessment,
+                rhrAssessment = rhrAssessment,
+                todayRasIncrease = todayRasIncrease,
+            )
+        }
+
+        private fun buildOtherPresentations(
+            summary: DailySummary?,
+            preferences: UserPreferences,
+            unavailableValueText: String,
+            liveResidualFatigue: LiveResidualFatigue,
+        ): Map<CardId, UniversalMetricPresentation> {
+            val map = mutableMapOf<CardId, UniversalMetricPresentation>()
+            map.putAll(
+                bodyCompositionFactory.build(
+                    summary = summary,
+                    preferences = preferences,
+                    unavailableValueText = unavailableValueText,
+                ),
+            )
             map[CardId.RESIDUAL_FATIGUE] =
                 residualFatiguePresentationFactory.build(
                     summary = summary,
@@ -140,7 +175,6 @@ class DashboardMetricPresentationFactory
                     unavailableValueText = unavailableValueText,
                     liveResidualFatigue = liveResidualFatigue,
                 )
-
             map.putAll(
                 cardioFactory.build(
                     summary = summary,
@@ -148,7 +182,6 @@ class DashboardMetricPresentationFactory
                     unavailableValueText = unavailableValueText,
                 ),
             )
-
             return map
         }
     }
