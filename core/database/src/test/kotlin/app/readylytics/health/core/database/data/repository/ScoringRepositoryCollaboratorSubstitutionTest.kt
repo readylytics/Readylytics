@@ -9,8 +9,10 @@ import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.scoring.DayAssembly
 import app.readylytics.health.core.model.domain.scoring.DayAssemblyUnavailableReason
 import io.mockk.coEvery
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -95,14 +97,26 @@ class ScoringRepositoryCollaboratorSubstitutionTest {
         }
 
     @Test
-    fun computeAndPersistDailySummary_persistAccepted_commitsOnce() =
+    fun computeAndPersistDailySummary_persistAccepted_commitsOnceAfterPersist() =
         runTest {
-            coEvery { dayAssembler.computeDay(date, any(), any(), any()) } returns computedDay(genuineAssembly())
+            val commit = mockk<() -> Unit>(relaxed = true)
+            coEvery { dayAssembler.computeDay(date, any(), any(), any()) } returns
+                ComputedDay(
+                    assembly = genuineAssembly(),
+                    workouts = emptyList(),
+                    workoutUpdates = emptyList(),
+                    commitWalkForwardContexts = commit,
+                )
             coEvery { dataLoader.persistDayAssembly(any(), any(), any(), any(), any()) } returns true
 
             createRepo().computeAndPersistDailySummary(date)
 
-            assertEquals(1, commitCount.get())
+            // Pins the "commit only after persist" ordering directly, not just the commit count.
+            coVerifyOrder {
+                dataLoader.persistDayAssembly(any(), any(), any(), any(), any())
+                commit.invoke()
+            }
+            verify(exactly = 1) { commit.invoke() }
         }
 
     @Test
