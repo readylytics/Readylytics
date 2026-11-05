@@ -1,4 +1,5 @@
 package app.readylytics.health.core.database.domain.scoring
+import app.readylytics.health.core.database.testutil.createScoringRepositoryForTest
 import app.readylytics.health.core.database.data.repository.ScoringRuntime
 import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
@@ -256,39 +257,20 @@ class ScoringRepositoryN1Test {
             )
 
         repo =
-            ScoringRepositoryImpl(
-                loaders = ScoringDataLoaders(
-                    dataLoader,
-                    bodyMetricsDataLoader,
-                    seriesLoader,
-                    heartRateDataLoader,
-                ),
-                settingsRepo = settingsRepo,
-                baselineComputer = baselineComputer,
-                scoringConfigFactory = scoringConfigFactory,
-                useCases =
-                    ScoringDayUseCases(
-                        ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
-                        ComputeResidualFatigueUseCase(),
-                        resolveDailyBaselinesUseCase,
-                        AssembleEverydayLoadInputUseCase(),
-                        ComputeTrainingReadinessUseCase(scoringCalculator),
-                        UthVo2MaxCalculator(),
-                        Vo2MaxSourceResolver(),
-                    ),
-                scoringHistoryRepository = scoringHistoryRepository,
-                readinessSummaryCoordinator = readinessSummaryCoordinator,
-                runtime = ScoringRuntime(UnconfinedTestDispatcher(), FIXED_TEST_CLOCK),
-                recommendationDependencies =
-                    MorningRecommendationDependencies(
-                        sleepSessionRepository = mockk(relaxed = true),
-                        computeSleepMetricsUseCase = mockk(relaxed = true),
-                        hrvResolver = mockk(relaxed = true),
-                        workoutRepository = mockk(relaxed = true),
-                        dailySummaryRepository = mockk(relaxed = true),
-                        getWorkoutDisplayMetricsUseCase = mockk(relaxed = true),
-                    ),
-            )
+            createScoringRepositoryForTest(
+            dataLoader = dataLoader,
+            bodyMetricsDataLoader = bodyMetricsDataLoader,
+            seriesLoader = seriesLoader,
+            heartRateDataLoader = heartRateDataLoader,
+            settingsRepo = settingsRepo,
+            baselineComputer = baselineComputer,
+            scoringConfigFactory = scoringConfigFactory,
+            scoringHistoryRepository = scoringHistoryRepository,
+            readinessSummaryCoordinator = readinessSummaryCoordinator,
+            computeDailyTrimp = ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
+            resolveDailyBaselines = resolveDailyBaselinesUseCase,
+            computeTrainingReadiness = ComputeTrainingReadinessUseCase(scoringCalculator),
+        )
     }
 
     @Test

@@ -2,6 +2,7 @@ package app.readylytics.health.core.database.domain.scoring.golden
 
 import app.readylytics.health.core.database.data.repository.ScoringRuntime
 import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
+import app.readylytics.health.core.database.testutil.createScoringRepositoryForTest
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -206,16 +207,20 @@ class WalkForwardCorrectionEquivalenceTest {
             )
         val heartRateDataLoader = ScoringHeartRateDataLoader(db.heartRateDao(), db.minuteBucketDao())
         val scoringRepo =
-            ScoringRepositoryImpl(
-                loaders = ScoringDataLoaders(dataLoader, bodyMetricsLoader, seriesLoader, heartRateDataLoader),
+            createScoringRepositoryForTest(
+                dataLoader = dataLoader,
+                bodyMetricsDataLoader = bodyMetricsLoader,
+                seriesLoader = seriesLoader,
+                heartRateDataLoader = heartRateDataLoader,
                 settingsRepo = settingsRepo,
                 baselineComputer = baselineComputer,
                 scoringConfigFactory = configFactory,
-                useCases = createScoringDayUseCases(resolveDailyBaselinesUseCase, calculator),
                 scoringHistoryRepository = historyRepo,
                 readinessSummaryCoordinator = readinessCoordinator,
+                computeDailyTrimp = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
+                resolveDailyBaselines = resolveDailyBaselinesUseCase,
+                computeTrainingReadiness = ComputeTrainingReadinessUseCase(calculator),
                 runtime = ScoringRuntime(UnconfinedTestDispatcher(), FIXED_TEST_CLOCK),
-                recommendationDependencies = createRecommendationDependencies(),
             )
         return DailyRecomputeSupport(scoringRepo, settingsRepo, RoomTransactionRunner(db), clock = FIXED_TEST_CLOCK)
     }
@@ -230,29 +235,6 @@ class WalkForwardCorrectionEquivalenceTest {
         val dataLoader: ScoringDayDataLoader,
         val seriesLoader: ScoringSeriesLoader,
     )
-
-    private fun createScoringDayUseCases(
-        resolveBaselines: ResolveDailyBaselinesUseCase,
-        calculator: CompositeScoringCalculator,
-    ) = ScoringDayUseCases(
-        ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
-        ComputeResidualFatigueUseCase(),
-        resolveBaselines,
-        AssembleEverydayLoadInputUseCase(),
-        ComputeTrainingReadinessUseCase(calculator),
-        UthVo2MaxCalculator(),
-        Vo2MaxSourceResolver(),
-    )
-
-    private fun createRecommendationDependencies() =
-        MorningRecommendationDependencies(
-            sleepSessionRepository = io.mockk.mockk(relaxed = true),
-            computeSleepMetricsUseCase = io.mockk.mockk(relaxed = true),
-            hrvResolver = io.mockk.mockk(relaxed = true),
-            workoutRepository = io.mockk.mockk(relaxed = true),
-            dailySummaryRepository = io.mockk.mockk(relaxed = true),
-            getWorkoutDisplayMetricsUseCase = io.mockk.mockk(relaxed = true),
-        )
 
     private fun createReadinessCoordinator(
         deps: ScoringTestDependencies,

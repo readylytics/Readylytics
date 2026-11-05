@@ -2,6 +2,8 @@ package app.readylytics.health.core.database.data.repository.recommendation
 
 import app.readylytics.health.core.database.data.repository.ScoringRuntime
 import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
+import app.readylytics.health.core.database.testutil.RecommendationTestDeps
+import app.readylytics.health.core.database.testutil.createScoringRepositoryForTest
 import app.readylytics.health.core.database.data.mapper.WorkoutRecommendationCodec
 import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoader
 import app.readylytics.health.core.database.data.repository.MorningRecommendationDependencies
@@ -125,7 +127,7 @@ class ScoringRepositoryRecommendationWiringTest {
     private val heartRateDataLoader = ScoringHeartRateDataLoader(heartRateDao, minuteBucketDao)
 
     private fun createRepo(
-        recommendationDependencies: MorningRecommendationDependencies = createRecommendationDependencies(),
+        recommendationDependencies: RecommendationTestDeps = createRecommendationDependencies(),
     ): ScoringRepositoryImpl {
         val readinessSummaryCoordinator =
             ReadinessSummaryCoordinator(
@@ -138,29 +140,26 @@ class ScoringRepositoryRecommendationWiringTest {
                 ResolveDailyBaselinesUseCase(baselineComputer),
                 AssembleDailySummaryUseCase(),
             )
-        return ScoringRepositoryImpl(
-            ScoringDataLoaders(dataLoader, bodyMetricsDataLoader, seriesLoader, heartRateDataLoader),
-            settingsRepo,
-            baselineComputer,
-            scoringConfigFactory,
-            ScoringDayUseCases(
-                ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
-                ComputeResidualFatigueUseCase(),
-                ResolveDailyBaselinesUseCase(baselineComputer),
-                AssembleEverydayLoadInputUseCase(),
-                ComputeTrainingReadinessUseCase(scoringCalculator),
-                UthVo2MaxCalculator(),
-                Vo2MaxSourceResolver(),
-            ),
-            scoringHistoryRepository,
-            readinessSummaryCoordinator,
-            ScoringRuntime(UnconfinedTestDispatcher(), FIXED_TEST_CLOCK),
-            recommendationDependencies,
+        return createScoringRepositoryForTest(
+            dataLoader = dataLoader,
+            bodyMetricsDataLoader = bodyMetricsDataLoader,
+            seriesLoader = seriesLoader,
+            heartRateDataLoader = heartRateDataLoader,
+            settingsRepo = settingsRepo,
+            baselineComputer = baselineComputer,
+            scoringConfigFactory = scoringConfigFactory,
+            scoringHistoryRepository = scoringHistoryRepository,
+            readinessSummaryCoordinator = readinessSummaryCoordinator,
+            computeDailyTrimp = ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
+            resolveDailyBaselines = ResolveDailyBaselinesUseCase(baselineComputer),
+            computeTrainingReadiness = ComputeTrainingReadinessUseCase(scoringCalculator),
+            runtime = ScoringRuntime(UnconfinedTestDispatcher(), FIXED_TEST_CLOCK),
+            recommendation = recommendationDependencies,
         )
     }
 
     private fun createRecommendationDependencies() =
-        MorningRecommendationDependencies(
+        RecommendationTestDeps(
             sleepSessionRepository = recommendationSleepSessionRepository,
             computeSleepMetricsUseCase = recommendationComputeSleepMetricsUseCase,
             hrvResolver = recommendationHrvResolver,

@@ -1,5 +1,7 @@
 package app.readylytics.health.core.database.data.repository
 
+import app.readylytics.health.core.database.testutil.createScoringRepositoryForTest
+import app.readylytics.health.core.database.testutil.RecommendationTestDeps
 import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
@@ -125,35 +127,22 @@ class ScoringRepositoryImplAssemblyStatusTest {
                 ResolveDailyBaselinesUseCase(baselineComputer),
                 AssembleDailySummaryUseCase(),
             )
-        return ScoringRepositoryImpl(
-            ScoringDataLoaders(
-                dataLoader,
-                bodyMetricsDataLoader,
-                seriesLoader,
-                heartRateDataLoader,
-            ),
-            settingsRepo,
-            baselineComputer,
-            scoringConfigFactory,
-            ScoringDayUseCases(
-                ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
-                ComputeResidualFatigueUseCase(),
-                ResolveDailyBaselinesUseCase(baselineComputer),
-                AssembleEverydayLoadInputUseCase(),
-                ComputeTrainingReadinessUseCase(scoringCalculator),
-                UthVo2MaxCalculator(),
-                Vo2MaxSourceResolver(),
-            ),
-            scoringHistoryRepository,
-            readinessSummaryCoordinator,
-            ScoringRuntime(dispatcher, FIXED_TEST_CLOCK),
-            MorningRecommendationDependencies(
+        return createScoringRepositoryForTest(
+            dataLoader = dataLoader,
+            bodyMetricsDataLoader = bodyMetricsDataLoader,
+            seriesLoader = seriesLoader,
+            heartRateDataLoader = heartRateDataLoader,
+            settingsRepo = settingsRepo,
+            baselineComputer = baselineComputer,
+            scoringConfigFactory = scoringConfigFactory,
+            scoringHistoryRepository = scoringHistoryRepository,
+            readinessSummaryCoordinator = readinessSummaryCoordinator,
+            computeDailyTrimp = ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
+            resolveDailyBaselines = ResolveDailyBaselinesUseCase(baselineComputer),
+            computeTrainingReadiness = ComputeTrainingReadinessUseCase(scoringCalculator),
+            runtime = ScoringRuntime(dispatcher, FIXED_TEST_CLOCK),
+            recommendation = RecommendationTestDeps(
                 sleepSessionRepository = sleepSessionRepository,
-                computeSleepMetricsUseCase = mockk(relaxed = true),
-                hrvResolver = mockk(relaxed = true),
-                workoutRepository = mockk(relaxed = true),
-                dailySummaryRepository = mockk(relaxed = true),
-                getWorkoutDisplayMetricsUseCase = mockk(relaxed = true),
             ),
         )
     }

@@ -2,6 +2,7 @@ package app.readylytics.health.core.database.domain.scoring.golden
 
 import app.readylytics.health.core.database.data.repository.ScoringRuntime
 import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
+import app.readylytics.health.core.database.testutil.createScoringRepositoryForTest
 import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoader
 import app.readylytics.health.core.database.data.repository.MorningRecommendationDependencies
@@ -79,39 +80,22 @@ internal class GoldenScoringRepositoryFactory(
                 resolveDailyBaselinesUseCase = resolveBaselines,
                 assembleDailySummaryUseCase = AssembleDailySummaryUseCase(),
             )
-        return ScoringRepositoryImpl(
-            loaders = loaders,
+        return createScoringRepositoryForTest(
+            dataLoader = loaders.day,
+            bodyMetricsDataLoader = loaders.bodyMetrics,
+            seriesLoader = loaders.series,
+            heartRateDataLoader = loaders.heartRate,
             settingsRepo = settingsRepository,
             baselineComputer = baseline,
             scoringConfigFactory = configFactory,
-            useCases = createDayUseCases(calculator, resolveBaselines),
             scoringHistoryRepository = history,
             readinessSummaryCoordinator = readiness,
+            computeDailyTrimp = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
+            resolveDailyBaselines = resolveBaselines,
+            computeTrainingReadiness = ComputeTrainingReadinessUseCase(calculator),
             runtime = ScoringRuntime(UnconfinedTestDispatcher(), FIXED_TEST_CLOCK),
-            recommendationDependencies =
-                MorningRecommendationDependencies(
-                    sleepSessionRepository = io.mockk.mockk(relaxed = true),
-                    computeSleepMetricsUseCase = io.mockk.mockk(relaxed = true),
-                    hrvResolver = io.mockk.mockk(relaxed = true),
-                    workoutRepository = io.mockk.mockk(relaxed = true),
-                    dailySummaryRepository = io.mockk.mockk(relaxed = true),
-                    getWorkoutDisplayMetricsUseCase = io.mockk.mockk(relaxed = true),
-                ),
         )
     }
-
-    private fun createDayUseCases(
-        calculator: CompositeScoringCalculator,
-        resolveBaselines: ResolveDailyBaselinesUseCase,
-    ) = ScoringDayUseCases(
-        ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
-        ComputeResidualFatigueUseCase(),
-        resolveBaselines,
-        AssembleEverydayLoadInputUseCase(),
-        ComputeTrainingReadinessUseCase(calculator),
-        UthVo2MaxCalculator(),
-        Vo2MaxSourceResolver(),
-    )
 
     private fun createLoaders() =
         ScoringDataLoaders(

@@ -1,4 +1,5 @@
 package app.readylytics.health.core.database.data.repository
+import app.readylytics.health.core.database.testutil.createScoringRepositoryForTest
 import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
@@ -123,44 +124,21 @@ abstract class ResidualFatigueWalkForwardTestBase {
                 ResolveDailyBaselinesUseCase(baselineComputer),
                 AssembleDailySummaryUseCase(),
             )
-        return ScoringRepositoryImpl(
-            ScoringDataLoaders(
-                dataLoader,
-                bodyMetricsDataLoader,
-                seriesLoader,
-                heartRateDataLoader,
-            ),
-            settingsRepo,
-            baselineComputer,
-            scoringConfigFactory,
-            ScoringDayUseCases(
-                ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
-                ComputeResidualFatigueUseCase(),
-                ResolveDailyBaselinesUseCase(baselineComputer),
-                AssembleEverydayLoadInputUseCase(),
-                        ComputeTrainingReadinessUseCase(scoringCalculator),
-                UthVo2MaxCalculator(),
-                Vo2MaxSourceResolver(),
-            ),
-            scoringHistoryRepository,
-            readinessSummaryCoordinator,
-            ScoringRuntime(UnconfinedTestDispatcher(), FIXED_TEST_CLOCK),
-            fakeRecommendationDependencies(),
+        return createScoringRepositoryForTest(
+            dataLoader = dataLoader,
+            bodyMetricsDataLoader = bodyMetricsDataLoader,
+            seriesLoader = seriesLoader,
+            heartRateDataLoader = heartRateDataLoader,
+            settingsRepo = settingsRepo,
+            baselineComputer = baselineComputer,
+            scoringConfigFactory = scoringConfigFactory,
+            scoringHistoryRepository = scoringHistoryRepository,
+            readinessSummaryCoordinator = readinessSummaryCoordinator,
+            computeDailyTrimp = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
+            resolveDailyBaselines = ResolveDailyBaselinesUseCase(baselineComputer),
+            computeTrainingReadiness = ComputeTrainingReadinessUseCase(scoringCalculator),
         )
     }
-
-    // The recommendation feature is orthogonal to residual-fatigue walk-forward equivalence: relaxed
-    // mocks resolve to a NO_SLEEP snapshot (no session ends "today" in these fixtures) without needing
-    // real repositories wired up.
-    private fun fakeRecommendationDependencies() =
-        MorningRecommendationDependencies(
-            sleepSessionRepository = mockk(relaxed = true),
-            computeSleepMetricsUseCase = mockk(relaxed = true),
-            hrvResolver = mockk(relaxed = true),
-            workoutRepository = mockk(relaxed = true),
-            dailySummaryRepository = mockk(relaxed = true),
-            getWorkoutDisplayMetricsUseCase = mockk(relaxed = true),
-        )
 
     private fun stubScoringDependencies() {
         every { settingsRepo.userPreferences } returns

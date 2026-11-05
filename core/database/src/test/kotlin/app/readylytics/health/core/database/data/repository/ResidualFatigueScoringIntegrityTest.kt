@@ -1,5 +1,6 @@
 package app.readylytics.health.core.database.data.repository
 
+import app.readylytics.health.core.database.testutil.createScoringRepositoryForTest
 import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -550,44 +551,21 @@ class ResidualFatigueScoringIntegrityTest {
         )
         val coordinator = createReadinessCoordinator(components)
 
-        return ScoringRepositoryImpl(
-            loaders = ScoringDataLoaders(
-                dataLoader,
-                bodyMetricsDataLoader,
-                seriesLoader,
-                heartRateDataLoader,
-            ),
+        return createScoringRepositoryForTest(
+            dataLoader = dataLoader,
+            bodyMetricsDataLoader = bodyMetricsDataLoader,
+            seriesLoader = seriesLoader,
+            heartRateDataLoader = heartRateDataLoader,
             settingsRepo = settingsRepo,
             baselineComputer = baselineComputer,
             scoringConfigFactory = scoringConfigFactory,
-            useCases = ScoringDayUseCases(
-                ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
-                ComputeResidualFatigueUseCase(),
-                ResolveDailyBaselinesUseCase(baselineComputer),
-                AssembleEverydayLoadInputUseCase(),
-                        ComputeTrainingReadinessUseCase(scoringCalculator),
-                UthVo2MaxCalculator(),
-                Vo2MaxSourceResolver(),
-            ),
             scoringHistoryRepository = scoringHistoryRepository,
             readinessSummaryCoordinator = coordinator,
-            runtime = ScoringRuntime(UnconfinedTestDispatcher(), FIXED_TEST_CLOCK),
-            recommendationDependencies = fakeRecommendationDependencies(),
+            computeDailyTrimp = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
+            resolveDailyBaselines = ResolveDailyBaselinesUseCase(baselineComputer),
+            computeTrainingReadiness = ComputeTrainingReadinessUseCase(scoringCalculator),
         )
     }
-
-    // The recommendation feature is orthogonal to residual-fatigue scoring integrity: relaxed mocks
-    // resolve to a NO_SLEEP snapshot (no session ends "today" in these fixtures) without needing
-    // real repositories wired up.
-    private fun fakeRecommendationDependencies() =
-        MorningRecommendationDependencies(
-            sleepSessionRepository = io.mockk.mockk(relaxed = true),
-            computeSleepMetricsUseCase = io.mockk.mockk(relaxed = true),
-            hrvResolver = io.mockk.mockk(relaxed = true),
-            workoutRepository = io.mockk.mockk(relaxed = true),
-            dailySummaryRepository = io.mockk.mockk(relaxed = true),
-            getWorkoutDisplayMetricsUseCase = io.mockk.mockk(relaxed = true),
-        )
 
     private fun createDataLoader(database: HealthDatabase): ScoringDayDataLoader =
         ScoringDayDataLoader(
