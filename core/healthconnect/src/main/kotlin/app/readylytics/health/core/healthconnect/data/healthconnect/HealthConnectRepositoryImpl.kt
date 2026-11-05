@@ -1,14 +1,10 @@
 package app.readylytics.health.core.healthconnect.data.healthconnect
 
 import app.readylytics.health.core.model.domain.repository.ExerciseSessionRead
-import androidx.health.connect.client.HealthConnectClient
-import app.readylytics.health.core.model.domain.repository.WorkoutRouteLookup
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.DistanceRecord
-import androidx.health.connect.client.records.ExerciseRouteResult
-import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
@@ -16,7 +12,6 @@ import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
-import app.readylytics.health.core.healthconnect.domain.sync.retryWithBackoff
 import app.readylytics.health.core.model.domain.model.DomainBloodPressureRecord
 import app.readylytics.health.core.model.domain.model.DomainBodyFatRecord
 import app.readylytics.health.core.model.domain.model.DomainBodyTemperatureRecord
@@ -34,7 +29,6 @@ import app.readylytics.health.core.model.domain.repository.PermissionStatus
 import app.readylytics.health.core.model.domain.repository.ReadRetryScope
 import app.readylytics.health.core.model.domain.repository.ReadOutcome
 import app.readylytics.health.core.model.domain.repository.getOrNull
-import app.readylytics.health.core.model.domain.repository.valueOrPrevious
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.model.domain.util.logW
@@ -54,14 +48,12 @@ class HealthConnectRepositoryImpl
     @Inject
     constructor(
         private val stepRecordReader: StepRecordReader,
-        private val intervalTotalsReader: IntervalTotalsReader,
         private val clock: Clock,
-        private val client: HealthConnectClient,
-        private val routeLookup: WorkoutRouteLookup,
         private val availability: HealthConnectAvailability,
         private val permissionGateway: HealthConnectPermissionGateway,
         private val pagedReader: HealthConnectPagedReader,
         private val readGuard: HealthConnectReadGuard,
+        private val exerciseReader: HealthConnectExerciseReader,
     ) : HealthConnectRepository {
         override val criticalPermissions: Set<String>
             get() = permissionGateway.criticalPermissions
@@ -177,115 +169,16 @@ class HealthConnectRepositoryImpl
             includeDetails: Boolean,
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainExerciseSessionRecord>> =
-            readExerciseSessionsResult(from, to, includeDetails, retryScope).sessions
+            exerciseReader.readExerciseSessions(from, to, includeDetails, retryScope)
 
         override suspend fun readExerciseSessionsWithCompletion(
             from: Instant,
             to: Instant,
             retryScope: ReadRetryScope?,
-        ): ExerciseSessionRead = readExerciseSessionsResult(from, to, true, retryScope, scanEmptyWindow = true)
-
-        private suspend fun readExerciseSessionsResult(
-            from: Instant,
-            to: Instant,
-            includeDetails: Boolean,
-            retryScope: ReadRetryScope?,
-            scanEmptyWindow: Boolean = false,
-        ): ExerciseSessionRead {
-            val completed = mutableSetOf<String>()
-            val outcome =
-            readGuard.guardedRead(ExerciseSessionRecord::class, LABEL_EXERCISE) {
-                val sessions = pagedReader.readAll<ExerciseSessionRecord>(from, to, retryScope)
-                if ((!scanEmptyWindow && sessions.isEmpty()) || !includeDetails) {
-                    sessions.map { it.toDomain(null) }
-                } else {
-                    val totals = intervalTotalsReader.readSessionTotals(sessions, from, to, retryScope)
-                    completed.addAll(totals.completedTypes)
-
-                    val routeConsent = WorkoutRouteReadPolicy.hasConsent(client)
-                    val storedRoutes = routeLookup.snapshots(sessions.map { it.metadata.id })
-                    sessions.map { session ->
-                        // Read routes only when consent and the stored identity require enrichment.
-                        val routeResult =
-                            if (!routeConsent ||
-                                !WorkoutRouteReadPolicy.needsRead(session, storedRoutes[session.metadata.id])
-                            ) {
-                                ExerciseRouteResult.ConsentRequired()
-                            } else try {
-                                val record =
-                                    retryWithBackoff(budget = retryScope) {
-                                        client.readRecord(ExerciseSessionRecord::class, session.metadata.id).record
-                                    }
-                                record.exerciseRouteResult
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (e: SecurityException) {
-                                logW("HealthConnectRepository") {
-                                    "Exercise route permission not granted: ${e.message}; omitting route"
-                                }
-                                ExerciseRouteResult.ConsentRequired()
-                            } catch (e: Exception) {
-                                if (e.asHealthConnectSecurityCause() != null) {
-                                    logW("HealthConnectRepository") {
-                                        "Exercise route permission not granted; omitting route"
-                                    }
-                                    ExerciseRouteResult.ConsentRequired()
-                                } else {
-                                    // A transient/unexpected failure must propagate for retry, never
-                                    // be coerced into "no route" -- that would silently strip route
-                                    // data from a session that genuinely has it (H5/WP-09).
-                                    throw e
-                                }
-                            }
-                        session.toDomain(
-                            routeResult = routeResult,
-                            totalDistanceMeters = totals.distance[session.metadata.id],
-                            elevationGainMeters = totals.elevation[session.metadata.id],
-                        )
-                    }
-                }
-            }
-            return ExerciseSessionRead(outcome, if (outcome is ReadOutcome.Available) completed.toSet() else emptySet())
-        }
+        ): ExerciseSessionRead = exerciseReader.readExerciseSessionsWithCompletion(from, to, retryScope)
 
         override suspend fun readExerciseSession(id: String): DomainExerciseSessionRecord? =
-            readGuard.runOnIo {
-                if (!isAvailable()) return@runOnIo null
-                if (!permissionGateway.hasReadPermission(ExerciseSessionRecord::class, LABEL_EXERCISE)) {
-                    return@runOnIo null
-                }
-                try {
-                    val record = client.readRecord(ExerciseSessionRecord::class, id).record
-                    val routeResult = record.exerciseRouteResult
-                    logD("HealthConnectRepository") {
-                        "Read single exercise session $id (${record.exerciseType}) " +
-                            "route result: ${routeResult.javaClass.simpleName}"
-                    }
-                    val distanceTotals =
-                        intervalTotalsReader.readDistanceTotals(record.startTime, record.endTime)
-                            .valueOrPrevious(emptyList())
-                    val elevationTotals =
-                        intervalTotalsReader.readElevationTotals(record.startTime, record.endTime)
-                            .valueOrPrevious(emptyList())
-                    record.toDomain(
-                        routeResult = routeResult,
-                        totalDistanceMeters = intervalTotalsReader.resolveTotal(record, distanceTotals),
-                        elevationGainMeters = intervalTotalsReader.resolveTotal(record, elevationTotals),
-                    )
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: SecurityException) {
-                    logW("HealthConnectRepository") {
-                        "SecurityException reading exercise session $id: ${e.message}"
-                    }
-                    null
-                } catch (e: Exception) {
-                    logE("HealthConnectRepository", e) {
-                        "Failed to read exercise session $id"
-                    }
-                    null
-                }
-            }
+            exerciseReader.readExerciseSession(id)
 
         override suspend fun readStepsRecords(
             from: Instant,
@@ -489,10 +382,6 @@ class HealthConnectRepositoryImpl
                     emptyList()
                 }
             }
-
-        private companion object {
-            const val LABEL_EXERCISE = "Exercise session"
-        }
     }
 
 

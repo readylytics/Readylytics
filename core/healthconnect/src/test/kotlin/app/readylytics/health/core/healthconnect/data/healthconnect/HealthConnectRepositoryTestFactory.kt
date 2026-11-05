@@ -24,20 +24,31 @@ internal fun createHealthConnectRepositoryForTest(
     val availability = HealthConnectAvailability(context = context, client = client)
     val permissionGateway =
         HealthConnectPermissionGateway(availability = availability, client = client, ioDispatcher = ioDispatcher)
+    val pagedReader = HealthConnectPagedReader(client = client)
+    val readGuard =
+        HealthConnectReadGuard(
+            availability = availability,
+            permissions = permissionGateway,
+            ioDispatcher = ioDispatcher,
+        )
     return HealthConnectRepositoryImpl(
         stepRecordReader = StepRecordReader(context = context, ioDispatcher = ioDispatcher, client = client),
-        intervalTotalsReader = IntervalTotalsReader(context = context, ioDispatcher = ioDispatcher, client = client),
         clock = clock,
-        client = client,
-        routeLookup = routeLookup,
         availability = availability,
         permissionGateway = permissionGateway,
-        pagedReader = HealthConnectPagedReader(client = client),
-        readGuard =
-            HealthConnectReadGuard(
+        pagedReader = pagedReader,
+        readGuard = readGuard,
+        exerciseReader =
+            HealthConnectExerciseReader(
+                client = client,
+                ioDispatcher = ioDispatcher,
                 availability = availability,
                 permissions = permissionGateway,
-                ioDispatcher = ioDispatcher,
+                pagedReader = pagedReader,
+                guard = readGuard,
+                intervalTotalsReader =
+                    IntervalTotalsReader(context = context, ioDispatcher = ioDispatcher, client = client),
+                routeLookup = routeLookup,
             ),
     )
 }
