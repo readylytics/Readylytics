@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Clock
 import java.time.LocalDate
+import java.time.format.DateTimeParseException
 import javax.inject.Inject
 
 @HiltViewModel
@@ -67,7 +68,7 @@ class PhysiologySettingsViewModel
                         prefs.birthDate?.let {
                             try {
                                 LocalDate.parse(it)
-                            } catch (e: Exception) {
+                            } catch (e: DateTimeParseException) {
                                 logD("PhysiologySettings") { "Unparseable stored birth date: ${e.message}" }
                                 null
                             }

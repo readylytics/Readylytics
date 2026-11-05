@@ -5,11 +5,14 @@ import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
 import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.model.DomainError
 import app.readylytics.health.core.model.domain.model.InsightType
+import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.preferences.SettingsDefaults
 import app.readylytics.health.core.model.domain.sync.RecalcProgress
 import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
+import app.readylytics.health.core.ui.common.UiText
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -73,7 +76,25 @@ class DashboardViewModelTest : DashboardViewModelTestBase() {
     fun validateSelectedDate_futureDate_fails() {
         val result = viewModel.validateSelectedDate(LocalDate.now().plusDays(1))
         assert(result.isFailure) { "Future date should be invalid" }
+        val failure = result as Result.Failure
+        assertEquals(DomainError.InvalidDate, failure.error)
+        assertEquals("INVALID_DATE", failure.code)
     }
+
+    @Test
+    fun `DateSelected with future date sets error message and does not update selected date`() =
+        runTest {
+            val futureDate = LocalDate.now().plusDays(1)
+
+            viewModel.onEvent(DashboardEvent.DateSelected(futureDate))
+            advanceUntilIdle()
+
+            assertEquals(
+                UiText.StringRes(R.string.error_cannot_select_future_dates),
+                viewModel.errorMessage.value,
+            )
+            coVerify(exactly = 0) { selectedDateRepository.updateSelectedDate(any()) }
+        }
 
     @Test
     fun `request daily prompt emits formatted text for today`() =

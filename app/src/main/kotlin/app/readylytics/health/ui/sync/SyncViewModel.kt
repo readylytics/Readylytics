@@ -9,6 +9,8 @@ import app.readylytics.health.core.model.domain.repository.HealthConnectReposito
 import app.readylytics.health.core.model.domain.repository.PermissionStatus
 import app.readylytics.health.core.model.domain.sync.HistoricalResyncController
 import app.readylytics.health.core.model.domain.sync.HistoricalResyncState
+import app.readylytics.health.core.model.domain.util.logD
+import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.ui.common.BaseViewModel
 import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.data.preferences.SettingsRepository
@@ -113,8 +115,7 @@ class SyncViewModel
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    app.readylytics.health.core.model.domain.util
-                        .logE("SyncViewModel", e) { "Manual sync failed" }
+                    logE("SyncViewModel", e) { "Manual sync failed" }
                     _uiState.update {
                         SyncUiState.Error(
                             UiText.StringRes(CoreUiR.string.error_sync_failed),
@@ -152,7 +153,7 @@ class SyncViewModel
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    app.readylytics.health.core.model.domain.util.logE(
+                    logE(
                         "SyncViewModel",
                         e,
                     ) { "Foreground sync eval failed" }
@@ -163,14 +164,14 @@ class SyncViewModel
         }
 
         private suspend fun checkPermissionsAndSync() {
-            app.readylytics.health.core.model.domain.util.logD("SyncViewModel") {
+            logD("SyncViewModel") {
                 "App foregrounded. Starting permission check..."
             }
             _uiState.update { SyncUiState.CheckingPermissions }
             try {
                 when (val status = hcRepo.checkPermissions()) {
                     is PermissionStatus.Granted -> {
-                        app.readylytics.health.core.model.domain.util.logD("SyncViewModel") {
+                        logD("SyncViewModel") {
                             "Permissions GRANTED (critical ones present). Starting sync..."
                         }
                         _uiState.update { SyncUiState.PermissionsGranted }
@@ -181,34 +182,33 @@ class SyncViewModel
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {
-                            app.readylytics.health.core.model.domain.util.logE("SyncViewModel", e) {
+                            logE("SyncViewModel", e) {
                                 "Foreground sync failed, staying on MainShell"
                             }
                         }
                     }
                     is PermissionStatus.Missing -> {
-                        app.readylytics.health.core.model.domain.util.logD(
+                        logD(
                             "SyncViewModel",
                         ) { "Permissions MISSING: ${status.missing}" }
                         _uiState.update { SyncUiState.NeedsPermissions }
                     }
                     is PermissionStatus.Unavailable -> {
-                        app.readylytics.health.core.model.domain.util.logD(
+                        logD(
                             "SyncViewModel",
                         ) { "Health Connect UNAVAILABLE" }
                         _uiState.update { SyncUiState.Unavailable }
                     }
                 }
             } catch (e: HealthConnectPermissionRevokedException) {
-                app.readylytics.health.core.model.domain.util.logD(
+                logD(
                     "SyncViewModel",
                 ) { "Permissions revoked during check: ${e.message}" }
                 _uiState.update { SyncUiState.NeedsPermissions }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                app.readylytics.health.core.model.domain.util
-                    .logE("SyncViewModel", e) { "Foreground sync failed" }
+                logE("SyncViewModel", e) { "Foreground sync failed" }
                 _uiState.update {
                     SyncUiState.Error(
                         UiText.StringRes(CoreUiR.string.error_sync_failed),
@@ -222,23 +222,23 @@ class SyncViewModel
             _uiState.update { SyncUiState.SyncingCatchUp }
             viewModelScope.launch {
                 try {
-                    app.readylytics.health.core.model.domain.util.logD("SyncViewModel") {
+                    logD("SyncViewModel") {
                         "Permissions granted. Starting sync with all devices..."
                     }
                     foregroundSyncController.triggerImmediateSync()
-                    app.readylytics.health.core.model.domain.util.logD("SyncViewModel") {
+                    logD("SyncViewModel") {
                         "Initial sync completed. User can select device in settings later."
                     }
                     _uiState.update { SyncUiState.PermissionsGranted }
                 } catch (e: HealthConnectPermissionRevokedException) {
-                    app.readylytics.health.core.model.domain.util.logE("SyncViewModel", e) {
+                    logE("SyncViewModel", e) {
                         "Initial sync: permissions revoked"
                     }
                     handleHealthConnectPermissionFailure(e, "Initial sync")
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    app.readylytics.health.core.model.domain.util.logE("SyncViewModel", e) {
+                    logE("SyncViewModel", e) {
                         "Initial sync failed"
                     }
                     _uiState.update {
@@ -259,7 +259,7 @@ class SyncViewModel
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    app.readylytics.health.core.model.domain.util.logE("SyncViewModel", e) {
+                    logE("SyncViewModel", e) {
                         "Post-device-selection sync failed"
                     }
                 }
@@ -280,7 +280,7 @@ class SyncViewModel
             error: HealthConnectPermissionRevokedException,
             source: String,
         ) {
-            app.readylytics.health.core.model.domain.util.logE("SyncViewModel", error) {
+            logE("SyncViewModel", error) {
                 "$source reported a Health Connect permission failure; rechecking permissions"
             }
             val status =
@@ -289,7 +289,7 @@ class SyncViewModel
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    app.readylytics.health.core.model.domain.util.logE("SyncViewModel", e) {
+                    logE("SyncViewModel", e) {
                         "$source could not recheck Health Connect permissions"
                     }
                     _uiState.update {

@@ -11,7 +11,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
+import java.io.IOException
 import java.io.RandomAccessFile
+import java.security.GeneralSecurityException
+import java.security.ProviderException
 import java.security.SecureRandom
 import java.util.concurrent.locks.ReentrantLock
 import javax.crypto.Cipher
@@ -197,10 +200,10 @@ class SqlCipherKeyManager
                 val keystoreKey = getOrCreateKeystoreKey()
                 val encryptedKeyBase64 =
                     prefs.getString(PREF_ENCRYPTED_KEY, null)
-                        ?: error("Encrypted key not found in preferences")
+                        ?: throw IllegalArgumentException("Encrypted key not found in preferences")
                 val ivBase64 =
                     prefs.getString(PREF_IV, null)
-                        ?: error("Encryption IV not found in preferences")
+                        ?: throw IllegalArgumentException("Encryption IV not found in preferences")
 
                 val encryptedKey = Base64.decode(encryptedKeyBase64, Base64.NO_WRAP)
                 val iv = Base64.decode(ivBase64, Base64.NO_WRAP)
@@ -361,8 +364,17 @@ class SqlCipherKeyManager
                         val decrypted = keyCodec.decryptKey()
                         decrypted.fill(0)
                     } catch (e: Exception) {
-                        _isKeyCorrupted.value = true
-                        throw KeyDecryptionException("Failed to decrypt SQLite database key from KeyStore", e)
+                        when (e) {
+                            is GeneralSecurityException,
+                            is ProviderException,
+                            is IOException,
+                            is IllegalArgumentException,
+                            -> {
+                                _isKeyCorrupted.value = true
+                                throw KeyDecryptionException("Failed to decrypt SQLite database key from KeyStore", e)
+                            }
+                            else -> throw e
+                        }
                     }
                 }
             }
@@ -406,11 +418,20 @@ class SqlCipherKeyManager
                 try {
                     keyCodec.decryptKey()
                 } catch (e: Exception) {
-                    _isKeyCorrupted.value = true
-                    logE("SqlCipherKeyManager", e) {
-                        "Failed to decrypt database key. KeyStore key may have changed or data is corrupted."
+                    when (e) {
+                        is GeneralSecurityException,
+                        is ProviderException,
+                        is IOException,
+                        is IllegalArgumentException,
+                        -> {
+                            _isKeyCorrupted.value = true
+                            logE("SqlCipherKeyManager", e) {
+                                "Failed to decrypt database key. KeyStore key may have changed or data is corrupted."
+                            }
+                            throw KeyDecryptionException("Database key decryption failed", e)
+                        }
+                        else -> throw e
                     }
-                    throw KeyDecryptionException("Database key decryption failed", e)
                 }
             } else {
                 keyCodec.generateAndStoreNewKey()

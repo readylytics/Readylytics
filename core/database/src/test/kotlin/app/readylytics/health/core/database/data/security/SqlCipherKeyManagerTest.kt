@@ -72,6 +72,56 @@ class SqlCipherKeyManagerTest {
     }
 
     @Test
+    fun validateKeyDecryption_withUnexpectedException_propagatesWithoutSettingCorruptionState() {
+        val throwingKeyProvider =
+            object : KeyProvider {
+                override fun getOrCreateKey(alias: String): SecretKey {
+                    error("Unexpected Keystore failure")
+                }
+            }
+        val manager = SqlCipherKeyManager(context, throwingKeyProvider)
+        setupCorruptedPrefs()
+
+        assertThrows(IllegalStateException::class.java) {
+            manager.validateKeyDecryption()
+        }
+
+        assertFalse(manager.isKeyCorrupted.value)
+    }
+
+    @Test
+    fun validateKeyDecryption_withMissingIv_setsCorruptionStateAndThrows() {
+        context
+            .getSharedPreferences(SqlCipherKeyManager.PREF_FILE_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(SqlCipherKeyManager.PREF_ENCRYPTED_KEY, "invalid")
+            .remove(SqlCipherKeyManager.PREF_IV)
+            .commit()
+
+        assertThrows(KeyDecryptionException::class.java) {
+            keyManager.validateKeyDecryption()
+        }
+
+        assertTrue(keyManager.isKeyCorrupted.value)
+    }
+
+    @Test
+    fun getOrCreateDbKey_withMissingIv_setsCorruptionStateAndThrows() {
+        context
+            .getSharedPreferences(SqlCipherKeyManager.PREF_FILE_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(SqlCipherKeyManager.PREF_ENCRYPTED_KEY, "invalid")
+            .remove(SqlCipherKeyManager.PREF_IV)
+            .commit()
+
+        assertThrows(KeyDecryptionException::class.java) {
+            keyManager.getOrCreateDbKeyForTest()
+        }
+
+        assertTrue(keyManager.isKeyCorrupted.value)
+    }
+
+    @Test
     fun resetKeyAndDatabase_clearsCorruptionState() {
         setupCorruptedPrefs()
 

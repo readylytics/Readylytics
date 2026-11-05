@@ -6,7 +6,9 @@ import app.readylytics.health.core.model.domain.scoring.TrimpModel
 
 import app.readylytics.health.core.model.data.preferences.Gender
 import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.model.getOrNull
+import org.junit.Assert.assertThrows
 import org.junit.Test
 import java.time.Instant
 import kotlin.test.assertEquals
@@ -244,5 +246,52 @@ class ComputeWorkoutTrimpUseCaseTest {
                 ).getOrNull()!!
 
         assertTrue(trimpHrMax180 != trimpHrMax220, "Different prefs hrMax must produce different TRIMP when not frozen")
+    }
+
+    @Test
+    fun execute_whenIllegalArgumentExceptionThrown_returnsFailureWithTrimpComputationError() {
+        val throwingSamples =
+            object : AbstractList<ComputeWorkoutTrimpUseCase.HeartRateSample>() {
+                override val size: Int
+                    get() = throw IllegalArgumentException("Invalid sample data")
+
+                override fun get(index: Int): ComputeWorkoutTrimpUseCase.HeartRateSample =
+                    throw IllegalArgumentException("Invalid sample data")
+            }
+
+        val result =
+            useCase.execute(
+                workoutStartTime = 0L,
+                workoutEndTime = 1000L * 60 * 30,
+                workoutAvgHr = 150f,
+                samples = throwingSamples,
+                prefs = defaultPrefs,
+            )
+
+        assertTrue(result.isFailure)
+        val failure = result as Result.Failure
+        assertEquals("TRIMP_COMPUTATION_ERROR", failure.code)
+    }
+
+    @Test
+    fun execute_whenUnexpectedExceptionThrown_doesNotCatchAndPropagates() {
+        val throwingSamples =
+            object : AbstractList<ComputeWorkoutTrimpUseCase.HeartRateSample>() {
+                override val size: Int
+                    get() = error("Unexpected state")
+
+                override fun get(index: Int): ComputeWorkoutTrimpUseCase.HeartRateSample =
+                    error("Unexpected state")
+            }
+
+        assertThrows(IllegalStateException::class.java) {
+            useCase.execute(
+                workoutStartTime = 0L,
+                workoutEndTime = 1000L * 60 * 30,
+                workoutAvgHr = 150f,
+                samples = throwingSamples,
+                prefs = defaultPrefs,
+            )
+        }
     }
 }

@@ -35,6 +35,7 @@ class BackupSnapshotExporter
             var snapshotIdentity: BackupSnapshotIdentity? = null
 
             healthMutationCoordinator.withMaintenance(operationId) {
+                var exported = false
                 try {
                     val mutationState = healthDatabase.healthMutationStateDao().current()
                     val sourceGeneration = mutationState.sourceGeneration
@@ -72,14 +73,16 @@ class BackupSnapshotExporter
                     }
 
                     snapshotIdentity = identity
-                } catch (e: Throwable) {
-                    target.delete()
-                    withContext(NonCancellable) {
-                        runCatching {
-                            healthDatabase.healthMutationStateDao().setMaintenance(null, null)
+                    exported = true
+                } finally {
+                    if (!exported) {
+                        target.delete()
+                        withContext(NonCancellable) {
+                            runCatching {
+                                healthDatabase.healthMutationStateDao().setMaintenance(null, null)
+                            }
                         }
                     }
-                    throw e
                 }
             }
 

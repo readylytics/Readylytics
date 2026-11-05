@@ -11,7 +11,19 @@ import app.readylytics.health.core.model.domain.user.UserProfileActions
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import java.time.Clock
@@ -19,7 +31,9 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class PhysiologySettingsViewModelTest {
+    private val testDispatcher = UnconfinedTestDispatcher()
     private lateinit var settingsRepo: UserPreferencesReader
     private lateinit var physiologySettings: PhysiologySettings
     private lateinit var displaySettings: DisplaySettings
@@ -29,6 +43,7 @@ class PhysiologySettingsViewModelTest {
 
     @Before
     fun setUp() {
+        Dispatchers.setMain(testDispatcher)
         settingsRepo =
             mockk {
                 every { userPreferences } returns flowOf(UserPreferences(scoringZoneId = "Pacific/Kiritimati"))
@@ -37,16 +52,42 @@ class PhysiologySettingsViewModelTest {
         displaySettings = mockk(relaxed = true)
         userUseCase = mockk(relaxed = true)
         healthDataRefresh = mockk(relaxed = true)
-        viewModel =
-            PhysiologySettingsViewModel(
-                settingsRepo = settingsRepo,
-                physiologySettings = physiologySettings,
-                displaySettings = displaySettings,
-                userUseCase = userUseCase,
-                healthDataRefresh = healthDataRefresh,
-                clock = Clock.fixed(Instant.parse("2026-01-01T10:30:00Z"), ZoneId.of("Pacific/Honolulu")),
-            )
+        viewModel = buildViewModel(settingsRepo = settingsRepo)
     }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    private fun buildViewModel(settingsRepo: UserPreferencesReader = this.settingsRepo): PhysiologySettingsViewModel =
+        PhysiologySettingsViewModel(
+            settingsRepo = settingsRepo,
+            physiologySettings = physiologySettings,
+            displaySettings = displaySettings,
+            userUseCase = userUseCase,
+            healthDataRefresh = healthDataRefresh,
+            clock = Clock.fixed(Instant.parse("2026-01-01T10:30:00Z"), ZoneId.of("Pacific/Honolulu")),
+        )
+
+    @Test
+    fun `unparseable stored birth date is gracefully mapped to null`() =
+        runTest(testDispatcher) {
+            val userPrefsFlow =
+                MutableStateFlow(
+                    UserPreferences(birthDate = "invalid-date-format"),
+                )
+            val settingsRepo =
+                mockk<UserPreferencesReader>(relaxed = true) {
+                    every { userPreferences } returns userPrefsFlow
+                }
+            val viewModel = buildViewModel(settingsRepo = settingsRepo)
+            val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
+            advanceUntilIdle()
+
+            assertNull(viewModel.uiState.value.birthDate)
+            job.cancel()
+        }
 
     @Test
     fun validateBirthdayDay_15_succeeds() {

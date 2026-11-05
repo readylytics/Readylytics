@@ -100,9 +100,8 @@ class SafBackupStore(
                 }
                 published = true
             }
-        } catch (e: Throwable) {
+        } finally {
             if (!published) staged.delete()
-            throw e
         }
     }
 

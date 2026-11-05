@@ -15,9 +15,12 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -667,5 +670,28 @@ class SecureFileLogSinkTest {
             assertTrue(content.lines().contains("OPERATION_FAILED phase=RECOMPUTE dayOffset=-3"))
             assertFalse(content.contains("2026-10-05"))
             assertFalse(content.contains("bpm=187"))
+        }
+
+    @Test
+    fun `log sink scope cancellation cancels running log write without suppression`() =
+        runTest {
+            val testScope = kotlinx.coroutines.CoroutineScope(coroutineContext + kotlinx.coroutines.Job())
+            val sink =
+                SecureFileLogSink(
+                    context = mockContext,
+                    scope = testScope,
+                )
+            sink.log(
+                level = LogLevel.INFO,
+                tag = "TestTag",
+                message = "Test message",
+                throwable = null,
+                context = LogContext(),
+            )
+            testScope.cancel()
+            assertTrue(testScope.coroutineContext[kotlinx.coroutines.Job]?.isCancelled == true)
+            verify(exactly = 0) {
+                Log.println(Log.ERROR, any(), match { it.contains("LOG_WRITE_FAILED") })
+            }
         }
 }

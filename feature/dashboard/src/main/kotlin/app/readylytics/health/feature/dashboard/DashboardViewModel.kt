@@ -8,6 +8,7 @@ import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.dashboard.CardManagementDelegate
 import app.readylytics.health.core.model.domain.model.DailyMetricsMapper
 import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.model.DomainError
 import app.readylytics.health.core.model.domain.model.InsightType
 import app.readylytics.health.core.model.domain.model.MetricStatus
 import app.readylytics.health.core.model.domain.model.Result
@@ -68,7 +69,7 @@ class DashboardViewModel
             if (date <= LocalDate.now(clock)) {
                 Result.success(date)
             } else {
-                Result.failure("Cannot select future dates", "INVALID_DATE")
+                Result.failure(DomainError.InvalidDate)
             }
 
         private val cardManagementDelegate =
@@ -305,13 +306,17 @@ class DashboardViewModel
             when (event) {
                 is DashboardEvent.DateSelected ->
                     viewModelScope.launch {
-                        repositories.selectedDate.updateSelectedDate(event.date)
+                        if (validateSelectedDate(event.date).isSuccess) {
+                            repositories.selectedDate.updateSelectedDate(event.date)
+                        } else {
+                            _errorMessage.value = UiText.StringRes(R.string.error_cannot_select_future_dates)
+                        }
                     }
                 DashboardEvent.PreviousDay -> onPreviousDay()
                 DashboardEvent.NextDay -> onNextDay()
                 DashboardEvent.Refresh -> onRefresh()
                 DashboardEvent.ToggleCardManagement -> toggleCardManagement()
-                is DashboardEvent.DismissInsight -> {
+                is DashboardEvent.DismissInsight ->
                     viewModelScope.launch {
                         val zoneId =
                             repositories.settings.userPreferences
@@ -324,8 +329,7 @@ class DashboardViewModel
                                 .toEpochMilli()
                         repositories.insightDismissal.dismiss(dateMs, event.type)
                     }
-                }
-                DashboardEvent.RestoreInsights -> {
+                DashboardEvent.RestoreInsights ->
                     viewModelScope.launch {
                         val zoneId =
                             repositories.settings.userPreferences
@@ -338,8 +342,7 @@ class DashboardViewModel
                                 .toEpochMilli()
                         repositories.insightDismissal.restoreAllForDate(dateMs)
                     }
-                }
-                DashboardEvent.RequestDailyPromptCopy -> {
+                DashboardEvent.RequestDailyPromptCopy ->
                     viewModelScope.launch {
                         try {
                             val zoneId =
@@ -356,7 +359,6 @@ class DashboardViewModel
                             _errorMessage.value = UiText.StringRes(R.string.ai_recommendation_copy_failed)
                         }
                     }
-                }
             }
         }
 

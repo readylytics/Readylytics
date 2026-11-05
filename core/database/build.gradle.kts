@@ -59,6 +59,7 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.room.testing)
+    androidTestImplementation(libs.mockk.android)
 }
 
 tasks.withType<Test>().configureEach {
