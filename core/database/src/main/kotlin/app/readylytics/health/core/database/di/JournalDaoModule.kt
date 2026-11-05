@@ -1,5 +1,6 @@
 package app.readylytics.health.core.database.di
 
+import app.readylytics.health.core.database.data.local.dao.AuditEventDao
 import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.databaseschema.data.local.dao.DirtyRangeDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HealthMutationStateDao
@@ -10,9 +11,10 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 
+/** DAOs for the dirty-range, mutation-state, scan-staging and audit journals. */
 @Module
 @InstallIn(SingletonComponent::class)
-object DaoJournalProvidersModule {
+object JournalDaoModule {
     @Provides
     fun provideDirtyRangeDao(db: HealthDatabase): DirtyRangeDao = db.dirtyRangeDao()
 
@@ -20,8 +22,11 @@ object DaoJournalProvidersModule {
     fun provideHealthMutationStateDao(db: HealthDatabase): HealthMutationStateDao = db.healthMutationStateDao()
 
     @Provides
-    fun provideScanStagingDao(database: HealthDatabase): ScanStagingDao = database.scanStagingDao()
+    fun provideScanStagingDao(db: HealthDatabase): ScanStagingDao = db.scanStagingDao()
 
     @Provides
-    fun provideScanTypeStateDao(database: HealthDatabase): ScanTypeStateDao = database.scanTypeStateDao()
+    fun provideScanTypeStateDao(db: HealthDatabase): ScanTypeStateDao = db.scanTypeStateDao()
+
+    @Provides
+    fun provideAuditEventDao(db: HealthDatabase): AuditEventDao = db.auditEventDao()
 }
