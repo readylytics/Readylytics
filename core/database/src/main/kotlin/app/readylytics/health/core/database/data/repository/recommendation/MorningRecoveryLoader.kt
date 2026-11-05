@@ -126,9 +126,7 @@ private fun SleepSession.toSleepDaySegment(): SleepDaySegment =
  * [SleepMetricsRequest]). Residual fatigue uses the caller's resolved [ScoringDayContext.runContext]
  * retention boundary and never reads wall time.
  */
-// Hilt-annotated for a future direct binding, but currently constructed by hand in
-// `ScoringRepositoryImpl` (from `MorningRecommendationDependencies`) rather than injected --
-// the graph has no binding for this type today.
+// Injected by Hilt (singleton).
 @Singleton
 class MorningRecoveryLoader
     @Inject

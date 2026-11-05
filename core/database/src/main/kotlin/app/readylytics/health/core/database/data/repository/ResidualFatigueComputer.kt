@@ -10,6 +10,8 @@ import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigue
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * Residual-fatigue snapshot computation for the daily scoring pipeline. Mirrors
@@ -17,7 +19,8 @@ import java.time.ZoneId
  * fatigue math. The walk-forward path advances the shared accumulator; the single-day fallback
  * reconstructs the same state from all retained canonical workout impulses.
  */
-class ResidualFatigueComputer(
+@Singleton
+class ResidualFatigueComputer @Inject constructor(
     private val dataLoader: ScoringDayDataLoader,
     private val computeResidualFatigueUseCase: ComputeResidualFatigueUseCase,
 ) {

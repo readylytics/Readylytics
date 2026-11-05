@@ -24,8 +24,10 @@ import app.readylytics.health.core.scoring.domain.scoring.EverydayHrLoadResult
 import app.readylytics.health.core.scoring.domain.scoring.TrainingReadinessProjection
 import kotlinx.coroutines.CancellationException
 import java.util.concurrent.TimeUnit
+import javax.inject.Inject
+import javax.inject.Singleton
 
-data class Vo2MaxScoringDependencies(
+data class Vo2MaxScoringDependencies @Inject constructor(
     val uthCalculator: UthVo2MaxCalculator,
     val materkoAdaptedCalculator: MaterkoAdaptedVo2MaxCalculator,
     val sourceResolver: Vo2MaxSourceResolver,
@@ -36,7 +38,8 @@ data class Vo2MaxScoringDependencies(
  * [BaseSummaryAssembler]/[CalibrationGate]: the repository orchestrates, this class owns the
  * calibrated/uncalibrated finalization plus the shadow-mode residual-fatigue snapshot.
  */
-class FinalSummaryAssembler(
+@Singleton
+class FinalSummaryAssembler @Inject constructor(
     private val baseSummaryAssembler: BaseSummaryAssembler,
     private val calibrationGate: CalibrationGate,
     private val baselineComputer: BaselineComputer,
