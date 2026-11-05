@@ -8,6 +8,7 @@ import app.readylytics.health.core.model.domain.preferences.DisplaySettings
 import app.readylytics.health.core.model.domain.preferences.PhysiologySettings
 import app.readylytics.health.core.model.domain.service.BmiData
 import app.readylytics.health.core.model.domain.service.BmiService
+import app.readylytics.health.core.model.domain.validation.BirthdayBounds
 import app.readylytics.health.core.model.domain.validation.SettingsValidators
 import app.readylytics.health.core.model.domain.validation.ValidationResult
 import app.readylytics.health.core.ui.common.BaseViewModel
@@ -26,6 +27,8 @@ class OnboardingViewModel
         private val bmiService: BmiService,
         private val clock: Clock,
     ) : BaseViewModel() {
+        fun birthdayBounds(): BirthdayBounds = SettingsValidators.birthdayBounds(clock)
+
         fun validateBirthdayDay(day: String): Result<Int> =
             try {
                 val d = day.toInt()
@@ -53,11 +56,11 @@ class OnboardingViewModel
         fun validateBirthdayYear(year: String): Result<Int> =
             try {
                 val y = year.toInt()
-                val now = LocalDate.now(clock).year
-                if (y in 1900..now) {
+                val range = birthdayBounds().yearRange
+                if (y in range) {
                     Result.success(y)
                 } else {
-                    Result.failure("Year must be 1900–$now", "INVALID_YEAR")
+                    Result.failure("Year must be ${range.first}–${range.last}", "INVALID_YEAR")
                 }
             } catch (e: NumberFormatException) {
                 Result.failure("Year must be a number", "INVALID_FORMAT")
@@ -89,7 +92,7 @@ class OnboardingViewModel
             heightCm: Float?,
             onComplete: () -> Unit,
         ) {
-            if (birthDate.isAfter(LocalDate.now(clock))) {
+            if (birthDate !in birthdayBounds()) {
                 return
             }
 

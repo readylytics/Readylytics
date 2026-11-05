@@ -15,6 +15,7 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import app.readylytics.health.core.model.domain.validation.BirthdayBounds
 import app.readylytics.health.core.ui.R
 import java.time.Instant
 import java.time.LocalDate
@@ -25,6 +26,7 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun BirthdayDatePickerField(
     birthDate: LocalDate?,
+    bounds: BirthdayBounds,
     onFieldClick: () -> Unit,
     onDateSelected: (LocalDate) -> Unit,
     showDialog: Boolean,
@@ -55,13 +57,13 @@ fun BirthdayDatePickerField(
         val datePickerState =
             rememberDatePickerState(
                 initialSelectedDateMillis = birthDate?.atStartOfDay(ZoneId.of("UTC"))?.toInstant()?.toEpochMilli(),
-                yearRange = 1900..LocalDate.now().year,
+                yearRange = bounds.yearRange,
                 selectableDates =
                     object : SelectableDates {
                         override fun isSelectableDate(utcTimeMillis: Long): Boolean =
-                            utcTimeMillis <= System.currentTimeMillis()
+                            bounds.isSelectableUtcMillis(utcTimeMillis)
 
-                        override fun isSelectableYear(year: Int): Boolean = year in 1900..LocalDate.now().year
+                        override fun isSelectableYear(year: Int): Boolean = bounds.isSelectableYear(year)
                     },
             )
 

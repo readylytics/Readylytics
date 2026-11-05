@@ -191,6 +191,7 @@ private fun OnboardingScreenContent(
     allPermissions: Set<String>,
 ) {
     val context = LocalContext.current
+    val birthdayBounds = remember { onboardingViewModel.birthdayBounds() }
     OnboardingScreen(
         onProfileSetupComplete = { result, onComplete ->
             onProfileSaved()
@@ -215,6 +216,7 @@ private fun OnboardingScreenContent(
         },
         permissions = permissions,
         restoreCallbacks = restoreCallbacks,
+        birthdayBounds = birthdayBounds,
     )
 }
 

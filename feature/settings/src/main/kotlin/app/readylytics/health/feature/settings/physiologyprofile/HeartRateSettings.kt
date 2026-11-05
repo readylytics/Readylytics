@@ -92,6 +92,7 @@ fun HeartRateZoneSection(
             Column {
                 BirthdayDatePickerField(
                     birthDate = physiologyState.birthDate,
+                    bounds = physiologyState.birthdayBounds,
                     onFieldClick = { showBirthdatePicker = true },
                     onDateSelected = { date ->
                         onPhysiologyEvent(SettingsEvent.BirthdayChanged(date))

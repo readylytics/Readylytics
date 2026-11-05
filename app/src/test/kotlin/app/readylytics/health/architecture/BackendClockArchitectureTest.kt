@@ -17,8 +17,6 @@ class BackendClockArchitectureTest {
     companion object {
         private const val DATE_SWITCHER_PATH =
             "core/ui/src/main/kotlin/app/readylytics/health/core/ui/dashboard/DateSwitcher.kt"
-        private const val BIRTHDAY_PICKER_PATH =
-            "core/ui/src/main/kotlin/app/readylytics/health/core/ui/components/settings/BirthdayDatePickerField.kt"
         val ALLOW_LIST =
             listOf(
                 AllowedException(
@@ -26,25 +24,6 @@ class BackendClockArchitectureTest {
                     symbolSnippet = "today: LocalDate = LocalDate.now(),",
                     violation = "LocalDate.now()",
                     reason = "UI default parameter for today fallback in DateSwitcher",
-                ),
-                AllowedException(
-                    relativePath = BIRTHDAY_PICKER_PATH,
-                    symbolSnippet = "yearRange = 1900..LocalDate.now().year,",
-                    violation = "LocalDate.now()",
-                    reason = "UI date picker upper year bound in BirthdayDatePickerField",
-                ),
-                AllowedException(
-                    relativePath = BIRTHDAY_PICKER_PATH,
-                    symbolSnippet = "utcTimeMillis <= System.currentTimeMillis()",
-                    violation = "System.currentTimeMillis()",
-                    reason = "UI date picker upper selectable timestamp bound in BirthdayDatePickerField",
-                ),
-                AllowedException(
-                    relativePath = BIRTHDAY_PICKER_PATH,
-                    symbolSnippet =
-                        "override fun isSelectableYear(year: Int): Boolean = year in 1900..LocalDate.now().year",
-                    violation = "LocalDate.now()",
-                    reason = "UI date picker selectable year bound in BirthdayDatePickerField",
                 ),
             )
     }
@@ -90,8 +69,12 @@ class BackendClockArchitectureTest {
     }
 
     private fun collectScannedFiles(repoRoot: File): List<File> =
-        (collectCoreAndAppDirectories(repoRoot) + collectClockedAppFiles(repoRoot) + collectFeatureFiles(repoRoot))
-            .distinct()
+        (
+            collectCoreAndAppDirectories(repoRoot) +
+                collectClockedAppFiles(repoRoot) +
+                collectFeatureFiles(repoRoot) +
+                collectBirthdayUiFiles(repoRoot)
+        ).distinct()
 
     private fun kotlinFilesUnder(dir: File): List<File> =
         dir
@@ -140,6 +123,16 @@ class BackendClockArchitectureTest {
             ).map { "$appPrefix/$it" },
         )
     }
+
+    // Birthday UI takes its limits from BirthdayBounds (SettingsValidators.birthdayBounds(clock)), never wall time.
+    private fun collectBirthdayUiFiles(repoRoot: File): List<File> =
+        requireFiles(
+            repoRoot,
+            listOf(
+                "core/ui/src/main/kotlin/app/readylytics/health/core/ui/components/settings/BirthdayDatePickerField.kt",
+                "feature/onboarding/src/main/kotlin/app/readylytics/health/feature/onboarding/OnboardingScreen.kt",
+            ),
+        )
 
     // Identified feature VM/flow/loader files.
     private fun collectFeatureFiles(repoRoot: File): List<File> {
