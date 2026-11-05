@@ -1,15 +1,11 @@
 package app.readylytics.health.core.model.domain.dashboard
 
+import app.readylytics.health.core.model.domain.layout.LayoutManagementDelegate
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 
 /**
  * Aggregated card-management UI state derived purely from upstream flows.
@@ -53,19 +49,17 @@ sealed interface CardManagementEvent {
 }
 
 /**
- * Reactive delegate for card-management state.
+ * Card-management facade over the generic [LayoutManagementDelegate].
  *
- * State derived from MutableStateFlow.combine().stateIn() — launched via the
- * injected scope. Persistence side effects from SaveChanges flow through
- * persistTrigger.filterNotNull().collect so cancellation is automatic when
- * the parent scope is cancelled (preventing the memory leak from orphaned
- * coroutines).
+ * The edit-mode state machine (pending list, save/cancel/reset, reorder, display mode) lives in
+ * [LayoutManagementDelegate]; this class adds what is card-specific: validation of card ids
+ * (unknown ids are programming errors and throw) and Health Connect permission gating of the
+ * persisted list. Persistence stays only-on-save and cancellation is automatic with [scope].
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 class CardManagementDelegate(
-    private val defaultConfigurations: List<CardConfiguration>,
+    defaultConfigurations: List<CardConfiguration>,
     private val persist: suspend (List<CardConfiguration>) -> Unit,
-    private val scope: CoroutineScope,
+    scope: CoroutineScope,
     // Gates optional-card persistence on Health Connect permissions. Each defaults to
     // "granted"; the dashboard wires the real HealthConnectRepository checks through these.
     private val hasBodyTemperaturePermission: suspend () -> Boolean = { true },
@@ -75,11 +69,7 @@ class CardManagementDelegate(
     private val hasBloodPressurePermission: suspend () -> Boolean = { true },
     private val hasOxygenSaturationPermission: suspend () -> Boolean = { true },
 ) {
-    private val _isManagingCards = MutableStateFlow(false)
-    private val _pendingConfigs = MutableStateFlow<List<CardConfiguration>?>(null)
-    private val persistTrigger = MutableStateFlow<List<CardConfiguration>?>(null)
-
-    // Suspend persistence via the injected persist lambda. Called reactively on SaveChanges event.
+    // Suspend persistence via the injected persist lambda, invoked by the inner delegate on save.
     //
     // This is the single choke point for persistence, regardless of which onEvent path
     // produced `configs` (manual edits, ResetToDefaults, etc.) -- filtering here, rather
@@ -99,21 +89,21 @@ class CardManagementDelegate(
         persist(toPersist)
     }
 
-    init {
-        scope.launch {
-            persistTrigger
-                .filterNotNull()
-                .collect { configs ->
-                    persistConfigs(configs)
-                }
-        }
-    }
+    private val layout =
+        LayoutManagementDelegate(
+            defaultConfigurations = defaultConfigurations,
+            persist = ::persistConfigs,
+            scope = scope,
+            withVisibility = { config, visible -> config.copy(isVisible = visible) },
+            withPosition = { config, position -> config.copy(position = position) },
+            withDisplayMode = { config, mode -> config.copy(requestedDisplayMode = mode) },
+        )
 
     /**
-     * Aggregated state — derived via combine().stateIn() from the source flows.
+     * Aggregated state -- derived via combine().stateIn() from the inner delegate's flows.
      */
     val state: StateFlow<CardManagementState> =
-        combine(_isManagingCards, _pendingConfigs) { isManaging, pending ->
+        combine(layout.isManaging, layout.pendingConfigs) { isManaging, pending ->
             CardManagementState(isManagingCards = isManaging, pendingConfigs = pending)
         }.stateIn(
             scope = scope,
@@ -122,51 +112,34 @@ class CardManagementDelegate(
         )
 
     /** Convenience projections for existing call sites. */
-    val isManagingCards: StateFlow<Boolean> = _isManagingCards.asStateFlow()
-    val pendingConfigs: StateFlow<List<CardConfiguration>?> = _pendingConfigs.asStateFlow()
+    val isManagingCards: StateFlow<Boolean> = layout.isManaging
+    val pendingConfigs: StateFlow<List<CardConfiguration>?> = layout.pendingConfigs
 
     /**
      * Single event entry point. All mutations route through here.
      */
     fun onEvent(event: CardManagementEvent) {
         when (event) {
-            is CardManagementEvent.EnterEditMode -> {
-                _pendingConfigs.value = event.currentConfigs
-                _isManagingCards.value = true
-            }
-            CardManagementEvent.SaveChanges -> {
-                _pendingConfigs.value?.let { configs ->
-                    persistTrigger.value = configs
-                }
-                _isManagingCards.value = false
-                _pendingConfigs.value = null
-            }
-            CardManagementEvent.CancelChanges -> {
-                _isManagingCards.value = false
-                _pendingConfigs.value = null
-            }
-            CardManagementEvent.ResetToDefaults -> {
-                _pendingConfigs.value = defaultConfigurations
-            }
+            is CardManagementEvent.EnterEditMode -> layout.enterEditMode(event.currentConfigs)
+            CardManagementEvent.SaveChanges -> layout.saveChanges()
+            CardManagementEvent.CancelChanges -> layout.cancelChanges()
+            CardManagementEvent.ResetToDefaults -> layout.onResetToDefaults()
             is CardManagementEvent.ToggleVisibility -> {
-                val base = _pendingConfigs.value ?: event.currentConfigs
-                _pendingConfigs.value = toggleCardVisibility(base, event.cardId, event.visible)
+                val base = layout.pendingConfigs.value ?: event.currentConfigs
+                require(base.any { it.cardId == event.cardId }) {
+                    "Card ${event.cardId} not found in configurations"
+                }
+                layout.onToggleVisibility(event.currentConfigs, event.cardId, event.visible)
             }
             is CardManagementEvent.ReorderCards -> {
-                val base = _pendingConfigs.value ?: event.currentConfigs
-                _pendingConfigs.value = reorderCards(base, event.newOrder)
+                val base = layout.pendingConfigs.value ?: event.currentConfigs
+                validateReorder(base, event.newOrder)
+                layout.onReorder(event.currentConfigs, event.newOrder)
             }
             is CardManagementEvent.DisplayModeChanged -> {
-                val base = _pendingConfigs.value ?: return
+                val base = layout.pendingConfigs.value ?: return
                 require(base.any { it.cardId == event.cardId })
-                _pendingConfigs.value =
-                    base.map { configuration ->
-                        if (configuration.cardId == event.cardId) {
-                            configuration.copy(requestedDisplayMode = event.mode)
-                        } else {
-                            configuration
-                        }
-                    }
+                layout.onDisplayModeChanged(event.cardId, event.mode)
             }
         }
     }
@@ -193,37 +166,16 @@ class CardManagementDelegate(
 
     fun onResetToDefaults() = onEvent(CardManagementEvent.ResetToDefaults)
 
-    private fun toggleCardVisibility(
-        cardConfigurations: List<CardConfiguration>,
-        cardId: CardId,
-        visible: Boolean,
-    ): List<CardConfiguration> {
-        require(cardConfigurations.any { it.cardId == cardId }) {
-            "Card $cardId not found in configurations"
-        }
-
-        return cardConfigurations.map { config ->
-            if (config.cardId == cardId) config.copy(isVisible = visible) else config
-        }
-    }
-
-    private fun reorderCards(
+    private fun validateReorder(
         cardConfigurations: List<CardConfiguration>,
         newOrder: List<CardConfiguration>,
-    ): List<CardConfiguration> {
+    ) {
         val validIds = cardConfigurations.map { it.cardId }.toSet()
         require(newOrder.all { it.cardId in validIds }) {
             "Invalid card IDs in reorder request: ${newOrder.map { it.cardId }.toSet() - validIds}"
         }
         require(newOrder.size <= cardConfigurations.size) {
             "Reorder list size (${newOrder.size}) exceeds original configuration size (${cardConfigurations.size})"
-        }
-
-        val reorderedIds = newOrder.map { it.cardId }.toSet()
-        val hiddenCards = cardConfigurations.filter { it.cardId !in reorderedIds }
-
-        return (newOrder + hiddenCards).mapIndexed { index, config ->
-            config.copy(position = index)
         }
     }
 }
