@@ -257,6 +257,17 @@ Phases run in order. Within a phase, PRs are independent and can land in any ord
 - No public interface changes in `core:model`.
 - `DATA_FLOW.md` is updated in the same PR.
 
+**Phase 4 outcome (2026-11-05).**
+- PR 4.1: `ScoringRepositoryImpl` collaborators are now Hilt-injected. `WalkForwardContextLoader` and `DayAssembler` were extracted, and the holders `ScoringDataLoaders`, `ScoringDayUseCases` and `MorningRecommendationDependencies` were deleted (`Vo2MaxScoringDependencies` and `ScoringRuntime` stay). `ScoringRepositoryImpl` went from 592 to 166 lines; `DayAssembler` is 288. The test seam is `createScoringRepositoryForTest(loaders: ScoringTestLoaders, useCases: ScoringTestUseCases, …)`, grouped into test data classes to satisfy `LongParameterList`.
+- PR 4.2: `HealthConnectRepositoryImpl` went from 784 to a 225-line facade over `HealthConnectAvailability`, `HealthConnectPermissionGateway`, `HealthConnectPagedReader`, `HealthConnectReadGuard`, `HealthConnectVitalsReader`, `HealthConnectBodyMetricsReader`, `HealthConnectExerciseReader` and `HealthConnectDeviceDiscovery`. The baseline `LargeClass` and `LongMethod(discoverDevices)` entries are removed. The `TooManyFunctions` entry for the facade is intentionally kept: the `core:model` `HealthConnectRepository` contract mandates 32 overrides and Phase 4 may not change it. This needs explicit human approval per the project rule. Splitting the interface by role (ISP) is a possible follow-up.
+- PR 4.3: `HealthIngestionCoordinator` went from 584 to 168 lines via internal `BulkWindowIngestPhase`, `DenseWindowStreamPhase` and `WindowScanReconciler`. The public 3-arg constructor stays as a secondary constructor (36 call sites).
+- PR 4.4: `ComputeSleepMetricsUseCase` went from 636 to about 259 lines via `NocturnalSleepScorer`, `SleepBaselineWindowResolver` and `SleepNightScoringContext`; `invoke` is about 44 lines. The `CyclomaticComplexMethod` and `LongMethod` baseline entries and the `@Suppress("SENSELESS_COMPARISON")` are removed. No formula changed.
+- Deviations from the plan: Task 9 ran before Task 8; Tasks 12 and 13 were batched; a `runOnIo` bridge was added and then removed; the `createScoringRepositoryForTest` signature was regrouped; `SleepNightScoringContext` was added.
+- Baseline entries: `core:database` 16 to 16, `core:healthconnect` 8 to 6, `core:scoring` 45 to 43.
+- New pins: `ChunkAlignmentIndependenceTest`, `HealthConnectReadGuardTest`, `HealthIngestionCoordinatorPhaseOrderTest`, `ComputeSleepMetricsUseCaseCharacterizationTest`, `ScoringRepositoryCollaboratorSubstitutionTest`, `WalkForwardContextLoaderTest`.
+- Open item: `ChunkAlignmentIndependenceTest` is a reduced form of the "two retention windows give identical scores" criterion. A true end-to-end test needs an in-memory Room plus Health Connect fake harness that does not exist yet.
+- `:core:database:testDebugUnitTest` has 19 pre-existing environment failures (`SQLiteCantOpenDatabaseException`), unchanged from the phase base.
+
 ### Phase 5: UI and presentation decomposition
 *Risk: medium (visual regressions) · Behavior change: none intended · Est. 3–4 PRs*
 
