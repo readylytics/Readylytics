@@ -23,14 +23,10 @@ import app.readylytics.health.core.model.domain.model.RecordType
 import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
-import app.readylytics.health.core.scoring.domain.cardio.UthVo2MaxCalculator
-import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxSourceResolver
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
-import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
 import app.readylytics.health.core.scoring.domain.scoring.BuildLoadSeriesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
-import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase

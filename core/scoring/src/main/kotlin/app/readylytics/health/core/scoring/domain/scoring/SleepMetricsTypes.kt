@@ -6,6 +6,7 @@ import app.readylytics.health.core.model.domain.model.RecoveryFlag
 import app.readylytics.health.core.model.domain.model.SleepSession
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
+import app.readylytics.health.core.model.domain.repository.SleepSessionData
 import app.readylytics.health.core.model.domain.security.EncryptionManager
 import app.readylytics.health.core.scoring.domain.scoring.sleep.CoreRecoveryInput
 import app.readylytics.health.core.scoring.domain.scoring.sleep.CurrentNightHrvResolver
@@ -45,7 +46,7 @@ data class SleepMetricsCollaborators
  *
  * A *morning-anchored* caller — the workout recommendation — narrows the same three fields instead
  * of taking a second code path: [dayEndMs] becomes the selected session's wake time, so the RHR and
- * HRV baseline windows in `resolveBaselineWindow` stop there; [currentSessionIds] is the single
+ * HRV baseline windows in `SleepBaselineWindowResolver.resolve` stop there; [currentSessionIds] is the single
  * selected record, so nightly HRV and nocturnal RHR come from that record alone; and
  * [prefetchedSessions] is pre-truncated at the same wake time, so the regularity modifier's
  * circadian score cannot see a nap recorded later the same day. A sleep record appended after the
@@ -122,6 +123,30 @@ internal data class NocturnalScoringResult(
     val persistedFlags: String?,
     val sRest: Float?,
     val readinessResult: ReadinessResult,
+) {
+    companion object {
+        /** Result used when the night has no nocturnal RHR: no scores, empty readiness. */
+        val EMPTY =
+            NocturnalScoringResult(
+                sleepScore = null,
+                readinessScore = null,
+                readinessEverydayHr = null,
+                persistedZLnHrv = null,
+                persistedZRhr = null,
+                persistedFlags = null,
+                sRest = null,
+                readinessResult = ReadinessResult.EMPTY,
+            )
+    }
+}
+
+/** Per-night evidence collected from the current session before baseline/scoring stages. */
+internal data class NightEvidence(
+    val hrv: CurrentNightHrvResolver.HrvResult,
+    val wakeHr: SleepPercentileRhrCalculator.SleepPercentileRhrResult,
+    val baselineRhrValue: Int,
+    val minHrTimestamp: Long?,
+    val validation: ScoringCalculator.NightValidationResult,
 )
 
 internal data class ReadinessContext(
@@ -172,3 +197,20 @@ internal data class DebugScoringSnapshot(
     val readinessScore: Float?,
     val recoveryFlags: String?,
 )
+
+internal fun SleepSession.toSleepSessionData(): SleepSessionData =
+    SleepSessionData(
+        id = id,
+        deviceName = deviceName,
+        startTime = startTime,
+        endTime = endTime,
+        durationMinutes = durationMinutes,
+        efficiency = efficiency,
+        deepSleepMinutes = deepSleepMinutes,
+        lightSleepMinutes = lightSleepMinutes,
+        remSleepMinutes = remSleepMinutes,
+        awakeMinutes = awakeMinutes,
+        sleepScore = sleepScore,
+        startZoneOffsetSeconds = startZoneOffsetSeconds,
+        endZoneOffsetSeconds = endZoneOffsetSeconds,
+    )

@@ -7,14 +7,10 @@ import app.readylytics.health.core.database.testutil.RecommendationTestDeps
 import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
-import app.readylytics.health.core.scoring.domain.cardio.UthVo2MaxCalculator
-import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxSourceResolver
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
-import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
 import app.readylytics.health.core.scoring.domain.scoring.BuildLoadSeriesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
-import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
