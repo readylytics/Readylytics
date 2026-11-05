@@ -135,4 +135,21 @@ class HealthConnectReadGuardTest {
 
             assertSame(failure, assertFailsWith<IllegalStateException> { readHeartRatePaged() })
         }
+
+    @Test
+    fun getGrantedPermissionsCancellation_propagatesFromRead() =
+        runTest {
+            coEvery { client.permissionController.getGrantedPermissions() } throws CancellationException("cancelled")
+
+            // Coroutine stack-trace recovery may copy the exception, so assert type + message, not identity.
+            assertEquals("cancelled", assertFailsWith<CancellationException> { readWeight() }.message)
+        }
+
+    @Test
+    fun getGrantedPermissionsCancellation_propagatesFromCheckPermissions() =
+        runTest {
+            coEvery { client.permissionController.getGrantedPermissions() } throws CancellationException("cancelled")
+
+            assertEquals("cancelled", assertFailsWith<CancellationException> { repo.checkPermissions() }.message)
+        }
 }

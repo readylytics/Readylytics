@@ -20,13 +20,21 @@ internal fun createHealthConnectRepositoryForTest(
     routeLookup: WorkoutRouteLookup,
     ioDispatcher: CoroutineDispatcher = Dispatchers.Unconfined,
     clock: Clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
-): HealthConnectRepositoryImpl =
-    HealthConnectRepositoryImpl(
-        context = context,
+): HealthConnectRepositoryImpl {
+    val availability = HealthConnectAvailability(context = context, client = client)
+    return HealthConnectRepositoryImpl(
         ioDispatcher = ioDispatcher,
         stepRecordReader = StepRecordReader(context = context, ioDispatcher = ioDispatcher, client = client),
         intervalTotalsReader = IntervalTotalsReader(context = context, ioDispatcher = ioDispatcher, client = client),
         clock = clock,
         client = client,
         routeLookup = routeLookup,
+        availability = availability,
+        permissionGateway =
+            HealthConnectPermissionGateway(
+                availability = availability,
+                client = client,
+                ioDispatcher = ioDispatcher,
+            ),
     )
+}

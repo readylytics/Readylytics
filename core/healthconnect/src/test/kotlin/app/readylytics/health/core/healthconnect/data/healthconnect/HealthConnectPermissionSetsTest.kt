@@ -2,8 +2,14 @@ package app.readylytics.health.core.healthconnect.data.healthconnect
 
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.HealthConnectFeatures
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.unmockkAll
+import org.junit.After
 import org.junit.Test
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -55,5 +61,32 @@ class HealthConnectPermissionSetsTest {
             repo.allPermissions.none { it.endsWith("READ_EXERCISE_ROUTES") },
             "READ_EXERCISE_ROUTES cannot be granted through the bulk permission sheet",
         )
+    }
+
+    @After
+    fun teardown() {
+        unmockkAll()
+    }
+
+    /**
+     * `allPermissions` is a snapshot taken once at construction. `requiredPermissions` is a live
+     * getter that re-queries the history feature status on every read.
+     */
+    @Test
+    fun allPermissions_isSnapshotAtConstruction() {
+        val historyPermission = "android.permission.health.READ_HEALTH_DATA_HISTORY"
+        mockkObject(HealthConnectClient)
+        every { HealthConnectClient.getSdkStatus(any()) } returns HealthConnectClient.SDK_AVAILABLE
+        every { client.features.getFeatureStatus(HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_HISTORY) } returns
+            HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
+        val snapshotRepo = createHealthConnectRepositoryForTest(context, client, mockk(relaxed = true))
+        assertTrue(historyPermission in snapshotRepo.allPermissions)
+        assertTrue(historyPermission in snapshotRepo.requiredPermissions)
+
+        every { client.features.getFeatureStatus(HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_HISTORY) } returns
+            HealthConnectFeatures.FEATURE_STATUS_UNAVAILABLE
+
+        assertTrue(historyPermission in snapshotRepo.allPermissions)
+        assertFalse(historyPermission in snapshotRepo.requiredPermissions)
     }
 }

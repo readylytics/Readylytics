@@ -1,19 +1,15 @@
 package app.readylytics.health.core.healthconnect.data.healthconnect
 
-import android.content.Context
 import app.readylytics.health.core.model.domain.repository.ExerciseSessionRead
 import androidx.health.connect.client.HealthConnectClient
 import app.readylytics.health.core.model.domain.repository.WorkoutRouteLookup
-import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.DistanceRecord
-import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.ExerciseRouteResult
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
-import androidx.health.connect.client.records.Record as HcRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.SleepSessionRecord
@@ -22,7 +18,6 @@ import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
-import app.readylytics.health.core.healthconnect.BuildConfig
 import app.readylytics.health.core.healthconnect.domain.sync.retryWithBackoff
 import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.core.model.domain.model.DomainBloodPressureRecord
@@ -35,7 +30,6 @@ import app.readylytics.health.core.model.domain.model.DomainOxygenSaturationReco
 import app.readylytics.health.core.model.domain.model.DomainSleepSessionRecord
 import app.readylytics.health.core.model.domain.model.DomainStepsRecord
 import app.readylytics.health.core.model.domain.model.DomainVo2MaxRecord
-import androidx.health.connect.client.HealthConnectFeatures
 import app.readylytics.health.core.model.domain.model.DomainWeightRecord
 import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
@@ -46,9 +40,7 @@ import app.readylytics.health.core.model.domain.repository.getOrNull
 import app.readylytics.health.core.model.domain.repository.valueOrPrevious
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
-import app.readylytics.health.core.model.domain.util.logI
 import app.readylytics.health.core.model.domain.util.logW
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.async
@@ -66,206 +58,68 @@ import javax.inject.Singleton
 class HealthConnectRepositoryImpl
     @Inject
     constructor(
-        @param:ApplicationContext private val context: Context,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
         private val stepRecordReader: StepRecordReader,
         private val intervalTotalsReader: IntervalTotalsReader,
         private val clock: Clock,
         private val client: HealthConnectClient,
         private val routeLookup: WorkoutRouteLookup,
+        private val availability: HealthConnectAvailability,
+        private val permissionGateway: HealthConnectPermissionGateway,
     ) : HealthConnectRepository {
-        override val criticalPermissions: Set<String> =
-            setOf(
-                HealthPermission.getReadPermission(SleepSessionRecord::class),
-                HealthPermission.getReadPermission(HeartRateRecord::class),
-                HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
-                HealthPermission.getReadPermission(ExerciseSessionRecord::class),
-            )
+        override val criticalPermissions: Set<String>
+            get() = permissionGateway.criticalPermissions
 
-        override fun isHistoryReadAvailable(): Boolean =
-            if (!isAvailable()) {
-                false
-            } else {
-                try {
-                    client.features.getFeatureStatus(
-                        HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_HISTORY,
-                    ) == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
-                } catch (_: Exception) {
-                    false
-                }
-            }
+        override fun isHistoryReadAvailable(): Boolean = availability.isHistoryReadAvailable()
 
-        override fun isBackgroundReadAvailable(): Boolean =
-            if (!isAvailable()) {
-                false
-            } else {
-                try {
-                    client.features.getFeatureStatus(
-                        HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_IN_BACKGROUND,
-                    ) == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
-                } catch (_: Exception) {
-                    false
-                }
-            }
+        override fun isBackgroundReadAvailable(): Boolean = availability.isBackgroundReadAvailable()
 
         override val requiredPermissions: Set<String>
-            get() {
-                val base = criticalPermissions
-                return if (isHistoryReadAvailable()) {
-                    base + setOf("android.permission.health.READ_HEALTH_DATA_HISTORY")
-                } else {
-                    base
-                }
-            }
+            get() = permissionGateway.requiredPermissions
 
-        override val optionalPermissions: Set<String> =
-            setOf(
-                HealthPermission.getReadPermission(StepsRecord::class),
-                HealthPermission.getReadPermission(WeightRecord::class),
-                HealthPermission.getReadPermission(BodyFatRecord::class),
-                HealthPermission.getReadPermission(BloodPressureRecord::class),
-                HealthPermission.getReadPermission(OxygenSaturationRecord::class),
-                HealthPermission.getReadPermission(BodyTemperatureRecord::class),
-                // The recording app writes a workout's distance and elevation gain as separate
-                // records, not on the ExerciseSessionRecord. Without these the app can only
-                // integrate the GPS polyline, which reads ~1-3% short of the source app.
-                HealthPermission.getReadPermission(DistanceRecord::class),
-                HealthPermission.getReadPermission(ElevationGainedRecord::class),
-                HealthPermission.getReadPermission(Vo2MaxRecord::class),
-                // READ_EXERCISE_ROUTES is deliberately absent. Health Connect does not expose routes
-                // in the bulk data-type permission sheet -- it lives under "Additional access"
-                // (alongside background and past-data access) as a tri-state Always allow / Ask every
-                // time / Don't allow, defaulting to "Ask every time". Requesting it here is silently
-                // dropped: on a clean install every other permission comes back USER_SET while routes
-                // comes back with no user decision at all. Routes are obtained per workout through
-                // ExerciseRouteRequestContract instead (see ui/health/ExerciseRoutePermissionRequest).
-                // It must stay declared in AndroidManifest.xml -- that declaration is what makes the
-                // "Access exercise routes" row appear in Health Connect settings.
-            )
+        override val optionalPermissions: Set<String>
+            get() = permissionGateway.optionalPermissions
 
-        override val allPermissions: Set<String> =
-            requiredPermissions + optionalPermissions
+        override val allPermissions: Set<String>
+            get() = permissionGateway.allPermissions
 
-        override val backgroundReadPermission: String =
-            HealthPermission.PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND
+        override val backgroundReadPermission: String
+            get() = permissionGateway.backgroundReadPermission
 
-        override fun isAvailable(): Boolean =
-            HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE
+        override fun isAvailable(): Boolean = availability.isAvailable()
 
-        override suspend fun checkPermissions(): PermissionStatus =
-            withContext(ioDispatcher) {
-                logD(
-                    "HealthConnectRepository",
-                ) { "Checking permissions..." }
-                if (!isAvailable()) {
-                    logD(
-                        "HealthConnectRepository",
-                    ) { "SDK not available" }
-                    return@withContext PermissionStatus.Unavailable
-                }
-                val granted =
-                    try {
-                        client.permissionController.getGrantedPermissions()
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        logE("HealthConnectRepository", e) {
-                            "Failed to get granted permissions"
-                        }
-                        throw e
-                    }
-                if (BuildConfig.DEBUG) {
-                    logD(
-                        "HealthConnectRepository",
-                    ) { "Granted permissions: $granted" }
-                    logD("HealthConnectRepository") {
-                        "Required permissions: $requiredPermissions"
-                    }
-                } else {
-                    logD(
-                        "HealthConnectRepository",
-                    ) { "Granted permissions count: ${granted.size}" }
-                }
-
-                if (granted.containsAll(requiredPermissions)) {
-                    logD(
-                        "HealthConnectRepository",
-                    ) { "All required permissions granted" }
-                    PermissionStatus.Granted
-                } else {
-                    val missing = requiredPermissions - granted
-                    if (BuildConfig.DEBUG) {
-                        logI(
-                            "HealthConnectRepository",
-                        ) { "Missing permissions: $missing" }
-                    } else {
-                        logD(
-                            "HealthConnectRepository",
-                        ) { "Missing permissions count: ${missing.size}" }
-                    }
-                    PermissionStatus.Missing(missing)
-                }
-            }
+        override suspend fun checkPermissions(): PermissionStatus = permissionGateway.checkPermissions()
 
         override suspend fun hasBodyTemperaturePermission(): Boolean =
-            hasPermission<BodyTemperatureRecord>("body temperature")
+            permissionGateway.hasReadPermission(BodyTemperatureRecord::class, "body temperature")
 
         override suspend fun hasStepsPermission(): Boolean =
-            hasPermission<StepsRecord>("steps")
+            permissionGateway.hasReadPermission(StepsRecord::class, "steps")
 
         override suspend fun hasWeightPermission(): Boolean =
-            hasPermission<WeightRecord>("weight")
+            permissionGateway.hasReadPermission(WeightRecord::class, "weight")
 
         override suspend fun hasDistancePermission(): Boolean =
-            hasPermission<DistanceRecord>("distance")
+            permissionGateway.hasReadPermission(DistanceRecord::class, "distance")
 
         override suspend fun hasBodyFatPermission(): Boolean =
-            hasPermission<BodyFatRecord>("body fat")
+            permissionGateway.hasReadPermission(BodyFatRecord::class, "body fat")
 
         override suspend fun hasBloodPressurePermission(): Boolean =
-            hasPermission<BloodPressureRecord>("blood pressure")
+            permissionGateway.hasReadPermission(BloodPressureRecord::class, "blood pressure")
 
         override suspend fun hasOxygenSaturationPermission(): Boolean =
-            hasPermission<OxygenSaturationRecord>("oxygen saturation")
+            permissionGateway.hasReadPermission(OxygenSaturationRecord::class, "oxygen saturation")
 
         override suspend fun hasVo2MaxPermission(): Boolean =
-            hasPermission<Vo2MaxRecord>("VO2 max")
+            permissionGateway.hasReadPermission(Vo2MaxRecord::class, "VO2 max")
 
         override suspend fun hasExerciseRoutesPermission(): Boolean =
-            withContext(ioDispatcher) {
-                if (!isAvailable()) return@withContext false
-                try {
-                    val granted = client.permissionController.getGrantedPermissions()
-                    granted.contains("android.permission.health.READ_EXERCISE_ROUTES") ||
-                        granted.contains("com.google.android.apps.healthdata.permission.READ_EXERCISE_ROUTES")
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    logE("HealthConnectRepository", e) {
-                        "Failed to check exercise routes permission"
-                    }
-                    false
-                }
-            }
+            permissionGateway.hasExerciseRoutesPermission()
 
         private suspend inline fun <reified T : androidx.health.connect.client.records.Record> hasPermission(
             label: String,
-        ): Boolean =
-            withContext(ioDispatcher) {
-                if (!isAvailable()) return@withContext false
-                try {
-                    client.permissionController
-                        .getGrantedPermissions()
-                        .contains(HealthPermission.getReadPermission(T::class))
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    logE("HealthConnectRepository", e) {
-                        "Failed to check $label permission"
-                    }
-                    false
-                }
-            }
+        ): Boolean = permissionGateway.hasReadPermission(T::class, label)
 
         private suspend inline fun <reified T : androidx.health.connect.client.records.Record> readAllPages(
             from: Instant,
