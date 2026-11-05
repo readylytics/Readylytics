@@ -6,6 +6,7 @@ import app.readylytics.health.core.model.domain.model.RecoveryFlag
 import app.readylytics.health.core.model.domain.model.SleepSession
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
+import app.readylytics.health.core.model.domain.repository.SleepSessionData
 import app.readylytics.health.core.model.domain.security.EncryptionManager
 import app.readylytics.health.core.scoring.domain.scoring.sleep.CoreRecoveryInput
 import app.readylytics.health.core.scoring.domain.scoring.sleep.CurrentNightHrvResolver
@@ -122,6 +123,30 @@ internal data class NocturnalScoringResult(
     val persistedFlags: String?,
     val sRest: Float?,
     val readinessResult: ReadinessResult,
+) {
+    companion object {
+        /** Result used when the night has no nocturnal RHR: no scores, empty readiness. */
+        val EMPTY =
+            NocturnalScoringResult(
+                sleepScore = null,
+                readinessScore = null,
+                readinessEverydayHr = null,
+                persistedZLnHrv = null,
+                persistedZRhr = null,
+                persistedFlags = null,
+                sRest = null,
+                readinessResult = ReadinessResult.EMPTY,
+            )
+    }
+}
+
+/** Per-night evidence collected from the current session before baseline/scoring stages. */
+internal data class NightEvidence(
+    val hrv: CurrentNightHrvResolver.HrvResult,
+    val wakeHr: SleepPercentileRhrCalculator.SleepPercentileRhrResult,
+    val baselineRhrValue: Int,
+    val minHrTimestamp: Long?,
+    val validation: ScoringCalculator.NightValidationResult,
 )
 
 internal data class ReadinessContext(
@@ -172,3 +197,20 @@ internal data class DebugScoringSnapshot(
     val readinessScore: Float?,
     val recoveryFlags: String?,
 )
+
+internal fun SleepSession.toSleepSessionData(): SleepSessionData =
+    SleepSessionData(
+        id = id,
+        deviceName = deviceName,
+        startTime = startTime,
+        endTime = endTime,
+        durationMinutes = durationMinutes,
+        efficiency = efficiency,
+        deepSleepMinutes = deepSleepMinutes,
+        lightSleepMinutes = lightSleepMinutes,
+        remSleepMinutes = remSleepMinutes,
+        awakeMinutes = awakeMinutes,
+        sleepScore = sleepScore,
+        startZoneOffsetSeconds = startZoneOffsetSeconds,
+        endZoneOffsetSeconds = endZoneOffsetSeconds,
+    )

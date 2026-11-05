@@ -27,6 +27,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -119,7 +120,9 @@ class ComputeSleepMetricsUseCaseCharacterizationTest {
         runTest {
             val fixture = Fixture()
             val live = DailySummary(date = targetDate, baselineCalculatedAtDate = null)
-            val request = fixture.request(live)
+            // prefs.scoringZoneId deliberately differs from request.zoneId (Berlin): the
+            // SleepDayPolicy zone must come from the request, not from the preferences.
+            val request = fixture.request(live, prefs = UserPreferences(scoringZoneId = "UTC"))
 
             val result = fixture.useCase(request)
 
@@ -213,7 +216,7 @@ class ComputeSleepMetricsUseCaseCharacterizationTest {
                     fixture.scoringHistoryRepository.countEligibleSleepDaysThrough(any(), any())
                 }
                 // Frozen MATURE/60 resolved: not calibrating, in spite of the live stub of 0.
-                assertEquals(false, out.readinessResult.diagnostics.isCalibrating)
+                assertFalse(out.readinessResult.diagnostics.isCalibrating)
             }
 
             // Counterpart: with NO frozen metadata the live count IS consulted (guards vacuity).
@@ -288,6 +291,7 @@ class ComputeSleepMetricsUseCaseCharacterizationTest {
         fun request(
             summary: DailySummary,
             forceLiveBaselines: Boolean = false,
+            prefs: UserPreferences = UserPreferences(scoringZoneId = berlin.id),
         ): SleepMetricsRequest {
             val session = session()
             val dayMidnight = targetDate.atStartOfDay(berlin).toInstant()
@@ -304,7 +308,7 @@ class ComputeSleepMetricsUseCaseCharacterizationTest {
                     ),
                 dayMidnight = dayMidnight,
                 targetDate = targetDate,
-                prefs = UserPreferences(scoringZoneId = berlin.id),
+                prefs = prefs,
                 summary = summary,
                 loadScore = 50f,
                 loadScoreEverydayHr = null,
