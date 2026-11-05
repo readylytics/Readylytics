@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
@@ -23,6 +25,7 @@ import app.readylytics.health.core.designsystem.LocalStatusColors
 import app.readylytics.health.core.designsystem.calculateFreshColor
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.feature.workouts.R
+import app.readylytics.health.core.ui.R as CoreUiR
 
 /**
  * Horizontal legend row shown **below** the ACWR chart.
@@ -164,5 +167,19 @@ fun TsbChartLegend(modifier: Modifier = Modifier) {
                 )
             }
         }
+    }
+}
+
+@Composable
+internal fun EmptyAcwrChartPlaceholder(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.fillMaxWidth().height(180.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = stringResource(CoreUiR.string.message_no_data_available),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }

@@ -1,13 +1,10 @@
 package app.readylytics.health.feature.workouts
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
@@ -19,6 +16,7 @@ import app.readylytics.health.core.scoring.domain.cardio.TrainingStressBalanceCa
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.TrendGranularity
+import app.readylytics.health.core.ui.components.AutoDismissChartSelection
 import app.readylytics.health.core.ui.components.DataPointTooltipData
 import app.readylytics.health.core.ui.components.rememberChartMarkerVisibilityListener
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
@@ -93,15 +91,7 @@ internal fun rememberTsbTooltipState(
         tooltipData = null
     }
 
-    LaunchedEffect(scrollState) {
-        snapshotFlow { scrollState.value }.collect { clearTooltip() }
-    }
-    val currentParentScrollInProgress by rememberUpdatedState(parentScrollInProgress)
-    LaunchedEffect(Unit) {
-        snapshotFlow { currentParentScrollInProgress() }.collect { inProgress ->
-            if (inProgress) clearTooltip()
-        }
-    }
+    AutoDismissChartSelection(scrollState, parentScrollInProgress, clearTooltip)
 
     val tsbFormat = stringResource(R.string.tsb_tooltip_format)
     val avgTsbFormat = stringResource(R.string.tsb_tooltip_avg_format)
