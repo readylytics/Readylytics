@@ -123,7 +123,7 @@ object HistoricalRunResolver {
      * then RECOMPUTE), rather than collapsing into the same full-restart-from-scratch path a
      * protocol-version or date-range mismatch takes. The run is rewound to [ResyncPhase.INGEST] at
      * `runStartDate` because ingestion filters records to the selected device *before persisting*
-     * (`HealthIngestionCoordinator.fetchAndPersistBulkRecords`), so a newly selected device's
+     * (`BulkWindowIngestPhase.fetchAndPersist`), so a newly selected device's
      * records were never persisted under the old selection and must be re-fetched from Health
      * Connect across the full range -- there is no per-type ingest cursor to resume mid-range from.
      *
