@@ -8,7 +8,7 @@ import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepModifiers
  * mappings into the downstream nocturnal-scorer / debug-log / summary-assembly inputs.
  * Structural carrier only: no scoring math lives here.
  */
-internal data class SleepNightScoringContext(
+internal class SleepNightScoringContext(
     val request: SleepMetricsRequest,
     val scoringConfig: ScoringConfig,
     val frozenBaseline: Boolean,

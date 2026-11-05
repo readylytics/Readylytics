@@ -221,12 +221,12 @@ class ComputeSleepMetricsUseCase
             stagesSuspicious: Boolean,
         ): SleepModifiers =
             collaborators.sleepModifierResolver.resolve(
-            coreSessionIds = request.core.sessionIds,
-            targetDate = request.targetDate,
-            prefs = request.prefs,
-            stagesSuspicious = stagesSuspicious,
-            prefetchedSessions = request.prefetchedSessions?.map { it.toSleepSessionData() },
-        )
+                coreSessionIds = request.core.sessionIds,
+                targetDate = request.targetDate,
+                prefs = request.prefs,
+                stagesSuspicious = stagesSuspicious,
+                prefetchedSessions = request.prefetchedSessions?.map { it.toSleepSessionData() },
+            )
 
         private suspend fun resolveCalibration(
             request: SleepMetricsRequest,
