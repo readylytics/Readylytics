@@ -15,31 +15,23 @@ import javax.inject.Singleton
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeout
 
-
 /**
- * Reads one Health Connect window, maps + device-filters it, and upserts every record type into
- * Room. Shared by the recent-window [DailySyncUseCase] and the chunked [ResyncRangeUseCase], so
- * both flows ingest through identical mapping/filtering logic.
+ * Orchestrates one Health Connect window ingest, shared by the recent-window [DailySyncUseCase]
+ * and the chunked [ResyncRangeUseCase] so both flows ingest through identical mapping/filtering.
  *
- * Sleep/exercise sessions and low-cardinality vitals are fetched and persisted up front (small,
- * bounded volume) -- sessions are the one exception kept whole, since HR/HRV page tagging and
- * workout metrics both need the complete, unfiltered session list before any sample page arrives.
- * Heart-rate, HRV, and steps -- the types that can reach into the millions (HR/HRV) or tens of
- * thousands (steps) for a dense chunk -- are streamed page-by-page via [HealthConnectRepository]'s
- * paged reads (HC-001): each page is tagged against this window's already-known sessions (HR/HRV
- * only -- steps carries no session relationship) and persisted immediately, so at most one Health
- * Connect page of samples is ever held in memory at once. A scan only reaches
- * [app.readylytics.health.core.model.domain.sync.TypeScanState.COMPLETE] once its *entire* paged
- * read succeeds; a denied or failed page leaves it incomplete so `StagedDeletionReconciler` never
- * deletes rows against a partial id set (HC-005). Workouts are persisted with zero metrics at this
- * point (mirroring the changes-path pattern in `HealthChangeSynchronizerImpl`, HC-004); the
- * post-ingestion `SessionLinkReconciler.recomputeWorkouts` pass -- which both sync flows always run
- * immediately after ingestion, before any walk-forward recompute reads workout data -- fills in the
- * real TRIMP/zone-minutes once every HR sample in range has been streamed and tagged.
+ * Phase order inside a single `withTimeout(windowBudgetMs)`:
+ * 1. bulk fetch + persist of sessions and low-cardinality vitals ([BulkWindowIngestPhase]);
+ * 2. heart-rate, then HRV, then steps streamed page-by-page ([DenseWindowStreamPhase], HC-001);
+ * 3. staging of the bulk-read scan id sets, then the optional deletion reconcile
+ *    ([WindowScanReconciler], HC-005).
+ *
+ * A timeout is rethrown as [HealthConnectWindowTimeoutException] (HC-002). Workouts are persisted
+ * with zero metrics here; `SessionLinkReconciler.recomputeWorkouts` fills them in afterwards.
  *
  * [staging] is deliberately required, with no default: a heap-backed store would silently
  * reintroduce PERF-001 and stop `StagedDeletionReconciler` from ever seeing a scan reach
  * `COMPLETE`, so losing the `RoomScanStagingStore` Hilt binding must fail wiring, not degrade.
+ * The public three-argument constructor builds the phases directly for tests and benchmarks.
  */
 @Singleton
 class HealthIngestionCoordinator

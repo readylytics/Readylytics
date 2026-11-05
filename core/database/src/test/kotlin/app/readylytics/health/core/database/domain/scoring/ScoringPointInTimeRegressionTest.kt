@@ -2,20 +2,14 @@ package app.readylytics.health.core.database.domain.scoring
 import app.readylytics.health.core.database.testutil.ScoringTestLoaders
 import app.readylytics.health.core.database.testutil.ScoringTestUseCases
 import app.readylytics.health.core.database.testutil.createScoringRepositoryForTest
-import app.readylytics.health.core.database.data.repository.ScoringRuntime
-import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
 import app.readylytics.health.core.model.domain.scoring.LoadCoverageConfidence
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
-import app.readylytics.health.core.scoring.domain.cardio.UthVo2MaxCalculator
-import app.readylytics.health.core.scoring.domain.cardio.Vo2MaxSourceResolver
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
-import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
 import app.readylytics.health.core.scoring.domain.scoring.BuildLoadSeriesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
-import app.readylytics.health.core.scoring.domain.scoring.ComputeResidualFatigueUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
@@ -45,7 +39,6 @@ import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepPercentileR
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
