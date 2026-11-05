@@ -13,7 +13,6 @@ import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.DailyRasValues
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.model.domain.repository.ScoringRepository
-import app.readylytics.health.core.model.domain.repository.Vo2MaxKey
 import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
 import app.readylytics.health.core.model.domain.repository.WalkForwardContexts
 import app.readylytics.health.core.model.domain.repository.WalkForwardFatigueContext
@@ -22,7 +21,6 @@ import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpConte
 import app.readylytics.health.core.model.domain.repository.WalkForwardVo2MaxContext
 import app.readylytics.health.core.model.domain.scoring.DayAssembly
 import app.readylytics.health.core.model.domain.scoring.DayAssemblyUnavailableReason
-import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.model.domain.scoring.summaryOrNull
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
@@ -31,8 +29,6 @@ import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.EverydayHrLoadResult
 import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
-import app.readylytics.health.core.scoring.domain.scoring.TrimpDateBucketer
-import java.time.Instant
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
@@ -42,12 +38,8 @@ import kotlinx.coroutines.withContext
 import java.time.Clock
 import java.time.LocalDate
 import java.time.ZoneId
-import java.util.TreeMap
 import javax.inject.Inject
 import javax.inject.Singleton
-
-/** Trailing lookback for wearable VO2 Max readings, mirroring [FinalSummaryAssembler]'s per-day window. */
-private const val VO2_MAX_LOOKBACK_DAYS = 30L
 
 @Singleton
 class ScoringRepositoryImpl
@@ -131,6 +123,16 @@ class ScoringRepositoryImpl
                 ),
             )
 
+        // Built inline for now; becomes an injected collaborator once the constructor is reshaped.
+        private val walkForwardContextLoader =
+            WalkForwardContextLoader(
+                seriesLoader,
+                bodyMetricsDataLoader,
+                baselineComputer,
+                scoringHistoryRepository,
+                residualFatigueComputer,
+            )
+
         private val dayAssembler =
             DayAssembler(
                 readinessSummaryCoordinator,
@@ -176,110 +178,36 @@ class ScoringRepositoryImpl
             startDate: LocalDate,
             endDate: LocalDate,
             zoneId: ZoneId,
-        ): WalkForwardTrimpContext {
-            val fromMs =
-                startDate
-                    .minusDays(ScoringConstants.LOAD_LOOKBACK_DAYS)
-                    .atStartOfDay(zoneId)
-                    .toInstant()
-                    .toEpochMilli()
-            val toMs =
-                endDate
-                    .plusDays(1)
-                    .atStartOfDay(zoneId)
-                    .toInstant()
-                    .toEpochMilli()
-            return WalkForwardTrimpContext(
-                dailyTrimpByDate =
-                    TreeMap(
-                        TrimpDateBucketer.bucket(
-                            seriesLoader.loadWorkoutTrimpPoints(fromMs, toMs),
-                            zoneId,
-                        ),
-                    ),
-                everydayTrimpByDate =
-                    TreeMap(
-                        TrimpDateBucketer.bucket(
-                            seriesLoader.loadEverydayTrimpPoints(fromMs, toMs),
-                            zoneId,
-                        ),
-                    ),
-                trackingStartDate = seriesLoader.loadTrackingStartDate(zoneId),
-            )
-        }
+        ): WalkForwardTrimpContext = walkForwardContextLoader.trimp(startDate, endDate, zoneId)
 
         override suspend fun fetchWalkForwardBaselineContext(
             startDate: LocalDate,
             endDate: LocalDate,
             zoneId: ZoneId,
-        ): WalkForwardBaselineContext =
-            WalkForwardBaselineContext(
-                sessions = baselineComputer.prefetchWalkForwardSessions(startDate, endDate, zoneId),
-                scoringHistoryRepository = scoringHistoryRepository,
-            )
+        ): WalkForwardBaselineContext = walkForwardContextLoader.baseline(startDate, endDate, zoneId)
 
         override suspend fun fetchWalkForwardFatigueContext(
             startDate: LocalDate,
             endDate: LocalDate,
             prefs: UserPreferences,
             runContext: ScoringRunContext,
-        ): WalkForwardFatigueContext =
-            run {
-                require(runContext.zoneId == prefs.scoringZone()) {
-                    "Scoring run context zone must match the preferences snapshot"
-                }
-                residualFatigueComputer.fetchWalkForwardContext(
-                    startDate = startDate,
-                    zoneId = runContext.zoneId,
-                    retentionStartMs = runContext.retentionStartMs,
-                    prefs = prefs,
-                )
+        ): WalkForwardFatigueContext {
+            require(runContext.zoneId == prefs.scoringZone()) {
+                "Scoring run context zone must match the preferences snapshot"
             }
+            return walkForwardContextLoader.fatigue(startDate, prefs, runContext)
+        }
 
         override suspend fun fetchWalkForwardRasContext(
             startDate: LocalDate,
             zoneId: ZoneId,
-        ): WalkForwardRasWindow {
-            val seedMidnights =
-                (1..WalkForwardRasWindow.MAX_WINDOW_DAYS).map { i ->
-                    startDate.minusDays(i.toLong()).atStartOfDay(zoneId).toInstant().toEpochMilli()
-                }
-            val previousSummaries = seriesLoader.loadPreviousDaysSummaries(seedMidnights)
-            val seedDays =
-                previousSummaries.map { summary ->
-                    DailyRasValues(
-                        date = Instant.ofEpochMilli(summary.dateMidnightMs).atZone(zoneId).toLocalDate(),
-                        rasWorkoutOnly = summary.rasWorkoutOnly,
-                        rasEverydayHr = summary.rasEverydayHr,
-                    )
-                }
-            return WalkForwardRasWindow(seedDays)
-        }
-
+        ): WalkForwardRasWindow = walkForwardContextLoader.ras(startDate, zoneId)
 
         override suspend fun fetchWalkForwardVo2MaxContext(
             startDate: LocalDate,
             endDate: LocalDate,
             zoneId: ZoneId,
-        ): WalkForwardVo2MaxContext {
-            val fromMs =
-                startDate
-                    .minusDays(VO2_MAX_LOOKBACK_DAYS)
-                    .atStartOfDay(zoneId)
-                    .toInstant()
-                    .toEpochMilli()
-            val toMs =
-                endDate
-                    .plusDays(2)
-                    .atStartOfDay(zoneId)
-                    .toInstant()
-                    .toEpochMilli()
-            val vo2MaxByTimestampMs = TreeMap<Vo2MaxKey, Float>()
-            bodyMetricsDataLoader.loadVo2MaxRange(fromMs, toMs).forEach {
-                vo2MaxByTimestampMs[Vo2MaxKey(it.timestampMs, it.id)] = it.vo2Max
-            }
-            return WalkForwardVo2MaxContext(vo2MaxByTimestampMs)
-        }
+        ): WalkForwardVo2MaxContext = walkForwardContextLoader.vo2Max(startDate, endDate, zoneId)
 
         override suspend fun computeDailySummary(targetDate: LocalDate): DailySummary {
             val prefs = settingsRepo.userPreferences.first()
