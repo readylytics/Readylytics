@@ -31,25 +31,36 @@ internal fun createHealthConnectRepositoryForTest(
             permissions = permissionGateway,
             ioDispatcher = ioDispatcher,
         )
+    val stepRecordReader = StepRecordReader(context = context, ioDispatcher = ioDispatcher, client = client)
+    val exerciseReader =
+        HealthConnectExerciseReader(
+            client = client,
+            ioDispatcher = ioDispatcher,
+            availability = availability,
+            permissions = permissionGateway,
+            pagedReader = pagedReader,
+            guard = readGuard,
+            intervalTotalsReader =
+                IntervalTotalsReader(context = context, ioDispatcher = ioDispatcher, client = client),
+            routeLookup = routeLookup,
+        )
+    val vitalsReader = HealthConnectVitalsReader(pagedReader = pagedReader, guard = readGuard)
+    val bodyMetricsReader = HealthConnectBodyMetricsReader(pagedReader = pagedReader, guard = readGuard)
     return HealthConnectRepositoryImpl(
-        stepRecordReader = StepRecordReader(context = context, ioDispatcher = ioDispatcher, client = client),
-        clock = clock,
         availability = availability,
-        permissionGateway = permissionGateway,
-        readGuard = readGuard,
-        exerciseReader =
-            HealthConnectExerciseReader(
-                client = client,
+        permissions = permissionGateway,
+        vitals = vitalsReader,
+        bodyMetrics = bodyMetricsReader,
+        exercise = exerciseReader,
+        stepRecordReader = stepRecordReader,
+        deviceDiscovery =
+            HealthConnectDeviceDiscovery(
+                clock = clock,
                 ioDispatcher = ioDispatcher,
-                availability = availability,
-                permissions = permissionGateway,
-                pagedReader = pagedReader,
-                guard = readGuard,
-                intervalTotalsReader =
-                    IntervalTotalsReader(context = context, ioDispatcher = ioDispatcher, client = client),
-                routeLookup = routeLookup,
+                vitals = vitalsReader,
+                bodyMetrics = bodyMetricsReader,
+                exercise = exerciseReader,
+                stepRecordReader = stepRecordReader,
             ),
-        vitalsReader = HealthConnectVitalsReader(pagedReader = pagedReader, guard = readGuard),
-        bodyMetricsReader = HealthConnectBodyMetricsReader(pagedReader = pagedReader, guard = readGuard),
     )
 }

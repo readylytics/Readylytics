@@ -20,23 +20,13 @@ import app.readylytics.health.core.model.domain.model.DomainSleepSessionRecord
 import app.readylytics.health.core.model.domain.model.DomainStepsRecord
 import app.readylytics.health.core.model.domain.model.DomainVo2MaxRecord
 import app.readylytics.health.core.model.domain.model.DomainWeightRecord
-import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
 import app.readylytics.health.core.model.domain.repository.PermissionStatus
 import app.readylytics.health.core.model.domain.repository.ReadRetryScope
 import app.readylytics.health.core.model.domain.repository.ReadOutcome
-import app.readylytics.health.core.model.domain.repository.getOrNull
-import app.readylytics.health.core.model.domain.util.logD
-import app.readylytics.health.core.model.domain.util.logE
-import app.readylytics.health.core.model.domain.util.logW
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
-import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -44,85 +34,84 @@ import javax.inject.Singleton
 class HealthConnectRepositoryImpl
     @Inject
     constructor(
-        private val stepRecordReader: StepRecordReader,
-        private val clock: Clock,
         private val availability: HealthConnectAvailability,
-        private val permissionGateway: HealthConnectPermissionGateway,
-        private val readGuard: HealthConnectReadGuard,
-        private val exerciseReader: HealthConnectExerciseReader,
-        private val vitalsReader: HealthConnectVitalsReader,
-        private val bodyMetricsReader: HealthConnectBodyMetricsReader,
+        private val permissions: HealthConnectPermissionGateway,
+        private val vitals: HealthConnectVitalsReader,
+        private val bodyMetrics: HealthConnectBodyMetricsReader,
+        private val exercise: HealthConnectExerciseReader,
+        private val stepRecordReader: StepRecordReader,
+        private val deviceDiscovery: HealthConnectDeviceDiscovery,
     ) : HealthConnectRepository {
         override val criticalPermissions: Set<String>
-            get() = permissionGateway.criticalPermissions
+            get() = permissions.criticalPermissions
 
         override fun isHistoryReadAvailable(): Boolean = availability.isHistoryReadAvailable()
 
         override fun isBackgroundReadAvailable(): Boolean = availability.isBackgroundReadAvailable()
 
         override val requiredPermissions: Set<String>
-            get() = permissionGateway.requiredPermissions
+            get() = permissions.requiredPermissions
 
         override val optionalPermissions: Set<String>
-            get() = permissionGateway.optionalPermissions
+            get() = permissions.optionalPermissions
 
         override val allPermissions: Set<String>
-            get() = permissionGateway.allPermissions
+            get() = permissions.allPermissions
 
         override val backgroundReadPermission: String
-            get() = permissionGateway.backgroundReadPermission
+            get() = permissions.backgroundReadPermission
 
         override fun isAvailable(): Boolean = availability.isAvailable()
 
-        override suspend fun checkPermissions(): PermissionStatus = permissionGateway.checkPermissions()
+        override suspend fun checkPermissions(): PermissionStatus = permissions.checkPermissions()
 
         override suspend fun hasBodyTemperaturePermission(): Boolean =
-            permissionGateway.hasReadPermission(BodyTemperatureRecord::class, "body temperature")
+            permissions.hasReadPermission(BodyTemperatureRecord::class, "body temperature")
 
         override suspend fun hasStepsPermission(): Boolean =
-            permissionGateway.hasReadPermission(StepsRecord::class, "steps")
+            permissions.hasReadPermission(StepsRecord::class, "steps")
 
         override suspend fun hasWeightPermission(): Boolean =
-            permissionGateway.hasReadPermission(WeightRecord::class, "weight")
+            permissions.hasReadPermission(WeightRecord::class, "weight")
 
         override suspend fun hasDistancePermission(): Boolean =
-            permissionGateway.hasReadPermission(DistanceRecord::class, "distance")
+            permissions.hasReadPermission(DistanceRecord::class, "distance")
 
         override suspend fun hasBodyFatPermission(): Boolean =
-            permissionGateway.hasReadPermission(BodyFatRecord::class, "body fat")
+            permissions.hasReadPermission(BodyFatRecord::class, "body fat")
 
         override suspend fun hasBloodPressurePermission(): Boolean =
-            permissionGateway.hasReadPermission(BloodPressureRecord::class, "blood pressure")
+            permissions.hasReadPermission(BloodPressureRecord::class, "blood pressure")
 
         override suspend fun hasOxygenSaturationPermission(): Boolean =
-            permissionGateway.hasReadPermission(OxygenSaturationRecord::class, "oxygen saturation")
+            permissions.hasReadPermission(OxygenSaturationRecord::class, "oxygen saturation")
 
         override suspend fun hasVo2MaxPermission(): Boolean =
-            permissionGateway.hasReadPermission(Vo2MaxRecord::class, "VO2 max")
+            permissions.hasReadPermission(Vo2MaxRecord::class, "VO2 max")
 
         override suspend fun hasExerciseRoutesPermission(): Boolean =
-            permissionGateway.hasExerciseRoutesPermission()
+            permissions.hasExerciseRoutesPermission()
 
         override suspend fun readSleepSessions(
             from: Instant,
             to: Instant,
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainSleepSessionRecord>> =
-            vitalsReader.readSleepSessions(from, to, retryScope)
+            vitals.readSleepSessions(from, to, retryScope)
 
         override suspend fun readHeartRateSamples(
             from: Instant,
             to: Instant,
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainHeartRateRecord>> =
-            vitalsReader.readHeartRateSamples(from, to, retryScope)
+            vitals.readHeartRateSamples(from, to, retryScope)
 
         override suspend fun readHrvSamples(
             from: Instant,
             to: Instant,
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainHrvRecord>> =
-            vitalsReader.readHrvSamples(from, to, retryScope)
+            vitals.readHrvSamples(from, to, retryScope)
 
         override suspend fun readHeartRateSamplesPaged(
             from: Instant,
@@ -131,7 +120,7 @@ class HealthConnectRepositoryImpl
             retryScope: ReadRetryScope?,
             onPage: suspend (List<DomainHeartRateRecord>, String?) -> Unit,
         ): ReadOutcome<Unit> =
-            vitalsReader.readHeartRateSamplesPaged(from, to, startPageToken, retryScope, onPage)
+            vitals.readHeartRateSamplesPaged(from, to, startPageToken, retryScope, onPage)
 
         override suspend fun readHrvSamplesPaged(
             from: Instant,
@@ -140,7 +129,7 @@ class HealthConnectRepositoryImpl
             retryScope: ReadRetryScope?,
             onPage: suspend (List<DomainHrvRecord>, String?) -> Unit,
         ): ReadOutcome<Unit> =
-            vitalsReader.readHrvSamplesPaged(from, to, startPageToken, retryScope, onPage)
+            vitals.readHrvSamplesPaged(from, to, startPageToken, retryScope, onPage)
 
         override suspend fun readExerciseSessions(
             from: Instant,
@@ -148,16 +137,16 @@ class HealthConnectRepositoryImpl
             includeDetails: Boolean,
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainExerciseSessionRecord>> =
-            exerciseReader.readExerciseSessions(from, to, includeDetails, retryScope)
+            exercise.readExerciseSessions(from, to, includeDetails, retryScope)
 
         override suspend fun readExerciseSessionsWithCompletion(
             from: Instant,
             to: Instant,
             retryScope: ReadRetryScope?,
-        ): ExerciseSessionRead = exerciseReader.readExerciseSessionsWithCompletion(from, to, retryScope)
+        ): ExerciseSessionRead = exercise.readExerciseSessionsWithCompletion(from, to, retryScope)
 
         override suspend fun readExerciseSession(id: String): DomainExerciseSessionRecord? =
-            exerciseReader.readExerciseSession(id)
+            exercise.readExerciseSession(id)
 
         override suspend fun readStepsRecords(
             from: Instant,
@@ -194,162 +183,43 @@ class HealthConnectRepositoryImpl
             to: Instant,
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainWeightRecord>> =
-            bodyMetricsReader.readWeightRecords(from, to, retryScope)
+            bodyMetrics.readWeightRecords(from, to, retryScope)
 
         override suspend fun readBodyFatRecords(
             from: Instant,
             to: Instant,
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainBodyFatRecord>> =
-            bodyMetricsReader.readBodyFatRecords(from, to, retryScope)
+            bodyMetrics.readBodyFatRecords(from, to, retryScope)
 
         override suspend fun readBloodPressureRecords(
             from: Instant,
             to: Instant,
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainBloodPressureRecord>> =
-            bodyMetricsReader.readBloodPressureRecords(from, to, retryScope)
+            bodyMetrics.readBloodPressureRecords(from, to, retryScope)
 
         override suspend fun readOxygenSaturationRecords(
             from: Instant,
             to: Instant,
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainOxygenSaturationRecord>> =
-            bodyMetricsReader.readOxygenSaturationRecords(from, to, retryScope)
+            bodyMetrics.readOxygenSaturationRecords(from, to, retryScope)
 
         override suspend fun readBodyTemperatureRecords(
             from: Instant,
             to: Instant,
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainBodyTemperatureRecord>> =
-            bodyMetricsReader.readBodyTemperatureRecords(from, to, retryScope)
+            bodyMetrics.readBodyTemperatureRecords(from, to, retryScope)
 
         override suspend fun readVo2MaxRecords(
             startTime: Instant,
             endTime: Instant,
             retryScope: ReadRetryScope?,
         ): ReadOutcome<List<DomainVo2MaxRecord>> =
-            bodyMetricsReader.readVo2MaxRecords(startTime, endTime, retryScope)
-
-        private suspend fun <T> readOrEmpty(block: suspend () -> ReadOutcome<List<T>>): List<T> =
-            try {
-                block().getOrNull() ?: emptyList()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                logW("HealthConnectRepository", e) {
-                    "Read failed; returning empty list"
-                }
-                emptyList()
-            }
-
-        /**
-         * HC-001: collects device names from a streaming paged read without ever materializing the
-         * full [from]..[to] record list. [readPaged] is expected to be a partial application of
-         * readHeartRateSamplesPaged/readHrvSamplesPaged that forwards each page's device names to
-         * its callback.
-         */
-        private suspend fun collectDeviceNames(
-            label: String,
-            readPaged: suspend (onNames: suspend (List<String>) -> Unit) -> Unit,
-        ): Set<String> {
-            val localDevices = mutableSetOf<String>()
-            try {
-                readPaged { names -> localDevices.addAll(names) }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                logW("HealthConnectRepository", e) {
-                    "$label device scan failed; returning partial results"
-                }
-            }
-            return localDevices
-        }
+            bodyMetrics.readVo2MaxRecords(startTime, endTime, retryScope)
 
         override suspend fun discoverDevices(windowDays: Int): List<String> =
-            readGuard.runOnIo {
-                try {
-                    logD(
-                        "HealthConnectRepository",
-                    ) { "Discovering devices in $windowDays day window..." }
-                    val from = clock.instant().minusSeconds(windowDays.toLong() * TimeUnit.DAYS.toSeconds(1))
-                    val to = clock.instant()
-
-                    val devices = mutableSetOf<String>()
-
-                    coroutineScope {
-                        // Each read is wrapped so a single revoked/missing permission can't
-                        // cancel the whole scope and collapse discovery to an empty list.
-                        val sleepSessionsDeferred =
-                            async { readOrEmpty { readSleepSessions(from, to) } }
-                        val hrDevicesDeferred =
-                            async {
-                                collectDeviceNames("Heart rate") { onNames ->
-                                    readHeartRateSamplesPaged(from, to) { page, _ ->
-                                        onNames(page.map { it.deviceName })
-                                    }
-                                }
-                            }
-                        val hrvDevicesDeferred =
-                            async {
-                                collectDeviceNames("HRV") { onNames ->
-                                    readHrvSamplesPaged(from, to) { page, _ ->
-                                        onNames(page.map { it.deviceName })
-                                    }
-                                }
-                            }
-                        val workoutRecordsDeferred =
-                            // Discovery only reads deviceName -- reading routes here would add one
-                            // IPC round-trip per workout and block the source picker for nothing.
-                            async { readOrEmpty { readExerciseSessions(from, to, includeDetails = false) } }
-                        val stepsRecordsDeferred =
-                            async { readOrEmpty { readStepsRecords(from, to) } }
-                        val weightRecordsDeferred =
-                            async { readOrEmpty { readWeightRecords(from, to) } }
-                        val bodyFatRecordsDeferred =
-                            async { readOrEmpty { readBodyFatRecords(from, to) } }
-                        val bloodPressureRecordsDeferred =
-                            async { readOrEmpty { readBloodPressureRecords(from, to) } }
-                        val spo2RecordsDeferred =
-                            async { readOrEmpty { readOxygenSaturationRecords(from, to) } }
-                        val bodyTemperatureRecordsDeferred =
-                            async { readOrEmpty { readBodyTemperatureRecords(from, to) } }
-
-                        sleepSessionsDeferred.await().forEach { devices.add(it.deviceName) }
-                        devices.addAll(hrDevicesDeferred.await())
-                        devices.addAll(hrvDevicesDeferred.await())
-                        workoutRecordsDeferred.await().forEach { devices.add(it.deviceName) }
-
-                        // Steps are frequently the only data the phone records, so scanning
-                        // them here is what surfaces the phone as a selectable source device.
-                        stepsRecordsDeferred.await().forEach { devices.add(it.deviceName) }
-                        weightRecordsDeferred.await().forEach { devices.add(it.deviceName) }
-                        bodyFatRecordsDeferred.await().forEach { devices.add(it.deviceName) }
-                        bloodPressureRecordsDeferred.await().forEach { devices.add(it.deviceName) }
-                        spo2RecordsDeferred.await().forEach { devices.add(it.deviceName) }
-                        bodyTemperatureRecordsDeferred.await().forEach { devices.add(it.deviceName) }
-                    }
-
-                    logD(
-                        "HealthConnectRepository",
-                    ) { "Device discovery found ${devices.size} unique devices" }
-                    devices.sorted()
-                } catch (e: SecurityException) {
-                    throw HealthConnectPermissionRevokedException(
-                        cause = e,
-                        operation = "discoverDevices",
-                    )
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    logE(
-                        "HealthConnectRepository",
-                        e,
-                    ) { "Device discovery failed" }
-                    emptyList()
-                }
-            }
+            deviceDiscovery.discoverDevices(windowDays)
     }
-
-
-

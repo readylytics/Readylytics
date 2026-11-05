@@ -62,9 +62,6 @@ class HealthConnectReadGuard
                 }
             }
 
-        /** Runs [block] on the IO dispatcher, for facade operations that need it outside [guardedRead]. */
-        suspend fun <R> runOnIo(block: suspend () -> R): R = withContext(ioDispatcher) { block() }
-
         private fun logDenied(
             label: String,
             e: Exception,
