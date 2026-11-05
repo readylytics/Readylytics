@@ -282,6 +282,20 @@ Phases run in order. Within a phase, PRs are independent and can land in any ord
 - Charts are checked manually on a device in light, dark and dynamic color.
 - Every touched file is ≤ 400 lines.
 
+**Phase 5 outcome (2026-11-06).**
+- PR 5.1: Shared Vico chart scaffolding extracted to `core:ui` (`VicoLayers`, `BoundsTrackingMarker`, `ChartAutoDismiss`, `AxisItemPlacers`). `SleepTrendChart` dropped from 689 to 362 lines (with `SleepTrendRangeProviders` at 200 lines and `SleepTrendSummaryRow` at 68 lines). `SleepStagesChart` dropped from 682 to 218 lines (with `SleepStagesCanvasRenderer` at 326 lines, `SleepStagesLabelLayout` at 194 lines, and `SleepStagesAccessibility` at 147 lines). `AcwrChart` dropped from 626 to 268 lines (with `TsbChart` extracted at 375 lines, `AcwrChartRangeProviders` at 177 lines, `AcwrChartLegends` at 185 lines, `AcwrSelectedState` at 94 lines, and `TrainingLoadMetric` at 56 lines). All touched files are ≤ 400 lines.
+- PR 5.2: `DashboardMetricPresentationFactory` (665 lines) decomposed into a clean facade (187 lines) orchestrating family factories: `DashboardRecoveryMetricPresentationFactory` (371 lines, leveraging helper `DashboardMetricPresentationHelpers` at 48 lines), `DashboardScoreMetricPresentationFactory` (211 lines), `DashboardVitalsMetricPresentationFactory` (246 lines), `DashboardSleepRhythmMetricPresentationFactory` (123 lines), and `DashboardBodyCompositionMetricPresentationFactory` (148 lines). All factories are ≤ 400 lines.
+- PR 5.3: `DashboardViewModel` dropped from 539 to 240 lines. Extracted `DashboardUiState` (122 lines) into a standalone model file and `DashboardUiStateTransformer` (166 lines) for pure UI state mapping and presentation generation. `DashboardViewModel` retains only state flow orchestration and user intent handling.
+- Baseline entries burned down:
+  - `feature/dashboard`: 2 entries removed (`CyclomaticComplexMethod` and `LongMethod` for `DashboardMetricPresentationFactory.build`).
+  - `feature/sleep`: 3 entries removed (`CyclomaticComplexMethod` for `SleepStagesChart` and `SleepTrendChart`, and `LongMethod` for `SleepTrendCard`).
+  - `feature/workouts`: 1 entry removed (`CyclomaticComplexMethod` for `AcwrChart`).
+  - Total: 6 baseline entries removed across the UI modules, with zero additions and zero new `@Suppress` annotations.
+- Verification:
+  - Pre-commit gate passed: `ktlintFormat`, `detekt`, `assembleDebug`, and `testDebugUnitTest` (all unit tests green, with the 19 pre-existing Windows SQLite environment failures in `:core:database:testDebugUnitTest` documented in Phase 4).
+  - Release lint check passed: `lintRelease` passed with zero errors.
+  - Every touched file in Phase 5 is ≤ 400 lines (hard limit ≤ 800 lines fully satisfied).
+
 ### Ongoing: detekt baseline burn-down
 Apply the boyscout rule: every PR in Phases 0–5 removes the baseline entries for the methods it touches. Track the total entry count (about 205 today, 45 of them in `core:scoring`) at the end of each phase. The target is a monotonically decreasing count, with `LargeClass` and `LongParameterList` at zero after Phase 4.
 
