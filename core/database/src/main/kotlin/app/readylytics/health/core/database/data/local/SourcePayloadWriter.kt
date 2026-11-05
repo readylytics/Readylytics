@@ -38,7 +38,7 @@ class SourcePayloadWriter
         private val dirtyRangeStore: RoomDirtyRangeStore? = null,
         private val healthMutationStateDao: HealthMutationStateDao? = null,
         private val settingsRepo: SettingsRepository? = null,
-        private val clock: Clock = Clock.systemDefaultZone(),
+        private val clock: Clock,
         private val warmRefresh: SourceHeartRateRefresh? = null,
     ) {
         companion object {

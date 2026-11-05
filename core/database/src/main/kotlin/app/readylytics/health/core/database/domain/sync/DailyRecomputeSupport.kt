@@ -41,7 +41,7 @@ class DailyRecomputeSupport
         private val scoringRepository: ScoringRepository,
         private val settingsRepo: SettingsRepository,
         private val transactionRunner: TransactionRunner,
-        private val clock: Clock = Clock.systemDefaultZone(),
+        private val clock: Clock,
         private val dirtyRangeStore: DirtyRangeStore? = null,
     ) {
         /**

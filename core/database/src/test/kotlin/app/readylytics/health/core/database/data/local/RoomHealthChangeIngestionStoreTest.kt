@@ -1,5 +1,6 @@
 package app.readylytics.health.core.database.data.local
 
+import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -74,8 +75,13 @@ class RoomHealthChangeIngestionStoreTest {
                 transactionRunner = RoomTransactionRunner(database),
                 vo2MaxRecordDao = database.vo2MaxRecordDao(),
                 scanTypeStateDao = database.scanTypeStateDao(),
+                clock = FIXED_TEST_CLOCK,
             )
-        changeStore = RoomHealthChangeIngestionStore(daos = daos, vo2MaxRecordDao = database.vo2MaxRecordDao())
+        changeStore = RoomHealthChangeIngestionStore(
+            daos = daos,
+            vo2MaxRecordDao = database.vo2MaxRecordDao(),
+            clock = FIXED_TEST_CLOCK,
+        )
     }
 
     @After

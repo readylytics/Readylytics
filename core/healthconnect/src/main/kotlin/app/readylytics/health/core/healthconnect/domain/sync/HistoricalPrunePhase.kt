@@ -45,7 +45,7 @@ class HistoricalPrunePhase
         private val selectedSourcePruner: SelectedSourcePruner,
         private val healthIngestionStore: HealthIngestionStore,
         private val checkpointStore: ResyncCheckpointStore,
-        private val clock: Clock = Clock.systemDefaultZone(),
+        private val clock: Clock,
     ) {
         suspend fun execute(
             context: PrunePhaseContext,

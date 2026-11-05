@@ -1,5 +1,6 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
+import app.readylytics.health.core.healthconnect.testutil.FIXED_TEST_CLOCK
 import app.readylytics.health.core.model.domain.repository.ReadRetryScope
 import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.core.database.domain.sync.DailyRecomputeSupport
@@ -104,7 +105,6 @@ class ResyncRangeUseCaseTest {
         useCase =
             ResyncRangeUseCase(
                 settingsRepo = settingsRepo,
-                clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
                 sessionLinkReconciler = sessionLinkReconciler,
                 changeSynchronizer = changeSynchronizer,
                 selectedSourcePruner = selectedSourcePruner,
@@ -116,8 +116,16 @@ class ResyncRangeUseCaseTest {
                         stepCountFetcher = StepCountFetcher(hcRepo),
                         staging = staging,
                     ),
-                recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner),
-                ioDispatcher = Dispatchers.Unconfined,
+                recomputeSupport = DailyRecomputeSupport(
+                    scoringRepository,
+                    settingsRepo,
+                    transactionRunner,
+                    clock = FIXED_TEST_CLOCK,
+                ),
+                runtime = ResyncRuntime(
+                    Dispatchers.Unconfined,
+                    Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
+                ),
             )
     }
 

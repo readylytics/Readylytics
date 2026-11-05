@@ -1,5 +1,6 @@
 package app.readylytics.health.core.database.data.local
 
+import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import app.readylytics.health.core.database.data.repository.RoomWorkoutRouteLookup
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -67,6 +68,7 @@ class WorkoutRouteIngestionPreservationTest {
             transactionRunner = RoomTransactionRunner(db),
             vo2MaxRecordDao = db.vo2MaxRecordDao(),
             scanTypeStateDao = db.scanTypeStateDao(),
+            clock = FIXED_TEST_CLOCK,
         )
 
     private fun buildChangeStore(
@@ -76,6 +78,7 @@ class WorkoutRouteIngestionPreservationTest {
         RoomHealthChangeIngestionStore(
             daos = daosFor(db, workoutRoutePointDao),
             transactionRunner = RoomTransactionRunner(db),
+            clock = FIXED_TEST_CLOCK,
         )
 
     private fun daosFor(db: HealthDatabase, workoutRoutePointDao: WorkoutRoutePointDao): HealthRecordDaos =

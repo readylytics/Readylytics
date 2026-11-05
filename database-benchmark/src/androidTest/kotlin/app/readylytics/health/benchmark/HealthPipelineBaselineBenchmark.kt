@@ -33,6 +33,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.ByteArrayOutputStream
+import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -167,6 +168,7 @@ class HealthPipelineBaselineBenchmark {
                     RoomScanStagingStore(
                         instance.database.scanStagingDao(),
                         instance.database.scanTypeStateDao(),
+                        clock = Clock.systemDefaultZone(),
                     ),
                 )
 
@@ -210,7 +212,11 @@ class HealthPipelineBaselineBenchmark {
                     HealthIngestionCoordinator(
                         fakeRepo,
                         store,
-                        RoomScanStagingStore(database.scanStagingDao(), database.scanTypeStateDao()),
+                        RoomScanStagingStore(
+                            database.scanStagingDao(),
+                            database.scanTypeStateDao(),
+                            clock = Clock.systemDefaultZone(),
+                        ),
                     )
 
                 val before = usedHeapBytes()
@@ -369,7 +375,11 @@ class HealthPipelineBaselineBenchmark {
                         CountingTransactionRunner(RoomTransactionRunner(database)),
                     )
                 val staging =
-                    RoomScanStagingStore(database.scanStagingDao(), database.scanTypeStateDao())
+                    RoomScanStagingStore(
+                        database.scanStagingDao(),
+                        database.scanTypeStateDao(),
+                        clock = Clock.systemDefaultZone(),
+                    )
                 val repo =
                     BenchmarkFakeHealthConnectRepository(stepsPagesSequence = BaselineScalePoints.stepsPages(100))
                 val coordinator = HealthIngestionCoordinator(repo, store, staging)

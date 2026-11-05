@@ -18,7 +18,7 @@ internal class PhysiologyPreferences
     @Inject
     constructor(
         private val dataStore: DataStore<UserPreferencesProto>,
-        private val clock: Clock = Clock.systemDefaultZone(),
+        private val clock: Clock,
     ) {
         private fun Int.toValidMaxHr() = coerceIn(100, 250)
 

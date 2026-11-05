@@ -43,6 +43,9 @@ class DailySyncStagingCleanupTest {
     private val walDiagnostics = mockk<WalDiagnostics>(relaxed = true)
     private val fixedClock = Clock.fixed(Instant.parse("2024-06-15T12:00:00Z"), ZoneId.of("UTC"))
 
+    private fun recomputeSupport() =
+        DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner, clock = fixedClock)
+
     @Test
     fun `sync clears stale DAILY_SYNC staging from a prior day`() =
         runTest {
@@ -93,7 +96,7 @@ class DailySyncStagingCleanupTest {
                 DailySyncUseCase(
                     settingsRepo = settingsRepo,
                     rasSourceModeBootstrapUseCase = rasSourceModeBootstrapUseCase,
-                    recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner),
+                    recomputeSupport = recomputeSupport(),
                     walDiagnostics = walDiagnostics,
                     ingestion =
                         DailySyncIngestionCollaborators(

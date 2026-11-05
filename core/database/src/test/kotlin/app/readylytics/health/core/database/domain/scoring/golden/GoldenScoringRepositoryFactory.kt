@@ -1,5 +1,7 @@
 package app.readylytics.health.core.database.domain.scoring.golden
 
+import app.readylytics.health.core.database.data.repository.ScoringRuntime
+import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoader
 import app.readylytics.health.core.database.data.repository.MorningRecommendationDependencies
@@ -85,7 +87,7 @@ internal class GoldenScoringRepositoryFactory(
             useCases = createDayUseCases(calculator, resolveBaselines),
             scoringHistoryRepository = history,
             readinessSummaryCoordinator = readiness,
-            defaultDispatcher = UnconfinedTestDispatcher(),
+            runtime = ScoringRuntime(UnconfinedTestDispatcher(), FIXED_TEST_CLOCK),
             recommendationDependencies =
                 MorningRecommendationDependencies(
                     sleepSessionRepository = io.mockk.mockk(relaxed = true),

@@ -1,5 +1,6 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
+import app.readylytics.health.core.healthconnect.testutil.FIXED_TEST_CLOCK
 import app.readylytics.health.core.database.domain.sync.DailyRecomputeSupport
 import app.readylytics.health.core.model.domain.model.DomainHeartRateRecord
 import app.readylytics.health.core.model.domain.model.DomainHrvRecord
@@ -107,7 +108,6 @@ class PagedIngestResumptionTest {
         useCase =
             ResyncRangeUseCase(
                 settingsRepo = settingsRepo,
-                clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
                 sessionLinkReconciler = sessionLinkReconciler,
                 changeSynchronizer = changeSynchronizer,
                 selectedSourcePruner = selectedSourcePruner,
@@ -119,8 +119,16 @@ class PagedIngestResumptionTest {
                         stepCountFetcher = StepCountFetcher(hcRepo),
                         staging = staging,
                     ),
-                recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner),
-                ioDispatcher = Dispatchers.Unconfined,
+                recomputeSupport = DailyRecomputeSupport(
+                    scoringRepository,
+                    settingsRepo,
+                    transactionRunner,
+                    clock = FIXED_TEST_CLOCK,
+                ),
+                runtime = ResyncRuntime(
+                    Dispatchers.Unconfined,
+                    Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
+                ),
             )
     }
 
@@ -638,7 +646,6 @@ class PagedIngestResumptionTest {
     ): ResyncRangeUseCase =
         ResyncRangeUseCase(
             settingsRepo = settingsRepo,
-            clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
             sessionLinkReconciler = sessionLinkReconciler,
             changeSynchronizer = changeSynchronizer,
             selectedSourcePruner = selectedSourcePruner,
@@ -650,8 +657,16 @@ class PagedIngestResumptionTest {
                     stepCountFetcher = StepCountFetcher(hcRepo),
                     staging = staging,
                 ),
-            recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner),
-            ioDispatcher = Dispatchers.Unconfined,
+            recomputeSupport = DailyRecomputeSupport(
+                scoringRepository,
+                settingsRepo,
+                transactionRunner,
+                clock = FIXED_TEST_CLOCK,
+            ),
+            runtime = ResyncRuntime(
+                Dispatchers.Unconfined,
+                Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
+            ),
         )
 
     private suspend fun runUninterruptedRun(

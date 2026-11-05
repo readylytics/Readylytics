@@ -101,7 +101,6 @@ class CompleteTypeScanTest {
         useCase =
             ResyncRangeUseCase(
                 settingsRepo = settingsRepo,
-                clock = fixedClock,
                 sessionLinkReconciler = sessionLinkReconciler,
                 changeSynchronizer = changeSynchronizer,
                 selectedSourcePruner = selectedSourcePruner,
@@ -113,8 +112,13 @@ class CompleteTypeScanTest {
                         stepCountFetcher = StepCountFetcher(hcRepo),
                         staging = staging,
                     ),
-                recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner),
-                ioDispatcher = Dispatchers.Unconfined,
+                recomputeSupport = DailyRecomputeSupport(
+                    scoringRepository,
+                    settingsRepo,
+                    transactionRunner,
+                    clock = fixedClock,
+                ),
+                runtime = ResyncRuntime(Dispatchers.Unconfined, fixedClock),
             )
     }
 

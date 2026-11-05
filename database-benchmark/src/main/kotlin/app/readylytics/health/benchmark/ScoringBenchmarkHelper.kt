@@ -15,6 +15,7 @@ import app.readylytics.health.core.database.data.repository.ScoringDayUseCases
 import app.readylytics.health.core.database.data.repository.ScoringHeartRateDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
+import app.readylytics.health.core.database.data.repository.ScoringRuntime
 import app.readylytics.health.core.database.data.repository.ScoringSeriesLoader
 import app.readylytics.health.core.database.data.repository.SleepSessionRepositoryImpl
 import app.readylytics.health.core.database.data.repository.WorkoutRepositoryImpl
@@ -57,6 +58,7 @@ import app.readylytics.health.core.scoring.domain.scoring.strategies.LoadScoring
 import app.readylytics.health.core.scoring.domain.scoring.strategies.RasScoringStrategy
 import app.readylytics.health.core.scoring.domain.scoring.strategies.SleepScoringStrategy
 import kotlinx.coroutines.runBlocking
+import java.time.Clock
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -190,7 +192,7 @@ object ScoringBenchmarkHelper {
                 ),
             scoringHistoryRepository = scoringHistoryRepository,
             readinessSummaryCoordinator = readinessSummaryCoordinator,
-            defaultDispatcher = kotlinx.coroutines.Dispatchers.Default,
+            runtime = ScoringRuntime(kotlinx.coroutines.Dispatchers.Default, Clock.systemDefaultZone()),
             recommendationDependencies =
                 MorningRecommendationDependencies(
                     sleepSessionRepository = sleepSessionRepository,
@@ -231,6 +233,7 @@ object ScoringBenchmarkHelper {
             transactionRunner = transactionRunner,
             vo2MaxRecordDao = db.vo2MaxRecordDao(),
             scanTypeStateDao = db.scanTypeStateDao(),
+            clock = Clock.systemDefaultZone(),
         )
     }
 

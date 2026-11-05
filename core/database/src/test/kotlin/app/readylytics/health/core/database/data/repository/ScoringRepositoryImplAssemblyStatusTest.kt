@@ -1,5 +1,6 @@
 package app.readylytics.health.core.database.data.repository
 
+import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import app.readylytics.health.core.scoring.domain.scoring.ComputeTrainingReadinessUseCase
 
 import app.readylytics.health.core.scoring.domain.cardio.UthVo2MaxCalculator
@@ -145,7 +146,7 @@ class ScoringRepositoryImplAssemblyStatusTest {
             ),
             scoringHistoryRepository,
             readinessSummaryCoordinator,
-            dispatcher,
+            ScoringRuntime(dispatcher, FIXED_TEST_CLOCK),
             MorningRecommendationDependencies(
                 sleepSessionRepository = sleepSessionRepository,
                 computeSleepMetricsUseCase = mockk(relaxed = true),

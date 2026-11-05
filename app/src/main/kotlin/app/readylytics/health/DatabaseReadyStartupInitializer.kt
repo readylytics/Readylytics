@@ -39,7 +39,7 @@ internal class DatabaseReadyStartupInitializer(
     private val context: Context? = null,
     private val dirtyRangeStore: Lazy<DirtyRangeStore>? = null,
     private val restoreMaintenanceCoordinator: Lazy<RestoreMaintenanceCoordinator>? = null,
-    private val clock: Clock = Clock.systemDefaultZone(),
+    private val clock: Clock,
 ) {
     private val initialized = AtomicBoolean(false)
 

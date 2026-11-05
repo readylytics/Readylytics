@@ -1,7 +1,6 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
 import app.readylytics.health.core.database.domain.sync.DailyRecomputeSupport
-import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.preferences.SettingsDefaults
@@ -137,30 +136,32 @@ class ResyncRangeUseCase
         private val healthIngestionStore: HealthIngestionStore,
         private val recomputeSupport: DailyRecomputeSupport,
         private val ingestion: ResyncIngestionDependencies,
-        @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
-        private val clock: Clock = Clock.systemDefaultZone(),
+        runtime: ResyncRuntime,
         private val ingestPhase: HistoricalIngestPhase =
             HistoricalIngestPhase(
                 healthIngestionStore = healthIngestionStore,
                 ingestion = ingestion,
                 checkpointStore = checkpointStore,
-                clock = clock,
+                clock = runtime.clock,
             ),
         private val prunePhase: HistoricalPrunePhase =
             HistoricalPrunePhase(
                 selectedSourcePruner = selectedSourcePruner,
                 healthIngestionStore = healthIngestionStore,
                 checkpointStore = checkpointStore,
-                clock = clock,
+                clock = runtime.clock,
             ),
         private val recomputePhase: HistoricalRecomputePhase =
             HistoricalRecomputePhase(
                 healthIngestionStore = healthIngestionStore,
                 recomputeSupport = recomputeSupport,
                 checkpointStore = checkpointStore,
-                clock = clock,
+                clock = runtime.clock,
             ),
     ) {
+        private val ioDispatcher = runtime.ioDispatcher
+        private val clock = runtime.clock
+
         suspend fun run(
             startDate: LocalDate,
             endDate: LocalDate,

@@ -1,5 +1,7 @@
 package app.readylytics.health.core.database.domain.scoring.golden
 
+import app.readylytics.health.core.database.data.repository.ScoringRuntime
+import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -212,10 +214,10 @@ class WalkForwardCorrectionEquivalenceTest {
                 useCases = createScoringDayUseCases(resolveDailyBaselinesUseCase, calculator),
                 scoringHistoryRepository = historyRepo,
                 readinessSummaryCoordinator = readinessCoordinator,
-                defaultDispatcher = UnconfinedTestDispatcher(),
+                runtime = ScoringRuntime(UnconfinedTestDispatcher(), FIXED_TEST_CLOCK),
                 recommendationDependencies = createRecommendationDependencies(),
             )
-        return DailyRecomputeSupport(scoringRepo, settingsRepo, RoomTransactionRunner(db))
+        return DailyRecomputeSupport(scoringRepo, settingsRepo, RoomTransactionRunner(db), clock = FIXED_TEST_CLOCK)
     }
 
     private data class ScoringTestDependencies(

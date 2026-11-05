@@ -53,7 +53,7 @@ class SettingsRepositoryTest {
         repository =
             SettingsRepository(
                 dataStore = dataStore,
-                physiology = PhysiologyPreferences(dataStore),
+                physiology = PhysiologyPreferences(dataStore, clock = testClock),
                 thresholds = mockk<ThresholdPreferences>(relaxed = true),
                 sleep = SleepPreferences(dataStore),
                 ui = mockk<UIPreferences>(relaxed = true),
@@ -272,11 +272,11 @@ class SettingsRepositoryTest {
             val repositoryWithRealSync =
                 SettingsRepository(
                     dataStore = dataStore,
-                    physiology = PhysiologyPreferences(dataStore),
+                    physiology = PhysiologyPreferences(dataStore, clock = testClock),
                     thresholds = mockk<ThresholdPreferences>(relaxed = true),
                     sleep = SleepPreferences(dataStore),
                     ui = mockk<UIPreferences>(relaxed = true),
-                    sync = SyncPreferences(dataStore),
+                    sync = SyncPreferences(dataStore, clock = testClock),
                     backup = mockk<BackupPreferences>(relaxed = true),
                     clock = testClock,
                 )

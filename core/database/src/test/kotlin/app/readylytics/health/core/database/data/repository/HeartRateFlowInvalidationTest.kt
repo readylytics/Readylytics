@@ -1,5 +1,6 @@
 package app.readylytics.health.core.database.data.repository
 
+import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.readylytics.health.core.database.data.local.HealthDatabase
@@ -59,7 +60,7 @@ class HeartRateFlowInvalidationTest {
                 database.sourceRecordDao(),
                 database.minuteBucketMaintenanceDao(),
             )
-        writer = SourcePayloadWriter(daos, RoomTransactionRunner(database))
+        writer = SourcePayloadWriter(daos, RoomTransactionRunner(database), clock = FIXED_TEST_CLOCK)
         repository = HeartRateRepositoryImpl(database.heartRateDao(), database.hrvDao(), database.minuteBucketDao())
     }
 

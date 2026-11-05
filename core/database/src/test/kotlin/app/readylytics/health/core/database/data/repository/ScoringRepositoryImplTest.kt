@@ -1,4 +1,5 @@
 package app.readylytics.health.core.database.data.repository
+import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
 import app.readylytics.health.core.databaseschema.data.local.dao.*
 import app.readylytics.health.core.databaseschema.data.local.entity.BodyTemperatureRecordEntity
@@ -115,7 +116,7 @@ class ScoringRepositoryImplTest {
             ),
             scoringHistoryRepository,
             readinessSummaryCoordinator,
-            dispatcher,
+            ScoringRuntime(dispatcher, FIXED_TEST_CLOCK),
             MorningRecommendationDependencies(
                 sleepSessionRepository = mockk(relaxed = true),
                 computeSleepMetricsUseCase = mockk(relaxed = true),

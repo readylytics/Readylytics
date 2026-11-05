@@ -36,7 +36,7 @@ class SyncPreferencesTest {
                 scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
                 produceFile = { context.dataStoreFile(fileName) },
             )
-        syncPreferences = SyncPreferences(dataStore)
+        syncPreferences = SyncPreferences(dataStore, clock = clock)
     }
 
     @Test

@@ -12,7 +12,7 @@ internal class SyncPreferences
     @Inject
     constructor(
         private val dataStore: DataStore<UserPreferencesProto>,
-        private val clock: Clock = Clock.systemDefaultZone(),
+        private val clock: Clock,
     ) {
         suspend fun updateSyncPreference(pref: SyncPreference) {
             dataStore.updateData {

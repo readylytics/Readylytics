@@ -133,7 +133,7 @@ class HistoricalIngestPhase
         private val healthIngestionStore: HealthIngestionStore,
         private val ingestion: ResyncIngestionDependencies,
         private val checkpointStore: ResyncCheckpointStore,
-        private val clock: Clock = Clock.systemDefaultZone(),
+        private val clock: Clock,
         private val staging: ScanStagingStore = ingestion.staging,
     ) {
         suspend fun execute(

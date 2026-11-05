@@ -1,5 +1,6 @@
 package app.readylytics.health.core.database.data.local
 
+import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import android.content.Context
 import android.database.sqlite.SQLiteException
 import androidx.room.Room
@@ -87,6 +88,7 @@ class SourceReplacementInstrumentedTest {
                     transactionRunner = transactionRunner,
                     vo2MaxRecordDao = database.vo2MaxRecordDao(),
                     scanTypeStateDao = database.scanTypeStateDao(),
+                    clock = FIXED_TEST_CLOCK,
                 )
 
             val payload =

@@ -51,7 +51,7 @@ class HistoricalRecomputePhase
         private val healthIngestionStore: HealthIngestionStore,
         private val recomputeSupport: DailyRecomputeSupport,
         private val checkpointStore: ResyncCheckpointStore,
-        private val clock: Clock = Clock.systemDefaultZone(),
+        private val clock: Clock,
     ) {
         suspend fun execute(
             context: RecomputePhaseContext,

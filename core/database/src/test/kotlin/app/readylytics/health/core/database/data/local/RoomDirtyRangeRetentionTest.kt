@@ -1,5 +1,6 @@
 package app.readylytics.health.core.database.data.local
 
+import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -61,6 +62,7 @@ class RoomDirtyRangeRetentionTest {
                     dirtyRangeStore = store,
                     healthMutationStateDao = database.healthMutationStateDao(),
                     transactionRunner = RoomTransactionRunner(database),
+                    clock = FIXED_TEST_CLOCK,
                 )
         }
 

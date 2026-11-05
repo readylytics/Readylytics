@@ -1,5 +1,6 @@
 package app.readylytics.health.core.database.data.local
 
+import app.readylytics.health.core.database.testutil.FIXED_TEST_CLOCK
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.readylytics.health.core.databaseschema.data.local.dao.getOrCreateSourceRef
@@ -234,6 +235,7 @@ class WarmMutationRegressionTest {
                     publisher,
                     database.healthMutationStateDao(),
                 ),
+                clock = FIXED_TEST_CLOCK,
         )
 
     private suspend fun visibleAverages() =

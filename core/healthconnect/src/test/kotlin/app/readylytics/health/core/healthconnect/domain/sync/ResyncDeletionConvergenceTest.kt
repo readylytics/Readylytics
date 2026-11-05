@@ -68,6 +68,9 @@ class ResyncDeletionConvergenceTest {
 
     private val fixedClock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC"))
 
+    private fun recomputeSupport() =
+        DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner, clock = fixedClock)
+
     private lateinit var useCase: ResyncRangeUseCase
 
     @Before
@@ -115,7 +118,6 @@ class ResyncDeletionConvergenceTest {
         useCase =
             ResyncRangeUseCase(
                 settingsRepo = settingsRepo,
-                clock = fixedClock,
                 sessionLinkReconciler = sessionLinkReconciler,
                 changeSynchronizer = changeSynchronizer,
                 selectedSourcePruner = selectedSourcePruner,
@@ -127,8 +129,8 @@ class ResyncDeletionConvergenceTest {
                         stepCountFetcher = StepCountFetcher(hcRepo),
                         staging = staging,
                     ),
-                recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner),
-                ioDispatcher = Dispatchers.Unconfined,
+                recomputeSupport = recomputeSupport(),
+                runtime = ResyncRuntime(Dispatchers.Unconfined, fixedClock),
             )
     }
 
