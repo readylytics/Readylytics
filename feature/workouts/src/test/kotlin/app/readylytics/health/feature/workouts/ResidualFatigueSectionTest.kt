@@ -12,6 +12,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.time.LocalDate
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -24,7 +25,7 @@ class ResidualFatigueSectionTest {
         composeRule.setContent {
             FitDashboardTheme {
                 ResidualFatigueSection(
-                    uiState = WorkoutsUiState(),
+                    uiState = WorkoutsUiState(selectedDate = LocalDate.of(2026, 10, 8), rangeStartMs = 0L),
                     onRangeSelected = {},
                     parentScrollInProgress = { false },
                 )
@@ -43,7 +44,12 @@ class ResidualFatigueSectionTest {
         composeRule.setContent {
             FitDashboardTheme {
                 ResidualFatigueSection(
-                    uiState = WorkoutsUiState(selectedFatigueRange = FatigueCurveRange.ONE_DAY),
+                    uiState =
+                        WorkoutsUiState(
+                            selectedDate = LocalDate.of(2026, 10, 8),
+                            rangeStartMs = 0L,
+                            selectedFatigueRange = FatigueCurveRange.ONE_DAY,
+                        ),
                     onRangeSelected = { selectedRange = it },
                     parentScrollInProgress = { false },
                 )

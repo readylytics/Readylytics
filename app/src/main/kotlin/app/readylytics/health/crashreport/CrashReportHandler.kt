@@ -6,6 +6,7 @@ import app.readylytics.health.BuildConfig
 import app.readylytics.health.core.model.domain.crashreport.CrashReportMetadata
 import app.readylytics.health.core.model.domain.crashreport.formatCrashReport
 import app.readylytics.health.data.crashreport.CrashReportStoreImpl
+import java.time.Clock
 import java.time.Instant
 
 /**
@@ -16,6 +17,7 @@ import java.time.Instant
 class CrashReportHandler(
     private val context: Context,
     private val defaultHandler: Thread.UncaughtExceptionHandler?,
+    private val clock: Clock,
 ) : Thread.UncaughtExceptionHandler {
     override fun uncaughtException(
         thread: Thread,
@@ -24,7 +26,7 @@ class CrashReportHandler(
         runCatching {
             val metadata =
                 CrashReportMetadata(
-                    timestampIso = Instant.now().toString(),
+                    timestampIso = Instant.now(clock).toString(),
                     appVersionName = BuildConfig.VERSION_NAME,
                     appVersionCode = BuildConfig.VERSION_CODE.toLong(),
                     androidRelease = Build.VERSION.RELEASE,

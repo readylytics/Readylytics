@@ -7,6 +7,7 @@ import app.readylytics.health.R
 import app.readylytics.health.core.model.domain.githubissue.GitHubIssueType
 import app.readylytics.health.core.model.domain.githubissue.IssueReportRequest
 import app.readylytics.health.core.model.domain.githubissue.ReportChannel
+import app.readylytics.health.testutil.FIXED_TEST_CLOCK
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -176,6 +177,7 @@ class CrashReportShareIntentTest {
                     crashReportText = null,
                     logcatText = logcatText,
                     logcatDurationMinutes = 45,
+                    clock = FIXED_TEST_CLOCK,
                 ),
             ).intent.data!!
 
@@ -199,7 +201,7 @@ class CrashReportShareIntentTest {
     fun bugReportIntentUsesLabelsInsteadOfTemplateAndMatchesGithubBody() {
         val crashText = "d".repeat(50)
 
-        val uri = ready(buildBugReportIntent(context, crashText)).intent.data!!
+        val uri = ready(buildBugReportIntent(context, crashText, clock = FIXED_TEST_CLOCK)).intent.data!!
 
         assertEquals("bug", uri.getQueryParameter("labels"))
         assertNull(uri.getQueryParameter("template"))
@@ -209,14 +211,14 @@ class CrashReportShareIntentTest {
 
     @Test
     fun bugReportIntentWithNoCrashTextStillMatchesGithubBody() {
-        val uri = ready(buildBugReportIntent(context)).intent.data!!
+        val uri = ready(buildBugReportIntent(context, clock = FIXED_TEST_CLOCK)).intent.data!!
 
         assertEquals(buildBugReportGithubBody(context, null, null, null), uri.getQueryParameter("body"))
     }
 
     @Test
     fun featureRequestIntentUsesLabelsInsteadOfTemplateAndMatchesEmailBody() {
-        val uri = ready(buildFeatureRequestIntent(context)).intent.data!!
+        val uri = ready(buildFeatureRequestIntent(context, clock = FIXED_TEST_CLOCK)).intent.data!!
 
         assertEquals("enhancement", uri.getQueryParameter("labels"))
         assertNull(uri.getQueryParameter("template"))
@@ -236,8 +238,8 @@ class CrashReportShareIntentTest {
                 logcatDurationMinutes = 30,
             )
 
-        val result = buildIssueReportIntent(context, request, crashText, null, null, null)
-        val expected = buildBugReportIntent(context, crashText, null, 30)
+        val result = buildIssueReportIntent(context, request, crashText, null, null, null, clock = FIXED_TEST_CLOCK)
+        val expected = buildBugReportIntent(context, crashText, null, 30, clock = FIXED_TEST_CLOCK)
 
         assertEquals(ready(expected).intent.data, ready(result).intent.data)
         assertEquals(ready(expected).intent.action, ready(result).intent.action)
@@ -254,8 +256,8 @@ class CrashReportShareIntentTest {
                 logcatDurationMinutes = 15,
             )
 
-        val result = buildIssueReportIntent(context, request, null, null, null, null)
-        val expected = buildFeatureRequestIntent(context)
+        val result = buildIssueReportIntent(context, request, null, null, null, null, clock = FIXED_TEST_CLOCK)
+        val expected = buildFeatureRequestIntent(context, clock = FIXED_TEST_CLOCK)
 
         assertEquals(ready(expected).intent.data, ready(result).intent.data)
         assertEquals(ready(expected).intent.action, ready(result).intent.action)
@@ -267,7 +269,7 @@ class CrashReportShareIntentTest {
         // 8000-char URL limit once percent-encoded -- it must no longer be truncated for no reason.
         val reportText = "z".repeat(3000)
 
-        val result = buildGithubIssueIntent(context, reportText)
+        val result = buildGithubIssueIntent(context, reportText, clock = FIXED_TEST_CLOCK)
 
         assertTrue(result is GithubIssueIntentResult.Ready)
         val body = ready(result).intent.data!!.getQueryParameter("body")!!
@@ -278,7 +280,7 @@ class CrashReportShareIntentTest {
     fun githubIssueIntentOversizedWhenReportHuge() {
         val reportText = "z".repeat(20000)
 
-        val result = buildGithubIssueIntent(context, reportText)
+        val result = buildGithubIssueIntent(context, reportText, clock = FIXED_TEST_CLOCK)
 
         assertTrue(result is GithubIssueIntentResult.Oversized)
         val oversized = result as GithubIssueIntentResult.Oversized
@@ -292,7 +294,7 @@ class CrashReportShareIntentTest {
     fun bugReportIntentOversizedCarriesBugLabel() {
         val crashText = "z".repeat(20000)
 
-        val result = buildBugReportIntent(context, crashText)
+        val result = buildBugReportIntent(context, crashText, clock = FIXED_TEST_CLOCK)
 
         assertTrue(result is GithubIssueIntentResult.Oversized)
         val oversized = result as GithubIssueIntentResult.Oversized
@@ -322,10 +324,22 @@ class CrashReportShareIntentTest {
     }
 
     @Test
-    fun suggestedFilenameMatchesTimestampPattern() {
-        val filename = CrashReportFileExport.suggestedFilename("readylytics_crash_report")
+    fun suggestedFilenameUsesInjectedClockInstantAndZone() {
+        val instant = java.time.Instant.parse("2026-12-31T12:00:00.123Z")
 
-        assertTrue(filename.matches(Regex("readylytics_crash_report_\\d{4}-\\d{2}-\\d{2}_\\d{6}-\\d{3}\\.txt")))
+        val utc =
+            CrashReportFileExport.suggestedFilename(
+                "readylytics_crash_report",
+                java.time.Clock.fixed(instant, java.time.ZoneId.of("UTC")),
+            )
+        val kiritimati =
+            CrashReportFileExport.suggestedFilename(
+                "readylytics_crash_report",
+                java.time.Clock.fixed(instant, java.time.ZoneId.of("Pacific/Kiritimati")),
+            )
+
+        assertEquals("readylytics_crash_report_2026-12-31_120000-123.txt", utc)
+        assertEquals("readylytics_crash_report_2027-01-01_020000-123.txt", kiritimati)
     }
 
     @Test

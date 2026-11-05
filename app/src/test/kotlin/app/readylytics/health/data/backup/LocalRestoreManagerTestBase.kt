@@ -14,6 +14,7 @@ import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepositor
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.security.EncryptionManager
+import app.readylytics.health.testutil.FIXED_TEST_CLOCK
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -27,10 +28,12 @@ import org.junit.Before
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.io.File
+import java.time.Clock
 import java.time.Instant
 
 @RunWith(RobolectricTestRunner::class)
 abstract class LocalRestoreManagerTestBase {
+    protected val clock: Clock = FIXED_TEST_CLOCK
     protected lateinit var context: Context
     protected lateinit var db: HealthDatabase
     protected lateinit var settingsRepo: SettingsRepository
@@ -70,6 +73,7 @@ abstract class LocalRestoreManagerTestBase {
                 inventoryValidator = RestoreInventoryValidator(),
                 ioDispatcher = Dispatchers.Unconfined,
                 restoreMaintenanceCoordinator = restoreMaintenanceCoordinator,
+                clock = clock,
             )
     }
 
@@ -121,7 +125,7 @@ abstract class LocalRestoreManagerTestBase {
             app.readylytics.health.core.database.data.local
                 .HealthMutationCoordinatorImpl(db.healthMutationStateDao())
         restoreJournal = RestoreOperationJournal(context, encryptionManager)
-        val coverageChecker = RestoreRecommendationCoverageChecker(db, settingsRepo, workerScheduler)
+        val coverageChecker = RestoreRecommendationCoverageChecker(db, settingsRepo, workerScheduler, clock)
         return RestoreMaintenanceCoordinator(
             healthMutationCoordinator = mutationCoordinator,
             healthDatabase = db,

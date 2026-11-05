@@ -31,6 +31,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import java.time.Clock
@@ -160,6 +161,16 @@ class WorkoutsClockBoundaryTest {
                 ),
             clock = fixedClock,
         )
+
+    @Test
+    fun `initial state takes the selected date from the store and range start from the injected clock`() {
+        val viewModel = createViewModel()
+
+        val initial = viewModel.uiState.value
+
+        assertEquals(selectedDateFlow.value, initial.selectedDate)
+        assertEquals(fixedClock.millis(), initial.rangeStartMs)
+    }
 
     @Test
     fun `workouts query branches on today in scoring zone and clips fatigue curve to clock millis`() =

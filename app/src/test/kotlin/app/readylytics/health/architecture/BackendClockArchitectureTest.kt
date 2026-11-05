@@ -89,39 +89,67 @@ class BackendClockArchitectureTest {
         }
     }
 
-    private fun collectScannedFiles(repoRoot: File): List<File> {
-        val scannedFiles = mutableListOf<File>()
+    private fun collectScannedFiles(repoRoot: File): List<File> =
+        (collectCoreAndAppDirectories(repoRoot) + collectClockedAppFiles(repoRoot) + collectFeatureFiles(repoRoot))
+            .distinct()
 
-        // 1. core/*/src/main/kotlin
-        val coreDir = File(repoRoot, "core")
-        coreDir.listFiles()?.forEach { moduleDir ->
-            val srcMainKotlin = File(moduleDir, "src/main/kotlin")
-            if (srcMainKotlin.exists()) {
-                scannedFiles.addAll(srcMainKotlin.walkTopDown().filter { it.isFile && it.extension == "kt" })
-            }
+    private fun kotlinFilesUnder(dir: File): List<File> =
+        dir
+            .walkTopDown()
+            .filter {
+                it.isFile && it.extension == "kt"
+            }.toList()
+
+    private fun requireFiles(
+        repoRoot: File,
+        relativePaths: List<String>,
+    ): List<File> =
+        relativePaths.map { relative ->
+            File(repoRoot, relative).also { check(it.exists()) { "Required scanned file missing: $relative" } }
         }
 
-        // 2. app/.../workers
-        val workersDir = File(repoRoot, "app/src/main/kotlin/app/readylytics/health/workers")
-        if (workersDir.exists()) {
-            scannedFiles.addAll(workersDir.walkTopDown().filter { it.isFile && it.extension == "kt" })
-        }
-
-        // 3. Preference classes (mappers and the Clock-taking preference facades)
+    private fun collectCoreAndAppDirectories(repoRoot: File): List<File> {
         val appPrefix = "app/src/main/kotlin/app/readylytics/health"
         val prefDir = File(repoRoot, "$appPrefix/data/preferences")
         check(prefDir.exists()) { "Required scanned directory missing: $appPrefix/data/preferences" }
-        scannedFiles.addAll(prefDir.walkTopDown().filter { it.isFile && it.extension == "kt" })
-        val startupInitializer = File(repoRoot, "$appPrefix/DatabaseReadyStartupInitializer.kt")
-        check(startupInitializer.exists()) { "Required scanned file missing: DatabaseReadyStartupInitializer.kt" }
-        scannedFiles.add(startupInitializer)
+        val coreSources =
+            File(repoRoot, "core").listFiles().orEmpty().flatMap { moduleDir ->
+                File(moduleDir, "src/main/kotlin").takeIf { it.exists() }?.let(::kotlinFilesUnder).orEmpty()
+            }
+        val workers = File(repoRoot, "$appPrefix/workers").takeIf { it.exists() }?.let(::kotlinFilesUnder).orEmpty()
+        return coreSources +
+            workers +
+            kotlinFilesUnder(prefDir) +
+            requireFiles(repoRoot, listOf("$appPrefix/DatabaseReadyStartupInitializer.kt"))
+    }
 
-        // 4. Identified feature VM/flow/loader files
+    // Backup/restore, key rotation and crash-report classes that take an injected Clock.
+    private fun collectClockedAppFiles(repoRoot: File): List<File> {
+        val appPrefix = "app/src/main/kotlin/app/readylytics/health"
+        return requireFiles(
+            repoRoot,
+            listOf(
+                "data/backup/LocalBackupManager.kt",
+                "data/backup/LocalRestoreManager.kt",
+                "data/backup/BackupRotationService.kt",
+                "data/backup/RestoreRecommendationCoverageChecker.kt",
+                "domain/security/DatabaseKeyRotator.kt",
+                "crashreport/CrashReportHandler.kt",
+                "crashreport/CrashReportFileExport.kt",
+                "crashreport/CrashReportShareIntent.kt",
+            ).map { "$appPrefix/$it" },
+        )
+    }
+
+    // Identified feature VM/flow/loader files.
+    private fun collectFeatureFiles(repoRoot: File): List<File> {
         val dashPrefix = "feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard"
         val vitalsPrefix = "feature/vitals/src/main/kotlin/app/readylytics/health/feature/vitals"
         val workoutsPrefix = "feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts"
         val settingsPrefix = "feature/settings/src/main/kotlin/app/readylytics/health/feature/settings"
-        val featurePaths =
+        val onboardingPrefix = "feature/onboarding/src/main/kotlin/app/readylytics/health/feature/onboarding"
+        return requireFiles(
+            repoRoot,
             listOf(
                 "$dashPrefix/DashboardFlowIntermediate.kt",
                 "$dashPrefix/DashboardViewModel.kt",
@@ -130,14 +158,12 @@ class BackendClockArchitectureTest {
                 "$workoutsPrefix/WorkoutsViewModel.kt",
                 "$workoutsPrefix/WorkoutsDataLoader.kt",
                 "$settingsPrefix/PhysiologySettingsViewModel.kt",
-            )
-        for (fp in featurePaths) {
-            val f = File(repoRoot, fp)
-            check(f.exists()) { "Required scanned feature file missing: $fp" }
-            scannedFiles.add(f)
-        }
-
-        return scannedFiles.distinct()
+                "$onboardingPrefix/OnboardingViewModel.kt",
+                "$vitalsPrefix/overview/VitalsViewModel.kt",
+                "$vitalsPrefix/heartrate/HeartRateUiModels.kt",
+                "$workoutsPrefix/WorkoutsStateFactory.kt",
+            ),
+        )
     }
 
     @Test

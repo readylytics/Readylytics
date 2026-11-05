@@ -112,7 +112,11 @@ class HeartRateDetailViewModel
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5_000),
-                    initialValue = HeartRateDetailUiState(),
+                    initialValue =
+                        HeartRateDetailUiState(
+                            selectedDate = selectedDateRepository.selectedDate.value,
+                            today = LocalDate.now(clock),
+                        ),
                 )
 
         fun onPreviousDay() {

@@ -8,6 +8,7 @@ import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.data.preferences.SettingsRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
+import java.time.Clock
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -52,11 +53,12 @@ class RestoreRecommendationCoverageChecker
         private val healthDatabase: HealthDatabase,
         private val settingsRepository: SettingsRepository,
         private val workerScheduler: WorkerScheduler,
+        private val clock: Clock,
     ) {
         suspend fun scheduleRecomputeIfIncomplete() {
             try {
                 val prefs = settingsRepository.userPreferences.first()
-                val retentionCutoffMs = RetentionBounds.resolveRetentionCutoffMs(prefs, Instant.now())
+                val retentionCutoffMs = RetentionBounds.resolveRetentionCutoffMs(prefs, Instant.now(clock))
                 val summaries =
                     retentionCutoffMs?.let { healthDatabase.dailySummaryDao().getSince(it) }
                         ?: healthDatabase.dailySummaryDao().getAllSummaries()

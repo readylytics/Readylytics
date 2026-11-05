@@ -24,6 +24,8 @@ class HeartRateDetailScreenTest {
                 HeartRateDetailScreen(
                     uiState =
                         HeartRateDetailUiState(
+                            selectedDate = java.time.LocalDate.of(2026, 10, 8),
+                            today = java.time.LocalDate.of(2026, 10, 8),
                             minBpm = 50,
                             maxBpm = 100,
                             avgBpm = 72,

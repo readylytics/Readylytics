@@ -19,8 +19,11 @@ import app.readylytics.health.core.model.domain.user.UserProfileActions
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import java.time.Clock
 import java.time.DayOfWeek
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneOffset
 
 class FirstSetupFlowHarness(
     private val advanceUntilIdle: () -> Unit,
@@ -38,6 +41,7 @@ class FirstSetupFlowHarness(
             physiologySettings = physiologySettings,
             displaySettings = displaySettings,
             bmiService = BmiService(),
+            clock = Clock.fixed(Instant.parse("2026-06-15T10:00:00Z"), ZoneOffset.UTC),
         )
 
     fun seedProfile(

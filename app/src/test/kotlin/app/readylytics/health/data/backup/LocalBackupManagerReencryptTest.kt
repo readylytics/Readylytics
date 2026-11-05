@@ -25,6 +25,7 @@ import app.readylytics.health.core.model.domain.workouts.WorkoutDetailLayoutRepo
 import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.security.EncryptionManager
+import app.readylytics.health.testutil.FIXED_TEST_CLOCK
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -150,7 +151,7 @@ class LocalBackupManagerReencryptTest {
             journal = customJournal,
             verifiedPublisher = customPublisher,
             auditTrailRepository = auditTrailRepository,
-            ioDispatcher = Dispatchers.Unconfined,
+            runtime = BackupRuntime(Dispatchers.Unconfined, FIXED_TEST_CLOCK),
         )
 
     private fun buildManager(
@@ -192,6 +193,7 @@ class LocalBackupManagerReencryptTest {
             encryptionManager,
             auditTrailRepository,
             Dispatchers.Unconfined,
+            FIXED_TEST_CLOCK,
             customStoreFactory,
             RestoreInventoryValidator(),
             rotService,

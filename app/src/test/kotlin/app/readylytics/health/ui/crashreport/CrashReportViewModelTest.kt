@@ -2,6 +2,7 @@ package app.readylytics.health.ui.crashreport
 
 import app.readylytics.health.core.model.domain.crashreport.CrashReportStore
 import app.readylytics.health.core.model.domain.crashreport.RecalcDiagnosticStore
+import app.readylytics.health.testutil.FIXED_TEST_CLOCK
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -12,8 +13,8 @@ import java.io.File
 class CrashReportViewModelTest {
     @Test
     fun showPromptReflectsHasReportAtConstructionTime() {
-        val withReport = CrashReportViewModel(FakeCrashReportStore(hasReport = true))
-        val withoutReport = CrashReportViewModel(FakeCrashReportStore(hasReport = false))
+        val withReport = CrashReportViewModel(FakeCrashReportStore(hasReport = true), clock = FIXED_TEST_CLOCK)
+        val withoutReport = CrashReportViewModel(FakeCrashReportStore(hasReport = false), clock = FIXED_TEST_CLOCK)
 
         assertTrue(withReport.showPrompt.value)
         assertTrue(withReport.hasReport.value)
@@ -24,7 +25,7 @@ class CrashReportViewModelTest {
     @Test
     fun dismissHidesPromptButKeepsReport() {
         val store = FakeCrashReportStore(hasReport = true)
-        val viewModel = CrashReportViewModel(store)
+        val viewModel = CrashReportViewModel(store, clock = FIXED_TEST_CLOCK)
 
         viewModel.dismiss()
 
@@ -36,7 +37,7 @@ class CrashReportViewModelTest {
     @Test
     fun consumeReportHidesPromptAndDeletesReport() {
         val store = FakeCrashReportStore(hasReport = true)
-        val viewModel = CrashReportViewModel(store)
+        val viewModel = CrashReportViewModel(store, clock = FIXED_TEST_CLOCK)
 
         viewModel.consumeReport()
 
@@ -48,7 +49,7 @@ class CrashReportViewModelTest {
     @Test
     fun clearReportHidesPromptAndDeletesReport() {
         val store = FakeCrashReportStore(hasReport = true)
-        val viewModel = CrashReportViewModel(store)
+        val viewModel = CrashReportViewModel(store, clock = FIXED_TEST_CLOCK)
 
         viewModel.clearReport()
 
@@ -60,7 +61,11 @@ class CrashReportViewModelTest {
     @Test
     fun crashReportTakesPriorityOverRecalcDiagnostic() {
         val viewModel =
-            CrashReportViewModel(FakeCrashReportStore(hasReport = true), FakeRecalcStore(hasReport = true))
+            CrashReportViewModel(
+                FakeCrashReportStore(hasReport = true),
+                FakeRecalcStore(hasReport = true),
+                clock = FIXED_TEST_CLOCK,
+            )
 
         assertEquals(StartupReportKind.CRASH, viewModel.promptKind.value)
         assertTrue(viewModel.showPrompt.value)
@@ -69,7 +74,7 @@ class CrashReportViewModelTest {
     @Test
     fun recalcDiagnosticAloneShowsPromptWithoutFlaggingACrashReport() {
         val recalc = FakeRecalcStore(hasReport = true)
-        val viewModel = CrashReportViewModel(FakeCrashReportStore(hasReport = false), recalc)
+        val viewModel = CrashReportViewModel(FakeCrashReportStore(hasReport = false), recalc, clock = FIXED_TEST_CLOCK)
 
         assertEquals(StartupReportKind.RECALC_DIAGNOSTIC, viewModel.promptKind.value)
         assertTrue(viewModel.showPrompt.value)
@@ -81,7 +86,7 @@ class CrashReportViewModelTest {
     fun consumePromptReportDeletesOnlyTheShownReport() {
         val crash = FakeCrashReportStore(hasReport = false)
         val recalc = FakeRecalcStore(hasReport = true)
-        val viewModel = CrashReportViewModel(crash, recalc)
+        val viewModel = CrashReportViewModel(crash, recalc, clock = FIXED_TEST_CLOCK)
 
         viewModel.consumePromptReport()
 
@@ -93,7 +98,11 @@ class CrashReportViewModelTest {
     @Test
     fun noReportsMeansNoPrompt() {
         val viewModel =
-            CrashReportViewModel(FakeCrashReportStore(hasReport = false), FakeRecalcStore(hasReport = false))
+            CrashReportViewModel(
+                FakeCrashReportStore(hasReport = false),
+                FakeRecalcStore(hasReport = false),
+                clock = FIXED_TEST_CLOCK,
+            )
 
         assertNull(viewModel.promptKind.value)
         assertFalse(viewModel.showPrompt.value)

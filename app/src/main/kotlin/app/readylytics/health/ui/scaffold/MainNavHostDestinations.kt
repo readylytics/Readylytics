@@ -295,7 +295,15 @@ private fun handleSendIssueReport(
         val logcatFile = if (logcatText != null) logcatCaptureViewModel.captureFile() else null
         when (
             val result =
-                buildIssueReportIntent(context, request, crashText, crashFile, logcatText, logcatFile)
+                buildIssueReportIntent(
+                    context,
+                    request,
+                    crashText,
+                    crashFile,
+                    logcatText,
+                    logcatFile,
+                    crashReportViewModel.clock,
+                )
         ) {
             is GithubIssueIntentResult.Ready -> {
                 context.startActivity(result.intent)

@@ -54,8 +54,8 @@ data class VitalsUiState(
     val chartSeries: VitalsChartSeries = VitalsChartSeries(emptyList(), emptyList(), emptyList(), emptyList()),
     val presentation: VitalsPresentationState = VitalsPresentationState.empty(),
     val selectedRange: TimeRange = TimeRange.SEVEN_DAYS,
-    val selectedDate: LocalDate = LocalDate.now(),
-    val rangeStartMs: Long = System.currentTimeMillis(),
+    val selectedDate: LocalDate,
+    val rangeStartMs: Long,
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val vitalsCardConfigurations: List<CardConfiguration> = emptyList(),
@@ -312,7 +312,12 @@ class VitalsViewModel
             }.stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),
-                initialValue = VitalsUiState(isLoading = true),
+                initialValue =
+                    VitalsUiState(
+                        selectedDate = selectedDateRepository.selectedDate.value,
+                        rangeStartMs = 0L,
+                        isLoading = true,
+                    ),
             )
 
         fun onRangeSelected(range: TimeRange) {

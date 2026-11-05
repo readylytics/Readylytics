@@ -162,7 +162,7 @@ class LocalRestoreRecommendationCoverageTest : LocalRestoreManagerTestBase() {
 
             val json = createValidBackupJson()
             val outsideRetentionMs =
-                Instant.now().minus(retentionDays + 10L, ChronoUnit.DAYS).toEpochMilli()
+                Instant.now(clock).minus(retentionDays + 10L, ChronoUnit.DAYS).toEpochMilli()
             val summariesJson =
                 JSONArray().apply {
                     put(
@@ -193,7 +193,7 @@ class LocalRestoreRecommendationCoverageTest : LocalRestoreManagerTestBase() {
                 flowOf(UserPreferences(retentionDaysEnabled = true, retentionDays = retentionDays))
 
             val json = createValidBackupJson()
-            val withinRetentionMs = Instant.now().minus(5, ChronoUnit.DAYS).toEpochMilli()
+            val withinRetentionMs = Instant.now(clock).minus(5, ChronoUnit.DAYS).toEpochMilli()
             val summariesJson =
                 JSONArray().apply {
                     put(

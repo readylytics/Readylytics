@@ -4,8 +4,8 @@ import android.content.Context
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.CancellationException
+import java.time.Clock
 import java.time.Instant
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 // Writes an oversized crash/bug report to a user-picked SAF uri, for attaching to a GitHub issue
@@ -14,8 +14,11 @@ import java.time.format.DateTimeFormatter
 object CrashReportFileExport {
     private val FILENAME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss-SSS")
 
-    fun suggestedFilename(prefix: String): String {
-        val timestamp = Instant.now().atZone(ZoneId.systemDefault()).format(FILENAME_FORMATTER)
+    fun suggestedFilename(
+        prefix: String,
+        clock: Clock,
+    ): String {
+        val timestamp = Instant.now(clock).atZone(clock.zone).format(FILENAME_FORMATTER)
         return "${prefix}_$timestamp.txt"
     }
 

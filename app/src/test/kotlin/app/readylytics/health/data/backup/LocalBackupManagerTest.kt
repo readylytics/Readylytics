@@ -27,6 +27,7 @@ import app.readylytics.health.core.model.domain.workouts.WorkoutDetailLayoutRepo
 import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.security.EncryptionManager
+import app.readylytics.health.testutil.FIXED_TEST_CLOCK
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -44,6 +45,9 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.io.File
 import java.nio.charset.StandardCharsets
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
@@ -131,6 +135,7 @@ class LocalBackupManagerTest {
         customSettingsRepo: SettingsRepository = settingsRepo,
         customStoreFactory: BackupStoreFactory = DefaultBackupStoreFactory(context),
         customWriter: BackupStreamWriter? = null,
+        clock: Clock = FIXED_TEST_CLOCK,
     ): LocalBackupManager {
         kotlinx.coroutines.runBlocking {
             db.healthMutationStateDao().upsert(
@@ -168,6 +173,7 @@ class LocalBackupManagerTest {
             encryptionManager,
             auditTrailRepository,
             Dispatchers.Unconfined,
+            clock,
             customStoreFactory,
         )
     }
@@ -199,6 +205,33 @@ class LocalBackupManagerTest {
             assertTrue(result.isSuccess)
             assertEquals(listOf(AuditEvent.Type.BACKUP_CREATED), auditTrailRepository.events.map { it.type })
             assertEquals(null, auditTrailRepository.events.single().detail)
+        }
+
+    @Test
+    fun createBackup_stampsBackupCreatedEventWithInjectedClockInstant() =
+        runTest {
+            val clock = Clock.fixed(Instant.parse("2026-03-04T23:30:15Z"), ZoneId.of("UTC"))
+
+            buildManager(clock = clock).createBackup()
+
+            assertEquals(listOf(clock.instant()), auditTrailRepository.events.map { it.occurredAt })
+        }
+
+    @Test
+    fun createBackup_namesFileFromClockZoneNotSystemZone() =
+        runTest {
+            val instant = Instant.parse("2026-03-04T23:30:15Z")
+
+            val utcName =
+                buildManager(clock = Clock.fixed(instant, ZoneId.of("UTC"))).createBackup().getOrNull()?.name
+            val kiritimatiName =
+                buildManager(clock = Clock.fixed(instant, ZoneId.of("Pacific/Kiritimati")))
+                    .createBackup()
+                    .getOrNull()
+                    ?.name
+
+            assertEquals("backup_2026-03-04_233015.zip", utcName)
+            assertEquals("backup_2026-03-05_133015.zip", kiritimatiName)
         }
 
     @Test
