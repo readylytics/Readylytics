@@ -1,5 +1,6 @@
 package app.readylytics.health.core.model.domain.layout
 
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -11,9 +12,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * Aggregated edit-mode UI state shared by every visibility+position-only reorderable list
- * (Vitals/Workouts/Sleep charts, Workouts history). Cards with a display-mode concept
- * (e.g. dashboard cards) are not covered by this delegate.
+ * Aggregated edit-mode UI state shared by every reorderable layout list (charts, history,
+ * and cards with an optional display-mode concept).
  */
 data class LayoutManagementState<T : ReorderableItem<Id>, Id>(
     val isManaging: Boolean = false,
@@ -38,6 +38,7 @@ class LayoutManagementDelegate<T : ReorderableItem<Id>, Id>(
     private val scope: CoroutineScope,
     private val withVisibility: (T, Boolean) -> T,
     private val withPosition: (T, Int) -> T,
+    private val withDisplayMode: ((T, DashboardCardDisplayMode?) -> T)? = null,
 ) {
     private val _isManaging = MutableStateFlow(false)
     private val _pendingConfigs = MutableStateFlow<List<T>?>(null)
@@ -92,5 +93,18 @@ class LayoutManagementDelegate<T : ReorderableItem<Id>, Id>(
         val reorderedIds = newOrder.map { it.id }.toSet()
         val hidden = base.filter { it.id !in reorderedIds }
         _pendingConfigs.value = (newOrder + hidden).mapIndexed { index, config -> withPosition(config, index) }
+    }
+
+    /**
+     * Sets (or, with `null`, clears) the requested display mode of one pending item. Only valid
+     * for delegates built with [withDisplayMode]. A no-op outside edit mode.
+     */
+    fun onDisplayModeChanged(
+        id: Id,
+        mode: DashboardCardDisplayMode?,
+    ) {
+        val apply = checkNotNull(withDisplayMode) { "LayoutManagementDelegate was built without withDisplayMode" }
+        val base = _pendingConfigs.value ?: return
+        _pendingConfigs.value = base.map { if (it.id == id) apply(it, mode) else it }
     }
 }

@@ -1,5 +1,6 @@
 package app.readylytics.health.core.model.domain.layout
 
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
@@ -21,6 +22,7 @@ private data class FakeReorderableConfig(
     val configId: String,
     override val isVisible: Boolean = true,
     override val position: Int = 0,
+    val displayMode: DashboardCardDisplayMode? = null,
 ) : ReorderableItem<String> {
     override val id: String get() = configId
 }
@@ -159,6 +161,66 @@ class LayoutManagementDelegateTest {
             delegate.saveChanges()
             advanceUntilIdle()
             assertEquals(listOf(defaults), persistedConfigs)
+        }
+
+    private fun displayModeDelegate(): LayoutManagementDelegate<FakeReorderableConfig, String> =
+        LayoutManagementDelegate(
+            defaultConfigurations = defaults,
+            persist = { persistedConfigs += it },
+            scope = delegateScope,
+            withVisibility = { config, visible -> config.copy(isVisible = visible) },
+            withPosition = { config, pos -> config.copy(position = pos) },
+            withDisplayMode = { config, mode -> config.copy(displayMode = mode) },
+        )
+
+    private val someMode = DashboardCardDisplayMode.entries.first()
+
+    @Test
+    fun `onDisplayModeChanged updates only the matching pending item`() {
+        val modeDelegate = displayModeDelegate()
+        modeDelegate.enterEditMode(defaults)
+        modeDelegate.onDisplayModeChanged("b", someMode)
+        val updated = modeDelegate.pendingConfigs.value!!
+        assertEquals(someMode, updated.first { it.id == "b" }.displayMode)
+        assertNull(updated.first { it.id == "a" }.displayMode)
+        assertNull(updated.first { it.id == "c" }.displayMode)
+    }
+
+    @Test
+    fun `onDisplayModeChanged with null clears the mode`() {
+        val modeDelegate = displayModeDelegate()
+        modeDelegate.enterEditMode(defaults.map { it.copy(displayMode = someMode) })
+        modeDelegate.onDisplayModeChanged("a", null)
+        val updated = modeDelegate.pendingConfigs.value!!
+        assertNull(updated.first { it.id == "a" }.displayMode)
+        assertEquals(someMode, updated.first { it.id == "b" }.displayMode)
+    }
+
+    @Test
+    fun `onDisplayModeChanged outside edit mode is a no-op and does not persist`() =
+        testScope.runTest {
+            val modeDelegate = displayModeDelegate()
+            modeDelegate.onDisplayModeChanged("a", someMode)
+            advanceUntilIdle()
+            assertNull(modeDelegate.pendingConfigs.value)
+            assertTrue(persistedConfigs.isEmpty())
+        }
+
+    @Test(expected = IllegalStateException::class)
+    fun `onDisplayModeChanged without withDisplayMode throws IllegalStateException`() {
+        delegate.enterEditMode(defaults)
+        delegate.onDisplayModeChanged("a", someMode)
+    }
+
+    @Test
+    fun `display mode set in edit mode is persisted on save`() =
+        testScope.runTest {
+            val modeDelegate = displayModeDelegate()
+            modeDelegate.enterEditMode(defaults)
+            modeDelegate.onDisplayModeChanged("a", someMode)
+            modeDelegate.saveChanges()
+            advanceUntilIdle()
+            assertEquals(someMode, persistedConfigs.single().first { it.id == "a" }.displayMode)
         }
 
     @Test
