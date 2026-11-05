@@ -3,11 +3,7 @@ package app.readylytics.health.core.healthconnect.data.healthconnect
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import io.mockk.mockk
-import kotlinx.coroutines.Dispatchers
 import org.junit.Test
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneId
 import kotlin.test.assertTrue
 
 /**
@@ -19,18 +15,8 @@ import kotlin.test.assertTrue
 class HealthConnectPermissionSetsTest {
     private val context = mockk<Context>(relaxed = true)
     private val client = mockk<HealthConnectClient>(relaxed = true)
-    private val ioDispatcher = Dispatchers.Unconfined
     private val repo =
-        HealthConnectRepositoryImpl(
-                routeLookup = mockk(relaxed = true),
-            context = context,
-            ioDispatcher = ioDispatcher,
-            stepRecordReader = StepRecordReader(context = context, ioDispatcher = ioDispatcher, client = client),
-            intervalTotalsReader =
-                IntervalTotalsReader(context = context, ioDispatcher = ioDispatcher, client = client),
-            clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
-            client = client,
-        )
+        createHealthConnectRepositoryForTest(context = context, client = client, routeLookup = mockk(relaxed = true))
 
     private val permissionPrefix = "android.permission.health."
 

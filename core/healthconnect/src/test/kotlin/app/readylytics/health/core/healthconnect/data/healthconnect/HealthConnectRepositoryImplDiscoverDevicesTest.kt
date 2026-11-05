@@ -110,21 +110,7 @@ class HealthConnectRepositoryImplDiscoverDevicesTest {
                 every { pageToken } returns null
             }
 
-        val ioDispatcher = Dispatchers.Unconfined
-        val stepRecordReader =
-            StepRecordReader(context = context, ioDispatcher = ioDispatcher, client = client)
-        val intervalTotalsReader =
-            IntervalTotalsReader(context = context, ioDispatcher = ioDispatcher, client = client)
-        repo =
-            HealthConnectRepositoryImpl(
-                routeLookup = routeLookup,
-                context = context,
-                ioDispatcher = ioDispatcher,
-                stepRecordReader = stepRecordReader,
-                intervalTotalsReader = intervalTotalsReader,
-                clock = Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneId.of("UTC")),
-                client = client,
-            )
+        repo = createHealthConnectRepositoryForTest(context = context, client = client, routeLookup = routeLookup)
         coEvery { client.permissionController.getGrantedPermissions() } returns repo.allPermissions
     }
 
