@@ -29,7 +29,6 @@ import app.readylytics.health.core.ui.components.InvisibleMarker
 import app.readylytics.health.core.ui.components.VicoChartTooltipOverlay
 import app.readylytics.health.core.ui.components.ZoneBandDecoration
 import app.readylytics.health.core.ui.components.rememberLongPressMarkerController
-import app.readylytics.health.feature.workouts.R
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
@@ -58,48 +57,47 @@ private const val Y_AXIS_STEP = 10f
 private val TsbYAxisFormatter =
     CartesianValueFormatter { _, value, _ -> String.format(Locale.US, "%+d", value.roundToInt()) }
 
+private val TsbZoneBands =
+    listOf(
+        ZoneBand(
+            lowerBound = VERY_FRESH_THRESHOLD.toDouble(),
+            upperBound = Double.POSITIVE_INFINITY,
+            zone = HealthZone.NEUTRAL,
+        ),
+        ZoneBand(
+            lowerBound = FRESH_THRESHOLD.toDouble(),
+            upperBound = VERY_FRESH_THRESHOLD.toDouble(),
+            zone = HealthZone.OPTIMAL,
+        ),
+        ZoneBand(
+            lowerBound = FATIGUED_THRESHOLD.toDouble(),
+            upperBound = FRESH_THRESHOLD.toDouble(),
+            zone = HealthZone.OPTIMAL,
+        ),
+        ZoneBand(
+            lowerBound = HIGH_RISK_THRESHOLD.toDouble(),
+            upperBound = FATIGUED_THRESHOLD.toDouble(),
+            zone = HealthZone.WARNING,
+        ),
+        ZoneBand(
+            lowerBound = Double.NEGATIVE_INFINITY,
+            upperBound = HIGH_RISK_THRESHOLD.toDouble(),
+            zone = HealthZone.CRITICAL,
+        ),
+    )
+
 @Composable
 private fun rememberTsbDecorations(
     chartMinY: Double,
     chartMaxY: Double,
 ): List<Decoration> {
     val zoneVisuals = rememberTsbZoneVisuals()
-    val tsbZoneBands =
-        remember {
-            listOf(
-                ZoneBand(
-                    lowerBound = VERY_FRESH_THRESHOLD.toDouble(),
-                    upperBound = Double.POSITIVE_INFINITY,
-                    zone = HealthZone.NEUTRAL,
-                ),
-                ZoneBand(
-                    lowerBound = FRESH_THRESHOLD.toDouble(),
-                    upperBound = VERY_FRESH_THRESHOLD.toDouble(),
-                    zone = HealthZone.OPTIMAL,
-                ),
-                ZoneBand(
-                    lowerBound = FATIGUED_THRESHOLD.toDouble(),
-                    upperBound = FRESH_THRESHOLD.toDouble(),
-                    zone = HealthZone.OPTIMAL,
-                ),
-                ZoneBand(
-                    lowerBound = HIGH_RISK_THRESHOLD.toDouble(),
-                    upperBound = FATIGUED_THRESHOLD.toDouble(),
-                    zone = HealthZone.WARNING,
-                ),
-                ZoneBand(
-                    lowerBound = Double.NEGATIVE_INFINITY,
-                    upperBound = HIGH_RISK_THRESHOLD.toDouble(),
-                    zone = HealthZone.CRITICAL,
-                ),
-            )
-        }
     val bandColors = remember(zoneVisuals) { zoneVisuals.map { it.bandColor } }
 
     val decoration =
-        remember(tsbZoneBands, bandColors, chartMinY, chartMaxY) {
+        remember(bandColors, chartMinY, chartMaxY) {
             ZoneBandDecoration(
-                zoneBands = tsbZoneBands,
+                zoneBands = TsbZoneBands,
                 bandColors = bandColors,
                 minY = chartMinY,
                 maxY = chartMaxY,
@@ -232,7 +230,7 @@ private fun rememberTsbRemappedPoints(
 private data class TsbChartHostConfig(
     val rangeProvider: CartesianLayerRangeProvider,
     val xAxisFormatter: CartesianValueFormatter,
-    val itemPlacer: com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis.ItemPlacer,
+    val itemPlacer: HorizontalAxis.ItemPlacer,
     val modelProducer: CartesianChartModelProducer,
     val hasData: Boolean,
     val decorations: List<Decoration>,
