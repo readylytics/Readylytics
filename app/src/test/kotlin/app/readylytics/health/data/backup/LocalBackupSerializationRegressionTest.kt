@@ -35,6 +35,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.io.File
+import java.time.Clock
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -99,6 +100,7 @@ class LocalBackupSerializationRegressionTest {
                 settingsRepo(),
                 layoutRepos,
                 backupStreamWriter,
+                Clock.systemDefaultZone(),
             )
         manager =
             LocalBackupManager(

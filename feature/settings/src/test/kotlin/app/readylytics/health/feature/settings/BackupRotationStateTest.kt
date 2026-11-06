@@ -29,6 +29,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.io.IOException
+import java.time.Clock
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class BackupRotationStateTest {
@@ -77,6 +78,7 @@ class BackupRotationStateTest {
             restoreService = restoreService,
             encryptionManager = encryptionManager,
             ioDispatcher = testDispatcher,
+            clock = Clock.systemDefaultZone(),
         )
 
     @Test

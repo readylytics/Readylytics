@@ -10,6 +10,7 @@ import app.readylytics.health.core.model.domain.preferences.BackupSettings
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.security.EncryptionManager
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CompletableDeferred
@@ -26,6 +27,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class LocalBackupViewModelTest {
@@ -49,7 +53,7 @@ class LocalBackupViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun createViewModel() =
+    private fun createViewModel(clock: Clock = Clock.systemDefaultZone()) =
         LocalBackupViewModel(
             settingsRepo = settingsRepo,
             backupSettings = backupSettings,
@@ -57,6 +61,7 @@ class LocalBackupViewModelTest {
             restoreService = restoreService,
             encryptionManager = encryptionManager,
             ioDispatcher = testDispatcher,
+            clock = clock,
         )
 
     private fun backup(name: String) = BackupFileRef(name, 0L, 0L, BackupLocation("content://$name"))
@@ -133,6 +138,24 @@ class LocalBackupViewModelTest {
 
             assertTrue(viewModel.uiState.value.isLoadingBackups)
             assertEquals(emptyList<BackupFileRef>(), viewModel.uiState.value.availableBackups)
+        }
+
+    @Test
+    fun `successful backup records last backup timestamp from injected clock`() =
+        runTest(testDispatcher) {
+            prefsFlow.value = prefsFlow.value.copy(backupPasswordHash = "hash")
+            coEvery { backupService.listBackups() } returns emptyList()
+            coEvery { backupService.createBackup() } returns Result.success(Unit)
+            val fixedClock = Clock.fixed(Instant.parse("2026-01-15T10:00:00Z"), ZoneOffset.UTC)
+
+            viewModel = createViewModel(fixedClock)
+            val collectJob = launch { viewModel.uiState.collect {} }
+            testDispatcher.scheduler.advanceUntilIdle()
+            viewModel.onEvent(SettingsEvent.CreateLocalBackup)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            coVerify { backupSettings.updateLastBackupTimestamp(1_768_471_200_000L) }
+            collectJob.cancel()
         }
 
     @Test

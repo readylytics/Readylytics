@@ -120,6 +120,8 @@ class BackendClockArchitectureTest {
                 "crashreport/CrashReportHandler.kt",
                 "crashreport/CrashReportFileExport.kt",
                 "crashreport/CrashReportShareIntent.kt",
+                "data/backup/BackupSnapshotExporter.kt",
+                "ui/sync/SyncViewModel.kt",
             ).map { "$appPrefix/$it" },
         )
     }
@@ -144,6 +146,7 @@ class BackendClockArchitectureTest {
         return requireFiles(
             repoRoot,
             listOf(
+                "$settingsPrefix/LocalBackupViewModel.kt",
                 "$dashPrefix/DashboardFlowIntermediate.kt",
                 "$dashPrefix/DashboardViewModel.kt",
                 "$dashPrefix/DashboardClockPresentation.kt",

@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Clock
 import javax.inject.Inject
 import app.readylytics.health.core.ui.R as CoreUiR
 
@@ -61,6 +62,7 @@ class SyncViewModel
         private val historicalResyncController: HistoricalResyncController,
         private val settingsRepo: SettingsRepository,
         private val selectedDateRepository: SelectedDateRepository,
+        private val clock: Clock,
     ) : BaseViewModel() {
         fun validateSyncNecessary(): Result<Unit> = Result.success(Unit)
 
@@ -98,7 +100,7 @@ class SyncViewModel
             viewModelScope.launch {
                 userPreferences.collectLatest { prefs ->
                     if (prefs.installDate == 0L) {
-                        settingsRepo.updateInstallDate(System.currentTimeMillis())
+                        settingsRepo.updateInstallDate(clock.millis())
                     }
                 }
             }

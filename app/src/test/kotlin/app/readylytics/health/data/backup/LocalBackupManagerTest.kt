@@ -165,6 +165,7 @@ class LocalBackupManagerTest {
                 customSettingsRepo,
                 layoutRepos,
                 backupStreamWriter,
+                Clock.systemDefaultZone(),
             )
         return LocalBackupManager(
             context,

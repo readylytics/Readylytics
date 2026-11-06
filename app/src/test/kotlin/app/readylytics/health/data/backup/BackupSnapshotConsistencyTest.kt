@@ -45,9 +45,13 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.io.File
 import java.io.IOException
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
 
 @RunWith(RobolectricTestRunner::class)
 class BackupSnapshotConsistencyTest {
+    private val fixedClock = Clock.fixed(Instant.parse("2026-01-15T10:00:00Z"), ZoneOffset.UTC)
     private val context: Context
         get() = ApplicationProvider.getApplicationContext()
 
@@ -115,6 +119,7 @@ class BackupSnapshotConsistencyTest {
                 settingsRepository,
                 layoutRepositories,
                 backupStreamWriter,
+                fixedClock,
             )
     }
 
@@ -307,6 +312,20 @@ class BackupSnapshotConsistencyTest {
             // After export, competing mutation has applied generation B
             assertEquals(11L, db.healthMutationStateDao().current().sourceGeneration)
             assertEquals(3, db.sourceRecordDao().count())
+        }
+
+    @Test
+    fun exportedAtEpochMsComesFromInjectedClock() =
+        runBlocking(Dispatchers.Default) {
+            seedGenerationAData()
+
+            val identity =
+                exporter.captureEncrypted(
+                    File(stagingDir, "clock_snapshot.zip"),
+                    "password123".toCharArray(),
+                )
+
+            assertEquals(1_768_471_200_000L, identity.exportedAtEpochMs)
         }
 
     @Test

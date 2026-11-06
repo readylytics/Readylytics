@@ -25,6 +25,9 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
@@ -64,6 +67,7 @@ class SyncViewModelTest {
                 historicalResyncController = historicalResyncController,
                 settingsRepo = settingsRepo,
                 selectedDateRepository = selectedDateRepository,
+                clock = Clock.fixed(Instant.parse("2026-01-15T10:00:00Z"), ZoneOffset.UTC),
             )
     }
 
@@ -76,6 +80,12 @@ class SyncViewModelTest {
     fun validateSyncNecessary_succeeds() {
         val result = viewModel.validateSyncNecessary()
         assertTrue(result.isSuccess, "Sync should be valid")
+    }
+
+    @Test
+    fun installDate_isInitialisedFromInjectedClock() {
+        testDispatcher.scheduler.advanceUntilIdle()
+        coVerify { settingsRepo.updateInstallDate(1_768_471_200_000L) }
     }
 
     @Test
