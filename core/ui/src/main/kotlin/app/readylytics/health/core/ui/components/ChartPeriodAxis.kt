@@ -12,11 +12,9 @@ import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.compose.common.data.ExtraStore
 import java.time.ZoneId
 
-/**
- * Shared x-axis scaffolding for period-aggregated Vico trend charts (sleep trend, ACWR, TSB).
- * [DAILY][TrendGranularity.DAILY] keeps real day offsets; any coarser granularity renders one
- * point per period at ordinal x positions `0..n-1` with a label per period.
- */
+// Shared x-axis scaffolding for period-aggregated Vico trend charts (sleep trend, ACWR, TSB).
+// DAILY keeps real day offsets; any coarser granularity renders one point per period at ordinal
+// x positions 0..n-1 with a label per period.
 
 /** Re-index [points] to ordinal x positions for non-daily granularities; daily is returned as-is. */
 fun remapToOrdinalOffsets(
