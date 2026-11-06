@@ -31,6 +31,7 @@ import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.model.InsightType
 import app.readylytics.health.core.scoring.domain.insights.InsightParams
+import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.core.ui.components.CardConfigurationsList
 import app.readylytics.health.core.ui.components.CardDataMap
@@ -168,14 +169,23 @@ private fun DashboardSnackbarEffects(
     clipboardManager: Clipboard,
     copiedMessage: String,
     clipLabel: String,
+    loadError: UiText?,
 ) {
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
     val resolvedError = errorMessage.resolveOrNull()
+    val resolvedLoadError = loadError.resolveOrNull()
     val dailyPromptText by viewModel.dailyPromptText.collectAsStateWithLifecycle()
 
     LaunchedEffect(errorMessage) {
         if (resolvedError != null) {
             snackbarHostState.showSnackbar(ColoredSnackbarVisuals(resolvedError, isError = true))
+        }
+    }
+
+    // Keyed on the UiText value, so a repeated identical load error shows once, not per emission.
+    LaunchedEffect(loadError) {
+        if (resolvedLoadError != null) {
+            snackbarHostState.showSnackbar(ColoredSnackbarVisuals(resolvedLoadError, isError = true))
         }
     }
 
@@ -245,6 +255,7 @@ fun DashboardRoute(
         clipboardManager = clipboardManager,
         copiedMessage = copiedMessage,
         clipLabel = clipLabel,
+        loadError = uiState.errorMessage,
     )
 
     DashboardScreen(

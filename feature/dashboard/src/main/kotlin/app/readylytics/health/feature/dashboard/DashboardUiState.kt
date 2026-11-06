@@ -11,6 +11,7 @@ import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.sync.RecalcProgress
 import app.readylytics.health.core.scoring.domain.insights.InsightParams
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
+import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
 import java.time.LocalDate
@@ -39,7 +40,7 @@ data class DashboardUiState(
     val recalcProgress: RecalcProgress? = null,
     val isComputingMetrics: Boolean = false,
     val isCalibrating: Boolean = false,
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
     val heartRateDaySummary: HeartRateDaySummary? = null,
     val activeInsightTypes: Set<InsightType> = emptySet(),
     val currentInsight: InsightType? = null,
