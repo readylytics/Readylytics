@@ -95,7 +95,7 @@ fun SleepStagesChart(
             val tooltipData by rememberSleepStagesTooltipData(
                 selectedSegment = selectedSegment,
                 viewportWidthPx = constraints.maxWidth,
-                scrollOffsetPx = scrollState.value,
+                scrollOffsetPx = { scrollState.value },
                 selectedStageName = selectedStageName,
                 selectedDurationStr = selectedDurationStr,
                 timeFormatter = timeFormatter,

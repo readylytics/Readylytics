@@ -3,7 +3,9 @@ package app.readylytics.health.feature.sleep
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -123,25 +125,46 @@ internal fun rememberSleepStagesStateDescription(
         )
     } ?: stringResource(CoreUiR.string.chart_accessibility_no_selection)
 
-@Composable
-internal fun rememberSleepStagesTooltipData(
+internal fun sleepStagesTooltipData(
     selectedSegment: SelectedSegmentState?,
     viewportWidthPx: Int,
     scrollOffsetPx: Int,
     selectedStageName: String?,
     selectedDurationStr: String?,
     timeFormatter: DateTimeFormatter,
-): State<DataPointTooltipData?> =
-    remember(selectedSegment, viewportWidthPx, scrollOffsetPx, selectedStageName, selectedDurationStr) {
+): DataPointTooltipData? {
+    val sel = selectedSegment ?: return null
+    val viewportX = (sel.segmentCenterXPx - scrollOffsetPx).roundToInt()
+    if (viewportX !in 0..viewportWidthPx) return null
+    return DataPointTooltipData(
+        valueText = selectedStageName.orEmpty(),
+        dateText = timeFormatter.format(Instant.ofEpochMilli(sel.stage.startTime)),
+        extraLine = selectedDurationStr,
+        offset = IntOffset(viewportX, 0),
+    )
+}
+
+/** [scrollOffsetPx] is a lambda so the scroll value is read inside `derivedStateOf`, not during composition. */
+@Composable
+internal fun rememberSleepStagesTooltipData(
+    selectedSegment: SelectedSegmentState?,
+    viewportWidthPx: Int,
+    scrollOffsetPx: () -> Int,
+    selectedStageName: String?,
+    selectedDurationStr: String?,
+    timeFormatter: DateTimeFormatter,
+): State<DataPointTooltipData?> {
+    val currentScrollOffset by rememberUpdatedState(scrollOffsetPx)
+    return remember(selectedSegment, viewportWidthPx, selectedStageName, selectedDurationStr) {
         derivedStateOf {
-            val sel = selectedSegment ?: return@derivedStateOf null
-            val viewportX = (sel.segmentCenterXPx - scrollOffsetPx).roundToInt()
-            if (viewportX !in 0..viewportWidthPx) return@derivedStateOf null
-            DataPointTooltipData(
-                valueText = selectedStageName.orEmpty(),
-                dateText = timeFormatter.format(Instant.ofEpochMilli(sel.stage.startTime)),
-                extraLine = selectedDurationStr,
-                offset = IntOffset(viewportX, 0),
+            sleepStagesTooltipData(
+                selectedSegment,
+                viewportWidthPx,
+                currentScrollOffset(),
+                selectedStageName,
+                selectedDurationStr,
+                timeFormatter,
             )
         }
     }
+}
