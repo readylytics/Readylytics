@@ -37,6 +37,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.io.File
 import java.io.IOException
+import java.time.Clock
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -152,6 +153,7 @@ class LocalBackupManagerRetentionSafetyTest {
                 customSettingsRepo,
                 layoutRepos,
                 backupStreamWriter,
+                Clock.systemDefaultZone(),
             )
         return LocalBackupManager(
             context,

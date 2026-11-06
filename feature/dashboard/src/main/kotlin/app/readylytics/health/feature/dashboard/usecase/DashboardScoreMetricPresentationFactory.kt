@@ -3,7 +3,6 @@ package app.readylytics.health.feature.dashboard.usecase
 import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.display.MetricFormatter
 import app.readylytics.health.core.model.domain.model.DailyMetrics
-import app.readylytics.health.core.model.domain.model.DailyMetricsMapper
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.model.LoadSourceSelector
 import app.readylytics.health.core.model.domain.model.MetricStatus
@@ -27,13 +26,13 @@ class DashboardScoreMetricPresentationFactory
 
         fun build(
             summary: DailySummary?,
+            metrics: DailyMetrics?,
             preferences: UserPreferences,
             unavailableValueText: String,
             scoreMaximumText: String,
             todayStrainIncrease: Float? = null,
-        ): Map<CardId, UniversalMetricPresentation> {
-            val metrics = summary?.let { DailyMetricsMapper.toMetrics(it, preferences) }
-            return mapOf(
+        ): Map<CardId, UniversalMetricPresentation> =
+            mapOf(
                 CardId.SLEEP_SCORE to
                     sleepScorePresentation(summary, metrics, unavailableValueText, scoreMaximumText),
                 CardId.READINESS to
@@ -49,7 +48,6 @@ class DashboardScoreMetricPresentationFactory
                 CardId.STRAIN_RATIO to
                     strainRatioPresentation(metrics, unavailableValueText, todayStrainIncrease),
             )
-        }
 
         private fun sleepScorePresentation(
             summary: DailySummary?,

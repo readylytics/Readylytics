@@ -14,6 +14,7 @@ import app.readylytics.health.core.scoring.domain.dashboard.InsightDeriver
 import app.readylytics.health.core.scoring.domain.insights.InsightContext
 import app.readylytics.health.core.scoring.domain.insights.InsightEngine
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
+import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
 import app.readylytics.health.feature.dashboard.usecase.LiveResidualFatigue
 import kotlinx.coroutines.CancellationException
@@ -58,7 +59,7 @@ class DashboardUiStateTransformer
                 )
 
             val cards = cardsResult.getOrNull()
-            val derived = deriveInsights(basicInputs, selectedDate, clock)
+            val derived = deriveInsights(basicInputs, selectedDate)
             val yesterdayMetrics = resolveYesterdayMetrics(basicInputs, selectedDate)
 
             return DashboardUiState(
@@ -75,7 +76,14 @@ class DashboardUiStateTransformer
                 cardConfigurations = cardState.pendingConfiguration ?: cardState.cardConfiguration,
                 isManagingCards = cardState.isManagingCards,
                 isCalibrating = basicInputs.summary?.isCalibrating ?: false,
-                errorMessage = if (cardsResult.isFailure) "Failed to load dashboard data" else null,
+                errorMessage =
+                    if (cardsResult.isFailure) {
+                        UiText.StringRes(
+                            R.string.error_dashboard_load_failed,
+                        )
+                    } else {
+                        null
+                    },
                 heartRateDaySummary = hrSummary,
                 activeInsightTypes = derived.active,
                 currentInsight = derived.current,
@@ -123,7 +131,6 @@ class DashboardUiStateTransformer
         internal fun deriveInsights(
             basicInputs: DashboardBasicInputs,
             selectedDate: LocalDate,
-            clock: Clock,
         ): DerivedInsights {
             val engineFindings =
                 basicInputs.summary?.let { summary ->

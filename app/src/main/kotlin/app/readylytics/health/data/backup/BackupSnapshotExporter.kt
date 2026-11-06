@@ -12,6 +12,7 @@ import net.lingala.zip4j.model.ZipParameters
 import net.lingala.zip4j.model.enums.AesKeyStrength
 import net.lingala.zip4j.model.enums.EncryptionMethod
 import java.io.File
+import java.time.Clock
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -25,6 +26,7 @@ class BackupSnapshotExporter
         private val settingsRepository: SettingsRepository,
         private val layoutRepositories: RestoreLayoutRepositories,
         private val backupStreamWriter: BackupStreamWriter,
+        private val clock: Clock,
     ) {
         suspend fun captureEncrypted(
             target: File,
@@ -44,7 +46,7 @@ class BackupSnapshotExporter
                     val capturedPreferences = buildUserPreferencesBackup(prefs, layouts)
 
                     val scoringSnapshotId = HistoricalRunIdentity.computeSnapshotId(prefs)
-                    val exportedAtEpochMs = System.currentTimeMillis()
+                    val exportedAtEpochMs = clock.millis()
 
                     val identity =
                         BackupSnapshotIdentity(

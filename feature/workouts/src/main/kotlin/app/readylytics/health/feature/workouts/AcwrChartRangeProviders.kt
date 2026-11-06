@@ -3,21 +3,13 @@ package app.readylytics.health.feature.workouts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
-import app.readylytics.health.core.ui.common.TrendGranularity
-import app.readylytics.health.core.ui.common.periodLabelFor
-import app.readylytics.health.core.ui.common.rememberPeriodOrdinalLabel
-import app.readylytics.health.core.ui.components.ChartDefaults
+import app.readylytics.health.core.ui.components.fixedXRangeProvider
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianLayerRangeProvider
-import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.compose.cartesian.data.columnModel
 import com.patrykandpatrick.vico.compose.cartesian.data.lineModel
-import com.patrykandpatrick.vico.compose.common.data.ExtraStore
 import kotlin.math.ceil
-
-internal typealias AcwrRangeProviders = AcwrChartRangeProviders
 
 internal class AcwrChartRangeProviders(
     val trimpRangeProvider: CartesianLayerRangeProvider,
@@ -33,60 +25,20 @@ internal fun rememberAcwrRangeProviders(
 ): AcwrChartRangeProviders {
     val trimpRangeProvider =
         remember(remappedTrimpPoints, xAxisRangeDays) {
-            object : CartesianLayerRangeProvider {
-                override fun getMinX(
-                    minX: Double,
-                    maxX: Double,
-                    extraStore: ExtraStore,
-                ) = 0.0
-
-                override fun getMaxX(
-                    minX: Double,
-                    maxX: Double,
-                    extraStore: ExtraStore,
-                ) = (xAxisRangeDays - 1).toDouble()
-
-                override fun getMaxY(
-                    minY: Double,
-                    maxY: Double,
-                    extraStore: ExtraStore,
-                ): Double = (ceil(maxY / 25.0) * 25.0).coerceAtLeast(100.0)
-
-                override fun getMinY(
-                    minY: Double,
-                    maxY: Double,
-                    extraStore: ExtraStore,
-                ): Double = 0.0
-            }
+            fixedXRangeProvider(
+                xAxisRangeDays = xAxisRangeDays,
+                minYOf = { _, _ -> 0.0 },
+                maxYOf = { _, maxY -> (ceil(maxY / 25.0) * 25.0).coerceAtLeast(100.0) },
+            )
         }
 
     val ratioRangeProvider =
         remember(remappedRatioPoints, xAxisRangeDays) {
-            object : CartesianLayerRangeProvider {
-                override fun getMinX(
-                    minX: Double,
-                    maxX: Double,
-                    extraStore: ExtraStore,
-                ) = 0.0
-
-                override fun getMaxX(
-                    minX: Double,
-                    maxX: Double,
-                    extraStore: ExtraStore,
-                ) = (xAxisRangeDays - 1).toDouble()
-
-                override fun getMaxY(
-                    minY: Double,
-                    maxY: Double,
-                    extraStore: ExtraStore,
-                ): Double = (ceil(maxY / 0.5) * 0.5).coerceAtLeast(2.0)
-
-                override fun getMinY(
-                    minY: Double,
-                    maxY: Double,
-                    extraStore: ExtraStore,
-                ): Double = 0.0
-            }
+            fixedXRangeProvider(
+                xAxisRangeDays = xAxisRangeDays,
+                minYOf = { _, _ -> 0.0 },
+                maxYOf = { _, maxY -> (ceil(maxY / 0.5) * 0.5).coerceAtLeast(2.0) },
+            )
         }
 
     val ratioAxisMax =
@@ -99,34 +51,6 @@ internal fun rememberAcwrRangeProviders(
         AcwrChartRangeProviders(trimpRangeProvider, ratioRangeProvider, ratioAxisMax)
     }
 }
-
-@Composable
-internal fun rememberAcwrPeriodLabels(
-    trimpPoints: List<DailyDataPoint>,
-    rangeStartMs: Long,
-    granularity: TrendGranularity,
-): List<String> {
-    val ordinalLabel = rememberPeriodOrdinalLabel(granularity)
-    return remember(trimpPoints, rangeStartMs, granularity, ordinalLabel) {
-        if (granularity == TrendGranularity.DAILY) {
-            emptyList()
-        } else {
-            trimpPoints.map { point ->
-                val date = ChartUtils.dayOffsetToLocalDate(point.dayOffset, rangeStartMs)
-                periodLabelFor(granularity, date, ordinalLabel)
-            }
-        }
-    }
-}
-
-@Composable
-internal fun rememberAcwrRemappedPoints(
-    points: List<DailyDataPoint>,
-    granularity: TrendGranularity,
-): List<DailyDataPoint> =
-    remember(points, granularity) {
-        if (granularity == TrendGranularity.DAILY) points else points.mapIndexed { i, p -> p.copy(dayOffset = i) }
-    }
 
 @Composable
 internal fun rememberAcwrModelProducer(
@@ -158,20 +82,3 @@ internal fun rememberAcwrModelProducer(
     }
     return modelProducer
 }
-
-@Composable
-internal fun rememberAcwrXAxisFormatter(
-    periodLabels: List<String>,
-    rangeStartMs: Long,
-    granularity: TrendGranularity,
-): CartesianValueFormatter =
-    if (granularity == TrendGranularity.DAILY) {
-        ChartDefaults.rememberPeriodFormatter(rangeStartMs, granularity)
-    } else {
-        val fallback = periodLabels.firstOrNull().orEmpty()
-        remember(periodLabels) {
-            CartesianValueFormatter { _, value, _ ->
-                periodLabels.getOrElse(value.toInt()) { fallback }
-            }
-        }
-    }

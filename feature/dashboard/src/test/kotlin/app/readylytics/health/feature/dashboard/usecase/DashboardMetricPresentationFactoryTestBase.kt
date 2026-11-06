@@ -6,8 +6,6 @@ import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.model.MetricStatus
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.util.ResourceProvider
-import app.readylytics.health.core.scoring.domain.cardio.CooperNormsClassifier
-import app.readylytics.health.core.scoring.domain.cardio.TrainingStressBalanceCalculator
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricUnavailableReason
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import io.mockk.clearMocks
@@ -26,16 +24,7 @@ abstract class DashboardMetricPresentationFactoryTestBase {
     @Before
     fun setup() {
         resourceProvider = mockk(relaxed = true)
-        factory =
-            DashboardMetricPresentationFactory(
-                resourceProvider,
-                ResidualFatiguePresentationFactory(resourceProvider),
-                DashboardCardioMetricPresentationFactory(
-                    resourceProvider,
-                    TrainingStressBalanceCalculator(),
-                    CooperNormsClassifier(),
-                ),
-            )
+        factory = dashboardMetricPresentationFactory(resourceProvider)
         every { resourceProvider.getString(any()) } returns "mock_string"
         every { resourceProvider.getString(CoreUiR.string.metric_value_unavailable) } returns "—"
         every { resourceProvider.getString(CoreUiR.string.score_maximum) } returns "100"

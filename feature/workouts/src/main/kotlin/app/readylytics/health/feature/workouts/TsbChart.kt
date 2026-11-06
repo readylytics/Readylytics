@@ -18,17 +18,18 @@ import app.readylytics.health.core.scoring.domain.cardio.TrainingStressBalanceCa
 import app.readylytics.health.core.scoring.domain.cardio.TrainingStressBalanceCalculator.Companion.FRESH_THRESHOLD
 import app.readylytics.health.core.scoring.domain.cardio.TrainingStressBalanceCalculator.Companion.HIGH_RISK_THRESHOLD
 import app.readylytics.health.core.scoring.domain.cardio.TrainingStressBalanceCalculator.Companion.VERY_FRESH_THRESHOLD
-import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.TrendGranularity
-import app.readylytics.health.core.ui.common.periodLabelFor
-import app.readylytics.health.core.ui.common.rememberPeriodOrdinalLabel
 import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.InvisibleMarker
 import app.readylytics.health.core.ui.components.VicoChartTooltipOverlay
 import app.readylytics.health.core.ui.components.ZoneBandDecoration
+import app.readylytics.health.core.ui.components.fixedXRangeProvider
 import app.readylytics.health.core.ui.components.rememberLongPressMarkerController
+import app.readylytics.health.core.ui.components.rememberOrdinalRemappedPoints
+import app.readylytics.health.core.ui.components.rememberPeriodAxisFormatter
+import app.readylytics.health.core.ui.components.rememberPeriodLabels
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
@@ -45,7 +46,6 @@ import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLa
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
-import com.patrykandpatrick.vico.compose.common.data.ExtraStore
 import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -124,31 +124,7 @@ private fun rememberTsbRangeProvider(
     chartMaxY: Double,
 ): CartesianLayerRangeProvider =
     remember(xAxisRangeDays, chartMinY, chartMaxY) {
-        object : CartesianLayerRangeProvider {
-            override fun getMinX(
-                minX: Double,
-                maxX: Double,
-                extraStore: ExtraStore,
-            ) = 0.0
-
-            override fun getMaxX(
-                minX: Double,
-                maxX: Double,
-                extraStore: ExtraStore,
-            ) = (xAxisRangeDays - 1).toDouble()
-
-            override fun getMinY(
-                minY: Double,
-                maxY: Double,
-                extraStore: ExtraStore,
-            ) = chartMinY
-
-            override fun getMaxY(
-                minY: Double,
-                maxY: Double,
-                extraStore: ExtraStore,
-            ) = chartMaxY
-        }
+        fixedXRangeProvider(xAxisRangeDays, minYOf = { _, _ -> chartMinY }, maxYOf = { _, _ -> chartMaxY })
     }
 
 @Composable
@@ -183,49 +159,6 @@ private fun rememberTsbLine(): LineCartesianLayer.Line {
         interpolator = LineCartesianLayer.Interpolator.cubic(0.2f),
     )
 }
-
-@Composable
-private fun rememberTsbPeriodLabels(
-    tsbPoints: List<DailyDataPoint>,
-    rangeStartMs: Long,
-    granularity: TrendGranularity,
-): List<String> {
-    val ordinalLabel = rememberPeriodOrdinalLabel(granularity)
-    return remember(tsbPoints, rangeStartMs, granularity, ordinalLabel) {
-        if (granularity == TrendGranularity.DAILY) {
-            emptyList()
-        } else {
-            tsbPoints.map { point ->
-                val date = ChartUtils.dayOffsetToLocalDate(point.dayOffset, rangeStartMs)
-                periodLabelFor(granularity, date, ordinalLabel)
-            }
-        }
-    }
-}
-
-@Composable
-private fun rememberTsbXAxisFormatter(
-    periodLabels: List<String>,
-    rangeStartMs: Long,
-    granularity: TrendGranularity,
-): CartesianValueFormatter =
-    if (granularity == TrendGranularity.DAILY) {
-        ChartDefaults.rememberPeriodFormatter(rangeStartMs, granularity)
-    } else {
-        val fallback = periodLabels.firstOrNull().orEmpty()
-        remember(periodLabels) {
-            CartesianValueFormatter { _, value, _ -> periodLabels.getOrElse(value.toInt()) { fallback } }
-        }
-    }
-
-@Composable
-private fun rememberTsbRemappedPoints(
-    tsbPoints: List<DailyDataPoint>,
-    granularity: TrendGranularity,
-): List<DailyDataPoint> =
-    remember(tsbPoints, granularity) {
-        if (granularity == TrendGranularity.DAILY) tsbPoints else tsbPoints.mapIndexed { i, p -> p.copy(dayOffset = i) }
-    }
 
 private data class TsbChartHostConfig(
     val rangeProvider: CartesianLayerRangeProvider,
@@ -320,7 +253,7 @@ internal fun TsbChart(
     granularity: TrendGranularity = TrendGranularity.DAILY,
     parentScrollInProgress: () -> Boolean = { false },
 ) {
-    val remappedPoints = rememberTsbRemappedPoints(tsbPoints, granularity)
+    val remappedPoints = rememberOrdinalRemappedPoints(tsbPoints, granularity)
     val xAxisRangeDays =
         remember(tsbPoints, granularity) {
             if (granularity == TrendGranularity.DAILY) rangeDays else tsbPoints.size
@@ -330,8 +263,8 @@ internal fun TsbChart(
     val rangeProvider = rememberTsbRangeProvider(xAxisRangeDays, minY, maxY)
     val decorations = rememberTsbDecorations(minY, maxY)
     val modelProducer = rememberTsbModelProducer(remappedPoints)
-    val periodLabels = rememberTsbPeriodLabels(tsbPoints, rangeStartMs, granularity)
-    val xAxisFormatter = rememberTsbXAxisFormatter(periodLabels, rangeStartMs, granularity)
+    val periodLabels = rememberPeriodLabels(tsbPoints, rangeStartMs, granularity)
+    val xAxisFormatter = rememberPeriodAxisFormatter(periodLabels, rangeStartMs, granularity)
     val tooltipState =
         rememberTsbTooltipState(
             remappedPoints = remappedPoints,

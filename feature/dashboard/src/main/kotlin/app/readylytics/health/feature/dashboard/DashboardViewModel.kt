@@ -42,7 +42,7 @@ class DashboardViewModel
         private val permissionChecker: HealthConnectPermissionChecker,
         private val clock: Clock,
         @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
-        private val stateTransformer: DashboardUiStateTransformer = DashboardUiStateTransformer(useCases, clock),
+        private val stateTransformer: DashboardUiStateTransformer,
     ) : BaseViewModel(),
         DashboardCardActions {
         fun validateSelectedDate(date: LocalDate): Result<LocalDate> =

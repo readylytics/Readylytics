@@ -102,8 +102,16 @@ abstract class DashboardViewModelTestBase {
     }
 
     /** The default wiring, shared by [setUp] and [configureDashboardFlows]. */
-    protected fun buildViewModel(clock: java.time.Clock = java.time.Clock.systemDefaultZone()): DashboardViewModel =
-        DashboardViewModel(
+    protected fun buildViewModel(clock: java.time.Clock = java.time.Clock.systemDefaultZone()): DashboardViewModel {
+        val useCases =
+            DashboardUseCases(
+                getDashboardData = getDashboardDataUseCase,
+                observeDashboardStrainIncrease = observeDashboardStrainIncreaseUseCase,
+                observeDashboardRasIncrease = observeDashboardRasIncreaseUseCase,
+                getDailyPromptData = getDailyPromptDataUseCase,
+                getCurrentResidualFatigue = getCurrentResidualFatigueUseCase,
+            )
+        return DashboardViewModel(
             repositories =
                 DashboardRepositories(
                     dailySummary = dailySummaryRepository,
@@ -116,20 +124,15 @@ abstract class DashboardViewModelTestBase {
                     insightDismissal = insightDismissalRepository,
                     bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
                 ),
-            useCases =
-                DashboardUseCases(
-                    getDashboardData = getDashboardDataUseCase,
-                    observeDashboardStrainIncrease = observeDashboardStrainIncreaseUseCase,
-                    observeDashboardRasIncrease = observeDashboardRasIncreaseUseCase,
-                    getDailyPromptData = getDailyPromptDataUseCase,
-                    getCurrentResidualFatigue = getCurrentResidualFatigueUseCase,
-                ),
+            useCases = useCases,
             foregroundSyncController = foregroundSyncController,
             fatigueTicker = fatigueTicker,
             permissionChecker = permissionChecker,
             clock = clock,
             defaultDispatcher = testDispatcher,
+            stateTransformer = DashboardUiStateTransformer(useCases, clock),
         )
+    }
 
     protected fun arrangeStrainForwardingTest(
         selectedDate: LocalDate,

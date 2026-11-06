@@ -10,8 +10,6 @@ import app.readylytics.health.core.model.domain.util.DomainLogSink
 import app.readylytics.health.core.model.domain.util.DomainLogger
 import app.readylytics.health.core.model.domain.util.LogContext
 import app.readylytics.health.core.model.domain.util.LogLevel
-import app.readylytics.health.core.scoring.domain.cardio.CooperNormsClassifier
-import app.readylytics.health.core.scoring.domain.cardio.TrainingStressBalanceCalculator
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CancellationException
@@ -34,18 +32,7 @@ class GetDashboardDataUseCaseTest {
         resourceProvider = mockk(relaxed = true)
         every { resourceProvider.getString(CoreUiR.string.metric_value_unavailable) } returns "—"
         useCase =
-            GetDashboardDataUseCase(
-                factory =
-                    DashboardMetricPresentationFactory(
-                        resourceProvider,
-                        ResidualFatiguePresentationFactory(resourceProvider),
-                        DashboardCardioMetricPresentationFactory(
-                            resourceProvider,
-                            TrainingStressBalanceCalculator(),
-                            CooperNormsClassifier(),
-                        ),
-                    ),
-            )
+            GetDashboardDataUseCase(factory = dashboardMetricPresentationFactory(resourceProvider))
     }
 
     @After

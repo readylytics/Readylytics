@@ -52,6 +52,7 @@ import org.robolectric.RobolectricTestRunner
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
+import java.time.Clock
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
@@ -179,6 +180,7 @@ class LocalBackupManagerReencryptTest {
                 customSettingsRepo,
                 layoutRepos,
                 BackupStreamWriter(db, CoverageBackupWriter(db)),
+                Clock.systemDefaultZone(),
             )
         val rotService =
             rotationService ?: buildRotationService(

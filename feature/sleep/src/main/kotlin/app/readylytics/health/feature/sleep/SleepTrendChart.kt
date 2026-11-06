@@ -42,6 +42,9 @@ import app.readylytics.health.core.ui.components.InvisibleMarker
 import app.readylytics.health.core.ui.components.rememberCountItemPlacer
 import app.readylytics.health.core.ui.components.rememberCubicLineCartesianLayer
 import app.readylytics.health.core.ui.components.rememberLongPressMarkerController
+import app.readylytics.health.core.ui.components.rememberOrdinalRemappedPoints
+import app.readylytics.health.core.ui.components.rememberPeriodAxisFormatter
+import app.readylytics.health.core.ui.components.rememberPeriodLabels
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
@@ -149,7 +152,7 @@ fun SleepTrendChart(
     val clockFormatter = remember(context) { DateFormat.getTimeFormat(context) }
     val granularity = selectedRange.granularity
 
-    val periodLabels = rememberSleepTrendPeriodLabels(startOffsetPoints, rangeStartMs, granularity, scoringZoneId)
+    val periodLabels = rememberPeriodLabels(startOffsetPoints, rangeStartMs, granularity, scoringZoneId)
     val tooltipState =
         remember(
             selectedState,
@@ -176,9 +179,9 @@ fun SleepTrendChart(
     val labelComponent = ChartDefaults.labelTextComponent()
     val guidelineComponent = ChartDefaults.guidelineComponent()
 
-    val remappedStartPoints = rememberSleepTrendRemappedPoints(startOffsetPoints, granularity)
-    val remappedSpanPoints = rememberSleepTrendRemappedPoints(durationSpanPoints, granularity)
-    val remappedActualPoints = rememberSleepTrendRemappedPoints(actualDurationPoints, granularity)
+    val remappedStartPoints = rememberOrdinalRemappedPoints(startOffsetPoints, granularity)
+    val remappedSpanPoints = rememberOrdinalRemappedPoints(durationSpanPoints, granularity)
+    val remappedActualPoints = rememberOrdinalRemappedPoints(actualDurationPoints, granularity)
     val xAxisRangeDays =
         remember(startOffsetPoints, granularity) {
             if (granularity == TrendGranularity.DAILY) rangeDays else startOffsetPoints.size
@@ -198,7 +201,7 @@ fun SleepTrendChart(
             remappedActualPoints = remappedActualPoints,
             xAxisRangeDays = xAxisRangeDays,
         )
-    val xAxisFormatter = rememberSleepTrendXAxisFormatter(periodLabels, rangeStartMs, granularity, scoringZoneId)
+    val xAxisFormatter = rememberPeriodAxisFormatter(periodLabels, rangeStartMs, granularity, scoringZoneId)
 
     val hasData =
         remember(remappedStartPoints, remappedSpanPoints, remappedActualPoints) {

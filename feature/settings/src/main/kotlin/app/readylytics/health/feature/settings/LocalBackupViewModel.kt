@@ -35,6 +35,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Clock
 import javax.inject.Inject
 import app.readylytics.health.core.ui.R as CoreUiR
 
@@ -49,6 +50,7 @@ class LocalBackupViewModel
         private val restoreService: RestoreService,
         private val encryptionManager: EncryptionManager,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+        private val clock: Clock,
     ) : ViewModel() {
         sealed interface SideEffect {
             data object RestartApp : SideEffect
@@ -284,7 +286,7 @@ class LocalBackupViewModel
             backupService
                 .createBackup()
                 .onSuccess {
-                    backupSettings.updateLastBackupTimestamp(System.currentTimeMillis())
+                    backupSettings.updateLastBackupTimestamp(clock.millis())
                     transientState.update { it.copy(refreshTrigger = it.refreshTrigger + 1) }
                 }.onFailure { e ->
                     transientState.update {

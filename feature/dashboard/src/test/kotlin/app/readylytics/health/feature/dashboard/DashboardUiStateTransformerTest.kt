@@ -1,12 +1,14 @@
 package app.readylytics.health.feature.dashboard
 
 import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.model.DomainError
 import app.readylytics.health.core.model.domain.model.InsightType
 import app.readylytics.health.core.model.domain.model.RecoveryFlag
 import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.SleepSessionData
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
+import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.feature.dashboard.usecase.GetCurrentResidualFatigueUseCase
 import app.readylytics.health.feature.dashboard.usecase.GetDashboardDataUseCase
 import app.readylytics.health.feature.dashboard.usecase.LiveResidualFatigue
@@ -90,7 +92,7 @@ class DashboardUiStateTransformerTest {
                 dismissedInsightTypes = setOf(InsightType.LATE_NADIR),
             )
 
-        val derived = transformer.deriveInsights(basicInputs, selectedDate, clock)
+        val derived = transformer.deriveInsights(basicInputs, selectedDate)
         assertEquals(1, derived.dismissedCount)
         assertTrue(derived.visibleQueue.none { it == InsightType.LATE_NADIR })
     }
@@ -107,7 +109,7 @@ class DashboardUiStateTransformerTest {
                 rasSummaries = emptyList(),
             )
 
-        val derived = transformer.deriveInsights(basicInputs, selectedDate, clock)
+        val derived = transformer.deriveInsights(basicInputs, selectedDate)
         assertTrue(derived.active.isEmpty())
         assertNull(derived.current)
         assertEquals(0, derived.dismissedCount)
@@ -199,5 +201,49 @@ class DashboardUiStateTransformerTest {
             coVerify(exactly = 1) {
                 getCurrentResidualFatigueUseCase.invoke(selectedDate, any())
             }
+        }
+
+    @Test
+    fun `transform sets localized error when cards fail`() =
+        runTest {
+            val selectedDate = LocalDate.of(2026, 7, 29)
+            val summary = DailySummary(date = selectedDate)
+            val basicInputs =
+                DashboardBasicInputs(
+                    selectedDate = selectedDate,
+                    summary = summary,
+                    userPreferences = UserPreferences(scoringZoneId = "UTC"),
+                    circadianResult = CircadianConsistencyResult.MissingData,
+                    rasSummaries = listOf(summary),
+                )
+            val cardState =
+                DashboardCardState(
+                    isManagingCards = false,
+                    cardConfiguration = emptyList(),
+                    lastSleepSession = null,
+                    pendingConfiguration = null,
+                )
+            every {
+                getDashboardDataUseCase.invoke(
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                )
+            } returns Result.failure(DomainError.CardGenerationError)
+            coEvery {
+                getCurrentResidualFatigueUseCase.invoke(selectedDate, any())
+            } returns LiveResidualFatigue.NotApplicable
+
+            val state = transformer.transformToUiState(basicInputs, cardState, minuteBucket = 1L)
+
+            assertEquals(UiText.StringRes(R.string.error_dashboard_load_failed), state.errorMessage)
         }
 }

@@ -2,6 +2,8 @@ package app.readylytics.health.feature.dashboard.usecase
 
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.model.DailyMetrics
+import app.readylytics.health.core.model.domain.model.DailyMetricsMapper
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.util.ResourceProvider
 import io.mockk.every
@@ -37,6 +39,7 @@ class DashboardScoreMetricPresentationFactoryTest {
         val cards =
             factory.build(
                 summary = summary,
+                metrics = summary?.let { DailyMetricsMapper.toMetrics(it, preferences) },
                 preferences = preferences,
                 unavailableValueText = "—",
                 scoreMaximumText = "100",
@@ -50,11 +53,27 @@ class DashboardScoreMetricPresentationFactoryTest {
     }
 
     @Test
+    fun `uses supplied metrics instead of remapping the summary`() {
+        val date = LocalDate.of(2026, 11, 5)
+        val cards =
+            factory.build(
+                summary = DailySummary(date = date, sleepScore = 85f),
+                metrics = DailyMetrics(date = date, sleepScoreRounded = 42),
+                preferences = UserPreferences(),
+                unavailableValueText = "—",
+                scoreMaximumText = "100",
+            )
+
+        assertEquals("42", cards[CardId.SLEEP_SCORE]?.valueText)
+    }
+
+    @Test
     fun `builds cards with null summary`() {
         val preferences = UserPreferences()
         val cards =
             factory.build(
                 summary = null,
+                metrics = null,
                 preferences = preferences,
                 unavailableValueText = "—",
                 scoreMaximumText = "100",
@@ -80,6 +99,7 @@ class DashboardScoreMetricPresentationFactoryTest {
         val cards =
             factory.build(
                 summary = summary,
+                metrics = summary?.let { DailyMetricsMapper.toMetrics(it, preferences) },
                 preferences = preferences,
                 unavailableValueText = "—",
                 scoreMaximumText = "100",
@@ -102,6 +122,7 @@ class DashboardScoreMetricPresentationFactoryTest {
         val cards =
             factory.build(
                 summary = summary,
+                metrics = summary?.let { DailyMetricsMapper.toMetrics(it, preferences) },
                 preferences = preferences,
                 unavailableValueText = "—",
                 scoreMaximumText = "100",
