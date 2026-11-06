@@ -9,8 +9,6 @@ import app.readylytics.health.core.model.domain.model.assessHrv
 import app.readylytics.health.core.model.domain.model.assessRhr
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.util.ResourceProvider
-import app.readylytics.health.core.scoring.domain.cardio.CooperNormsClassifier
-import app.readylytics.health.core.scoring.domain.cardio.TrainingStressBalanceCalculator
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
@@ -31,28 +29,6 @@ class DashboardMetricPresentationFactory
         private val sleepRhythmFactory: DashboardSleepRhythmMetricPresentationFactory,
         private val recoveryFactory: DashboardRecoveryMetricPresentationFactory,
     ) {
-        // Secondary constructor for test backwards compatibility
-        constructor(
-            resourceProvider: ResourceProvider,
-            residualFatiguePresentationFactory: ResidualFatiguePresentationFactory =
-                ResidualFatiguePresentationFactory(resourceProvider),
-            cardioFactory: DashboardCardioMetricPresentationFactory =
-                DashboardCardioMetricPresentationFactory(
-                    resourceProvider,
-                    TrainingStressBalanceCalculator(),
-                    CooperNormsClassifier(),
-                ),
-        ) : this(
-            resourceProvider = resourceProvider,
-            residualFatiguePresentationFactory = residualFatiguePresentationFactory,
-            cardioFactory = cardioFactory,
-            scoreFactory = DashboardScoreMetricPresentationFactory(resourceProvider),
-            bodyCompositionFactory = DashboardBodyCompositionMetricPresentationFactory(resourceProvider),
-            vitalsFactory = DashboardVitalsMetricPresentationFactory(resourceProvider),
-            sleepRhythmFactory = DashboardSleepRhythmMetricPresentationFactory(resourceProvider),
-            recoveryFactory = DashboardRecoveryMetricPresentationFactory(resourceProvider),
-        )
-
         fun build(
             summary: DailySummary?,
             preferences: UserPreferences,
