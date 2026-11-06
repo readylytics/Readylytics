@@ -31,6 +31,9 @@ import app.readylytics.health.core.ui.components.rememberBoundsTrackingMarker
 import app.readylytics.health.core.ui.components.rememberCountItemPlacer
 import app.readylytics.health.core.ui.components.rememberCubicLineCartesianLayer
 import app.readylytics.health.core.ui.components.rememberLongPressMarkerController
+import app.readylytics.health.core.ui.components.rememberOrdinalRemappedPoints
+import app.readylytics.health.core.ui.components.rememberPeriodAxisFormatter
+import app.readylytics.health.core.ui.components.rememberPeriodLabels
 import app.readylytics.health.core.ui.components.rememberRoundedColumnCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
@@ -143,11 +146,11 @@ private fun AcwrChart(
     var layerBounds by remember { mutableStateOf<Rect?>(null) }
     val invisibleMarker = rememberBoundsTrackingMarker { layerBounds = it }
 
-    val periodLabels = rememberAcwrPeriodLabels(trimpPoints, rangeStartMs, granularity)
+    val periodLabels = rememberPeriodLabels(trimpPoints, rangeStartMs, granularity)
     val tooltipState = rememberAcwrTooltipData(selectedState, rangeStartMs, granularity, periodLabels)
 
-    val remappedTrimpPoints = rememberAcwrRemappedPoints(trimpPoints, granularity)
-    val remappedRatioPoints = rememberAcwrRemappedPoints(ratioPoints, granularity)
+    val remappedTrimpPoints = rememberOrdinalRemappedPoints(trimpPoints, granularity)
+    val remappedRatioPoints = rememberOrdinalRemappedPoints(ratioPoints, granularity)
     val xAxisRangeDays =
         remember(trimpPoints, granularity) {
             if (granularity == TrendGranularity.DAILY) rangeDays else trimpPoints.size
@@ -164,7 +167,7 @@ private fun AcwrChart(
 
     val modelProducer = rememberAcwrModelProducer(remappedTrimpPoints, remappedRatioPoints)
     val rangeProviders = rememberAcwrRangeProviders(remappedTrimpPoints, remappedRatioPoints, xAxisRangeDays)
-    val xAxisFormatter = rememberAcwrXAxisFormatter(periodLabels, rangeStartMs, granularity)
+    val xAxisFormatter = rememberPeriodAxisFormatter(periodLabels, rangeStartMs, granularity)
 
     val ratioLine =
         rememberCubicLineCartesianLayer(

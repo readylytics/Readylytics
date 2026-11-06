@@ -135,13 +135,16 @@ internal fun sleepStagesTooltipData(
 ): DataPointTooltipData? {
     val sel = selectedSegment ?: return null
     val viewportX = (sel.segmentCenterXPx - scrollOffsetPx).roundToInt()
-    if (viewportX !in 0..viewportWidthPx) return null
-    return DataPointTooltipData(
-        valueText = selectedStageName.orEmpty(),
-        dateText = timeFormatter.format(Instant.ofEpochMilli(sel.stage.startTime)),
-        extraLine = selectedDurationStr,
-        offset = IntOffset(viewportX, 0),
-    )
+    return if (viewportX in 0..viewportWidthPx) {
+        DataPointTooltipData(
+            valueText = selectedStageName.orEmpty(),
+            dateText = timeFormatter.format(Instant.ofEpochMilli(sel.stage.startTime)),
+            extraLine = selectedDurationStr,
+            offset = IntOffset(viewportX, 0),
+        )
+    } else {
+        null
+    }
 }
 
 /** [scrollOffsetPx] is a lambda so the scroll value is read inside `derivedStateOf`, not during composition. */
