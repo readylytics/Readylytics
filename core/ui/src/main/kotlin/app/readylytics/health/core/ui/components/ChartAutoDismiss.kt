@@ -13,13 +13,14 @@ fun AutoDismissChartSelection(
     parentScrollInProgress: () -> Boolean,
     onDismiss: () -> Unit,
 ) {
+    val currentOnDismiss by rememberUpdatedState(onDismiss)
     LaunchedEffect(scrollState) {
-        snapshotFlow { scrollState.value }.collect { onDismiss() }
+        snapshotFlow { scrollState.value }.collect { currentOnDismiss() }
     }
     val currentParentScrollInProgress by rememberUpdatedState(parentScrollInProgress)
     LaunchedEffect(Unit) {
         snapshotFlow { currentParentScrollInProgress() }.collect { inProgress ->
-            if (inProgress) onDismiss()
+            if (inProgress) currentOnDismiss()
         }
     }
 }
