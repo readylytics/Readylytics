@@ -90,7 +90,7 @@ class DashboardUiStateTransformerTest {
                 dismissedInsightTypes = setOf(InsightType.LATE_NADIR),
             )
 
-        val derived = transformer.deriveInsights(basicInputs, selectedDate, clock)
+        val derived = transformer.deriveInsights(basicInputs, selectedDate)
         assertEquals(1, derived.dismissedCount)
         assertTrue(derived.visibleQueue.none { it == InsightType.LATE_NADIR })
     }
@@ -107,7 +107,7 @@ class DashboardUiStateTransformerTest {
                 rasSummaries = emptyList(),
             )
 
-        val derived = transformer.deriveInsights(basicInputs, selectedDate, clock)
+        val derived = transformer.deriveInsights(basicInputs, selectedDate)
         assertTrue(derived.active.isEmpty())
         assertNull(derived.current)
         assertEquals(0, derived.dismissedCount)

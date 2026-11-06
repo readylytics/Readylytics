@@ -58,7 +58,7 @@ class DashboardUiStateTransformer
                 )
 
             val cards = cardsResult.getOrNull()
-            val derived = deriveInsights(basicInputs, selectedDate, clock)
+            val derived = deriveInsights(basicInputs, selectedDate)
             val yesterdayMetrics = resolveYesterdayMetrics(basicInputs, selectedDate)
 
             return DashboardUiState(
@@ -123,7 +123,6 @@ class DashboardUiStateTransformer
         internal fun deriveInsights(
             basicInputs: DashboardBasicInputs,
             selectedDate: LocalDate,
-            clock: Clock,
         ): DerivedInsights {
             val engineFindings =
                 basicInputs.summary?.let { summary ->

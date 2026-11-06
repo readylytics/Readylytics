@@ -58,6 +58,7 @@ class DashboardMetricPresentationFactory
             map.putAll(
                 scoreFactory.build(
                     summary = summary,
+                    metrics = m,
                     preferences = preferences,
                     unavailableValueText = unavailableValueText,
                     scoreMaximumText = scoreMaximumText,
