@@ -104,7 +104,7 @@ class ThemeTest {
         val hct =
             com.materialkolor.hct.Hct
                 .fromInt(seedColor.toArgb())
-        val scheme = com.materialkolor.scheme.SchemeTonalSpot(hct, false, 0.0)
+        val scheme = com.materialkolor.scheme.SchemeTonalSpot(listOf(hct), false, 0.0)
 
         // Ensure MCU derived colors are valid and not empty/zero
         assertNotEquals(0, scheme.primary)

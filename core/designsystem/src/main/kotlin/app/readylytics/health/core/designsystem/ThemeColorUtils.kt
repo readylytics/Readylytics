@@ -381,7 +381,7 @@ internal fun mcuColorScheme(
     isDark: Boolean,
 ): ColorScheme {
     val hct = Hct.fromInt(seedColor.toArgb())
-    val scheme = SchemeTonalSpot(hct, isDark, 0.0)
+    val scheme = SchemeTonalSpot(listOf(hct), isDark, 0.0)
 
     return if (isDark) {
         buildDarkMcuScheme(scheme, secondaryColor, tertiaryColor)
