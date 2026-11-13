@@ -4,6 +4,7 @@
 > confirmed compatible with the matching standalone Kotlin release. **AGP 9.4.0 was
 > attempted and does NOT qualify** (see §1/§2 spike result, 2026-09-04). Do not start
 > until the precondition in §2 passes. Written 2026-08-18.
+> Scheduled as Phase 8 of [`HEXAGONAL_ARCHITECTURE_REFACTOR.md`](HEXAGONAL_ARCHITECTURE_REFACTOR.md).
 
 This plan is the "migration we couldn't do" during the repo-wide architecture remediation that
 landed on the `feat/code-review` branch: converting `:core:scoring` from an Android library to

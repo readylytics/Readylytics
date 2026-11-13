@@ -1,7 +1,8 @@
 # Plan: Hexagonal Architecture (Ports & Adapters) Remediation
 
 > **Status:** PROPOSED — not started. Written 2026-11-13 against `main` @ `f35bc9f`.
-> Execute one phase per PR, in order. Each phase is independently shippable and behaviour-preserving.
+> Eight phases. Execute one phase per PR, in order. Each phase is independently shippable and behaviour-preserving.
+> Phase 8 (JVM domain core) is externally gated; see its section.
 
 ## Context
 This plan evaluates the Readylytics module graph against the Ports & Adapters model and lays out a phased, behaviour-preserving remediation. The scoring math (`core/scoring/**` formulas and coefficients) is **off-limits**: every phase is a move, split or rewire, protected by the existing golden and determinism tests. Each phase also adds a Konsist or architecture guard test, so the fixed boundary cannot regress. Follow every repository rule in `.claude/CLAUDE.md`: the pre-commit chain, no new detekt issues or `@Suppress`, synchronous `internal-docs/DATA_FLOW.md` updates, `codegraph index`/`sync`, and never uninstalling `app.readylytics.health`.
@@ -12,6 +13,20 @@ This plan evaluates the Readylytics module graph against the Ports & Adapters mo
 - Outbound adapters: `core:database` + `core:database-schema` (Room), `core:healthconnect` (Health Connect), `app/data/*` (DataStore, backup files, security), `app/workers` (WorkManager).
 - Inbound adapters: `feature/*` ViewModels and Compose, plus the WorkManager workers as scheduled inbound triggers.
 - Composition root: the Hilt modules (`app/di`, `core/*/di`).
+
+## Score card (baseline 2026-11-13: ~7/10)
+
+| Area | Now | After phases | Phase(s) that move it |
+|---|---|---|---|
+| Domain purity | 9 | 10 | 8 (compiler-enforced JVM core) |
+| Port ownership | 9 | 10 | 1, 3 (`HealthChangeSynchronizer` port to `core:model`) |
+| Inbound adapters (features) | 8 | 10 | 6 |
+| Composition root | 7 | 9–10 | 1, 3 |
+| Testability and guards | 7 | 9–10 | every phase's guard, plus 7 |
+| Application-layer placement | 5 | 9–10 | 2, 3, 4 |
+| Outbound adapter isolation | 5 | 9–10 | 4, 5 |
+
+Expected trajectory: about 8 after Phases 1–3, about 9 after 4–5, and 10 after Phase 8.
 
 ## Evaluation summary
 
@@ -42,6 +57,7 @@ This plan evaluates the Readylytics module graph against the Ports & Adapters mo
 **Execution conventions:**
 - One branch and one PR per phase.
 - A phase may start only once the previous phase is merged. Phases 6 and 7 are independent of 2–5 and may run in parallel.
+- Phase 8 is externally gated, by an AGP and Kotlin compiler pairing. It runs last, whenever its spike passes, but it requires Phases 2 and 4 to have landed first.
 - If a phase uncovers a needed change to scoring output, stop. That is out of scope for this plan.
 
 Phases are ordered from lowest to highest risk. Each phase follows the same steps: (a) add a characterization or architecture test that fails, or would fail on the old code, (b) move and rewire, (c) add a Konsist guard, (d) update docs if the touched area is load-bearing, (e) run `codegraph index`/`sync`, (f) commit.
@@ -62,7 +78,7 @@ Phases are ordered from lowest to highest risk. Each phase follows the same step
 - Move these classes, with no logic change:
   - `core/database/domain/sync/DailyRecomputeSupport.kt` to `core/scoring/.../application/recompute/`.
   - `core/database/domain/scoring/TrainingReadinessProjectionRecomputeUseCase.kt` to `core/scoring/.../application/recompute/`.
-  - `core/database/domain/scoring/RecomputeTodayUseCase.kt` to `core/scoring/.../application/recompute/`. Its `@Binds` to `RecomputeToday` moves from `ScoringSyncBindingsModule` to `core/scoring/di/ScoringBindsModule`.
+  - `core/database/domain/scoring/RecomputeTodayUseCase.kt` to `core/scoring/.../application/recompute/`. Its `@Binds` to `RecomputeToday` stays in a Hilt module outside `core:scoring`: keep it in `core/database/di/ScoringSyncBindingsModule`, or move it to `app/di`. Do **not** add Hilt modules to `core:scoring`. Phase 8 must remove them from there, and a JVM module can't hold `@InstallIn` modules.
   - All three depend only on `core:model` ports and `core:scoring`, which is verified.
 - Move their unit tests (`core/database/src/test/.../domain/{scoring,sync}/*Test.kt` that use fakes or mocks) to `core:scoring` tests. Golden tests that need Room (`WalkForward*EquivalenceTest`, `ScoringSyncScopeOutputsDeterminismTest`, `ResidualFatigueScoringIntegrityTest`) stay in `core:database` and just update their imports.
 - Update the imports in `core/healthconnect/domain/sync/{DailySyncUseCase,ResyncRangeUseCase,HistoricalRecomputePhase,FullHistoricalResyncUseCase}.kt`.
@@ -135,9 +151,50 @@ Phases are ordered from lowest to highest risk. Each phase follows the same step
 - Add it as `testImplementation` to the modules that need it, and swap the duplicated private fakes for the shared ones. Don't migrate the MockK usages wholesale; only the duplicated fakes.
 - Optionally rename `CircadianConsistencyRepository` to `CircadianConsistencyCalculator`, since it isn't a port.
 
+### Phase 8 — Compiler-enforced domain purity: `core:model` + `core:scoring` as `kotlin("jvm")` (the step to 10/10)
+**Goal.** Purity of the domain and application core is today enforced only by Konsist. This phase makes it a compile-time guarantee: any `android.*`, `androidx.*`, Room or Health Connect import in `core:model` or `core:scoring` fails the build. Their tests then run as plain JVM tests, with no Robolectric or Android test runner.
+
+**Gate (hard precondition).** Do not start until one of the two paths below passes the clean-rebuild determinism spike in `internal-docs/plans/CORE_SCORING_JVM_MIGRATION.md` §2. That spike means compiling, deleting `build/`, and recompiling at least twice, green every time. The known blocker: with `android.builtInKotlin=true`, AGP's bundled Kotlin compiler and the standalone `kotlin("jvm")` compiler write incompatible classpath snapshots. `:core:scoring:compileKotlin` then crashes in `shrinkAndSaveClasspathSnapshot`, as seen with AGP 9.3.1 and 9.4.0. Re-check this gate at every AGP or Kotlin bump.
+
+**Path A — scoring only (default).** Execute `CORE_SCORING_JVM_MIGRATION.md` §3.1–3.8 as written:
+- Add the catalog entries.
+- Replace `BuildConfig.DEBUG`.
+- Move the `core/scoring/di/{ScoringModule,ScoringBindsModule}` Hilt modules into an Android module (`app/di` or `core:database/di`).
+- De-Android `core:model`'s dependencies: `androidx.core.ktx` becomes `kotlinx.coroutines.core`, and `hilt.android` becomes `javax.inject`.
+- Convert `core/scoring/build.gradle.kts`, using the artifact-type rules to consume `core:model`.
+- Resolve the `core:database-schema` test dependency with option (A): rewrite the 3 tests to use domain fixtures.
+
+**Path B — model first (use if Path A's spike still crashes).** Convert `core:model` to `kotlin("jvm")` first, then `core:scoring`. The JVM compiler then only reads JVM-compiled classes, which removes the Android-module-on-JVM-classpath boundary that triggers the crash.
+- The spike must also confirm the reverse direction: Android modules (`:core:database`, `:core:healthconnect`, `:core:ui`, `:feature:*`, `:app`) compiled by the built-in compiler must consume the JVM `core:model` jar cleanly, also over clean rebuilds.
+- This path has a bigger blast radius. Land it as its own PR (8a: `core:model`), before the `core:scoring` PR (8b).
+
+**Interactions with earlier phases (why this is last):**
+- Phases 2 and 4 move application services into `core:scoring`. They use `javax.inject` only, which works on the JVM, and no Hilt modules. All bindings stay in Android `di` modules, per the Phase 2 note.
+- Phase 4 removes `core:database`'s dependency on `core:scoring` internals. That shrinks the set of Android consumers of the JVM module.
+- Phase 7: `core:testing` must not be needed by `core:model`/`core:scoring` tests. Otherwise, split out a JVM `:core:testing-domain` holding the port fakes, which are pure, and keep the Android-specific fakes in `:core:testing`.
+- `@Serializable` on `core:model` types stays. kotlinx.serialization is JVM-compatible.
+
+**Guards:**
+- An architecture test (`architecture/DomainModulePurityTest`) parses `core/model/build.gradle.kts` and `core/scoring/build.gradle.kts`. It asserts that they apply `kotlin("jvm")`, apply no `com.android.*` plugin, and have no `project(":core:database*")`/`healthconnect`/`ui` dependency, test scope included.
+- Keep the existing Konsist purity assertions as a second line of defence.
+
+**Docs:**
+- Mark `CORE_SCORING_JVM_MIGRATION.md` as DONE, superseded by this phase.
+- Update `.claude/CLAUDE.md`'s "Logic Isolation" bullet to say purity is compiler-enforced.
+- Update `internal-docs/DATA_FLOW.md`'s module map, if it lists module types.
+
+**Verification:**
+- The §2 spike passes for the chosen path.
+- `rm -rf core/*/build && ./gradlew :core:model:test :core:scoring:test` passes twice in a row.
+- The full pre-commit chain passes.
+- The 80% coverage floor on the scoring package holds.
+- All golden and determinism suites from Phase 4 are unchanged.
+- `./gradlew lintRelease` passes.
+
+**Rollback:** follow `CORE_SCORING_JVM_MIGRATION.md` §5. Path B needs one extra step: revert `core/model/build.gradle.kts` (PR 8a), independently of 8b.
+
 ### Deferred, not in this plan
-- Converting `core:model`/`core:scoring` to `kotlin("jvm")`: blocked, see `internal-docs/plans/CORE_SCORING_JVM_MIGRATION.md`.
-- Extracting `core:healthconnect/domain/sync` into its own `:core:sync` application module. Revisit after Phase 3, once the module boundary is clean.
+- Extracting `core:healthconnect/domain/sync` into its own `:core:sync` application module. Revisit after Phase 3, once the module boundary is clean. If Phase 8 has landed, it could be born as a `kotlin("jvm")` module.
 
 ## Verification (every phase)
 1. `./gradlew ktlintFormat && ./gradlew detekt && ./gradlew assembleDebug && ./gradlew testDebugUnitTest`. No new detekt issues and no `@Suppress` or baseline edits; if one seems unavoidable, stop and ask.
@@ -148,4 +205,4 @@ Phases are ordered from lowest to highest risk. Each phase follows the same step
    - Settings → Resync still shows the "day X of Y" banner and notification.
    - Backup → restore round-trips.
 5. `codegraph index` (new files) and `codegraph sync` (moves) after each phase.
-6. After the final phase: `./gradlew lintRelease`.
+6. After the final phase (Phase 8, or Phase 7 if Phase 8 is still gated): `./gradlew lintRelease`.
